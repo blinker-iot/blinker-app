@@ -5,6 +5,11 @@
 4.本软件版本使用 **GPL v3** 协议开源，不可用于商业用途  
 5.blinker开发者及商业用户，请使用最新版本的blinker App，方可正常进行设备开发。  
 
+## 关于blinker-app 2.2.0  
+由于我和王工半路出家，及ionic 3框架本身的局限性，blinker-app在2.2.0以前都充斥着丑陋、滑稽的代码。  
+好在ionic 4的发布和angular的更新，让blinker App重获新生。  
+由于blinker App计划中的功能，还未完全实现，因此短期内不会开源最新的版本。
+
 ## 开发环境  
 推荐使用 Visual Studio Code  
 主要框架 http://ionicframework.com/  
