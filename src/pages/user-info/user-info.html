@@ -1,0 +1,31 @@
+<ion-header>
+    <ion-navbar>
+        <ion-title>用户资料</ion-title>
+    </ion-navbar>
+</ion-header>
+
+<ion-content>
+    <ion-item-group>
+        <p>基础资料</p>
+        <ion-item (click)="gotoChangeAvatar()">头像
+            <ion-avatar item-end>
+                <img width="300" height="300" src="{{userProvider.avatar}}" onError="this.src='assets/img/avatar.png'">
+            </ion-avatar>
+        </ion-item>
+        <ion-item (click)="showChangeUserName()">用户名
+            <ion-note item-end>
+                {{userProvider.username}}
+            </ion-note>
+        </ion-item>
+        <p>安全信息</p>
+        <ion-item (click)="showChangePassword()">修改密码</ion-item>
+        <ion-item (click)="showChangePhone()">手机号
+            <ion-note item-end>
+                {{userProvider.phone}}
+            </ion-note>
+        </ion-item>
+        <!-- <p>社交账号(暂不可用)</p>
+        <ion-item>QQ</ion-item>
+        <ion-item>微信</ion-item> -->
+    </ion-item-group>
+</ion-content>

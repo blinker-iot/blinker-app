@@ -1,0 +1,7 @@
+{
+  "name": "blinker",
+  "integrations": {
+    "cordova": {}
+  },
+  "type": "ionic-angular"
+}

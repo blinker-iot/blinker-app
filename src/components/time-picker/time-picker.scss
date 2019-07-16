@@ -1,0 +1,20 @@
+time-picker {
+    height: 100%;
+    .pick-box {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        .pick-item {
+            color: #FFF;
+            font-size: 3.3rem;
+        }
+        .pick-opts {
+            transform-style: preserve-3d;
+            pointer-events: none;
+        }
+        .spacer {
+            padding: 0 5vw;
+        }
+    }
+}

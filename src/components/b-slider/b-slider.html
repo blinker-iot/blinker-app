@@ -1,0 +1,9 @@
+<div [ngClass]="{'slider':direction == 'x' , 'slider-y':direction == 'y'}">
+  <div class="bar" #bar>
+    <div class="bar bar-active" #barActive></div>
+  </div>
+  <div class="knob-box" #knob>
+    <div class="knob"></div>
+  </div>
+  <div class="touch" #touchBar></div>
+</div>

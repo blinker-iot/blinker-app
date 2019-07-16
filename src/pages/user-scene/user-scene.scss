@@ -1,0 +1,19 @@
+page-user-scene {
+
+    .sceneButtonList {
+        .sceneButtonItem {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px;
+            border-bottom: 1px solid #dee2e6;
+            .scene-item-button {
+                width: 35px;
+                height: 35px;
+                border-radius: 50%;
+                font-size: 20px;
+                padding: 0;
+            }
+        }
+    }
+}

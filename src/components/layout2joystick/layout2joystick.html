@@ -1,0 +1,12 @@
+<div layout-box>
+  <div class="joyout">
+    <img src="assets/img/layout/joyout.png" />
+  </div>
+  <div class="joyin">
+    <div class="stick" #stick>
+      <img *ngIf="loaded" src="assets/img/layout/joyin.png" />
+    </div>
+  </div>
+  <div class="touch" #touchZone></div>
+</div>
+<div *ngIf="layouter.editMode && key" layout-key>{{key}}</div>

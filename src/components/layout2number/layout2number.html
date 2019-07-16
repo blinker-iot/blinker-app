@@ -1,0 +1,62 @@
+<div class="numbox numbox1" *ngIf="lstyle==0">
+  <div class="valuebox">
+    <span class="value">{{value}}</span>
+    <span class="unit">{{unit}}</span>
+    <div class="content" overflow>{{t0}}</div>
+  </div>
+</div>
+<div class="numbox numbox2" *ngIf="lstyle==1">
+  <div class="valuebox">
+    <span class="value">{{value}}</span>
+    <span class="unit">{{unit}}</span>
+  </div>
+  <div class="contentbox">
+    <i #icon class="{{ico}}"></i>
+    <div class="content" overflow>{{t0}}</div>
+  </div>
+</div>
+<div layout-box layout-col class="numbox numbox3" *ngIf="lstyle==2">
+  <div class="topbox">
+    <div class="valuebox">
+      <span class="value">{{value}}</span>
+      <span class="unit">{{unit}}</span>
+    </div>
+    <i #icon class="{{ico}}"></i>
+  </div>
+  <div class="contentbox">
+    <div class="content" overflow>{{t0}}</div>
+  </div>
+</div>
+<div layout-box layout-col class="numbox numbox3 item22" *ngIf="lstyle==3">
+  <div class="valuebox">
+    <span class="value">{{value}}</span>
+    <span class="unit">{{unit}}</span>
+  </div>
+  <div class="content" overflow>{{t0}}</div>
+</div>
+<div layout-box layout-col class="numbox numbox3 item22" *ngIf="lstyle==4">
+  <div class="valuebox">
+    <span class="value">{{value}}</span>
+    <span class="unit">{{unit}}</span>
+  </div>
+  <div class="contentbox">
+    <div class="content" overflow>{{t0}}</div>
+    <i #icon class="{{ico}} iconbottom"></i>
+  </div>
+</div>
+<div layout-box layout-col class="numbox numbox3 item22" *ngIf="lstyle==5">
+  <i #icon class="{{ico}}"></i>
+  <div class="valuebox">
+    <span class="value">{{value}}</span>
+    <span class="unit">{{unit}}</span>
+  </div>
+  <div class="content content2" overflow>{{t0}}</div>
+</div>
+<div #gauge layout-box layout-col class="gauge-box" *ngIf="lstyle==6">
+  <mwl-gauge *ngIf="showGauge" [max]="max" [dialStartAngle]="140" [dialEndAngle]="40" [value]="value" [animated]="true"
+    [animationDuration]="1">
+  </mwl-gauge>
+  <div class="unit">{{unit}}</div>
+  <div class="content" overflow>{{t0}}</div>
+</div>
+<div *ngIf="layouter.editMode && key" layout-key>{{key}}</div>

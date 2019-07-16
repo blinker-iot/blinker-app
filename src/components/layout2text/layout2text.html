@@ -1,0 +1,15 @@
+<div layout-box class="textbox" *ngIf="lstyle==0">
+  <div class="title title-self" overflow>{{t0}}</div>
+</div>
+<div layout-box class="textbox" *ngIf="lstyle==1">
+  <div class="title" overflow>{{t0}}</div>
+  <div class="content" overflow>{{t1}}</div>
+</div>
+<div layout-box class="textbox textbox2" *ngIf="lstyle==2">
+  <div class="title title-self" overflow>{{t0}}</div>
+</div>
+<div layout-box class="textbox textbox2" *ngIf="lstyle==3">
+  <div class="title" overflow>{{t0}}</div>
+  <div class="content" overflow>{{t1}}</div>
+</div>
+<div *ngIf="layouter.editMode && key" layout-key>{{key}}</div>

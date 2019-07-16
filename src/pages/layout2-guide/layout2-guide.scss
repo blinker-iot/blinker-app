@@ -1,0 +1,62 @@
+page-layout2-guide {
+    .guide-bg {
+        width: 100%;
+        height: 100%;
+        background-color: black;
+        opacity: 0.1;
+    }
+    .guide {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        flex-direction: column;
+    }
+    .iphonex{
+        margin-top: 90px; 
+    }
+    .dialog {
+        color: #595959;
+        position: absolute;
+        margin-top: 85px;
+        background-color: #fff; // height: 20vh;
+        width: 90%;
+        padding: 10px;
+        font-size: 18px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        .triangle {
+            width: 0;
+            height: 0;
+            position: absolute;
+            top: -20px;
+            right: 10px;
+            border-top: 20px solid transparent;
+            border-right: 15px solid #fff;
+            border-bottom: 10px solid transparent;
+        }
+    }
+    .btn {
+        position: absolute;
+        bottom: 20vh;
+        border: 1px solid #595959;
+        border-radius: 25px;
+        padding: 10px 20px;
+        height: 50px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        span {
+            color: #595959;
+            font-size: 20px;
+        }
+    }
+    .example {
+        position: absolute;
+        bottom: 15vh;
+    }
+}

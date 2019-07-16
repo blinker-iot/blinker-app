@@ -1,0 +1,7 @@
+<ion-scroll class="scrollHeight" scrollX="true">
+  <div demo-box>
+    <div #demo demo-item *ngFor="let btn of buttonList;index as i" (click)="changeAction(i)" [ngClass]="{'selected':isSelected(btn)}">
+      <layout2button lstyle={{btn.lstyle}} ico={{btn.ico}} color={{btn.color}} t0={{btn.t0}} t1={{btn.t1}}></layout2button>
+    </div>
+  </div>
+</ion-scroll>

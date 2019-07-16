@@ -1,0 +1,55 @@
+<ion-header>
+  <ion-navbar>
+  </ion-navbar>
+</ion-header>
+
+<ion-content padding>
+  <div class="title-box">
+    <div class="title1">注册</div>
+    <div class="title2">欢迎使用blinker物联网解决方案</div>
+  </div>
+
+  <div class="login-box">
+    <div class="input-box">
+      <div class="item-img">
+        <i class="fal fa-mobile"></i>
+      </div>
+      <ion-item no-padding transparent>
+        <ion-label floating>请输入手机号</ion-label>
+        <ion-input required type="tel" minlength="11" maxlength="11" (input)="checkPhone()" [(ngModel)]="phone"></ion-input>
+      </ion-item>
+      <div class="sendsms">
+        <div class="v-line"></div>
+        <button ion-button clear [disabled]="smscodeButtonDisabled||waiting" (click)="onSmscodeButton()">{{smscodeButton}}</button>
+      </div>
+    </div>
+    <div class="input-box">
+      <div class="item-img">
+        <i class="fal fa-shield-check"></i>
+      </div>
+      <ion-item no-padding transparent>
+        <ion-label floating>验证码</ion-label>
+        <ion-input required type="number" check minlength="6" maxlength="6" (input)="checkAll()" [(ngModel)]="smscode"></ion-input>
+      </ion-item>
+    </div>
+    <div class="input-box">
+      <div class="item-img">
+        <i class="fal fa-lock-alt"></i>
+      </div>
+      <ion-item no-padding transparent>
+        <ion-label floating>密码（至少8位字符）</ion-label>
+        <ion-input required type="password" minlength="8" maxlength="32" (input)="checkAll()" [(ngModel)]="password"></ion-input>
+      </ion-item>
+    </div>
+    <div class="login-btn">
+      <button ion-button full round [disabled]="registerButtonDisabled" (click)="onRegisterButton()">立即注册</button>
+    </div>
+    <div class="other">
+      <span>
+        注册账号即表示您同意并遵守blinker
+        <a href="https://clz.me/blinker-user-agreement/" target="_blank">用户协议</a>和
+        <a href="https://clz.me/blinker-privacy-policy/" target="_blank">隐私政策</a>
+      </span>
+    </div>
+  </div>
+</ion-content>

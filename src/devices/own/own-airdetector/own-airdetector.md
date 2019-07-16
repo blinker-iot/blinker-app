@@ -1,0 +1,20 @@
+{  
+	"aqibase":"cn",  
+	"langauage":"cn",
+	"timezone":8.0,
+	"mode":["sleep","65"],  
+	"light":"on",  
+	"timing":false,  
+	"loop":false,  
+	"countdown":false,  
+	"detector":{  
+		"pm1.0":10,  
+		"pm2.5":10,  
+		"pm10":20,  
+		"hcho":0.1,  
+		"temp":20.2,  
+		"humi":50,  
+		"AQICN":[20,1],  
+		"AQIUS":[20,1]  
+	}  
+}  

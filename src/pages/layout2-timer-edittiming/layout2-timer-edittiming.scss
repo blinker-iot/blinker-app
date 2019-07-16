@@ -1,0 +1,115 @@
+page-layout2-timer-edittiming {
+    .scroll-content {
+        background-color: #F5F5F5 !important;
+    }
+    .scrollHeight {
+        height: 20vh;
+        position: relative;
+    }
+    .title{
+        margin: 8px 15px;
+    }
+    .setting1 {
+        [demo-box] {
+            height: 100%;
+            position: absolute;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            padding: 0 10px 0 15px;
+            [demo-item] {
+                margin-right: 2vw;
+                box-shadow: 0 0 10px #0000001f;
+                border-radius: 5px;
+                background-color: #FFF;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                layout2text {
+                    height: 100%;
+                    width: 100%;
+                    transform: scale(0.95, 0.95);
+                }
+                layout2button {
+                    height: 100%;
+                    width: 100%;
+                    transform: scale(0.95, 0.95);
+                }
+                layout2range {
+                    height: 100%;
+                    width: 100%;
+                    transform: scale(0.95, 0.95);
+                }
+                layout2color {
+                    height: 100%;
+                    width: 100%;
+                    transform: scale(0.95, 0.95);
+                }
+                layout2number {
+                    height: 100%;
+                    width: 100%;
+                    transform: scale(0.95, 0.95);
+                }
+                layout2debug {
+                    height: 100%;
+                    width: 100%; // transform: scale(0.95, 0.95);
+                }
+                layout2joystick {
+                    height: 100%;
+                    width: 100%;
+                    transform: scale(0.95, 0.95);
+                }
+                layout2timer {
+                    height: 100%;
+                    width: 100%;
+                    transform: scale(0.95, 0.95);
+                }
+            }
+            .selected {
+                box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8) !important;
+            }
+        }
+    }
+    .setting2 {
+        .timebox {
+            margin-top:3px;
+            padding: 0 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 30px;
+            height: 50px;
+            background-color: #FFF;
+        }
+        .arrow {
+            color: #D8D8D8;
+        }
+    }
+    .setting3 {
+        padding: 15px;
+        .daybar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            [day] {
+                color: #D8D8D8;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+                i {
+                    margin-top: 3px;
+                    font-size: 28px;
+                }
+            }
+        }
+    }
+    .chosen {
+        color:#3C3C3C !important;
+        i {
+            color: #389BEE;
+        }
+    }
+}

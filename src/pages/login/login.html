@@ -1,0 +1,32 @@
+<ion-content padding>
+  <div class="login-box">
+    <img class="logo" src="assets/img/login-logo.png">
+    <div class="input-box">
+      <div class="item-img">
+        <i class="fal fa-user"></i>
+      </div>
+      <ion-item no-padding transparent>
+        <!-- <ion-label floating>用户名/手机号</ion-label> -->
+        <ion-input required type="text" [(ngModel)]="username" placeholder="用户名/手机号"></ion-input>
+      </ion-item>
+    </div>
+    <div class="input-box">
+      <div class="item-img">
+        <i class="fal fa-lock-alt"></i>
+      </div>
+      <ion-item no-padding transparent>
+        <!-- <ion-label floating>密码</ion-label> -->
+        <ion-input required type="password" [(ngModel)]="password" placeholder="密码"></ion-input>
+      </ion-item>
+    </div>
+    <div class="login-btn">
+      <button ion-button full round login (click)="loginButton()">登 录</button>
+    </div>
+    <div class="other">
+      <button ion-button button-clear retrieve clear (click)="gotoRetrieve()">找回密码</button>
+      <button ion-button button-clear register clear (click)="gotoSignup()">用户注册</button>
+    </div>
+  </div>
+  <!-- <button ion-button round outline color="facebook">QQ登录</button>
+  <button ion-button round outline color="twitter">微信登录</button> -->
+</ion-content>

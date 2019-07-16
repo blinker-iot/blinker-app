@@ -1,0 +1,26 @@
+<div class="timing-tab">
+  <ion-scroll scrollY="true">
+    <div tim-item *ngFor="let task of device.data.timing;trackBy: trackByFn" (click)="editTimingTask(task)" (press)="delTimingTask(task)">
+      <div>
+        <div action>{{task.act | objToStr}}</div>
+        <div clock>{{task.tim | minuteToTime }}</div>
+      </div>
+      <div day>
+        <span *ngIf="task.day[0]=='1'">日</span>
+        <span *ngIf="task.day[1]=='1'">一</span>
+        <span *ngIf="task.day[2]=='1'">二</span>
+        <span *ngIf="task.day[3]=='1'">三</span>
+        <span *ngIf="task.day[4]=='1'">四</span>
+        <span *ngIf="task.day[5]=='1'">五</span>
+        <span *ngIf="task.day[6]=='1'">六</span>
+      </div>
+      <!-- checked="getEna(task.ena)" -->
+      <ion-toggle [ngModel]="getEna(task)" (ngModelChange)="changeEna(task)"></ion-toggle>
+    </div>
+    <div height20>
+    </div>
+  </ion-scroll>
+  <div class="add-btn" (click)="addTimingTask()">
+    <i class="fal fa-plus"></i>
+  </div>
+</div>

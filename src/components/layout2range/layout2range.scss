@@ -1,0 +1,29 @@
+layout2range {
+    .text1 {
+        width: 95%;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 1%;
+        margin-bottom: 2%;
+    }
+    b-slider{
+        width: 95%;
+    }
+    .style2{
+        justify-content: space-between !important;
+        height: 100%;
+        .value{
+            margin-top: 5px;
+            height: 6%;
+        }
+        b-slider{
+            height: 87%;
+        }
+        .text{
+            margin-bottom: 5px;
+            height: 6%;
+        }
+    }
+}

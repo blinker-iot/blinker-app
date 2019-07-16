@@ -1,0 +1,162 @@
+$toolbar-ios-title-text-color:snow;
+//slider
+$range-ios-knob-box-shadow:0px 0px 15px rgba(0, 0, 0, 0.2);
+$range-ios-bar-height:5px;
+$range-ios-bar-border-radius:2.5px;
+$range-ios-knob-width:20px;
+.toast-ios .toast-wrapper.toast-top {
+    margin-top: 20px;
+}
+
+ion-range {
+    .range-bar {
+        border-radius: $range-ios-bar-border-radius !important;
+    }
+    .range-bar-active {
+        background: #3ea1ea;
+    }
+}
+
+ion-header {
+    // background-color: #389BEE;
+    .toolbar-background {
+        background-color: #389BEE; // background-color: transparent;
+        border-color: rgba(200, 200, 200, 0.1) !important;
+    }
+    ion-icon {
+        color: snow;
+    }
+    ion-title {
+        .toolbar-title {
+            color: snow;
+        }
+    }
+    .bar-buttons-ios[end] {
+        margin-left: 5px;
+        margin-right: 10px;
+        i {
+            font-size: 21px;
+        }
+    }
+    button {
+        color: snow;
+    }
+    span {
+        color: snow;
+    }
+}
+
+ion-toggle {
+    width: 44px !important;
+    height: 25px !important;
+    .toggle-inner {
+        width: 21px !important;
+        height: 21px !important;
+        box-shadow: 0 0px 5px rgba(0, 0, 0, 0.3) !important;
+        ;
+    }
+}
+
+[transparent] {
+    background-color: transparent !important;
+}
+
+[blinker-blue] {
+    background-color: #389BEE;
+}
+
+[selectable] {
+    -webkit-user-select: all;
+    -moz-user-select: all;
+    -ms-user-select: all;
+    user-select: all;
+}
+
+[h-line] {
+    width: 100%;
+    height: 1px;
+    background-color: #EBEBEB;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+ion-item {
+    .item-inner {
+        border: 0 !important;
+    }
+}
+
+ion-popover {
+    // ion-backdrop {
+    //     opacity: 0.3 !important;
+    // }
+    .popover-arrow {
+        height: 5px !important;
+    } // .popover-arrow::after {
+    // background-color: #EBEBEB !important;
+    // }
+    .popover-content {
+        // background: #EBEBEB !important;
+        border-radius: 5px !important;
+        width: 160px !important;
+    }
+}
+
+[gray] {
+    background-color: #595959;
+}
+
+[red] {
+    background-color: #EA0909;
+}
+
+[green] {
+    background-color: #00A90C;
+}
+
+[blue] {
+    background-color: #076EEF;
+}
+
+[purple] {
+    background-color: #6010E4;
+}
+
+[yellow] {
+    background-color: #FBA613;
+}
+
+[layout-box] {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+}
+
+[layout-col] {
+    flex-direction: column;
+}
+
+[layout-row] {
+    flex-direction: row;
+}
+
+[layout-key] {
+    text-shadow: 1px 1px 1px rgba(99, 99, 99, 0.8);
+    font-size: 0.8em;
+    color: white;
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 2px 3px 2px 3px;
+    background-color: rgba(70, 210, 253, 0.5);
+}
+
+[overflow] {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}

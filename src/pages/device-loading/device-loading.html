@@ -1,0 +1,13 @@
+<div class="loading full" *ngIf="!errorMessage">
+  <div class="textcenter">
+    正在加载设备...
+  </div>
+</div>
+<div class="full" *ngIf="errorMessage">
+  <div>
+    <img src="./assets/img/device-loading-error.png">
+  </div>
+  <div class="textcenter">
+    {{errorMessage}}
+  </div>
+</div>

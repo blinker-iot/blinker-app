@@ -1,0 +1,54 @@
+<div layout-box #button>
+  <!-- <div class="btnbox" [ngClass]="{
+    'btnbox2':lstyle==2,
+    'btnbox3':lstyle==4||lstyle==5}">
+    <div #round [ngClass]="{
+      'round':lstyle==0||lstyle==2,
+      'capsule':lstyle==1||lstyle==3,
+      'round2':lstyle==4,
+      'capsule2':lstyle==5}">
+      <i class="{{ico}} text-in-btn" *ngIf="lstyle==0 || lstyle==2 || lstyle==4"></i>
+      <div class="text-in-btn" overflow *ngIf="lstyle==1 || lstyle==3 || lstyle==5">{{t0}}</div>
+    </div>
+    <div class="content" [ngClass]="{'content2':lstyle!=2}" overflow *ngIf="lstyle==2 || lstyle==4 || lstyle==5">{{t1}}</div>
+  </div> -->
+  <div class="btnbox" *ngIf="lstyle==0">
+    <div class="round btn" #round>
+      <i class="{{ico}} text-in-btn"></i>
+    </div>
+  </div>
+  <div class="btnbox" *ngIf="lstyle==1">
+    <div class="capsule btn" #round>
+      <div class="text-in-btn" overflow>{{t0}}</div>
+    </div>
+  </div>
+  <div class="btnbox btnbox2" *ngIf="lstyle==2">
+    <div class="round btn" #round>
+      <i class="{{ico}}"></i>
+    </div>
+    <div class="content" overflow>{{t1}}</div>
+  </div>
+  <div class="btnbox" *ngIf="lstyle==3">
+    <div class="capsule btn" #round>
+      <div class="text-in-btn" overflow>{{t0}}</div>
+    </div>
+  </div>
+  <div class="btnbox btnbox3" *ngIf="lstyle==4">
+    <div class="round round2 btn" #round>
+      <i class="{{ico}} text-in-btn"></i>
+    </div>
+    <div class="content content2 content3" overflow>{{t1}}</div>
+  </div>
+  <div class="btnbox btnbox3" *ngIf="lstyle==5">
+    <div class="capsule capsule2 btn" #round>
+      <div class="text-in-btn" overflow>{{t0}}</div>
+    </div>
+    <div class="content content2 content3" overflow>{{t1}}</div>
+  </div>
+  <div class="btnbox" *ngIf="lstyle==6">
+    <div class="toggle-box" [ngClass]="{'toggle-box-off':state=='off'}" #round>
+      <div class="toggle-inner" [ngClass]="{'on':state=='on','off':state=='off'}"></div>
+    </div>
+  </div>
+</div>
+<div *ngIf="layouter.editMode && key" layout-key>{{key}}</div>

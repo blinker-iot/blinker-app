@@ -1,0 +1,24 @@
+page-roommenu {
+    .h-line {
+        width: 100%;
+        height: 1px;
+        background-color: #D5D5D5
+    }
+    .add-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        .btn {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            padding: 12px 0;
+            font-size: 15px;
+            color: #3C3C3C;
+            img {
+                width: 15px;
+                margin-right: 10px;
+            }
+        }
+    }
+}

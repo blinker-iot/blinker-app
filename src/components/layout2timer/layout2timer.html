@@ -1,0 +1,4 @@
+<div class="icon" [ngClass]="{'style1':lstyle==1}" (click)="gotoTimingPage()">
+  <i [ngClass]="{'hasTask':hasTask}" class="fal fa-stopwatch"></i>
+  <div *ngIf="lstyle==1" class="content">{{t0}}</div>
+</div>

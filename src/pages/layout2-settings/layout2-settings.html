@@ -1,0 +1,69 @@
+<ion-header>
+  <ion-navbar>
+    <ion-title>DIY设备设置</ion-title>
+  </ion-navbar>
+</ion-header>
+
+<ion-content>
+  <div class="device-info">
+    <div class="imgbox">
+      <img src="assets/img/devices/{{device.config.image}}" onError="this.src='assets/img/devices/unknown.png'" />
+    </div>
+    <div class="infobox">
+      <div class="infoitem">设备名称：{{device.config.customName}}</div>
+      <div class="infoitem">设备型号：{{device.deviceType}}</div>
+      <div class="infoitem">识别码：{{device.deviceName | devicename2macPipe}}</div>
+      <div class="infoitem" *ngIf="device.config.authKey">密钥：
+        <span selectable>{{device.config.authKey}}</span>
+      </div>
+    </div>
+  </div>
+  <ion-list>
+    <ion-item (click)="changeName()">
+      <ion-label>
+        自定义设备名
+      </ion-label>
+      <button ion-button clear item-right>修改名称</button>
+    </ion-item>
+    <div class="h-line"></div>
+    <ion-item (click)="changeImage()">
+      <ion-label>
+        自定义显示图标
+      </ion-label>
+      <button ion-button clear item-right>选择图标</button>
+    </ion-item>
+    <div class="h-line"></div>
+    <ion-item (click)="gotoAligenie()" *ngIf="device.config.mode=='mqtt'">
+      <ion-label>
+        语音助手设置
+      </ion-label>
+      <button ion-button clear item-right>开始接入</button>
+    </ion-item>
+    <div class="h-line"></div>
+    <ion-item class="disable">
+      <ion-label>
+        载入示例界面
+      </ion-label>
+      <button ion-button clear item-right>选择载入</button>
+    </ion-item>
+    <div class="h-line"></div>
+    <ion-item (click)="addShortcut()" *ngIf="platform.is('android')">
+      <ion-label>
+        添加设备到桌面
+      </ion-label>
+      <button ion-button clear item-right>立即添加</button>
+    </ion-item>
+    <div class="h-line"></div>
+    <ion-item class="disable">
+      <ion-label>
+        更新固件
+      </ion-label>
+      <button ion-button clear item-right>获取固件</button>
+    </ion-item>
+  </ion-list>
+  <div class="btnbox">
+    <div class="btn">
+      <button ion-button block round color="danger" outline (click)="unbind()">解除绑定</button>
+    </div>
+  </div>
+</ion-content>

@@ -1,0 +1,39 @@
+<ion-header>
+  <ion-navbar>
+    <ion-title>Linux设备接入向导</ion-title>
+  </ion-navbar>
+</ion-header>
+
+<ion-content>
+    <div item class="device-item">
+        <img src="assets/img/devices/diylinux.png" />
+      </div>
+      <div item class="text-item">
+          <p>本功能用于 Linux设备/树莓派/香蕉派 接入</p>
+          <p>需配合blinker python库使用</p>
+          <br>
+          <p>详细接入方法可见：</p>
+          <p>https://doc.blinker.app</p>
+          <p>该功能仅供DIY设备/测试设备接入，如需商业合作，可邮件联系：</p>
+          <p>clz@clz.me</p>
+      </div>
+  <ion-grid>
+      <ion-row>
+        <ion-col col-4>
+          <button ion-button block icon-left (click)="gotoConfig('ble','DiyLinux')">
+            <img src="assets/img/icon/ble-w.png" /> 蓝牙接入
+          </button>
+        </ion-col>
+        <ion-col col-4>
+          <button ion-button block icon-left (click)="gotoConfig('net','DiyLinux')">
+            <img src="assets/img/icon/wifi-w.png" /> WiFi接入
+          </button>
+        </ion-col>
+        <ion-col col-4>
+          <button ion-button block icon-left (click)="gotoMqttkey('DiyLinux')">
+            <img src="assets/img/icon/mqtt-w.png" /> MQTT接入
+          </button>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+</ion-content>

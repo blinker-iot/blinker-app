@@ -1,0 +1,72 @@
+page-own-light-dashboard {
+    .content-offline {
+        background-image: url(../assets/img/devices/ownlight/bg.jpg);
+        background-repeat: no-repeat;
+        background-size: cover;
+        color: #ececec;
+    }
+    .content-sun  {
+        background-image: url(../assets/img/devices/ownlight/bg.jpg);
+        background-repeat: no-repeat;
+        background-size: cover;
+        color: #ececec;
+    }
+    .content-solid  {
+        background-image: url(../assets/img/devices/ownlight/bg.jpg);
+        background-repeat: no-repeat;
+        background-size: cover;
+        color: #ececec;
+    }
+    .content-breath  {
+        background-image: url(../assets/img/devices/ownlight/bg.jpg);
+        background-repeat: no-repeat;
+        background-size: cover;
+        color: #ececec;
+    }
+    .content-blink  {
+        background-image: url(../assets/img/devices/ownlight/bg.jpg);
+        background-repeat: no-repeat;
+        background-size: cover;
+        color: #ececec;
+    }
+    .content-stream  {
+        background-image: url(../assets/img/devices/ownlight/bg.jpg);
+        background-repeat: no-repeat;
+        background-size: cover;
+        color: #ececec;
+    }
+
+
+    .btn-gounp {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 5px;
+        padding-bottom: 10px;
+        [btn] {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin: 0 10px;
+            .icon {
+                margin-bottom: 5px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 25px;
+                height: 45px;
+                width: 45px;
+                border: 1px solid #FFF;
+                border-radius: 50%;
+            }
+        }
+        .selected {
+            .icon {
+                // box-shadow: 3px 0 10px #3683DE;
+                background-color: rgba(255, 255, 255, 0.295);
+                color: #fff;
+            }
+        }
+    }
+}

@@ -1,0 +1,82 @@
+page-own-plug-add-timing {
+    .scroll-content {
+        background-color: #F5F5F5 !important;
+    }
+    .scrollHeight {
+        height: 20vh;
+        position: relative;
+    }
+    .title {
+        margin: 8px 15px;
+    }
+    .setting1 {
+        background-color: #1F8CE8;
+        padding: 30px 0;
+        color: #FFF;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        .btn-box {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            .btn {
+                padding: 10px;
+                width: 35vw;
+                height: 10vw;
+                padding: 10px;
+                background-color: #0076D9;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            .btn-on {
+                border-top-left-radius: 5vw;
+                border-bottom-left-radius: 5vw;
+                // border-top-right-radius: 0;
+                // border-bottom-right-radius: 0;
+           
+            }
+            .btn-off {
+                // border-top-left-radius: 0;
+                // border-bottom-left-radius: 0;
+                border-top-right-radius: 5vw;
+                border-bottom-right-radius: 5vw;
+
+            }
+        }
+    }
+    .setting2 {
+        height: 20vh;
+        padding: 0 0 30px 0;
+        background-color: #1F8CE8;
+    }
+    .setting3 {
+        padding: 15px;
+        .daybar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            [day] {
+                color: #D8D8D8;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+                i {
+                    margin-top: 3px;
+                    font-size: 28px;
+                }
+            }
+        }
+    }
+    .chosen {
+        color: #3C3C3C !important;
+        i {
+            color: #389BEE;
+        }
+    }
+}

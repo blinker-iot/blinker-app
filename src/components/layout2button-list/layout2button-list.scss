@@ -1,0 +1,33 @@
+layout2button-list {
+    width: 100%;
+    .scrollHeight {
+        height: 20vh;
+        position: relative;
+    }
+    [demo-box] {
+        height: 100%;
+        position: absolute;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 15px;
+        [demo-item] {
+            margin-right: 2vw;
+            box-shadow: 0 0 10px #0000001f;
+            border-radius: 5px;
+            background-color: #FFF;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            layout2button {
+                height: 100%;
+                width: 100%;
+                transform: scale(0.95, 0.95);
+            }
+        }
+        .selected {
+            box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8) !important;
+        }
+    }
+}

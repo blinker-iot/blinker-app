@@ -1,0 +1,73 @@
+page-retrieve {
+    .title-box {
+        .title1 {
+            font-size: 3rem;
+            font-weight: 500;
+        }
+        .title2 {
+            color: #4A4A4A;
+            margin-top: 0.3rem;
+            font-size: 1.5rem;
+        }
+    }
+    .login-box {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+        .input-box {
+            width: 100%;
+            display: flex;
+            align-items: flex-end;
+            flex-direction: row;
+            justify-content: center;
+            border-bottom: 1px solid #c8c7cc;
+            .item-img {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 8px;
+                margin-right: 12px;
+                flex: 0 0 20px;
+                font-size: 20px;
+            }
+            ion-label {
+                color: #9B9B9B;
+            }
+            .item-inner {
+                border: 0;
+            }
+            .sendsms {
+                height: 20px;
+                margin-bottom: 10px;
+                .v-line {
+                    width: 1px;
+                    height: 20px;
+                    background-color: #979797;
+                }
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                .button-inner {
+                    color: #000;
+                }
+            }
+        }
+        .h-line {
+            height: 1px;
+            width: 100%;
+            background: #c8c7cc;
+        }
+        .login-btn {
+            margin-top: 60px;
+            width: 100%;
+            button {
+                height: 45px;
+                font-size: 20px;
+                background-color: #009ee8;
+            }
+        }
+    }
+}

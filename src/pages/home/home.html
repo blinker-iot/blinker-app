@@ -1,0 +1,19 @@
+﻿<ion-header [ngClass]="{'header-iphonex':isIphonex}">
+    <div class="bar">
+        <div class="header-top">
+            <weatherblock></weatherblock>
+            <div class="add-btn" (click)="presentPopover($event)">
+                <ion-icon name="ios-add-circle-outline"></ion-icon>
+            </div>
+        </div>
+        <scene-button-group [scenes]="autoProvider.sceneButtonList" #sceneZone></scene-button-group>
+    </div>
+</ion-header>
+<ion-content>
+    <ion-refresher (ionRefresh)="doRefresh()" (ionStart)="startRefresh()" [enabled]="HomeRefresherEnabled">
+        <ion-refresher-content pullingIcon="arrow-dropdown" refreshingSpinner="circles">
+        </ion-refresher-content>
+    </ion-refresher>
+    <room-list [(roomid)]="roomid" (refresherEnabled)="refresherEnabled($event)"></room-list>
+    <deviceblock-homelist *ngIf="deviceProvider.devices" [(roomid)]="roomid" (refresherEnabled)="refresherEnabled($event)"></deviceblock-homelist>
+</ion-content>

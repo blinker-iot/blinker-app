@@ -1,0 +1,135 @@
+layout2number {
+    .numbox {
+        padding: 0 9%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        background-color: #fff;
+        i {
+            font-size: 15px;
+        }
+    }
+    .numbox1 {
+        .content {
+            position: absolute;
+            right: 5%;
+            width: 35%
+        }
+    }
+    .valuebox {
+        width: 100%;
+        display: flex;
+        justify-content: flex-start;
+        align-items: flex-end;
+        flex-direction: rows;
+    }
+    .value {
+        line-height: 25px;
+        color: #3C3C3C;
+        font-size: 30px;
+        font-weight: bold;
+    }
+    .unit {
+        color: #898989;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+    .content {
+        font-size: 12px;
+        color: #898989;
+    }
+    .numbox2 {
+        justify-content: space-between;
+        flex-direction: row;
+        .contentbox {
+            width: 40%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            .content {
+                width: 100%;
+            }
+        }
+    }
+    .numbox3 {
+        flex-direction: column;
+        align-items: flex-start;
+        .topbox {
+            display: flex;
+            flex-direction: row;
+            i {
+                position: absolute;
+                right: 5%;
+                align-self: flex-end;
+            }
+        }
+        .contentbox {
+            width: 100%;
+        }
+    }
+    .iconbottom {
+        margin-left: 10px;
+    }
+    .item22 {
+        .valuebox {
+            margin: 12px 0 12px -2px;
+        }
+        i {
+            font-size: 19px !important;
+        }
+        .contentbox{
+            width: 100%;
+        }
+        .content {
+            font-size: 18px;
+            width: 100%;
+        }
+        .value {
+            line-height: 35px;
+            font-size: 45px;
+        }
+        .content2 {
+            font-size: 15px !important;
+        }
+    }
+    .gauge-box {
+        justify-content: center;
+        align-items: center;
+        .unit {
+            position: absolute;
+            top: 55%;
+            width: 100%;
+            text-align: center;
+            font-size: 1em;
+        }
+        .content {
+            position: absolute;
+            bottom: 5px;
+            width: 100%;
+            text-align: center;
+            font-size: 1.2em !important;
+        }
+        mwl-gauge {
+            width: 100%;
+            height: 100%;
+            // display: block;
+        }
+        mwl-gauge>.gauge>.dial {
+            stroke: #eee;
+            stroke-width: 6;
+            fill: rgba(0, 0, 0, 0);
+        }
+        mwl-gauge>.gauge>.value {
+            // stroke: rgb(179, 243, 253);
+            stroke-width: 6;
+            fill: rgba(0, 0, 0, 0);
+        }
+        mwl-gauge>.gauge>.value-text {
+            font-weight: bold;
+            font-size: 1em;
+        }
+    }
+}

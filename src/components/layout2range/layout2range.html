@@ -1,0 +1,13 @@
+<div layout-box layout-col *ngIf="lstyle==0">
+  <div class="text1">
+    <span>{{t0}}</span>
+    <span>{{value}}</span>
+  </div>
+  <b-slider [value]="value" [disabled]="disabled" [min]="min" [max]="max" [color]="color" (update)="valueChange($event)" (sendData)="sendData($event)"></b-slider>
+</div>
+<div layout-box layout-col class="style2" *ngIf="lstyle==1">
+  <span class="value">{{value}}</span>
+  <b-slider [value]="value" [disabled]="disabled" [direction]="'y'" [min]="min" [max]="max" [color]="color" (update)="valueChange($event)" (sendData)="sendData($event)"></b-slider>
+  <span class="text">{{t0}}</span>
+</div>
+<div *ngIf="layouter.editMode && key" layout-key>{{key}}</div>

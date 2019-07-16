@@ -1,0 +1,23 @@
+page-device-loading {
+    .full {
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align:center;
+        flex-direction: column;
+        img{
+            height: 40vw;
+        }
+    }
+    .loading {
+        background-image: url(../assets/img/device-loading.png);
+        background-repeat: no-repeat;
+        background-size: cover;
+    }
+    .textcenter {
+        padding-top: 50%;
+        color: white;
+    }
+}

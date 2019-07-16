@@ -1,0 +1,29 @@
+page-mqttkey {
+    [unsupport] {
+        position: absolute;
+        left: 0;
+        top: 0px;
+        padding: 5px;
+    }
+    [height60] {
+        height: 60vh;
+    }
+    [right] {
+        float: right;
+    }
+    [keyvalue] {
+        font-size: 1.3em;
+        border: 1px solid #636363;
+        text-align: center;
+        padding: 3px 0 3px 0;
+    }
+    [selectable] {
+        -webkit-user-select: all;
+        -moz-user-select: all;
+        -ms-user-select: all;
+        user-select: all;
+    }
+    [gotohome] {
+        margin-top: 1em;
+    }
+}

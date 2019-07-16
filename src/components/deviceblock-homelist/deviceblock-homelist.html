@@ -1,0 +1,41 @@
+<ion-slides (ionSlideDidChange)="slideChanged()" [zoom]="false">
+  <ion-slide class="scrollHeight">
+    <div class="testscroll" (scroll)="test($event)">
+      <div class="devicebox" #devicebox no-padding>
+        <deviceblock class="deviceblock" *ngFor="let deviceName of userProvider.deviceList" [device]="deviceProvider.devices[deviceName]" sortId="{{deviceName}}"></deviceblock>
+        <div class="device-space"></div>
+      </div>
+    </div>
+  </ion-slide>
+  <ion-slide class="scrollHeight" *ngFor="let roomName of userProvider.roomList.order">
+    <div class="testscroll" (scroll)="test($event)">
+      <div class="devicebox" #devicebox no-padding>
+        <deviceblock class="deviceblock" *ngFor="let deviceName of userProvider.roomList.data[roomName]" [device]="deviceProvider.devices[deviceName]" sortId="{{deviceName}}"></deviceblock>
+        <div class="device-space"></div>
+      </div>
+    </div>
+  </ion-slide>
+</ion-slides>
+
+<!-- 测试用设备 -->
+<!-- <deviceblock class="deviceblock" [device]="deviceProvider.devices[deviceName]"></deviceblock> -->
+<!-- 
+<div class="swiper-container">
+  <div class="swiper-wrapper">
+    <div class="swiper-slide">
+      <div class="testscroll" (scroll)="test($event)">
+        <div class="devicebox" #devicebox no-padding>
+          <deviceblock class="deviceblock" *ngFor="let deviceName of userProvider.deviceList" [device]="deviceProvider.devices[deviceName]"
+            sortId="{{deviceName}}"></deviceblock>
+          <div class="device-space"></div>
+        </div>
+      </div>
+    </div>
+    <div class="swiper-slide">
+      Slide 2
+    </div>
+    <div class="swiper-slide">
+      Slide 3
+    </div>
+  </div>
+</div> -->

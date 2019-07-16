@@ -1,0 +1,53 @@
+deviceblock-list {
+    width: 100%;
+    .scrollHeight {
+        height: 20vh;
+        position: relative;
+    }
+    .block-box {
+        height: 100%;
+        position: absolute;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 15px 15px;
+        .block {
+            position: relative;
+            width: 23vw;
+            height: 23vw;
+            margin-right: 1.5vw;
+            border: 1px solid #E6E6E6;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+            justify-content: space-between;
+            background-color: #fff;
+            .block-img {
+                height: 70%;
+            }
+            .block-text {
+                height: 25%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .h-line {
+                width: 100%;
+                height: 1px;
+                background-color: #EBEBEB;
+                margin-top: 1px;
+            }
+            .mode {
+                height: 20%;
+                position: absolute;
+                left: 3%;
+                top: 3%;
+            }
+        }
+    }
+    .selected {
+        box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8) !important;
+    }
+}

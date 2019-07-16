@@ -1,0 +1,205 @@
+﻿<ion-header mode="ios">
+    <ion-navbar mode="ios" transparent>
+        <ion-title mode="ios">智能插座</ion-title>
+        <ion-buttons end (click)="gotoHelp()">
+            <button ion-button icon-only>
+                <i class="fal fa-question-circle"></i>
+            </button>
+        </ion-buttons>
+        <ion-buttons end (click)="gotoSettings()">
+            <button ion-button icon-only>
+                <i class="fal fa-cog "></i>
+            </button>
+        </ion-buttons>
+    </ion-navbar>
+</ion-header>
+<ion-content [ngClass]="{'off':device.data.switch=='off'}">
+    <!-- <div class="bg"></div> -->
+    <div class="btn-gounp">
+        <div btn [ngClass]="{'selected':tab==0}" (click)="changeTab(0)">
+            <div class="icon">
+                <i class="fal fa-power-off"></i>
+            </div>
+            开关
+        </div>
+        <div btn [ngClass]="{'selected':tab==1}" (click)="changeTab(1)">
+            <div class="icon">
+                <i class="fal fa-clock"></i>
+            </div>
+            定时
+        </div>
+        <div btn [ngClass]="{'selected':tab==2}" (click)="changeTab(2)">
+            <div class="icon">
+                <i class="fal fa-stopwatch"></i>
+            </div>
+            倒计时
+        </div>
+        <div btn [ngClass]="{'selected':tab==3}" (click)="changeTab(3)">
+            <div class="icon">
+                <i class="fal fa-sync"></i>
+            </div>
+            循环
+        </div>
+        <div btn [ngClass]="{'selected':tab==4}" (click)="changeTab(4)">
+            <div class="icon">
+                <i class="fal fa-bolt"></i>
+            </div>
+            电量
+        </div>
+    </div>
+    <div *ngIf="tab==0" class="switch-tab">
+        <div class="plugbox">
+            <div class="power">实时功耗：<span>{{device.data.power}}W</span></div>
+            <div class="plug">
+                <div socketbox socketbox1>
+                    <div socket socket1></div>
+                    <div socket socket1></div>
+                    <div socket socket1></div>
+                </div>
+                <div socketbox socketbox2>
+                    <div socket socket2></div>
+                    <div socket socket3></div>
+                </div>
+            </div>
+        </div>
+        <div class="switchbox" (click)="turnSwitch()">
+            <div class="switch">
+                <i class="fal fa-power-off"></i>
+            </div>
+        </div>
+    </div>
+    <div *ngIf="tab==1" class="timing-tab">
+        <ion-scroll scrollY="true">
+            <div timing-item item *ngFor="let task of device.data.timing" (click)="editTimingTask(task)">
+                <div>
+                    <div action>{{task.act | ownplugAct2str }}</div>
+                    <div clock>{{task.tim | minuteToTime }}</div>
+                    <div day>
+                        <span *ngIf="task.day[0]=='1'">周日</span>
+                        <span *ngIf="task.day[1]=='1'">周一</span>
+                        <span *ngIf="task.day[2]=='1'">周二</span>
+                        <span *ngIf="task.day[3]=='1'">周三</span>
+                        <span *ngIf="task.day[4]=='1'">周四</span>
+                        <span *ngIf="task.day[5]=='1'">周五</span>
+                        <span *ngIf="task.day[6]=='1'">周六</span>
+                    </div>
+                </div>
+                <!-- checked="getEna(task.ena)" -->
+                <ion-toggle [ngModel]="getEna(task)" (ngModelChange)="changeEna(task)"></ion-toggle>
+            </div>
+            <div height20>
+            </div>
+        </ion-scroll>
+        <div class="add-btn" (click)="addTimingTask()">
+            <i class="fal fa-plus"></i>
+        </div>
+    </div>
+    <div *ngIf="tab==2" class="countdown-tab">
+        <div class="countdownbox">
+            <div clock>{{device.data.countdown.rtim | minuteToTime }}</div>
+            <div action>{{device.data.countdown.act | objToStr}}</div>
+            <!-- <div class="btns">
+                    </div> -->
+            <div class="btns">
+                <div *ngIf="!device.data.countdown.run" (click)="startCountdown()" btn class="start">开始</div>
+                <div *ngIf="device.data.countdown.run==1" (click)="cancelCountdown()" btn class="cancel animated fadeInRight">取消</div>
+                <div *ngIf="device.data.countdown.run" (click)="tapCountdownBtn()" btn class="animated fadeInLeft" [ngClass]="{
+                        'pause':device.data.countdown.run==1,
+                        'continue':device.data.countdown.run==0
+                      }">{{countdownBtn}}</div>
+            </div>
+        </div>
+        <div item class="timebox" (click)="showTimePicker()">
+            <span class="time">
+                10分钟
+            </span>
+            <div class="arrow">
+                <ion-icon name="arrow-forward"></ion-icon>
+            </div>
+        </div>
+        <div item class="timebox" (click)="showTimePicker()">
+            <span class="time">
+                30分钟
+            </span>
+            <div class="arrow">
+                <ion-icon name="arrow-forward"></ion-icon>
+            </div>
+        </div>
+        <div item class="timebox" (click)="showTimePicker()">
+            <span class="time">
+                60分钟
+            </span>
+            <div class="arrow">
+                <ion-icon name="arrow-forward"></ion-icon>
+            </div>
+        </div>
+        <div item class="timebox" (click)="showTimePicker()">
+            <span class="time">
+                自定义
+            </span>
+            <div class="arrow">
+                <ion-icon name="arrow-forward"></ion-icon>
+            </div>
+        </div>
+    </div>
+    <div *ngIf="tab==3" class="loop-tab">
+        <div item class="loopbox">
+            <div class="loopitem">
+                <div action>打开插座</div>
+                <div clock>00:00</div>
+            </div>
+            <div class="exchange">
+                <i class="fal fa-exchange"></i>
+            </div>
+            <div class="loopitem">
+                <div action>关闭插座</div>
+                <div clock>00:00</div>
+            </div>
+        </div>
+        <div item class="timebox" (click)="setLoopTime()">
+            <span class="time">
+                循环次数
+            </span>
+            <div class="arrow">
+                <ion-icon name="arrow-forward"></ion-icon>
+            </div>
+        </div>
+    </div>
+    <div *ngIf="tab==4" class="chart-tab">
+        <div class="chart" #chartCanvas></div>
+    </div>
+
+    <!-- <ion-list>
+        <ion-item (click)="turnSwitch()">
+            <ion-icon name="power" item-left large [ngStyle]="{'color':device.state=='on'?'#00c0e8':'#424242'}"></ion-icon>
+            <h2>电源开关</h2>
+            <p>当前状态：{{device.state}}</p>
+            <button ion-button clear item-right>点击打开</button>
+        </ion-item>
+        <ion-item (click)="gotoTiming()">
+            <ion-icon name="time" item-left large [ngStyle]="{'color':device.timing==true?'#00c0e8':'#424242'}"></ion-icon>
+            <h2>定时开关</h2>
+            <p>当前任务：{{device.timing}}</p>
+            <button ion-button clear item-right>查看任务</button>
+        </ion-item>
+        <ion-item (click)="gotoCountdown()">
+            <ion-icon name="stopwatch" item-left large [ngStyle]="{'color':device.countdown==true?'#00c0e8':'#424242'}"></ion-icon>
+            <h2>倒计时开关</h2>
+            <p>当前任务：{{device.countdown}}</p>
+            <button ion-button clear item-right>查看任务</button>
+        </ion-item>
+        <ion-item (click)="gotoLoop()">
+            <ion-icon name="refresh" item-left large [ngStyle]="{'color':device.loop==true?'#00c0e8':'#424242'}"></ion-icon>
+            <h2>循环开关</h2>
+            <p>当前任务：{{device.loop}}</p>
+            <button ion-button clear item-right>查看任务</button>
+        </ion-item>
+        <ion-item (click)="gotoStatistics()">
+            <ion-icon name="stats" item-left large [ngStyle]="{'color':device.power>0?'#00c0e8':'#424242'}"></ion-icon>
+            <h2>用电情况</h2>
+            <p>实时功耗：{{device.power}}W</p>
+            <button ion-button clear item-right>查看详情</button>
+        </ion-item>
+    </ion-list> -->
+
+</ion-content>

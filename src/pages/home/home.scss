@@ -1,0 +1,71 @@
+page-home {
+    ion-header {
+        background-image: url(../assets/img/headerbg.jpg);
+        background-repeat: no-repeat;
+        background-size: cover;
+        padding-top: $cordova-md-statusbar-padding;
+        .bar {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-direction: column;
+            padding-bottom: 10px;
+            .header-top {
+                height: 50px;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-direction: row;
+            }
+            .add-btn {
+                height: 100%; // width: 100%;
+                padding: 0 10px 0 10px;
+                font-size: 26px;
+                display: flex;
+                align-items: center;
+            }
+            weatherblock {
+                padding-left: 10px;
+            }
+            scene-button-group {
+                width: 100%;
+            }
+        }
+    }
+    .header-iphonex {
+        padding-top: 25px;
+    }
+    .add-device-btn {
+        position: relative;
+        width: 29vw;
+        height: 32vw;
+        margin-top: 3.5vw;
+        margin-right: 3.2vw;
+        border-radius: 5px;
+        box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        img {
+            width: 50%;
+        }
+        .add-device-btn-txt {
+            font-size: 1.3rem;
+            position: absolute;
+            bottom: 2vw;
+            width: 100%;
+            .add-device-btn-txt2 {
+                color: #595959;
+                text-align: center;
+            }
+        }
+    }
+    ion-content .scroll-content {
+        overflow: hidden;
+    }
+    .fixSortable {
+        transform: none !important;
+    }
+}

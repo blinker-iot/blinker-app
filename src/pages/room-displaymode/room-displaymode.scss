@@ -1,0 +1,25 @@
+page-room-displaymode {
+    .mode-box {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        .item {
+            filter: grayscale(100%);
+            padding: 10px;
+            color: #969696;
+            font-size: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            i{
+                font-size: 18px;
+                margin: 10px 0;
+            }
+        }
+        .selected {
+            filter: grayscale(0%) !important;
+            color: #389BEE;
+        }
+    }
+}

@@ -1,0 +1,194 @@
+page-layout2-timer {
+    .scroll-content {
+        background-color: #F5F5F5 !important;
+    }
+    [item] {
+        width: 100%;
+        background-color: #fff;
+    }
+    .btn-gounp {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #979797;
+        [btn] {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin: 0 10px;
+            .icon {
+                margin-bottom: 5px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 25px;
+                height: 45px;
+                width: 45px;
+                border: 1px solid #979797;
+                border-radius: 50%;
+                box-shadow: 3px 0 10px #cacaca;
+            }
+        }
+        .selected {
+            .icon {
+                background-color: #3C3C3C;
+                color: #fff;
+            }
+        }
+    }
+
+    // .add-btn {
+    //     z-index: 9;
+    //     position: absolute;
+    //     bottom: 30px;
+    //     left: 50%;
+    //     margin-left: -32.5px;
+    //     display: flex;
+    //     justify-content: center;
+    //     align-items: center;
+    //     font-size: 45px;
+    //     width: 65px;
+    //     height: 65px;
+    //     border-radius: 50%;
+    //     background-color: #389BEE;
+    //     color: #fff;
+    // }
+    // .timing-tab {
+    //     height: 85%;
+    //     ion-scroll {
+    //         height: 100%;
+    //     }
+    //     [height20] {
+    //         height: 20vh;
+    //     }
+    // }
+    // .textcenter {
+    //     text-align: center;
+    // }
+    // ion-toggle {
+    //     width: 44px !important;
+    //     height: 25px !important;
+    //     .toggle-inner {
+    //         width: 21px !important;
+    //         height: 21px !important;
+    //         box-shadow: 0 0px 5px rgba(0, 0, 0, 0.3) !important;
+    //         ;
+    //     }
+    // }
+    // .timebox {
+    //     margin-top: 3px;
+    //     padding: 0 15px;
+    //     display: flex;
+    //     justify-content: space-between;
+    //     flex-direction: row;
+    //     align-items: center;
+    //     font-size: 20px;
+    //     height: 50px;
+    // }
+    // .countdown-tab {
+    //     display: flex; // justify-content: center;
+    //     flex-direction: column;
+    //     align-items: center;
+    //     .settingbox {
+    //         width: 100%;
+    //         .title{
+    //             margin: 8px 15px;
+    //         }
+    //         .timebox {
+    //             margin-top: 3px;
+    //             padding: 0 15px;
+    //             display: flex;
+    //             justify-content: space-between;
+    //             align-items: center;
+    //             font-size: 30px;
+    //             height: 50px;
+    //             background-color: #FFF;
+    //         }
+    //         .arrow {
+    //             color: #D8D8D8;
+    //         }
+    //     }
+    //     .countdownbox {
+    //         height: 210px;
+    //         display: flex;
+    //         flex-direction: column;
+    //         align-items: center;
+    //         justify-content: center;
+    //     }
+    //     [clock] {
+    //         font-size: 45px;
+    //     }
+    //     [action] {
+    //         font-size: 15px;
+    //     }
+    //     .btns {
+    //         display: flex;
+    //         align-items: center;
+    //         justify-content: center;
+    //         margin-top: 20px;
+    //         [btn] {
+    //             display: flex;
+    //             justify-content: center;
+    //             align-items: center;
+    //             font-size: 18px;
+    //             width: 70px;
+    //             height: 70px;
+    //             border-radius: 50%;
+    //             color: #fff;
+    //             transition: all 0.3s;
+    //         }
+    //         .start {
+    //             background-color: #1AA717;
+    //         }
+    //         .pause {
+    //             background-color: #FBA613;
+    //             margin-left: 75px;
+    //         }
+    //         .continue {
+    //             background-color: #389BEE;
+    //             margin-left: 75px;
+    //         }
+    //         .cancel {
+    //             background-color: #D61313;
+    //             margin-right: 75px;
+    //         }
+    //     }
+    //     .start-btn{
+    //         margin-top:30px;
+    //     }
+    //     .arrow {
+    //         color: #D8D8D8;
+    //     }
+    // }
+    // .loop-tab {
+    //     display: flex;
+    //     flex-direction: column;
+    //     align-items: center;
+    //     .loopbox {
+    //         display: flex;
+    //         flex-direction: row;
+    //         align-items: center;
+    //         justify-content: center;
+    //         height: 80px;
+    //         .loopitem {
+    //             display: flex;
+    //             flex-direction: column;
+    //             align-items: center;
+    //             justify-content: center;
+    //             [clock] {
+    //                 font-size: 30px;
+    //             }
+    //             [action] {
+    //                 font-size: 15px;
+    //             }
+    //         }
+    //     }
+    //     .exchange {
+    //         font-size: 25px;
+    //         margin: 20px;
+    //     }
+    // }
+}

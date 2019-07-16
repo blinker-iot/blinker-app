@@ -1,0 +1,32 @@
+﻿<ion-header>
+  <ion-navbar>
+    <ion-title>
+      更改头像
+    </ion-title>
+    <ion-buttons end (click)="rotate()">
+      <button ion-button icon-only>
+        <ion-icon name='refresh'></ion-icon>
+      </button>
+    </ion-buttons>
+  </ion-navbar>
+</ion-header>
+
+<!-- <ion-content> -->
+<div *ngIf="pictureURI" imgbox>
+  <img src={{pictureURI}} #image>
+</div>
+<!-- </ion-content> -->
+<ion-footer>
+  <ion-toolbar>
+    <ion-buttons>
+      <button ion-button (click)="cancel()">
+        取消
+      </button>
+    </ion-buttons>
+    <ion-buttons end>
+      <button ion-button end (click)="confirm()">
+        确认
+      </button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-footer>
