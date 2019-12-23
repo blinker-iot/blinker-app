@@ -1,6 +1,9 @@
 # 点灯.blinker  
 版本：2.2.x  
-框架：ionic4、angular8、cordova8
+框架：ionic4、angular8、cordova8  
+
+## Apk下载  
+https://github.com/blinker-iot/app-release/releases  
 
 ## 环境配置  
 [nodejs LTS版本](https://nodejs.org/en/)  
