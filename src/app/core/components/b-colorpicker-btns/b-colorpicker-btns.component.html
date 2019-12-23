@@ -1,0 +1,7 @@
+<div class="btns">
+  <ng-container *ngFor="let color of colorList">
+    <div class="color-btn" [ngStyle]="{'background-color': color}" (click)="selectColor(color)">
+      <div [ngClass]="{'selected': selected==color}"></div>
+    </div>
+  </ng-container>
+</div>

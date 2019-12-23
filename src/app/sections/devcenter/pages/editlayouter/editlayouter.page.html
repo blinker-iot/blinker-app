@@ -1,0 +1,33 @@
+<ion-header class="dark">
+  <ion-toolbar color="transparent">
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>界面编辑</ion-title>
+    <ion-buttons slot="end">
+      <!-- 导入配置 -->
+      <!-- <ion-button (click)="gotoIeConfig()" *ngIf="!editMode"> -->
+      <ion-button [routerLink]="[ '/devcenter/prodevice/editlayouter/ieconfig', deviceType ]" *ngIf="!editMode">
+        <i class="fal fa-upload"></i>
+      </ion-button>
+      <!-- 清空布局器 -->
+      <ion-button (click)="cleanWidgets()" *ngIf="editMode">
+        <i class="fal fa-trash-alt"></i>
+      </ion-button>
+      <!-- 背景设置 -->
+      <ion-button (click)="editBackground()" *ngIf="editMode">
+        <i class="fal fa-file-image"></i>
+      </ion-button>
+      <!-- 编辑/保存 -->
+      <ion-button (click)="unlock()" *ngIf="!editMode">
+        <i class="fal fa-edit"></i>
+      </ion-button>
+      <ion-button (click)="lock()" *ngIf="editMode">
+        <i class="fal fa-lock"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content fullscreen=true scrollY=false>
+  <layouter2 *ngIf="showLayouter" [device]="device" [layouterData]="layouterData"></layouter2>
+</ion-content>

@@ -1,0 +1,18 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{docTitle}}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="close()">
+        <i class="fal fa-times"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- <div [innerHTML]="docContent | wrap"></div> -->
+  <div markdown [innerHTML]="docContent | markdown"></div>
+</ion-content>

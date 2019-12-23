@@ -1,0 +1,51 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>开发中心</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content scrollY=false>
+  <div class="userinfo">
+    <div class="box">
+      <div class="item">
+        <span *ngIf="userLevel==0">Diy开发者</span>
+        <span *ngIf="userLevel==1">认证开发者</span>
+        <span *ngIf="userLevel==99">管理员</span>
+      </div>
+      <div class="item">
+        专属设备： {{proDeviceNum}}/{{proDeviceMaxNum}}
+      </div>
+      <div class="item">
+        数据存储： {{dataKeyNum}}/{{dataKeyMaxNum}}
+      </div>
+    </div>
+  </div>
+  <div class="btnbox">
+    <div class="btn" [ngClass]="{'selected': selectedTab==0}" (click)="selectTab(0)">
+      <span class="iconfont icon-data"></span>
+      <div>数据管理</div>
+    </div>
+    <div class="btn" [ngClass]="{'selected': selectedTab==1}" (click)="selectTab(1)">
+      <span class="iconfont icon-device"></span>
+      <div>专属设备</div>
+    </div>
+    <div class="btn" [ngClass]="{'selected': selectedTab==2}" (click)="selectTab(2)">
+      <span class="iconfont icon-dev"></span>
+      <div>开发工具</div>
+    </div>
+  </div>
+  <div class="list">
+    <ng-container *ngIf="selectedTab==0">
+      <devcenter-datakey></devcenter-datakey>
+    </ng-container>
+    <ng-container *ngIf="selectedTab==1">
+      <div textcenter-temp *ngIf="userLevel==0">仅限已认证开发者使用</div>
+      <devcenter-prodevice *ngIf="userLevel>0"></devcenter-prodevice>
+    </ng-container>
+    <ng-container *ngIf="selectedTab==2">
+      <devcenter-devtool></devcenter-devtool>
+    </ng-container>
+  </div>
+</ion-content>

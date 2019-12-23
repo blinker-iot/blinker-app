@@ -1,0 +1,51 @@
+.title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #444444;
+    margin-bottom: 0.7rem;
+}
+
+.item-box {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    .item {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #444444;
+        border: 1px solid #BEBEBE;
+        font-size: 0.8rem;
+        height: 2rem;
+        padding: 0 20px;
+    }
+    .active{
+        background-color: #389BEE;
+        color: #fff;
+        border: 1px solid #389BEE;
+    }
+}
+
+textarea {
+    width: 100%;
+    background-color: #F5F5F5;
+}
+
+.btnbox {
+    margin-top: 2rem;
+    width: 100%;
+    [fullbtn]{
+        border-radius: 5px;
+    }
+}
+
+.done-box{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    height: 50vh;
+    font-size: 0.8rem;
+    color: #444444;
+}

@@ -1,0 +1,31 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>EspTouch快捷配置</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div flex-box>
+    <div class="box">
+      1.确保设备已进入等待配置状态<br>
+      2.输入WiFi密码，并点击开始配置
+    </div>
+    <div class="box mt10">
+      <div style="color:rgb(255, 95, 95);" *ngIf="is5G">该设备暂不支持5G WiFi</div>
+      <div class="item">
+        <div class="title">WiFi 名称</div>
+        <input type="text" [(ngModel)]="myssid" disabled>
+      </div>
+      <div class="item">
+        <div class="title">WiFi 密码</div>
+        <input class="password" type="{{pwshow?'text':'password'}}" [(ngModel)]="mypasswd">
+        <i class="iconfont" [ngClass]="{'icon-eye-open': pwshow,'icon-eye-close':!pwshow}" (click)="showPassword()"></i>
+      </div>
+      <button fullbtn (click)="startConfig()">开始配置</button>
+      <div text-center (click)="openWifiSetting()">选择其他WiFi</div>
+    </div>
+  </div>
+</ion-content>

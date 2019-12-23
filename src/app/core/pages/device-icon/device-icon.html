@@ -1,0 +1,16 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>图标设置</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="img-box">
+    <div class="img-item" *ngFor="let filename of imageList">
+      <img src="assets/img/devices/icon/{{filename}}.png" (click)="select(filename)">
+    </div>
+  </div>
+</ion-content>

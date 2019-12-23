@@ -1,0 +1,16 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>导入导出配置</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content padding>
+  <textarea class="configzone" [(ngModel)]="configData"></textarea>
+  <div class="btnbox">
+    <div fullbtn class="btn40" (click)="importData()">导入配置</div>
+    <div fullbtn class="btn40" (click)="exportData()">导出配置</div>
+  </div>
+</ion-content>

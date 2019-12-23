@@ -1,0 +1,50 @@
+.bg {
+    height: 100vh;
+    width: 100vw;
+    background-color: #00000033;
+}
+
+.popup {
+    position: absolute;
+    bottom: 0;
+    height: 45vh;
+    width: 100%;
+    background-color: #FFF;
+    .scroll {
+        overflow-x: scroll;
+        height: 100%;
+        .item-box {
+            display: flex;
+            align-content: center;
+            flex-direction: row;
+            height: 100%;
+            padding-left: 4vw;
+            .item {
+                position: relative;
+                margin: auto 2vw auto 0;
+                .thumbnail {
+                    width: 35vw;
+                }
+                .selected {
+                    position: absolute;
+                    top: 5px;
+                    left: 5px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 50%;
+                    width: 5.5vw;
+                    height: 5.5vw;
+                    background-color: #389BEE;
+                    ion-icon {
+                        color: #fff;
+                        font-size: 5.5vw;
+                    }
+                }
+            }
+            .item.end{
+                padding-right: 4vw;
+            }
+        }
+    }
+}

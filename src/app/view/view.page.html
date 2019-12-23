@@ -1,0 +1,6 @@
+<ion-split-pane contentId="menu-content">
+  <ion-menu contentId="menu-content" type="overlay" swipeGesture="{{menuSwipeEnable}}" (ionDidOpen)="menuDidOpen()" (ionDidClose)="menuDidClose()">
+    <blinker-menu></blinker-menu>
+  </ion-menu>
+  <ion-router-outlet id="menu-content"></ion-router-outlet>
+</ion-split-pane>

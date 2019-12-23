@@ -1,0 +1,35 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>添加设备动作</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="delete()">
+        <i class="fal fa-trash-alt"></i>
+      </ion-button>
+      <ion-button (click)="save()">
+        <i class="fal fa-check-circle" [ngClass]="{'disable': !selectedAction}"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <div class="selectBox">
+    <div class="selectTitle">选择要控制的设备</div>
+    <deviceblock-list2 (update)="updateSelectedDevice($event)"></deviceblock-list2>
+  </div>
+  <div class="selectBox" *ngIf="selectedDevice">
+    <div class="selectTitle">选择执行的动作</div>
+    <widget-buttonlist
+      *ngIf="selectedDevice.deviceType=='DiyArduino'||selectedDevice.deviceType=='DiyLinux'"
+      [device]="selectedDevice" (update)="updateSelectedAction($event)">
+    </widget-buttonlist>
+    <ng-template #elseBlock>
+      <div>
+        非DIY设备
+      </div>
+    </ng-template>
+
+  </div>
+</ion-content>

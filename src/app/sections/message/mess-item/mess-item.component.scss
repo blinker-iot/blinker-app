@@ -1,0 +1,76 @@
+.messitem {
+    display: flex;
+    align-items: center;
+    padding: 3px 0;
+    border-bottom: 1px solid #eeeeee;
+    font-size: 13px;
+    color: #999999;
+    position: relative;
+
+    .imgbox {
+        margin-right: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-shrink: 0;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        overflow: hidden;
+        background-color: #eee;
+
+        img {
+            height: 60px;
+            width: 60px;
+        }
+    }
+
+    .contentbox {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        position: relative;
+        max-width: 80%;
+
+        .titlebox {
+            width: 100%;
+            display: flex;
+            // justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            position: relative;
+
+            .title {
+                color: #444444;
+                font-size: 15px;
+                font-weight: 500;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+                width: 60%;
+            }
+
+            .date{
+               position: absolute;
+               right: 0; 
+            }
+        }
+
+        .content {
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            width: 60vw;
+        }
+    }
+
+    .delbtn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 21px;
+        color: red;
+        padding:15px 15px 15px 0;
+    }
+}

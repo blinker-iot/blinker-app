@@ -1,0 +1,57 @@
+.foundbox {
+    padding: 0 15px;
+
+    .title {
+        padding: 15px 0;
+        text-align: center;
+    }
+}
+
+[item] {
+    position: relative;
+    background: #FFF;
+    height: 80px;
+    width: 100%;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+    padding: 0 15px;
+    margin: 0 0 15px 0;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-direction: row;
+
+    .mess {
+        position: absolute;
+        left: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+
+        .text1 {
+            font-size: 16px;
+
+            span {
+                margin-left: 5px;
+                font-size: 13px;
+            }
+        }
+
+        .text2 {
+            font-size: 13px;
+            margin-top: 8px;
+            color: #898989;
+        }
+    }
+
+    .rssi {
+        font-size: 13px;
+        color: #389BEE;
+    }
+
+    .add-btn {
+        margin-left: 20px;
+        font-size: 30px;
+        color: #389BEE;
+    }
+}

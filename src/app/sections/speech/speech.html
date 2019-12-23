@@ -1,0 +1,21 @@
+<div class="speech-lay animated faster" [ngClass]="{'fadeInUp': !closeAnimate,'fadeOutDown':closeAnimate}">
+  <div *ngIf="!showSpeechCmdList" class="speech-text">{{speechContent}}</div>
+  <div *ngIf="!showSpeechCmdList" class="speech-svg">
+    <img src="assets/svg/speech.svg" />
+  </div>
+  <div *ngIf="showSpeechCmdList" class="speech-cmdlist animated fadeIn">
+    <div class="speech-cmd" *ngFor="let cmd of speechTextList">
+      {{cmd}}
+    </div>
+  </div>
+  <button class="speech-button speech-help" ion-button color="light" outline (click)="help()">
+    <ion-icon name="help"></ion-icon>
+  </button>
+  <button class="speech-button speech-button-center" ion-button color="light" outline (click)="start()">
+    <ion-icon name="mic"></ion-icon>
+  </button>
+  <button class="speech-button speech-close" ion-button color="light" outline (click)="close()">
+    <ion-icon name="close"></ion-icon>
+  </button>
+</div>
+<!-- <audio autoplay="autoplay" #speechAudio></audio> -->

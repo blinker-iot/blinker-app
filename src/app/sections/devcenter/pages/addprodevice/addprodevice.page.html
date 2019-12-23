@@ -1,0 +1,52 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>新建专属设备</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <form class="form-box" (ngSubmit)="add()" #formBox="ngForm">
+    <div class="input-box">
+      <div class="title">
+        提供者
+      </div>
+      <input disabled value="{{username}}">
+    </div>
+    <div class="input-box">
+      <div class="title">
+        设备类型
+      </div>
+      <select>
+        <option value="mqtt">WiFi (MQTT)</option>
+        <!-- <option value="mqtt">WiFi</option>
+        <option value="mqtt">WiFi</option> -->
+      </select>
+    </div>
+    <div class="input-box">
+      <div class="title">
+        设备图标
+      </div>
+      <div class="deviceimg" (click)="selectIcon()">
+        <img src="assets/img/devices/icon/{{image}}" onError="this.src='assets/img/devices/unknown.png'" />
+        <div class="uploadimg">选择图标</div>
+      </div>
+    </div>
+    <div class="input-box">
+      <div class="title">
+        设备名称
+      </div>
+      <input [(ngModel)]="customName" name="customName" (ngModelChange)="checkCustomName($event)">
+    </div>
+    <!-- <div class="input-box">
+      <div class="title">
+        设备介绍
+      </div>
+      <textarea [(ngModel)]="description" name="description"></textarea>
+    </div> -->
+
+    <button type="submit" [disabled]="btnDisabled" fullbtn>确认</button>
+  </form>
+</ion-content>

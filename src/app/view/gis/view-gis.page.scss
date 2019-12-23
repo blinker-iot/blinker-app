@@ -1,0 +1,110 @@
+ion-header {
+    ion-toolbar {
+        ion-buttons {
+            img {
+                height: 30px;
+            }
+        }
+        .searchbox {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            .search {
+                display: flex;
+                flex-direction: row;
+                justify-content: flex-start;
+                align-items: center;
+                background-color: #F0F0F0;
+                color: #BBBBBB;
+                font-size: 12px;
+                height: 30px;
+                border-radius: 15px;
+                padding-left: 10px;
+                width: 90%;
+                i {
+                    margin-right: 5px;
+                    line-height: 15px;
+                }
+                .text {
+                    color: #BBBBBB
+                }
+            }
+        }
+    }
+}
+
+.mapbox {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 0;
+    height: 100vh;
+    width: 100vw;
+    .mapview {
+        width: 300%;
+        height: 300%;
+        position: absolute;
+        left: -100%;
+        top: -100%;
+    }
+}
+
+.sidebar {
+    position: absolute;
+    top: 80px;
+    right: 15px;
+    z-index: 999;
+    background-color: #FFF;
+    width: 42px;
+    height: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    border-radius: 5px;
+    .item {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        font-size: 10px;
+        height: 100%;
+        color: #616161;
+    }
+    .iconfont {
+        font-size: 28px;
+        color: #444444;
+    }
+    .h-line {
+        width: 100%;
+        height: 1px;
+        background-color: #CCCCCC;
+    }
+    .waiting {
+        -webkit-animation: refresh 1s linear infinite;
+    }
+    @-webkit-keyframes refresh {
+        0% {
+            -webkit-transform: rotate(0deg);
+        }
+        25% {
+            -webkit-transform: rotate(90deg);
+        }
+        50% {
+            -webkit-transform: rotate(180deg);
+        }
+        75% {
+            -webkit-transform: rotate(270deg);
+        }
+        100% {
+            -webkit-transform: rotate(360deg);
+        }
+    }
+}
+
+map-info-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 999;
+}

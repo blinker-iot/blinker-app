@@ -1,0 +1,44 @@
+<ion-header>
+  <ion-toolbar #navbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>添加场景</ion-title>
+    <!-- <ion-buttons end (click)="save()">
+      <button [ngClass]="{'disable':scene.actions.length == 0}" ion-button>
+        保存
+      </button>
+    </ion-buttons> -->
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <div class="cardbox">
+    <div class="card">
+      <div class="ico" *ngIf="sceneDataDict[sceneName]">
+        <i class="{{sceneDataDict[sceneName].ico}}"></i>
+      </div>
+      <div>{{sceneName}}</div>
+      <div class="btnbox">
+        <div class="btn" (click)="changeSceneIcon()">修改图标</div>
+        <div class="btn" (click)="changeSceneName()">修改名称</div>
+      </div>
+    </div>
+  </div>
+  <div class="textbox">当按下按键时，将执行以下动作</div>
+  <div class="scrollbox">
+    <ng-container *ngFor="let action of acts;index as i">
+      <div class="item">
+        <img src="assets/img/devices/icon/{{deviceDataDict[action.deviceName].config.image}}">
+        <div class="namebox">
+          <div class="name">{{deviceDataDict[action.deviceName].config.customName}}</div>
+          <div class="act">{{action.text}}</div>
+        </div>
+        <div class="btn" (click)="delAct(i)">
+          <ion-icon name="md-close"></ion-icon>
+        </div>
+      </div>
+    </ng-container>
+    <div class="hspace"></div>
+  </div>
+  <div class="addbtn" (click)="addAct()">+ 添加设备动作</div>
+</ion-content>

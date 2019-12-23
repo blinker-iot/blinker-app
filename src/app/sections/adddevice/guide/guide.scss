@@ -1,0 +1,60 @@
+[item] {
+  background-color: #fff;
+  padding: 15px;
+  font-size: 15px;
+}
+
+.device-item {
+  height: 20vh;
+  display: flex;
+
+  img {
+    height: 100%;
+  }
+  .description {
+    margin-left: 10px;
+    display: flex;
+    align-items: center;
+    ::ng-deep p {
+      color: #595959;
+    }
+  }
+}
+
+.text-item {
+  margin-top: 10px;
+}
+
+.btnbox {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  font-size: 18px;
+  color: #fff;
+
+  .btn {
+    background-color: #389bee;
+    height: 50px;
+    width: 45%;
+    border-radius: 5px;
+
+    .btninner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      i {
+        margin-right: 5px;
+      }
+    }
+  }
+
+  .onebtn {
+    width: 100%;
+  }
+}

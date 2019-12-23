@@ -1,0 +1,66 @@
+.speech-lay {
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 99;
+    // background: rgba(0, 0, 0, 0.9);
+    background: rgb(0, 0, 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.speech-svg {
+    width: 20%;
+}
+
+.speech-cmdlist {
+    width: 70vw;
+    height: 55vh;
+    margin-bottom: 60px;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    text-align: center;
+    .speech-cmd {
+        color: #b1b1b1;
+        font-size: 18px;
+        margin: 5px;
+    }
+}
+
+.speech-button {
+    position: absolute;
+    bottom: 60px;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    font-size: 35px;
+    padding: 0;
+    border: 1px solid #fff;
+    color: #fff;
+}
+
+.speech-button-center {
+    left: 50%;
+    transform: translate(-50%);
+}
+
+.speech-close {
+    right: 29px;
+}
+
+.speech-help {
+    left: 29px;
+}
+
+.speech-text {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translate(-50%);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 25px;
+}

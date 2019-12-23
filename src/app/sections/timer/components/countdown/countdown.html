@@ -1,0 +1,39 @@
+<div class="countdown-tab" *ngIf="loaded">
+  <div class="settingbox" *ngIf="!device.data.countdown">
+    <div class="title">选择执行动作</div>
+    <cmdlist [device]="device" (updateAct)="updateSelectedAction($event)"></cmdlist>
+    <div class="settingbox">
+      <div class="title">设定倒计时时间</div>
+      <b-timepicker [(time)]="timeInfo"></b-timepicker>
+    </div>
+    <div class="item-box">
+      <div item (click)="selectTime(1)">1分钟</div>
+      <div item (click)="selectTime(10)">10分钟</div>
+      <div item (click)="selectTime(30)">30分钟</div>
+      <div item (click)="selectTime(60)">60分钟</div>
+      <div item (click)="selectTime(90)">90分钟</div>
+      <div item (click)="selectTime(120)">120分钟</div>
+    </div>
+    <div class="settingbox">
+      <div class="btns start-btn">
+        <div *ngIf="!device.data.countdown.run" (click)="startCountdown()" btn class="start"
+          [ngClass]="{'disable':countdownData.act.length == 0}">开始</div>
+      </div>
+    </div>
+  </div>
+  <div class="countdown-tab" *ngIf="device.data.countdown">
+    <div class="paddingbox">
+      <div item class="countdownbox">
+        <div clock>{{(device.data.countdown.ttim-device.data.countdown.rtim) | minuteToTime }}</div>
+        <div text>倒计时结束后执行</div>
+        <div action>{{device.data.countdown.act | act2text}}</div>
+      </div>
+    </div>
+    <div class="btns">
+      <div (click)="cancelCountdown()" btn class="cancel animated fadeIn">取消</div>
+      <div *ngIf="device.data.countdown.run==1" (click)="pauseCountdown()" btn class="pause animated fadeIn">暂停</div>
+      <div *ngIf="device.data.countdown.run==0" (click)="continueCountdown()" btn class="continue animated fadeIn">继续
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,13 @@
+<div widget class="color-box">
+  <b-colorpicker-disc (colorChange)="colorChange($event)" (sendData)="sendData()" [enableWhite]="true"></b-colorpicker-disc>
+  <div class="brightness">
+    <i class="fal fa-minus"></i>
+    <b-range [value]="brightness" [min]="0" [max]="255" (sendData)="brightnessChange($event)"
+      [barcolor]="barcolor" [activebar]="false">
+    </b-range>
+    <i class="fal fa-plus"></i>
+  </div>
+  <div class="content">
+    <span>{{t0}}</span>
+  </div>
+</div>

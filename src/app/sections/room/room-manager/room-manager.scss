@@ -1,0 +1,92 @@
+.item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 10px 20px 10px 20px;
+    background-color: #FFF;
+    height: 8vh;
+    margin-top: 3px;
+    font-size: 15px;
+    position: relative;
+    .name {
+        position: absolute;
+        left: 20px;
+    }
+    .num {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #959595;
+        margin-right: 10px;
+    }
+    .arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 21px;
+        color: #959595;
+        img {
+            height: 2.5vh;
+        }
+    }
+}
+
+.hspace {
+    height: 16vh;
+}
+
+.addbtn {
+    border-top: 1px solid #d3d3d3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px 10px 20px;
+    background-color: #FFF;
+    color: #389BEE;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 8vh;
+    font-size: 15px;
+}
+
+.sortbox{
+    position: relative;
+}
+
+.item-edit {
+    position: relative;
+    justify-content: flex-start;
+    .delbtn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 21px;
+        color: red;
+    }
+    .name {
+        position: relative;
+    }
+    .handle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        right: 0;
+        padding: 0 20px;
+        height: 100%;
+        font-size: 21px;
+        color: #959595;
+        cursor: move;
+        cursor: -webkit-grabbing;
+    }
+}
+
+.schosen {
+    opacity: 0.4;
+}
+
+.sdrag {
+    opacity: 1;
+}

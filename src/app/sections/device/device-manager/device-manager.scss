@@ -1,0 +1,48 @@
+.device-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    background-color: #fff;
+    height: 11vh;
+    padding: 0 15px;
+    margin-bottom: 5px;
+
+    .item-img-box {
+        margin-right: 10px;
+        position: relative;
+        .item-img {
+            height: 9vh;
+        }
+        .mode {
+            position: absolute;
+            width: 14px !important;
+            height: 14px !important;
+            left: -8px;
+            top: 5px;
+        }
+    }
+    .name {
+        font-size: 14px;
+        color: #595959;
+    }
+    .mac {
+        margin-top: 3px;
+        font-size: 11px;
+        color: #959595;
+    }
+    .arrow {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        right: 15px;
+        height: 100%;
+        width: 10vw;
+        img{
+            height: 25%;
+        }
+    }
+}
+
+// }

@@ -1,0 +1,56 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>正式上线申请</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content whitebg>
+  <!-- 声明与协议 -->
+  <ng-container *ngIf="step==0">
+    <div class="box animated fadeIn">
+      <div class="title">
+        责任声明
+      </div>
+      <div class="text">点灯科技只提供设备接入服务和支持，由于设备是由开发者/企业开发、生产、销售，点灯科技无法对设备质量、可用性、可靠性进行保障，关于产品本身造成的一切后果均由开发者/企业承担。</div>
+      <div class="title">
+        点灯开发者使用协议
+      </div>
+      <!-- <div class="text" [innerHTML]="agreement | wrap"></div> -->
+      <div markdown [innerHTML]="agreement | markdown"></div>
+    </div>
+    <div class="btnbox">
+      <button fullbtn (click)="next()">同意协议</button>
+    </div>
+  </ng-container>
+  <!-- 开发者认证 -->
+  <ng-container *ngIf="step==1">
+    <div class="fullbox animated fadeIn">
+      <dev-authentication (confirm)="uploadAuthInfo()"></dev-authentication>
+    </div>
+  </ng-container>
+  <!-- 配置编辑 -->
+  <ng-container *ngIf="step==2">
+    <div class="animated fadeIn">
+      <dev-prodevice-info (confirm)="publicDevice()"></dev-prodevice-info>
+    </div>
+    <!-- <div class="btnbox">
+      <button fullbtn (click)="publicDevice()">提交上线申请</button>
+    </div> -->
+  </ng-container>
+
+  <ng-container *ngIf="step==3">
+    <div class="animated fadeIn publicdesc">
+      <div line>设备上线资料已提交</div>
+      <div line>点灯会在3个工作日内审核</div>
+      <div line>审核通过后，这个设备将可以在添加设备页找到</div>
+    </div>
+    <div class="btnbox">
+      <button fullbtn (click)="pop()">返回</button>
+    </div>
+  </ng-container>
+
+
+</ion-content>

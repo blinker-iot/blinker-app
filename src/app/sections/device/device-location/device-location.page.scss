@@ -1,0 +1,43 @@
+.mapbox {
+    position: relative;
+    width: 100vw;
+    height: 80vh;
+}
+
+.bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 999;
+    border-top: 1px solid #c5c5c5;
+    background-color: #FFF;
+    // height: 25vh;
+    width: 100vw;
+    padding: 10px 5%;
+    .togbox{
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        span{
+            margin-right: 10px;
+            font-size: 13px;
+        }
+    }
+    .addr {
+        font-size: 13px;
+        .title{
+            margin-bottom: 5px;
+        }
+    }
+    .btnbox {
+        position: absolute;
+        bottom: 10px;
+        left: 0;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        .savebtn {
+            width: 90%;
+        }
+    }
+}

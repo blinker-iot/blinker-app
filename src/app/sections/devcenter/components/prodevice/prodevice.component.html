@@ -1,0 +1,19 @@
+<div class="devicelist">
+  <ng-container *ngFor="let prodevice of proDeviceList;trackBy:trackByFn">
+    <div device-card>
+      <div card-header>
+        <img src="assets/img/devices/icon/{{prodevice.image}}" onError="this.src='assets/img/devices/icon/unknown.png'" />
+        <div device-info>
+          <div name>{{prodevice.name}}</div>
+          <div id>{{prodevice.deviceType}}</div>
+        </div>
+      </div>
+      <div class="number">已激活：{{prodevice.quantity}}</div>
+      <div class="setting" (click)="edit(prodevice)">
+        <i class="iconfont icon-gear"></i>
+      </div>
+    </div>
+  </ng-container>
+  <div class="hspace"></div>
+</div>
+<div class="addbtn" *ngIf="showAddBtn" (click)="add()">+ 新建专属设备</div>

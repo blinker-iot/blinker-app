@@ -1,0 +1,61 @@
+<!-- <div class="infobox" *ngIf="prodevice">
+  <div class="imgbox" (click)="selectIcon()">
+    <img src="assets/img/devices/icon/{{prodevice.image}}" onError="this.src='assets/img/devices/unknown.png'" />
+    <div class="uploadimg">更改图标</div>
+  </div>
+  <div class="itembox">
+    <div class="item">提供者:<span>{{prodevice.vender}}</span></div>
+    <div class="item" (click)="changeName()">设备名:<span>{{prodevice.name}}</span><i class="fal fa-pencil"></i>
+    </div>
+    <div class="item">
+      TypeKey: <span>{{deviceType}}</span>
+    </div>
+    <div class="item">
+      接入方式: <span *ngIf="prodevice.mode=='mqtt'">WiFi（MQTT）</span>
+    </div>
+  </div>
+</div> -->
+
+<form class="form-box" (ngSubmit)="upload()" #formBox="ngForm" *ngIf="prodevice">
+  <div class="input-box">
+    <div class="title">
+      设备页组件
+    </div>
+    <div class="laybox">
+      <div class="layitem" [ngClass]="{'selected': prodevice.component=='Layouter2'}"
+        (click)="changeComponent('Layouter2')">Layouter2</div>
+      <div class="layitem" [ngClass]="{'selected': prodevice.component!='Layouter2'}"
+        (click)="changeComponent(deviceType)">自定义组件</div>
+    </div>
+    <input *ngIf="prodevice.component!='Layouter2'" [(ngModel)]="prodevice.component" name="component">
+  </div>
+  <div class="input-box">
+    <div class="title">
+      设备配网方式
+    </div>
+    <div class="laybox">
+      <div class="layitem" [ngClass]="{'selected': hasConfigurator('espTouch')}"
+        (click)="changeConfigurator('espTouch')">SmartConfig</div>
+      <div class="layitem" [ngClass]="{'selected': hasConfigurator('apConfig')}"
+        (click)="changeConfigurator('apConfig')">ApConfig</div>
+      <!-- <div class="layitem" [ngClass]="{'selected': prodevice.component!='Layouter2'}"
+        (click)="changeComponent(deviceType)"></div> -->
+    </div>
+  </div>
+  <div class="input-box">
+    <div class="title">
+      设备介绍 <span>| 对该设备的简要介绍</span>
+    </div>
+    <textarea class="description" [(ngModel)]="prodevice.description" name="description"></textarea>
+  </div>
+  <div class="input-box">
+    <div class="title">
+      接入引导 <span>| 设备添加页显示的引导信息</span>
+    </div>
+    <textarea [(ngModel)]="prodevice.guide" name="guide"></textarea>
+  </div>
+  <div class="btnbox">
+    <button type="submit" fullbtn>确认</button>
+  </div>
+
+</form>

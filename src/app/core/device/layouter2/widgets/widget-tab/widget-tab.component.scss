@@ -1,0 +1,28 @@
+.tabsbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+
+    .tab {
+        width: 18vw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        i{
+            color: #DDDDDD;
+            font-size: 42px;
+        }
+        .content{
+            margin-top: 5px;
+            color: #999999;
+            font-size: 0.8rem;
+        }
+    }
+
+    .tab:active {
+        border-radius: 4px;
+        transform: scale(0.95, 0.95);
+    }
+}

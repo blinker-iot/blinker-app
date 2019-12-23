@@ -1,0 +1,52 @@
+<form class="form-box" (ngSubmit)="upload()" #formBox="ngForm">
+  <div class="desc">这是您第一次发布设备，请提供以下信息，以进行产品备案</div>
+  <div class="input-box">
+    <div class="title">
+      认证类型
+    </div>
+    <select [(ngModel)]="type" name="type">
+      <option value="individual">个人</option>
+      <option value="enterprise">企业</option>
+    </select>
+  </div>
+
+  <div class="input-box">
+    <div class="title">
+      提供者名称
+    </div>
+    <input value="{{vender}}">
+  </div>
+
+  <div class="input-box">
+    <div class="title" *ngIf="type=='individual'">
+      开发者手持身份证照片
+    </div>
+    <div class="title" *ngIf="type=='enterprise'">
+      法人手持身份证照片
+    </div>
+    <div class="imgbox">
+      <div class="img" (click)="getPictureActionSheet(0)">
+        <div *ngIf="!img0" class="upload">点击选择图片</div>
+        <img *ngIf="img0" src="{{img0}}">
+      </div>
+      <div class="img g30">
+        <img src="assets/img/zjz.jpg">
+        <div class="example">拍照示例</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-box" *ngIf="type=='enterprise'">
+    <div class="title">
+      企业营业执照
+    </div>
+    <div class="img" (click)="getPictureActionSheet(1)">
+      <div *ngIf="!img1" class="upload">点击选择图片</div>
+      <img *ngIf="img1" src="{{img1}}">
+    </div>
+  </div>
+  <div class="btnbox">
+      <button type="submit" fullbtn>确认</button>
+  </div>
+
+</form>

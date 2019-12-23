@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="54px" height="54px" viewBox="0 0 54 54" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 49.3 (51167) - http://www.bohemiancoding.com/sketch -->
+    <title>菜单</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="环境监测" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
+        <g id="设备地图" transform="translate(-40.000000, -92.000000)" stroke="#4D4D4D" stroke-width="4">
+            <g id="菜单" transform="translate(40.000000, 92.000000)">
+                <g transform="translate(6.000000, 8.000000)">
+                    <path d="M0.636363636,1.90909091 L41.4431043,1.90909091" id="Line-2"></path>
+                    <path d="M0.636363636,18.4545455 L41.4431043,18.4545455" id="Line-2-Copy"></path>
+                    <path d="M0.636363636,35 L24.1818182,35" id="Line-2-Copy-2"></path>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

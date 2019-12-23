@@ -1,0 +1,76 @@
+.textbox {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: flex-start;
+    padding-left: 2vw;
+    height: 100%;
+    i {
+        font-size: 15px;
+        margin-right: 2vw;
+    }
+}
+
+
+.contentbox {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.title {
+    font-size: 1rem;
+    font-weight: bold;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.content {
+    font-size: 3vw;
+    color: #898989;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.textbox2 {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-direction: column;
+    padding-top: 2vw;
+    padding-left: 2vw;
+
+    i {
+        font-size: 1.5rem;
+        margin-right: 2vw;
+    }
+}
+
+.textbox3 {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: flex-start;
+    padding-left: 2vw;
+    height: 100%;
+
+    i {
+        font-size: 2.5rem;
+        margin-right: 2vw;
+    }
+}
+
+.textbox4 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    height: 100%;
+
+    i {
+        font-size: 4rem;
+    }
+}

@@ -1,0 +1,35 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>定时任务</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content scrollY="false">
+  <div class="box">
+    <div class="btn-gounp">
+      <div btn [routerLink]="[ '/timer',id,'timing' ]" routerLinkActive="active">
+        <div class="icon">
+          <i class="fal fa-clock"></i>
+        </div>
+        定时
+      </div>
+      <div btn [routerLink]="[ '/timer',id,'countdown' ]" routerLinkActive="active">
+        <div class="icon">
+          <i class="fal fa-stopwatch"></i>
+        </div>
+        倒计时
+      </div>
+      <div *ngIf="isDebug" btn [routerLink]="[ '/timer',id,'loop' ]" routerLinkActive="active">
+        <div class="icon">
+          <i class="fal fa-sync"></i>
+        </div>
+        循环
+      </div>
+    </div>
+    <div class="tc">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</ion-content>

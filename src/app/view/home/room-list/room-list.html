@@ -1,0 +1,12 @@
+<div class="room-bar" *ngIf="loaded">
+  <div class="room-btn">
+    <!-- <i class="fas fa-th-large"></i> -->
+    <img src="assets/img/icon/room.png" />
+  </div>
+  <div class="scrollbox">
+    <div class="room-box" #roombox>
+      <div class="room" (click)="selectRoom(-1)" [ngClass]="{'selected':roomid==-1}">所有设备</div>
+      <div class="room" *ngFor="let room of roomDataList;index as i" [ngClass]="{'selected':roomid==i}" (click)="selectRoom(i)">{{room}}</div>
+    </div>
+  </div>
+</div>

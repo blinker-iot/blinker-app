@@ -1,0 +1,11 @@
+<div class="box">
+    <div class="header">
+        <span>Monitor</span>
+        <i class="fal fa-sync" (click)="sync()"></i>
+        <i class="fal fa-trash-alt" (click)="clear()"></i>
+    </div>
+    <div class="display" (click)="showDebugModal()" #scrollContainer>
+        <div *ngIf="data" class="textzone" [innerHTML]="data | html">
+        </div>
+    </div>
+</div>

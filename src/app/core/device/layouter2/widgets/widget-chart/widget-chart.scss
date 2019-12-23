@@ -1,0 +1,72 @@
+.chartbox {
+    width: 100%;
+    height: 100%;
+    // display: flex;
+    // // align-items: center;
+    // justify-content: flex-start;
+    // flex-direction: column;
+}
+
+.nodata {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #666666;
+    margin-top: 2%;
+}
+
+.btnbox {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+
+    .item {
+        border: 1px solid #CCCCCC;
+        border-radius: 4px;
+        width: 16vw;
+        height: 22px;
+        margin-right: 3vw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        color: #666666;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .selected {
+        color: #fff;
+        background-color: #389BEE;
+        border: none;
+    }
+
+    .unselected {
+        background-color: #fff !important;
+    }
+}
+
+select {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    height: 22px;
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    font-size: 13px;
+    background-color: #fff0;
+}
+
+.chartzone {
+    flex-grow: 1;
+}

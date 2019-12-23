@@ -1,0 +1,13 @@
+<div class="padding" (click)="close()">
+</div>
+<div class="inputbox">
+  <div class="send-box">
+    <form class="send" (ngSubmit)="send()" #formBox="ngForm">
+      <!-- <textarea name="" id="" cols="30" rows="10"></textarea> -->
+      <input input-zone type="text" [(ngModel)]="sendmess" name="sendmess" autofocus #myInput>
+      <button class="btn" type="submit">
+        <i class="fal fa-arrow-up"></i>
+      </button>
+    </form>
+  </div>
+</div>

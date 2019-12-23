@@ -1,0 +1,11 @@
+.img-box {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.img-item {
+    width: 24vw;
+    height: 24vw;
+    margin: 0.5vw;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}

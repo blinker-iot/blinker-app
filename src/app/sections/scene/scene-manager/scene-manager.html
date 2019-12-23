@@ -1,0 +1,53 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>场景管理</ion-title>
+    <ion-buttons slot="end" (click)="switchMode()">
+      <ion-button *ngIf="editMode">
+        完成
+      </ion-button>
+      <ion-button *ngIf="!editMode">
+        编辑
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <ng-container *ngIf="loaded">
+    <ng-container *ngIf="!editMode">
+      <ng-container *ngFor="let sceneName of sceneDataList">
+        <div class="item" [routerLink]="[ '/scene-manager', sceneName ]">
+          <div class="ico" *ngIf="sceneDataDict[sceneName]">
+            <i class="{{sceneDataDict[sceneName].ico}}"></i>
+          </div>
+          <div class="name">{{sceneName}}</div>
+          <div class="arrow">
+            <img src="assets/img/icon/arrow.png">
+          </div>
+        </div>
+      </ng-container>
+      <div class="hspace"></div>
+      <div class="addbtn" (click)="addScene()">+ 新建场景</div>
+    </ng-container>
+    <ng-container *ngIf="editMode">
+      <div class="sortbox" #sortbox>
+        <ng-container *ngFor="let sceneName of sceneDataList">
+          <div class="item item-edit" data-id="{{sceneName}}">
+            <div class="delbtn" (click)="delSceneAlert(sceneName)">
+              <ion-icon name="remove-circle"></ion-icon>
+            </div>
+            <div class="ico" *ngIf="sceneDataDict[sceneName]">
+              <i class="{{sceneDataDict[sceneName].ico}}"></i>
+            </div>
+            <div class="name">{{sceneName}}</div>
+            <div class="handle">
+              <ion-icon name="menu"></ion-icon>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </ng-container>
+  </ng-container>
+</ion-content>

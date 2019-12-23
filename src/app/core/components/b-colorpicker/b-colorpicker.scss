@@ -1,0 +1,81 @@
+.slider {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    min-height: 20px;
+    min-width: 100px;
+    padding: 0 10px;
+
+    .bar {
+        width: 100%;
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.2);
+
+        // background: linear-gradient(to right, #ffa645, #fff9fb);
+        .activebar {
+            border-radius: 4px;
+            width: 0%;
+            height: 100%;
+            background: #FFFFFF;
+        }
+    }
+
+    .touch {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+    }
+
+    .knob {
+        position: absolute;
+        left: 0;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #FFF;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); // border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+}
+
+.colorpicker {
+    position: relative;
+    height: 100%;
+
+    canvas {
+        height: 100%;
+    }
+
+    .knob {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 40px;
+        height: 40px;
+        border-radius: 1.5em;
+        background: #FFF;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        transition: opacity 0.6s;
+        opacity: 0;
+    }
+
+    .pickerbox {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        top: 0;
+        width: 100%;
+        height: 100%;
+
+        .picker-inner {
+            width: 30%;
+            height: 30%;
+            border-radius: 50%;
+        }
+    }
+}

@@ -1,0 +1,11 @@
+<div class="infobox">
+  <ng-container *ngIf="device">
+    <div class="gotobtn" (click)="gotoDashboard()">
+      <div>查看详情</div>
+    </div>
+    <div class="name">{{device.config.customName}}</div>
+    <div class="id"><i class="fal fa-file-alt"></i> {{id}}</div>
+    <div class="gps"><i class="fal fa-map-marker-alt"></i> {{device.config.position.address}}</div>
+    <!-- <div class="state">{{device.data.state}}</div> -->
+  </ng-container>
+</div>

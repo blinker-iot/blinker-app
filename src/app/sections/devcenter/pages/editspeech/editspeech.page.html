@@ -1,0 +1,21 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>编辑语音配置</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <form class="form-box" (ngSubmit)="uploadSpeech()" #formBox="ngForm">
+    <div class="input-box">
+      <div class="title">
+        语音配置 <span>| 对App语音识别功能的配置</span>
+      </div>
+      <textarea [(ngModel)]="speechConfig" name="speech"></textarea>
+    </div>
+    <div class="btnbox">
+      <button type="submit" fullbtn>确认</button>
+    </div>
+  </form>
+</ion-content>

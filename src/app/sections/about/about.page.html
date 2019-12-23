@@ -1,0 +1,25 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>关于我们</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content padding>
+  <!-- logo -->
+  <div class="logo">
+    <img class="logo" src="{{LOGO}}">
+  </div>
+  <!-- 企业介绍 -->
+  <div class="text">
+    {{ABOUT_US}}
+  </div>
+  <!-- 联系电话 -->
+  <button class="telephone" fullbtn>
+    <a href="tel:{{TELEPHONE}}">
+      <i class="fal fa-phone-office"></i>
+      <span>联系客服</span>
+    </a>
+  </button>
+</ion-content>

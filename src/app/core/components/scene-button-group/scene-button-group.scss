@@ -1,0 +1,37 @@
+.scrollHeight {
+    height: 60px;
+    width: 100vw;
+    overflow-x: scroll;
+}
+
+.buttonbox {
+    padding: 0 15px;
+    display: flex;
+    flex-direction: row;
+    justify-items: flex-start;
+    align-items: center;
+    .wspace {
+        padding-left: 9px;
+        height: 60px;
+    }
+}
+
+scene-button {
+    width: 100px;
+    margin-right: 6px;
+}
+
+.icon {
+    color: #389BEE
+}
+
+.sschosen {
+    opacity: 0;
+}
+
+.ssdrag {
+    .scene-btn {
+        opacity: 1;
+        box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8);
+    }
+}

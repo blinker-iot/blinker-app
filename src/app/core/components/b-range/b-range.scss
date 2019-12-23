@@ -1,0 +1,85 @@
+.slider {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    min-height: 20px;
+    min-width: 100px;
+    padding: 0 10px;
+    .bar {
+        width: 100%;
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.2);
+        position: relative;
+        .activebar {
+            border-radius: 4px;
+            width: 0%;
+            height: 100%;
+            background: #FFFFFF;
+        }
+        .activebar2 {
+            border-radius: 4px;
+            width: 100%;
+            height: 100%;
+            background: #FFFFFF;
+            position: absolute;
+            right: 0;
+        }
+    }
+    .layer {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    .knob {
+        position: absolute;
+        left: 0;
+        top: calc(50% - 10px);
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #FFF;
+        box-shadow:0px 2px 4px 1px rgba(0,0,0,0.3);
+    }
+}
+
+.slider-y {
+    position: relative;
+    display: flex;
+    display: -webkit-flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    height: 100%;
+    min-width: 20px;
+    min-height: 50px;
+    padding: 10px 0;
+    .bar {
+        width: 5px;
+        height: 100%;
+        border-radius: 2.5px;
+    }
+    .bar-active {
+        position: absolute;
+        bottom: 0;
+        height: 0%;
+    }
+    .knob-box {
+        position: absolute;
+        height: 100%;
+        width: 20px;
+        left: 0;
+        .knob {
+            bottom: 0;
+        }
+    }
+    .touch {
+        width: 150%;
+        height: 100%;
+        position: absolute;
+        left: 0;
+    }
+}

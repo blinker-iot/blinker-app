@@ -1,0 +1,120 @@
+.box {
+    color: #777777;
+    padding: 0 15px;
+    .info {
+        font-size: 11px;
+        .gps {
+            margin-top: 2px;
+        }
+    }
+    .title {
+        font-size: 15px;
+        margin: 20px 0 10px 0;
+    }
+    .box1 {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #777777;
+        height: 120px;
+        margin: 30px 0;
+        .indexbox {
+            width: 50%;
+            .index {
+                color: #FF9944;
+                font-weight: 300;
+                font-size: 70px;
+            }
+        }
+        .list1 {
+            border-left: 1px solid rgb(230, 230, 230);
+            width: 50%;
+            padding-left: 5%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            .item {
+                margin-top: 10px;
+                width: 20vw;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+        }
+    }
+    .list2 {
+        color: #777777;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        .item {
+            margin-top: 10px;
+            width: 32%;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            img {
+                width: 25px;
+                margin-right: 5px;
+            }
+            .inner {
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+        }
+    }
+}
+
+.valuebox {
+    display: flex;
+    align-items: flex-end;
+    flex-direction: row;
+    .value {
+        font-size: 17px;
+        line-height: 17px;
+        color: #4D4D4D;
+        margin-right: 2px;
+    }
+    .unit {
+        font-size: 10px;
+    }
+}
+
+.name {
+    margin-top: 2px;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.namebox {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-end;
+    margin-top: 2px;
+    .name {
+        font-size: 10px;
+    }
+    .zh {
+        font-size: 8px;
+    }
+}
+
+.hline {
+    margin-top: 30px;
+    border-top: 1px solid rgb(230, 230, 230);
+}
+
+.chart {
+    height: 150px;
+}
+
+.statisbox {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}

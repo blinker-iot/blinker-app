@@ -1,65 +1,47 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="zh-cmn-Hans">
 
 <head>
-  <meta charset="UTF-8">
-  <title>blinker</title>
-  <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="format-detection" content="telephone=no">
-  <meta name="msapplication-tap-highlight" content="no">
+  <meta charset="utf-8"/>
+  <title>blinker App</title>
 
-  <!-- <link rel="icon" type="image/x-icon" href="assets/icon/favicon.ico"> -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#4e8ef7">
+  <base href="/"/>
 
-  <!-- add to homescreen for ios -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="format-detection" content="telephone=no"/>
+  <meta name="msapplication-tap-highlight" content="no"/>
 
-  <!-- cordova.js required for cordova apps -->
-  <script src="cordova.js"></script>
-
-  <!-- un-comment this code to enable service worker
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(() => console.log('service worker installed'))
-        .catch(err => console.error('Error', err));
-    }
-  </script>-->
-
-  <!-- code push -->
-  <!-- <meta http-equiv="Content-Security-Policy-Report-Only" content="default-src iotdev.clz.me blinker-iot.com *.iot-as-mqtt.cn-shanghai.aliyuncs.com
-  https://codepush.azurewebsites.net data: 'self' 'unsafe-eval' 'unsafe-inline';
-   style-src 'self' 'unsafe-inline'; 
-   media-src *;
-   img-src *;
-   font-src *" /> -->
-  <meta http-equiv="Content-Security-Policy" 
-  content="default-src https://codepush.azurewebsites.net https://iotdev.clz.me https://blinker.app wss://qwdizbyvdug.iot-as-mqtt.cn-shanghai.aliyuncs.com ws://*:81 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval'; style-src 'self' 'unsafe-inline';script-src 'self' 'unsafe-inline' 'unsafe-eval';media-src *" />
-  <link href="build/main.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="assets/icons/icon-72x72.png"/>
+  <!-- animate -->
+  <link rel="stylesheet" href="assets/css/animate.min.css">
   <!-- Font-awesome -->
-  <link href="assets/css/all.css" rel="stylesheet" />
-  <!-- echarts主题 -->
-  <script src="assets/theme/infographic.js"></script>
-
+  <link rel="stylesheet" href="assets/css/all.css"/>
+  <!-- blinker font -->
+  <link rel="stylesheet" href="assets/ownfonts/iconfont.css">
+  <!-- leaflet -->
+  <link rel="stylesheet" href="assets/lib/leaflet/leaflet.css"/>
+  <script src="assets/lib/leaflet/leaflet.js"></script>
+  <script src="assets/lib/leaflet/leaflet.ChineseTmsProviders.js"></script>
+  <link rel="stylesheet" href="assets/lib/leaflet/leaflet-routing-machine.css"/>
+  <script src="assets/lib/leaflet/leaflet-routing-machine.js"></script>
+  <link rel="stylesheet" href="assets/lib/leaflet/MarkerCluster.css"/>
+  <link rel="stylesheet" href="assets/lib/leaflet/MarkerCluster.Default.css"/>
+  <script src="assets/lib/leaflet/leaflet.markercluster.js"></script>
+  <script src="assets/lib/leaflet/heatmap.js"></script>
+  <script src="assets/lib/leaflet/leaflet-heatmap.js"></script>
+  <!-- loader.css -->
+  <link rel="stylesheet" type="text/css" href="assets/lib/loader.css/loaders.min.css">
+  <!-- add to homescreen for ios -->
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+  <!-- PWA support -->
+  <!-- <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1976d2"> -->
 </head>
 
 <body>
-
-  <!-- Ionic's root component and where the app will load -->
-  <ion-app></ion-app>
-
-  <!-- The polyfills js is generated during the build process -->
-  <script src="build/polyfills.js"></script>
-
-  <!-- The vendor js is generated during the build process
-       It contains all of the dependencies in node_modules -->
-  <script src="build/vendor.js"></script>
-
-  <!-- The main bundle js is generated during the build process -->
-  <script src="build/main.js"></script>
-
+  <app-root></app-root>
+  <noscript>Please enable JavaScript to continue using this application.</noscript>
 </body>
 
 </html>

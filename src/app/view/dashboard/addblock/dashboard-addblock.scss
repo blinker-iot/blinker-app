@@ -1,0 +1,86 @@
+page-dashboard-addblock {
+    .transparent {
+        height: 50%;
+    }
+    .show {
+        height: 50%;
+        background-color: #FAFAFA;
+        overflow-y: scroll;
+    }
+    .allBlocklist {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        .deviceBlocklist {
+            // position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100%;
+            height: 9.5vh;
+            padding-left: 15px;
+            border-bottom: 1px solid #E8E8E8;
+            .deviceInfo {
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 12vw;
+                height: 100%;
+                flex-shrink: 0;
+                img {
+                    margin-top: 5px;
+                    width: 7.5vh;
+                }
+                .name {
+                    font-size: 1.3vh;
+                    position: absolute;
+                    bottom: 5px;
+                    white-space: nowrap;
+                }
+            }
+            .scroll {
+                overflow-x: scroll;
+                overflow-y: hidden;
+                margin-left: 5vw;
+                height: 100%;
+            }
+            .blocklist {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                height: 100%;
+                .block {
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                    justify-content: flex-start;
+                    flex-direction: column;
+                    height: 100%;
+                    color: #3C3C3C;
+                    padding: 5px 10px;
+                    .ico {
+                        height: 6vh;
+                        width: 6vh;
+                        border: 1px solid #CBCBCB;
+                        border-radius: 3px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 3vh;
+                    }
+                    .name {
+                        position: absolute;
+                        bottom: 5px;
+                        font-size: 1.3vh;
+                        line-height: 1.3vh;
+                        white-space: nowrap;
+                    }
+                }
+                .wspace {
+                    padding: 1.5vw;
+                }
+            }
+        }
+    }
+}

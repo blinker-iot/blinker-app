@@ -1,0 +1,30 @@
+[text-center] {
+    margin-top: 30vh;
+    margin-bottom: 5vh;
+    color: 333;
+}
+
+.item-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.item {
+    width: 20vw;
+    height: 20vw;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-size: 0.8rem;
+    color: #999999;
+
+    i {
+        font-size: 1.5rem;
+        margin-bottom: 0.6rem;
+    }
+}

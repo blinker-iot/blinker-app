@@ -1,0 +1,102 @@
+<div class="translucent animated fadeIn faster">
+  <!-- DIY设备配置 -->
+  <ng-container *ngIf="isDevtool">
+    <!-- 发现设备 -->
+    <ng-container *ngIf="step==1">
+      <div class="title">发现设备中...</div>
+      <div class="line"></div>
+      <div class="loaderbox margin5">
+        <div class="loader-inner ball-scale-multiple">
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+      </div>
+      <div class="btn" (click)="cancel()">
+        取消
+      </div>
+    </ng-container>
+    <!-- 配置成功 -->
+    <ng-container *ngIf="step==2">
+      <div class="title">配置成功</div>
+      <div class="line"></div>
+      <div>MAC: <span>{{mac}}</span></div>
+      <div class="margin2">IP: <span>{{ip}}</span></div>
+      <div class="btn" (click)="cancel()">
+        返回
+      </div>
+    </ng-container>
+    <ng-container *ngIf="step==98">
+      <div class="iconbox fail animated fadeIn faster">
+        <i class="fal fa-times"></i>
+      </div>
+      <div class="title">没有找到设备，请重试</div>
+      <div class="btn" (click)="cancel()">
+        重试
+      </div>
+    </ng-container>
+    <ng-container *ngIf="step==99">
+      <div class="iconbox fail animated fadeIn faster">
+        <i class="fal fa-times"></i>
+      </div>
+      <div class="title">配置失败，请重试</div>
+      <div class="btn" (click)="cancel()">
+        重试
+      </div>
+    </ng-container>
+  </ng-container>
+  <!-- 专属设备配置 -->
+  <ng-container *ngIf="!isDevtool">
+    <!-- 配置中 -->
+    <ng-container *ngIf="step<4">
+      <div class="title">正在进行配置，请稍候···</div>
+      <div class="line"></div>
+      <div class="stepbox">
+        <div class="stepitem" *ngFor="let item of stepArray;index as i">
+          <div class="circle" [ngClass]="{'light': isDone(i)}">
+            <div class="loaderbox2" *ngIf="step==i+1">
+              <div class="loader-inner ball-scale-multiple">
+                <div></div>
+                <div></div>
+                <div></div>
+              </div>
+            </div>
+            {{i+1}}
+          </div>
+          {{item}}
+        </div>
+      </div>
+      <div class="btn" (click)="cancel()">取消</div>
+    </ng-container>
+    <!-- 配置成功 -->
+    <ng-container *ngIf="step==4">
+      <div class="iconbox done animated fadeIn faster">
+        <i class="fal fa-check"></i>
+      </div>
+      <div class="title">配置成功</div>
+      <div class="btn" (click)="gotoHome()">
+        开始使用设备
+      </div>
+    </ng-container>
+    <!-- 没有找到设备 -->
+    <ng-container *ngIf="step==98">
+      <div class="iconbox fail animated fadeIn faster">
+        <i class="fal fa-times"></i>
+      </div>
+      <div class="title">没有找到设备，请重试</div>
+      <div class="btn" (click)="cancel()">
+        重试
+      </div>
+    </ng-container>
+    <!-- 配置失败 -->
+    <ng-container *ngIf="step==99">
+      <div class="iconbox fail animated fadeIn faster">
+        <i class="fal fa-times"></i>
+      </div>
+      <div class="title">配置失败，请重试</div>
+      <div class="btn" (click)="cancel()">
+        重试
+      </div>
+    </ng-container>
+  </ng-container>
+</div>

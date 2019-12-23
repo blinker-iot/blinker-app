@@ -1,0 +1,53 @@
+[updatebox] {
+    font-size: 13px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    margin-top: 15vh;
+    font-size: 14px;
+
+    img {
+        width: 21%;
+    }
+
+    [ver] {
+        color: #595959;
+        margin-top: 3vh;
+    }
+
+    [ver2] {
+        color: #FBA613;
+        margin-top: 2vh;
+    }
+
+    [des-title] {
+        font-size: 13px;
+        color: #959595;
+        margin-top: 5vh;
+        margin-left: 10px;
+        align-self: flex-start;
+    }
+
+    [des] {
+        font-size: 13px;
+        color: #959595;
+        margin-top: 1vh;
+        margin-left: 10px;
+        align-self: flex-start;
+        line-height: 16px;
+    }
+
+    [btn] {
+        width: 95%;
+        height: 40px;
+        border-radius: 20px;
+        border: solid 1px #DDDDDD;
+        position: absolute;
+        bottom: 10vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+}

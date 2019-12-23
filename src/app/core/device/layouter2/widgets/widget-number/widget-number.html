@@ -1,0 +1,18 @@
+<div widget>
+  <div class="numbox" *ngIf="lstyle==0">
+    <i class="{{ico}}" [ngStyle]="{'color':color}"></i>
+    <div class="valuebox" *ngIf="value||value==0" [ngStyle]="{'color':color,'transform':fontScale}">
+      <span class="value">{{value}}</span>
+      <span class="unit">{{unit}}</span>
+    </div>
+    <div class="content" overflow>{{t0}}</div>
+  </div>
+
+  <div class="numbox1" *ngIf="lstyle==1||lstyle==2">
+    <div class="progressBar" [ngClass]="{'progressBar2': lstyle==2}" #ProgressBar></div>
+    <div class="text-box" overflow [ngClass]="{'text-box2': lstyle==2}">
+      <div class="value" overflow [ngStyle]="{'color':color,'transform':fontScale}">{{value}} {{unit}}</div>
+      <div class="content" overflow>{{t0}}</div>
+    </div>
+  </div>
+</div>

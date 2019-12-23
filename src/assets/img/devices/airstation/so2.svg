@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="46px" height="46px" viewBox="0 0 46 46" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 49.3 (51167) - http://www.bohemiancoding.com/sketch -->
+    <title>Group 3</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="设备具体参数" transform="translate(-40.000000, -694.000000)">
+            <g id="Group-6" transform="translate(40.000000, 694.000000)">
+                <g id="Group-3" transform="translate(8.000000, 2.000000)">
+                    <path d="M20.2163323,18.6019788 L28.7445226,35.6583592 C29.4854903,37.1402947 28.8848173,38.9423138 27.4028818,39.6832816 C26.9863155,39.8915647 26.5269763,40 26.061241,40 L3.6382974,40 C1.98144315,40 0.638297398,38.6568542 0.638297398,37 C0.638297398,36.5342647 0.746732673,36.0749255 0.955015825,35.6583592 L9.48320606,18.6019788 C10.9651415,15.6381078 14.5691798,14.4367617 17.5330508,15.9186972 C18.6942152,16.4992794 19.6357501,17.4408143 20.2163323,18.6019788 Z" id="Combined-Shape" stroke="#979797" stroke-width="3"></path>
+                    <path d="M5.24590164,3.27868852 C9.99624708,5.0808626 12.5955969,8.87451343 13.0439511,14.659641" id="Path-2" stroke="#979797" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+                    <path d="M17.0491803,15.0304153 C17.9367465,7.76475184 20.5113441,3.84750959 24.7729732,3.27868852" id="Path-3" stroke="#979797" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+                    <circle id="Oval-4" fill="#979797" cx="12.4590164" cy="4.59016393" r="1"></circle>
+                    <circle id="Oval-4-Copy-2" fill="#979797" cx="17.0491803" cy="7.21311475" r="1"></circle>
+                    <circle id="Oval-4-Copy-3" fill="#979797" cx="21.6393443" cy="8.52459016" r="1"></circle>
+                    <circle id="Oval-4-Copy-4" fill="#979797" cx="24.2622951" cy="5.90163934" r="1"></circle>
+                    <circle id="Oval-4-Copy-5" fill="#979797" cx="20.9836066" cy="1.96721311" r="1"></circle>
+                    <circle id="Oval-4-Copy-6" fill="#979797" cx="9.18032787" cy="10.4918033" r="1"></circle>
+                    <circle id="Oval-4-Copy-7" fill="#979797" cx="5.24590164" cy="5.90163934" r="1"></circle>
+                    <circle id="Oval-4-Copy-8" fill="#979797" cx="7.21311475" cy="0.655737705" r="1"></circle>
+                    <circle id="Oval-4-Copy-9" fill="#979797" cx="16.3934426" cy="3.93442623" r="1"></circle>
+                    <circle id="Oval-4-Copy" fill="#979797" cx="15.0819672" cy="10.4918033" r="1.31147541"></circle>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -1,0 +1,36 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>设备发现</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <div *ngIf="!found">
+    <p text-center>
+      <img src="assets/svg/puff.svg" style="width:90%" />
+    </p>
+    <h3 text-center>搜索设备中</h3>
+  </div>
+  <div class="foundbox" *ngIf="found">
+    <div class="title">
+      发现以下设备
+    </div>
+    <div item *ngFor="let item of deviceTypeList" (click)="registerLocalDevice(item)">
+      <div class="mess">
+        <div class="text1" *ngIf="item.deviceName">
+          {{item.deviceName}}
+          <span *ngIf="item.registed">(已添加设备)</span>
+        </div>
+        <div class="text2" *ngIf="item.name">
+          {{item.name}}
+        </div>
+      </div>
+      <div class="rssi" *ngIf="this.mode=='ble'">{{item.rssi}}db</div>
+      <div class="add-btn">
+        <ion-icon name="ios-add-circle-outline"></ion-icon>
+      </div>
+    </div>
+  </div>
+</ion-content>

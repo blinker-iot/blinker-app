@@ -1,0 +1,28 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{device.config.customName}} 位置设置</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="mapbox" #mapbox>
+  </div>
+
+  <div class="bar" [ngStyle]="{'height': isDiyDevice?'30vh':'25vh'}">
+    <div class="togbox" *ngIf="isDiyDevice">
+      <span>位置分享</span>
+      <ion-toggle [(ngModel)]="publicMode" (ngModelChange)="changePublicMode()"></ion-toggle>
+    </div>
+    <div class="addr">
+      <div class="title">当前设定位置：</div>
+      <div>{{address}}</div>
+    </div>
+    <div class="btnbox">
+      <button [disabled]="btnDisabled" [ngStyle]="{'opacity': btnDisabled?'0.5':'1'}" class="savebtn" fullbtn
+        (click)="saveGeolocation()">更新位置</button>
+    </div>
+  </div>
+</ion-content>

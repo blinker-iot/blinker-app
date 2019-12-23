@@ -1,0 +1,39 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>设备接入向导</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- 设备图片 -->
+  <div item class="device-item">
+    <img src="assets/img/devices/icon/{{image}}" onError="this.src='assets/img/devices/unknown.png'" />
+    <div class="description" markdown [innerHTML]="descriptionText | markdown"></div>
+  </div>
+  <!-- 使用说明 -->
+  <div item class="text-item" markdown [innerHTML]="guideText | markdown"></div>
+  <!-- 开始配置按钮 -->
+  <div class="btnbox">
+    <div class="btn" [ngClass]="{'onebtn': tools.length==1}" *ngFor="let tool of tools"
+      [routerLink]="[ '/adddevice', deviceType, tool ]">
+      <div class="btninner" *ngIf="tool=='bleConfig'">
+        <i class="fab fa-bluetooth-b"></i>蓝牙接入
+      </div>
+      <div class="btninner" *ngIf="tool=='KeyConfig'">
+        <i class="fal fa-wifi"></i>WiFi接入
+      </div>
+      <div class="btninner" *ngIf="tool=='espTouch'">
+        <i class="fal fa-cloud"></i>智能配网
+      </div>
+      <div class="btninner" *ngIf="tool=='apConfig'">
+        <i class="fal fa-cloud"></i>AP配网
+      </div>
+      <div class="btninner" *ngIf="tool=='qrScanner'">
+        <i class="fal fa-qrcode"></i>扫码配置
+      </div>
+    </div>
+  </div>
+</ion-content>

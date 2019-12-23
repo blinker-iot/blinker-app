@@ -1,0 +1,42 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>意见反馈</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+
+<ion-content whitebg padding>
+  <ng-container *ngIf="!isDone">
+    <div>
+      <div class="title">问题类型</div>
+      <div class="item-box">
+        <div class="item" (click)="select('设备使用')" [ngClass]="{'active': selectType==0}">设备使用</div>
+        <div class="item" (click)="select('用户账户')" [ngClass]="{'active': selectType==1}">用户账户</div>
+        <div class="item" (click)="select('其他问题')" [ngClass]="{'active': selectType==2}">其他问题</div>
+      </div>
+
+      <div class="title">问题描述</div>
+      <textarea rows="8" [(ngModel)]="content"></textarea>
+      <!-- <div class="upload-btn">上传图片</div> -->
+    </div>
+    <div class="btnbox" (click)="submit()">
+      <button fullbtn>提交</button>
+    </div>
+  </ng-container>
+  <ng-container *ngIf="isDone">
+    <div class="done-box">
+      <div style="margin-bottom: 15px">
+        感谢您的反馈
+      </div>
+      <div>
+        如有需要，我们将通过电话或短信与您取得联系
+      </div>
+    </div>
+    <div class="btnbox" (click)="back()">
+      <button fullbtn>返回</button>
+    </div>
+  </ng-container>
+</ion-content>

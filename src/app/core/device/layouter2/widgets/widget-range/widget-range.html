@@ -1,0 +1,11 @@
+<div widget>
+  <div class="rangebox" *ngIf="lstyle==0||lstyle==1">
+    <div class="textbox">
+      <span>{{t0}}</span>
+      <span>{{value}}</span>
+    </div>
+    <b-range [(value)]="value" [min]="min" [max]="max" (sendData)="sendData($event)"
+      [barcolor]="'#D8D8D8'" [activecolor]="color">
+    </b-range>
+  </div>
+</div>

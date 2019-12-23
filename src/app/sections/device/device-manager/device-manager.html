@@ -1,0 +1,28 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>设备管理</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <ng-container *ngIf="loaded">
+    <div class="device-item" *ngFor="let deviceName of deviceDataList" [routerLink]="['/device-manager',deviceName]">
+      <div class="item-img-box">
+        <img class="item-img" src="assets/img/devices/icon/{{deviceDataDict[deviceName].config.image}}"
+          onError="this.src='assets/img/devices/unknown.png'" />
+        <img *ngIf="deviceDataDict[deviceName].config.mode=='ble'" class="mode" src="assets/img/icon/ble.png" />
+        <img *ngIf="deviceDataDict[deviceName].config.mode=='net'" class="mode" src="assets/img/icon/wifi.png" />
+        <img *ngIf="deviceDataDict[deviceName].config.mode=='mqtt'" class="mode" src="assets/img/icon/mqtt.png" />
+      </div>
+      <div>
+        <div class="name">{{deviceDataDict[deviceName].config.customName}}</div>
+        <div class="mac">{{deviceName}}</div>
+      </div>
+      <div class="arrow">
+        <img src="assets/img/icon/arrow-gray.svg">
+      </div>
+    </div>
+  </ng-container>
+</ion-content>

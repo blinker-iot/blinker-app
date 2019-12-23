@@ -1,0 +1,13 @@
+<div class="chart-box">
+  <div class="canvas-box" #chartbox [ngStyle]="{'visibility': !showNoData?'visible':'hidden'}">
+    <canvas class="chart" #chartCanvas></canvas>
+  </div>
+  <div class="nodata" *ngIf="showNoData">
+    暂无数据
+  </div>
+  <select [(ngModel)]="quickCode" (ngModelChange)="changeQuickCode()">
+    <option value="1h">最近1小时</option>
+    <option value="1d">最近1天</option>
+    <option value="1w">最近1周</option>
+  </select>
+</div>

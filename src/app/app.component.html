@@ -1,0 +1,4 @@
+<ion-app [ngClass]="{'pwa': isPWA}">
+  <ion-router-outlet [swipeGesture]="swipeEnable"></ion-router-outlet>
+  <b-progressbar *ngIf="progressValue>0" [value]="progressValue"></b-progressbar>
+</ion-app>

@@ -1,0 +1,78 @@
+[unsupport] {
+    position: absolute;
+    left: 0;
+    top: 0px;
+    padding: 5px;
+}
+
+[height60] {
+    height: 60vh;
+}
+
+[right] {
+    float: right;
+}
+
+
+.desc {
+    font-size: 13px;
+    margin-bottom: 10vh;
+    color: #444444;
+}
+
+.card {
+    padding: 50px 15px 0 15px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 13px;
+    color: #666666;
+
+    .text {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    .loaddesc {
+        margin-top: 30px;
+        font-size: 13px;
+    }
+
+    [keyvalue] {
+        font-size: 1.6em;
+        background: rgba(245, 245, 245, 1);
+        border-radius: 5px;
+        border: 1px solid rgba(204, 204, 204, 1);
+        text-align: center;
+        padding: 3px 0 3px 0;
+        width: 100%;
+        padding: 8px;
+    }
+
+    .copybtn {
+        margin-top: 30px;
+        background-color: #389BEE;
+        color: #fff;
+        height: 30px;
+        border-radius: 15px;
+
+        span {
+            padding: 5px 15px;
+        }
+    }
+}
+
+.btnbox {
+    position: absolute;
+    bottom: 10vh;
+    padding: 0 15px;
+    width: 100%;
+}
+
+.loaderbox {
+
+    .ball-pulse>div {
+        background: #389bee;
+    }
+}

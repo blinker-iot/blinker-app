@@ -1,0 +1,70 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{device.config.customName}}固件更新</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content padding>
+  <ng-container *ngIf="!hasNewVersion && !isUpdating">
+    <div updatebox>
+      <img src="./assets/img/icon/update-gray.png">
+      <div ver>当前版本：{{device.data.version}}</div>
+      <div ver2>当前固件是最新版本</div>
+    </div>
+  </ng-container>
+
+  <div updatebox *ngIf="(updateState == 100 ||updateState == 2 || updateState == 0)&& hasNewVersion">
+    <img src="./assets/img/icon/update-blue.png">
+    <div ver>当前版本：{{device.data.version}}</div>
+    <div ver2>新的版本：{{device.data.newVersion}}</div>
+    <div des-title>更新说明：</div>
+    <div des *ngIf="device.data.newVersionDescription" [innerHTML]="device.data.newVersionDescription | wrap"></div>
+    <div btn (click)="updateDevice()">
+      <div>立即更新</div>
+    </div>
+  </div>
+
+  <div updatebox *ngIf="updateState == 1">
+    <img src="./assets/img/icon/update-blue.png">
+    <div ver>下载中···</div>
+    <div ver2>固件下载中，请勿断电，等待更新完成再使用本设备</div>
+  </div>
+
+  <div updatebox *ngIf="updateState == -2">
+    <img src="./assets/img/icon/update-blue.png">
+    <div ver>下载失败</div>
+    <div ver2>固件下载失败，请稍后尝试更新</div>
+    <div btn (click)="updateDevice()">
+      <div>重新尝试更新</div>
+    </div>
+  </div>
+
+  <div updatebox *ngIf="updateState == 99">
+    <img src="./assets/img/icon/update-blue.png">
+    <div ver>更新中···</div>
+    <div ver2>固件更新中，请勿断电，等待更新完成再使用本设备</div>
+  </div>
+
+  <div updatebox *ngIf="updateState == 100 && isUpdating && !hasNewVersion">
+    <img src="./assets/img/icon/update-done.png">
+    <div ver>更新成功</div>
+    <div ver2>当前版本：{{device.data.version}}</div>
+
+    <div btn (click)="popDevicePage()">
+      <div>确定</div>
+    </div>
+  </div>
+
+  <div updatebox *ngIf="updateState == -1">
+    <img src="./assets/img/icon/update-fail.png">
+    <div ver>更新失败</div>
+    <div ver2>固件更新失败，请稍后尝试更新</div>
+    <div btn (click)="updateDevice()">
+      <div>重新尝试更新</div>
+    </div>
+  </div>
+
+</ion-content>

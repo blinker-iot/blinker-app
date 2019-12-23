@@ -1,0 +1,48 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{device.config.customName}} 分享管理</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <div class="noshared animated fadeIn" textcenter
+    *ngIf="!shareData.share0[deviceName] && !shareData.share[deviceName]">
+    该设备没有分享给其他用户
+  </div>
+  <ng-container *ngIf="shareData.share0[deviceName]">
+    <ng-container *ngFor="let item of shareData.share0[deviceName];index as i">
+      <div class="item" [ngClass]="{'animated zoomOut': i==share0Selected}">
+        <div class="avatar">
+          <img src="{{userService.avatar}}" onError="this.src='assets/img/avatar.png'">
+        </div>
+        <div class="namebox">
+          <div class="name">{{item.username}}</div>
+          <div class="act">等待用户接受</div>
+        </div>
+        <div class="btn" (click)="cancel0(item.uuid,i)">
+          取消共享
+        </div>
+      </div>
+    </ng-container>
+  </ng-container>
+  <ng-container *ngIf="shareData.share[deviceName]">
+    <ng-container *ngFor="let item of shareData.share[deviceName];index as i">
+      <div class="item" [ngClass]="{'animated zoomOut': i==shareSelected}">
+        <div class="avatar">
+          <img src="{{userService.avatar}}" onError="this.src='assets/img/avatar.png'">
+        </div>
+        <div class="namebox">
+          <div class="name">{{item.username}}</div>
+          <div class="act">{{item.date | msToDate}} 共享</div>
+        </div>
+        <div class="btn" (click)="cancel(item.uuid,i)">
+          取消共享
+        </div>
+      </div>
+    </ng-container>
+  </ng-container>
+  <div class="hspace"></div>
+  <div class="addbtn" (click)="addShare()">+ 添加共享</div>
+</ion-content>

@@ -1,0 +1,18 @@
+<div class="bg animated fadeIn faster" (click)="exit($event)">
+</div>
+<div class="popup animated slideInUp faster">
+    <div class="scroll">
+        <div class="item-box">
+            <ng-container *ngFor="let item of bgList;index as i">
+                <div class="item" [ngClass]="{'end':bgList.length-1==i}" (click)="selected(item,i)">
+                    <div class="thumbnail" *ngIf="item.type=='img'">
+                        <img src="{{item.img}}">
+                    </div>
+                    <div class="selected" *ngIf="selectedItem==i">
+                        <ion-icon name="checkmark"></ion-icon>
+                    </div>
+                </div>
+            </ng-container>
+        </div>
+    </div>
+</div>

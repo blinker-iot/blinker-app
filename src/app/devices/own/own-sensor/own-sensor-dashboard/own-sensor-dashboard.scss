@@ -1,0 +1,56 @@
+[textcenter] {
+    font-size: 13px;
+    color: #fff;
+    margin-top: 5vh;
+}
+
+[device-bg].on {
+    background: #005ECC;
+}
+
+[device-bg] {
+    background: #B5B5B5;
+}
+
+.sensor-card {
+    border-radius: 50px;
+    height: 60vh;
+    // height: 100%;
+    width: 100%;
+    position: absolute;
+}
+
+.card1 {
+    background: #0F70F4;
+}
+
+.card2 {
+    background: #0084EC;
+}
+
+.card3 {
+    background: #2D9FF8;
+}
+
+.top {
+    top: 0;
+}
+
+.mid {
+    top: 60px;
+}
+
+.bot {
+    bottom: 0;
+}
+
+.swiper-container{
+    height: 100%;
+    .swiper-wrapper{
+        height: 100%;
+    }
+}
+
+// ion-slides {
+//     height: 80vh;
+// }

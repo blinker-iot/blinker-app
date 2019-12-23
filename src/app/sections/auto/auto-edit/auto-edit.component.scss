@@ -1,0 +1,24 @@
+.item-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    i{
+        font-size: 1.3rem;
+        color: #333;
+        width: 30px;
+    }
+}
+
+.item-box {
+
+    .item {
+        border-radius: 6px;
+        height: 60px;
+        box-shadow: 0px 4px 12px 0px rgba(114, 124, 142, 0.2);
+        background: #FFF;
+        margin-top: 15px;
+    }
+}

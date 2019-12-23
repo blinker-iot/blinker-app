@@ -1,0 +1,13 @@
+.configzone {
+    width: 100%;
+    height: 70%;
+}
+
+.btnbox {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3vh;
+    .btn40 {
+        width: 45%;
+    }
+}

@@ -1,0 +1,10 @@
+<div class="colorpicker">
+  <canvas #myCanvas>
+  </canvas>
+  <div class="knob" #knob></div>
+  <div class="pickerbox" #pickerbox (tap)="tapEvent($event)" (panstart)="panstartEvent($event)"
+    (panmove)="panmoveEvent($event)" (panend)="panendEvent($event)">
+    <!-- <div class="picker-inner" #picker></div> -->
+  </div>
+</div>
+<!-- <div class="picker-inner" #picker></div> -->

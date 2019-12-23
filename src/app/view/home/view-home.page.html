@@ -1,0 +1,47 @@
+﻿<ion-header>
+    <ion-toolbar color="transparent">
+        <ion-buttons slot="start">
+            <ion-menu-button><i class="iconfont icon-menu"></i></ion-menu-button>
+        </ion-buttons>
+        <ion-title></ion-title>
+        <ion-buttons slot="end">
+            <ion-button [routerLink]="['/adddevice']">
+                <i class="iconfont icon-add-circle"></i>
+            </ion-button>
+            <ion-button (click)="changeView()">
+                <i class="iconfont icon-view"></i>
+            </ion-button>
+        </ion-buttons>
+    </ion-toolbar>
+</ion-header>
+<ion-content fullscreen scrollY=false>
+    <ng-container *ngIf="loaded">
+        <div class="contentbox" #contentbox>
+            <div class="sceneZone" #sceneZone>
+                <div class="bg">
+                    <img src="assets/img/headerbg.jpg" [ngStyle]="{'max-width': '120%'}">
+                </div>
+                <scene-button-group></scene-button-group>
+            </div>
+            <div class="nodevice" *ngIf="deviceNum==0">
+                <img src="assets/img/nodevice.svg">
+                <div class="text">添加新设备，开始你的点灯之旅</div>
+                <button [routerLink]="['/adddevice']">
+                    <i class="fal fa-plus"></i><span>添加设备</span>
+                </button>
+            </div>
+            <ng-container *ngIf="deviceNum>0">
+                <room-list [(roomid)]="roomid"></room-list>
+                <div #deviceZone class="deviceZone animated fadeIn">
+                    <deviceblock-homelist [(roomid)]="roomid">
+                    </deviceblock-homelist>
+                </div>
+            </ng-container>
+        </div>
+        <div class="speech">
+            <div class="speech-button" [ngClass]="{'iphonex': isIphonex}">
+                <speech-button></speech-button>
+            </div>
+        </div>
+    </ng-container>
+</ion-content>

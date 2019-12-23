@@ -1,0 +1,129 @@
+.numbox {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    overflow: hidden;
+    padding: 0.5rem;
+    width: 100%;
+    height: 100%;
+
+    i {
+        font-size: 1.5rem;
+    }
+
+    .valuebox {
+        display: flex;
+        justify-content: flex-start;
+        align-items: flex-end;
+        flex-direction: row;
+        transition: transform 0.2s;
+        font-size: 1.3rem;
+        line-height: 1.3rem;
+        transform-origin: left;
+        margin-top: 0.25rem;
+
+        .value {
+            color: #3C3C3C;
+            font-weight: bold;
+        }
+
+        .unit {
+            color: #898989;
+            font-size: 0.7rem;
+            line-height: 0.9rem;
+            white-space: nowrap;
+        }
+    }
+
+    .content {
+        font-size: 0.7rem;
+        position: absolute;
+        bottom: 0.25rem;
+        left: 0.5rem;
+    }
+
+}
+
+.numbox1 {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .progressBar2 {
+        width: 85% !important;
+    }
+
+    .progressBar {
+        width: 75%;
+    }
+
+
+    .text-box {
+        position: absolute;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        bottom: 5%;
+
+        .value {
+            font-size: 1rem;
+            white-space: nowrap;
+        }
+
+        .content {
+            font-size: 0.7rem;
+            text-align: center;
+        }
+    }
+
+    .text-box2 {
+        position: absolute;
+        height: 100%;
+
+        .value {
+            margin-top: 1.5rem;
+        }
+    }
+
+    .s1 {
+        top: 45%;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+
+    .s2 {
+        font-size: 1.6rem;
+        font-weight: bold;
+        top: 33%;
+    }
+
+}
+
+.numbox2 {
+    width: 100%;
+    height: 100%;
+}
+
+.chartbox {
+    width: 100%;
+    height: 100%;
+}
+
+.content {
+    color: #959595;
+    width: 100%;
+}
+
+.unit {
+    margin-left: 0.1rem;
+}
+
+[overflow] {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

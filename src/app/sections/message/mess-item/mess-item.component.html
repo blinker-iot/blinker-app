@@ -1,0 +1,16 @@
+<div class="messitem" (tap)="goto()">
+  <div class="delbtn" *ngIf="editMode" (click)="showDelAlert()">
+    <ion-icon name="remove-circle"></ion-icon>
+  </div>
+  <div class="imgbox">
+    <!-- <img src="{{message.icon}}"> -->
+    <img src="assets/img/blinker-icon.png">
+  </div>
+  <div class="contentbox">
+    <div class="titlebox">
+      <div class="title">{{message.title}}</div>
+      <div class="date">{{message.date | date:'MM/dd HH:mm'}}</div>
+    </div>
+    <div class="content">{{message.content}}</div>
+  </div>
+</div>

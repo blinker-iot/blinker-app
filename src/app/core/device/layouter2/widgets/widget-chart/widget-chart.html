@@ -1,0 +1,21 @@
+<div widget>
+    <div class="chartbox" #chartbox [ngStyle]="{'visibility': !showNoData?'visible':'hidden'}">
+        <canvas class="chart" #chartCanvas></canvas>
+    </div>
+    <div class="nodata" *ngIf="showNoData">
+        暂无数据
+    </div>
+    <div class="btnbox">
+        <ng-container *ngFor="let key of keys;index as i">
+            <div class="item" *ngIf="key" (click)="changeKey(key)" [ngStyle]="{'background-color': chartColor}"
+                [ngClass]="{'selected': selectedKey==key,'unselected':selectedKey!=key}">
+                {{ts[i]}}
+            </div>
+        </ng-container>
+    </div>
+    <select [(ngModel)]="quickCode" (ngModelChange)="changeQuickCode()">
+        <option value="1h">最近1小时</option>
+        <option value="1d">最近1天</option>
+        <option value="1w">最近1周</option>
+    </select>
+</div>

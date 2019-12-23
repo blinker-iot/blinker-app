@@ -1,0 +1,78 @@
+.btnbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #389BEE;
+    margin-top: -10px;
+    .btn {
+        color: white;
+        opacity: 0.6;
+        padding: 10px 15px;
+    }
+    .selected {
+        opacity: 1;
+    }
+}
+
+.item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px 20px 10px 20px;
+    background-color: #FFF;
+    height: 10vh;
+    margin-top: 3px;
+    font-size: 15px;
+    img {
+        height: 9vh;
+    }
+    .namebox {
+        margin-left: 20px;
+        .name {}
+        .act {
+            margin-top: 5px;
+            font-size: 13px;
+            color: #959595;
+        }
+    }
+    .arrow {
+        position: absolute;
+        right: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 21px;
+        color: #959595;
+        img {
+            height: 2.5vh;
+        }
+    }
+    .btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        width: 60px;
+        font-size: 13px;
+        color: #389BEE;
+    }
+    .accept {
+        right: 0;
+        padding: 20px 20px 20px 10px;
+    }
+    .refuse {
+        right: 60px;
+        padding: 20px 10px 20px 20px;
+    }
+    .cancel {
+        right: 0;
+        padding: 20px;
+        width: auto;
+    }
+}
+
+.noshared {
+    color: #8E8E8E;
+    padding-top: 20px;
+}

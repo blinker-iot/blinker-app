@@ -1,0 +1,37 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{tempRoomName}} 设置</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+
+<ion-content>
+  <div class="textbox">房间名</div>
+  <div class="item" (click)="changeRoomName()">
+    {{tempRoomName}}
+  </div>
+  <div class="textbox" *ngIf="currentRoomData.length != 0">房间中的设备</div>
+  <ng-container *ngFor="let deviceId of currentRoomData">
+    <div class="item" (click)="delDevice(deviceId)">
+      <img src="assets/img/devices/icon/{{deviceDataDict[deviceId].config.image}}">
+      <div class="name">{{deviceDataDict[deviceId].config.customName}}</div>
+      <div class="btn">
+        <ion-icon name="md-close"></ion-icon>
+      </div>
+    </div>
+  </ng-container>
+
+  <div class="textbox">可添加的设备</div>
+  <ng-container *ngFor="let deviceId of deviceDataList">
+    <div class="item" (click)="addDevice(deviceId)" *ngIf="!isExist(deviceId)">
+      <img src="assets/img/devices/icon/{{deviceDataDict[deviceId].config.image}}">
+      <div class="name">{{deviceDataDict[deviceId].config.customName}}</div>
+      <div class="btn">
+        <ion-icon name="md-add"></ion-icon>
+      </div>
+    </div>
+  </ng-container>
+</ion-content>

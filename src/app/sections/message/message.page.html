@@ -1,0 +1,27 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>消息盒子</ion-title>
+    <ion-buttons slot="end" (click)="switchMode()">
+      <ion-button *ngIf="!editMode">
+        编辑
+      </ion-button>
+      <ion-button *ngIf="editMode">
+        完成
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content padding whitebg>
+  <div class="nomess animated fadeIn" *ngIf="messageList.length==0" textcenter>
+    <img src="assets\img\icon\message.svg">
+    <div textcenter>暂无消息</div>
+  </div>
+  <ng-container *ngIf="messageList.length>0">
+    <mess-item *ngFor="let messageItem of messageList" [editMode]="editMode" [message]="messageItem"></mess-item>
+  </ng-container>
+
+</ion-content>

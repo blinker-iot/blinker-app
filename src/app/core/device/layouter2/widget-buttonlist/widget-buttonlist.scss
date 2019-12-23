@@ -1,0 +1,78 @@
+.scrollHeight {
+    height: 20vh;
+    position: relative;
+    overflow: auto;
+    z-index: 0;
+    padding: 5px;
+
+    .widgetitem {
+        margin: auto 10px;
+        position: relative;
+    }
+
+    .default {
+        background-color: #fff;
+        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
+        border-radius: 6px;
+    }
+
+    .translucent {
+        background-color: rgba(255, 255, 255, 0.5);
+        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
+        border-radius: 6px;
+    }
+
+    .transparent {
+        background: none;
+    }
+
+    .round {
+        background-color: #fff;
+        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+    }
+}
+
+
+// .scroll {
+//     height: 20vh;
+//     position: relative;
+//     overflow: auto;
+//     z-index: 0;
+//     padding: 5px;
+// }
+
+[demo-box] {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 10px 0 15px;
+
+    [demo-item] {
+        margin-right: 2vw;
+        box-shadow: 0 0 10px #0000001f;
+        border-radius: 5px;
+        background-color: #FFF;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+
+        widget-dynamic {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+    }
+
+    .selected {
+        box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8) !important;
+    }
+}
+
+.scale {
+    transform: scale(0.7);
+    transform-origin: left top;
+    padding-top: 5px;
+}

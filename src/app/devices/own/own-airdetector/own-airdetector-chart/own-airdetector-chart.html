@@ -1,0 +1,38 @@
+<ion-header>
+    <ion-toolbar>
+        <ion-buttons slot="start">
+            <ion-back-button text=""></ion-back-button>
+        </ion-buttons>
+        <ion-title>历史数据</ion-title>
+    </ion-toolbar>
+</ion-header>
+<ion-content>
+    <div class="box">
+        <div class="btn-list">
+            <div class="btn" [ngClass]="{'chosen':chosen==0}" (click)="chose(0)">AQI</div>
+            <div class="btn" [ngClass]="{'chosen':chosen==1}" (click)="chose(1)">温度</div>
+            <div class="btn" [ngClass]="{'chosen':chosen==2}" (click)="chose(2)">湿度</div>
+            <div class="btn" [ngClass]="{'chosen':chosen==3}" (click)="chose(3)">甲醛</div>
+        </div>
+        <div class="chart-box">
+            <!-- <div class="btn-box" (click)="showCalendar()">
+                <div class="date-btn">
+                    <span>▼</span>
+                </div>
+            </div> -->
+            <div class="chart" #chartCanvas></div>
+        </div>
+        <div class="data-box">
+            <div class="data-name">平均值 (min)</div>
+            <div class="data-value">123</div>
+        </div>
+        <div class="data-box">
+            <div class="data-name">最高值 (max)</div>
+            <div class="data-value">123</div>
+        </div>
+        <div class="data-box">
+            <div class="data-name">最低值 (average)</div>
+            <div class="data-value">123</div>
+        </div>
+    </div>
+</ion-content>

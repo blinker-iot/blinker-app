@@ -1,0 +1,29 @@
+<div class="block" (click)="gotoDashboard()" [ngStyle]="{'opacity': state?1:0.4}" [ngClass]="{'on': switch}">
+  <div class="lt imgbox">
+    <img class="block-img" src="assets/img/devices/icon/{{device.config.image}}"
+      onError="this.src='assets/img/devices/unknown.png'" />
+  </div>
+  <div class="lb">
+    {{device.config.customName}}
+    <span class="dev" *ngIf="device.config.isDev">
+      <i class="fal fa-code"></i>
+    </span>
+    <span class="dev" *ngIf="device.config.mode=='ble'">
+      <i class="fab fa-bluetooth-b"></i>
+    </span>
+  </div>
+  <div class="rt">
+    <span class="blue animated fadeIn"
+      *ngIf="device.config.mode=='ble' && deviceService.islocalDevice(device)">可连接</span>
+    <span class="gray animated fadeIn"
+      *ngIf="device.config.mode=='ble' && !deviceService.islocalDevice(device)">蓝牙设备</span>
+    <span class="blue animated fadeIn" *ngIf="device.config.mode=='mqtt' && device.data.state=='online'">在线</span>
+    <span class="gray animated fadeIn" *ngIf="device.config.mode=='mqtt' && device.data.state=='offline'">离线</span>
+  </div>
+  <div class="rb" *ngIf="device.data.switch" (click)="tapSwitch($event)">
+    <div class="switch">
+      <i class="fal fa-power-off"></i>
+    </div>
+  </div>
+</div>
+<audio autoplay="autoplay" #audio></audio>

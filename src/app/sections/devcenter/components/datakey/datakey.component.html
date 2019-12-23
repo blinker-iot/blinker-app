@@ -1,0 +1,24 @@
+<div class="keylist" *ngIf="loaded">
+  <ng-container *ngFor="let item of datakeyList;trackBy:trackByFn">
+    <div device-card *ngIf="item.keys.length!=0">
+      <div card-header>
+        <img src="assets/img/devices/icon/{{deviceDataDict[item.deviceId].config.image}}">
+        <div device-info>
+          <div name>{{deviceDataDict[item.deviceId].config.customName}}</div>
+          <div id>{{item.deviceId}}</div>
+        </div>
+      </div>
+      <div linebox>
+        <div line></div>
+      </div>
+      <div card-footer>
+        <div key *ngFor="let key of item.keys;index as i" [ngClass]="{'space': (i+1)%3!=0}">
+          {{key}}
+          <div delbtn (click)="delDataKey(item.deviceId,key,i)">
+            <i class="fal fa-times"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

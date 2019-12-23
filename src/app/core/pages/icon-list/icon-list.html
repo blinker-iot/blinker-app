@@ -1,0 +1,13 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>请选择图标</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="box">
+    <div class="item" *ngFor="let icon of iconList" (click)="select(icon)">
+      <i class="{{icon}}"></i>
+    </div>
+  </div>
+</ion-content>

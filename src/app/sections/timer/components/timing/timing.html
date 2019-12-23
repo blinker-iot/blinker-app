@@ -1,0 +1,27 @@
+<div class="timing-tab" *ngIf="loaded">
+  <div scrollY>
+    <ng-container *ngFor="let task of device.data.timing;trackBy: trackByFn">
+      <div tim-item>
+        <div class="infobox" (click)="editTimingTask(task)">
+          <div action>{{task.act | act2text}}</div>
+          <div clock>{{task.tim | minuteToTime }}</div>
+          <div day>
+            <span *ngIf="task.day[0]=='1'">周日</span>
+            <span *ngIf="task.day[1]=='1'">周一</span>
+            <span *ngIf="task.day[2]=='1'">周二</span>
+            <span *ngIf="task.day[3]=='1'">周三</span>
+            <span *ngIf="task.day[4]=='1'">周四</span>
+            <span *ngIf="task.day[5]=='1'">周五</span>
+            <span *ngIf="task.day[6]=='1'">周六</span>
+          </div>
+        </div>
+        <ion-toggle [checked]="task.ena == '1' ? true : false" (click)="changeEna(task)"></ion-toggle>
+      </div>
+    </ng-container>
+    <div height20>
+    </div>
+  </div>
+  <div class="add-btn" *ngIf="device.data.timing.length<10" (click)="addTimingTask()">
+    <i class="fal fa-plus"></i>
+  </div>
+</div>

@@ -1,0 +1,47 @@
+<ion-header whitebg>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button><i class="iconfont icon-menu"></i></ion-menu-button>
+    </ion-buttons>
+    <div class="searchbox">
+      <div class="search">
+        <i class="fal fa-search"></i>
+        <div class="text">
+          搜索设备
+        </div>
+      </div>
+    </div>
+    <ion-buttons slot="end">
+      <ion-button [routerLink]="[ '/adddevice']">
+        <i class="iconfont icon-add-circle"></i>
+      </ion-button>
+      <ion-button (click)="changeView()">
+        <i class="iconfont icon-view"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="listview">
+    <div class="item" *ngFor="let deviceName of deviceDataList">
+      <div>
+        <img src="assets/img/devices/icon/{{deviceDataDict[deviceName].config.image}}" onError="this.src='assets/img/devices/unknown.png'" />
+      </div>
+      <div>
+        <div class="name">
+          {{deviceDataDict[deviceName].config.customName}}
+        </div>
+        <div class="id">
+          {{deviceDataDict[deviceName].deviceName}}
+        </div>
+      </div>
+      <div class="position">
+        {{deviceDataDict[deviceName].config.position.address}}
+      </div>
+      <div>
+        <div>{{deviceDataDict[deviceName].data.state}}</div>
+      </div>
+    </div>
+  </div>
+</ion-content>

@@ -1,0 +1,46 @@
+.box {
+  padding: 0 30px;
+  overflow-y: scroll;
+  height: 85%;
+
+  .title {
+    color: #444444;
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 30px;
+  }
+
+  .text {
+    font-size: 13px;
+    color: #666666;
+    margin-top: 15px;
+  }
+}
+
+.fullbox {
+  height: 100%;
+}
+
+.publicdesc {
+  margin-top: 30vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  font-size: 13px;
+  [line] {
+    margin-top: 5px;
+  }
+}
+
+.btnbox {
+  background-color: #fff;
+  position: absolute;
+  height: 15%;
+  bottom: 0;
+  padding: 0 15px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

@@ -1,0 +1,53 @@
+.sortablemenu{
+    position: fixed;
+    top: 0;
+}
+
+.devicebox {
+    display: flex;
+    justify-content: space-between;
+    flex-flow: row wrap;
+    align-content: flex-start;
+    padding: 0 15px 0 15px;
+    position: relative;
+    visibility: visible; 
+    .schosen {
+        opacity: 0.4;
+        border-radius: 5px;
+    }
+    .sdrag {
+        opacity: 1 !important;
+        border-radius: 5px;
+        box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8);
+    }
+    .sghost {
+        // visibility: visible !important;
+        opacity: 0.4;
+        border-radius: 5px;
+        // box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8);
+    }
+}
+
+deviceblock {
+    margin-top: 2.5vw; // margin-top: 3.5vw;
+}
+
+.device-space{
+    margin-top: 2.5vw;
+}
+
+.device-space0 {
+    width: 29vw;
+    height: 32vw;
+}
+
+.device-space1 {
+    width: 90vw;
+    height: 16vw;
+}
+
+.hspace {
+    margin-top: 2.5vw;
+    width: 100vw;
+    height: 16vw;
+}

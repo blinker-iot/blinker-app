@@ -1,0 +1,53 @@
+<ion-header whitebg>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content whitebg>
+  <div class="title-box">
+    <div class="title1">注册</div>
+    <div class="title2">欢迎使用 blinker 物联网解决方案</div>
+  </div>
+
+  <form class="form-box" (ngSubmit)="onRegisterButton()" #formBox="ngForm">
+    <div class="input-box">
+      <div class="item-img">
+        <i class="fal fa-mobile"></i>
+      </div>
+      <input [(ngModel)]="phone" name="phone" (input)="checkPhone()" placeholder="手机号">
+      <div class="sendsms">
+        <div class="v-line"></div>
+        <button [disabled]="smscodeButtonDisabled||waiting" (click)="onSmscodeButton()">{{smscodeButton}}</button>
+      </div>
+    </div>
+    <div class="input-box">
+      <div class="item-img">
+        <i class="fal fa-shield-check"></i>
+      </div>
+      <input [(ngModel)]="smscode" (input)="checkAll()" name="smscode" placeholder="验证码">
+    </div>
+    <div class="input-box">
+      <div class="item-img">
+        <i class="fal fa-lock-alt"></i>
+      </div>
+      <input type="password" [(ngModel)]="password" (input)="checkAll()" name="password" placeholder="密码（至少8位字符）">
+    </div>
+    <button fullbtn type="submit" [disabled]="registerButtonDisabled">
+      注册</button>
+  </form>
+  <div class="other">
+    <div>
+      注册账号即表示您同意并遵守blinker
+      <span text (click)="openUrl(USER_AGREEMENT,'用户协议')">
+        用户协议
+      </span>
+      和
+      <span text (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
+        隐私政策
+      </span>
+    </div>
+  </div>
+</ion-content>

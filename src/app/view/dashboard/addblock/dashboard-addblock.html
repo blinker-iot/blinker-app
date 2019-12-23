@@ -1,0 +1,26 @@
+<div class="transparent" (click)="dismiss()"></div>
+<div class="show">
+    <div class="allBlocklist">
+        <ng-container *ngFor="let deviceBlocklist of allBlocklist">
+            <div class="deviceBlocklist">
+                <div class="deviceInfo">
+                    <img src="assets/img/devices/icon/{{devices[deviceBlocklist.deviceName].config.image}}">
+                    <div class="name">{{devices[deviceBlocklist.deviceName].config.customName}}</div>
+                </div>
+                <div class="scroll">
+                    <div class="blocklist">
+                        <ng-container *ngFor="let block of deviceBlocklist.blocks">
+                            <div class="block" (click)="addBlock(block)">
+                                <div class="ico">
+                                    <i class="{{block.ico}}"></i>
+                                </div>
+                                <div class="name">{{block.txt}}</div>
+                            </div>
+                        </ng-container>
+                        <div class="wspace"></div>
+                    </div>
+                </div>
+            </div>
+        </ng-container>
+    </div>
+</div>

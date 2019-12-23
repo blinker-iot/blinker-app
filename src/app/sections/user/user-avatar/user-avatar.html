@@ -1,0 +1,29 @@
+﻿<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>
+      更改头像
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="rotate()">
+        <i class="fal fa-redo"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div *ngIf="tempImgFile" imgbox>
+    <img src={{tempImgFile}} #image>
+  </div>
+  <div class="footer-bar">
+    <button (click)="cancel()">
+      取消
+    </button>
+    <button (click)="confirm()">
+      确认
+    </button>
+  </div>
+</ion-content>
