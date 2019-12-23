@@ -2,6 +2,10 @@
 版本：2.2.x  
 框架：ionic4、angular8、cordova8  
 
+## 协议
+本软体使用GPLv3发布  
+如需商业使用，请联系 [点灯科技](https://diandeng.tech/) 获取商业授权  
+
 ## Apk下载  
 https://github.com/blinker-iot/app-release/releases  
 
