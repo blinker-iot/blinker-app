@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { Events, NavController } from '@ionic/angular';
+import { NavController } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
 import { ActivatedRoute } from '@angular/router';
 import { NoticeService } from 'src/app/core/services/notice.service';
@@ -14,17 +14,21 @@ import { AdddeviceService } from '../adddevice.service';
 export class BwconfigPage {
   mode: string = 'ble';
   type: string;
-  found: boolean = false;
   timer;
+
+  scanState = 0;
 
   get deviceTypeList() {
     return this.adddeviceService.deviceTypeList
   }
 
+  get found() {
+    return this.adddeviceService.deviceTypeList.length > 0
+  }
+
   constructor(
     private adddeviceService: AdddeviceService,
     private userService: UserService,
-    public events: Events,
     private navCtrl: NavController,
     private activatedRoute: ActivatedRoute,
     private noticeService: NoticeService
@@ -36,15 +40,12 @@ export class BwconfigPage {
   }
 
   ngAfterViewInit() {
-    this.adddeviceService.startScanDevice(this.type, this.mode);
-    this.timer = window.setTimeout(() => {
-      this.found = true;
-    }, 3000)
+    this.scan();
   }
 
   ngOnDestroy(): void {
     this.adddeviceService.stopScanDevice();
-    window.clearTimeout(this.timer);
+    clearTimeout(this.timer);
   }
 
   async registerLocalDevice(item) {
@@ -66,6 +67,14 @@ export class BwconfigPage {
     } else {
       console.log('设备注册失败');
     }
+  }
+
+  scan() {
+    this.scanState = 0;
+    this.adddeviceService.startScanDevice(this.type, this.mode);
+    this.timer = setTimeout(() => {
+      this.scanState = 99;
+    }, 3500)
   }
 
 }

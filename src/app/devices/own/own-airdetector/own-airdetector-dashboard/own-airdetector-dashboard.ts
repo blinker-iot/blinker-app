@@ -1,8 +1,6 @@
 ﻿import { Component, ChangeDetectorRef, Input } from '@angular/core';
-import { NavController, Events } from '@ionic/angular';
-import { Router } from '@angular/router';
-import { deviceName12 } from 'src/app/core/functions/func';
-import { DeviceComponent } from 'src/app/core/device/device.model';
+import { NavController } from '@ionic/angular';
+import { DeviceComponent } from 'src/app/core/model/device.model';
 
 
 @Component({
@@ -15,15 +13,13 @@ export class OwnAirdetectorDashboard implements DeviceComponent {
 
   @Input() device;
 
-  private timer;
   showus: boolean = false;
   ico = "fal fa-meh-blank";
+  showChart = false
+
 
   constructor(
     public navCtrl: NavController,
-    private router: Router,
-    // private deviceProvider: DeviceProvider,
-    public events: Events,
     public changeDetectorRef: ChangeDetectorRef,
   ) {
   }
@@ -52,35 +48,37 @@ export class OwnAirdetectorDashboard implements DeviceComponent {
     }
   }
 
-  ionViewDidEnter() {
-    console.log('创建定时器，29秒更新一次信息');
-    this.subscribe();
-    // this.deviceProvider.pubMessage(this.device, `{ "get":"state"}`);
-    // this.timer = setInterval(() => {
-    //   this.deviceProvider.pubMessage(this.device, `{ "get":"state"}`);
-    // }, 29000);
-    //图标变化测试
-    // window.setInterval(() => {
-    //   this.device.data.AQICN += 1;
-    //   if (this.device.data.AQICN > 360) {
-    //     this.device.data.AQICN = 0;
-    //   }
-    // }, 500);
+  changeMode() {
+    this.showChart = !this.showChart
   }
 
-  ionViewDidLeave() {
-    window.clearInterval(this.timer);
-    this.unsubscribe();
-  }
+  // ionViewDidEnter() {
+  //   console.log('创建定时器，29秒更新一次信息');
+  //   this.subscribe();
+  // this.deviceProvider.pubMessage(this.device, `{ "get":"state"}`);
+  // this.timer = setInterval(() => {
+  //   this.deviceProvider.pubMessage(this.device, `{ "get":"state"}`);
+  // }, 29000);
+  //图标变化测试
+  // window.setInterval(() => {
+  //   this.device.data.AQICN += 1;
+  //   if (this.device.data.AQICN > 360) {
+  //     this.device.data.AQICN = 0;
+  //   }
+  // }, 500);
+  // }
+
+  // ionViewDidLeave() {
+  //   window.clearInterval(this.timer);
+  //   this.unsubscribe();
+  // }
 
   subscribe() {
-    this.events.subscribe(this.device.deviceName + ':state', message => {
-      if (message == "loaded") {
-        console.log('刷新页面');
-        this.processData();
-        this.changeDetectorRef.detectChanges();
-      }
-    });
+    //   if (message == "loaded") {
+    //     console.log('刷新页面');
+    //     this.processData();
+    //     this.changeDetectorRef.detectChanges();
+    //   }
   }
 
   processData() {
@@ -102,7 +100,7 @@ export class OwnAirdetectorDashboard implements DeviceComponent {
   }
 
   unsubscribe() {
-    this.events.unsubscribe(this.device.deviceName + ':state');
+
   }
 
   gotoSettings() {
@@ -114,8 +112,12 @@ export class OwnAirdetectorDashboard implements DeviceComponent {
   }
 
   gotoChart() {
-    this.router.navigate(['/device', deviceName12(this.device.deviceName), 'history'])
-    // this.navCtrl.push("OwnAirdetectorChartPage", this.device);
+    // this.router.navigate(['/device', deviceName12(this.device.deviceName), 'history'])
+
+  }
+
+  gotoRealTime() {
+
   }
 
 }

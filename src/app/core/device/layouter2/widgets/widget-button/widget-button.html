@@ -1,15 +1,20 @@
 <div widget #button (tap)="tap($event)" (press)="press($event)" (pressup)="pressup($event)">
-  <div class="btnbox" *ngIf="lstyle==0||lstyle==2">
+
+  <div class="btnbox action" *ngIf="lstyle==0||lstyle==2" [ngStyle]="{'background': state=='on'?color:''}"
+    [ngClass]="{'on':state=='on','off':state!='on'}">
     <i class="{{ico}}" [ngStyle]="{'color': color}" [ngClass]="{'bigger': lstyle==2}"></i>
     <div class="content" overflow>{{t0}}</div>
   </div>
-  <div class="btnbox" *ngIf="lstyle==1">
+
+  <div class="btnbox" *ngIf="lstyle==1||lstyle==3">
     <div class="toggle-box" [ngStyle]="{'background-color': state=='on'?color:''}">
       <div class="toggle-inner" [ngClass]="{'on':state=='on','off':state!='on'}"></div>
     </div>
-    <div class="content" overflow>{{t0}}</div>
+    <div class="content" overflow *ngIf="lstyle!=3">{{t0}}</div>
   </div>
-  <!-- <div class="btnbox" *ngIf="lstyle==3">
-    <i class="{{ico}}" [ngStyle]="{'color': color}"></i>
-  </div> -->
+
+  <div class="btnbox action" *ngIf="lstyle==4" [ngStyle]="{'background': state=='on'?color:''}"
+    [ngClass]="{'on':state=='on','off':state!='on'}">
+    <i class="{{ico}}" style="font-size: 1.2rem;" [ngStyle]="{'color': color}"></i>
+  </div>
 </div>

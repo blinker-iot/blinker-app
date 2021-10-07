@@ -1,20 +1,84 @@
-.box {
+.text-box {
+    font-size: 14px;
+    padding: 15px;
+    line-height: 25px;
+}
+
+.tab-box {
+    padding: 15px;
     display: flex;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background-color: #fff;
+    box-shadow: 0 0 10px #ccc;
+    padding-top: 45px;
+    font-size: 14px;
+    z-index: 99;
+
+    .text{
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        span{
+            margin-left: 15px;
+            color: #BBB;
+            font-size: 12px;
+        }
+    }
+
+    .tab {
+        border: 1px solid #ccc;
+        padding: 8px 15px;
+        border-radius: 5px;
+    }
+
+    .tab.selected {
+        background-color: #389bee;
+        color: #fff;
+    }
+}
+
+.icon-box {
+    display: flex;
+    flex-direction: column;
+    padding: 0 15px 15px 15px;
+}
+
+.class-box {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid #ddd;
+    .title {
+        font-size: 14px;
+        margin-top: 15px;
+    }
+}
+
+.item-box {
+    display: flex;
+    justify-content: space-between;
     flex-wrap: wrap;
-    margin-left: 3px;
+    padding-bottom: 30px;
 }
 
 .item {
-    width: 19.5vw;
-    height: 19.5vw;
-    margin: 0.1vw;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
-    font-size: 30px;
+    width: 16vw;
+    height: 16vw;
+    margin-top: 15px;
+    // margin: 0.6vw;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    font-size: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #389BEE;
-    i{
-        font-size: 30px;
+    color: #389bee;
+    i {
+        font-size: 32px;
     }
+}
+
+.null {
+    width: 16vw;
 }

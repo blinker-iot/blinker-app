@@ -16,24 +16,8 @@ export class DevcenterPage implements OnInit {
     return false
   }
 
-  get userLevel() {
-    return this.devcenterService.userLevel
-  }
-
-  get proDeviceNum() {
-    return this.devcenterService.proDeviceNum
-  }
-
-  get dataKeyNum() {
-    return this.devcenterService.dataKeyNum
-  }
-
-  get proDeviceMaxNum() {
-    return this.devcenterService.proDeviceMaxNum
-  }
-
-  get dataKeyMaxNum() {
-    return this.devcenterService.dataKeyMaxNum
+  get developerInfo(){
+    return this.devcenterService.developerInfo
   }
 
   constructor(
@@ -41,12 +25,17 @@ export class DevcenterPage implements OnInit {
     private dataService: DataService,
   ) { }
 
+  subscription;
   ngOnInit() {
-    this.dataService.userDataLoader.subscribe(loaded => {
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
       if (loaded) {
         this.devcenterService.getUserLevel();
       }
     })
+  }
+
+  ngOnDestroy() {
+    this.subscription.unsubscribe();
   }
 
   loaded;

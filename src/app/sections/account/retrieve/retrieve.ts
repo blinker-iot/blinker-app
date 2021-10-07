@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 import { LoadingController, AlertController, NavController } from '@ionic/angular';
-import { UserService } from 'src/app/core/services/user.service';
 import { checkPhone, checkPassword, checkSmscode } from 'src/app/core/functions/check';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { CONFIG } from 'src/app/configs/app.config';
 
 @Component({
   selector: 'page-retrieve',
@@ -10,19 +10,21 @@ import { AuthService } from 'src/app/core/services/auth.service';
   styleUrls: ['retrieve.scss'],
 })
 export class RetrievePage {
-  // @Input() events: any;
 
   phone: string = '';
   password: string = '';
   smscode: string = '';
-  smscodeButton: string = "发送验证码";
+  smscodeButton: string = "ACCOUNT.SEND_SMSCODE";
   smscodeButtonDisabled: boolean = true;
   retrieveButtonDisabled: boolean = true;
-  waiting: boolean = false;
+  // waiting: boolean = false;
+
+  countdownString = ''
+
+  NAME = CONFIG.NAME;
 
   constructor(
     private authService: AuthService,
-    private userService: UserService,
     public loadingCtrl: LoadingController,
     public alertCtrl: AlertController,
     private navCtrl: NavController
@@ -49,17 +51,19 @@ export class RetrievePage {
       }
     })
     this.smscodeButtonDisabled = true;
-    this.waiting = true;
+    // this.waiting = true;
     let countdown = 60;
     let t = window.setInterval(() => {
       countdown = countdown - 1;
       if (countdown == 0) {
-        this.smscodeButton = "重新发送";
+        this.smscodeButton = "ACCOUNT.RESEND_SMSCODE";
+        this.countdownString = '';
         this.smscodeButtonDisabled = false;
-        this.waiting = false;
+        // this.waiting = false;
         window.clearInterval(t);
       } else {
-        this.smscodeButton = "重新发送(" + countdown + ")";
+        this.smscodeButton = "ACCOUNT.RESEND_SMSCODE";
+        this.countdownString = `(${countdown})`;
       }
     }, 1000)
   }

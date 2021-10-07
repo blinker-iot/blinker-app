@@ -20,7 +20,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    background-color: #E6E6E6;
+    background-color: #e6e6e6;
     color: #595959;
     flex-shrink: 0;
     padding: 3px 8px;
@@ -39,29 +39,29 @@
     .fa-power-off {
         margin-top: 2px;
     }
-
 }
 
 .display {
     flex-grow: 1;
     overflow-y: scroll;
     background-color: rgba(255, 255, 255, 0.9);
-
+    position: relative;
     .textzone {
         font-size: 12px;
         padding: 5px;
+        position: absolute;
+        bottom: 0;
 
         .senddata {
-            color: #389BEE;
+            color: #389bee;
         }
     }
 }
 
-
 .send-box {
     // position: absolute;
     // bottom: 0;
-    background-color: #E6E6E6;
+    background-color: #e6e6e6;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -96,7 +96,7 @@
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        border: 1px solid #AFAFAF;
-        color: #AFAFAF;
+        border: 1px solid #afafaf;
+        color: #afafaf;
     }
 }

@@ -1,0 +1,11 @@
+<div class="blinke-toast animate__animated animate__faster"
+  [ngClass]="{'animate__fadeInUp': !hide,'animate__fadeOutDown':hide}">
+  <b-device-img [deviceId]="toast.device.id"></b-device-img>
+  <div text-box>
+    <div name>{{toast.device.config.customName}}</div>
+    <div mess>{{toast.message}}</div>
+  </div>
+  <div close-btn (click)="close()">
+    <i class="fal fa-times"></i>
+  </div>
+</div>

@@ -1,0 +1,63 @@
+<ion-header>
+  <ion-toolbar overlayPadding #navbar>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>编辑场景</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <ng-container *ngIf="loaded">
+    <b-top-box>
+      <div class="full-box">
+        <div class="box" (click)="changeSceneIcon()">
+          <div class="icon-box" *ngIf="sceneDataDict[sceneName]">
+            <i class="{{sceneDataDict[sceneName].ico}}"></i>
+          </div>
+          <div class="btn">修改图标</div>
+        </div>
+        <div class="box right" (click)="changeSceneName()">
+          <div class="text-box">{{sceneName}}</div>
+          <div class="btn">修改名称</div>
+        </div>
+      </div>
+    </b-top-box>
+    <div class="title">当按下按键时，将执行以下动作</div>
+    <div class="scrollbox">
+      <b-item-list>
+        <ng-container *ngFor="let action of acts;index as i">
+          <b-item>
+            <ng-container *ngIf="action.delay">
+              <div class="img-box">
+                <i class="fal fa-history"></i>
+              </div>
+              <div class="text-box">
+                <div class="name">延时{{action.delay}}秒</div>
+              </div>
+              <div class="btn-box" (click)="delAct(i)">
+                <ion-icon name="close-outline"></ion-icon>
+              </div>
+            </ng-container>
+            <ng-container *ngIf="!action.delay">
+              <div class="img-box">
+                <b-device-img [deviceId]="action.deviceId"></b-device-img>
+              </div>
+              <div class="text-box">
+                <div class="name">{{deviceDataDict[action.deviceId].config.customName}}</div>
+                <div class="other">{{action.text | actcmd2text:action.deviceId}}</div>
+              </div>
+              <div class="btn-box" (click)="delAct(i)">
+                <ion-icon name="close-outline"></ion-icon>
+              </div>
+            </ng-container>
+          </b-item>
+        </ng-container>
+      </b-item-list>
+    </div>
+  </ng-container>
+</ion-content>
+<ion-footer class="ion-no-border">
+  <ion-toolbar>
+    <b-bottom-btn (click)="addAct()">+ 添加动作</b-bottom-btn>
+  </ion-toolbar>
+</ion-footer>

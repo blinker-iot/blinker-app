@@ -1,10 +1,12 @@
-import { Component, Input } from '@angular/core';
-import { Events } from '@ionic/angular';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { timeToMinute, minuteToTime } from 'src/app/core/functions/func'
 import { DeviceService } from 'src/app/core/services/device.service';
-import { UserService } from 'src/app/core/services/user.service';
 import { TimerService } from '../../timer.service';
 import { DataService } from 'src/app/core/services/data.service';
+import { BlinkerDevice } from 'src/app/core/model/device.model';
+import { ModalController } from '@ionic/angular';
+import { ActionSelectorModalComponent } from 'src/app/core/modals/action-selector-modal/action-selector-modal.component';
+import { TimeSelectorModalComponent } from 'src/app/core/modals/time-selector-modal/time-selector-modal.component';
 
 @Component({
   selector: 'timer-countdown',
@@ -13,10 +15,8 @@ import { DataService } from 'src/app/core/services/data.service';
 })
 export class CountdownComponent {
 
-  get device() {
-    return this.timerService.currentDevice
-  }
-
+  device: BlinkerDevice;
+  deviceSubject;
   loaded;
 
   timeInfo = '00:00';
@@ -27,18 +27,21 @@ export class CountdownComponent {
   };
 
   constructor(
-    public events: Events,
     private deviceService: DeviceService,
     private dataService: DataService,
-    private timerService: TimerService
+    private timerService: TimerService,
+    private modalCtrl: ModalController,
+    private cd: ChangeDetectorRef
   ) { }
 
+  subscription;
   ngOnInit() {
-    this.dataService.userDataLoader.subscribe(loaded => {
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
       if (loaded) {
-        this.loaded = loaded
+        this.device = this.timerService.currentDevice
         this.timerService.loadTask('countdown');
-        this.events.subscribe(this.device.deviceName + ":countdown", (message) => {
+        this.loaded = loaded
+        this.deviceSubject = this.device.subject.subscribe((message) => {
           if (message == "loaded") {
             if (this.device.data.countdown.run == 1) {
               this.countdownProcess();
@@ -50,8 +53,42 @@ export class CountdownComponent {
   }
 
   ngOnDestroy() {
-    this.events.unsubscribe(this.device.deviceName + ":countdown");
+    this.subscription.unsubscribe();
+    this.deviceSubject.unsubscribe();
     window.clearInterval(this.timer);
+  }
+
+
+  async openTimeModal() {
+    const modal = await this.modalCtrl.create({
+      component: TimeSelectorModalComponent,
+      componentProps: {
+        data: this.timeInfo
+      }
+    });
+    modal.onDidDismiss().then(result => {
+      console.log(result.data);
+      if (typeof result.data != 'undefined')
+        this.timeInfo = result.data
+    })
+    return await modal.present();
+  }
+
+  async openActionModal() {
+    const modal = await this.modalCtrl.create({
+      component: ActionSelectorModalComponent,
+      componentProps: {
+        device: this.device
+      }
+    });
+    modal.onDidDismiss().then(result => {
+      // console.log(result.data);
+      if (typeof result.data != 'undefined') {
+        // this.actcmd = result.data
+        this.countdownData.act = [JSON.stringify(result.data)];
+      }
+    })
+    return await modal.present();
   }
 
   timer;
@@ -79,6 +116,9 @@ export class CountdownComponent {
       }
     }
     this.deviceService.sendData(this.device, JSON.stringify(data));
+    setTimeout(() => {
+      this.cd.detectChanges()
+    }, 1000);
   }
 
   continueCountdown() {
@@ -88,6 +128,9 @@ export class CountdownComponent {
       }
     }
     this.deviceService.sendData(this.device, JSON.stringify(data));
+    setTimeout(() => {
+      this.cd.detectChanges()
+    }, 1000);
   }
 
   updateSelectedAction(act) {
@@ -96,6 +139,7 @@ export class CountdownComponent {
   }
 
   startCountdown() {
+    if (this.timeInfo == '00:00') return;
     this.countdownData.ttim = timeToMinute(this.timeInfo);
     if (this.countdownData.act.length == 0) return;
     let uploadDate = this.countdownData;
@@ -104,8 +148,10 @@ export class CountdownComponent {
         countdown: uploadDate
       }
     }
-    console.log(JSON.stringify(data));
     this.deviceService.sendData(this.device, JSON.stringify(data));
+    setTimeout(() => {
+      this.cd.detectChanges()
+    }, 1000);
   }
 
   cancelCountdown() {
@@ -115,6 +161,9 @@ export class CountdownComponent {
       }
     }
     this.deviceService.sendData(this.device, JSON.stringify(data));
+    setTimeout(() => {
+      this.cd.detectChanges()
+    }, 1000);
   }
 
 }

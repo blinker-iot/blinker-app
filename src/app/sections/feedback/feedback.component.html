@@ -1,15 +1,14 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>意见反馈</ion-title>
+    <ion-title>{{'MENU.FEEDBACK' | translate}}</ion-title>
   </ion-toolbar>
 </ion-header>
-
-
 <ion-content whitebg padding>
-  <ng-container *ngIf="!isDone">
+  <!-- <ng-container> -->
+    <ng-container *ngIf="!isDone  && !isDeveloper">
     <div>
       <div class="title">问题类型</div>
       <div class="item-box">
@@ -26,7 +25,7 @@
       <button fullbtn>提交</button>
     </div>
   </ng-container>
-  <ng-container *ngIf="isDone">
+  <ng-container *ngIf="isDone && !isDeveloper">
     <div class="done-box">
       <div style="margin-bottom: 15px">
         感谢您的反馈
@@ -38,5 +37,8 @@
     <div class="btnbox" (click)="back()">
       <button fullbtn>返回</button>
     </div>
+  </ng-container>
+  <ng-container *ngIf="isDeveloper">
+    <div textcenter class="tip">开发者请通过 <b>官网>开发者社区</b> 提交反馈</div>
   </ng-container>
 </ion-content>

@@ -5,26 +5,13 @@ import {
   Renderer2,
   Input,
   Output,
-  EventEmitter,
-  ChangeDetectorRef,
+  EventEmitter
 } from '@angular/core';
-import { HammerGestureConfig, HAMMER_GESTURE_CONFIG } from '@angular/platform-browser';
-import * as Hammer from 'hammerjs';
-
-export class MyHammerConfig extends HammerGestureConfig {
-  overrides = <any>{
-    'pan': { direction: Hammer.DIRECTION_ALL, threshold: 99 }
-  }
-}
 
 @Component({
   selector: 'b-range',
   templateUrl: 'b-range.html',
-  styleUrls: ['b-range.scss'],
-  providers: [{
-    provide: HAMMER_GESTURE_CONFIG,
-    useClass: MyHammerConfig
-  }]
+  styleUrls: ['b-range.scss']
 })
 export class BRangeComponent {
 

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { DataService } from './data.service';
 import { HttpClient } from '@angular/common/http';
 import { BlinkerResponse } from '../model/response.model';
-import { API } from 'src/app/configs/app.config';
+import { API } from 'src/app/configs/api.config';
 import { sha256 } from '../functions/func';
 import { NavController } from '@ionic/angular';
 
@@ -81,7 +81,6 @@ export class AuthService {
     }
 
     register(phone, smscode, password): Promise<boolean> {
-        // this.events.publish("loading:show", "register");
         return this.http.get(API.AUTH.REGISTER, {
             params: {
                 phone: phone,
@@ -94,13 +93,9 @@ export class AuthService {
                 console.log(response);
                 let data = JSON.parse(JSON.stringify(response));
                 if (data.message == 1000) {
-                    // this.storage.set('user', data.detail);
                     this.dataService.auth = data.detail
-                    // this.token = data.detail.token;
-                    // this.uuid = data.detail.uuid;
-                    console.log("uuid:" + this.uuid);
-                    console.log("token:" + this.token);
-                    // this.events.publish("loading:hide", "");
+                    // console.log("uuid:" + this.uuid);
+                    // console.log("token:" + this.token);
                     return true;
                 } else
                     return false;

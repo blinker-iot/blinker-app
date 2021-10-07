@@ -7,3 +7,24 @@
     width: 40vw;
   }
 }
+
+.img-box {
+  img {
+    border-radius: 50%;
+    border: 1px solid #ccc;
+  }
+}
+
+.other {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: 60vw;
+}
+
+.date {
+  position: absolute;
+  right: 10px;
+  color: #999999;
+  font-size: 12px;
+}

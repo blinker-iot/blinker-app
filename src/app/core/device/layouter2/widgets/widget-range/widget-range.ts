@@ -1,6 +1,6 @@
-import { Component, Input, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, Input, ViewChild } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { Events } from '@ionic/angular';
+import { LayouterService } from '../../../layouter.service';
 
 @Component({
   selector: 'widget-range',
@@ -19,6 +19,8 @@ export class WidgetRangeComponent implements Layouter2Widget {
   get t0() {
     return this.getValue('t0')
   }
+
+  @ViewChild('rangbox', { read: ElementRef, static: true }) rangbox: ElementRef;
 
   showValue = 0;
   set value(value) {
@@ -59,13 +61,15 @@ export class WidgetRangeComponent implements Layouter2Widget {
     return this.getValue('cus')
   }
 
+  textBoxWidth = '300px'
+
   getValue(valueKey) {
     if (typeof this.device.data[this.key] != 'undefined')
       if (typeof this.device.data[this.key][valueKey] != 'undefined')
         return this.device.data[this.key][valueKey]
     if (typeof this.widget[valueKey] != 'undefined')
       return this.widget[valueKey]
-    return 
+    return
   }
 
   _lstyle
@@ -82,25 +86,35 @@ export class WidgetRangeComponent implements Layouter2Widget {
   }
 
   constructor(
-    public events: Events,
-    public changeDetectorRef: ChangeDetectorRef
+    private LayouterService: LayouterService
   ) {
   }
 
-  ngOnDestroy() {
-    if (typeof (this.device) != 'undefined')
-      this.events.unsubscribe(this.device.deviceName + ':' + this.key);
+  ngAfterViewInit(): void {
+    this.refresh()
   }
 
-  // valueChange(e) {
-  //   this.showValue = e;
-  //   this.changeDetectorRef.detectChanges();
-  // }
+  canSend = true;
+  sendData(senddata) {
+    this.LayouterService.send(`{"${this.key}":${senddata}}\n`);
+  }
 
-  sendData(e) {
-    // if (this.layouter.editMode) return;
-    let data = `{"${this.key}":${e}}\n`;
-    this.events.publish('layouter2', 'send', data);
+  refresh() {
+    setTimeout(() => {
+      this.textBoxWidth = `${this.rangbox.nativeElement.clientWidth}px`
+    }, 100)
+  }
+
+  jia() {
+    if (typeof this.value == 'undefined') this.value = 0
+    this.value++
+    this.sendData(this.value)
+  }
+
+  jian() {
+    if (typeof this.value == 'undefined') this.value = 0
+    this.value--
+    this.sendData(this.value)
   }
 
 }

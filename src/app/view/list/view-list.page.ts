@@ -1,9 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { StatusBar } from '@ionic-native/status-bar/ngx';
-import { Events } from '@ionic/angular';
-import { UserService } from 'src/app/core/services/user.service';
-import { DeviceService } from 'src/app/core/services/device.service';
 import { DataService } from 'src/app/core/services/data.service';
+import { ViewService } from 'src/app/core/services/view.service';
 
 @Component({
   selector: 'view-list',
@@ -21,10 +19,8 @@ export class ViewListPage {
   }
 
   constructor(
-    private events: Events,
-    private userService: UserService,
-    private deviceService: DeviceService,
-    private dataService: DataService
+    private dataService: DataService,
+    private viewService: ViewService
   ) { }
 
   gotoDashboard() {
@@ -36,6 +32,6 @@ export class ViewListPage {
   }
 
   changeView() {
-    this.events.publish('changeView', '')
+    this.viewService.changeView();
   }
 }

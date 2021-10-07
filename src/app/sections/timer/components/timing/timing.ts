@@ -1,9 +1,8 @@
 import { Component } from '@angular/core';
-import { Events, ModalController } from '@ionic/angular';
+import { ModalController } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
-import { TimingEditPage } from './timing-edit/timing-edit';
+import { TimingEditPage } from '../timing-edit/timing-edit';
 import { TimerService } from '../../timer.service';
-import { UserService } from 'src/app/core/services/user.service';
 import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
@@ -13,27 +12,38 @@ import { DataService } from 'src/app/core/services/data.service';
 })
 export class TimingComponent {
 
-  get device() {
-    return this.timerService.currentDevice
+  device;
+  editMode = false;
+
+
+  get deviceDataDict() {
+    return this.dataService.device.dict
   }
 
-  loaded;
+
+  loaded = false;
 
   constructor(
     public modalCtrl: ModalController,
-    public events: Events,
     public deviceService: DeviceService,
     private dataService: DataService,
     private timerService: TimerService
   ) { }
 
+
+  subscription;
   ngOnInit() {
-    this.dataService.userDataLoader.subscribe(loaded => {
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
       if (loaded) {
-        this.loaded = loaded
+        this.device = this.timerService.currentDevice
         this.timerService.loadTask();
+        this.loaded = loaded
       }
     })
+  }
+
+  ngOnDestroy() {
+    this.subscription.unsubscribe();
   }
 
   trackByFn(index, task) {
@@ -60,15 +70,16 @@ export class TimingComponent {
       actList.push(JSON.stringify(btnAct))
     }
     editTask.act = actList;
-    this.gotoTimingEditPage(editTask)
+    this.gotoTimingEditPage(editTask, 'edit')
   }
 
-  async gotoTimingEditPage(task) {
+  async gotoTimingEditPage(task, mode = 'new') {
     let modal = await this.modalCtrl.create({
       component: TimingEditPage,
       componentProps: {
         'task': task,
-        'device': this.device
+        'device': this.device,
+        'mode': mode
       }
     });
     modal.present();

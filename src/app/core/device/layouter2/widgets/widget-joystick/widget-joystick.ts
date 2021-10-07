@@ -1,7 +1,7 @@
-import { Component, Input, Renderer2, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, Renderer2, ViewChild, ElementRef, Injectable } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { Events } from '@ionic/angular';
-// import Hammer from 'hammerjs';
+import { LayouterService } from '../../../layouter.service';
+
 
 @Component({
   selector: 'widget-joystick',
@@ -12,16 +12,9 @@ export class WidgetJoystickComponent implements Layouter2Widget {
 
   @Input() device;
   @Input() widget;
-  // @Input() content = '自定义文本';
-  @Input() key;
 
-  getValue(valueKey) {
-    if (typeof this.device.data[this.key] != 'undefined')
-      if (typeof this.device.data[this.key][valueKey] != 'undefined')
-        return this.device.data[this.key][valueKey]
-    if (typeof this.widget[valueKey] != 'undefined')
-      return this.widget[valueKey]
-    return ''
+  get key() {
+    return this.widget.key;
   }
 
   _lstyle
@@ -43,57 +36,25 @@ export class WidgetJoystickComponent implements Layouter2Widget {
   loaded = false;
 
   constructor(
-    public events: Events,
     private renderer: Renderer2,
+    private LayouterService: LayouterService
   ) {
   }
 
   ngAfterContentInit() {
-    this.listenGesture();
-    window.setTimeout(() => {
-      this.setStick();
-      this.loaded = true;
-    }, 300);
+    // this.setStick();
   }
 
   ngOnDestroy() {
-    // this.gesture.destroy();
-  }
 
-  setStick() {
-    let _touchZone = this.touchZone.nativeElement.getBoundingClientRect();
-    let _stick = this.stick.nativeElement.getBoundingClientRect();
-    let l = (_touchZone.width - _stick.width) / 2;
-    let t = (_touchZone.height - _stick.height) / 2;
-    // if (this.layouter.editMode) {
-      // l = l / this.layouter.scaling;
-      // t = t / this.layouter.scaling;
-    // }
-    this.renderer.setStyle(this.stick.nativeElement, 'left', `${(l).toString()}px`);
-    this.renderer.setStyle(this.stick.nativeElement, 'top', `${(t).toString()}px`);
-  }
-
-  listenGesture() {
-    // this.gesture = new Hammer.Manager(this.touchZone.nativeElement, {
-    //   recognizers: [
-    //     [Hammer.Pan, { threshold: 1, direction: Hammer.DIRECTION_ALL }]
-    //   ]
-    // });
-    // this.gesture.listen();
-    // this.gesture.on('panmove', e => this.panmoveEvent(e));
-    // this.gesture.on('panend', e => this.panendEvent(e));
-  }
-
-  unlistenGesture() {
-    // this.gesture.unlisten();
   }
 
   oldX;
   oldY;
   lastSendTime;
-  panmoveEvent(event) {
-    //console.log('panmoveEvent');
-    // if (!this.layouter.editMode) {
+  panmove(event) {
+    // console.log(event);
+    
     let _touchZone = this.touchZone.nativeElement.getBoundingClientRect();
     let _stick = this.stick.nativeElement.getBoundingClientRect();
     let r = (_touchZone.width - _stick.width) / 2;
@@ -109,26 +70,23 @@ export class WidgetJoystickComponent implements Layouter2Widget {
       this.renderer.setStyle(this.stick.nativeElement, 'left', `${(l).toString()}px`);
       this.renderer.setStyle(this.stick.nativeElement, 'top', `${(t).toString()}px`);
       let senddata = `{"${this.key}":[${x},${y}]}\n`;
-      // this.events.publish('layout:send', senddata);
       this.sendData(senddata);
       this.oldX = x;
       this.oldY = y;
     }
-    // }
   }
 
-  panendEvent(event) {
-    // if (!this.layouter.editMode) {
-      this.setStick();
-      let senddata = `{"${this.key}":[128,128]}\n`;
-      this.events.publish('layout:send', senddata);
-    // }
+  panend(event) {
+    this.renderer.setStyle(this.stick.nativeElement, 'left', `calc(50% - 35px)`);
+    this.renderer.setStyle(this.stick.nativeElement, 'top', `calc(50% - 35px)`);
+    let senddata = `{"${this.key}":[128,128]}\n`;
+    this.LayouterService.send(senddata);
   }
 
   canSend = true;
   sendData(senddata) {
     if (this.canSend) {
-      this.events.publish('layout:send', senddata);
+      this.LayouterService.send(senddata);
       this.canSend = false;
       window.setTimeout(() => {
         this.canSend = true;

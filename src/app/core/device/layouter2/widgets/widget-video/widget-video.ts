@@ -1,5 +1,6 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ViewChild, ElementRef } from '@angular/core';
 import { Layouter2Widget } from '../config';
+import Hls from 'hls.js';
 
 @Component({
   selector: 'widget-video',
@@ -11,9 +12,25 @@ export class WidgetVideoComponent implements Layouter2Widget {
   @Input() device;
   @Input() widget;
   @Input() key;
+  @Input() isDemo = false;
 
-  get hlsUrl() {
-    return this.getValue('hls')
+  videoPlayer: HTMLVideoElement;
+  @ViewChild('video', { read: ElementRef }) video: ElementRef;
+  playerState = "load"; //play,pause
+  showVideo = false;
+
+  hls;
+
+  get url() {
+    return this.getValue('url')
+  }
+
+  get playMode() {
+    return this.getValue('mode')
+  }
+
+  get streamType() {
+    return this.getValue('str')
   }
 
   getValue(valueKey) {
@@ -38,20 +55,61 @@ export class WidgetVideoComponent implements Layouter2Widget {
     return 0;
   }
 
-  constructor() {
+  constructor() { }
 
+  ngAfterViewInit() {
+    if (this.isDemo) return;
+    if (this.streamType == 'hls')
+      this.initHls();
   }
 
-  ngAfterContentInit() {
-
+  ngOnDestroy(): void {
+    //Called once, before the instance is destroyed.
+    //Add 'implements OnDestroy' to the class.
+    if (typeof this.hls != 'undefined') {
+      this.hls.destroy()
+    }
   }
 
-  ngOnDestroy() {
-
+  initHls() {
+    if (this.url == '') return
+    this.videoPlayer = this.video.nativeElement;
+    // console.log(this.video);
+    // if (Hls.isSupported()) {
+      this.hls = new Hls();
+      this.hls.loadSource(this.url);
+      this.hls.attachMedia(this.videoPlayer);
+      this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        this.showVideo = true;
+        this.playerState = 'pause';
+        // console.log(this.playMode);
+        if (this.playMode === 0) this.play()
+      });
+    // }
   }
 
-  init() {
+  switch() {
+    if (this.url == '') return
+    if (this.playerState == 'pause') {
+      this.play();
+    } else {
+      this.pause()
+    }
+  }
 
+  play() {
+    this.videoPlayer.play();
+    this.playerState = 'play';
+  }
+
+  pause() {
+    this.videoPlayer.pause();
+    this.playerState = 'pause';
+  }
+
+  refresh() {
+    if (this.streamType == 'hls')
+      this.initHls();
   }
 
 }

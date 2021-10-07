@@ -1,9 +1,9 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>{{device.config.customName}} 位置设置</ion-title>
+    <ion-title *ngIf="device">{{device.config.customName}} 位置</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -11,11 +11,14 @@
   <div class="mapbox" #mapbox>
   </div>
 
-  <div class="bar" [ngStyle]="{'height': isDiyDevice?'30vh':'25vh'}">
-    <div class="togbox" *ngIf="isDiyDevice">
-      <span>位置分享</span>
-      <ion-toggle [(ngModel)]="publicMode" (ngModelChange)="changePublicMode()"></ion-toggle>
-    </div>
+  <!-- <div>
+    <div>当前位置</div>
+    <div>历史轨迹</div>
+    <div>位置设定</div>
+  </div> -->
+
+  <!-- 位置设定 -->
+  <div *ngIf="device" class="blinker-box">
     <div class="addr">
       <div class="title">当前设定位置：</div>
       <div>{{address}}</div>

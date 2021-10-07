@@ -1,12 +1,11 @@
 import { Component, ViewChild, ElementRef, Input } from '@angular/core';
 import { NavController } from '@ionic/angular';
-import F2 from '@antv/f2/build/f2-all';
 import { deviceName12 } from 'src/app/core/functions/func';
-import { ViewService } from 'src/app/view/view.service';
+import { ViewService } from 'src/app/core/services/view.service';
 import { ActivatedRoute } from '@angular/router';
 import { DeviceService } from 'src/app/core/services/device.service';
-import { DeviceComponent } from 'src/app/core/device/device.model';
 import { DataService } from 'src/app/core/services/data.service';
+import { DeviceComponent } from 'src/app/core/model/device.model';
 
 
 @Component({
@@ -18,9 +17,6 @@ export class OwnAirStationDashboard implements DeviceComponent {
 
   id;
   device;
-  // get device() {
-  //   return this.deviceService.device[this.id]
-  // }
 
   get geolocation() {
     return this.device.config.position.address

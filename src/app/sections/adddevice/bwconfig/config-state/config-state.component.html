@@ -1,0 +1,27 @@
+<div class="translucent">
+
+  <ng-container *ngIf="state==0">
+    <div class="title">发现设备中</div>
+    <div class="line"></div>
+    <div class="loaderbox margin5">
+      <div class="loader-inner ball-scale-multiple">
+        <div></div>
+        <div></div>
+        <div></div>
+      </div>
+    </div>
+    <div class="btn" (click)="cancel()">
+      取消
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="state==99">
+    <div class="iconbox fail animated fadeIn faster">
+      <i class="fal fa-times"></i>
+    </div>
+    <div class="title">配置失败，请重试</div>
+    <div class="btn" (click)="onRetry()">
+      重试
+    </div>
+  </ng-container>
+</div>

@@ -1,0 +1,11 @@
+<div class="dismiss" (click)="clickCancel()"></div>
+<div class="select-modal">
+  <div class="item-list">
+    <ng-container *ngFor="let deviceId of deviceDataList">
+      <div class="item" (click)="selectDevice(deviceDataDict[deviceId])">
+        <b-device-img [deviceId]="deviceId"></b-device-img>
+        <span>{{deviceDataDict[deviceId].config.customName}}</span>
+      </div>
+    </ng-container>
+  </div>
+</div>

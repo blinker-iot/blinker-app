@@ -7,36 +7,18 @@
             </div>
             开关
         </div>
-        <!-- <div btn [ngClass]="{'selected':tab==1}" (click)="changeTab(1)">
-            <div class="icon">
-                <i class="fal fa-clock"></i>
-            </div>
-            定时
-        </div>
-        <div btn [ngClass]="{'selected':tab==2}" (click)="changeTab(2)">
-            <div class="icon">
-                <i class="fal fa-stopwatch"></i>
-            </div>
-            倒计时
-        </div> -->
-        <!-- <div btn [ngClass]="{'selected':tab==3}" (click)="changeTab(3)">
-            <div class="icon">
-                <i class="fal fa-sync"></i>
-            </div>
-            循环
-        </div> -->
         <div btn [ngClass]="{'selected':tab==4}" (click)="changeTab(4)">
             <div class="icon">
                 <i class="fal fa-bolt"></i>
             </div>
-            电量
+            统计
         </div>
     </div>
     <div *ngIf="tab==0" class="switch-tab">
         <div class="plugbox">
             <div class="power">
-                <ng-container *ngIf="power">
-                    实时功耗：<span>{{power}}W</span>
+                <ng-container *ngIf="power&&switch">
+                    实时功率：<span>{{power}}W</span>
                 </ng-container>
             </div>
             <div class="plug">
@@ -52,21 +34,15 @@
             </div>
         </div>
         <div class="switchbox" (click)="turnSwitch()">
-            <div class="switch">
+            <div class="switch" [ngClass]="{'on': switch}">
                 <i class="fal fa-power-off"></i>
             </div>
         </div>
     </div>
-    <!-- <div *ngIf="tab==1" class="timing-tab">
-        <timer-timing [device]="device"></timer-timing>
-    </div>
-    <div *ngIf="tab==2" class="countdown-tab">
-        <timer-countdown [device]="device"></timer-countdown>
-    </div>
-    <div *ngIf="tab==3" class="loop-tab">
-
-    </div> -->
     <div *ngIf="tab==4" class="chart-tab">
-        <div textcenter>当前设备没有电量统计单元</div>
+        <div class="title-box">功率记录</div>
+        <b-chart [device]="device" [key]="'power'" [style]="'white'"></b-chart>
+        <div class="title-box">电量记录</div>
+        <b-chart [device]="device" [key]="'cspt'" [style]="'white'"></b-chart>
     </div>
 </div>

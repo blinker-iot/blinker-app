@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectorRef, ViewChildren, QueryList, ElementRef, Renderer2 } from '@angular/core';
-import { AlertController, Events } from '@ionic/angular';
+import { AlertController } from '@ionic/angular';
 import { styleList } from '../widgets/config';
 
 @Component({
@@ -29,7 +29,6 @@ export class widgetButtonListComponent {
 
   constructor(
     public alertCtrl: AlertController,
-    public events: Events,
     public changeDetectorRef: ChangeDetectorRef,
     public renderer: Renderer2
   ) { }
@@ -41,7 +40,7 @@ export class widgetButtonListComponent {
   getButtonList() {
     this.buttonList = [];
     this.actList = [];
-    if (typeof this.device.config.layouter == null) return;
+    if (this.device.config.layouter == null) return;    
     let dashboard = JSON.parse(this.device.config.layouter).dashboard;
     console.log(dashboard);
 
@@ -129,7 +128,6 @@ export class widgetButtonListComponent {
     // 添加动作
     if (this.actList.length > 1) {
       //只能添加两个动作
-      this.events.publish('provider:notice', "tooMuchAction");
       return;
     }
     let act;

@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
@@ -30,7 +30,7 @@
         设备图标
       </div>
       <div class="deviceimg" (click)="selectIcon()">
-        <img src="assets/img/devices/icon/{{image}}" onError="this.src='assets/img/devices/unknown.png'" />
+        <b-device-img [filename]="image"></b-device-img>
         <div class="uploadimg">选择图标</div>
       </div>
     </div>

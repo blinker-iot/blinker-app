@@ -7,6 +7,7 @@ import { IonicModule } from '@ionic/angular';
 
 import { EditlayouterPage } from './editlayouter.page';
 import { Layouter2Module } from 'src/app/core/device/layouter2/layouter2.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
 
 const routes: Routes = [
   {
@@ -21,6 +22,7 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     Layouter2Module,
+    DirectivesModule,
     RouterModule.forChild(routes)
   ],
   declarations: [EditlayouterPage]

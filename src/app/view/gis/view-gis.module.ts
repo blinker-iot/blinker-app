@@ -7,6 +7,8 @@ import { IonicModule } from '@ionic/angular';
 
 import { ViewGisPage } from './view-gis.page';
 import { InfoBarComponent } from './info-bar/info-bar.component';
+import { ComponentsModule } from 'src/app/core/components/components.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
 
 const routes: Routes = [
   {
@@ -20,7 +22,9 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     IonicModule,
-    RouterModule.forChild(routes)
+    ComponentsModule,
+    RouterModule.forChild(routes),
+    DirectivesModule
   ],
   declarations: [ViewGisPage, InfoBarComponent]
 })

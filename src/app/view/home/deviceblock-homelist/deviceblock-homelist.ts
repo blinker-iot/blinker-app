@@ -32,14 +32,10 @@ export class DeviceblockHomelistComponent {
     return this.dataService.room.list
   }
 
-  // @Input() sortableMode = false;
-
   @Output() roomidChange: EventEmitter<number> = new EventEmitter();
 
-  // @ViewChildren("devicebox") devicebox: QueryList<ElementRef>;
-
-  @ViewChild('refreshZone', { read: ElementRef, static: true }) refreshZone: ElementRef;
-  @ViewChild('deviceZone', { read: ElementRef, static: true }) deviceZone: ElementRef;
+  @ViewChild('refreshZone', { read: ElementRef, static: false }) refreshZone: ElementRef;
+  @ViewChild('deviceZone', { read: ElementRef, static: false }) deviceZone: ElementRef;
 
   constructor(
     private deviceService: DeviceService,
@@ -48,18 +44,19 @@ export class DeviceblockHomelistComponent {
   ) {
   }
 
-  ngAfterViewInit() {
-    this.initRefresh();
-    this.dataService.userDataLoader.subscribe(loaded => {
+  ngOnInit() {
+    this.dataService.initCompleted.subscribe(loaded => {
       if (loaded) {
-        setTimeout(() => {
-          this.loaded = loaded;
-        })
+        this.loaded = loaded;
         setTimeout(() => {
           this.slides = document.querySelector('ion-slides');
-        }, 500);
+        }, 100);
       }
     })
+  }
+
+  ngAfterViewInit() {
+    this.initRefresh();
   }
 
   async slideChanged(e) {
@@ -67,10 +64,6 @@ export class DeviceblockHomelistComponent {
     let length = await this.slides.length();
     if (currentIndex < length)
       this.roomidChange.emit(currentIndex - 1);
-    // let currentIndex = this.mySwiper.activeIndex;
-    // if (currentIndex < this.mySwiper.slides.length) {
-    //   this.roomidChange.emit(currentIndex - 1)
-    // }
   }
 
   goToSlide(index) {
@@ -87,7 +80,7 @@ export class DeviceblockHomelistComponent {
   }
 
   swipeEnabledChanged(e) {
-    console.log('swipeEnabledChanged:' + e);
+    // console.log('swipeEnabledChanged:' + e);
     this.slides.lockSwipes(!e);
     this.refresherEnabled = e;
     if (e)
@@ -117,7 +110,6 @@ export class DeviceblockHomelistComponent {
   async refresh() {
     await this.userService.getAllInfo();
     this.deviceService.searchLocalDevice();
-    // this.deviceService.queryDevices();
   }
 
   destroyRefresh() {

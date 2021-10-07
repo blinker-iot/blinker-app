@@ -1,0 +1,24 @@
+.item-list-box {
+    padding-top: 5px;
+    padding-bottom: 65px;
+}
+
+.item-list-box.edit {
+    ::ng-deep {
+        .item {
+            margin-left: 60px;
+
+            [edit-hide] {
+                visibility: hidden;
+            }
+        }
+    }
+}
+
+.item-list-box.sort.edit {
+    ::ng-deep {
+        .handle {
+            z-index: 99;
+        }
+    }
+}

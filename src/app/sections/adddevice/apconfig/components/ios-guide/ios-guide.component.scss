@@ -1,0 +1,51 @@
+@import "../../../config-state.scss";
+
+.ios-guide {
+    position: absolute;
+    z-index: 9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #FFF;
+
+    .ios-img {
+        width: 330px;
+        border: 1px solid #ccc;
+        margin-bottom: 30px;
+        position: relative;
+
+        .ssid {
+            position: absolute;
+            top: 135px;
+            left: 35px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    }
+
+    .text {
+        font-size: 13px;
+        line-height: 30px;
+    }
+
+    [textcenter] {
+        font-size: 13px;
+        color: #389bee;
+        position: absolute;
+        bottom: 50px;
+    }
+}
+
+// [close-btn] {
+//     position: absolute;
+//     top: 0;
+//     left: 0;
+//     padding: 10px;
+//     font-size: 1.6rem;
+// }

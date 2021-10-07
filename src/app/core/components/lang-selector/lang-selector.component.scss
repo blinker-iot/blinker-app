@@ -1,0 +1,21 @@
+.lang-selector {
+    display: flex;
+    align-items: center;
+}
+
+.lang-item {
+    padding-left: 15px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+}
+
+img {
+    width: 25px;
+}
+
+.lang-text {
+    font-size: 11px;
+    margin-left: 8px;
+    color: #333;
+}

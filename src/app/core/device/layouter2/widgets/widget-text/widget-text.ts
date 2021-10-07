@@ -16,19 +16,23 @@ export class WidgetTextComponent implements Layouter2Widget {
   }
 
   get t0() {
-    return this.getValue(['tex','t0'])
+    return this.getValue(['tex', 't0'])
   }
 
   get t1() {
-    return this.getValue(['tex1','t1'])
+    return this.getValue(['tex1', 't1'])
   }
 
   get ico() {
-    return this.getValue(['ico','icon'])
+    return this.getValue(['ico', 'icon'])
+  }
+
+  get size() {
+    return this.getValue(['size'])
   }
 
   get color() {
-    return this.getValue(['clr','col','color'])
+    return this.getValue(['clr', 'col', 'color'])
   }
 
   getValue(valueKeys: string[]): any {
@@ -56,60 +60,6 @@ export class WidgetTextComponent implements Layouter2Widget {
   }
 
   constructor(
-    // public events: Events,
-    // private changeDetectorRef: ChangeDetectorRef,
-    // public render: Renderer2,
-  ) {}
-
-  // ngAfterContentInit(): void {
-  //   if (typeof (this.device) != 'undefined') {
-  //     window.setTimeout(() => {
-  //       this.subscribe(this.key);
-  //     }, 100);
-  //   }
-  //   // console.log(this.widget);
-  // }
-
-  // ngOnDestroy() {
-  //   if (typeof (this.device) != 'undefined')
-  //     this.events.unsubscribe(this.device.deviceName + ':' + this.key);
-  // }
-
-  // subscribe(key) {
-  //   if (typeof (this.device) != 'undefined')
-  //     window.setTimeout(() => {
-  //       // console.log("this.device test:");
-  //       this.events.subscribe(this.device.deviceName + ':' + key, message => {
-  //         if (message == "loaded") {
-  //           if (this.device.data.hasOwnProperty(key)) {
-  //             this.processData(this.device.data[key])
-  //           }
-  //           this.changeDetectorRef.detectChanges();
-  //         }
-  //       });
-  //     }, 100);
-  // }
-
-  // processData(data) {
-  //   if (typeof data.t0 != "undefined")
-  //     this.t0 = data.t0;
-  //   if (typeof data.t1 != "undefined")
-  //     this.t1 = data.t1;
-  //   if (typeof data.tex != "undefined")
-  //     this.t0 = data.tex;
-  //   if (typeof data.tex1 != "undefined")
-  //     this.t1 = data.tex1;
-  // }
-
-  // unsubscribe(key) {
-  //   if (typeof (this.device) != 'undefined')
-  //     this.events.unsubscribe(this.device.deviceName + ':' + key);
-  // }
-
-  // changeColor(color = '#959595') {
-  //   if (color[0] != '#' && color[0] != 'r') color = '#' + color;
-  //   if (typeof this.icon.first != 'undefined')
-  //     this.render.setStyle(this.icon.first.nativeElement, 'color', `${color}`);
-  // }
+  ) { }
 
 }

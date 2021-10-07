@@ -1,10 +1,10 @@
 import { Component, Input } from '@angular/core';
 import { stringify, parse } from 'zipson';
-import { Device } from 'src/app/core/device/device.model';
 import { DevcenterService } from '../../../devcenter.service';
 import { ActivatedRoute } from '@angular/router';
-import { Events } from '@ionic/angular';
 import { Clipboard } from '@ionic-native/clipboard/ngx';
+import { Device } from 'src/app/core/model/device.model';
+import { NoticeService } from 'src/app/core/services/notice.service';
 
 @Component({
   selector: 'blinker-ieconfig',
@@ -29,7 +29,7 @@ export class IeconfigPage {
     private clipboard: Clipboard,
     private devcenterService: DevcenterService,
     private activatedRoute: ActivatedRoute,
-    private events: Events
+    private noticeService: NoticeService,
   ) { }
 
 
@@ -59,14 +59,14 @@ export class IeconfigPage {
       "layouter": data
     }
     this.devcenterService.setProDeviceConfig(this.deviceType, layouterConfig).then(result => {
-      if (result) this.events.publish("provider:notice", "importSuccess")
+      if (result) this.noticeService.showToast("importSuccess")
     });
   }
 
   exportData() {
     this.configData = stringify(JSON.parse(this.layouterData))
     this.clipboard.copy(this.configData);
-    this.events.publish("provider:notice", "copySuccess")
+    this.noticeService.showToast("copySuccess")
   }
 
 }

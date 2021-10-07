@@ -1,12 +1,8 @@
 <div device-bg [ngClass]="{'on': switch}">
-  <div class="stream" *ngIf="tab==4 && switchState == 'on'">
+  <div class="stream" *ngIf="tab==4 && switch">
     <img src="assets/img/devices/ownlight/bg.jpg">
   </div>
 </div>
-<!-- <ion-content [ngClass]="{
-    'offline': switchState == 'off' || state=='offline',
-    'content-color': tab!=4 && switchState == 'on'
-  }"> -->
 <div device-box [ngClass]="{'off': !switch}">
   <div class="btn-gounp">
     <div btn [ngClass]="{'selected':tab==0}" (click)="changeTab(0)">
@@ -103,15 +99,10 @@
     </ng-container>
   </div>
   <div class="switchbox">
-    <div class="switch" [ngClass]="{'on': switchState=='on'}" (click)="turn()">
+    <div class="switch" [ngClass]="{'on': switch}" (click)="turnSwitch()">
       <i class="fal fa-power-off"></i>
     </div>
-    <!-- <div class="timing" (click)="gotoTiming()">
-      <img src="assets/img/devices/ownlight/timing.png">
-    </div> -->
   </div>
-
 </div>
 
 <img preload src="/assets/img/devices/ownlight/bg.jpg">
-<div debug *ngIf="isDebug">colortemp:{{colortemp}},brightness:{{brightness}},speed:{{speed}},color:{{color}}</div>

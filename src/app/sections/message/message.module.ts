@@ -6,8 +6,9 @@ import { Routes, RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 
 import { MessagePage } from './message.page';
-import { MessContentComponent } from './mess-content/mess-content.component';
-import { MessItemComponent } from './mess-item/mess-item.component';
+import { ComponentsModule } from 'src/app/core/components/components.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { TranslateModule } from '@ngx-translate/core';
 
 const routes: Routes = [
   {
@@ -21,8 +22,11 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     IonicModule,
-    RouterModule.forChild(routes)
+    ComponentsModule,
+    DirectivesModule,
+    RouterModule.forChild(routes),
+    TranslateModule.forChild()
   ],
-  declarations: [MessagePage,MessItemComponent,MessContentComponent]
+  declarations: [MessagePage]
 })
 export class BlinkerMessageModule { }

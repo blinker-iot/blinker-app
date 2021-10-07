@@ -15,9 +15,16 @@
 
 
 .desc {
-    font-size: 13px;
-    margin-bottom: 10vh;
+    // font-size: 13px;
+    margin-bottom: 5vh;
     color: #444444;
+    text-align: center;
+}
+
+.custom-btn {
+    padding: 15px;
+    text-align: center;
+    color: #389bee;
 }
 
 .card {
@@ -28,6 +35,11 @@
     align-items: center;
     font-size: 13px;
     color: #666666;
+
+    .broker-item {
+        margin-bottom: 5vh;
+        height: 45px;
+    }
 
     .text {
         width: 100%;
@@ -74,5 +86,45 @@
 
     .ball-pulse>div {
         background: #389bee;
+    }
+}
+
+.broker-box {
+    padding: 0 30px;
+
+    .broker-item {
+        margin-bottom: 30px;
+        border-radius: 30px;
+        height: 60px;
+        box-shadow: 0 0 10px #CCC;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+
+        img {
+            height: 30px;
+        }
+    }
+
+    .broker-item.disable {
+        filter: grayscale(90%);
+        opacity: 0.5;
+    }
+
+    .beta {
+        position: absolute;
+        right: 15px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-left: 10px;
+        height: 20px;
+        border-radius: 10px;
+        padding: 5px 10px;
+        background: red;
+        box-shadow: 0 0 5px rgb(255, 106, 106);
+        font-size: 10px;
+        color: #FFF;
     }
 }

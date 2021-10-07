@@ -1,7 +1,5 @@
 import {
   ModalController,
-  AlertController,
-  Events,
   Platform
 } from '@ionic/angular';
 import {
@@ -9,7 +7,6 @@ import {
   ViewChild,
   Renderer2,
   ElementRef,
-  ChangeDetectorRef,
   Input,
   EventEmitter,
 } from '@angular/core';
@@ -21,31 +18,19 @@ import {
 } from 'angular-gridster2';
 
 import { widgetList, configList, styleList } from './widgets/config'
-
-import { arrayRemove, randomString, deviceName12 } from 'src/app/core/functions/func';
+import { arrayRemove, randomString } from 'src/app/core/functions/func';
 import { DeviceService } from 'src/app/core/services/device.service';
-import { UserService } from 'src/app/core/services/user.service';
 import { NativeService } from 'src/app/core/services/native.service';
-import { Layouter2Service } from './layouter2.service';
+import { LayouterService } from '../layouter.service';
 import { Layouter2GuidePage } from './guide/layouter2-guide';
 import { Mode } from './layouter2-mode';
 import { ActivatedRoute } from '@angular/router';
-import { parse } from 'zipson';
-import { DeviceComponent } from '../device.model';
-import { DevicelistService } from '../../services/devicelist.service';
-
-
-// interface LayouterData {
-//   config: {
-//     headerColor: string,
-//     headerStyle: string,
-//     background: {
-//       img: string,
-//       isFull: boolean
-//     },
-//   },
-//   dashboard: any[]
-// }
+import { DeviceConfigService } from '../../services/device-config.service';
+import { BlinkerDevice, DeviceComponent } from '../../model/device.model';
+import { ViewService } from '../../services/view.service';
+import { NoticeService } from '../../services/notice.service';
+import { DataService } from '../../services/data.service';
+import { BackgroundComponent } from './background/background.component'
 
 @Component({
   selector: 'layouter2',
@@ -57,29 +42,59 @@ export class Layouter2 implements DeviceComponent {
   static deviceType = 'Layouter2';
 
   id;
-  @Input() device:BlinkerDevice;
+  @Input() device: BlinkerDevice;
 
   loaded = false;
   get widgetList() {
     return widgetList
   }
 
-  options: GridsterConfig;
   resizeEvent: EventEmitter<any> = new EventEmitter<any>();
 
-  @Input() layouterData:string;
+  @Input() layouterData: string;
 
   defaultData = {
-    "config": {
-      "headerColor": 'transparent',
-      "headerStyle": 'light',
-      "background": {
+    version:'2.0.0',
+    config: {
+      headerColor: 'transparent',
+      headerStyle: 'dark',
+      background: {
         img: 'assets/img/headerbg.jpg',
         isFull: false
-      },
+      }
     },
-    "dashboard": []
+    dashboard: [],
+    actions: [],
+    triggers: []
   }
+
+  demoDashboard = [
+    { "type": "btn", "ico": "fad fa-siren-on", "mode": 0, "t0": "点我开关灯", "clr": "#389BEE", "t1": "文本2", "bg": 0, "cols": 2, "rows": 2, "key": "btn-abc", "x": 6, "y": 1, "speech": [], "lstyle": 0 },
+    { "type": "tex", "t0": "blinker入门示例", "t1": "文本2", "bg": 2, "ico": "", "cols": 4, "rows": 1, "key": "tex-272", "x": 0, "y": 0, "speech": [], "lstyle": 1, "clr": "#FFF" },
+    { "type": "num", "t0": "点击按键", "ico": "fad fa-american-sign-language-interpreting", "clr": "#389BEE", "min": 0, "max": 100, "uni": "次", "bg": 0, "cols": 4, "rows": 2, "key": "num-abc", "x": 0, "y": 1, "speech": [], "lstyle": 1 },
+    { "type": "btn", "ico": "fad fa-hand-point-down", "mode": 0, "t0": "点我计数", "t1": "文本2", "bg": 0, "cols": 2, "rows": 2, "key": "btn-123", "x": 4, "y": 1, "speech": [], "lstyle": 0, "clr": "#389BEE" },
+    { "type": "deb", "mode": 0, "bg": 0, "cols": 8, "rows": 3, "key": "debug", "x": 0, "y": 3 }
+  ]
+
+  demoActions = [
+    {
+      "cmd": { "switch": "on" },
+      "text": "打开?name"
+    },
+    {
+      "cmd": { "switch": "off" },
+      "text": "关闭?name"
+    }
+  ]
+
+  demoTriggers = [
+    {
+      "source": "switch",
+      "source_zh": "开关状态",
+      "state": ["on", "off"],
+      "state_zh": ["打开", "关闭"]
+    }
+  ]
 
   get dashboard(): Array<GridsterItem> {
     if (typeof this.device.data['layouterData'] == 'undefined')
@@ -95,14 +110,12 @@ export class Layouter2 implements DeviceComponent {
     if (typeof this.device.data['layouterData'] == 'undefined')
       return {
         "headerColor": 'transparent',
-        "headerStyle": 'light',
+        "headerStyle": 'dark',
         "background": {
           img: 'assets/img/headerbg.jpg',
           isFull: false
         },
       }
-    // console.log(this.device.data['layouterData']['config'].background.isFull);
-      
     return this.device.data['layouterData']['config']
   }
 
@@ -110,21 +123,70 @@ export class Layouter2 implements DeviceComponent {
     this.device.data['layouterData']['config'] = config
   }
 
+  margin = 5;
+
+  options: GridsterConfig = {
+    margin: this.margin,
+    outerMargin: true,
+    // gridType: GridType.Fixed,
+    gridType: GridType.ScrollVertical,
+    displayGrid: DisplayGrid.None,
+    mobileBreakpoint: 0,
+    outerMarginLeft: 13,
+    outerMarginRight: 13,
+    minCols: 8,
+    maxCols: 8,
+    minRows: 14,
+    maxRows: 20,
+    maxItemCols: 8,
+    minItemCols: 1,
+    maxItemRows: 8,
+    minItemRows: 1,
+    maxItemArea: 64,
+    minItemArea: 1,
+    defaultItemCols: 1,
+    defaultItemRows: 1,
+    // 多层配置
+    allowMultiLayer: true,
+    defaultLayerIndex: 1,
+    baseLayerIndex: 2,
+    maxLayerIndex: 2,
+    // 
+    scrollSensitivity: 0,
+    scrollSpeed: 0,
+    ignoreMarginInRow: false,
+    draggable: {
+      enabled: false
+    },
+    resizable:{
+      enabled:false
+    },
+    swap: true,
+    swapWhileDragging:true,
+    pushItems: false,
+    disableWindowResize: false,
+    disableWarnings: false,
+    scrollToNewItems: false,
+    itemInitCallback: (GridsterItem, GridsterItemComponent) => this.iteminitCallback(GridsterItem, GridsterItemComponent),
+    itemResizeCallback: (item) => this.resizeEvent.emit(item),
+    // gridSizeChangedCallback: (gridsterComponent) => { this.resizeWidgets(gridsterComponent) }
+  };
+
   @Input()
   public set mode(mode: Mode) {
     if (mode == Mode.Edit) this.EditMode();
     else if (mode == Mode.Default) this.DefaultMode();
     else if (mode == Mode.EditBackground) this.EditBackgroundMode();
-    this.layouter2Service.mode = mode
-    // this.changeDetectorRef.detectChanges();
+    this.LayouterService.mode = mode
   }
 
   public get mode() {
-    return this.layouter2Service.mode
+    return this.LayouterService.mode
   }
 
   public hasDebug = false;
   public hasTiming = false;
+  public hasVideo = false;
 
   oldState;
 
@@ -137,6 +199,8 @@ export class Layouter2 implements DeviceComponent {
   clientHeight;
   clientWidth;
 
+  actionSubject;
+
   get isSharedDevice() {
     return this.device.config.isShared
   }
@@ -148,16 +212,15 @@ export class Layouter2 implements DeviceComponent {
   constructor(
     private activatedRoute: ActivatedRoute,
     private render: Renderer2,
-    private events: Events,
     private modalCtrl: ModalController,
-    private alertCtrl: AlertController,
     private deviceService: DeviceService,
-    private userService: UserService,
     private nativeService: NativeService,
-    private changeDetectorRef: ChangeDetectorRef,
-    private layouter2Service: Layouter2Service,
+    private LayouterService: LayouterService,
     private platform: Platform,
-    private deviceListService: DevicelistService
+    private deviceListService: DeviceConfigService,
+    private viewService: ViewService,
+    private noticeService: NoticeService,
+    private dataService: DataService
   ) {
   }
 
@@ -168,30 +231,36 @@ export class Layouter2 implements DeviceComponent {
 
   ngAfterViewInit() {
     this.nativeService.init();
-    this.events.publish("swipeEnable", false)
-    this.events.subscribe('layouter2', (act, data) => {
-      if (act == 'cleanWidgets') this.cleanWidgets();
-      else if (act == 'addWidget') this.addWidget(data)
-      else if (act == 'delWidget') this.delWidget(data);
-      else if (act == 'changeWidget') this.changedOptions();
-      else if (act == 'changeMode') this.mode = data;
-      else if (act == 'send') this.deviceService.sendData(this.device, data);
+    this.viewService.disableSwipeBack();
+    this.actionSubject = this.LayouterService.action.subscribe(async act => {
+      if (act.name == 'cleanWidgets') this.cleanWidgets();
+      else if (act.name == 'addWidget') this.addWidget(act.data)
+      else if (act.name == 'delWidget') this.delWidget(act.data);
+      else if (act.name == 'changeWidget') this.changedOptions();
+      else if (act.name == 'changeMode') {
+        this.mode = act.data;
+        if (this.mode == Mode.EditBackground) {
+          let modal = await this.modalCtrl.create({
+            component: BackgroundComponent
+          })
+          modal.present();
+        }
+
+      } else if (act.name == 'changeBackground') {
+        this.backgroundChanged(act.data)
+      }
+      else if (act.name == 'send') this.deviceService.sendData(this.device, act.data);
     })
-    // this.events.subscribe(this.device.deviceName + ':state', data => {
-    //   this.changeDetectorRef.detectChanges();
-    // })
     setTimeout(() => {
-      this.getBgPosition()
+      this.getBgPosition();
+      this.checkBackground();
     }, 50);
-    // this.detectChangesTimer = setInterval(() => {
-    //   this.changeDetectorRef.detectChanges();
-    // }, 1111)
   }
 
   ngOnDestroy() {
-    this.layouter2Service.mode = Mode.Default;
-    // clearInterval(this.detectChangesTimer);
-    this.events.publish("swipeEnable", true)
+    this.LayouterService.mode = Mode.Default;
+    this.viewService.enableSwipeBack();
+    // this.viewService.restoreStatusBar();
     this.destroy();
   }
 
@@ -201,8 +270,8 @@ export class Layouter2 implements DeviceComponent {
     let csstext = document.querySelectorAll('.gridster-row')[2]['style']['cssText'];
     this.bgPosition = `${Number(csstext.substring(22, csstext.indexOf('px'))) + (this.platform.is('cordova') ? 72 : 52)}px`;
     let length = csstext.substring(csstext.lastIndexOf('height:') + 7, csstext.lastIndexOf('px'));
-    this.layouter2Service.gridLength = parseFloat(length);
-    this.layouter2Service.gridMargin = this.margin;
+    this.LayouterService.gridLength = parseFloat(length);
+    this.LayouterService.gridMargin = this.margin;
   }
 
   initLayouter2() {
@@ -212,47 +281,10 @@ export class Layouter2 implements DeviceComponent {
 
   destroy() {
     this.nativeService.allStop(this.device);
-    this.events.unsubscribe('layouter2');
-    // this.events.unsubscribe(this.device.deviceName + ':state');
+    this.actionSubject.unsubscribe();
   }
 
-  public margin = 5;
   initGrid() {
-    this.options = {
-      margin: this.margin,
-      outerMargin: true,
-      // gridType: GridType.Fixed,
-      gridType: GridType.ScrollVertical,
-      displayGrid: DisplayGrid.None,
-      mobileBreakpoint: 0,
-      outerMarginLeft: 13,
-      outerMarginRight: 13,
-      minCols: 8,
-      maxCols: 8,
-      minRows: 14,
-      maxRows: 16,
-      maxItemCols: 8,
-      minItemCols: 1,
-      maxItemRows: 8,
-      minItemRows: 1,
-      maxItemArea: 64,
-      minItemArea: 1,
-      defaultItemCols: 1,
-      defaultItemRows: 1,
-      scrollSensitivity: 0,
-      scrollSpeed: 0,
-      ignoreMarginInRow: false,
-      draggable: {
-        enabled: false
-      },
-      swap: false,
-      pushItems: true,
-      disableWindowResize: false,
-      disableWarnings: false,
-      scrollToNewItems: false,
-      itemInitCallback: (GridsterItem, GridsterItemComponent) => this.iteminitCallback(GridsterItem, GridsterItemComponent),
-      itemResizeCallback: (item) => this.resizeEvent.emit(item)
-    };
     this.changedOptions();
   }
 
@@ -266,6 +298,21 @@ export class Layouter2 implements DeviceComponent {
     this.render.setStyle(this.gridsterBox.nativeElement, 'transform', `none`);
   }
 
+  // 检查组件并自动改变尺寸
+  resizeTimer;
+  resizeWidgets(gridsterComponent) {
+    clearTimeout(this.resizeTimer)
+    this.resizeTimer = setTimeout(() => {
+      this.dashboard.forEach(widget => {
+        if (widget.isfull) {
+          widget.cols = gridsterComponent.columns
+        }
+      });
+      this.changedOptions();
+    }, 600);
+
+  }
+
   //显示使用向导
   async showGuide() {
     if (this.isSharedDevice || !this.isDiyDevice) return
@@ -275,14 +322,18 @@ export class Layouter2 implements DeviceComponent {
     });
     modal.onDidDismiss().then(result => {
       if (result.data == 'loadExample1') {
-        this.layouterData = JSON.stringify(parse(`{¨config¨{¨headerColor¨¨transparent¨¨headerStyle¨¨light¨¨background¨{¨img¨¨assets/img/headerbg.jpg¨¨isFull¨«}}¨dashboard¨|{¨type¨¨btn¨¨ico¨¨fal fa-power-off¨¨mode¨É¨t0¨¨点我开关灯¨¨t1¨¨文本2¨¨bg¨É¨cols¨Ë¨rows¨Ë¨key¨¨btn-abc¨´x´Ï´y´Ê¨speech¨|÷¨lstyle¨É}{ßA¨tex¨ßF¨blinker入门示例¨ßHßIßJËßC´´ßKÍßLÊßM¨tex-272¨´x´É´y´ÉßO|÷ßPÊ¨clr¨¨#FFF¨}{ßA¨num¨ßF¨点击按键¨ßC¨fal fa-comment-dots¨ßT¨#389BEE¨¨min¨É¨max¨¢1c¨uni¨´次´ßJÉßKËßLËßM¨num-abc¨´x´É´y´ÊßO|÷}{ßAßBßC¨fal fa-pencil-alt¨ßEÉßF¨点我计数¨ßHßIßJÉßKËßLËßM¨btn-123¨´x´Í´y´ÊßO|÷ßPÉßT¨#595959¨}÷}`))
+        this.defaultData.dashboard = this.demoDashboard;
+        this.defaultData.actions = this.demoActions;
+        this.defaultData.triggers = this.demoTriggers;
+        this.layouterData = JSON.stringify(this.defaultData);
         this.loadLayouterData();
         let layouterDataConfig = {
           "layouter": JSON.stringify(this.device.data['layouterData'])
         }
         this.deviceService.saveDeviceConfig(this.device, layouterDataConfig).then(result => {
           this.device.config['layouter'] = this.layouterData;
-          if (result) this.events.publish("provider:notice", "importSuccess")
+          if (result)
+            this.noticeService.showToast('importSuccess');
         });
       }
     });
@@ -290,12 +341,14 @@ export class Layouter2 implements DeviceComponent {
   }
 
   loadLayouterData() {
+    // console.log(this.device);
     // console.log(this.layouterData);
-    if (this.layouterData == null) {
+    if (this.layouterData == null || this.layouterData == '') {
       this.device.data['layouterData'] = this.defaultData;
     } else {
       this.device.data['layouterData'] = JSON.parse(this.layouterData);
     }
+
     if (this.dashboard.length == 0)
       this.showGuide();
     for (let component of this.dashboard) {
@@ -305,18 +358,23 @@ export class Layouter2 implements DeviceComponent {
       if (component.type == 'tim') {
         this.hasTiming = true;
       }
+      if (component.type == 'vid') {
+        this.hasVideo = true;
+      }
     }
     this.loaded = true;
+    this.LayouterService.updateConfig.next();
   }
 
   loadProDevice() {
-    this.deviceListService.deviceConfig[this.device.deviceType]
+    this.deviceListService.deviceConfigs[this.device.deviceType]
   }
 
   //清空组件
   async cleanWidgets() {
     this.dashboard = [];
     this.hasDebug = false;
+    this.hasVideo = false;
     this.hasTiming = false;
   }
 
@@ -334,21 +392,20 @@ export class Layouter2 implements DeviceComponent {
   //添加组件
   addWidget(type) {
     // 蓝牙模式，禁用定时
-    if (type == 'tim' && this.device.config.mode == "ble") {
-      this.events.publish("provider:notice", "canNotBeUsed");
-      return;
-    }
+    // if (type == 'tim' && this.device.config.mode == "ble") {
+    //   this.noticeService.showToast('canNotBeUsed');
+    //   return;
+    // }
     let component = Object.assign({}, configList[type], styleList[type][0])
     component['key'] = component.type + "-" + randomString();
-    // component['layouter'] = this;
-    // component['device'] = this.device;
-    // component['self'] = component;
     this.dashboard.push(component);
     if (type == 'deb') {
       this.hasDebug = true;
       component['key'] = 'debug';
-    }
-    if (type == 'tim') {
+    } else if (type == 'vid') {
+      this.hasVideo = true;
+      component['key'] = 'video';
+    } else if (type == 'tim') {
       this.hasTiming = true;
       component['key'] = 'timing';
     }
@@ -362,13 +419,15 @@ export class Layouter2 implements DeviceComponent {
       if (typeof GridsterItemComponent.notPlaced != "undefined") {
         if (GridsterItemComponent.notPlaced) {
           arrayRemove(this.dashboard, this.dashboard.length - 1);
-          this.events.publish('provider:notice', 'notPlaced');
-
+          this.noticeService.showToast('notPlaced');
           if (GridsterItem.type == 'deb') {
             this.hasDebug = false;
           }
           if (GridsterItem.type == 'tim') {
             this.hasTiming = false;
+          }
+          if (GridsterItem.type == 'vid') {
+            this.hasVideo = false;
           }
         }
       }
@@ -400,11 +459,8 @@ export class Layouter2 implements DeviceComponent {
   }
 
   changedOptions() {
-    // if (this.options.api && this.options.api.optionsChanged) {
     if (this.options.api) {
-      // setTimeout(() => {
-        this.options.api.optionsChanged();
-      // })
+      this.options.api.optionsChanged();
     }
   }
 
@@ -414,9 +470,30 @@ export class Layouter2 implements DeviceComponent {
     return true;
   }
 
+  checkBackground() {
+    if (this.config['headerStyle'] == 'light') {
+      this.viewService.setDarkStatusBar();
+    }
+    // else{
+    //   this.viewService.setLightStatusBar();
+    // }
+  }
+
   backgroundChanged(background) {
+    if (background.img == '' || background.headerStyle == 'light') {
+      this.config['headerStyle'] = 'light';
+      this.viewService.setDarkStatusBar();
+    }
+    else {
+      this.config['headerStyle'] = 'dark';
+      this.viewService.setLightStatusBar();
+    }
+
+    console.log(this.config['headerStyle']);
+
     this.config['background']['img'] = background.img;
     this.config['background']['isFull'] = background.isFull;
+    this.LayouterService.updateConfig.next();
   }
 
 }

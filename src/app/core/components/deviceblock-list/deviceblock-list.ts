@@ -55,7 +55,7 @@ export class DeviceblockListComponent {
     filter: '.device-space',
     dataIdAttr: 'id',
     onChoose: (event: any) => {
-      console.log('onChoose');
+      // console.log('onChoose');
       this.swipeEnabled.emit(false);
       this.waitSaveDeviceList();
     },
@@ -64,7 +64,7 @@ export class DeviceblockListComponent {
     //   this.swipeEnabled.emit(true);
     // },
     onEnd: (event: any) => {
-      console.log('onEnd');
+      // console.log('onEnd');
       this.swipeEnabled.emit(true);
       this.saveDeviceList();
     },

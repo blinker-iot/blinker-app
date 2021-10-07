@@ -1,6 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { DocService } from '../../services/doc.service';
-import { ActivatedRoute } from '@angular/router';
 import { ModalController } from '@ionic/angular';
 
 @Component({
@@ -20,7 +19,7 @@ export class DocPage implements OnInit {
 
   constructor(
     private docService: DocService,
-    private modalCtrl: ModalController
+    private modalCtrl: ModalController,
   ) { }
 
   ngOnInit() {
@@ -29,8 +28,9 @@ export class DocPage implements OnInit {
     })
   }
 
-  close() {
-    this.modalCtrl.dismiss()
+  async close() {
+    (await this.modalCtrl.getTop()).dismiss()
+    // this.modalCtrl.dismiss()
   }
 
 }

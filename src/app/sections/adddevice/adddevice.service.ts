@@ -1,14 +1,15 @@
 import { Injectable } from '@angular/core';
-import { Platform, Events } from '@ionic/angular';
+import { Platform } from '@ionic/angular';
 import { Zeroconf } from '@ionic-native/zeroconf/ngx';
 import { BLE } from '@ionic-native/ble/ngx';
 import { Network } from '@ionic-native/network/ngx';
 import { DataService } from 'src/app/core/services/data.service';
 import { Uint8Array2hex, name2mac, mac2name } from 'src/app/core/functions/func';
 import { Diagnostic } from '@ionic-native/diagnostic/ngx';
-import { API } from 'src/app/configs/app.config';
+import { API } from 'src/app/configs/api.config';
 import { HttpClient } from '@angular/common/http';
 import { BlinkerResponse } from 'src/app/core/model/response.model';
+import { NoticeService } from 'src/app/core/services/notice.service';
 
 @Injectable({
   providedIn: 'root'
@@ -34,17 +35,17 @@ export class AdddeviceService {
   isDev = false;
   deviceType;
   mode;
-  deviceTypeList;
+  deviceTypeList = [];
 
   constructor(
     private http: HttpClient,
     private zeroconf: Zeroconf,
     public plt: Platform,
-    public events: Events,
     private ble: BLE,
     private diagnostic: Diagnostic,
     public network: Network,
-    private dataService: DataService
+    private dataService: DataService,
+    private noticeService: NoticeService
   ) { }
 
   isRegisted(deviceName) {
@@ -59,7 +60,7 @@ export class AdddeviceService {
     if (await this.diagnostic.getBluetoothState() == this.diagnostic.bluetoothState.POWERED_ON) {
       return true;
     } else {
-      this.events.publish("provider:notice", "openBluetooth");
+      this.noticeService.showAlert('openBluetooth')
       return false;
     }
   }
@@ -196,8 +197,32 @@ export class AdddeviceService {
         let data = JSON.parse(JSON.stringify(response));
         if (data.message == 1000) {
           return true;
-        } else
+        } else {
+          this.noticeService.showToast(data.detail)
           return false;
+        }
+      })
+      .catch(this.handleError);
+  }
+
+  addDeviceByScan(registerKey): Promise<boolean> {
+    let params = {
+      uuid: this.uuid,
+      token: this.token,
+      // deviceType: deviceType,
+      registerKey: registerKey
+    }
+    console.log(params);
+    return this.http.post<BlinkerResponse>(API.ADDDEVICE.ADDDEVICE_SCAN, params)
+      .toPromise()
+      .then(response => {
+        console.log(response);
+        if (response.message == 1000) {
+          return true;
+        } else {
+          this.noticeService.showToast(response.detail);
+          return false;
+        }
       })
       .catch(this.handleError);
   }
@@ -271,7 +296,6 @@ export class AdddeviceService {
         console.log(response);
         let data = JSON.parse(JSON.stringify(response));
         if (data.message == 1000) {
-          // this.events.publish("adddevice:mqttkey", data.detail);
           return data.detail;
         } else
           return false;
@@ -280,14 +304,13 @@ export class AdddeviceService {
   }
 
   addDevice2(deviceIP): Promise<boolean> {
-    return this.http.get("http://" + deviceIP + "/date=" + ((new Date).getTime()))
+    return this.http.get<BlinkerResponse>("http://" + deviceIP + "/date=" + ((new Date).getTime()))
       .toPromise()
-      .then(response => {
-        console.log(response);
-        let data = JSON.parse(JSON.stringify(response));
-        if (data.message == 'success') {
+      .then(resp => {
+        if (resp.message == 1000) {
           return true;
         } else {
+          this.noticeService.showToast(resp.detail)
           return false;
         }
       })
@@ -302,6 +325,7 @@ export class AdddeviceService {
 
   handleError(error: any): boolean {
     console.error('An error occurred', error);
+    this.noticeService.showToast(error)
     return false;
   }
 

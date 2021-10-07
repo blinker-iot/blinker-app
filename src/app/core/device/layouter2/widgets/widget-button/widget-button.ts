@@ -1,23 +1,14 @@
-import { Component, Input, ElementRef, ViewChild, Renderer2, ViewChildren, QueryList } from '@angular/core';
-import { Events } from '@ionic/angular';
+import { Component, Input, ElementRef, ViewChild, Renderer2, Injectable } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { HammerGestureConfig, HAMMER_GESTURE_CONFIG } from '@angular/platform-browser';
 import { NativeService } from 'src/app/core/services/native.service';
+import { LayouterService } from '../../../layouter.service';
 
-export class MyHammerConfig extends HammerGestureConfig {
-  overrides = <any>{
-    'press': { time: 300, threshold: 99 } // override default settings
-  }
-}
+
 
 @Component({
   selector: 'widget-button',
   templateUrl: 'widget-button.html',
-  styleUrls: ['widget-button.scss'],
-  providers: [{
-    provide: HAMMER_GESTURE_CONFIG,
-    useClass: MyHammerConfig
-  }]
+  styleUrls: ['widget-button.scss']
 })
 export class WidgetButtonComponent implements Layouter2Widget {
 
@@ -41,6 +32,10 @@ export class WidgetButtonComponent implements Layouter2Widget {
   }
 
   get state() {
+    this.device.data[this.key] 
+    if (typeof this.device.data[this.key] == 'string') {
+      return this.device.data[this.key]
+    }
     return this.getValue(['swi', 'switch'])
   }
 
@@ -81,10 +76,9 @@ export class WidgetButtonComponent implements Layouter2Widget {
   @ViewChild("button", { read: ElementRef, static: true }) button: ElementRef;
 
   constructor(
-    public events: Events,
     public render: Renderer2,
-    private nativeService: NativeService
-    // private changeDetectorRef: ChangeDetectorRef
+    private nativeService: NativeService,
+    private LayouterService: LayouterService
   ) { }
 
   ngAfterViewInit() {
@@ -111,15 +105,14 @@ export class WidgetButtonComponent implements Layouter2Widget {
   press(event) {
     this.pressed = true;
     let data = `{"${this.key}":"press"}\n`;
-    this.events.publish('layouter2', 'send', data + '\n');
-    // console.log(data);
+    this.LayouterService.send(data + '\n')
   }
 
   pressup(event) {
     if (this.pressed) {
       this.pressed = false;
       let data = `{"${this.key}":"pressup"}\n`;
-      this.events.publish('layouter2', 'send', data + '\n');
+      this.LayouterService.send(data + '\n')
     }
   }
 
@@ -132,8 +125,8 @@ export class WidgetButtonComponent implements Layouter2Widget {
     } else if (this.mode == 2) {
       data = `{"${this.key}":"${this.custom}"}`;
     }
-    this.events.publish('layouter2', 'send', data + '\n');
-    this.nativeService.vibrate();
+    this.LayouterService.send(data + '\n')
+    // this.nativeService.vibrate();
   }
 
 }

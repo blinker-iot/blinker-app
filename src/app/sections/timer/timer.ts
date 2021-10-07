@@ -1,13 +1,9 @@
 import { Component } from '@angular/core';
-import { Events } from '@ionic/angular';
-import { DeviceService } from 'src/app/core/services/device.service';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TimerService } from './timer.service';
-import { UserService } from 'src/app/core/services/user.service';
-import { DevicelistService } from 'src/app/core/services/devicelist.service';
+import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 import { DataService } from 'src/app/core/services/data.service';
-// import { timeToMinute, minuteToTime } from 'src/app/core/functions/func'
-
+import { NoticeService } from 'src/app/core/services/notice.service';
 
 @Component({
   selector: 'blinker-timer',
@@ -15,20 +11,17 @@ import { DataService } from 'src/app/core/services/data.service';
   styleUrls: ['timer.scss']
 })
 export class TimerPage {
-  tab = 0;
-  id;
+  selectedIndex = 0;
+  deviceId;
+
+  device;
 
   get deviceDataDict() {
     return this.dataService.device.dict;
   }
 
-  get isDebug() {
-    // return isDevMode()
-    return false
-  }
-
   get deviceConfig() {
-    return this.device.config.isDev ? this.devicelistService.devDeviceConfig : this.devicelistService.deviceConfig;
+    return this.device.config.isDev ? this.deviceConfigService.devDeviceConfig : this.deviceConfigService.deviceConfigs;
   }
 
   get isDiy() {
@@ -39,28 +32,25 @@ export class TimerPage {
       return false
   }
 
-  get device() {
-    return this.timerService.currentDevice
-  }
-
   constructor(
-    private events: Events,
-    private deviceService: DeviceService,
     private dataService: DataService,
-    private userService: UserService,
     private activatedRoute: ActivatedRoute,
+    private deviceConfigService: DeviceConfigService,
     private timerService: TimerService,
-    private devicelistService: DevicelistService
+    private noticeService: NoticeService,
+    private router: Router
   ) {
 
   }
 
   ngOnInit(): void {
     this.activatedRoute.params.subscribe(params => {
-      this.id = params['id'];
+      this.deviceId = params['deviceId'];
+      // console.log(this.deviceId);
       this.dataService.userDataLoader.subscribe(loaded => {
         if (loaded) {
-          this.timerService.currentDevice = this.deviceDataDict[this.id];
+          this.device = this.deviceDataDict[this.deviceId];
+          this.timerService.currentDevice = this.device;
           if (typeof this.device.data.timing == 'undefined') {
             this.device.data['timing'] = []
           }
@@ -72,15 +62,26 @@ export class TimerPage {
           }
           if (this.device.data.state == 'offline' || this.device.data.state == 'disconnected') {
             console.log('offline');
-            this.events.publish("provider:notice", "timingOffline");
+            this.noticeService.showAlert('timingOffline')
             return;
-          }
-          if (!this.isDiy) {
-            this.timerService.getProDeviceCmd(this.device)
           }
         }
       })
     })
+  }
+
+  tabBarTabOnPress(pressParam: any) {
+    this.selectedIndex = pressParam.index;
+    switch (this.selectedIndex) {
+      case 0:
+        this.router.navigate(['timer', this.deviceId, 'timing'])
+        break;
+      case 1:
+        this.router.navigate(['timer', this.deviceId, 'countdown'])
+        break;
+      default:
+        break;
+    }
   }
 
 }

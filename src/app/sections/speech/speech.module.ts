@@ -7,6 +7,8 @@ import { IonicModule } from '@ionic/angular';
 import { SpeechPage } from './speech';
 import { SpeechService } from './speech.service';
 import { SpeechButtonComponent } from './speech-button/speech-button';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { TranslateModule } from '@ngx-translate/core';
 
 const routes: Routes = [
   {
@@ -19,11 +21,12 @@ const routes: Routes = [
   imports: [
     CommonModule,
     IonicModule,
-    RouterModule.forChild(routes)
+    RouterModule.forChild(routes),
+    DirectivesModule,
+    TranslateModule.forChild()
   ],
   providers: [SpeechService],
   declarations: [SpeechPage, SpeechButtonComponent],
-  exports: [SpeechPage, SpeechButtonComponent],
-  entryComponents: [SpeechPage]
+  exports: [SpeechPage, SpeechButtonComponent]
 })
 export class BlinkerSpeechModule { }

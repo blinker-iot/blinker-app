@@ -1,8 +1,8 @@
 .block {
   position: relative;
-  width: 45vw;
-  height: 30vw;
-  border-radius: 5px;
+  width: calc(50vw - 15px);
+  height: 29vw;
+  border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   background: #fff;
   font-size: 13px;
@@ -13,9 +13,13 @@
     top: 7%;
     left: 7%;
 
-    .block-img {
-      max-width: 70px;
-      max-height: 70px;
+    b-device-img {
+      ::ng-deep {
+        img {
+          max-width: 70px;
+          max-height: 70px;
+        }
+      }
     }
 
   }
@@ -36,8 +40,7 @@
     position: absolute;
     right: 0;
     bottom: 0;
-    padding-bottom: 6%;
-    padding-right: 6%;
+    padding: 3% 6% 6% 3%;
   }
 
   .switch {
@@ -59,6 +62,7 @@
 
   .switch {
     background-color: #fff;
+    padding-top: 1px;
   }
 }
 

@@ -1,9 +1,8 @@
 import { Component } from '@angular/core';
-import { AlertController, Events } from '@ionic/angular';
-import { UserService } from 'src/app/core/services/user.service';
-import { DeviceService } from 'src/app/core/services/device.service';
+import { AlertController } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
 import { DataService } from 'src/app/core/services/data.service';
+import { NoticeService } from 'src/app/core/services/notice.service';
 
 
 @Component({
@@ -25,11 +24,11 @@ export class RoomEditPage {
     return this.dataService.room.list
   }
 
-  get deviceDataDict(){
+  get deviceDataDict() {
     return this.dataService.device.dict
   }
 
-  get deviceDataList(){
+  get deviceDataList() {
     return this.dataService.device.list
   }
 
@@ -44,7 +43,7 @@ export class RoomEditPage {
   constructor(
     private dataService: DataService,
     private alertCtrl: AlertController,
-    private events: Events,
+    private noticeService: NoticeService,
     private activatedRoute: ActivatedRoute
   ) {
   }
@@ -82,11 +81,11 @@ export class RoomEditPage {
             // console.log(data.newRoomName.length);
             if (data.newRoomName.length == 0) return;
             if (data.newRoomName.length > 10) {
-              this.events.publish('provider:notice', 'tooLongroomName')
+              this.noticeService.showToast('tooLongroomName')
               return;
             }
             if (this.roomIsExist(data.newRoomName)) {
-              this.events.publish('provider:notice', 'sameroomName')
+              this.noticeService.showToast('sameroomName')
               return;
             }
             this.tempRoomName = data.newRoomName;

@@ -1,0 +1,46 @@
+<ion-header>
+  <ion-toolbar overlayPadding>
+    <ion-buttons slot="start">
+      <ion-button (click)="close()">
+        <i class="fal fa-times"></i>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>添加条件</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="save()">
+        <i class="fal fa-check" [ngClass]="{'save-btn-disable': disableSave}"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <b-top-box *ngIf="step>1">
+    <div class="img-box animated fadeIn faster">
+      <b-device-img [deviceId]="selectedDeviceId"></b-device-img>
+    </div>
+    <div class="text-box">
+      <div class="name animated fadeIn faster">{{deviceDataDict[selectedDeviceId].config.customName}}
+      </div>
+      <div class="other animated fadeIn faster" *ngIf="step>2">{{selectedSource | trigger2text}}</div>
+    </div>
+    <div class="btn-box animated fadeIn faster" (click)="reset()">
+      重新选择
+    </div>
+  </b-top-box>
+  <div *ngIf="step==1">
+    <div class="title animated fadeIn faster">1.选择触发设备</div>
+    <b-device-list (updateDeviceId)="updateSelectedDeviceId($event)"></b-device-list>
+  </div>
+  <div *ngIf="step==2">
+    <div class="title animated fadeIn faster">2.选择触发状态</div>
+    <source-list [deviceId]="selectedDeviceId" (updateSource)="updateSelectedSource($event)"></source-list>
+  </div>
+  <!-- <div *ngIf="step==3">
+    <div class="title animated fadeIn faster">3.设定数值</div>
+  </div>
+  <div *ngIf="step==4">
+    <div class="title animated fadeIn faster">4.持续时间</div>
+  </div> -->
+
+
+</ion-content>

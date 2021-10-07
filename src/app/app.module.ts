@@ -1,5 +1,4 @@
-import { NgModule } from '@angular/core';
-import { BrowserModule, HAMMER_GESTURE_CONFIG, HammerGestureConfig } from '@angular/platform-browser';
+import { NgModule, Injectable } from '@angular/core';
 import { RouteReuseStrategy } from '@angular/router';
 
 import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
@@ -24,31 +23,29 @@ import { Zeroconf } from '@ionic-native/zeroconf/ngx';
 import { Network } from '@ionic-native/network/ngx';
 import { BLE } from '@ionic-native/ble/ngx';
 import { Diagnostic } from '@ionic-native/diagnostic/ngx';
-// import { CodePush } from '@ionic-native/code-push/ngx';
 
 import { GridsterModule } from 'angular-gridster2';
 import { Geolocation } from '@ionic-native/geolocation/ngx';
 import { AndroidPermissions } from '@ionic-native/android-permissions/ngx';
 
 import { AppMinimize } from '@ionic-native/app-minimize/ngx';
-import { ViewService } from './view/view.service';
+import { ViewService } from './core/services/view.service';
 import { BlinkerViewModule } from './view/view.module';
 import { BlinkerAddDeviceModule } from './sections/adddevice/adddevice.module';
 import { BlinkerAccountModule } from './sections/account/account-routing.module';
 import { BlinkerDeviceManagerModule } from './sections/device/device-manager-routing.module';
 import { BlinkerRoomManagerModule } from './sections/room/room-manager-routing.module';
-import { BlinkerSceneManagerModule } from './sections/scene/scene-manager-routing.module';
-import { BlinkerShareManagerModule } from './sections/share/share-manager-routing.module';
+import { BlinkerShareManagerModule } from './sections/share/share.module';
 import { BlinkerSettingsModule } from './sections/settings/settings.module';
 import { BlinkerTimerModule } from './sections/timer/timer.module';
 import { BlinkerUserModule } from './sections/user/user.module';
-import { JPush } from '@jiguang-ionic/jpush/ngx';
+// import { JPush } from '@jiguang-ionic/jpush/ngx';
 import { Brightness } from '@ionic-native/brightness/ngx';
 import { BlinkerMessageModule } from './sections/message/message.module';
 import { BlinkerDevCenterModule } from './sections/devcenter/devcenter.module';
 import { ComponentsModule } from './core/components/components.module';
 import { UpdateService } from './core/services/update.service';
-import { DevicelistService } from './core/services/devicelist.service';
+import { DeviceConfigService } from './core/services/device-config.service';
 import { DebugModule } from './debug/debug.module';
 import { DocModule } from './core/pages/doc/doc.module';
 import { BlinkerDeviceModule } from './core/device/device.module';
@@ -67,27 +64,37 @@ import { BlinkerAutoModule } from './sections/auto/auto.module';
 import { NetworkService } from './core/services/network.service';
 import { AboutModule } from './sections/about/about.module';
 import { ScreenOrientation } from '@ionic-native/screen-orientation/ngx';
-// import { NgxsModule } from '@ngxs/store';
+import { ImageService } from './core/services/image.service';
+import { BlinkerSceneManagerModule } from './sections/scene/scene.module';
+import { AliyunPush } from 'libs/@ionic-native/aliyun-push/ngx';
+import { BrowserModule, HAMMER_GESTURE_CONFIG, HammerGestureConfig, HammerModule } from '@angular/platform-browser';
+import { TranslateModule } from '@ngx-translate/core';
+// import { NgZorroAntdMobileModule } from 'ng-zorro-antd-mobile';
+
+declare var Hammer: any;
+@Injectable()
+export class MyHammerConfig extends HammerGestureConfig {
+  overrides = <any>{
+    'pan': { direction: Hammer.DIRECTION_ALL, threshold: 5 },
+    'press': { time: 300, threshold: 99 }
+  }
+}
 
 @NgModule({
   declarations: [AppComponent],
-  entryComponents: [],
   imports: [
     BrowserModule,
     IonicModule.forRoot({
-      mode: 'ios',
-      _forceStatusbarPadding: true
+      mode: 'ios'
     }),
+    // NgZorroAntdMobileModule,
+    TranslateModule.forRoot(),
     AppRoutingModule,
     IonicStorageModule.forRoot(),
     HttpClientModule,
     GridsterModule,
     MarkdownModule.forRoot(),
     ComponentsModule,
-    // --状态管理--
-    // NgxsModule.forRoot([
-
-    // ]),
     // --blinker module--
     BlinkerAccountModule,
     BlinkerUserModule,
@@ -107,9 +114,8 @@ import { ScreenOrientation } from '@ionic-native/screen-orientation/ngx';
     DocModule,
     AboutModule,
     BlinkerSpeechModule,
-    BlinkerFeedbackModule
-    // --PWA support--
-    // ServiceWorkerModule.register('ngsw-worker.js', { enabled: environment.production }),
+    BlinkerFeedbackModule,
+    HammerModule
   ],
   providers: [
     StatusBar,
@@ -118,6 +124,7 @@ import { ScreenOrientation } from '@ionic-native/screen-orientation/ngx';
     { provide: HAMMER_GESTURE_CONFIG, useClass: HammerGestureConfig },
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     { provide: HTTP_INTERCEPTORS, useClass: ServerInterceptor, multi: true },
+    { provide: HAMMER_GESTURE_CONFIG, useClass: MyHammerConfig },
     AuthService,
     DataService,
     UserService,
@@ -129,7 +136,8 @@ import { ScreenOrientation } from '@ionic-native/screen-orientation/ngx';
     ViewService,
     PermissionService,
     PusherService,
-    DevicelistService,
+    DeviceConfigService,
+    ImageService,
     OpenNativeSettings,
     Zeroconf,
     Network,
@@ -141,13 +149,14 @@ import { ScreenOrientation } from '@ionic-native/screen-orientation/ngx';
     Geolocation,
     AndroidPermissions,
     AppMinimize,
-    JPush,
+    // JPush,
     Brightness,
     AppVersion,
     FileTransfer,
     FileOpener,
     File,
-    ScreenOrientation
+    ScreenOrientation,
+    AliyunPush,
     // InAppBrowser
   ],
   bootstrap: [AppComponent]

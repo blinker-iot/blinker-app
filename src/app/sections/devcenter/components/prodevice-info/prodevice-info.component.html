@@ -1,21 +1,3 @@
-<!-- <div class="infobox" *ngIf="prodevice">
-  <div class="imgbox" (click)="selectIcon()">
-    <img src="assets/img/devices/icon/{{prodevice.image}}" onError="this.src='assets/img/devices/unknown.png'" />
-    <div class="uploadimg">更改图标</div>
-  </div>
-  <div class="itembox">
-    <div class="item">提供者:<span>{{prodevice.vender}}</span></div>
-    <div class="item" (click)="changeName()">设备名:<span>{{prodevice.name}}</span><i class="fal fa-pencil"></i>
-    </div>
-    <div class="item">
-      TypeKey: <span>{{deviceType}}</span>
-    </div>
-    <div class="item">
-      接入方式: <span *ngIf="prodevice.mode=='mqtt'">WiFi（MQTT）</span>
-    </div>
-  </div>
-</div> -->
-
 <form class="form-box" (ngSubmit)="upload()" #formBox="ngForm" *ngIf="prodevice">
   <div class="input-box">
     <div class="title">

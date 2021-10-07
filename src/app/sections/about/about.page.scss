@@ -1,34 +1,49 @@
 .logo {
-    height: 15vh;
-    margin-top: 15px;
-    margin-bottom: 15px;
-    text-align: center;
+  height: 15vh;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  text-align: center;
 
-    img {
-        height: 40px;
-    }
+  img {
+    height: 40px;
+  }
 }
 
 .text {
-    padding: 15px;
-    min-height: 50vh;
-    text-indent:2em;
-    line-height: 1.7em;
+  padding: 15px;
+  min-height: 50vh;
+  text-indent: 2em;
+  line-height: 1.7em;
 }
 
 .telephone {
-    color: #FFF;
-    font-size: 18px;
-    position: relative;
+  color: #fff;
+  font-size: 18px;
+  position: relative;
+  margin-left: 15px;
+  width: calc(100% - 30px);
 
-    a {
-        width: 100%;
-        padding: 5px;
-        color: #FFF !important;
-        text-decoration: none;
-    }
+  a {
+    width: 100%;
+    padding: 5px;
+    color: #fff !important;
+    text-decoration: none;
+  }
 
-    span {
-        margin-left: 15px;
-    }
+  span {
+    margin-left: 15px;
+  }
+}
+
+.other {
+  width:calc(100% - 30px);
+  text-align: center;
+  z-index: 1;
+  position: absolute;
+  bottom: 3rem;
+  font-size: 13px;
+
+  [text] {
+    color: #009ee8;
+  }
 }

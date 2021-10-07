@@ -1,0 +1,50 @@
+<div device-bg [ngClass]="{'on': switch}">
+</div>
+<div device-box [ngClass]="{'off': !switch}">
+  <div class="bar-box">
+    <div bar>
+      <img src="assets/img/devices/ownlight/sun-h.png">
+      <b-range [value]="brightness" (valueChange)="brightnessChange($event)" (sendData)="sendData()">
+      </b-range>
+      <img src="assets/img/devices/ownlight/sun-f.png">
+    </div>
+    <div bar>
+      <img src="assets/img/devices/ownlight/warm.png">
+      <b-range [value]="colortemp" [barcolor]="'linear-gradient(to right, #ffa645, #fff9fb)'" [activebar]="false"
+        (valueChange)="colortempChange($event)" (sendData)="sendData()">
+      </b-range>
+      <img src="assets/img/devices/ownlight/cool.png">
+    </div>
+  </div>
+  <div class="btn-box">
+    <div btn [ngClass]="{'selected':mode==0}" (click)="changeMode(0)">
+      <div class="icon">
+        <i class="fal fa-sun"></i>
+      </div>
+      日光
+    </div>
+    <div btn [ngClass]="{'selected':mode==1}" (click)="changeMode(1)">
+      <div class="icon">
+        <i class="far fa-moon-stars"></i>
+      </div>
+      月光
+    </div>
+    <div btn [ngClass]="{'selected':mode==2}" (click)="changeMode(2)">
+      <div class="icon">
+        <i class="fal fa-sparkles"></i>
+      </div>
+      星光
+    </div>
+    <div btn [ngClass]="{'selected':mode==3}" (click)="changeMode(3)">
+      <div class="icon">
+        <i class="fal fa-home"></i>
+      </div>
+      自定义
+    </div>
+  </div>
+  <div class="switch-box">
+    <div class="switch" [ngClass]="{'on': switch}" (click)="turnSwitch()">
+      <i class="fal fa-power-off"></i>
+    </div>
+  </div>
+</div>

@@ -5,6 +5,7 @@ import { Routes, RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 import { DeviceUpdatePage } from './device-update';
 import { PipesModule } from 'src/app/core/pipes/pipes.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
 
 const routes: Routes = [
   { path: "", component: DeviceUpdatePage }
@@ -16,6 +17,7 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     PipesModule,
+    DirectivesModule,
     RouterModule.forChild(routes)
   ],
   declarations: [

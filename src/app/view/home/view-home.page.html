@@ -1,5 +1,5 @@
-﻿<ion-header>
-    <ion-toolbar color="transparent">
+﻿<ion-header whitebg>
+    <ion-toolbar overlayPadding>
         <ion-buttons slot="start">
             <ion-menu-button><i class="iconfont icon-menu"></i></ion-menu-button>
         </ion-buttons>
@@ -14,34 +14,32 @@
         </ion-buttons>
     </ion-toolbar>
 </ion-header>
-<ion-content fullscreen scrollY=false>
-    <ng-container *ngIf="loaded">
-        <div class="contentbox" #contentbox>
-            <div class="sceneZone" #sceneZone>
-                <div class="bg">
-                    <img src="assets/img/headerbg.jpg" [ngStyle]="{'max-width': '120%'}">
-                </div>
-                <scene-button-group></scene-button-group>
+<ion-content fullscreen=true scrollY=false>
+    <!-- <div class="bg" [ngStyle]="{'height': bgPosition}"></div> -->
+    <div class="bg"></div>
+    <div class="contentbox" *ngIf="loaded" [ngClass]="{'show-scene-button-group': sceneDataList.length>0}">
+        <scene-button-group *ngIf="sceneDataList.length>0"></scene-button-group>
+        <ng-container *ngIf="deviceNum>0;else nodevice">
+            <room-list [(roomid)]=" roomid">
+            </room-list>
+            <div #deviceZone class="deviceZone animated fadeIn">
+                <deviceblock-homelist [(roomid)]="roomid">
+                </deviceblock-homelist>
             </div>
-            <div class="nodevice" *ngIf="deviceNum==0">
+        </ng-container>
+        <ng-template #nodevice>
+            <div class="nodevice">
                 <img src="assets/img/nodevice.svg">
-                <div class="text">添加新设备，开始你的点灯之旅</div>
+                <div class="text">{{'HOME.WELCOME' | translate}}</div>
                 <button [routerLink]="['/adddevice']">
-                    <i class="fal fa-plus"></i><span>添加设备</span>
+                    <i class="fal fa-plus"></i><span>{{'HOME.ADD_DEVICE' | translate}}</span>
                 </button>
             </div>
-            <ng-container *ngIf="deviceNum>0">
-                <room-list [(roomid)]="roomid"></room-list>
-                <div #deviceZone class="deviceZone animated fadeIn">
-                    <deviceblock-homelist [(roomid)]="roomid">
-                    </deviceblock-homelist>
-                </div>
-            </ng-container>
+        </ng-template>
+    </div>
+    <div class="speech" *ngIf="!isIos">
+        <div class="speech-button" [ngClass]="{'iphonex': isIphonex}">
+            <speech-button></speech-button>
         </div>
-        <div class="speech">
-            <div class="speech-button" [ngClass]="{'iphonex': isIphonex}">
-                <speech-button></speech-button>
-            </div>
-        </div>
-    </ng-container>
+    </div>
 </ion-content>

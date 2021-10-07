@@ -1,8 +1,12 @@
 <div class="slider" [ngClass]="{'slider':direction == 'x' , 'slider-y':direction == 'y'}">
   <div class="bar" #bar>
-    <div [ngClass]="{'activebar': activebar}" #barActive></div>
+    <div [ngClass]="{'activebar': activebar}" #barActive>
+      <ng-content></ng-content>
+    </div>
     <div [ngClass]="{'activebar2': activebar2}" #barActive2></div>
   </div>
   <div class="knob" #knob></div>
-  <div class="layer" (tap)="tapEvent($event)" (panstart)="panstartEvent($event)" (panmove)="panmoveEvent($event)" (panend)="panendEvent($event)" #touchBar></div>
+  <!-- <ng-content></ng-content> -->
+  <div class="layer" (tap)="tapEvent($event)" (panstart)="panstartEvent($event)" (panmove)="panmoveEvent($event)"
+    (panend)="panendEvent($event)" #touchBar></div>
 </div>

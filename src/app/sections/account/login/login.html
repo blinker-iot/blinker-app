@@ -1,5 +1,6 @@
 <ion-header whitebg>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
+    <blinker-lang-selector></blinker-lang-selector>
   </ion-toolbar>
 </ion-header>
 <ion-content>
@@ -11,23 +12,35 @@
       <div class="item-img">
         <i class="fal fa-user"></i>
       </div>
-      <input [(ngModel)]="username" name="username" placeholder="用户名/手机号" (focus)="onFocus()" (blur)="onBlur()">
+      <input [(ngModel)]="username" name="username" placeholder="{{'ACCOUNT.USERNAME' | translate}}" (focus)="onFocus()" (blur)="onBlur()">
     </div>
     <div class="input-box">
       <div class="item-img">
         <i class="fal fa-lock-alt"></i>
       </div>
-      <input type="{{pwshow?'text':'password'}}" [(ngModel)]="password" name="password" placeholder="密码" (focus)="onFocus()" (blur)="onBlur()">
+      <input type="{{pwshow?'text':'password'}}" [(ngModel)]="password" name="password" placeholder="{{'ACCOUNT.PASSWORD' | translate}}"
+        (focus)="onFocus()" (blur)="onBlur()">
       <i class="iconfont" [ngClass]="{'icon-eye-open': pwshow,'icon-eye-close':!pwshow}" (click)="showPassword()"></i>
     </div>
-    <button type="submit" fullbtn>登录</button>
+    <button type="submit" fullbtn>{{'ACCOUNT.LOGIN' | translate}}</button>
   </form>
-  <div class="other">
-    <div [routerLink]="['/retrieve']">找回密码</div>
-    <div [routerLink]="['/register']">用户注册</div>
+  <div class="other-btn">
+    <div [routerLink]="['/retrieve']">{{'ACCOUNT.RETRIEVE' | translate}}</div>
+    <div [routerLink]="['/register']">{{'ACCOUNT.REGISTER' | translate}}</div>
   </div>
-  <div class="footer-box animated fadeIn faster" *ngIf="showPoweredBy">
+  <div class="other animated fadeInUp" *ngIf="showPoweredBy">
+    <div>
+      <span link-text (click)="openUrl(USER_AGREEMENT,'用户协议')">
+        {{'ACCOUNT.USER_AGREEMENT' | translate}}
+      </span>
+      {{'ACCOUNT.AND' | translate}}
+      <span link-text (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
+        {{'ACCOUNT.PRIVACY_POLICY' | translate}}
+      </span>
+    </div>
+  </div>
+  <!-- <div class="footer-box animated fadeIn faster" *ngIf="showPoweredBy">
     <div>Powered by</div>
     <img src="assets/img/diandeng-logo.png">
-  </div>
+  </div> -->
 </ion-content>

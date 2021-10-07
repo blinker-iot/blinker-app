@@ -1,84 +1,66 @@
-ion-content {
-    --background: #FFF;
-}
+@import "../account.scss";
 
 .logo-box {
-    text-align: center;
-
-    .logo {
-        margin-top: 40px;
-        margin-bottom: 40px;
-        max-width: 200px;
-    }
+  text-align: center;
+  .logo {
+    margin-top: 15px;
+    margin-bottom: 30px;
+    max-width: 200px;
+  }
 }
 
 .form-box {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: center;
-    width: 100%;
-    padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  padding: 0 1.5rem;
 
-    .input-box {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        flex-direction: row;
-        justify-content: flex-start;
-        padding: 5px 12px;
-        border-bottom: 1px solid #c8c7cc;
-
-        .item-img {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 22px;
-            font-size: 22px;
-            margin-right: 10px;
-        }
-
-        input {
-            flex-grow: 1;
-            height: 50px;
-            line-height: 22px;
-        }
-
-        .iconfont {
-            position: absolute;
-            right: 20px;
-            font-size: 20px;
-            padding: 0 10px;
-        }
-    }
-
-    [fullbtn] {
-        margin-top: 50px;
-    }
-}
-
-.other {
-    padding: 0 30px;
-    z-index: 1;
-    margin-top: 4rem;
+  .input-box {
     width: 100%;
     display: flex;
     align-items: center;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: flex-start;
+    padding: 5px 12px;
+    border-bottom: 1px solid #c8c7cc;
+    .item-img {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      font-size: 22px;
+      margin-right: 10px;
+    }
+
+    input {
+      flex-grow: 1;
+      height: 50px;
+      line-height: 22px;
+    }
+
+    .iconfont {
+      position: absolute;
+      right: 20px;
+      font-size: 20px;
+      padding: 0 10px;
+    }
+  }
+
+  [fullbtn] {
+    margin-top: 40px;
+  }
 }
 
-.footer-box {
-    position: fixed;
-    bottom: 15px;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 12px;
-
-    img {
-        margin-left: 15px;
-        height: 18px;
-    }
+.other-btn {
+  padding: 0 30px;
+  z-index: 1;
+  margin-top: 4rem;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  justify-content: space-between;
+  color: #333;
 }

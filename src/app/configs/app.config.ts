@@ -1,90 +1,26 @@
 export const CONFIG = {
-    NAME: "blinker",
+    NAME: "点灯·blinker",
     LOGIN_LOGO: "assets/img/login-logo.png",
     WEBSITE: "https://diandeng.tech",
-    SERVER: "",
-    USER_AGREEMENT: "https://diandeng.tech/agreements/user.md",
-    PRIVACY_POLICY: "https://diandeng.tech/agreements/privacy.md",
-    DEV_AGREEMENT: "https://diandeng.tech/agreements/develop.md",
-    UPDATE_FILE: "https://diandeng.tech/update/update.json",
+    USER_AGREEMENT: "https://iot.diandeng.tech/public/user.md",
+    PRIVACY_POLICY: "https://iot.diandeng.tech/public/privacy.md",
+    DEV_AGREEMENT: "https://iot.diandeng.tech/public/develop.md",
+    UPDATE_FILE: "https://iot.diandeng.tech/public/update.json",
+    ICON_FILE: "https://iot.diandeng.tech/public/icon.json",
     ABOUT_US: "blinker是一套跨硬件、跨平台的物联网解决方案，提供APP端、设备端、服务器端支持，使用公有云服务进行数据传输存储。可用于多种物联网应用场合，可以帮助用户更好更快地搭建项目。",
-    TELEPHONE: "88888888",
+    TELEPHONE: "",
     BUILTIN_DEVICES: {
         ENABLE: true
     },
     I18N: {
-        ENABLE: false,
+        ENABLE: true,
         DEFAULT: '简体中文'
     }
 }
 
-const SERVER_URL = CONFIG.SERVER + "/api/v1";
-const SERVER_URL2 = CONFIG.SERVER + "/api/v2";
-
-export const API = {
-    LOGIN: SERVER_URL + '/user/login',
-    REGISTER: SERVER_URL + '/web/register',
-    RETRIEVE: SERVER_URL + '/web/password',
-    SMSCODE: SERVER_URL + '/web/sms',
-    AUTH: {
-        LOGIN: SERVER_URL + '/user/login',
-        REGISTER: SERVER_URL + '/user/register',
-        RETRIEVE: SERVER_URL + '/user/password/reset',
-        SMSCODE: SERVER_URL + '/user/smscode',
-        CHECK: SERVER_URL + '/user/token/check',
-    },
-    USER: {
-        ALL: SERVER_URL + '/user/overview',
-        DEVICE: SERVER_URL + '/user/device/pull',
-        INFO: SERVER_URL + '/user/profile/get',
-        SAVE_CONFIG: SERVER_URL + '/user/config/save',
-        AVATAR: CONFIG.SERVER + '/avatar',
-        UPLOAD_AVATAR: SERVER_URL + '/user/avatar/upload',
-        CHANGE_PASSWORD: SERVER_URL + "/user/password/change",
-        CHANGE_PROFILE: SERVER_URL + "/user/profile/modify",
-        ADD_DEVICE: SERVER_URL + '/user/config/save',
-        DEL_DEVICE: SERVER_URL + '/user/device/remove',
-    },
-    DEVICE: {
-        NEW_VERSION: SERVER_URL + '/user/device/ota/get',
-        OTA_STATE: SERVER_URL + '/user/device/ota/upgrade_status',
-        TIME_SERIES_DATA: SERVER_URL + '/user/device/pull_cloudStorage/',
-        LOAD_CONFIG: SERVER_URL + '/user/device/config/load',
-        SAVE_CONFIG: SERVER_URL + '/user/device/config/save',
-    },
-    DEVICE_CONFIG: {
-        DEV: SERVER_URL2 + '/dev/device/conf/all',
-        PUBLIC: SERVER_URL2 + '/device/conf/all',
-    },
-    ADDDEVICE: {
-        ADDDEVICE: SERVER_URL + '/user/device/add',
-        GET_MQTTKEY: SERVER_URL + '/user/device/diy/add',
-        CHECK: SERVER_URL + '/user/device/check',
-    },
-    SHARE: {
-        SHARE_LIST: SERVER_URL + '/user/device/share/list',
-        SHARE_DEVIE: SERVER_URL + '/user/device/share/master',
-        DEL_SHARE: SERVER_URL + '/user/device/share/master/delete',
-        ACCEPT_SHARED: SERVER_URL + '/user/device/share/slaver/accept',
-        REFUSE_SHARED: SERVER_URL + '/user/device/share/slaver/refuse',
-        DEL_SHARED: SERVER_URL + '/user/device/share/slaver/delete',
-    },
-    DEV_CENTER: {
-        USER_LEVEL: SERVER_URL2 + "/dev/user",
-        USER_AUTH: SERVER_URL2 + "/dev/auth",
-        DATAKEYS: SERVER_URL2 + "/dev/storage",
-        PRODEVICE: SERVER_URL2 + "/dev/device",
-        PRODEVICE_KEY: SERVER_URL2 + "/dev/device/key",
-        PRODEVICE_CONFIG: SERVER_URL2 + "/dev/device/conf",
-        PRODEVICE_LAYOUTER: SERVER_URL2 + "/dev/device/conf/layouter",
-        PUBLIC_PRODEVICE: SERVER_URL2 + "/dev/device/public",
-    },
-    MESSAGE: SERVER_URL + '/user/message',
-    FEEDBACK: SERVER_URL + '/feedback'
-}
-
 //可用的图片文件名
 export const ImageList = [
+    'unknown',
     'diyarduino', 'arduino-red',
     'wifiduino', 'wifiduino-blue', 'esp32',
     'diylinux', 'raspberrypi-blue', 'raspberrypi-zero',
@@ -97,29 +33,93 @@ export const ImageList = [
 
 // 可用的图标名
 export const IconList = [
-    "",
-    "iconfont icon-windmill", "iconfont icon-sun", "iconfont icon-wind", "iconfont icon-drop", "iconfont icon-leaf",
-    "iconfont icon-snow", "iconfont icon-shake",
-    "iconfont icon-fan", "iconfont icon-air-conditioning",
-    "iconfont icon-n1", "iconfont icon-n2", "iconfont icon-n3", "iconfont icon-n4", "iconfont icon-n5",
-    "fal fa-power-off", "fal fa-plug",
-    "fal fa-thumbs-up", "fal fa-hand-point-up", "fal fa-hand-point-down", "fal fa-hand-point-left", "fal fa-hand-point-right",
-    "fal fa-hand-peace", "fal fa-hand-rock", "fal fa-hand-paper", "fal fa-handshake", "fal fa-american-sign-language-interpreting",
-    "fal fa-arrow-alt-up", "fal fa-arrow-alt-down", "fal fa-arrow-alt-left", "fal fa-arrow-alt-right",
-    "fal fa-meh-blank", "fal fa-meh", "fal fa-surprise", "fal fa-tired", "fal fa-dizzy", "fal fa-frown", "fal fa-smile", "fal fa-skull",
-    "fal fa-comments", "fal fa-comment", "fal fa-comment-check", "fal fa-comment-dots", "fal fa-comment-exclamation", "fal fa-comment-smile",
-    "fal fa-paper-plane", "fal fa-thumbtack", "fal fa-pencil-alt", "fal fa-heart", "fal fa-heartbeat", "fal fa-home", "fal fa-thermometer-three-quarters",
-    "fal fa-atom", "fal fa-burn", "fal fa-fire", "fal fa-tint", "fal fa-sun", "fal fa-umbrella", "fal fa-moon", "fal fa-star", "fas fa-star",
-    "fas fa-bell", "fal fa-bell", "fal fa-bell-slash", "fal fa-book", "fal fa-life-ring", "fal fa-ban", "fal fa-gem", "fal fa-leaf", "fal fa-pennant",
-    "fas fa-lightbulb", "fal fa-lightbulb", "fal fa-lightbulb-on", "fal fa-lightbulb-exclamation",
-    "fal fa-redo-alt", "fal fa-repeat-alt", "fal fa-sync",
-    "fal fa-clock",
-    "fal fa-utensil-knife", "fal fa-utensil-spoon", "fal fa-utensil-fork", "fal fa-wrench",
-    "fal fa-link", "fal fa-thumbtack", "fal fa-anchor",
-    "fal fa-signal", "fal fa-signal-4", "fal fa-signal-3", "fal fa-signal-2", "fal fa-signal-1", "fal fa-signal-slash",
-    "fal fa-search-minus", "fal fa-search-plus", "fal fa-music",
-    "fal fa-wheelchair", "fal fa-bed", "fal fa-walking", "fal fa-door-closed", "fal fa-briefcase",
-    "fal fa-lock-alt", "fal fa-lock-alt", "fal fa-lock-alt",
-    "fal fa-dog", "fal fa-dog-leashed", "fal fa-cat", "fal fa-crow", "fal fa-fish", "fal fa-rabbit", "fal fa-pig", "fal fa-ram",
-    "fal fa-baby-carriage", "fas fa-baby", "far fa-child",
+    {
+        title: "",
+        icon: [
+            ""
+        ]
+    },
+    {
+        title: "方向",
+        icon: [
+            "fad fa-arrow-alt-up", "fad fa-arrow-alt-down", "fad fa-arrow-alt-left", "fad fa-arrow-alt-right",
+            "fad fa-arrow-alt-up r45", "fad fa-arrow-alt-down r135", "fad fa-arrow-alt-left r225", "fad fa-arrow-alt-right r135",
+            "fad fa-arrow-alt-circle-up", "fad fa-arrow-alt-circle-down", "fad fa-arrow-alt-circle-left", "fad fa-arrow-alt-circle-right",
+            "fad fa-arrow-alt-circle-up r45", "fad fa-arrow-alt-circle-down r135", "fad fa-arrow-alt-circle-left r225", "fad fa-arrow-alt-circle-right r135",
+            "fad fa-hand-point-up", "fad fa-hand-point-down", "fad fa-hand-point-left", "fad fa-hand-point-right",
+        ]
+    },
+    {
+        title: "调节",
+        icon: [
+            "fad fa-plus", "fad fa-minus", "fad fa-plus-circle", "fad fa-minus-circle", "fad fa-search-plus", "fad fa-search-minus",
+            "fad fa-signal", "fad fa-signal-4", "fad fa-signal-3", "fad fa-signal-2", "fad fa-signal-1", "fad fa-signal-slash",
+            "iconfont icon-n1", "iconfont icon-n2", "iconfont icon-n3", "iconfont icon-n4", "iconfont icon-n5",
+        ]
+    },
+    {
+        title: "开关",
+        icon: [
+            "fad fa-lock", "fad fa-unlock", "fad fa-door-closed", "fad fa-door-open", "fad fa-blinds", "fad fa-blinds-raised",
+            "fad fa-lightbulb", "fad fa-lightbulb-on", "fad fa-toggle-off", "fad fa-toggle-on", "fad fa-play-circle", "fad fa-pause-circle",
+            "fad fa-siren", "fad fa-siren-on"
+        ]
+    },
+    {
+        title: "动植物",
+        icon: [
+            "fad fa-dog", "fad fa-dog-leashed", "fad fa-cat", "fad fa-crow", "fad fa-fish", "fad fa-rabbit", "fad fa-pig", "fad fa-ram", "fas fa-baby",
+            "fad fa-seedling", "fad fa-flower-tulip", "fad fa-flower-daffodil", "fad fa-tree",
+        ]
+    },
+    {
+        title: "气象",
+        icon: [
+            "fad fa-sun", "fad fa-moon-stars", "fad fa-cloud-rain", "fad fa-umbrella", "fad fa-clouds",
+            "fad fa-wind", "fad fa-smoke", "fad fa-thunderstorm", "fad fa-snowflakes", "fad fa-cloud-hail",
+            "fad fa-cloud-showers-heavy", "fad fa-fog",
+            "fad fa-humidity", "fad fa-thermometer-three-quarters", "fad fa-temperature-up", "fad fa-temperature-down",
+            "fad fa-house-day", "fad fa-house-night"
+        ]
+    },
+    {
+        title: "电器/设备/建筑",
+        icon: [
+            "fad fa-air-conditioner", "fad fa-fan", "fad fa-fan-table", "fad fa-vacuum", "fad fa-charging-station", "fad fa-projector",
+            "fad fa-sprinkler", "fad fa-spray-can", "fad fa-faucet-drip", "fad fa-toilet", "fad fa-tachometer-alt-fast", "fad fa-blender", "fad fa-plug",
+            "fad fa-weight", "fad fa-tv-retro", "fad fa-tablet-alt", "fad fa-trash", "fad fa-phone", "fad fa-digital-tachograph", "fad fa-calculator",
+            "fad fa-microwave", "fad fa-outlet", "fad fa-oven", "fad fa-refrigerator", "fad fa-mailbox",
+            "fad fa-sensor", "fad fa-solar-panel", "fad fa-server",
+            "fad fa-light-ceiling", "fad fa-lamp-floor", "fad fa-lamp-desk",
+            "fad fa-cctv", "fad fa-camera-home", "fad fa-webcam",
+            "fad fa-washer", "fad fa-dryer", "fad fa-dryer-alt",
+            "fad fa-chair-office", "fad fa-loveseat",
+            "fad fa-car", "fad fa-garage-car",
+            "fad fa-house", "fad fa-building", "fad fa-industry-alt"
+        ]
+    },
+    {
+        title: "表情",
+        icon: [
+            "fad fa-meh-blank", "fad fa-meh", "fad fa-surprise", "fad fa-tired", "fad fa-dizzy", "fad fa-frown", "fad fa-smile", "fad fa-laugh",
+            "fad fa-skull",
+            "fad fa-comments", "fad fa-comment", "fad fa-comment-check", "fad fa-comment-dots", "fad fa-comment-exclamation", "fad fa-comment-smile",
+        ]
+    },
+    {
+        title: "行为",
+        icon: [
+            "fad fa-house-leave", "fad fa-house-return", "fad fa-walking", "fad fa-bed", "fad fa-person-carry", "fad fa-portal-enter", "fad fa-portal-exit",
+        ]
+    },
+    {
+        title: "其他",
+        icon: [
+            "fad fa-fire-alt", "fad fa-tint", "fad fa-leaf", "fad fa-heartbeat", "fad fa-redo-alt", "fad fa-repeat-alt", "fad fa-sync", "fad fa-database",
+            "fad fa-chart-network", "fad fa-power-off", "fad fa-dna", "fad fa-user-robot", "fad fa-atom", "fad fa-american-sign-language-interpreting",
+            "fad fa-cogs", "fad fa-handshake-alt", "fad fa-map-marked-alt", "fad fa-link", "fad fa-route"
+
+        ]
+    }
+
 ]

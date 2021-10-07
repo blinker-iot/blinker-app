@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
@@ -9,29 +9,42 @@
 
 
 <ion-content>
-  <div class="textbox">房间名</div>
-  <div class="item" (click)="changeRoomName()">
-    {{tempRoomName}}
-  </div>
-  <div class="textbox" *ngIf="currentRoomData.length != 0">房间中的设备</div>
-  <ng-container *ngFor="let deviceId of currentRoomData">
-    <div class="item" (click)="delDevice(deviceId)">
-      <img src="assets/img/devices/icon/{{deviceDataDict[deviceId].config.image}}">
-      <div class="name">{{deviceDataDict[deviceId].config.customName}}</div>
-      <div class="btn">
-        <ion-icon name="md-close"></ion-icon>
-      </div>
+  <b-top-box>
+    <div class="roomname" (click)="changeRoomName()">
+      {{tempRoomName}}
     </div>
-  </ng-container>
+  </b-top-box>
 
-  <div class="textbox">可添加的设备</div>
-  <ng-container *ngFor="let deviceId of deviceDataList">
-    <div class="item" (click)="addDevice(deviceId)" *ngIf="!isExist(deviceId)">
-      <img src="assets/img/devices/icon/{{deviceDataDict[deviceId].config.image}}">
-      <div class="name">{{deviceDataDict[deviceId].config.customName}}</div>
-      <div class="btn">
-        <ion-icon name="md-add"></ion-icon>
+  <div class="title" *ngIf="currentRoomData.length != 0">房间中的设备</div>
+  <b-item-list>
+    <b-item *ngFor="let deviceId of currentRoomData" (click)="delDevice(deviceId)">
+      <div class="img-box">
+        <b-device-img [deviceId]="deviceId"></b-device-img>
       </div>
-    </div>
-  </ng-container>
+      <div class="text-box">
+        <div class="name">{{deviceDataDict[deviceId].config.customName}}</div>
+        <div class="other">{{deviceId}}</div>
+      </div>
+      <div class="btn-box">
+        <ion-icon name="close-outline"></ion-icon>
+      </div>
+    </b-item>
+  </b-item-list>
+  <div class="title">可添加的设备</div>
+  <b-item-list>
+    <ng-container *ngFor="let deviceId of deviceDataList">
+      <b-item (click)="addDevice(deviceId)" *ngIf="!isExist(deviceId)">
+        <div class="img-box">
+          <b-device-img [deviceId]="deviceId"></b-device-img>
+        </div>
+        <div class="text-box">
+          <div class="name">{{deviceDataDict[deviceId].config.customName}}</div>
+          <div class="other">{{deviceId}}</div>
+        </div>
+        <div class="btn-box">
+          <ion-icon name="add-outline"></ion-icon>
+        </div>
+      </b-item>
+    </ng-container>
+  </b-item-list>
 </ion-content>

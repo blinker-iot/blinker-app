@@ -19,6 +19,8 @@ export class ShareManagerPage {
   shared0Selected0;
   shared0Selected1;
 
+  sharedDeviceList = []
+
   set tab(tab) {
     this._tab = tab;
   }
@@ -47,28 +49,39 @@ export class ShareManagerPage {
   ) {
   }
 
+  subscription;
   ngOnInit() {
-    this.dataService.userDataLoader.subscribe(loaded => {
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
       if (loaded) {
-        if (this.shareData.shared0.length > 0) this.changeTab(1);
-        this.loaded = loaded
+        this.shareService.getShareList().then(result => {
+          if (result) {
+            if (this.shareData.shared0.length > 0) this.changeTab(1);
+            this.shareData.shared.forEach(sharedDevice => {
+              this.sharedDeviceList.push(sharedDevice.deviceName)
+            });
+            this.loaded = loaded
+          }
+        });
       }
     })
+  }
 
+  ngOnDestroy() {
+    this.subscription.unsubscribe();
   }
 
   changeTab(num) {
     this.tab = num;
   }
 
-  isSharedDevice(deviceName) {
-    if (this.shareData.shared.indexOf(deviceName) > -1) return true;
+  isSharedDevice(deviceId) {
+    if (this.sharedDeviceList.indexOf(deviceId) > -1) return true;
     return false
   }
 
-  gotoEdit(deviceName) {
-    // this.navCtrl.push('ShareEditPage', this.devices[deviceName])
-  }
+  // gotoEdit(deviceId) {
+  //   // this.navCtrl.push('ShareEditPage', this.devices[deviceName])
+  // }
 
   accept(taskId, index = 99) {
     this.shared0Selected0 = index;

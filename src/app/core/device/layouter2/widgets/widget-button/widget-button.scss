@@ -19,16 +19,30 @@
         font-size: 0.7rem;
         width: 100%;
         text-align: center;
-        overflow:hidden;
-        white-space:nowrap;
+        overflow: hidden;
+        white-space: nowrap;
     }
 }
 
-.bigger{
+.action {
+    &.on {
+        i {
+            color: #FFF !important;
+        }
+
+        .content {
+            color: #FFF !important;
+        }
+    }
+
+    &.off {}
+}
+
+.bigger {
     font-size: 5rem !important;
 }
 
-.btnbox:active {
+.action:active {
     border-radius: 4px;
     transform: scale(0.95, 0.95);
 }
@@ -41,7 +55,7 @@
     align-items: center;
     background-color: #E0E0E0;
     border-radius: 13.5px;
-    width: 55px;
+    width: 45px;
     height: 25px;
     transition: all 0.3s;
 

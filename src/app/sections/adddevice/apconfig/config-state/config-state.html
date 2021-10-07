@@ -1,9 +1,12 @@
 <div class="translucent animated fadeIn faster">
+  <!-- ios配置向导 -->
+  <apconfig-ios-guide *ngIf="step==0" [deviceType]="deviceType"></apconfig-ios-guide>
+
   <!-- DIY设备配置 -->
   <ng-container *ngIf="isDevtool">
     <!-- 发现设备 -->
     <ng-container *ngIf="step==1">
-      <div class="title">发现设备中...</div>
+      <div class="title">发现设备中</div>
       <div class="line"></div>
       <div class="loaderbox margin5">
         <div class="loader-inner ball-scale-multiple">

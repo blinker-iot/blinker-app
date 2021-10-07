@@ -1,27 +1,20 @@
-<div class="timing-tab" *ngIf="loaded">
-  <div scrollY>
+<ng-container *ngIf="loaded">
+  <b-item-list [editMode]="editMode" [enableSort]="false">
     <ng-container *ngFor="let task of device.data.timing;trackBy: trackByFn">
-      <div tim-item>
-        <div class="infobox" (click)="editTimingTask(task)">
-          <div action>{{task.act | act2text}}</div>
-          <div clock>{{task.tim | minuteToTime }}</div>
-          <div day>
-            <span *ngIf="task.day[0]=='1'">周日</span>
-            <span *ngIf="task.day[1]=='1'">周一</span>
-            <span *ngIf="task.day[2]=='1'">周二</span>
-            <span *ngIf="task.day[3]=='1'">周三</span>
-            <span *ngIf="task.day[4]=='1'">周四</span>
-            <span *ngIf="task.day[5]=='1'">周五</span>
-            <span *ngIf="task.day[6]=='1'">周六</span>
-          </div>
+      <b-item (enter)="editTimingTask(task)">
+        <div class="text-box">
+          <div class="name">{{task.tim | minuteToTime }}</div>
+          <div class="other">{{task.act[0] | actcmd2text:device.id}} <span style="margin-left: 10px;">{{ task.day | days2text}}</span></div>
         </div>
-        <ion-toggle [checked]="task.ena == '1' ? true : false" (click)="changeEna(task)"></ion-toggle>
-      </div>
+        <div class="toggle">
+          <Switch [checked]="task.ena == '1' ? true : false" (click)="changeEna(task)"></Switch>
+          <!-- <ion-toggle [checked]="task.ena == '1' ? true : false" (click)="changeEna(task)"></ion-toggle> -->
+        </div>
+      </b-item>
     </ng-container>
-    <div height20>
-    </div>
-  </div>
+  </b-item-list>
+
   <div class="add-btn" *ngIf="device.data.timing.length<10" (click)="addTimingTask()">
     <i class="fal fa-plus"></i>
   </div>
-</div>
+</ng-container>

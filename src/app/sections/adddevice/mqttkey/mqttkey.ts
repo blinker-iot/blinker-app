@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
-import { Events, NavController } from '@ionic/angular';
+import { NavController } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
 import { Clipboard } from '@ionic-native/clipboard/ngx';
 import { ActivatedRoute } from '@angular/router';
 import { GeolocationService } from 'src/app/core/services/geolocation.service';
 import { AdddeviceService } from '../adddevice.service';
+import { NoticeService } from 'src/app/core/services/notice.service';
 
 @Component({
   selector: 'page-mqttkey',
@@ -15,6 +16,8 @@ import { AdddeviceService } from '../adddevice.service';
 export class MqttkeyPage {
   showKey = false;
   showExit = false;
+
+  step = 0;
   secretKey: string;
   showBroker: string;
   deviceType;
@@ -32,7 +35,7 @@ export class MqttkeyPage {
   constructor(
     private adddeviceService: AdddeviceService,
     private userService: UserService,
-    private events: Events,
+    private noticeService: NoticeService,
     private activatedRoute: ActivatedRoute,
     private navCtrl: NavController,
     private clipboard: Clipboard,
@@ -46,10 +49,13 @@ export class MqttkeyPage {
 
   ngAfterViewInit() {
     // this.deviceType = this.activatedRoute.snapshot.params['deviceType'];
-    this.registerDevice();
+    // this.registerDevice();
+    this.registerDevice('blinker')
   }
 
   async registerDevice(broker = 'aliyun') {
+    this.showBroker = broker;
+    this.step++;
     let image;
     let customName;
     if (this.deviceType == 'DiyArduino') {
@@ -65,12 +71,12 @@ export class MqttkeyPage {
         "mode": "mqtt",
         "broker": broker,
         "image": image,
-        "customName": customName,
+        "customName": "新的设备",
         "showSwitch": true
       }
     }
     console.log('get position');
-    
+
     if (await this.geolocationService.getUserPosition()) {
       device.config['position'] = {
         "location": [this.longitude, this.latitude],
@@ -78,13 +84,10 @@ export class MqttkeyPage {
       }
       device.config['public'] = 1;
     }
-
-    this.showBroker = broker;
-    console.log('get key');
     let newDevice = await this.adddeviceService.getMqttKey(device)
     if (newDevice) {
       this.secretKey = newDevice.authKey;
-      this.showKey = true;
+      this.step++;
     } else {
       this.showExit = true;
       console.log('注册失败');
@@ -93,11 +96,16 @@ export class MqttkeyPage {
 
   copyKey() {
     this.clipboard.copy(this.secretKey);
-    this.events.publish("provider:notice", "copySuccess")
+    this.noticeService.showToast('copySuccess')
   }
 
   gotoHome() {
     this.navCtrl.navigateRoot('/');
     this.userService.getAllInfo();
   }
+
+  showToast() {
+    this.noticeService.showToast('您的账号暂不支持该功能');
+  }
+
 }

@@ -7,6 +7,7 @@ import { IonicModule } from '@ionic/angular';
 
 import { EditinfoPage } from './editinfo.page';
 import { devCenterComponentsModule } from '../../components/components.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
 
 const routes: Routes = [
   {
@@ -21,6 +22,7 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     devCenterComponentsModule,
+    DirectivesModule,
     RouterModule.forChild(routes)
   ],
   declarations: [EditinfoPage]

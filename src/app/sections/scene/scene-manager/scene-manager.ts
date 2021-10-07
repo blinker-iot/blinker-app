@@ -4,15 +4,11 @@ import {
   QueryList,
   ElementRef,
 } from '@angular/core';
-import {
-  AlertController,
-  Events,
-} from '@ionic/angular';
-import { UserService } from 'src/app/core/services/user.service';
+import { AlertController } from '@ionic/angular';
 import { Router } from '@angular/router';
-import Sortable from 'sortablejs';
 import { DataService } from 'src/app/core/services/data.service';
 import { SceneService } from '../scene.service';
+import { NoticeService } from 'src/app/core/services/notice.service';
 
 
 @Component({
@@ -20,9 +16,7 @@ import { SceneService } from '../scene.service';
   templateUrl: 'scene-manager.html',
   styleUrls: ['scene-manager.scss']
 })
-export class SceneManagerPage {
-
-  @ViewChildren("sortbox") sortbox: QueryList<ElementRef>;
+export class SceneManager {
 
   loaded = false;
 
@@ -50,14 +44,15 @@ export class SceneManagerPage {
   constructor(
     private sceneService: SceneService,
     private dataService: DataService,
-    public alertCtrl: AlertController,
-    public events: Events,
+    private alertCtrl: AlertController,
+    private noticeService: NoticeService,
     private router: Router
   ) {
   }
 
+  subscription;
   ngOnInit() {
-    this.dataService.userDataLoader.subscribe(loaded => {
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
       if (loaded) {
         this.loaded = loaded
         this.oldSceneListData = JSON.stringify(this.sceneData)
@@ -67,25 +62,19 @@ export class SceneManagerPage {
 
   // 退出页面时保存数据
   ngOnDestroy() {
+    this.subscription.unsubscribe();
     if (this.oldSceneListData == JSON.stringify(this.sceneData)) return;
     this.saveConfig();
   }
 
   switchMode() {
     this.editMode = !this.editMode;
-    if (this.editMode) {
-      setTimeout(() => {
-        this.initSortable()
-      }, 100);
-    } else {
-      this.destroySortable()
-    }
   }
 
   async addScene() {
     // if (typeof this.userService.sceneList.order != 'undefined')
     if (this.sceneDataList.length > 98) {
-      this.events.publish('provider:notice', 'tooManyScenes')
+      this.noticeService.showToast('tooManyScenes')
       return;
     }
     this.alert = await this.alertCtrl.create({
@@ -102,11 +91,11 @@ export class SceneManagerPage {
           text: '确认', handler: data => {
             if (data.newSceneName.length == 0) return;
             if (data.newSceneName.length > 10) {
-              this.events.publish('provider:notice', 'tooLongSceneName')
+              this.noticeService.showToast('tooLongSceneName')
               return;
             }
             if (this.sceneIsExist(data.newSceneName)) {
-              this.events.publish('provider:notice', 'sameSceneName')
+              this.noticeService.showToast('sameSceneName')
               return;
             }
             this.newScene(data.newSceneName);
@@ -119,7 +108,6 @@ export class SceneManagerPage {
   }
 
   editScene(sceneName) {
-    // this.navCtrl.push('SceneEditPage', sceneName)
     this.router.navigate(['/scene-manager', sceneName])
   }
 
@@ -132,12 +120,7 @@ export class SceneManagerPage {
     this.sceneDataList.push(sceneName);
     this.sceneDataDict[sceneName] = {
       ico: "fal fa-question-circle",
-      acts: [
-        // { devicename: "30AEA4244BF4ORZ88QHTJRRC", content: "开灯", key: "tog-abc", value: "on" },
-        // { devicename: "30AEA4244BF4ORZ88QHTJRRB", content: "开灯", key: "tog-abc", value: "on" },
-        // { devicename: "30AEA4244BF4ORZ88QHTJRRA", content: "开灯", key: "tog-abc", value: "on" },
-        // { devicename: "30AEA4244BF4ORZ88QHTJRRD", content: "开灯", key: "tog-abc", value: "on" },
-      ]
+      acts: []
     }
   }
 
@@ -169,29 +152,12 @@ export class SceneManagerPage {
     delete this.sceneDataDict[sceneName]
   }
 
-  sortable;
-  initSortable() {
-    let box = this.sortbox.first;
-    // let box = this.content.getNativeElement()
-    if (typeof box == 'undefined') return;
-    console.log("init Sortablejs");
-    this.sortable = new Sortable(box.nativeElement, {
-      handle: ".handle",
-      animation: 150,
-      chosenClass: "schosen",
-      dragClass: "sdrag",
-      dataIdAttr: "id",
-      scroll: false,
-    });
-  }
-
-  destroySortable() {
-    this.sceneDataList = this.sortable.toArray();
-    this.sortable.destroy();
-  }
-
   saveConfig() {
     this.sceneService.saveData(this.sceneData);
+  }
+
+  sortChange(event) {
+    this.sceneDataList = event
   }
 
 }

@@ -7,6 +7,7 @@ import { IonicModule } from '@ionic/angular';
 import { DashboardPage } from './dashboard';
 import { ComponentsModule } from 'src/app/core/components/components.module';
 import { DashboardBlockComponent } from './dashboard-block/dashboard-block';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
 
 const routes: Routes = [
     {
@@ -20,7 +21,8 @@ const routes: Routes = [
         CommonModule,
         IonicModule,
         ComponentsModule,
-        RouterModule.forChild(routes)
+        RouterModule.forChild(routes),
+        DirectivesModule
     ],
     declarations: [DashboardPage,DashboardBlockComponent]
 })

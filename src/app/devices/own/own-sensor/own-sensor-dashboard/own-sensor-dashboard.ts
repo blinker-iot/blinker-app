@@ -1,8 +1,10 @@
 ﻿import { Component, ChangeDetectorRef, ViewChildren, ElementRef, QueryList, Input } from '@angular/core';
-import { NavController, Events, ModalController } from '@ionic/angular';
+import { NavController, ModalController } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { NativeService } from 'src/app/core/services/native.service';
-import Swiper from 'swiper';
+// import Swiper from 'swiper';
+// import Swiper from 'swiper/dist/js/swiper.js'
+// import { Swiper, Pagination } from 'swiper/dist/js/swiper.esm.js';
 
 @Component({
   selector: 'own-sensor-dashboard',
@@ -42,7 +44,6 @@ export class OwnSensorDashboard {
   constructor(
     private navCtrl: NavController,
     private changeDetectorRef: ChangeDetectorRef,
-    private events: Events,
     private modalCtrl: ModalController,
     private deviceService: DeviceService,
     private nativeService: NativeService
@@ -73,11 +74,11 @@ export class OwnSensorDashboard {
   }
 
   ngAfterViewInit(): void {
-    var mySwiper = new Swiper ('.swiper-container', {
-      // Optional parameters
-      direction: 'vertical',
-      // loop: true
-    })
+    // var mySwiper = new Swiper ('.swiper-container', {
+    //   // Optional parameters
+    //   direction: 'vertical',
+    //   // loop: true
+    // })
   }
 
   // ionViewDidEnter() {
@@ -106,7 +107,7 @@ export class OwnSensorDashboard {
       message = `{"switch":"on"}`
     }
     this.deviceService.sendData(this.device, message);
-    this.nativeService.vibrate();
+    // this.nativeService.vibrate();
   }
 
   changeTab(tab) {

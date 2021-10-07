@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { AndroidPermissions } from '@ionic-native/android-permissions/ngx'
-import { Platform, Events } from '@ionic/angular';
+import { Platform } from '@ionic/angular';
 import { Diagnostic } from '@ionic-native/diagnostic/ngx';
+import { NoticeService } from './notice.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +13,7 @@ export class PermissionService {
     private diagnostic: Diagnostic,
     private androidPermissions: AndroidPermissions,
     private platform: Platform,
-    private events: Events
+    private noticeService: NoticeService
   ) {
 
   }
@@ -57,7 +58,7 @@ export class PermissionService {
       return true;
     } else {
       if (options.showNotice)
-        this.events.publish("provider:notice", "openWifi");
+        this.noticeService.showAlert('openWifi')
       return false;
     }
   }
@@ -67,7 +68,7 @@ export class PermissionService {
       return true;
     } else {
       if (options.showNotice)
-        this.events.publish("provider:notice", "openBluetooth");
+        this.noticeService.showAlert('openBluetooth')
       return false;
     }
   }

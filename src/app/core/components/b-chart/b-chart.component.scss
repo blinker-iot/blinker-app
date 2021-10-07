@@ -33,4 +33,15 @@ select {
     border-radius: 4px;
     font-size: 13px;
     background-color: #fff0;
+    option{
+        color: #000;
+    }
+}
+
+select.black{
+    color: #000;
+}
+
+select.white{
+    color: #FFF;
 }

@@ -1,11 +1,23 @@
-<div class="infobox">
+<!-- <div class="infobox">
   <ng-container *ngIf="device">
     <div class="gotobtn" (click)="gotoDashboard()">
       <div>查看详情</div>
     </div>
+    <b-device-img [deviceId]="device.id"></b-device-img>
     <div class="name">{{device.config.customName}}</div>
     <div class="id"><i class="fal fa-file-alt"></i> {{id}}</div>
     <div class="gps"><i class="fal fa-map-marker-alt"></i> {{device.config.position.address}}</div>
-    <!-- <div class="state">{{device.data.state}}</div> -->
   </ng-container>
+</div> -->
+
+<div class="blinke-toast animate__animated animate__faster"
+  [ngClass]="{'animate__fadeInUp': !hide,'animate__fadeOutDown':hide}">
+  <b-device-img [deviceId]="device.id" (click)="gotoDashboard()"></b-device-img>
+  <div text-box (click)="gotoDashboard()">
+    <div name>{{device.config.customName}}</div>
+    <div mess>{{device.config.position.address}}</div>
+  </div>
+  <div close-btn (click)="close()">
+    <i class="fal fa-times"></i>
+  </div>
 </div>

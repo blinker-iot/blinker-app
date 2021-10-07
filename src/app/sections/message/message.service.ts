@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { API } from 'src/app/configs/app.config';
+import { API } from 'src/app/configs/api.config';
 import { HttpClient } from '@angular/common/http';
 import { DataService } from 'src/app/core/services/data.service';
 import { BlinkerResponse } from 'src/app/core/model/response.model';
@@ -23,15 +23,14 @@ export class MessageService {
     private dataService: DataService
   ) { }
 
-  // 2019.10.22 消息需要最新的前
-  getMessage(page): Promise<boolean> {
+  getMessage(page = 1): Promise<boolean> {
     return this.http
       .get(API.MESSAGE, {
         params: {
           "uuid": this.uuid,
           "token": this.token,
           "unread": "0",
-          "page": "1",
+          "page": page.toString(),
           "perPage": "15"
         }
       })
@@ -39,7 +38,7 @@ export class MessageService {
       .then((resp: BlinkerResponse) => {
         console.log(resp);
         if (resp.message == 1000) {
-          this.list = resp.detail.messages
+          this.list = this.list.concat(resp.detail.messages)
           return true;
         } else {
           return false;

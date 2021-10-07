@@ -19,7 +19,6 @@ export class InputBoxComponent implements OnInit {
   ngOnInit() {}
 
   clear() {
-    // this.debugService.clean(this.device)
   }
 
   close() {
@@ -29,8 +28,6 @@ export class InputBoxComponent implements OnInit {
   send() {
     this.deviceService.sendData(this.device, this.sendmess);
     this.sendmess = '';
-    // this.nativeService.vibrate();
-    // // this.scrollToBottom();
   }
 
 }

@@ -17,6 +17,9 @@
             width: 0%;
             height: 100%;
             background: #FFFFFF;
+            overflow: hidden;
+            position: relative;
+            transition: background-color 0.5s;
         }
         .activebar2 {
             border-radius: 4px;

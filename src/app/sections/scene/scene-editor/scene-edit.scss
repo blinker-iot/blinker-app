@@ -1,0 +1,50 @@
+b-top-box {
+    ::ng-deep {
+        .full-box {
+            width: 100%;
+            display: flex;
+
+            .box {
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                align-items: center;
+                width: 50%;
+            }
+
+            .right {
+                padding-bottom: 1px;
+            }
+
+        }
+
+        .icon-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #389BEE;
+            height: 40px;
+
+            i {
+                font-size: 30px !important;
+            }
+        }
+
+        .text-box {
+            height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn {
+            margin-top: 5px;
+            color: #389BEE;
+            font-size: 13px;
+        }
+    }
+}
+
+.title {
+    padding-left: 15px;
+    color: #959595;
+}

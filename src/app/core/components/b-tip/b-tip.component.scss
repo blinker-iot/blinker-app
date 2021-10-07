@@ -1,0 +1,63 @@
+.blinke-tip {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    height: 60px;
+    width: calc(100% - 20px);
+    box-shadow: 0 0 5px #ccc;
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+
+    b-device-img {
+        width: 40px;
+        height: 40px;
+        ::ng-deep {
+            img {
+                width: 40px;
+            }
+        }
+    }
+
+    [text-box] {
+        font-size: 12px;
+        margin-left: 10px;
+        margin-top: -2px;
+        width: calc(100% - 90px);
+        display: flex;
+        align-items: center;
+        [mess] {
+            margin-top: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    [close-btn] {
+        position: absolute;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+i {
+    margin-right: 10px;
+    margin-top: 2px;
+    font-size: 18px;
+    &.error {
+        color: rgb(190, 37, 37);
+    }
+    &.done {
+        color: rgb(47, 145, 28);
+    }
+    &.warn {
+        color: rgb(216, 130, 0);
+    }
+}

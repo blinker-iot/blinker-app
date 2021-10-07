@@ -1,82 +1,27 @@
-.timing-tab {
-    height: 100%;
-    position: relative;
-
-    [scrollY] {
-        height: 100%;
-        overflow-y: scroll;
-    }
-
-    [height20] {
-        height: 20vh;
-    }
-
-    [tim-item] {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-direction: row;
-        background-color: #fff;
-        margin-bottom: 5px;
-        height: 100px;
-        padding: 10px 15px;
-        position: relative;
-
-        .infobox {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            flex-direction: column;
-            width: 80%;
-        }
-
-        [action] {
-            color: #595959;
-            font-size: 12px;
-        }
-
-        [clock] {
-            margin: 3px 0;
-            color: #3C3C3C;
-            font-size: 30px;
-        }
-
-        [day] {
-            color: #959595;
-            font-size: 11px;
-
-            span {
-                margin-right: 3px;
+b-item-list {
+    ::ng-deep {
+            .text-box {
+                .name {
+                    font-size: 20px !important;
+                }
             }
-        }
-    }
-
-    ion-toggle {
-
-        // width: 44px !important;
-        // height: 25px !important;
-
-        // .toggle-inner {
-        //     width: 21px !important;
-        //     height: 21px !important;
-        //     box-shadow: 0 0px 5px rgba(0, 0, 0, 0.3) !important;
-        //     ;
-        // }
     }
 }
 
+.toggle {}
+
 .add-btn {
     z-index: 9;
-    position: absolute;
-    bottom: 30px;
+    position: fixed;
+    bottom: 60px;
     left: 50%;
     margin-left: -32.5px;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 45px;
-    width: 65px;
-    height: 65px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background-color: #389BEE;
     color: #fff;

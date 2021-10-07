@@ -1,7 +1,7 @@
 import { Component, ChangeDetectorRef, ViewChildren, QueryList, ElementRef, Renderer2, Input } from '@angular/core';
-import { Events, ModalController, AlertController, Platform } from '@ionic/angular';
+import { ModalController, AlertController, Platform } from '@ionic/angular';
 import { styleList } from '../widgets/config';
-import { Layouter2Service } from '../layouter2.service';
+import { LayouterService } from '../../layouter.service';
 import { IconListPage } from 'src/app/core/pages/icon-list/icon-list';
 
 @Component({
@@ -13,7 +13,6 @@ export class WidgetEditor {
 
   @Input() widget;
   @Input() device;
-  tabSelected = 0;
 
   get widgets() {
     return styleList[this.widget.type]
@@ -22,13 +21,12 @@ export class WidgetEditor {
   @ViewChildren('widgetItem') widgetItems: QueryList<ElementRef>;
 
   constructor(
-    public events: Events,
     public changeDetectorRef: ChangeDetectorRef,
     public modalCtrl: ModalController,
     public renderer: Renderer2,
     public alertCtrl: AlertController,
     public platform: Platform,
-    private layouter2Service: Layouter2Service
+    private LayouterService: LayouterService
   ) { }
 
   ngOnInit() {
@@ -36,15 +34,12 @@ export class WidgetEditor {
   }
 
   ngAfterViewInit() {
-    if (this.platform.is('android'))
+    if (this.platform.is('android')) {
       this.listenKeyboard();
+    }
     setTimeout(() => {
       this.resize();
     }, 100);
-  }
-
-  loadWidgets() {
-    // this.renderer
   }
 
   //动态调整demo组件的尺寸
@@ -53,11 +48,12 @@ export class WidgetEditor {
     for (let item of this.widgetItems.toArray()) {
       let cols = styleList[this.widget.type][i].cols;
       let rows = styleList[this.widget.type][i].rows;
-      let width = cols * this.layouter2Service.gridLength + ((cols - 1) * this.layouter2Service.gridMargin);
-      let height = (rows * this.layouter2Service.gridLength) + ((rows - 1) * this.layouter2Service.gridMargin);
+      let width = cols * this.LayouterService.gridLength + ((cols - 1) * this.LayouterService.gridMargin);
+      let height = (rows * this.LayouterService.gridLength) + ((rows - 1) * this.LayouterService.gridMargin);
       this.renderer.setStyle(item.nativeElement, 'width', `${width}px`);
       this.renderer.setStyle(item.nativeElement, 'height', `${height}px`);
       i++;
+      this.changeDetectorRef.detectChanges();
     }
   }
 
@@ -67,29 +63,30 @@ export class WidgetEditor {
     this.changeDetectorRef.detectChanges();
   }
 
-  save() {
-    this.events.publish('layouter2', 'changeWidget', '')
-    this.modalCtrl.dismiss();
+  async save() {
+    this.LayouterService.changeWidget();
+    (await this.modalCtrl.getTop()).dismiss()
   }
 
-  delete() {
-    this.events.publish('layouter2', 'delWidget', this.widget)
-    this.modalCtrl.dismiss();
+  async delete() {
+    this.LayouterService.delWidget(this.widget);
+    (await this.modalCtrl.getTop()).dismiss()
+  }
+
+  async close() {
+    (await this.modalCtrl.getTop()).dismiss()
   }
 
   changeStyle(lstyle) {
-    console.log("changeStyle");
     this.widget["lstyle"] = lstyle;
     this.widget.cols = styleList[this.widget.type][lstyle].cols;
     this.widget.rows = styleList[this.widget.type][lstyle].rows;
   }
 
   changeColor(color) {
-    console.log("changeColor");
     this.widget["clr"] = color;
-    // this.changeDetectorRef.detectChanges();
     if (this.widget.type == 'num' && this.widget.lstyle != 0)
-      this.events.publish(this.device.deviceName + ':refreshWidget', this.widget)
+      this.LayouterService.refreshWidget(this.widget)
   }
 
   choseBtnMode(mode) {
@@ -100,12 +97,12 @@ export class WidgetEditor {
     this.widget["bg"] = bgmode;
   }
 
-  changeChartStyle(id,style){
-
+  chosePlayMode(mode) {
+    this.widget["mode"] = mode;
   }
 
-  tabChange(tab) {
-    this.tabSelected = tab;
+  changeChartStyle(id, style) {
+
   }
 
   async changeIcon() {
@@ -131,7 +128,6 @@ export class WidgetEditor {
 
   // delete() {
   //   this.viewCtrl.dismiss();
-  //   this.events.publish('layout:delete', this.element.id)
   // }
 
   // @ViewChild(Content) content: Content;
@@ -211,6 +207,10 @@ export class WidgetEditor {
     }
     array.length = array.length - 1;
     return array;
+  }
+
+  choseStream(stream) {
+    this.widget["str"] = stream;
   }
 
 }

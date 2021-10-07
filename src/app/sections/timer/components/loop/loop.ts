@@ -1,7 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { Events } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
-import { UserService } from 'src/app/core/services/user.service';
 import { TimerService } from '../../timer.service';
 import { DataService } from 'src/app/core/services/data.service';
 
@@ -29,20 +27,24 @@ export class LoopComponent {
   };
 
   constructor(
-    public events: Events,
     public deviceService: DeviceService,
     private dataService: DataService,
     private timerService: TimerService
   ) {
   }
 
+  subscription;
   ngOnInit() {
-    this.dataService.userDataLoader.subscribe(loaded => {
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
       if (loaded) {
         this.loaded = loaded
         this.timerService.loadTask('loop');
       }
     })
+  }
+
+  ngOnDestroy() {
+    this.subscription.unsubscribe();
   }
 
   startLoop() {

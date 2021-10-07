@@ -21,6 +21,7 @@ ion-header {
     margin-top: 3px;
     font-size: 15px;
     position: relative;
+
     .ico {
         width: 12vw;
         font-size: 4.5vh;
@@ -29,9 +30,11 @@ ion-header {
         justify-content: center;
         color: #389BEE;
     }
+
     .name {
         margin-left: 10px;
     }
+
     .num {
         display: flex;
         align-items: center;
@@ -39,6 +42,7 @@ ion-header {
         color: #959595;
         margin-right: 10px;
     }
+
     .arrow {
         position: absolute;
         right: 20px;
@@ -47,6 +51,7 @@ ion-header {
         justify-content: center;
         font-size: 21px;
         color: #959595;
+
         img {
             height: 2.5vh;
         }
@@ -58,6 +63,7 @@ ion-header {
 }
 
 .addbtn {
+    position: fixed;
     border-top: 1px solid #d3d3d3;
     display: flex;
     align-items: center;
@@ -65,7 +71,6 @@ ion-header {
     padding: 10px 20px 10px 20px;
     background-color: #FFF;
     color: #389BEE;
-    position: absolute;
     bottom: 0;
     width: 100%;
     height: 8vh;
@@ -74,6 +79,7 @@ ion-header {
 
 .item-edit {
     justify-content: flex-start;
+
     .delbtn {
         display: flex;
         align-items: center;
@@ -81,22 +87,24 @@ ion-header {
         font-size: 21px;
         color: red;
     }
+
     .ico {
         margin-left: 20px;
     }
-    .handle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: absolute;
-        right: 0;
-        padding: 0 20px;
-        height: 100%;
-        font-size: 21px;
-        color: #959595;
-        cursor: move;
-        cursor: -webkit-grabbing;
-    }
+
+    // .handle {
+    //     display: flex;
+    //     align-items: center;
+    //     justify-content: center;
+    //     position: absolute;
+    //     right: 0;
+    //     top: 0;
+    //     // padding: 0 20px;
+    //     // font-size: 21px;
+    //     // color: #959595;
+    //     cursor: move;
+    //     cursor: -webkit-grabbing;
+    // }
 }
 
 .schosen {

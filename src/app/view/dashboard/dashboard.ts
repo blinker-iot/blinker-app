@@ -1,8 +1,8 @@
 import { Component, ViewChild, Renderer2, ElementRef, ViewChildren, QueryList } from '@angular/core';
-import { ModalController, Events } from '@ionic/angular';
-// import Sortable from 'sortablejs';
+import { ModalController } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
 import { DataService } from 'src/app/core/services/data.service';
+import { ViewService } from 'src/app/core/services/view.service';
 
 @Component({
   selector: 'page-dashboard',
@@ -55,15 +55,14 @@ export class DashboardPage {
   // }
 
   // @ViewChild(Content,{ read: ElementRef, static: true }) content: Content;
-  @ViewChild('dashboardbox',{ read: ElementRef, static: true }) dashboardbox: ElementRef;
+  @ViewChild('dashboardbox', { read: ElementRef, static: true }) dashboardbox: ElementRef;
 
   constructor(
-
-    private events: Events,
     public modalCtrl: ModalController,
     public render: Renderer2,
     public userService: UserService,
-    private dataService: DataService
+    private dataService: DataService,
+    private viewService: ViewService
   ) {
     this.oldBlockListData = JSON.stringify(this.blockList)
   }
@@ -138,7 +137,7 @@ export class DashboardPage {
   }
 
   changeView() {
-    this.events.publish('changeView', '')
+    this.viewService.changeView();
   }
 
 }

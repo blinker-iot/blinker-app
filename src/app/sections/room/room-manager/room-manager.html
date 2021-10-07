@@ -1,10 +1,10 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>区域管理</ion-title>
-    <ion-buttons slot="end" (click)="switchMode()">
+    <ion-title>{{'MENU.REGIONAL_MANAGER' | translate}}</ion-title>
+    <ion-buttons slot="end" *ngIf="loaded" (click)="switchMode()">
       <ion-button *ngIf="!editMode">
         编辑
       </ion-button>
@@ -15,34 +15,16 @@
   </ion-toolbar>
 </ion-header>
 <ion-content>
-  <ng-container *ngIf="loaded">
-    <ng-container *ngIf="!editMode">
-      <ng-container *ngFor="let roomName of roomDataList">
-        <div class="item" (click)="editRoom(roomName)">
-          <div class="name">{{roomName}}</div>
-          <div class="num">{{roomDataDict[roomName].length}}</div>
-          <div class="arrow">
-            <img src="assets/img/icon/arrow.png">
-          </div>
-        </div>
-      </ng-container>
-      <div class="hspace"></div>
-      <div class="addbtn" (click)="addRoom()">+ 新建房间</div>
-    </ng-container>
-    <ng-container *ngIf="editMode">
-      <div class="sortbox" #sortbox>
-        <ng-container *ngFor="let roomName of roomDataList">
-          <div class="item item-edit" data-id="{{roomName}}">
-            <div class="delbtn" (click)="delRoomAlert(roomName)">
-              <ion-icon name="remove-circle"></ion-icon>
-            </div>
-            <div class="name">{{roomName}}</div>
-            <div class="handle">
-              <ion-icon name="menu"></ion-icon>
-            </div>
-          </div>
-        </ng-container>
-      </div>
-    </ng-container>
-  </ng-container>
+  <b-item-list *ngIf="loaded" [editMode]="editMode" (sortChange)="sortChange($event)">
+    <b-item [id]="roomName" showArrow="true" *ngFor="let roomName of roomDataList" (delete)="delRoom(roomName)"
+      (enter)="editRoom(roomName)">
+      <div class="title-box">{{roomName}}</div>
+      <div class="num" edit-hide>{{roomDataDict[roomName].length}}</div>
+    </b-item>
+  </b-item-list>
 </ion-content>
+<ion-footer class="ion-no-border">
+  <ion-toolbar>
+    <b-bottom-btn *ngIf="!editMode" (click)="addRoom()">+ 新建房间</b-bottom-btn>
+  </ion-toolbar>
+</ion-footer>

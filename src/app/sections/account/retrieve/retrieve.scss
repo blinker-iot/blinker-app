@@ -1,67 +1,55 @@
-.title-box {
-    margin-bottom: 1rem;
-    padding: 0 1.5rem;
-    .title1 {
-        font-size: 2rem;
-        font-weight: 500;
-    }
-    .title2 {
-        color: #4A4A4A;
-        margin-top: 0.3rem;
-        font-size: 1rem;
-    }
-}
+@import "../account.scss";
 
 .form-box {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  padding: 0 1.5rem;
+  .input-box {
+    width: 100%;
     display: flex;
     align-items: center;
-    flex-direction: column;
-    justify-content: center;
-    width: 100%;
-    padding: 0 1.5rem;
-    .input-box {
-        width: 100%;
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 12px;
+    border-bottom: 1px solid #c8c7cc;
+    position: relative;
+    .item-img {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      width: 30px;
+      margin-right: 10px;
+    }
+    input {
+      flex-grow: 1;
+    }
+    .sendsms {
+      position: absolute;
+      right: 0;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      .v-line {
+        width: 1px;
+        height: 30px;
+        background-color: #979797;
+      }
+      button {
         display: flex;
         align-items: center;
-        flex-direction: row;
-        justify-content: flex-start;
-        padding: 12px;
-        border-bottom: 1px solid #c8c7cc;
-        position: relative;
-        .item-img {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            width: 30px;
-            margin-right: 10px;
-        }
-        input {
-            flex-grow: 1;
-        }
-        .sendsms {
-            position: absolute;
-            right: 0;
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            .v-line {
-                width: 1px;
-                height: 30px;
-                background-color: #979797;
-            }
-            button {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1rem;
-                background-color: transparent;
-            }
-        }
+        justify-content: center;
+        font-size: 1rem;
+        background-color: transparent;
+      }
     }
-    [fullbtn] {
-        margin-top: 60px;
-    }
+  }
+  [fullbtn] {
+    margin-top: 60px;
+  }
 }

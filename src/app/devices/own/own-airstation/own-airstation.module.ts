@@ -15,9 +15,6 @@ import { FormsModule } from '@angular/forms';
   ],
   exports: [
     OwnAirStationDashboard
-  ],
-  entryComponents: [
-    OwnAirStationDashboard
   ]
 })
 

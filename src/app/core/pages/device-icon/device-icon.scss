@@ -1,11 +1,68 @@
+.custom-box {
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background-color: #fff;
+    box-shadow: 0 0 10px #ccc;
+    padding-top: 45px;
+    font-size: 14px;
+    z-index: 99;
+
+    .text {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        span {
+            margin-left: 15px;
+            color: #bbb;
+            font-size: 12px;
+        }
+    }
+
+    .input-box {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        input {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            height: 30px;
+            padding: 0 15px;
+            flex-grow: 1;
+        }
+
+        button {
+            background-color: #389bee;
+            border: 1px solid #389bee;
+            color: #fff;
+            height: 30px;
+            padding: 0 15px;
+            border-radius: 5px;
+            margin-left: 15px;
+        }
+    }
+}
+
 .img-box {
     display: flex;
+    justify-content: space-between;
     flex-wrap: wrap;
+    padding: 15px;
 }
 
 .img-item {
-    width: 24vw;
-    height: 24vw;
-    margin: 0.5vw;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+    width: 21vw;
+    height: 21vw;
+    padding: 10px;
+    margin-top: 10px;
+    // margin: 0.5vw;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+}
+
+.null {
+    width: 21vw;
 }

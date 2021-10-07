@@ -1,7 +1,7 @@
 import { Component, OnInit, Input, EventEmitter, Output } from '@angular/core';
 import { DevcenterService } from '../../devcenter.service';
 import { ActivatedRoute } from '@angular/router';
-import { DevicelistService } from 'src/app/core/services/devicelist.service';
+import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 
 @Component({
   selector: 'dev-prodevice-info',
@@ -20,7 +20,7 @@ export class ProdeviceInfoComponent implements OnInit {
   constructor(
     private devcenterService: DevcenterService,
     private activatedRoute: ActivatedRoute,
-    // private devicelistService: DevicelistService
+    // private deviceConfigService: DeviceConfigService
   ) { }
 
   ngOnInit() {
@@ -54,7 +54,7 @@ export class ProdeviceInfoComponent implements OnInit {
       .then(result => {
         if (result) {
           this.confirm.emit(true)
-          // this.devicelistService.getDevDeviceConfig();
+          // this.deviceConfigService.getDevDeviceConfig();
         }
 
       })

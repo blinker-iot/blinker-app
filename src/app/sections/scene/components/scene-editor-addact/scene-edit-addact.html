@@ -1,0 +1,69 @@
+<ion-header>
+  <ion-toolbar overlayPadding>
+    <ion-buttons slot="start">
+      <ion-button (click)="close()">
+        <i class="fal fa-times"></i>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>添加动作</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="save()">
+        <i class="fal fa-check" [ngClass]="{'save-btn-disable': disableSave}"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+
+  <b-item-list>
+    <b-item showArrow="true" (click)="openTypeSelectModal()">
+      <div>任务类型</div>
+      <div class="selected">
+        {{selectedType.text}}
+      </div>
+    </b-item>
+    <ng-container *ngIf="selectedType.value=='delay'">
+      <b-item showArrow="true" (click)="openDelaySelectModal()">
+        <div>延迟时长</div>
+        <div class="selected">
+          {{selectedDelay.text}}
+        </div>
+      </b-item>
+    </ng-container>
+    <ng-container *ngIf="selectedType.value=='action'">
+      <b-item showArrow="true" (click)="openDeviceSelectModal()">
+        <div>任务设备</div>
+        <div class="selected" *ngIf="selectedDevice">
+          {{selectedDevice.config.customName}}
+        </div>
+      </b-item>
+      <b-item showArrow="true" [disabled]="disableActionSelector" (click)="openActionSelectorModal()">
+        <div>执行动作</div>
+        <div class="selected" *ngIf="selectedDevice && selectedAction">
+          {{ selectedAction | actcmd2text:selectedDevice.id}}
+        </div>
+      </b-item>
+    </ng-container>
+
+  </b-item-list>
+
+  <!-- <div class="tab-box">
+    <div class="tab" (click)="selectTab(1)">
+      添加设备动作
+    </div>
+    <div class="tab" (click)="addDelay()">
+      添加延迟
+    </div>
+  </div>
+  <ng-container *ngIf="tab==1">
+    <div class="selectBox" (click)="openDeviceSelectModal()">
+      <div class="selectTitle">选择要控制的设备</div>
+      <deviceblock-list2 (update)="updateSelectedDevice($event)"></deviceblock-list2>
+    </div>
+
+    <div class="selectBox" (click)="openActionModal()">
+      <div class="selectTitle">选择执行的动作</div>
+      <b-actcmd-list [device]="selectedDevice" (updateAct)="updateSelectedAction($event)"></b-actcmd-list>
+    </div>
+  </ng-container> -->
+</ion-content>

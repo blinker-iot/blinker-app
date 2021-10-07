@@ -1,6 +1,6 @@
-import { Component, Input, ViewChild, ElementRef, Renderer2, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, ChangeDetectorRef } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { Events } from '@ionic/angular';
+import { LayouterService } from '../../../layouter.service';
 
 @Component({
   selector: 'widget-color',
@@ -63,8 +63,8 @@ export class WidgetColorComponent implements Layouter2Widget {
   loaded = false;
 
   constructor(
-    public changeDetectorRef: ChangeDetectorRef,
-    public events: Events,
+    private changeDetectorRef: ChangeDetectorRef,
+    private LayouterService: LayouterService
   ) { }
 
   timer;
@@ -93,19 +93,17 @@ export class WidgetColorComponent implements Layouter2Widget {
   colorChange(e) {
     this.value = this.brightness
     this.rgb = e;
-    this.sendData();
+    // this.sendData();
   }
 
   brightnessChange(e) {
     this.value = e;
-    // this.rgb = this.color
     this.sendData();
   }
 
   sendData() {
-    // if (typeof this.rgb == 'undefined') this.rgb = this.color;
     let data = `{"${this.key}":[${this.rgb[0]},${this.rgb[1]},${this.rgb[2]},${this.value}]}\n`;
-    this.events.publish('layouter2', 'send', data);
+    this.LayouterService.send(data)
   }
 
 }

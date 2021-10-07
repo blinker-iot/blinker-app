@@ -1,12 +1,11 @@
 .speech-button {
-    background: linear-gradient( #29C2F7, #389BEE);
+    background: linear-gradient(#29c2f7, #389bee);
     margin: 0;
     width: 45px;
     height: 45px;
     border-radius: 50%;
     font-size: 25px;
+    font-weight: 200;
     padding: 0;
-    img {
-        width: 40%;
-    }
+    color: #fff;
 }

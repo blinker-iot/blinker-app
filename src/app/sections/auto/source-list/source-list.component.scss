@@ -1,0 +1,19 @@
+.item {
+    height: 50px;
+    width: calc(100% - 30px);
+    margin-left: 15px;
+    margin-top: 8px;
+    border-radius: 8px;
+    padding-left: 15px;
+    background: #FFF;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+    display: flex;
+    // justify-content: center;
+    align-items: center;
+}
+
+input{
+    visibility: hidden;
+    height: 0;
+}

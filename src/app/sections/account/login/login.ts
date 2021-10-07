@@ -1,9 +1,11 @@
 import { Component } from '@angular/core';
-import { Events, NavController } from '@ionic/angular';
+import { NavController, ModalController } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
-import { ViewService } from 'src/app/view/view.service';
+import { ViewService } from 'src/app/core/services/view.service';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CONFIG } from 'src/app/configs/app.config';
+import { DocPage } from 'src/app/core/pages/doc/doc.page';
+import { NoticeService } from 'src/app/core/services/notice.service';
 
 @Component({
   selector: 'page-login',
@@ -20,12 +22,16 @@ export class LoginPage {
 
   showPoweredBy = true;
 
+  USER_AGREEMENT = CONFIG.USER_AGREEMENT;
+  PRIVACY_POLICY = CONFIG.PRIVACY_POLICY;
+
   constructor(
     private authService: AuthService,
     private userService: UserService,
-    private events: Events,
+    private noticeService: NoticeService,
     private navCtrl: NavController,
-    private viewService: ViewService
+    private viewService: ViewService,
+    private modalCtrl: ModalController,
   ) {
   }
 
@@ -34,16 +40,18 @@ export class LoginPage {
   }
 
   async login() {
+    await this.noticeService.showLoading('login')
     if (this.username.length <= 0) {
-      this.events.publish("provider:notice", "needPhoneNumberOrUserName");
+      this.noticeService.showToast('needPhoneNumberOrUserName')
       return;
     }
     if (this.password.length < 8) {
-      this.events.publish("provider:notice", "needPassword");
+      this.noticeService.showToast('needPassword')
       return;
     }
     if (await this.authService.login(this.username, this.password)) {
       await this.userService.getAllInfo();
+      await this.noticeService.hideLoading()
       this.navCtrl.navigateRoot('/');
     }
 
@@ -59,6 +67,19 @@ export class LoginPage {
 
   onBlur() {
     this.showPoweredBy = true;
+  }
+
+  async openUrl(url, title) {
+    // let browser = this.iab.create(url, '_system', 'location=no,hidden=no');
+    const modal = await this.modalCtrl.create({
+      component: DocPage,
+      backdropDismiss: false,
+      componentProps: {
+        'docTitle': title,
+        'docUrl': url,
+      }
+    });
+    modal.present();
   }
 
 }

@@ -1,0 +1,11 @@
+<div class="ios-guide">
+  <div class="ios-img" (click)="openWifiSetting()">
+    <img src="assets/img/apconfig-ios.png" alt="">
+    <div class="ssid">{{deviceType}}_XXXXXXXXXXXX</div>
+  </div>
+  <div class="text">请将手机WiFi连接到热点 {{deviceType}}_XXXXXXXXXXXX</div>
+  <div class="text">然后返回本App</div>
+  <div class="text">App将自动进行相关配置</div>
+  <div class="btn" (click)="openWifiSetting()">前往设置</div>
+  <div textcenter (click)="close()">取 消</div>
+</div>

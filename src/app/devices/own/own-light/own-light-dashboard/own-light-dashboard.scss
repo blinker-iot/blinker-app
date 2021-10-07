@@ -1,32 +1,10 @@
 [device-bg] {
-    background: #000342;
+    background: radial-gradient(circle, rgb(75, 121, 158), rgb(38, 99, 148), rgb(3, 56, 99));
 }
 
 [device-bg].on {
     background: radial-gradient(circle, #61B4FA, #389BEE, #0076D9);
 }
-
-// .content {
-//     color: #ececec; // transition: background-color 2s;
-//     background: #000342; // background: radial-gradient(circle, #0076D9, #000342, #000342);
-// }
-
-// .scroll-content {
-//     background-color: transparent !important;
-// }
-
-// .preload {
-//     width: 0;
-//     height: 0;
-// }
-
-// .offline {
-//     // background: #000342;
-// }
-
-// .content-color {
-//     background: radial-gradient(circle, #61B4FA, #389BEE, #0076D9);
-// }
 
 .stream {
     z-index: -1;
@@ -133,9 +111,13 @@
         color: #FFF;
     }
 
-    .on {
+    .switch.on {
         background-color: rgba(255, 255, 255, 0.295);
         color: #fff;
+    }
+
+    .switch:active {
+        transform: scale(0.95, 0.95);
     }
 
     .timing {
@@ -238,6 +220,7 @@
             margin: 0 3vw;
 
             .addbtninner {
+                color: #fff;
                 width: 15vw;
                 height: 15vw;
                 border-radius: 50%;

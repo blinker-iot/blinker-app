@@ -1,8 +1,6 @@
 import { Component } from '@angular/core';
-import { Platform, Events } from '@ionic/angular';
-// import { DeviceService } from 'src/app/core/services/device.service';
+import { Platform } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
-// import { Autostart } from '@ionic-native/autostart';
 import { PusherService } from 'src/app/core/services/pusher.service';
 
 
@@ -16,9 +14,6 @@ export class SettingsPage {
 
   constructor(
     public userService: UserService,
-    // private autostart: Autostart,
-    // private backgroundMode: BackgroundMode,
-    public events: Events,
     public plt: Platform,
     public pusher: PusherService
   ) {

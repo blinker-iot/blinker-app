@@ -1,0 +1,13 @@
+<div class="dismiss" (click)="clickCancel()"></div>
+<div class="select-modal">
+  <div class="item-list">
+    <ng-container *ngFor="let item of actions;index as i">
+      <div class="item" (click)="updateSelectedAction([item.cmd])" [ngClass]="{'selected':selectedItem == item.cmd}">
+        {{item.cmd | actcmd2text:device.id}}
+      </div>
+    </ng-container>
+    <ng-container *ngIf="actions.length==0">
+      <div class="noitem">{{'DEVICE.NO_ACTION' | translate}}</div>
+    </ng-container>
+  </div>
+</div>

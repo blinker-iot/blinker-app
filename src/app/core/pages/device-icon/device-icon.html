@@ -1,16 +1,29 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-button (click)="close()">
+        <i class="fal fa-times"></i>
+      </ion-button>
     </ion-buttons>
     <ion-title>图标设置</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
+  <div class="custom-box" *ngIf="dataService.isAdvancedDeveloper">
+    <div class="text">自定义图标<span>填入图标Url,200x200px,png格式</span></div>
+    <div class="input-box">
+      <input type="text" [(ngModel)]="customUrl">
+      <button (click)="selectCustomUrl()">确认</button>
+    </div>
+  </div>
   <div class="img-box">
     <div class="img-item" *ngFor="let filename of imageList">
-      <img src="assets/img/devices/icon/{{filename}}.png" (click)="select(filename)">
+      <!-- <img src="assets/img/devices/icon/{{filename}}.png" (click)="select(filename)"> -->
+      <b-device-img [filename]="filename" (click)="select(filename)"></b-device-img>
     </div>
+    <div class="null" *ngIf="(5-(imageList.length%4))>0"></div>
+    <div class="null" *ngIf="(5-(imageList.length%4))>1"></div>
+    <div class="null" *ngIf="(5-(imageList.length%4))>2"></div>
   </div>
 </ion-content>

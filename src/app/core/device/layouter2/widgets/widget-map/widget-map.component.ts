@@ -1,8 +1,6 @@
 import { Component, Input, ViewChild, ElementRef } from '@angular/core';
-import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
 import { GeolocationService } from 'src/app/core/services/geolocation.service';
-import { Events } from '@ionic/angular';
 import { Layouter2Widget } from '../config';
 declare var L;
 

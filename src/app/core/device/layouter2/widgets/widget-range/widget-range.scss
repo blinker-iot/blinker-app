@@ -3,15 +3,13 @@
     height: 100%;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     flex-direction: column;
     padding: 0 0.6rem;
     position: relative;
 
     b-range {
-        position: absolute;
-        top:50%;
-        width: calc(100% - 1.2rem);
+        width: 100%;
 
         .slider {
             height: 30px;
@@ -20,19 +18,111 @@
         .knob {
             border: 1px solid rgba(0, 0, 0, 0.1);
         }
-        .layer{
+
+        .layer {
             height: 50px;
             margin-top: -20px;
         }
     }
 
     .textbox {
-        padding-top: 1rem;
-        font-size: 14px;
-        width: 95%;
+        position: absolute;
+        top: 0.5rem;
+        font-size: 0.7rem;
+        color: #959595;
+        width: 90%;
         display: flex;
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
+    }
+}
+
+.rangebox.full {
+    padding: 0;
+
+    .textbox {
+        position: absolute;
+        top: 0;
+        color: #333;
+        display: flex;
+        height: 100%;
+        width: 100%;
+        padding: 0 15px;
+        align-items: center;
+        pointer-events: none;
+
+        &.top {
+            color: #eee;
+        }
+    }
+
+    .mark-box {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .mark {
+            height: 15px;
+            width: 1px;
+            background-color: #ddd;
+        }
+
+        .point {
+            height: 0px !important;
+        }
+    }
+
+    b-range {
+        width: 100%;
+        height: 100%;
+
+        ::ng-deep {
+            .slider {
+                height: 100%;
+                padding: 0;
+            }
+
+            .bar {
+                height: 100%;
+                width: 100%;
+                position: relative;
+                background: transparent !important;
+
+                // .activebar {
+                //     // border-radius: 8px;
+                //     // transition: background-color 1s;
+                // }
+            }
+
+            .knob {
+                visibility: hidden;
+            }
+        }
+    }
+}
+
+.flex-row-box {
+    display: flex;
+}
+
+.jj-box {
+    color: #666;
+    width: 50px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    .jj-btn {
+        height: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        i {
+            font-size:16px;
+        }
     }
 }

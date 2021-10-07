@@ -1,0 +1,12 @@
+<div class="scene-btn-box" (click)="sendData()">
+  <div class="icon">
+      <i class="{{scene.ico}}"></i>
+  </div>
+  <div class="scene-name" overflow>{{sceneName}}</div>
+  <div class="status">
+    <img *ngIf="state=='doing'" src="assets/svg/tail-spin.svg" />
+    <div *ngIf="state=='done'" class="circle animated fadeIn">
+      <ion-icon name="checkmark"></ion-icon>
+    </div>
+  </div>
+</div>

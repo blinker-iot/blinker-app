@@ -18,6 +18,7 @@ const routes: Routes = [
       { path: 'gis', loadChildren: './gis/view-gis.module#ViewGisPageModule' },
       { path: 'list', loadChildren: './list/view-list.module#ViewListPageModule' },
       { path: 'dashboard', loadChildren: './dashboard/dashboard.module#DashboardPageModule' },
+      { path: 'card', loadChildren: './card/card.module#CardPageModule' },
     ]
   }
 ];

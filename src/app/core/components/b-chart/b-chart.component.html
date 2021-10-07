@@ -5,9 +5,11 @@
   <div class="nodata" *ngIf="showNoData">
     暂无数据
   </div>
-  <select [(ngModel)]="quickCode" (ngModelChange)="changeQuickCode()">
+  <select [(ngModel)]="quickCode" (ngModelChange)="changeQuickCode()"
+    [ngClass]="{'black': style=='black','white':style=='white'}">
     <option value="1h">最近1小时</option>
     <option value="1d">最近1天</option>
     <option value="1w">最近1周</option>
+    <option value="1m">最近30天</option>
   </select>
 </div>

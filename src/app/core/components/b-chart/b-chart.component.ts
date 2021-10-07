@@ -1,6 +1,5 @@
 import { Component, Input, ViewChild, ElementRef, OnInit } from '@angular/core';
-import F2 from '@antv/f2/build/f2-all';
-import { Events } from '@ionic/angular';
+// import * as F2 from '@antv/f2/dist/f2-all.min';
 import { CloudStorageService } from 'src/app/core/services/cloudStorage.service';
 
 @Component({
@@ -14,6 +13,7 @@ export class BChartComponent implements OnInit {
 
   @Input() key = "test";
   @Input() color = "#FFF";
+  @Input() style = "black";
 
   chart;
   geometry;
@@ -36,7 +36,6 @@ export class BChartComponent implements OnInit {
 
   constructor(
     private cloudStorageService: CloudStorageService,
-    private events: Events
   ) { }
 
   ngOnInit() {
@@ -66,24 +65,23 @@ export class BChartComponent implements OnInit {
     if (this.quickCode == '1h') this.times = this.times.slice(this.times.length - 21, this.times.length - 1);
     if (this.quickCode == '1d') this.times = this.times.slice(this.times.length - 13, this.times.length - 1);
     if (this.quickCode == '1w') this.times = this.times.slice(this.times.length - 24, this.times.length - 1);
+
   }
 
   initChart() {
-    console.log('init chart');
-
-    this.chart = new F2.Chart({
-      el: this.chartCanvas.nativeElement,
-      width: this.chartBox.nativeElement.clientWidth,
-      height: this.chartBox.nativeElement.clientHeight,
-      padding: [58, 'auto', 26, 'auto'],
-      pixelRatio: window.devicePixelRatio
-    });
+    // this.chart = new F2.Chart({
+    //   el: this.chartCanvas.nativeElement,
+    //   width: this.chartBox.nativeElement.clientWidth,
+    //   height: this.chartBox.nativeElement.clientHeight,
+    //   padding: [58, 'auto', 26, 'auto'],
+    //   pixelRatio: window.devicePixelRatio
+    // });
 
     this.chart.source(this.data);
     this.chart.scale('date', {
       type: 'timeCat',
       mask: this.mask,
-      values: this.times
+      values: this.times,
     });
     this.chart.scale('value', {
       // tickCount: this.tickCount,
@@ -91,12 +89,18 @@ export class BChartComponent implements OnInit {
     });
     this.chart.axis('date', {
       label: {
-        fill: '#000'
+        fill: this.style=='white'?'#fff':'#000',
+        // textStyle: {
+        //   fill: this.style=='white'?'#fff':'#000',
+        // }
       }
     });
     this.chart.axis('value', {
       label: {
-        fill: '#000'
+        fill: this.style=='white'?'#fff':'#000',
+        // textStyle: {
+        //   fill:  this.style=='white'?'#fff':'#000',
+        // }
       }
     });
     this.geometry = this.chart.line();
@@ -104,7 +108,7 @@ export class BChartComponent implements OnInit {
     this.geometry.position('date*value').color(this.color);
     this.geometryArea.position('date*value').color(this.color);
     this.chart.interaction('pan');
-    // this.chart.interaction('pinch');
+
     this.chart.scrollBar({
       mode: 'x',
       xStyle: {
@@ -150,7 +154,6 @@ export class BChartComponent implements OnInit {
       values: this.times
     });
     this.chart.scale('value', {
-      // tickCount: this.tickCount,
       ticks: this.valueTicks
     });
     this.chart.line().position('date*value').color(this.color);

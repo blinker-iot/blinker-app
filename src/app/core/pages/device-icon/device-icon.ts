@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { NavController, ModalController } from '@ionic/angular';
 import { DataService } from '../../services/data.service';
 import { ImageList } from 'src/app/configs/app.config';
+import { ImageService } from '../../services/image.service';
 
 
 @Component({
@@ -18,19 +19,27 @@ export class DeviceIconPage {
 
   imageList;
 
+  customUrl = "";
+
+  get deviceIconDict() {
+    return this.imageService.deviceIconDict
+  }
+
   constructor(
     private activatedRoute: ActivatedRoute,
     private deviceService: DeviceService,
-    private dataService: DataService,
+    public dataService: DataService,
     private navCtrl: NavController,
-    private modalCtrl: ModalController
+    private modalCtrl: ModalController,
+    private imageService: ImageService
   ) {
   }
 
   ngOnInit() {
-    this.imageList = ImageList;
     this.id = this.activatedRoute.snapshot.params['id'];
     this.device = this.dataService.device.dict[this.id];
+    this.imageList = ImageList.concat(this.imageService.deviceIconList);
+    // this.imageService.imageDict
   }
 
   async select(filename) {
@@ -43,9 +52,19 @@ export class DeviceIconPage {
       }
       this.navCtrl.pop();
     } else {
-      this.modalCtrl.dismiss(filename + '.png');
+      (await this.modalCtrl.getTop()).dismiss(filename + '.png')
+      // this.modalCtrl.dismiss();
     }
   }
 
+  async close() {
+    (await this.modalCtrl.getTop()).dismiss()
+    // this.modalCtrl.dismiss()
+  }
+
+  async selectCustomUrl() {
+    if ((this.customUrl.indexOf('https://') > -1 || this.customUrl.indexOf('http://') > -1) && (this.customUrl.indexOf('.png')))
+      (await this.modalCtrl.getTop()).dismiss(this.customUrl)
+  }
 
 }

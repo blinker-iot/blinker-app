@@ -4,21 +4,28 @@
   flex-flow: row wrap;
   justify-content: space-between;
   flex-direction: column;
+
   .vender-box {
     display: flex;
     flex-direction: column;
     background-color: rgb(255, 255, 255);
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+
     .vender-name {
       font-size: 15px;
       color: #389bee;
       padding: 10px;
       border-bottom: 1px solid #e6e6e6;
     }
+
     .device-box {
       display: flex;
       flex-direction: row;
       flex-flow: row wrap;
       position: relative;
+
       .device {
         display: flex;
         flex-direction: column;
@@ -29,25 +36,43 @@
         border-bottom: 1px solid #e6e6e6;
         // border-left: 1px solid #e6e6e6;
         border-right: 1px solid #e6e6e6;
-        img {
+
+        b-device-img {
           width: 65%;
         }
+
         .divice-name {
           margin-top: 5px;
           font-size: 13px;
           color: #595959;
         }
       }
+
       .first {
         border-left: none;
       }
+
       .end {
         border-right: none;
       }
     }
   }
 }
+
 .hspace {
   height: 30px;
 }
-// }
+
+::ng-deep {
+  .icon1 {
+    font-size: 28px;
+  }
+  .icon2 {
+    font-size: 30px;
+  }
+}
+
+ion-searchbar {
+  background-color: #FFF;
+  // --background: #fff;
+}

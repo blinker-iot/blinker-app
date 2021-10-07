@@ -12,6 +12,7 @@
     flex-direction: row;
     align-items: center;
     padding: 15px 15px;
+
     .block {
         position: relative;
         width: 23vw;
@@ -25,9 +26,16 @@
         flex-direction: column;
         justify-content: space-between;
         background-color: #fff;
-        .block-img {
+
+        b-device-img {
             height: 70%;
+            ::ng-deep {
+                img {
+                    height: 100%;
+                }
+            }
         }
+
         .block-text {
             font-size: 12px;
             height: 25%;
@@ -35,12 +43,14 @@
             align-items: center;
             justify-content: center;
         }
+
         .h-line {
             width: 100%;
             height: 1px;
             background-color: #EBEBEB;
             margin-top: 1px;
         }
+
         .mode {
             height: 20%;
             position: absolute;

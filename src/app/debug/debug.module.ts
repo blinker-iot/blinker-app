@@ -15,9 +15,6 @@ import { PipesModule } from '../core/pipes/pipes.module';
   ],
   exports: [
     DebugComponent
-  ],
-  entryComponents:[
-    DebugComponent
   ]
 })
 export class DebugModule { }

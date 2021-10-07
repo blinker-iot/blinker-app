@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Network, Connection } from '@ionic-native/network/ngx';
-import { Events, Platform } from '@ionic/angular';
+import { Network } from '@ionic-native/network/ngx';
+import { Platform } from '@ionic/angular';
 import { DeviceService } from './device.service';
 import { BehaviorSubject } from 'rxjs';
 import { DataService } from './data.service';
+import { NoticeService } from './notice.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,16 +13,16 @@ export class NetworkService {
   // wifi/none/4g
   stateWatcher = new BehaviorSubject("unknow");
 
-  disconnectSubscription;
+  // disconnectSubscription;
   connectSubscription;
   watchNetworkTimer;
 
   constructor(
     private network: Network,
-    private events: Events,
     private platform: Platform,
     private deviceService: DeviceService,
-    private dataService: DataService
+    private dataService: DataService,
+    private noticeService: NoticeService
   ) { }
 
   init() {
@@ -39,26 +40,15 @@ export class NetworkService {
   }
 
   watch() {
-    // this.disconnectSubscription = this.network.onDisconnect().subscribe(() => {
-    //   console.log('当前网络状态：' + this.network.type);
-    //   window.clearTimeout(this.watchNetworkTimer);
-    //   this.deviceService.disconnectMqttBrokers();
-    //   this.watchNetworkTimer = window.setTimeout(() => {
-    //     if (this.network.type == 'none') {
-    //       this.events.publish("provider:notice", 'noNetwork');
-    //       this.events.publish("network", 'disconnected');
-    //     }
-    //   }, 2900);
-    // });
     this.connectSubscription = this.network.onConnect().subscribe(() => {
-      console.log('当前网络状态：' + this.network.type);
+      // console.log('当前网络状态：' + this.network.type);
       window.clearTimeout(this.watchNetworkTimer)
       this.watchNetworkTimer = window.setTimeout(() => {
         if (this.network.type != 'none') {
-          this.deviceService.disconnectMqttBrokers();
-          this.deviceService.connectMqttBrokers();
+          // this.deviceService.disconnectMqttBrokers();
+          // this.deviceService.connectMqttBrokers();
           this.deviceService.scanMdnsDevice();
-          this.events.publish("network", 'connected');
+          // this.noticeService.showToast('connected');
           this.stateWatcher.next(this.network.type);
         }
       }, 2900);
@@ -66,8 +56,9 @@ export class NetworkService {
   }
 
   unWatch() {
-    this.disconnectSubscription.unsubscribe();
-    this.connectSubscription.unsubscribe();
+    // this.disconnectSubscription.unsubscribe();
+    if (typeof this.connectSubscription != 'undefined')
+      this.connectSubscription.unsubscribe();
   }
 
 

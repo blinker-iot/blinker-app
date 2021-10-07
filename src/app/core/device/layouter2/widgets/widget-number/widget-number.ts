@@ -1,7 +1,7 @@
-import { Component, Input, ViewChild, ElementRef, EventEmitter, SimpleChanges, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, ViewChild, ElementRef, ChangeDetectorRef, SimpleChanges } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import ProgressBar from 'progressbar.js';
-import { Events } from '@ionic/angular';
+// import ProgressBar from 'progressbar.js';
+import * as Gauge from 'svg-gauge';
 
 @Component({
   selector: 'widget-number',
@@ -27,7 +27,6 @@ export class WidgetNumberComponent implements Layouter2Widget {
     return this.getValue(['ico', 'icon'])
   }
 
-  // @Input() color;
   @Input()
   set color(color) {
     this.setValue('clr', color);
@@ -40,6 +39,8 @@ export class WidgetNumberComponent implements Layouter2Widget {
     let val = this.getValue(['val', 'value'])
     if (typeof val == 'undefined')
       return 0
+    if ((val.toString()).indexOf(".") > -1)
+      return Math.floor(val * 100) / 100
     return val
   }
 
@@ -94,13 +95,12 @@ export class WidgetNumberComponent implements Layouter2Widget {
     return false;
   }
 
-  @ViewChild('ProgressBar', { read: ElementRef, static: false }) progressBar: ElementRef;
+  @ViewChild('Gauge', { read: ElementRef, static: false }) progressBar: ElementRef;
 
   scale = 1;
   fontScale = `scale(${this.scale})`;
 
   constructor(
-    private events: Events,
     private cd: ChangeDetectorRef
   ) { }
 
@@ -109,11 +109,6 @@ export class WidgetNumberComponent implements Layouter2Widget {
   ngAfterViewInit() {
     this.initChart();
     if (this.isDemo) return;
-    this.events.subscribe(this.device.deviceName + ':refreshWidget', widget => {
-      if (widget === this.widget) {
-        this.initChart();
-      }
-    });
     this.cd.detectChanges();
     this.scaleInterval = setInterval(() => {
       let textLength = this.value.toString().length + this.unit.length
@@ -128,10 +123,16 @@ export class WidgetNumberComponent implements Layouter2Widget {
   }
 
   ngOnDestroy() {
-    this.destroyBar();
     clearInterval(this.scaleInterval);
-    if (!this.isDemo)
-      this.events.unsubscribe(this.device.deviceName + ':' + this.key)
+    this.destroyBar();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (typeof this.bar != 'undefined') {
+      console.log('change color');
+      // this.bar.destroy()
+      this.refresh()
+    }
   }
 
   bar;
@@ -144,66 +145,106 @@ export class WidgetNumberComponent implements Layouter2Widget {
     }
     if (this.lstyle == 0) {
       this.oldLstyle = 0;
-    }
-    else if (this.lstyle == 1) {
-      this.initSemiCircle();
+    } else if (this.lstyle == 1) {
       this.oldLstyle = 1;
-    }
-    else if (this.lstyle == 2) {
-      this.initCircle();
+    } else if (this.lstyle == 2) {
+      this.initSemiCircle();
       this.oldLstyle = 2;
+    } else if (this.lstyle == 3) {
+      this.initSemiCircle2();
+      this.oldLstyle = 3;
+    } else if (this.lstyle == 4) {
+      this.initSemiCircle3();
+      this.oldLstyle = 4;
+    } else if (this.lstyle == 5) {
+      this.initCircle();
+      this.oldLstyle = 5;
     }
 
   }
 
+  // 上半圆
   initSemiCircle() {
-    this.bar = new ProgressBar.SemiCircle(this.progressBar.nativeElement, {
-      strokeWidth: 5,
-      duration: 1000,
-      color: this.color,
-      trailColor: '#eee',
-      trailWidth: 5,
-      step: (state, bar) => {
-        bar.path.setAttribute('stroke', this.color);
-        // bar.setText(this.value + this.unit);
+    this.bar = Gauge(this.progressBar.nativeElement, {
+      min: 0,
+      max: this.max,
+      dialStartAngle: 180,
+      dialEndAngle: 0,
+      value: 0,
+      showValue: false,
+      color: () => {
+        return this.color
       }
-    });
+    })
+    this.interval = setInterval(() => {
+      this.update()
+    }, 1100);
+  }
+
+  // 下半圆
+  initSemiCircle2() {
+    this.bar = Gauge(this.progressBar.nativeElement, {
+      min: 0,
+      max: this.max,
+      dialStartAngle: 0,
+      dialEndAngle: -180,
+      value: 0,
+      showValue: false,
+      color: () => {
+        return this.color
+      }
+    })
+    this.interval = setInterval(() => {
+      this.update()
+    }, 1100);
+  }
+
+
+  initSemiCircle3() {
+    this.bar = Gauge(this.progressBar.nativeElement, {
+      min: 0,
+      max: this.max,
+      value: 0,
+      color: () => {
+        return this.color
+      }
+    })
     this.interval = setInterval(() => {
       this.update()
     }, 1100);
   }
 
   initCircle() {
-    this.bar = new ProgressBar.Circle(this.progressBar.nativeElement, {
-      strokeWidth: 5,
-      duration: 1000,
-      color: this.color,
-      trailColor: '#eee',
-      trailWidth: 5,
-      step: (state, bar) => {
-        bar.path.setAttribute('stroke', this.color);
-        // bar.setText(this.value + this.unit);
+    this.bar = Gauge(this.progressBar.nativeElement, {
+      min: 0,
+      max: this.max,
+      dialStartAngle: -90,
+      dialEndAngle: -90.001,
+      value: 0,
+      color: () => {
+        return this.color
       }
-    });
+    })
     this.interval = setInterval(() => {
       this.update()
     }, 1100);
   }
 
-  update() {
-    this.bar.animate(this.valuePer, {
-      duration: 300
-    });
 
-    this.bar.path.setAttribute('stroke', this.color);
+
+  update() {
+    this.bar.setValueAnimated(this.value, 1);
   }
 
   destroyBar() {
     clearInterval(this.interval);
-    if (typeof this.bar != 'undefined') {
-      if (this.bar.path != null)
-        this.bar.destroy();
-    }
+  }
+
+  refresh() {
+    if (typeof this.progressBar != 'undefined')
+      if (this.progressBar.nativeElement.querySelector('svg') != null)
+        this.progressBar.nativeElement.removeChild(this.progressBar.nativeElement.querySelector('svg'))
+    this.initChart();
   }
 
 }

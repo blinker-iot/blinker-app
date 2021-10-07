@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, SimpleChanges } from '@angular/core';
 import { Router } from '@angular/router';
 import { deviceName12 } from 'src/app/core/functions/func';
 
@@ -10,6 +10,8 @@ import { deviceName12 } from 'src/app/core/functions/func';
 export class InfoBarComponent implements OnInit {
 
   @Input() device;
+
+  hide = false;
 
   get id() {
     return deviceName12(this.device.deviceName)
@@ -23,8 +25,16 @@ export class InfoBarComponent implements OnInit {
 
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    this.hide = false
+  }
+
   gotoDashboard() {
     this.router.navigate(['device/' + deviceName12(this.device.deviceName)])
+  }
+
+  close() {
+    this.hide = true
   }
 
 }

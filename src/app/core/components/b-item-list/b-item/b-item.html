@@ -1,0 +1,19 @@
+<div class="item-box">
+  <div class="del-btn animated fadeIn" [ngStyle]="{'height':itemHeight}" *ngIf="editMode" (click)="clickDelBtn()">
+    <ion-icon name="remove-circle"></ion-icon>
+  </div>
+  <div class="handle animated fadeIn" *ngIf="editMode" [ngStyle]="{'height':itemHeight}">
+    <i class="fal fa-grip-lines"></i>
+  </div>
+  <div class="item" [ngClass]="{'disabled': disabled}" [ngStyle]="{'height':itemHeight}" (click)="clickItem()">
+    <div class="content">
+      <ng-content></ng-content>
+    </div>
+    <div class="arrow" *ngIf="showArrow && !editMode">
+      <i class="fal fa-chevron-right"></i>
+    </div>
+  </div>
+  <div class="toggle-box">
+    <ng-content select=".toggle"></ng-content>
+  </div>
+</div>

@@ -26,7 +26,7 @@ ion-toolbar {
         margin-top: 10%;
         padding: 15px 50px;
         font-size: 0.9rem;
-        background-color: #389BEE;
+        background-color: #389bee;
         border-radius: 5px;
         color: #fff;
         display: flex;
@@ -41,20 +41,21 @@ ion-toolbar {
     }
 }
 
-.sceneZone {
-    position: relative;
-}
-
 .bg {
     width: 100vw;
-    position: absolute;
-    bottom: 0;
-
-    img {
-        position: absolute;
-        max-width: 118%;
-        bottom: -5px;
-    }
+    height: 100vh;
+    background-image: url(/assets/img/w-bg.jpg);
+    background-size: auto 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    filter: blur(5px);
+    // background: linear-gradient(135deg, #5ca3fb 30%, #216bff 100%);
+    // img {
+    //     position: absolute;
+    //     max-width: 118%;
+    //     bottom: -5px;
+    // }
 }
 
 .contentbox {
@@ -67,7 +68,13 @@ ion-toolbar {
     width: 100%;
 
     .deviceZone {
-        height: calc(100% - 100px);
+        height: 100%;
+    }
+
+    &.show-scene-button-group {
+        .deviceZone {
+            height: calc(100% - 80px);
+        }
     }
 }
 

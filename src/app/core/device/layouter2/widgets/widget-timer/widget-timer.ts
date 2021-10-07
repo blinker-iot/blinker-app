@@ -1,8 +1,5 @@
 import { Component, Input, ChangeDetectorRef } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import {
-  Events,
-} from '@ionic/angular';
 import { Router } from '@angular/router';
 import { deviceName12 } from 'src/app/core/functions/func';
 
@@ -27,7 +24,6 @@ export class WidgetTimerComponent implements Layouter2Widget {
   }
 
   constructor(
-    public events: Events,
     public changeDetectorRef: ChangeDetectorRef,
     private router: Router
   ) { }

@@ -1,21 +1,91 @@
-<div>
-  <div class="item-title">
-    <div>触发的条件</div>
-    <i class="fal fa-plus-circle"></i>
-  </div>
-  <div class="item-box">
-    <div class="item"></div>
-    <div class="item"></div>
-    <div class="item"></div>
-  </div>
-</div>
-
-<div>
-  <div class="item-title">
-    <div>执行的动作</div>
-    <i class="fal fa-plus-circle"></i>
-  </div>
-  <div class="item-box">
-    <div class="item"></div>
-  </div>
-</div>
+<ion-header>
+  <ion-toolbar overlayPadding>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>编辑规则</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="save()">
+        <i class="fal fa-check" [ngClass]="{'save-btn-disable': disableSave}"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <ng-container *ngIf="loaded">
+    <div class="box top-box">
+      <div class="desp-box" (click)="showChangeText()">
+        {{task.text}}
+      </div>
+      <div class="time-box">
+        <div class="left-box title">生效时间段</div>
+        <div class="right-box" (click)="editTime()">
+          <div class="range">{{timeRange}}</div>
+          <div class="days">
+            <ng-container *ngIf="task.time.day=='1111111'">
+              每天
+            </ng-container>
+            <ng-container *ngIf="task.time.day!='1111111'">
+              <span *ngIf="task.time.day[0]=='1'">周日</span>
+              <span *ngIf="task.time.day[1]=='1'">周一</span>
+              <span *ngIf="task.time.day[2]=='1'">周二</span>
+              <span *ngIf="task.time.day[3]=='1'">周三</span>
+              <span *ngIf="task.time.day[4]=='1'">周四</span>
+              <span *ngIf="task.time.day[5]=='1'">周五</span>
+              <span *ngIf="task.time.day[6]=='1'">周六</span>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="source-box box">
+      <div class="title">
+        <ng-container *ngIf="task.triggers.length==1">满足该条件时</ng-container>
+        <ng-container *ngIf="task.triggers.length!=1 && task.mode=='and'">满足所有条件时</ng-container>
+        <ng-container *ngIf="task.triggers.length!=1 && task.mode=='or'">满足任一条件时</ng-container>
+      </div>
+      <div class="changeMode" *ngIf="task.triggers.length!=1" (click)="changeMode()">切换触发模式</div>
+      <div class="item-box">
+        <ng-container *ngFor="let trigger of task.triggers">
+          <div class="item" *ngIf="deviceDataDict[trigger.deviceId]">
+            <b-device-img [deviceId]="trigger.deviceId"></b-device-img>
+            <div class="text">
+              <div class="name">
+                {{deviceDataDict[trigger.deviceId].config.customName}}
+              </div>
+              <div class="desp">
+                {{trigger | trigger2text}}
+              </div>
+            </div>
+            <div class="del-btn" (click)="delTrigger(trigger)">
+              <ion-icon name="close-outline"></ion-icon>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+      <div class="add-btn" (click)="addTrigger()">+ 添加条件</div>
+    </div>
+    <div class="link-box box">
+      <div class="title">执行动作</div>
+      <div class="item-box">
+        <ng-container *ngFor="let action of task.actions">
+          <div class="item" *ngIf="deviceDataDict[action.deviceId]">
+            <b-device-img [deviceId]="action.deviceId"></b-device-img>
+            <div class="text">
+              <div class="name">
+                {{deviceDataDict[action.deviceId].config.customName}}
+              </div>
+              <div class="desp">
+                {{action.act | actcmd2text:action.deviceId}}
+              </div>
+            </div>
+            <div class="del-btn" (click)="delAction(action)">
+              <ion-icon name="close-outline"></ion-icon>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+      <div class="add-btn" (click)="addAction()">+ 添加动作</div>
+    </div>
+  </ng-container>
+</ion-content>

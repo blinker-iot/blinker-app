@@ -1,5 +1,5 @@
 <ion-header whitebg>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
@@ -8,69 +8,35 @@
 
 <ion-content whitebg>
   <div class="title-box">
-    <div class="title1">找回密码</div>
-    <div class="title2">感谢使用 blinker 物联网解决方案</div>
+    <div class="title1">{{'ACCOUNT.RETRIEVE' | translate}}</div>
+    <div class="title2">{{'ACCOUNT.RETRIEVE_TEXT' | translate}}</div>
   </div>
   <form class="form-box" (ngSubmit)="onRetrieveButton()" #formBox="ngForm">
-      <div class="input-box">
-        <div class="item-img">
-          <i class="fal fa-mobile"></i>
-        </div>
-        <input [(ngModel)]="phone" (input)="checkPhone()" name="phone" placeholder="手机号">
-        <div class="sendsms">
-          <div class="v-line"></div>
-          <button [disabled]="smscodeButtonDisabled||waiting" (click)="onSmscodeButton()">{{smscodeButton}}</button>
-        </div>
-      </div>
-      <div class="input-box">
-        <div class="item-img">
-          <i class="fal fa-shield-check"></i>
-        </div>
-        <input [(ngModel)]="smscode" (input)="checkAll()" name="smscode" placeholder="验证码">
-      </div>
-      <div class="input-box">
-        <div class="item-img">
-          <i class="fal fa-lock-alt"></i>
-        </div>
-        <input type="password" [(ngModel)]="password" (input)="checkAll()" name="password" placeholder="新密码（至少8位字符）">
-      </div>
-      <button fullbtn type="submit" [disabled]="retrieveButtonDisabled">
-          重设密码</button>
-    </form>
-
-  <!-- <div class="form-box">
     <div class="input-box">
       <div class="item-img">
         <i class="fal fa-mobile"></i>
       </div>
-      <ion-item no-padding transparent>
-        <ion-label floating>请输入手机号</ion-label>
-        <ion-input required type="tel" (input)="checkPhone()" minlength="11" maxlength="11" [(ngModel)]="phone"></ion-input>
-      </ion-item>
+      <input [(ngModel)]="phone" (input)="checkPhone()" name="phone" placeholder="{{'ACCOUNT.PHONENUM' | translate}}">
       <div class="sendsms">
         <div class="v-line"></div>
-        <button ion-button clear [disabled]="smscodeButtonDisabled||waiting" (click)="onSmscodeButton()">{{smscodeButton}}</button>
+        <button [disabled]="smscodeButtonDisabled" (click)="onSmscodeButton()">{{smscodeButton |
+          translate}}{{countdownString}}</button>
       </div>
     </div>
     <div class="input-box">
       <div class="item-img">
         <i class="fal fa-shield-check"></i>
       </div>
-      <ion-item no-padding transparent>
-        <ion-label floating>验证码</ion-label>
-        <ion-input required type="number" (input)="checkAll()" check minlength="6" maxlength="6" [(ngModel)]="smscode"></ion-input>
-      </ion-item>
+      <input [(ngModel)]="smscode" (input)="checkAll()" name="smscode" placeholder="{{'ACCOUNT.SMSCODE' | translate}}">
     </div>
     <div class="input-box">
       <div class="item-img">
         <i class="fal fa-lock-alt"></i>
       </div>
-      <ion-item no-padding transparent>
-        <ion-label floating>密码（至少8位字符）</ion-label>
-        <ion-input required type="password" (input)="checkAll()" [(ngModel)]="password"></ion-input>
-      </ion-item>
+      <input type="password" [(ngModel)]="password" (input)="checkAll()" name="password"
+        placeholder="{{'ACCOUNT.PASSWORD3' | translate}}">
     </div>
-    <button fullbtn [disabled]="retrieveButtonDisabled" (click)="onRetrieveButton()">
-      重设密码</button>
-  </div> -->
+    <button fullbtn type="submit" [disabled]="retrieveButtonDisabled">
+      {{'ACCOUNT.RESET_PASSWORD' | translate}}</button>
+  </form>
 </ion-content>

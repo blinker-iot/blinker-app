@@ -1,0 +1,17 @@
+@import "../repeat-selector-modal/repeat-selector-modal.component.scss";
+
+.select-modal {
+    padding: 0 15px;
+}
+
+.item-list {
+    overflow-y: scroll;
+    justify-content: flex-start;
+    height: 100%;
+
+    .item {
+        flex-grow: 0;
+        flex-shrink: 0;
+        height: 52px;
+    }
+}

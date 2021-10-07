@@ -1,12 +1,13 @@
 import { Component, Input, ChangeDetectorRef } from '@angular/core';
-import { NavController, ModalController, Platform, Events } from '@ionic/angular';
+import { NavController, ModalController, Platform } from '@ionic/angular';
 import { Brightness } from '@ionic-native/brightness/ngx';
 import { PlatformLocation } from '@angular/common';
-import { DevicelistService } from 'src/app/core/services/devicelist.service';
+import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 import { AdddeviceService } from '../../adddevice.service';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { NetworkService } from 'src/app/core/services/network.service';
 import { UserService } from 'src/app/core/services/user.service';
+import { Device } from 'src/app/core/model/device.model';
 
 declare var WifiWizard2;
 
@@ -50,8 +51,7 @@ export class ConfigStatePage {
     private brightness: Brightness,
     private modalCtrl: ModalController,
     private changeDetectorRef: ChangeDetectorRef,
-    private events: Events,
-    private deviceListService: DevicelistService,
+    private deviceListService: DeviceConfigService,
     private deviceService: DeviceService,
     private adddeviceService: AdddeviceService,
     private networkService: NetworkService,
@@ -71,17 +71,44 @@ export class ConfigStatePage {
 
   ngAfterViewInit() {
     this.brightness.setKeepScreenOn(true);
-    this.configStart();
+    this.deviceService.disconnectMqttBrokers();
+    if (this.platform.is('ios'))
+      this.listenResumeAndGetSsid()
+    else
+      this.configStart();
   }
 
   ngOnDestroy() {
     if (this.deviceSsid != "") WifiWizard2.disconnect(this.deviceSsid);
     this.brightness.setKeepScreenOn(false);
     if (!this.isDevtool) {
-      clearInterval(this.checktimer1);
       clearTimeout(this.checktimer2);
+      clearInterval(this.checktimer1);
     }
     if (typeof this.ws != "undefined") this.ws.close();
+    this.deviceService.connectMqttBrokers();
+  }
+
+  // IOS使用
+  platformResume;
+  listenResumeAndGetSsid() {
+    this.platformResume = this.platform.resume.subscribe(() => {
+      console.log("Resume And Get Ssid")
+      WifiWizard2.getConnectedSSID().then(
+        ssid => {
+          if (ssid.indexOf(this.deviceType + "_") > -1) {
+            this.platformResume.unsubscribe();
+            this.deviceService.closeScanMdnsDevice();
+            this.deviceSsid = ssid;
+            this.changeDetectorRef.detectChanges();
+            this.configStart()
+          }
+        },
+        error => {
+          console.log(error);
+        }
+      )
+    });
   }
 
   cancel() {
@@ -91,6 +118,7 @@ export class ConfigStatePage {
   gotoHome() {
     this.navCtrl.navigateRoot('/');
     this.userService.getAllInfo();
+    this.deviceService.queryDevices();
     this.modalCtrl.dismiss();
   }
 
@@ -99,10 +127,9 @@ export class ConfigStatePage {
       this.date1 = new Date();
       this.stepTo(1);
       if (this.platform.is('android'))
-        this.searchSsid();
-      else {
-
-      }
+        this.searchAndConnectAp()
+      else
+        this.sendInfoForIos()
     } else {
       this.step = 1;
       setTimeout(() => {
@@ -135,14 +162,14 @@ export class ConfigStatePage {
 
   //配置成功
   async configComplete(res) {
-    this.stepTo(2);
     console.log(res);
     this.date2 = new Date();
     this.time = this.date2.getTime() - this.date1.getTime();
-    console.log("SmartConfig成功,耗时：" + this.time + "ms");
+    console.log("ApConfig成功,耗时：" + this.time + "ms");
     this.device.setDeviceName(res.bssid);
     this.device.setDeviceType(this.deviceType);
-    if (!await this.adddeviceService.checkDeviceType(res.ip, this.deviceType)) return;
+    // 检查设备类型是否正确
+    // if (!await this.adddeviceService.checkDeviceType(res.ip, this.deviceType)) return;
     //连接服务器注册设备
     this.stepTo(3);
     console.log('注册设备' + res.bssid);
@@ -153,38 +180,43 @@ export class ConfigStatePage {
       this.device.setCustomName(this.deviceListService.devDeviceConfig[this.deviceType].name);
       this.device.setImage(this.deviceListService.devDeviceConfig[this.deviceType].image);
     }
-    if (!await this.adddeviceService.addDevice(this.device)) {
-      console.log("设备注册失败");
-      this.stepTo(99);
-      return
-    }
-    this.t1 = window.setTimeout(() => {
-      console.log("设备注册失败");
-      this.stepTo(99);
-    }, 51000);
-    this.deviceMac = res.bssid;
-    this.waitComplete();
+    setTimeout(async () => {
+      if (!await this.adddeviceService.addDevice(this.device)) {
+        console.log("设备注册失败，服务器响应错误");
+        this.stepTo(99);
+        return
+      }
+      this.t1 = window.setTimeout(() => {
+        console.log("设备注册失败，配网超时");
+        this.stepTo(99);
+      }, 51000);
+      this.deviceMac = res.bssid;
+      this.waitComplete();
+    }, 3000);
+
   }
 
   checkTimer;
+  newDeviceSubject;
   waitComplete() {
-    this.events.subscribe('device:new', message => {
+    this.newDeviceSubject = this.deviceService.newDeviceSubject.subscribe(deviceId => {
       this.checkAddDevice()
-    });
+    })
     this.checkTimer = setInterval(() => {
       this.checkAddDevice()
     }, 12000)
   }
 
   checkAddDevice() {
-    // console.log(this.deviceType, this.deviceMac);
     this.adddeviceService.checkAddDevice(this.deviceType, this.deviceMac).then(result => {
       if (result) {
         console.log(`注册成功!bssid:${this.deviceMac}`);
         clearTimeout(this.t1);
         clearInterval(this.checkTimer);
-        this.events.unsubscribe('device:new');
-        this.stepTo(4);
+        this.newDeviceSubject.unsubscribe();
+        setTimeout(() => {
+          this.stepTo(4);
+        }, 3000);
       }
     });
   }
@@ -201,13 +233,14 @@ export class ConfigStatePage {
   }
 
   // 仅android可用  
-  searchSsid() {
+  searchAndConnectAp() {
     WifiWizard2.scan().then(result => {
       console.log(result);
       let notFoundDevice = true;
       result.forEach(async (apInfo: ApInfo) => {
         if (apInfo.SSID.indexOf(this.deviceType) > -1) {
           notFoundDevice = false;
+          this.deviceService.closeScanMdnsDevice();
           await this.connectAp(apInfo);
         }
       });
@@ -223,36 +256,75 @@ export class ConfigStatePage {
   connectAp(apInfo: ApInfo): Promise<any> {
     console.log("连接设备：" + apInfo.SSID);
     return WifiWizard2.connect(apInfo.SSID, true)
-      .then(
-        result => {
-          console.log(result);
-          this.deviceSsid = apInfo.SSID;
-          this.deviceBssid = apInfo.SSID.split('_')[1];
-          this.deviceName = apInfo.SSID;
-          console.log('已连接到设备，正在发送配网数据');
-          this.ws = new WebSocket('ws://192.168.4.1:81');
-          this.ws.onopen = () => {
-            this.ws.send(`{"ssid":"${this.ssid}","pswd":"${this.password}"}`);
-            setTimeout(() => {
-              this.ws.close();
-              WifiWizard2.disconnect(this.deviceSsid);
-              this.deviceSsid = "";
-              console.log('断开设备连接');
+      .then(result => {
+        // console.log(result);
+        this.deviceSsid = apInfo.SSID;
+        this.deviceBssid = apInfo.SSID.split('_')[1];
+        this.deviceName = apInfo.SSID;
+        console.log('已连接到设备，正在发送配网数据');
+        this.stepTo(2);
+        this.ws = new WebSocket('ws://192.168.4.1:81');
+        this.ws.onopen = () => {
+          this.ws.send(`{"ssid":"${this.ssid}","pswd":"${this.password}"}`);
+          setTimeout(() => {
+            this.ws.close();
+            // WifiWizard2.disconnect(this.deviceSsid);
+            this.deviceSsid = "";
+            console.log('断开设备连接');
+            WifiWizard2.connect(this.ssid, true, this.password, 'WPA').then(() => {
               let waiter = this.networkService.stateWatcher.subscribe(state => {
                 if (state == "wifi")
                   WifiWizard2.getConnectedSSID().then(ssid => {
-                    if (ssid == this.ssid) {
-                      waiter.unsubscribe();
+                    console.log("当前ssid:" + ssid);
+                    waiter.unsubscribe();
+                    if (this.isDevtool) {
                       this.waitDeviceMdns();
+                    } else {
+                      this.configComplete({
+                        bssid: this.deviceBssid,
+                      })
                     }
                   })
               })
-            }, 1000);
-          };
-        }
+            })
+          }, 1000);
+        };
+      }
       ).catch(error => {
         console.log(error);
       });
+  }
+
+  sendInfoForIos() {
+    this.deviceBssid = this.deviceSsid.split('_')[1];
+    this.deviceName = this.deviceSsid;
+    console.log('已连接到设备，正在发送配网数据');
+    this.stepTo(2);
+    this.ws = new WebSocket('ws://192.168.4.1:81');
+    this.ws.onopen = () => {
+      this.ws.send(`{"ssid":"${this.ssid}","pswd":"${this.password}"}`);
+      setTimeout(() => {
+        this.ws.close();
+        WifiWizard2.iOSDisconnectNetwork(this.deviceSsid);
+        this.deviceSsid = "";
+      }, 1000);
+      setTimeout(() => {
+        let waiter = this.networkService.stateWatcher.subscribe(state => {
+          if (state == "wifi")
+            WifiWizard2.getConnectedSSID().then(ssid => {
+              console.log("当前ssid:" + ssid);
+              waiter.unsubscribe();
+              if (this.isDevtool) {
+                this.waitDeviceMdns();
+              } else {
+                this.configComplete({
+                  bssid: this.deviceBssid,
+                })
+              }
+            })
+        })
+      }, 2000);
+    }
   }
 
   checktimer1;
@@ -262,16 +334,17 @@ export class ConfigStatePage {
     console.log("等待mdns扫描");
     this.deviceService.scanMdnsDevice();
     this.checktimer1 = setInterval(() => {
-      if (typeof this.deviceService.lanDeviceList[this.deviceName] != 'undefined') {
+      console.log('目标设备', this.deviceBssid);
+      if (typeof this.deviceService.lanDeviceList[this.deviceBssid] != 'undefined') {
         console.log("设备已连接到局域网");
         if (this.isDevtool) {
           this.configComplete4diy({
-            ip: this.deviceService.lanDeviceList[this.deviceName].ip,
+            ip: this.deviceService.lanDeviceList[this.deviceBssid].ip,
             bssid: this.deviceBssid,
           });
         } else {
           this.configComplete({
-            ip: this.deviceService.lanDeviceList[this.deviceName].ip,
+            ip: this.deviceService.lanDeviceList[this.deviceBssid].ip,
             bssid: this.deviceBssid,
           })
         }
@@ -299,43 +372,4 @@ interface ApInfo {
   level: number,
   SSID: string,
   timestamp: number
-}
-
-class Device {
-  deviceType: string;
-  image: string;
-  mqttBroker: string;
-  productKey: string;
-  deviceName: string;
-  customName: string;
-  config: any;
-
-  setProductKey(productKey: string) {
-    this.productKey = productKey;
-  }
-
-  setDeviceName(deviceName: string) {
-    this.deviceName = deviceName;
-  }
-
-  setDeviceType(deviceType: string) {
-    this.deviceType = deviceType;
-  }
-
-  setDevMode() {
-    this.config = {};
-    this.config['isDev'] = true;
-  }
-
-  setMqttBroker(mqttBroker: string) {
-    this.mqttBroker = mqttBroker;
-  }
-
-  setImage(image: string) {
-    this.config['image'] = image;
-  }
-
-  setCustomName(customName: string) {
-    this.config['customName'] = customName;
-  }
 }

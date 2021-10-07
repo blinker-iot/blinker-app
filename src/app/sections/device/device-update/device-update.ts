@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { Events, NavController } from '@ionic/angular';
+import { NavController } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
 import { ActivatedRoute } from '@angular/router';
@@ -16,10 +16,6 @@ export class DeviceUpdatePage {
   device;
   
   isUpdating = false;
-
-  // get device() {
-  //   return this.deviceService.devices[this.id]
-  // }
 
   get updateState() {
     return this.device.data['upgradeData']['step']
@@ -42,7 +38,6 @@ export class DeviceUpdatePage {
     public deviceService: DeviceService,
     private dataService: DataService,
     public userService: UserService,
-    public events: Events,
     private navCtrl: NavController
   ) { }
 

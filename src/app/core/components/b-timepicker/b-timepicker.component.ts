@@ -1,4 +1,5 @@
-import { Component, OnInit, ViewChild, ElementRef, Input, Output, EventEmitter } from '@angular/core';
+import { Component, ViewChild, ElementRef, Input, Output, EventEmitter } from '@angular/core';
+import { timeToMinute, minuteToTime } from 'src/app/core/functions/func';
 import Picker from 'pickerjs';
 
 @Component({
@@ -12,11 +13,19 @@ export class BTimepickerComponent {
 
   @Input() time: string = "00:00";
   @Output() timeChange = new EventEmitter();
-
+  @Input() value: number;
+  @Output() valueChange = new EventEmitter();
   @ViewChild('timepickerinput', { read: ElementRef, static: true }) timePickerInput: ElementRef;
   @ViewChild('timepickerbox', { read: ElementRef, static: true }) timePickerBox: ElementRef;
 
   constructor() { }
+
+
+  ngOnInit() {
+    if (typeof this.value != 'undefined') {
+      this.time = minuteToTime(this.value)
+    }
+  }
 
   ngOnDestroy() {
     this.timePicker.destroy()
@@ -39,8 +48,11 @@ export class BTimepickerComponent {
   }
 
   valueChanged() {
+    console.log('valueChanged');
+    
     let newtime = this.timePicker.getDate('HH:mm')
     this.timeChange.emit(newtime);
+    this.valueChange.emit(timeToMinute(newtime))
   }
 
 

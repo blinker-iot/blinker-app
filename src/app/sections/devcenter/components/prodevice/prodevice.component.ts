@@ -14,7 +14,7 @@ export class ProdeviceComponent implements OnInit {
   }
 
   get showAddBtn() {
-    return this.devcenterService.proDeviceNum < this.devcenterService.proDeviceMaxNum && this.proDeviceList.length < this.devcenterService.proDeviceMaxNum
+    return this.devcenterService.developerInfo.proDeviceNum < this.devcenterService.developerInfo.proDeviceMaxNum && this.proDeviceList.length < this.devcenterService.developerInfo.proDeviceMaxNum
   }
 
   constructor(

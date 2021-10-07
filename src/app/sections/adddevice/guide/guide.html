@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
@@ -10,30 +10,42 @@
 <ion-content>
   <!-- 设备图片 -->
   <div item class="device-item">
-    <img src="assets/img/devices/icon/{{image}}" onError="this.src='assets/img/devices/unknown.png'" />
+    <b-device-img [filename]="image"></b-device-img>
     <div class="description" markdown [innerHTML]="descriptionText | markdown"></div>
   </div>
   <!-- 使用说明 -->
   <div item class="text-item" markdown [innerHTML]="guideText | markdown"></div>
   <!-- 开始配置按钮 -->
-  <div class="btnbox">
-    <div class="btn" [ngClass]="{'onebtn': tools.length==1}" *ngFor="let tool of tools"
-      [routerLink]="[ '/adddevice', deviceType, tool ]">
-      <div class="btninner" *ngIf="tool=='bleConfig'">
-        <i class="fab fa-bluetooth-b"></i>蓝牙接入
-      </div>
-      <div class="btninner" *ngIf="tool=='KeyConfig'">
-        <i class="fal fa-wifi"></i>WiFi接入
-      </div>
-      <div class="btninner" *ngIf="tool=='espTouch'">
-        <i class="fal fa-cloud"></i>智能配网
-      </div>
-      <div class="btninner" *ngIf="tool=='apConfig'">
-        <i class="fal fa-cloud"></i>AP配网
-      </div>
-      <div class="btninner" *ngIf="tool=='qrScanner'">
-        <i class="fal fa-qrcode"></i>扫码配置
+</ion-content>
+<ion-footer class="ion-no-border">
+  <ion-toolbar overlayPadding>
+    <div class="btnbox">
+      <div class="btn" [ngClass]="{'onebtn': tools.length==1}" *ngFor="let tool of tools"
+        [routerLink]="[ '/adddevice', deviceType, tool ]">
+        <div class="btninner" *ngIf="tool=='bleConfig'">
+          <i class="fab fa-bluetooth"></i>
+          <div>蓝牙接入</div>
+        </div>
+        <div class="btninner" *ngIf="tool=='KeyConfig'">
+          <i class="fal fa-globe"></i>
+          <div>网络接入</div>
+        </div>
+        <div class="btninner" *ngIf="tool=='espTouch'">
+          <i class="fal fa-cloud"></i>
+          <div>智能配网</div>
+        </div>
+        <div class="btninner" *ngIf="tool=='apConfig' && tools.length>1">
+          <i class="fal fa-cloud"></i>
+          <div>AP配网</div>
+        </div>
+        <div class="btninner" *ngIf="tool=='apConfig' && tools.length==1">
+          <div>下一步</div>
+        </div>
+        <div class="btninner" *ngIf="tool=='qrScanner'">
+          <i class="fal fa-qrcode"></i>
+          <div>扫码配置</div>
+        </div>
       </div>
     </div>
-  </div>
-</ion-content>
+  </ion-toolbar>
+</ion-footer>

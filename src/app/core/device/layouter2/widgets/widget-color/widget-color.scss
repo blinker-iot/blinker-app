@@ -15,6 +15,12 @@
 
     b-colorpicker-disc {
         height: 70%;
+        width: calc(70% - 5px);
+    }
+
+    b-colorpicker-disc.full{
+        height: 100%;
+        width: calc(100% - 10px);
     }
 
     .brightness {

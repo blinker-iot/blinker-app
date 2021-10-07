@@ -4,11 +4,9 @@ import {
   ElementRef,
 } from '@angular/core';
 import { DeviceService } from 'src/app/core/services/device.service';
-import { UserService } from 'src/app/core/services/user.service';
 import { Router } from '@angular/router';
-import { PusherService } from 'src/app/core/services/pusher.service';
-import { Platform, Events } from '@ionic/angular';
-import { ViewService } from '../view.service';
+import { Platform } from '@ionic/angular';
+import { ViewService } from '../../core/services/view.service';
 import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
@@ -22,16 +20,36 @@ export class ViewHomePage {
   roomid = -1;
 
   get deviceNum() {
+    if (typeof this.dataService.device == 'undefined')
+      return
     return this.dataService.device.list.length
   };
 
   loaded = false;
   showSceneButtonGroup = false;
   showSpinner = false;
-  bgPosition;
-  // refresher;
-  @ViewChild('contentbox', { read: ElementRef, static: true }) contentbox: ElementRef;
-  // @ViewChild('content') content: ElementRef;
+
+  showBg = false;
+
+  // @ViewChild('sceneZone', { read: ElementRef, static: false }) sceneZone: ElementRef;
+  // @ViewChild('headerZone', { read: ElementRef, static: false }) headerZone: ElementRef;
+
+  // get bgPosition() {
+  //   if (typeof this.sceneZone == 'undefined') return `0px`
+  //   if (this.sceneZone.nativeElement.getBoundingClientRect().bottom == 0) return `0px`
+  //   this.bgPosition0 = `${this.sceneZone.nativeElement.getBoundingClientRect().bottom + 10}px`
+  //   return this.bgPosition0
+  // }
+  // bgPosition0 = null;
+  bgPosition = `114px`
+
+
+  get sceneDataList() {
+    if (typeof this.dataService.scene != 'undefined')
+      return this.dataService.scene.list
+    return
+  }
+
 
   isIos = false;
   isIphonex = false;
@@ -42,39 +60,25 @@ export class ViewHomePage {
   userDataLoader;
 
   constructor(
-    public deviceService: DeviceService,
+    private deviceService: DeviceService,
     private router: Router,
-    private events: Events,
-    public pusherService: PusherService,
-    private plt: Platform,
-    public viewService: ViewService,
+    private platform: Platform,
+    private viewService: ViewService,
     private dataService: DataService
   ) { }
 
   ngOnInit() {
-    // 判断是否真机运行
-    if (this.plt.is('cordova')) {
-      this.isCordova = true;
-    }
     // 判断是否为ios、iphonex，以便做适配
-    if (this.plt.is('ios')) {
+    if (this.platform.is('ios')) {
       this.isIos = true;
       if ((window.screen.width == 375) && (window.screen.height == 812)) {
         this.isIphonex = true;
       }
-      setTimeout(() => {
-        this.pusherService.setApplicationIconBadgeNumber(0);
-      });
     }
-
-    this.dataService.initCompleted.subscribe(state => {
-      if (state) {
-        this.loaded = true;
-      }
-    });
 
     this.userDataLoader = this.dataService.userDataLoader.subscribe(state => {
       if (state) {
+        this.loaded = true;
         this.deviceService.queryDevices();
       }
     })
@@ -85,22 +89,7 @@ export class ViewHomePage {
   }
 
   ngAfterViewInit() {
-    this.viewService.setLightStatusBar();
-    this.events.publish('menuSwipeEnable', false)
-    // this.getBgPosition();
-  }
-
-  getBgPosition() {
-    setTimeout(() => {
-      let rect = this.contentbox.nativeElement.getBoundingClientRect();
-      // console.log(rect);
-      this.bgPosition = `${rect.top + 65}px`;
-    }, 1000);
-  }
-
-  showSpeech = false;
-  showSpeechModal() {
-    this.viewService.showSpeechModal = true;
+    this.viewService.disableMenuSwipe();
   }
 
   goto(page) {
@@ -109,7 +98,7 @@ export class ViewHomePage {
 
   // 弹出视图模式菜单
   changeView() {
-    this.events.publish('changeView', '')
+    this.viewService.changeView();
   }
 
 }

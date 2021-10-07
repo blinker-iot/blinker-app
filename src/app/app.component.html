@@ -1,4 +1,9 @@
 <ion-app [ngClass]="{'pwa': isPWA}">
   <ion-router-outlet [swipeGesture]="swipeEnable"></ion-router-outlet>
-  <b-progressbar *ngIf="progressValue>0" [value]="progressValue"></b-progressbar>
+  <div tip-box>
+    <b-tip [tip]="tip" *ngFor="let tip of tipList"></b-tip>
+  </div>
+  <div toast-box>
+    <b-toast [toast]="toast" *ngFor="let toast of toastList"></b-toast>
+  </div>
 </ion-app>

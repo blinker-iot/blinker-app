@@ -7,6 +7,9 @@ import { ProdeviceComponent } from "./prodevice/prodevice.component";
 import { AuthenticationComponent } from "./authentication/authentication.component";
 import { FormsModule } from "@angular/forms";
 import { ProdeviceInfoComponent } from "./prodevice-info/prodevice-info.component";
+import { ComponentsModule } from "src/app/core/components/components.module";
+import { RouterModule } from "@angular/router";
+import { TranslateModule } from "@ngx-translate/core";
 
 @NgModule({
     declarations: [
@@ -19,7 +22,10 @@ import { ProdeviceInfoComponent } from "./prodevice-info/prodevice-info.componen
     imports: [
         CommonModule,
         IonicModule,
-        FormsModule
+        FormsModule,
+        ComponentsModule,
+        RouterModule,
+        TranslateModule.forChild()
     ],
     exports: [
         DatakeyComponent,

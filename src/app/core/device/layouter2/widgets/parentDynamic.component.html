@@ -1,19 +1,22 @@
-<!-- <div class="bg"> -->
 <widget-text *ngIf="widget.type=='tex'" [widget]="widget" [lstyle]="lstyle" [device]="device"></widget-text>
-<widget-number *ngIf="widget.type=='num'" [widget]="widget" [lstyle]="lstyle" [device]="device" [color]="widget.clr" [isDemo]="isDemo"></widget-number>
+<widget-number #widgetComponent *ngIf="widget.type=='num'" [widget]="widget" [lstyle]="lstyle" [device]="device"
+    [color]="color" [isDemo]="isDemo"></widget-number>
 <widget-button *ngIf="widget.type=='btn'" [widget]="widget" [lstyle]="lstyle" [device]="device"></widget-button>
-<widget-range *ngIf="widget.type=='ran'" [widget]="widget" [device]="device"></widget-range>
+<widget-range *ngIf="widget.type=='ran'" #widgetComponent [widget]="widget" [lstyle]="lstyle" [device]="device">
+</widget-range>
 <widget-timer *ngIf="widget.type=='tim'" [widget]="widget" [device]="device"></widget-timer>
-<widget-color *ngIf="widget.type=='col'" [widget]="widget" [device]="device"></widget-color>
+<widget-color *ngIf="widget.type=='col'" [widget]="widget" [lstyle]="lstyle" [device]="device"></widget-color>
 <widget-debug *ngIf="widget.type=='deb'" [widget]="widget" [device]="device"></widget-debug>
 <widget-joystick *ngIf="widget.type=='joy'" [widget]="widget" [device]="device"></widget-joystick>
-<widget-chart *ngIf="widget.type=='cha'" [widget]="widget" [device]="device" [isDemo]="isDemo"></widget-chart>
+<widget-chart #widgetComponent *ngIf="widget.type=='cha'" [widget]="widget" [device]="device" [isDemo]="isDemo">
+</widget-chart>
 <widget-map *ngIf="widget.type=='map'" [widget]="widget" [device]="device"></widget-map>
 <widget-tab *ngIf="widget.type=='tab'" [widget]="widget" [device]="device"></widget-tab>
 <widget-input *ngIf="widget.type=='inp'" [widget]="widget" [device]="device"></widget-input>
+<widget-video #widgetComponent *ngIf="widget.type=='vid'" [widget]="widget" [device]="device"></widget-video>
+<widget-image *ngIf="widget.type=='img'" [widget]="widget" [device]="device"></widget-image>
 <div class="editMode" *ngIf="mode=='1' && !isDemo" (tap)="edit($event)">
     <div class="key" [ngClass]="{'centerkey': widget.bg==3}">{{widget.key}}</div>
 </div>
 <div class="editMode" *ngIf="isDemo">
 </div>
-<!-- </div> -->

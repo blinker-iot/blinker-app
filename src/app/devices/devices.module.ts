@@ -5,7 +5,7 @@ import { OwnAirStationModule } from './own/own-airstation/own-airstation.module'
 import { OwnPlugModule } from './own/own-plug/own-plug.module';
 import { OwnLightModule } from './own/own-light/own-light.module';
 import { OwnSensorModule } from './own/own-sensor/own-sensor.module';
-import { Qianhong960eModule } from './qianhong/qianhong-960e/qianhong-960e.module';
+import { OwnLight1Module } from './own/own-light1/own-light1-dashboard.module';
 
 @NgModule({
   declarations: [
@@ -16,11 +16,8 @@ import { Qianhong960eModule } from './qianhong/qianhong-960e/qianhong-960e.modul
     OwnAirStationModule,
     OwnPlugModule,
     OwnLightModule,
+    OwnLight1Module,
     OwnSensorModule,
-    Qianhong960eModule
-  ],
-  entryComponents:[
-    
   ]
 })
 export class DevicesModule { }

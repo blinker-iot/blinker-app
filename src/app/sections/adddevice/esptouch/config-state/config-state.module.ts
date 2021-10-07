@@ -10,7 +10,6 @@ import { ConfigStatePage } from './config-state';
     FormsModule,
     IonicModule
   ],
-  entryComponents: [ConfigStatePage],
   declarations: [ConfigStatePage],
   exports: [ConfigStatePage]
 })

@@ -1,12 +1,15 @@
 ﻿<ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>添加设备</ion-title>
+    <ion-title>{{'HOME.ADD_DEVICE' | translate}}</ion-title>
     <ion-buttons slot="end">
+      <ion-button (click)="scanQrcode()">
+        <ion-icon class="icon1" name="scan-circle-outline"></ion-icon>
+      </ion-button>
       <ion-button (click)="switchSearchbar()">
-        <ion-icon slot="icon-only" name="search"></ion-icon>
+        <ion-icon class="icon2" name="search-circle-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
@@ -18,11 +21,12 @@
       <div class="vender-name">{{item.vendername}}</div>
       <div class="device-box">
         <ng-container *ngFor="let device of item.devices;index as i">
-          <div class="device" [ngClass]="{'first': (i+1)%3==1,'end':(i+1)%3==0}" (click)="gotoGuide(device)">
-            <!-- [routerLink]="[ '/adddevice', device.deviceType ]" [queryParams]="device.isDev?{isDev:true}:''"> -->
-            <img src="assets/img/devices/icon/{{device.image}}" onError="this.src='assets/img/devices/icon/unknown.png'" />
-            <div class="divice-name">{{device.name}}</div>
-          </div>
+          <ng-container *ngIf="device.deviceType!='DiyLinux' && device.deviceType!='DiyDevice' || isAdvancedDeveloper">
+            <div class="device" [ngClass]="{'first': (i+1)%3==1,'end':(i+1)%3==0}" (click)="gotoGuide(device)">
+              <b-device-img [filename]="device.image"></b-device-img>
+              <div class="divice-name">{{device.name}}</div>
+            </div>
+          </ng-container> 
         </ng-container>
       </div>
     </div>

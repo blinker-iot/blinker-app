@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 // import { CodePush, InstallMode } from '@ionic-native/code-push/ngx';
-import { Events, AlertController, Platform } from '@ionic/angular';
+import { AlertController, Platform } from '@ionic/angular';
 import { AppVersion } from '@ionic-native/app-version/ngx';
 import { FileOpener } from '@ionic-native/file-opener/ngx';
 import { HttpClient } from '@angular/common/http';
@@ -15,12 +15,11 @@ export class UpdateService {
 
   lastApk;
   currentVersion;
-  // hasNewVersion;
+  hasNewVersion;
 
   constructor(
     // private codePush: CodePush,
     private appVersion: AppVersion,
-    private events: Events,
     private file: File,
     private fileOpener: FileOpener,
     private alertCtrl: AlertController,
@@ -31,9 +30,10 @@ export class UpdateService {
 
   checkUpdate() {
     this.checkApkUpdate().then(result => {
-      if (result)
+      if (result) {
+        this.hasNewVersion = true
         this.showConfirm(this.lastApk);
-      else {
+      } else {
         // try {
         //   this.checkCodePush()
         // } catch (error) {
@@ -58,18 +58,18 @@ export class UpdateService {
     //     installMode: InstallMode.IMMEDIATE,
     //   },
     //   (progress) => {
-    //     this.events.publish('progressbar', progress.receivedBytes / progress.totalBytes)
+    //     this.ev.publish('progressbar', progress.receivedBytes / progress.totalBytes)
     //   }
     // ).subscribe((status) => {
     //   // switch (status) {
     //   //   case SyncStatus.DOWNLOADING_PACKAGE:
-    //   //     // this.events.publish('loading:show', 'updateDownloading')
+    //   //     // this.ev.publish('loading:show', 'updateDownloading')
     //   //     break;
     //   //   case SyncStatus.INSTALLING_UPDATE:
-    //   //     // this.events.publish('loading:show', 'updateInstalling')
+    //   //     // this.ev.publish('loading:show', 'updateInstalling')
     //   //     break;
     //   //   case SyncStatus.UPDATE_INSTALLED:
-    //   //     // this.events.publish('provider:notice', 'updateInstalled')
+    //   //     // this.ev.publish('provider:notice', 'updateInstalled')
     //   //     break;
     //   // }
     // },
@@ -85,7 +85,7 @@ export class UpdateService {
     //     if (result) return true
     //     // if (result) this.hasNewVersion = true
     //   })
-    return new Promise((reslove, reject) => { reslove(true) })
+    return new Promise((reslove, reject) => { reslove(false) })
   }
 
   checkApkUpdate(): Promise<boolean> {

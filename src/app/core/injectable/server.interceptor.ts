@@ -5,28 +5,49 @@ import {
   HttpErrorResponse,
   HttpEvent,
   HttpHandler,
-  HttpInterceptor
+  HttpInterceptor,
+  HttpParams
 } from "@angular/common/http";
 import { Observable } from "rxjs";
 import { map, catchError } from 'rxjs/operators';
-import { Events, NavController } from '@ionic/angular';
+import { NavController } from '@ionic/angular';
 import { AuthService } from "../services/auth.service";
+import { NoticeService } from "../services/notice.service";
+import { DataService } from "../services/data.service";
 
 @Injectable()
 export class ServerInterceptor implements HttpInterceptor {
 
+  get uuid() {
+    if (this.dataService.auth != null)
+      return this.dataService.auth.uuid
+  }
+
+  get token() {
+    if (this.dataService.auth != null)
+      return this.dataService.auth.token
+  }
+
   constructor(
-    public events: Events,
     private authService: AuthService,
-    private navCtrl: NavController
+    private navCtrl: NavController,
+    private noticeService: NoticeService,
+    private dataService: DataService
   ) { }
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    return next.handle(req).pipe(
+    // console.log(req.params.has('uuid'));
+    let newReq;
+    if (!req.params.has('uuid') && typeof this.token != 'undefined') {
+      newReq = req.clone({
+        params: new HttpParams({ fromString: req.params.toString() }).append('uuid', this.uuid).append('token', this.token)
+      });
+    } else {
+      newReq = req.clone()
+    }
+    return next.handle(newReq).pipe(
       map((event: HttpEvent<any>) => {
         if (event instanceof HttpResponse && event.status == 200) {
-          // console.log(req);
-          // console.log(event);
           if (typeof event.body.message != 'undefined' && event.body.message != 1000) {
             this.processErrorCode(event.body.message)
           }
@@ -41,6 +62,7 @@ export class ServerInterceptor implements HttpInterceptor {
           // if (err.status >= 500) {
           //   console.info('err.error =', err.error, ';');
           // }
+          console.log('ErrorResponse', err.status, err);
           this.processErrorResponse(err.status);
           return Observable.throw(err);
         }
@@ -49,17 +71,18 @@ export class ServerInterceptor implements HttpInterceptor {
   }
 
   processErrorResponse(statusCode) {
-    this.events.publish("provider:notice", 9999);
+    this.noticeService.showToast(9999)
   }
 
   processErrorCode(code) {
     // console.log(code);
-    //跳转到登录页
+    // 跳转到登录页
     if (code == 1408) {
       this.authService.logout();
       this.navCtrl.navigateRoot('/login');
+    } else {
+      this.noticeService.showToast(code)
     }
-    this.events.publish("provider:notice", code);
   }
 
 }

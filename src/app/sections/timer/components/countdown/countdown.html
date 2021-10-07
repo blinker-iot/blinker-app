@@ -1,23 +1,71 @@
+<ng-container *ngIf="loaded">
+  <ng-container *ngIf="!device.data.countdown;else tasking">
+
+    <b-item-list>
+      <b-item showArrow="true"  (click)="openTimeModal()">
+        <div>任务时间</div>
+        <div class="right-box">{{timeInfo}}</div>
+      </b-item>
+      <b-item showArrow="true" (click)="openActionModal()">
+        <div>执行动作</div>
+        <div class="right-box">{{ this.countdownData.act[0] | actcmd2text:device.id}}</div>
+      </b-item>
+    </b-item-list>
+
+    <div class="item-box">
+      <div item (click)="selectTime(1)">1 {{'TIMING.MINUTE' | translate}}</div>
+      <div item (click)="selectTime(10)">10 {{'TIMING.MINUTES' | translate}}</div>
+      <div item (click)="selectTime(30)">30 {{'TIMING.MINUTES' | translate}}</div>
+      <div item (click)="selectTime(60)">60 {{'TIMING.MINUTES' | translate}}</div>
+      <div item (click)="selectTime(90)">90 {{'TIMING.MINUTES' | translate}}</div>
+      <div item (click)="selectTime(120)">120 {{'TIMING.MINUTES' | translate}}</div>
+    </div>
+    <div class="btns start-btn">
+      <div *ngIf="!device.data.countdown.run" (click)="startCountdown()" btn class="start"
+        [ngClass]="{'disable':countdownData.act.length == 0 || this.timeInfo == '00:00'}">{{'TIMING.BEGIN' | translate}}</div>
+    </div>
+  </ng-container>
+  <ng-template #tasking>
+    <div class="countdownbox">
+      <div clock>{{(device.data.countdown.ttim-device.data.countdown.rtim) | minuteToTime }}</div>
+      <div text>{{'TIMING.COUNTDOWN_TEXT3' | translate}}</div>
+      <div action>{{device.data.countdown.act[0] | actcmd2text:device.id}}</div>
+    </div>
+
+    <div class="btns">
+      <div (click)="cancelCountdown()" btn class="cancel animated fadeIn">{{'TIMING.CANCEL' | translate}}</div>
+      <div *ngIf="device.data.countdown.run==1" (click)="pauseCountdown()" btn class="pause animated fadeIn">
+        {{'TIMING.PAUSE' | translate}}</div>
+      <div *ngIf="device.data.countdown.run==0" (click)="continueCountdown()" btn class="continue animated fadeIn">
+        {{'TIMING.CONTINUE' | translate}}
+      </div>
+    </div>
+  </ng-template>
+
+</ng-container>
+
+
+<!-- 
 <div class="countdown-tab" *ngIf="loaded">
   <div class="settingbox" *ngIf="!device.data.countdown">
-    <div class="title">选择执行动作</div>
-    <cmdlist [device]="device" (updateAct)="updateSelectedAction($event)"></cmdlist>
+    <div class="title">{{'TIMING.COUNTDOWN_TEXT' | translate}}</div>
+    <b-actcmd-list [device]="device" (updateAct)="updateSelectedAction($event)"></b-actcmd-list>
     <div class="settingbox">
-      <div class="title">设定倒计时时间</div>
+      <div class="title">{{'TIMING.COUNTDOWN_TEXT2' | translate}}</div>
       <b-timepicker [(time)]="timeInfo"></b-timepicker>
     </div>
     <div class="item-box">
-      <div item (click)="selectTime(1)">1分钟</div>
-      <div item (click)="selectTime(10)">10分钟</div>
-      <div item (click)="selectTime(30)">30分钟</div>
-      <div item (click)="selectTime(60)">60分钟</div>
-      <div item (click)="selectTime(90)">90分钟</div>
-      <div item (click)="selectTime(120)">120分钟</div>
+      <div item (click)="selectTime(1)">1 {{'TIMING.MINUTE' | translate}}</div>
+      <div item (click)="selectTime(10)">10 {{'TIMING.MINUTES' | translate}}</div>
+      <div item (click)="selectTime(30)">30 {{'TIMING.MINUTES' | translate}}</div>
+      <div item (click)="selectTime(60)">60 {{'TIMING.MINUTES' | translate}}</div>
+      <div item (click)="selectTime(90)">90 {{'TIMING.MINUTES' | translate}}</div>
+      <div item (click)="selectTime(120)">120 {{'TIMING.MINUTES' | translate}}</div>
     </div>
     <div class="settingbox">
       <div class="btns start-btn">
         <div *ngIf="!device.data.countdown.run" (click)="startCountdown()" btn class="start"
-          [ngClass]="{'disable':countdownData.act.length == 0}">开始</div>
+          [ngClass]="{'disable':countdownData.act.length == 0}">{{'TIMING.BEGIN' | translate}}</div>
       </div>
     </div>
   </div>
@@ -25,15 +73,17 @@
     <div class="paddingbox">
       <div item class="countdownbox">
         <div clock>{{(device.data.countdown.ttim-device.data.countdown.rtim) | minuteToTime }}</div>
-        <div text>倒计时结束后执行</div>
-        <div action>{{device.data.countdown.act | act2text}}</div>
+        <div text>{{'TIMING.COUNTDOWN_TEXT3' | translate}}</div>
+        <div action>{{device.data.countdown.act[0] | actcmd2text:device.id}}</div>
       </div>
     </div>
     <div class="btns">
-      <div (click)="cancelCountdown()" btn class="cancel animated fadeIn">取消</div>
-      <div *ngIf="device.data.countdown.run==1" (click)="pauseCountdown()" btn class="pause animated fadeIn">暂停</div>
-      <div *ngIf="device.data.countdown.run==0" (click)="continueCountdown()" btn class="continue animated fadeIn">继续
+      <div (click)="cancelCountdown()" btn class="cancel animated fadeIn">{{'TIMING.CANCEL' | translate}}</div>
+      <div *ngIf="device.data.countdown.run==1" (click)="pauseCountdown()" btn class="pause animated fadeIn">
+        {{'TIMING.PAUSE' | translate}}</div>
+      <div *ngIf="device.data.countdown.run==0" (click)="continueCountdown()" btn class="continue animated fadeIn">
+        {{'TIMING.CONTINUE' | translate}}
       </div>
     </div>
   </div>
-</div>
+</div> -->

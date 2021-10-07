@@ -1,39 +1,48 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>开发中心</ion-title>
+    <ion-title>{{'MENU.DEV' | translate}}</ion-title>
   </ion-toolbar>
 </ion-header>
 <ion-content scrollY=false>
   <div class="userinfo">
     <div class="box">
       <div class="item">
-        <span *ngIf="userLevel==0">Diy开发者</span>
-        <span *ngIf="userLevel==1">认证开发者</span>
-        <span *ngIf="userLevel==99">管理员</span>
+        <ng-container *ngIf="developerInfo.userLevel==1">{{'DEV.CERT_NAME' | translate}}:
+          {{developerInfo.auth.vender}}<br></ng-container>
+        {{'DEV.LICENCE' | translate}}:
+        <ng-container *ngIf="developerInfo.userLevel==0">{{'DEV.GROUP0' | translate}}</ng-container>
+        <ng-container *ngIf="developerInfo.userLevel==1">{{'DEV.GROUP1' | translate}}</ng-container>
+        <ng-container *ngIf="developerInfo.userLevel==99">Admin</ng-container><br>
+        <ng-container *ngIf="developerInfo.expiryDate != 0">
+          {{'DEV.EXPIRE' | translate}}: {{developerInfo.expiryDate | date:'yyyy-MM-dd'}}
+        </ng-container>
       </div>
-      <div class="item">
+      <!-- <div class="item">
+        独立设备： {{diyDeviceNum}}/{{diyDeviceMaxNum}}<br>
         专属设备： {{proDeviceNum}}/{{proDeviceMaxNum}}
-      </div>
-      <div class="item">
-        数据存储： {{dataKeyNum}}/{{dataKeyMaxNum}}
+      </div> -->
+      <div class="item" style="margin-left: 50px">
+        {{'DEV.DIY_DEVICE' | translate}}: {{developerInfo.diyDeviceNum}}/{{developerInfo.diyDeviceMaxNum}}<br>
+        {{'DEV.PRO_DEVICE' | translate}}: {{developerInfo.proDeviceNum}}/{{developerInfo.proDeviceMaxNum}}<br>
+        {{'DEV.DATA_KEY' | translate}}: {{developerInfo.dataKeyNum}}/{{developerInfo.dataKeyMaxNum}}
       </div>
     </div>
   </div>
   <div class="btnbox">
     <div class="btn" [ngClass]="{'selected': selectedTab==0}" (click)="selectTab(0)">
       <span class="iconfont icon-data"></span>
-      <div>数据管理</div>
+      <div> {{'DEV.DATA_MANAGER' | translate}}</div>
     </div>
     <div class="btn" [ngClass]="{'selected': selectedTab==1}" (click)="selectTab(1)">
       <span class="iconfont icon-device"></span>
-      <div>专属设备</div>
+      <div> {{'DEV.PRO_MANAGER' | translate}}</div>
     </div>
     <div class="btn" [ngClass]="{'selected': selectedTab==2}" (click)="selectTab(2)">
       <span class="iconfont icon-dev"></span>
-      <div>开发工具</div>
+      <div> {{'DEV.TOOL' | translate}}</div>
     </div>
   </div>
   <div class="list">
@@ -41,8 +50,11 @@
       <devcenter-datakey></devcenter-datakey>
     </ng-container>
     <ng-container *ngIf="selectedTab==1">
-      <div textcenter-temp *ngIf="userLevel==0">仅限已认证开发者使用</div>
-      <devcenter-prodevice *ngIf="userLevel>0"></devcenter-prodevice>
+      <ng-container *ngIf="developerInfo.userLevel==0">
+        <div textcenter-temp>{{'DEV.TEXT' | translate}}</div>
+        <div textcenter-temp>{{'DEV.MORE' | translate}}<br>https://diandeng.tech/doc/prodevice</div>
+      </ng-container>
+      <devcenter-prodevice *ngIf="developerInfo.userLevel>0"></devcenter-prodevice>
     </ng-container>
     <ng-container *ngIf="selectedTab==2">
       <devcenter-devtool></devcenter-devtool>

@@ -1,9 +1,9 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>关于我们</ion-title>
+    <ion-title>{{'MENU.ABOUT_US' | translate}}</ion-title>
   </ion-toolbar>
 </ion-header>
 <ion-content padding>
@@ -15,11 +15,22 @@
   <div class="text">
     {{ABOUT_US}}
   </div>
-  <!-- 联系电话 -->
   <button class="telephone" fullbtn>
     <a href="tel:{{TELEPHONE}}">
       <i class="fal fa-phone-office"></i>
-      <span>联系客服</span>
+      <span>{{'ABOUT_US.CONTACT_US' | translate}}</span>
     </a>
   </button>
+  <!-- 联系电话 -->
+  <div class="other">
+    <div>
+      <span text (click)="openUrl(USER_AGREEMENT,'用户协议')">
+        {{'ACCOUNT.USER_AGREEMENT' | translate}}
+      </span>
+      &
+      <span text (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
+        {{'ACCOUNT.PRIVACY_POLICY' | translate}}
+      </span>
+    </div>
+  </div>
 </ion-content>

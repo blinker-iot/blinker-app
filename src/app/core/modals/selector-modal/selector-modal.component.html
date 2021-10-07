@@ -1,0 +1,10 @@
+<div class="dismiss" (click)="clickCancel()"></div>
+<div class="select-modal">
+  <div class="item-list">
+    <ng-container *ngFor="let item of items;index as i">
+      <div class="item" (click)="selectItem(item)">
+        {{item.text}}
+      </div>
+    </ng-container>
+  </div>
+</div>

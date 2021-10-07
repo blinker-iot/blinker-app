@@ -1,0 +1,45 @@
+.vidbox {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.full {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: #fff;
+  opacity: 1;
+  transform: opacity 0.5s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .vbat {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    color: #999;
+    font-size: 50px;
+  }
+}
+
+.showVideo {
+  opacity: 0;
+}
+
+.lb {
+  position: absolute;
+  bottom: 15px;
+  left: 15px;
+  height: 25px;
+  width: 25px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #CCC;
+  font-size: 20px;
+}

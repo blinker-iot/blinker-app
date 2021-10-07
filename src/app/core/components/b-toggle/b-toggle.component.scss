@@ -1,0 +1,29 @@
+.toggle-box {
+    position: relative;
+    // border: 1px solid #959595;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #E0E0E0;
+    border-radius: 13.5px;
+    width: 45px;
+    height: 25px;
+    transition: all 0.3s;
+
+    .toggle-inner {
+        border-radius: 50%;
+        background: #fff;
+        height: 21px;
+        width: 21px;
+        position: absolute;
+        transition: all 0.3s;
+    }
+
+    .on {
+        right: 2px;
+    }
+
+    .off {
+        right: calc(100% - 23px);
+    }
+}

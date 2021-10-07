@@ -7,7 +7,9 @@ import { IonicModule } from '@ionic/angular';
 
 import { DevcenterPage } from './devcenter.page';
 import { devCenterComponentsModule } from './components/components.module';
-import { DeviceIconPage } from '../../core/pages/device-icon/device-icon';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { TranslateModule } from '@ngx-translate/core';
+import { ComponentsModule } from 'src/app/core/components/components.module';
 
 declare var window;
 window.hasDevCenterModule = true;
@@ -23,11 +25,10 @@ const routes: Routes = [
       { path: 'prodevice/editlayouter/ieconfig/:deviceType', loadChildren: './pages/editlayouter/ieconfig/ieconfig.module#IeconfigPageModule' },
       { path: 'prodevice/editinfo/:deviceType', loadChildren: './pages/editinfo/editinfo.module#EditinfoPageModule' },
       { path: 'prodevice/public/:deviceType', loadChildren: './pages/publicprodevice/publicprodevice.module#PublicprodevicePageModule' },
-      { path: 'prodevice/editspeech/:deviceType', loadChildren: './pages/editspeech/editspeech.module#EditspeechPageModule' },
-      { path: 'prodevice/edittimer/:deviceType', loadChildren: './pages/edittimer/edittimer.module#EdittimerPageModule' },
       { path: 'tool/esptouch', loadChildren: '../adddevice/esptouch/esptouch.module#EsptouchPageModule' },
       { path: 'tool/apconfig', loadChildren: '../adddevice/apconfig/apconfig.module#ApconfigPageModule' },
-      { path: 'tool/qrscanner', loadChildren: '../adddevice/qrscanner/qrscanner.module#QrscannerPageModule' }
+      { path: 'tool/qrscanner', loadChildren: '../adddevice/qrscanner/qrscanner.module#QrscannerPageModule' },
+      { path: 'tool/bleconfig', loadChildren: '../adddevice/bleconfig/bleconfig.module#BleconfigModule' }
     ]
   }
 ];
@@ -38,7 +39,10 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     devCenterComponentsModule,
-    RouterModule.forChild(routes)
+    DirectivesModule,
+    ComponentsModule,
+    RouterModule.forChild(routes),
+    TranslateModule.forChild()
   ],
   declarations: [DevcenterPage]
 })

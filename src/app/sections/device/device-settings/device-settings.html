@@ -1,73 +1,76 @@
 <ion-header whitebg *ngIf="loaded">
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>{{device.config.customName}}设置</ion-title>
+    <ion-title>{{device.config.customName}} {{'DEVICE.SETTING' | translate}}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content *ngIf="loaded">
   <div class="infobox">
-    <div class="imgbox" (click)="selectIcon()">
-      <img src="assets/img/devices/icon/{{device.config.image}}" onError="this.src='assets/img/devices/unknown.png'" />
-      <div class="uploadimg">更改图标</div>
+    <div class="imgbox">
+      <b-device-img [filename]="device.config.image"></b-device-img>
+      <div class="uploadimg" *ngIf="!isSharedDevice" (click)="selectIcon()">{{'DEVICE.CHANGE_ICON' | translate}}</div>
     </div>
     <div class="itembox">
-      <!-- <div class="infoitem">设备名称：{{device.config.customName}}</div> -->
-      <div class="item" (click)="changeName()">设备名:<span>{{device.config.customName}}</span><i
-          class="fal fa-pencil"></i></div>
-      <div class="item">设备型号：{{device.deviceType}}</div>
-      <div class="item">识别码：{{device.id}}</div>
-      <div class="item" *ngIf="device.config.authKey">密钥：
+      <div class="item" *ngIf="!isSharedDevice" (click)="changeName()">{{'DEVICE.NAME' | translate}}:
+        <span>{{device.config.customName}}</span>
+        <i class="fal fa-pencil"></i>
+      </div>
+      <div class="item" *ngIf="isSharedDevice">{{'DEVICE.NAME' | translate}}: <span>{{device.config.customName}}</span>
+      </div>
+      <div class="item">{{'DEVICE.TYPE' | translate}}: {{device | device2name}}</div>
+      <div class="item">
+        <div style="margin-right: 5px;">{{'DEVICE.BROKER' | translate}}: </div>
+        <img *ngIf="device.config.broker=='aliyun'" src="assets/img/broker/aliyun.png" alt="">
+        <img *ngIf="device.config.broker=='blinker'" src="assets/img/broker/blinker.png" alt="">
+      </div>
+      <div class="item">{{'DEVICE.ID' | translate}}: {{device.id}}</div>
+      <div class="item" *ngIf="device.config.authKey && !isSharedDevice">{{'DEVICE.SECRET' | translate}}:
         <span *ngIf="!showKey" (click)="showAuthKey()">************ <i class="fal fa-eye"></i></span>
         <span *ngIf="showKey" selectable>{{device.config.authKey}}</span>
       </div>
     </div>
   </div>
 
-  <div class="menubox">
-    <div class="item" [routerLink]="[ '/timer',id]">
-      <div class="name">定时任务<div redpoint *ngIf="hasTimerTask"></div>
+  <!-- 操作菜单 -->
+  <b-item-list>
+    <b-item showArrow="true" [routerLink]="[ '/timer',id]">
+      <div class="title-box">{{'DEVICE.TIMING_TASK' | translate}}<div redpoint *ngIf="hasTimerTask"></div>
       </div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-    <div class="item" [routerLink]="[ '/device-manager', id, 'location' ]" *ngIf="!isSharedDevice">
-      <div class="name">地理位置</div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-    <div class="item" [routerLink]="[ '/device-manager', id, 'ieconfig' ]"
+    </b-item>
+    <b-item showArrow="true" [routerLink]="[ '/device-manager', id, 'location' ]" *ngIf="!isSharedDevice">
+      <div class="title-box">{{'DEVICE.POSITION' | translate}}</div>
+    </b-item>
+    <!-- <b-item [routerLink]="[ '/device-manager', id, 'log' ]" *ngIf="!isSharedDevice">
+      <div class="title-box">{{'DEVICE.LOG' | translate}}</div>
+    </b-item> -->
+    <b-item showArrow="true" [routerLink]="[ '/device-manager', id, 'trigger-config' ]"
       *ngIf="!isSharedDevice && (device.deviceType=='DiyArduino' || device.deviceType=='DiyLinux')">
-      <div class="name">界面配置</div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-    <div class="item" [routerLink]="[ '/share-manager', id ]" *ngIf="!isSharedDevice&&!isDevDevice">
-      <div class="name">设备共享</div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-    <div class="item" (click)="addShortcut()" *ngIf="platform.is('android')">
-      <div class="name">添加设备到桌面</div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-    <div class="item" *ngIf="device.config.mode=='mqtt'&& !isSharedDevice && device.deviceType.indexOf('Diy')<0"
+      <div class="title-box">{{'DEVICE.TRIGGER' | translate}}</div>
+    </b-item>
+    <b-item showArrow="true" [routerLink]="[ '/device-manager', id, 'action-config' ]"
+      *ngIf="!isSharedDevice && (device.deviceType=='DiyArduino' || device.deviceType=='DiyLinux')">
+      <div class="title-box">{{'DEVICE.ACTION' | translate}}</div>
+    </b-item>
+    <b-item showArrow="true" [routerLink]="[ '/device-manager', id, 'ieconfig' ]"
+      *ngIf="!isSharedDevice && (device.deviceType=='DiyArduino' || device.deviceType=='DiyLinux')">
+      <div class="title-box">{{'DEVICE.LAYOUTER2' | translate}}</div>
+    </b-item>
+    <b-item showArrow="true" [routerLink]="[ '/share-manager', id ]" *ngIf="!isSharedDevice&&!isDevDevice">
+      <div class="title-box">{{'MENU.DEVICE_SHARING' | translate}}</div>
+    </b-item>
+    <b-item showArrow="true" *ngIf="device.config.mode=='mqtt'&& !isSharedDevice && device.deviceType.indexOf('Diy')<0"
       [routerLink]="[ '/device-manager', id, 'update' ]">
-      <div class="name">更新固件<div redpoint *ngIf="hasNewVersion"></div>
+      <div class="title-box">{{'DEVICE.OTA' | translate}}<div redpoint *ngIf="hasNewVersion"></div>
       </div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-  </div>
-
-  <div class="unbindbtn" warning (click)="unbind()">解除绑定</div>
+    </b-item>
+    <b-item (click)="addShortcut()" *ngIf="platform.is('android')">
+      {{'DEVICE.SHORTCUT' | translate}}
+    </b-item>
+    <b-item (click)="unbind()">
+      <div style="color: #f00000;">{{'DEVICE.UNBIND' | translate}}</div>
+    </b-item>
+  </b-item-list>
 </ion-content>

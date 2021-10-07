@@ -1,8 +1,9 @@
 import { Component, Input, ViewChild, ElementRef, ChangeDetectorRef, Renderer2 } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { ModalController, Events } from '@ionic/angular';
+import { ModalController } from '@ionic/angular';
 import { DebugComponent } from 'src/app/debug/debug.component';
 import { DebugService } from 'src/app/debug/debug.service';
+import { DeviceService } from 'src/app/core/services/device.service';
 
 @Component({
   selector: 'widget-debug',
@@ -10,7 +11,7 @@ import { DebugService } from 'src/app/debug/debug.service';
   styleUrls: ['widget-debug.scss']
 })
 export class WidgetDebugComponent implements Layouter2Widget {
-
+  debugServiceSubject;
   @Input() device;
   @Input() widget;
   @Input() lstyle = 0;
@@ -28,21 +29,21 @@ export class WidgetDebugComponent implements Layouter2Widget {
   constructor(
     public changeDetectorRef: ChangeDetectorRef,
     public renderer: Renderer2,
-    public debugService: DebugService,
+    private debugService: DebugService,
     private modalCtrl: ModalController,
-    private events: Events
+    private deviceService: DeviceService
   ) { }
 
-  ngAfterViewInit(): void {
-    this.events.subscribe('debugWidget', () => {
+  ngAfterViewInit() {
+    this.debugServiceSubject = this.debugService.state.subscribe(() => {
       setTimeout(() => {
         this.scrollToBottom();
       }, 50);
-    });
+    })
   }
 
-  ngOnDestroy(): void {
-    this.events.unsubscribe('debugWidget');
+  ngOnDestroy() {
+    this.debugServiceSubject.unsubscribe();
   }
 
   scrollToBottom() {
@@ -50,7 +51,7 @@ export class WidgetDebugComponent implements Layouter2Widget {
   }
 
   sync() {
-    this.events.publish('layouter2','send',`{"get":"state"}`);
+    this.deviceService.sendData(this.device, `{"get":"state"}`);
   }
 
   clear() {

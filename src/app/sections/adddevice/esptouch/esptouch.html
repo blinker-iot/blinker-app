@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
@@ -24,8 +24,16 @@
         <input class="password" type="{{pwshow?'text':'password'}}" [(ngModel)]="mypasswd">
         <i class="iconfont" [ngClass]="{'icon-eye-open': pwshow,'icon-eye-close':!pwshow}" (click)="showPassword()"></i>
       </div>
+      <div class="savepw">
+        <div class="savepw2" (click)="clickSavePassword()">
+          <div class="checkbox" [ngClass]="{'selected': savePassword}">
+            <i class="fal fa-check"></i>
+          </div>
+          <div>记住密码</div>
+        </div>
+      </div>
       <button fullbtn (click)="startConfig()">开始配置</button>
-      <div text-center (click)="openWifiSetting()">选择其他WiFi</div>
+      <div textcenter (click)="openWifiSetting()">选择其他WiFi</div>
     </div>
   </div>
 </ion-content>

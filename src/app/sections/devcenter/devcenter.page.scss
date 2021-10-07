@@ -1,21 +1,21 @@
 .userinfo {
-    background: #389BEE;
+    background: #389bee;
     padding: 3px 15px 10px 15px;
 
     .box {
         background: rgba(255, 255, 255, 0.3);
-        height: 30px;
+        // height: 30px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px;
+        padding: 5px 10px;
         font-size: 13px;
         color: #fff;
         border-radius: 5px;
 
         .item {
             flex-grow: 1;
-            text-align: center;
+            // text-align: center;
         }
     }
 }
@@ -24,7 +24,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
+    padding: 10px 15px 10px 15px;
 
     .btn {
         width: 30%;
@@ -47,7 +47,7 @@
     }
 
     .selected {
-        background: #389BEE;
+        background: #389bee;
         color: #fff;
 
         span {
@@ -57,7 +57,7 @@
 }
 
 .list {
-    padding: 0 15px;
+    // padding: 0 15px;
     height: calc(100% - 133px);
     overflow-y: scroll;
 }

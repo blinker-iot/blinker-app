@@ -1,7 +1,9 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
-import { Events } from '@ionic/angular';
+import { Component, Output, EventEmitter } from '@angular/core';
 import { Mode } from '../layouter2-mode';
+import { LayouterService } from '../../layouter.service';
+import { ModalController } from '@ionic/angular';
+import { NoticeService } from 'src/app/core/services/notice.service';
+import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
   selector: 'layouter2-background',
@@ -9,9 +11,13 @@ import { Mode } from '../layouter2-mode';
   styleUrls: ['./background.component.scss']
 })
 export class BackgroundComponent {
-  // id;
 
   bgList = [
+    {
+      type: 'img',
+      img: 'assets/img/bg/thumbnail/99.jpg',
+      url: ''
+    },
     {
       type: 'img',
       img: 'assets/img/bg/thumbnail/0.jpg',
@@ -74,21 +80,54 @@ export class BackgroundComponent {
     }
   ]
 
+  mode = 1;
+
   @Output() background = new EventEmitter();
 
   constructor(
-    private events: Events
+    private LayouterService: LayouterService,
+    private modalCtrl: ModalController,
+    private notice: NoticeService,
+    private dataService: DataService
   ) { }
 
-  exit(e) {
-    this.events.publish('layouter2', 'changeMode', Mode.Edit);
+  exit() {
+    this.LayouterService.action.next({ name: 'changeMode', data: Mode.Edit })
+    this.modalCtrl.dismiss();
   }
 
-  selectedItem = 0;
+  selectedItem = 100;
   selected(item, index) {
-    console.log(index);
     this.selectedItem = index;
-    this.background.emit({ img: item.url, isFull: item.isFull });
+    this.LayouterService.changeBackground({ img: item.url, isFull: item.isFull });
+  }
+
+  changeMode(i) {
+    if (this.dataService.isAdvancedDeveloper)
+      this.mode = i
+    else
+      this.notice.showToast('自定义背景图仅限专业版使用');
+  }
+
+  bgPosition = 1;
+  headerStyle = 'dark';
+  imgurl = "";
+
+  selectBgPosition(i) {
+    this.bgPosition = i
+  }
+
+  selectHeaderStyle(style) {
+    this.headerStyle = style
+  }
+
+  saveCustom() {
+    if ((this.imgurl.indexOf('https://') > -1 || this.imgurl.indexOf('http://') > -1) || (this.imgurl.indexOf('.png') > -1 || this.imgurl.indexOf('.jpg') > -1)) {
+      this.LayouterService.changeBackground({ img: this.imgurl, isFull: this.bgPosition == 1, headerStyle: this.headerStyle });
+      this.exit()
+    }
+    else
+      this.notice.showToast('url格式不合法')
   }
 
 }

@@ -5,6 +5,9 @@ import { Routes, RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 import { DeviceManagerPage } from './device-manager';
 import { PipesModule } from 'src/app/core/pipes/pipes.module';
+import { ComponentsModule } from 'src/app/core/components/components.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { TranslateModule } from '@ngx-translate/core';
 
 const routes: Routes = [
   {
@@ -19,7 +22,10 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     PipesModule,
-    RouterModule.forChild(routes)
+    ComponentsModule,
+    DirectivesModule,
+    RouterModule.forChild(routes),
+    TranslateModule.forChild()
   ],
   declarations: [
     DeviceManagerPage,

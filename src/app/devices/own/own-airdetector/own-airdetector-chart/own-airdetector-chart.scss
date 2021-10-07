@@ -1,87 +1,91 @@
-.scroll-content {
-        background-color: #10AF8B;
-    }
-    .content {
-        background-color: #10AF8B;
-        color: #ececec;
-    }
-    .box {
+.box {
+    display: flex;
+    align-items: center;
+    flex-direction: column; // justify-content: space-between;
+
+    .btn-list {
         display: flex;
         align-items: center;
-        flex-direction: column; // justify-content: space-between;
-        .btn-list {
+        flex-direction: row;
+        justify-content: space-between;
+        width: 90%;
+        margin-top: 2vh;
+
+        .btn {
             display: flex;
             align-items: center;
-            flex-direction: row;
-            justify-content: space-between;
-            width: 90%;
-            margin-top: 2vh;
-            .btn {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 14px; // background-color: #0A8267;
-                border-radius: 30px;
-                height: 28px;
-                width: 20vw;
-            }
-            .chosen {
-                background-color: #0A8267;
-            }
+            justify-content: center;
+            font-size: 14px; // background-color: #0A8267;
+            border-radius: 30px;
+            height: 28px;
+            width: 20vw;
         }
-        .chart-box {
-            margin-top: 2vh;
+
+        .chosen {
             background-color: #0A8267;
-            width: 100%;
-            height: 50vh;
-            display: flex;
-            align-items: center;
-            flex-direction: column;
-            justify-content: flex-start;
-            .btn-box {
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: flex-start;
-                position: absolute;
-                .date-btn {
-                    z-index: 9;
-                    margin: 15px;
-                    background-color: #0B9274;
-                    // font-size: 14px;
-                    border-radius: 3px;
-                    padding-right: 5px;
-                    // padding: 0 6px 0 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    height: 25px;
-                    span {
-                        font-size: 10px;
-                    }
-                }
-            }
-            .chart {
-                width: 100vw;
-                height: 50vh;
-            }
-        }
-        .data-box {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-direction: row;
-            margin-top: 2vh;
-            width: 90%;
-            height: 50px;
-            background-color: #10B88A;
-            padding: 0 10px 0 10px;
-            .data-name {
-                font-size: 14px;
-            }
-            .data-value {
-                font-size: 26px;
-                font-weight: bold;
-            }
         }
     }
+
+    .chart-box {
+        margin-top: 2vh;
+        background-color: #0A8267;
+        width: 100%;
+        height: 50vh;
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        justify-content: flex-start;
+
+        .btn-box {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            position: absolute;
+
+            .date-btn {
+                z-index: 9;
+                margin: 15px;
+                background-color: #0B9274;
+                // font-size: 14px;
+                border-radius: 3px;
+                padding-right: 5px;
+                // padding: 0 6px 0 0;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 25px;
+
+                span {
+                    font-size: 10px;
+                }
+            }
+        }
+
+        .chart {
+            width: 100vw;
+            height: 50vh;
+        }
+    }
+
+    .data-box {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-direction: row;
+        margin-top: 2vh;
+        width: 90%;
+        height: 50px;
+        background-color: #10B88A;
+        padding: 0 10px 0 10px;
+
+        .data-name {
+            font-size: 14px;
+        }
+
+        .data-value {
+            font-size: 26px;
+            font-weight: bold;
+        }
+    }
+}

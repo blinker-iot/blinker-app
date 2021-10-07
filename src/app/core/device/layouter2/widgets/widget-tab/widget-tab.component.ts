@@ -1,6 +1,6 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { Events } from '@ionic/angular';
+import { LayouterService } from '../../../layouter.service';
 
 @Component({
   selector: 'widget-tab',
@@ -103,7 +103,7 @@ export class WidgetTabComponent implements Layouter2Widget {
   }
 
   constructor(
-    public events: Events
+    private LayouterService: LayouterService
   ) { }
 
   ngOnInit() {
@@ -127,7 +127,7 @@ export class WidgetTabComponent implements Layouter2Widget {
       }
     }
     let data = `{"${this.key}":"${newSelectList}"}`;
-    this.events.publish('layouter2', 'send', data + '\n');
+    this.LayouterService.send(data + '\n')
   }
 
 }

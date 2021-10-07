@@ -1,5 +1,5 @@
 <ion-header whitebg>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
@@ -8,8 +8,8 @@
 
 <ion-content whitebg>
   <div class="title-box">
-    <div class="title1">注册</div>
-    <div class="title2">欢迎使用 blinker 物联网解决方案</div>
+    <div class="title1">{{'ACCOUNT.REGISTER' | translate}}</div>
+    <div class="title2">{{'ACCOUNT.REGISTER_TEXT' | translate}}</div>
   </div>
 
   <form class="form-box" (ngSubmit)="onRegisterButton()" #formBox="ngForm">
@@ -17,36 +17,38 @@
       <div class="item-img">
         <i class="fal fa-mobile"></i>
       </div>
-      <input [(ngModel)]="phone" name="phone" (input)="checkPhone()" placeholder="手机号">
+      <input [(ngModel)]="phone" name="phone" (input)="checkPhone()" placeholder="{{'ACCOUNT.PHONENUM' | translate}}">
       <div class="sendsms">
         <div class="v-line"></div>
-        <button [disabled]="smscodeButtonDisabled||waiting" (click)="onSmscodeButton()">{{smscodeButton}}</button>
+        <button [disabled]="smscodeButtonDisabled" (click)="onSmscodeButton()">{{smscodeButton |
+          translate}}{{countdownString}}</button>
       </div>
     </div>
     <div class="input-box">
       <div class="item-img">
         <i class="fal fa-shield-check"></i>
       </div>
-      <input [(ngModel)]="smscode" (input)="checkAll()" name="smscode" placeholder="验证码">
+      <input [(ngModel)]="smscode" (input)="checkAll()" name="smscode" placeholder="{{'ACCOUNT.SMSCODE' | translate}}">
     </div>
     <div class="input-box">
       <div class="item-img">
         <i class="fal fa-lock-alt"></i>
       </div>
-      <input type="password" [(ngModel)]="password" (input)="checkAll()" name="password" placeholder="密码（至少8位字符）">
+      <input type="password" [(ngModel)]="password" (input)="checkAll()" name="password"
+        placeholder="{{'ACCOUNT.PASSWORD2' | translate}}">
     </div>
     <button fullbtn type="submit" [disabled]="registerButtonDisabled">
-      注册</button>
+      {{'ACCOUNT.REGISTER' | translate}}</button>
   </form>
   <div class="other">
     <div>
-      注册账号即表示您同意并遵守blinker
-      <span text (click)="openUrl(USER_AGREEMENT,'用户协议')">
-        用户协议
+      {{'ACCOUNT.REGISTER_TEXT2' | translate}}
+      <span link-text (click)="openUrl(USER_AGREEMENT,'用户协议')">
+        {{'ACCOUNT.USER_AGREEMENT' | translate}}
       </span>
-      和
-      <span text (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
-        隐私政策
+      {{'ACCOUNT.AND' | translate}}
+      <span link-text (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
+        {{'ACCOUNT.PRIVACY_POLICY' | translate}}
       </span>
     </div>
   </div>

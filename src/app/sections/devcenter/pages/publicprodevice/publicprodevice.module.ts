@@ -9,6 +9,7 @@ import { PublicprodevicePage } from './publicprodevice.page';
 import { PipesModule } from 'src/app/core/pipes/pipes.module';
 import { devCenterComponentsModule } from '../../components/components.module';
 import { MarkdownModule } from 'ngx-markdown';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
 
 const routes: Routes = [
   {
@@ -25,6 +26,7 @@ const routes: Routes = [
     PipesModule,
     MarkdownModule.forChild(),
     devCenterComponentsModule,
+    DirectivesModule,
     RouterModule.forChild(routes)
   ],
   declarations: [PublicprodevicePage]

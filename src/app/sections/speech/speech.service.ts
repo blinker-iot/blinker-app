@@ -1,17 +1,21 @@
-import { Injectable } from '@angular/core';
-import { Platform, Events } from '@ionic/angular';
+import { Injectable, NgZone } from '@angular/core';
+import { Platform } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
-import { DevicelistService } from 'src/app/core/services/devicelist.service';
+import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 import { DataService } from 'src/app/core/services/data.service';
 import { Subject } from 'rxjs';
+import { BlinkerDevice } from 'src/app/core/model/device.model';
 
 declare var cordova;
 
 @Injectable()
 export class SpeechService {
-  
-  playAudio=new Subject;
+
+  playAudio = new Subject;
+
+  content: Subject<String> = new Subject;
+  action: Subject<String> = new Subject;
 
   audio = {
     "Begin": ["Begin"],
@@ -65,104 +69,112 @@ export class SpeechService {
     public userService: UserService,
     private dataService: DataService,
     public plt: Platform,
-    public events: Events,
-    private devicelistService: DevicelistService
+    private deviceConfigService: DeviceConfigService,
+    private ngzone: NgZone
   ) {
   }
 
   recognize() {
     cordova.plugins.bdasr.addEventListener((res) => {
-      if (!res) {
-        return;
-      }
-      switch (res.type) {
-        case "asrReady": {
-          console.log("等待语音输入")
-          break;
+      this.ngzone.run(() => {
+        if (!res) {
+          return;
         }
-        case "asrBegin": {
-          console.log("开始语音输入")
-          break;
-        }
-        case "asrEnd": {
-          console.log("等待识别结果")
-          break;
-        }
-        case "asrText": {
-          // console.log(res.message);
-          if (this.plt.is('android')) {
-            this.result = JSON.parse(res.message).best_result;
+        switch (res.type) {
+          case "asrReady": {
+            // console.log("等待语音输入")
+            break;
           }
-          else {
-            if (typeof (res.message.origin_result.result.word[0]) != "undefined")
-              this.result = res.message.origin_result.result.word[0].toString();
-            else if (typeof (res.message.results_recognition) != "undefined")
-              this.result = res.message.results_recognition.toString();
-            else this.result = "";
+          case "asrBegin": {
+            // console.log("开始语音输入")
+            break;
           }
-          console.log("识别结果：" + this.result);
-          //this.result = JSON.parse(res.message);//res.message.results_recognition;//JSON.parse(res.message.origin_result).
-          this.events.publish('speech:content', this.result);
-          break;
+          case "asrEnd": {
+            console.log("等待识别结果")
+            break;
+          }
+          case "asrText": {
+            console.log(res.message);
+            if (this.plt.is('android')) {
+              this.result = JSON.parse(res.message).best_result;
+            }
+            else {
+              if (typeof (res.message.origin_result.result.word[0]) != "undefined")
+                this.result = res.message.origin_result.result.word[0].toString();
+              else if (typeof (res.message.results_recognition) != "undefined")
+                this.result = res.message.results_recognition.toString();
+              else this.result = "";
+            }
+            console.log("识别结果：" + this.result);
+            this.content.next(this.result);
+            break;
+          }
+          case "asrFinish": {
+            console.log("识别结果：" + this.result);
+            this.process(this.result);
+            break;
+          }
+          case "asrCancel": {
+            // 语音识别取消
+            console.log("语音识别取消");
+            break;
+          }
+          default:
+            break;
         }
-        case "asrFinish": {
-          // console.log("识别结果：" + this.result);
-          this.process(this.result);
-          break;
-        }
-        case "asrCancel": {
-          // 语音识别取消
-          // console.log("语音识别取消");
-          break;
-        }
-        default:
-          break;
-      }
-      // this.events.publish('speech', res.type);
+      })
+
     }, (err) => {
-      this.events.publish('speech', 'Error');
-      // console.log(err);
+      this.ngzone.run(() => {
+        this.action.next('Error')
+      })
     });
   }
 
   start() {
     if (this.plt.is('cordova')) {
-      cordova.plugins.bdasr.startSpeechRecognize();
-      this.recognize();
+      this.ngzone.run(() => {
+        cordova.plugins.bdasr.startSpeechRecognize();
+        this.recognize();
+      })
+
     }
   }
 
   end() {
     if (this.plt.is('cordova')) {
-      cordova.plugins.bdasr.cancelSpeechRecognize();
+      this.ngzone.run(() => {
+        cordova.plugins.bdasr.cancelSpeechRecognize();
+        this.recognize();
+      })
     }
   }
 
   // 分发数据
   async process(str) {
     if (typeof this.speechCmdList[str] == 'undefined') {
-      this.events.publish('speech', 'NotFound');
+      this.action.next('NotFound')
       return false;
     }
     if (this.speechCmdList[str].device.config.mode == 'mqtt') {
       this.deviceService.pubMessage(this.speechCmdList[str].device, this.speechCmdList[str].act);
-      this.events.publish('speech', 'Sent');
+      this.action.next('Sent')
       return true;
     }
     else {
-      this.events.publish('speech', 'Wait');
+      this.action.next('Wait')
       let result = await this.deviceService.connectDevice(this.speechCmdList[str].device, "hide");
       if (result) {
         window.setTimeout(() => {
           this.deviceService.sendData(this.speechCmdList[str].device, this.speechCmdList[str].act);
         }, 500);
-        this.events.publish('speech', 'Done');
+        this.action.next('Done')
         window.setTimeout(() => {
           this.deviceService.disconnectDevice(this.speechCmdList[str].device);
         }, 1000);
         return true;
       } else {
-        this.events.publish('speech', 'CannotControl');
+        this.action.next('CannotControl')
         this.deviceService.disconnectDevice(this.speechCmdList[str].device);
         return false;
       }
@@ -178,60 +190,65 @@ export class SpeechService {
       else
         this.getProDeviceSpeechCmd(this.deviceDataDict[deviceId]);
     }
-    // console.log(this.speechCmdList);
   }
 
   getDiyDeviceSpeechCmd(device: BlinkerDevice) {
-    let layouter = JSON.parse(device.config.layouter)
-    if (layouter == null || typeof layouter.dashboard == 'undefined' || layouter.dashboard == null) return;
-    for (let component of layouter.dashboard) {
-      if (typeof component.speech == 'undefined') continue;
-      for (let speechCmd of component.speech) {
-        if (speechCmd.cmd == '') continue;
-        let cmdList = this.processCmd(device, speechCmd.cmd)
-        for (const cmd of cmdList) {
-          this.speechCmdList[cmd] = {
-            act: `{"${component.key}":"${speechCmd.act}"}\n`,
-            device: device
-          }
-          this.speechTextList.push(cmd);
+    let deviceConfig = JSON.parse(device.config.layouter)
+    if (deviceConfig == null) return;
+    if (typeof deviceConfig == 'undefined') return
+    if (typeof deviceConfig.actions == 'undefined') return
+    // console.log(deviceConfig);
+    // console.log(deviceConfig.actions);
+    let actions = deviceConfig.actions;
+    actions.forEach(action => {
+      let actTextList = this.processCmd(device, action.text)
+      for (const text of actTextList) {
+        this.speechCmdList[text.toLowerCase()] = {
+          act: JSON.stringify(action.cmd),
+          device: device
         }
+        this.speechTextList.push(text);
       }
-    }
+    })
   }
 
   getProDeviceSpeechCmd(device: BlinkerDevice) {
-    let deviceConfig = this.devicelistService.getDeviceConfig(device);
-    console.log(deviceConfig);
-    // console.log(deviceConfig);
-    // deviceConfig['speech'] = [
-    //   { "cmd": "打开?room的?name", "act": "{\"btn-acb\"}:\"on\"" },
-    //   { "cmd": "关闭?room的?name", "act": "{\"btn-acb\"}:\"off\"" }
-    // ]
+    let deviceConfig = this.deviceConfigService.getDeviceConfig(device);
     if (typeof deviceConfig == 'undefined') return
     if (typeof deviceConfig.speech == 'undefined') return
-    for (const speechCmd of deviceConfig.speech) {
-      let cmdList = this.processCmd(device, speechCmd.cmd)
-      for (const cmd of cmdList) {
-        this.speechCmdList[cmd] = {
-          act: speechCmd.act,
+    if (typeof deviceConfig.actions == 'undefined') return
+    if (deviceConfig.actions == '') return
+    let actions = JSON.parse(deviceConfig.actions);
+    actions.forEach(action => {
+      let actTextList = this.processCmd(device, action.text)
+      for (const text of actTextList) {
+        this.speechCmdList[text.toLowerCase()] = {
+          act: JSON.stringify(action.cmd),
           device: device
         }
-        this.speechTextList.push(cmd);
+        this.speechTextList.push(text);
       }
-    }
+    })
   }
 
-  processCmd(device: BlinkerDevice, cmd) {
+  processCmd(device: BlinkerDevice, actcmd) {
+    let cmd = actcmd
     let cmdList = []
-    if (cmd.search(/\?room/) > -1) {
+    cmdList.push(cmd.replace(/(\?|？)name/g, device.config.customName))
+    if (cmd.search(/\?name/) > -1) {
       let rooms = this.findRooms(device);
       for (const roomname of rooms) {
-        cmdList.push(cmd.replace(/(\?|？)name/g, device.config.customName).replace(/(\?|？)room/g, roomname))
+        cmdList.push(cmd.replace(/(\?|？)name/g, roomname + '的' + device.config.customName))
       }
-    } else {
-      cmdList.push(cmd.replace(/(\?|？)name/g, device.config.customName))
     }
+    // if (cmd.search(/\?room/) > -1) {
+    //   let rooms = this.findRooms(device);
+    //   for (const roomname of rooms) {
+    //     cmdList.push(cmd.replace(/(\?|？)name/g, device.config.customName).replace(/(\?|？)room/g, roomname))
+    //   }
+    // } else {
+    //   cmdList.push(cmd.replace(/(\?|？)name/g, device.config.customName))
+    // }
     return cmdList
   }
 

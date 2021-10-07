@@ -1,38 +1,14 @@
-<div class="userdevicebox">
-  <div class="device-item" (click)="goto('esptouch')">
-    <div class="item-img-box">
-      <img src="assets/img/esp-logo.png" />
+<b-item-list>
+  <b-item [height]="70" *ngFor="let tool of tools" [routerLink]="[tool.url]">
+    <div class="img-box" [ngStyle]="{'background-color': tool.color}">
+      <img src="{{tool.img}}" />
     </div>
-    <div class="name-box">
-      <div class="name">EspTouch/SmartConfig</div>
-      <div class="mac">通过广播wifi热点及密码进行配网</div>
+    <div class="text-box">
+      <div class="name">{{tool.name}}</div>
+      <div class="other">{{tool.desp}}</div>
     </div>
-  </div>
-  <div class="device-item" (click)="goto('apconfig')">
-    <div class="item-img-box">
-      <img src="assets/img/apconfig.png" />
+    <div class="arrow-box">
+      <img src="assets/img/icon/arrow.png">
     </div>
-    <div class="name-box">
-      <div class="name">ApConfig</div>
-      <div class="mac">通过连接到AP模式的设备进行配网</div>
-    </div>
-  </div>
-  <div class="device-item" (click)="goto('qrscanner')">
-    <div class="item-img-box qrscanner">
-      <img src="assets/img/icon/tool-qrscanner.png" />
-    </div>
-    <div class="name-box">
-      <div class="name">二维码扫描器 (暂不可用)</div>
-      <div class="mac">二维码识别</div>
-    </div>
-  </div>
-  <div class="device-item">
-    <div class="item-img-box bleconfig">
-      <img src="assets/img/icon/tool-bleconfig.png" />
-    </div>
-    <div class="name-box">
-      <div class="name">BleConfig (暂不可用)</div>
-      <div class="mac">通过蓝牙传输进行配网</div>
-    </div>
-  </div>
-</div>
+  </b-item>
+</b-item-list>

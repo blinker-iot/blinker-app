@@ -1,7 +1,8 @@
-<div class="block" (click)="gotoDashboard()" [ngStyle]="{'opacity': state?1:0.4}" [ngClass]="{'on': switch}">
+<div class="block" (click)="gotoDashboard()" [ngStyle]="{'opacity': state?1:0.5}" [ngClass]="{'on': switch}">
   <div class="lt imgbox">
-    <img class="block-img" src="assets/img/devices/icon/{{device.config.image}}"
-      onError="this.src='assets/img/devices/unknown.png'" />
+    <!-- <img class="block-img" src="assets/img/devices/icon/{{device.config.image}}"
+      onError="this.src='assets/img/devices/unknown.png'" /> -->
+    <b-device-img [filename]="device.config.image"></b-device-img>
   </div>
   <div class="lb">
     {{device.config.customName}}

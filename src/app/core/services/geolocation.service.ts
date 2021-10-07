@@ -12,7 +12,7 @@ import coordtransform from 'coordtransform';
 export class GeolocationService {
 
   // gaode
-  amapKey = '7cbacadf68ebc69a7fa4b2cf10e87576'
+  amapKey = ''
   amapUrl = 'https://restapi.amap.com/v3/';
 
   currentPosition = [103.9787507031, 30.6336840719]
@@ -44,23 +44,25 @@ export class GeolocationService {
   ) { }
 
   async getUserPosition(): Promise<boolean> {
-    // if (this.platform.is('cordova') && await this.diagnostic.isNetworkLocationEnabled() && await this.diagnostic.isGpsLocationEnabled()) {
-    if (false) {
-      return this.geolocation.getCurrentPosition({ enableHighAccuracy: true })
-        // return this.geolocation.getCurrentPosition()
-        .then(resp => {
-          console.log(resp);
-          this.currentPosition = coordtransform.wgs84togcj02(resp.coords.longitude, resp.coords.latitude)
-          console.log(this.currentPosition);
-          return true
-        })
-        .catch((error) => {
-          console.log('Error getting location', error);
-          console.log(error.message);
-          return false
-        });
+    if (this.platform.is('cordova') && this.platform.is('android')) {
+      if (await this.diagnostic.isNetworkLocationEnabled() && await this.diagnostic.isGpsLocationEnabled()) {
+        // if (false) {
+        return this.geolocation.getCurrentPosition({ enableHighAccuracy: true })
+          // return this.geolocation.getCurrentPosition()
+          .then(resp => {
+            console.log(resp);
+            this.currentPosition = coordtransform.wgs84togcj02(resp.coords.longitude, resp.coords.latitude)
+            console.log(this.currentPosition);
+            return true
+          })
+          .catch((error) => {
+            console.log('Error getting location', error);
+            console.log(error.message);
+            return false
+          });
+      }
     } else {
-      // console.info('当前为浏览器运行，使用高德ip定位');
+      // console.info('当前为浏览器运行或ios运行，使用高德ip定位');
       return this.http
         .get(this.amapUrl + "ip" +
           "?key=" + this.amapKey +
@@ -71,13 +73,19 @@ export class GeolocationService {
           console.log(response);
           let data = JSON.parse(JSON.stringify(response));
           if (data.status == 1) {
-            let pArray = data.rectangle.split(";")
-            let p0 = pArray[0].split(",")
-            let p1 = pArray[1].split(",")
-            this.longitude = (Number(p1[0]) - Number(p0[0])) / 2 + Number(p0[0]);
-            this.latitude = (Number(p1[1]) - Number(p0[1])) / 2 + Number(p0[1]);
-            this.address = data.province + data.city
-            return true;
+            if (data.rectangle.length > 0) {
+              let pArray = data.rectangle.split(";")
+              let p0 = pArray[0].split(",")
+              let p1 = pArray[1].split(",")
+              this.longitude = (Number(p1[0]) - Number(p0[0])) / 2 + Number(p0[0]);
+              this.latitude = (Number(p1[1]) - Number(p0[1])) / 2 + Number(p0[1]);
+              this.address = data.province + data.city
+              return true;
+            } else {
+              this.longitude = 108.919338
+              this.latitude = 34.539994
+              return true;
+            }
           } else
             return false;
         })

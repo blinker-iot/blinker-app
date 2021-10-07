@@ -1,7 +1,8 @@
 import {
     Component,
     ViewChild,
-    ElementRef
+    ElementRef,
+    Input
 } from '@angular/core';
 import {
     NavController,
@@ -9,18 +10,20 @@ import {
 } from '@ionic/angular';
 
 @Component({
-    selector: 'page-own-airdetector-chart',
+    selector: 'own-airdetector-chart',
     templateUrl: 'own-airdetector-chart.html',
     styleUrls: ['own-airdetector-chart.scss']
 })
 export class OwnAirdetectorChartPage {
+
+    @Input() device;
+
     public myChart: any;
     public myDate;
 
     @ViewChild('chartCanvas', { read: ElementRef, static: true }) chartCanvas: ElementRef;
     constructor(
         public navCtrl: NavController,
-
         public modalCtrl: ModalController,
     ) {
     }
@@ -60,9 +63,7 @@ export class OwnAirdetectorChartPage {
         }
         // console.log(times);
 
-        // this.myChart = echarts.init(this.chartCanvas.nativeElement
-        // , null, { renderer: 'svg' }
-        // );
+
         let option = {
             dataZoom: [
                 {

@@ -1,5 +1,5 @@
 <ion-header whitebg>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-menu-button><i class="iconfont icon-menu"></i></ion-menu-button>
     </ion-buttons>
@@ -36,6 +36,6 @@
       刷新
     </div>
   </div>
-  <map-info-bar class="animated slideInUp faster" *ngIf="selectedDevice" [device]="selectedDevice">
+  <map-info-bar *ngIf="selectedDevice" [device]="selectedDevice">
   </map-info-bar>
 </ion-content>

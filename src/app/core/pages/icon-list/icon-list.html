@@ -1,13 +1,40 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
+    <ion-buttons slot="start">
+      <ion-button (click)="close()">
+        <i class="fal fa-times"></i>
+      </ion-button>
+    </ion-buttons>
     <ion-title>请选择图标</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
-  <div class="box">
-    <div class="item" *ngFor="let icon of iconList" (click)="select(icon)">
-      <i class="{{icon}}"></i>
+  <!-- <div class="text-box" (click)="open('https://diandeng.tech/doc/')">
+    <div>内置Font Awesome Pro，9000余个图标供您选择</div>
+    <div>使用方法见：https://diandeng.tech/doc/</div>
+  </div> -->
+  <div class="tab-box">
+    <div class="text">图标风格<span>更多图标见https://diandeng.tech/doc/icon</span></div>
+    <div class="tab" (click)="selectStyle('fad')" [ngClass]="{'selected': style=='fad'}">双色</div>
+    <div class="tab"  (click)="selectStyle('fas')" [ngClass]="{'selected': style=='fas'}">实体</div>
+    <div class="tab"  (click)="selectStyle('far')" [ngClass]="{'selected': style=='far'}">常规</div>
+    <div class="tab"  (click)="selectStyle('fal')" [ngClass]="{'selected': style=='fal'}">纤细</div>
+  </div>
+  <div class="icon-box">
+    <div class="class-box" *ngFor="let iconClass of iconList">
+      <div class="title">{{iconClass.title}}</div>
+      <div class="item-box">
+        <div class="item" *ngFor="let icon of iconClass.icon" (click)="select(icon.replace('fad',style))">
+          <i class="{{icon.replace('fad',style)}}"></i>
+        </div>
+        <!-- <div class="null" *ngFor="let i of (5-(iconClass.icon.length%5))"></div> -->
+        <div class="null" *ngIf="(5-(iconClass.icon.length%5))>0"></div>
+        <div class="null" *ngIf="(5-(iconClass.icon.length%5))>1"></div>
+        <div class="null" *ngIf="(5-(iconClass.icon.length%5))>2"></div>
+        <div class="null" *ngIf="(5-(iconClass.icon.length%5))>3"></div>
+      </div>
+
     </div>
   </div>
 </ion-content>

@@ -7,22 +7,28 @@
     width: 85%;
 }
 
-.joyin {
+.stick {
     position: absolute;
-    height: 85%;
-    width: 85%;
-    .stick {
-        position: absolute;
-        height: 45%;
-        width: 45%;
-        top: 0;
-        left: 0;
-    }
+    height: 70px;
+    width: 70px;
+    background: rgba(56, 156, 238, 0.8);
+    border-radius: 50%;
+    top: calc(50% - 35px);
+    left: calc(50% - 35px);
 }
 
 .touch {
-    height: 85%;
-    width: 85%;
+    height: 100%;
+    width: 100%;
     border-radius: 50%;
-    z-index: 9;
+    z-index: 1;
+}
+
+.joystick-box {
+    height: 100%;
+    width: 100%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }

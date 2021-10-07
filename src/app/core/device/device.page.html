@@ -1,23 +1,29 @@
 <ion-header *ngIf="loaded && device" no-border [ngClass]="{'dark': headerStyle=='dark','light':headerStyle=='light'}">
-  <ion-toolbar color="transparent">
+  <!-- <ion-header *ngIf="loaded && device" no-border > -->
+  <ion-toolbar color="transparent" overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
     <ion-title (click)="enterDebug()">
       <div class="name">{{device.config.customName}}</div>
-      <div class="state">
+      <!-- <div class="state"
+        [ngClass]="{'showState': device.data.state=='offline'||device.data.state=='online'||device.data.state=='connected'||device.data.state=='disconnected'}"> -->
+      <div class="state" [ngClass]="{'showState': device.data.state!='waiting'}">
         <ng-container
-          *ngIf="(device.data.state=='connected') || (oldState=='connected' && device.data.state=='waiting')">(已连接)
+          *ngIf="(device.data.state=='connected') || (device.data.oldState=='connected' && device.data.state=='waiting')">
+          ({{'DEVICE.CONNECTED' | translate}})
         </ng-container>
-        <ng-container *ngIf="device.data.state=='disconnected'">(未连接)</ng-container>
+        <ng-container *ngIf="device.data.state=='disconnected'">({{'DEVICE.NOT_CONNECTED' | translate}})</ng-container>
         <ng-container
-          *ngIf="(device.data.state=='online') || (device.data.oldState=='online' && device.data.state=='waiting')">(在线)
+          *ngIf="(device.data.state=='online') || (device.data.oldState=='online' && device.data.state=='waiting')">
+          ({{'DEVICE.ONLINE' | translate}})
           <i *ngIf="deviceService.islocalDevice(device)" class="fal fa-exchange"></i>
           <i *ngIf="!deviceService.islocalDevice(device)" class="fal fa-cloud"></i>
         </ng-container>
         <ng-container
           *ngIf="(device.data.state=='offline') || (device.data.oldState=='offline' && device.data.state=='waiting')">
-          (离线)</ng-container>
+          ({{'DEVICE.OFFLINE' | translate}})
+        </ng-container>
       </div>
     </ion-title>
     <ion-buttons slot="end">
@@ -32,12 +38,12 @@
         <div redpoint *ngIf="device.data.hasNewVersion"></div>
       </ion-button>
       <!-- 清空布局器 -->
-      <ion-button (click)="cleanWidgets()" *ngIf="editMode">
+      <ion-button (click)="cleanWidgets()" *ngIf="editMode && deviceComponent.indexOf('Layouter')>-1">
         <!-- <i class="fal fa-trash-alt"></i> -->
         <i class="iconfont icon-trash"></i>
       </ion-button>
       <!-- 背景设置 -->
-      <ion-button (click)="editBackground()" *ngIf="editMode">
+      <ion-button (click)="editBackground()" *ngIf="editMode && deviceComponent.indexOf('Layouter')>-1">
         <!-- <i class="fal fa-file-image"></i> -->
         <i class="iconfont icon-pic"></i>
       </ion-button>
@@ -46,7 +52,7 @@
         <!-- <i class="fal fa-edit"></i> -->
         <i class="iconfont icon-edit"></i>
       </ion-button>
-      <ion-button (click)="lock()" *ngIf="editMode">
+      <ion-button (click)="lock()" *ngIf="editMode && deviceComponent.indexOf('Layouter')>-1">
         <!-- <i class="fal fa-lock"></i> -->
         <i class="iconfont icon-lock"></i>
       </ion-button>

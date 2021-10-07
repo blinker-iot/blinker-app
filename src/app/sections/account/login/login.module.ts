@@ -6,6 +6,9 @@ import { Routes, RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 
 import { LoginPage } from './login';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { TranslateModule } from '@ngx-translate/core';
+import { ComponentsModule } from 'src/app/core/components/components.module';
 
 const routes: Routes = [
   {
@@ -19,7 +22,10 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     IonicModule,
-    RouterModule.forChild(routes)
+    DirectivesModule,
+    RouterModule.forChild(routes),
+    TranslateModule.forChild(),
+    ComponentsModule
   ],
   declarations: [LoginPage]
 })

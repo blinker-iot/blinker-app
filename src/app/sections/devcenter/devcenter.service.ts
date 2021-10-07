@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { UserService } from 'src/app/core/services/user.service';
 import CryptoJS from 'crypto-js';
 import { NoticeService } from 'src/app/core/services/notice.service';
-import { API } from 'src/app/configs/app.config';
+import { API } from 'src/app/configs/api.config';
 import { DataService } from 'src/app/core/services/data.service';
 
 @Injectable({
@@ -21,11 +21,28 @@ export class DevcenterService {
 
   datakeyList = [];
   proDeviceList = [];
+
   userLevel;
   dataKeyNum;
   dataKeyMaxNum;
   proDeviceNum;
   proDeviceMaxNum;
+  diyDeviceNum;
+  diyDeviceMaxNum;
+  expiryDate;
+  vender;
+
+  developerInfo = {
+    auth: { vender: "", verified: 0 },
+    dataKeyMaxNum: 0,
+    dataKeyNum: 0,
+    diyDeviceMaxNum: 0,
+    diyDeviceNum: 0,
+    expiryDate: 0,
+    proDeviceMaxNum: 0,
+    proDeviceNum: 0,
+    userLevel: 0,
+  }
 
   // 暂存正在编辑的专属设备数据
   currentProDevice;
@@ -50,11 +67,16 @@ export class DevcenterService {
         console.log(response);
         let data = JSON.parse(JSON.stringify(response));
         if (data.message == 1000) {
-          this.dataKeyNum = data.detail.dataKeyNum;
-          this.dataKeyMaxNum = data.detail.dataKeyMaxNum;
-          this.proDeviceNum = data.detail.proDeviceNum;
-          this.proDeviceMaxNum = data.detail.proDeviceMaxNum;
-          this.userLevel = data.detail.userLevel;
+          this.developerInfo = data.detail
+          // this.dataKeyNum = data.detail.dataKeyNum;
+          // this.dataKeyMaxNum = data.detail.dataKeyMaxNum;
+          // this.proDeviceNum = data.detail.proDeviceNum;
+          // this.proDeviceMaxNum = data.detail.proDeviceMaxNum;
+          // this.userLevel = data.detail.userLevel;
+          // this.diyDeviceNum = data.detail.diyDeviceNum;
+          // this.diyDeviceMaxNum = data.detail.diyDeviceMaxNum;
+          // this.expiryDate = data.detail.expiryDate;
+          // this.vender = data.detail.auth.vender;
           return true
         }
         return false;

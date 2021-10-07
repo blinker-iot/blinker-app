@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
@@ -10,7 +10,8 @@
 <ion-content>
   <div class="infobox" *ngIf="prodevice">
     <div class="imgbox" (click)="selectIcon()">
-      <img src="assets/img/devices/icon/{{prodevice.image}}" onError="this.src='assets/img/devices/unknown.png'" />
+      <b-device-img [filename]="prodevice.image"></b-device-img>
+      <!-- <img src="assets/img/devices/icon/{{prodevice.image}}" onError="this.src='assets/img/devices/unknown.png'" /> -->
       <div class="uploadimg">更改图标</div>
     </div>
     <div class="itembox">
@@ -30,44 +31,19 @@
     </div>
   </div>
 
-  <div class="menubox">
-    <div class="item" [routerLink]="[ '/devcenter/prodevice/editinfo', deviceType ]">
-      <div class="name">编辑信息</div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-    <div class="item" [routerLink]="[ '/devcenter/prodevice/editlayouter', deviceType ]">
-      <div class="name">编辑界面（Layouter2）</div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-    <div class="item" [routerLink]="[ '/devcenter/prodevice/editspeech', deviceType ]">
-      <div class="name">语音配置</div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-    <div class="item" [routerLink]="[ '/devcenter/prodevice/edittimer', deviceType ]">
-      <div class="name">定时配置</div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-    <div class="item" [routerLink]="[ '/devcenter/prodevice/public', deviceType ]">
-      <div class="name">正式上线</div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-    <div class="item" (click)="showDelWarn()">
-      <div class="name">删除设备</div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.png">
-      </div>
-    </div>
-  </div>
-
-  <!-- <div textcenter-temp>您也可以在PC上访问blinker控制台(https://admin.diandeng.tech/)进行以上操作</div> -->
+  <b-item-list *ngIf="prodevice">
+    <b-item showArrow="true" [routerLink]="[ '/devcenter/prodevice/editinfo',deviceType]">
+      编辑信息
+    </b-item>
+    <b-item showArrow="true" [routerLink]="[ '/devcenter/prodevice/editlayouter', deviceType ]"
+      *ngIf="prodevice.component=='Layouter2'">
+      编辑界面（Layouter2）
+    </b-item>
+    <b-item showArrow="true" [routerLink]="[ '/devcenter/prodevice/public', deviceType ]">
+      正式上线
+    </b-item>
+    <b-item showArrow="true" (click)="showDelWarn()">
+      <div style="color: #f00000;">删除设备</div>
+    </b-item>
+  </b-item-list>
 </ion-content>

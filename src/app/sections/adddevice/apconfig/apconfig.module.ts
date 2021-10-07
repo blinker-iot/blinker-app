@@ -2,11 +2,12 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Routes, RouterModule } from '@angular/router';
-
 import { IonicModule } from '@ionic/angular';
-
 import { ApconfigPage } from './apconfig';
-import { ConfigStatePageModule } from './config-state/config-state.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { TranslateModule } from '@ngx-translate/core';
+import { ConfigStatePage } from './config-state/config-state';
+import { IosGuideComponent } from './components/ios-guide/ios-guide.component';
 
 const routes: Routes = [
   {
@@ -20,9 +21,10 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     IonicModule,
-    ConfigStatePageModule,
-    RouterModule.forChild(routes)
+    DirectivesModule,
+    RouterModule.forChild(routes),
+    TranslateModule.forChild()
   ],
-  declarations: [ApconfigPage]
+  declarations: [ApconfigPage, ConfigStatePage, IosGuideComponent]
 })
-export class ApconfigPageModule {}
+export class ApconfigPageModule { }

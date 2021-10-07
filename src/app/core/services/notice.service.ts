@@ -2,11 +2,10 @@ import { Injectable } from '@angular/core';
 import {
   ToastController,
   LoadingController,
-  AlertController,
-  Events
+  AlertController
 } from '@ionic/angular';
 import { OpenNativeSettings } from '@ionic-native/open-native-settings/ngx';
-import { async } from 'q';
+import { TipService } from './tip.service';
 
 @Injectable({
   providedIn: 'root',
@@ -31,7 +30,8 @@ export class NoticeService {
     'tooManyScenes', 'tooLongSceneName', 'sameSceneName',
     'deviceShareLimit',
     'geolocationUpdated',
-    'permissionDenied'
+    'permissionDenied',
+    'notJson'
   ];
   alertCodeList = [
     1300, 1301,
@@ -45,64 +45,25 @@ export class NoticeService {
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
     private alertCtrl: AlertController,
-    public events: Events,
-    private openNativeSettings: OpenNativeSettings
+    private openNativeSettings: OpenNativeSettings,
+    private tipService: TipService
   ) {
   }
 
   init() {
-    this.events.subscribe("provider:notice", code => {
-      // console.log(code);
-      if (code == 1408) {
-        this.events.publish('page:home', 'unauthorized user');
-      }
-      this.showNotice(code);
-    });
-    this.events.subscribe("loading:show", content => {
-      this.showLoading(content);
-    });
-    this.events.subscribe("loading:hide", content => {
-      this.hideLoading();
-    });
-    this.events.subscribe("notice:hide", content => {
-      this.hideLoading();
-      this.hideAlert();
-    });
   }
 
   lastTime = 0;
   lastCode = 0;
-  showNotice(code) {
-    if (typeof code == "object") {
-      if (typeof code.title == 'undefined') {
-        this.showToastObject(code);
-      } else {
-        this.showAlertObject(code);
-      }
-    } else if (this.toastCodeList.indexOf(code) > -1) {
-      if ((new Date().getTime() > this.lastTime + 5000) || (this.lastCode != this.toastCodeList.indexOf(code)))//超过5s或者和上次的消息不同则弹窗
-      {
-        this.lastCode = this.toastCodeList.indexOf(code);
-        this.showToast(code);
-      }
-      this.lastTime = new Date().getTime();
-    } else if (this.alertCodeList.indexOf(code) > -1) {
-      if ((new Date().getTime() > this.lastTime + 5000) || (this.lastCode != this.alertCodeList.indexOf(code)))//超过5s或者和上次的消息不同则弹窗
-      {
-        this.lastCode = this.alertCodeList.indexOf(code)
-        this.showAlert(code);
-      }
-      this.lastTime = new Date().getTime();
-    }
-  }
 
-  showToast(code) {
+
+  async showToast(code) {
     this.hideLoading();
-    let toast = this.toastCtrl.create(this.mess[code.toString()])
-      .then(
-        toast => toast.present()
-      );
-
+    console.log(code);
+    if (typeof this.mess[code.toString()] != 'undefined')
+      this.tipService.show(this.mess[code.toString()])
+    else
+      this.tipService.show({ message: code.toString() })
   }
 
   showAlert(code) {
@@ -113,29 +74,11 @@ export class NoticeService {
       );
   }
 
-  showToastObject(code) {
-    this.hideLoading();
-    let toast = this.toastCtrl.create(code)
-      .then(
-        toast => toast.present()
-      );
-  }
-
-  showAlertObject(code) {
-    this.hideLoading();
-    this.alert = this.alertCtrl.create(code)
-      .then(
-        alert => alert.present()
-      );
-  }
-
   async showLoading(content) {
     console.log('showLoading');
     this.hideLoading();
     this.loading = await this.loadingCtrl.create(this.loadingMess[content])
-    // console.log('135');
-    this.loading.present();
-    // console.log('138');
+    await this.loading.present();
     if (content == "connect" || content == "login" || content == "load")
       this.loadTimer = window.setTimeout(async () => {
         let toast = await this.toastCtrl.create(this.loadTimeoutMess[content])
@@ -144,15 +87,13 @@ export class NoticeService {
           this.loading.dismiss();
         }
       }, 10000);
+    return
   }
 
-  // changeLoading(content) {
-  //   this.loading.config
-  // }
-
-  hideLoading() {
+  async hideLoading() {
     if (typeof this.loading != 'undefined')
-      this.loading.dismiss();
+      await this.loading.dismiss();
+    return
   }
 
   hideAlert() {
@@ -210,118 +151,95 @@ export class NoticeService {
   mess = {
     "-1": {
       message: '未知错误',
-      duration: 5000,
-      position: 'top'
+      type: 'error'
     },
     '1100': {
       message: 'Error:1100',
-      duration: 5000,
-      position: 'top'
+      type: 'error'
     },
     '1101': {
       message: 'Error:1101',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     },
     '1200': {
       message: '短信发送失败，请稍后再试',
-      duration: 5000,
-      position: 'top'
+      type: 'error'
     },
     '1201': {
       message: '短信验证码错误',
-      duration: 5000,
-      position: 'top'
+      type: 'error'
     },
     '1202': {
       message: 'Error:1202',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     },
     '1300': {
       message: 'Error:1300',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     },
     '1301': {
       message: 'Error:1301',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     },
     '1400': {
       message: '用户名或密码错误',
-      duration: 3000,
-      position: 'top'
+      type: 'warn',
     },
     '1401': {
       message: '该手机号已注册过，请直接登录',
-      duration: 6000,
-      position: 'top'
+      type: 'warn'
     },
     '1402': {
       message: '用户名修改失败，新用户名已存在',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     '1403': {
       message: '用户信息获取失败，请稍后再试',
-      duration: 5000,
-      position: 'top'
+      type: 'error'
     },
     '1404': {
       message: '密码错误',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     '1405': {
       message: 'Error:1405',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     },
     '1406': {
       message: 'Error:1406',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     },
     '1407': {
       message: '用户名格式错误，修改失败',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     '1408': {
       message: '登录超时，或账号已在其他设备登录，请重新登录',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     '1409': {
       message: 'Error:1409',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     '1410': {
       message: '设备信息获取失败，请稍后再试',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     },
     '1412': {
       message: '没有找到这个用户，请确认该手机号是否正确',
-      duration: 4000,
-      position: 'top'
+      type: 'warn'
     },
     '1500': {
       message: '添加设备失败',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     },
     '1501': {
       message: 'Error:1501',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     },
     '1502': {
       message: '解绑设备失败',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     },
     '1503': {
       header: '保存设备配置失败',
@@ -355,28 +273,28 @@ export class NoticeService {
     },
     '1509': {
       message: 'Error:1509',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     },
     '1510': {
       header: 'MQTT设备数量超出限制',
       message: '当前用户Diy设备已达上限,如需更多设备，请联系blinker团队',
       buttons: ['确认']
     },
+    '1801': {
+      message: '想将设备分享给另一个你？再注册一个账号吧',
+      type: 'warn'
+    },
     '9999': {
       message: '服务器未响应，请稍后再试',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     'noNetwork': {
       message: '无法连接网络，请检查是否连接了wifi或移动网络',
-      duration: 5000,
-      position: 'top'
+      type: 'warn'
     },
     'noNetworkError': {
       message: '无法连接网络，请检查手机设置是否阻止了后台网络通信',
-      duration: 10000,
-      position: 'top'
+      type: 'warn'
     },
     'addDeviceSuccess': {
       header: '设备添加成功',
@@ -385,13 +303,11 @@ export class NoticeService {
     },
     'copySuccess': {
       message: '已复制到剪切板',
-      duration: 3000,
-      position: 'top'
+      type: 'done'
     },
     'importSuccess': {
       message: '数据导入成功',
-      duration: 3000,
-      position: 'top'
+      type: 'done'
     },
     // "getMqttKeySuccess":{
 
@@ -422,8 +338,8 @@ export class NoticeService {
       }]
     },
     "openWifi": {
-      header: '手机未连接到热点,或没有开启位置权限',
-      message: '请连接到热点或开启位置权限，再进行设备配置',
+      header: '手机未连接到热点,或没有开启定位服务',
+      message: '请连接到热点或开启定位服务，再进行设备配置',
       buttons: [{
         text: '确认',
         handler: () => {
@@ -443,39 +359,32 @@ export class NoticeService {
     },
     'needPhoneNumberOrUserName': {
       message: '手机号码或用户名错误，请重新输入',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     'needPassword': {
       message: '密码格式不正确，请输入8位以上的密码',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     'needPasswordLength': {
       message: '密码过短，请输入8位以上的密码',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     'needUserNameLength': {
       message: '用户名过短，请输入6位以上的用户名',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     'userNameLengthToLong': {
       message: '用户名不能为11位纯数字',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     'newPasswordNotMatch': {
       message: '两次输入的新密码不匹配',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
     // 双击退出提示
     "doubleClickExit": {
       message: '再按一次退出应用',
-      duration: 2000,
-      position: 'top'
+      type: 'warn'
     },
     "updateInstalled": {
       header: '更新完成',
@@ -489,18 +398,15 @@ export class NoticeService {
     },
     'timeoutConnect': {
       message: '连接超时，请稍后再试',
-      duration: 3000,
-      position: 'middle'
+      type: 'warn'
     },
     'timeoutLogin': {
       message: '登录超时，请稍后再试',
-      duration: 3000,
-      position: 'middle'
+      type: 'warn'
     },
     'timeoutLoad': {
       message: '加载失败，请稍后再试',
-      duration: 3000,
-      position: 'middle'
+      type: 'warn'
     },
     // 'tooManyComponents': {
     //   message: '组件数量超出限制，你最多能添加99个组件',
@@ -509,8 +415,7 @@ export class NoticeService {
     // },
     'notPlaced': {
       message: '没有空间添加该组件，请先删除一些组件，再尝试添加',
-      duration: 2500,
-      position: 'top'
+      type: 'warn'
     },
     'noAction': {
       header: '你没有添加设备动作',
@@ -519,18 +424,19 @@ export class NoticeService {
     },
     'tooMuchAction': {
       message: '一个任务最多能执行两个动作',
-      duration: 2500,
-      position: 'top'
+      type: 'warn'
     },
     'canNotBeUsed': {
       message: '当前模式下无法使用该功能',
-      duration: 2500,
-      position: 'top'
+      type: 'warn'
     },
     'canNotBeUsed2': {
       message: '当前账号无法使用该功能',
-      duration: 2500,
-      position: 'top'
+      type: 'warn'
+    },
+    'canNotBeUsed3': {
+      message: '该组件仅限专业版用户使用',
+      type: 'warn'
     },
     'timingOffline': {
       header: '设备不在线',
@@ -542,60 +448,59 @@ export class NoticeService {
       message: '已成功将设备添加到桌面',
       buttons: ['确认']
     },
+    'ShortcutPinnedfailed': {
+      header: '添加失败',
+      message: '请先通过 权限设置 允许本应用创建桌面快捷方式，再进行添加',
+      buttons: [{
+        text: '确认',
+        handler: () => {
+          this.openNativeSettings.open("application_details");
+        }
+      }]
+    },
     'bleNeedLocation': {
       message: '使用蓝牙ble，需要先开启手机定位服务',
-      duration: 3500,
-      position: 'top'
+      type: 'warn'
     },
     'tooManyRooms': {
       message: '房间数量超出限制。 请删除一些房间，再尝试新建',
-      duration: 5500,
-      position: 'top'
+      type: 'warn'
     },
     'tooLongRoomName': {
       message: '房间名超出长度限制。 最长10个字符',
-      duration: 5500,
-      position: 'top'
+      type: 'warn'
     },
     'sameRoomName': {
       message: '这个房间已存在。 请设置一个新的房间名称，或点击已有房间进行管理',
-      duration: 5500,
-      position: 'top'
+      type: 'warn'
     },
     'tooManyScenes': {
       message: '场景数量超出限制。 请删除一些场景，再尝试新建',
-      duration: 5500,
-      position: 'top'
+      type: 'warn'
     },
     'tooLongSceneName': {
       message: '场景名超出长度限制。 最长10个字符',
-      duration: 5500,
-      position: 'top'
+      type: 'warn'
     },
     'sameSceneName': {
       message: '这个场景名已存在。 请使用其他场景名',
-      duration: 5500,
-      position: 'top'
+      type: 'warn'
     },
     'deviceShareLimit': {
       message: '一个设备最多可共享给9个用户',
-      duration: 5000,
-      position: 'top'
+      type: 'warn'
     },
     'geolocationUpdated': {
       message: '设备位置信息已更新',
-      duration: 3000,
-      position: 'top'
+      type: 'done'
     },
     'permissionDenied': {
       message: '您的账号无法使用该功能',
-      duration: 3000,
-      position: 'top'
+      type: 'warn'
     },
-    'notJson':{
+    'notJson': {
       message: '输入的数据，不是一个有效的JSON数据',
-      duration: 3000,
-      position: 'top'
+      type: 'error'
     }
   }
 

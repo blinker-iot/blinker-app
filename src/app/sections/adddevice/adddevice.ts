@@ -1,7 +1,8 @@
 ﻿import { Component } from '@angular/core';
-import { DevicelistService } from 'src/app/core/services/devicelist.service';
+import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 import { Router } from '@angular/router';
 import { AdddeviceService } from './adddevice.service';
+import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
   selector: 'page-adddevice',
@@ -14,27 +15,32 @@ export class AddDevicePage {
   _items;
   get items() {
     if (typeof this._items == 'undefined')
-      return this.devicelistService.addDeviceList
+      return this.deviceConfigService.addDeviceList
     return this._items;
   }
   set items(items) {
     this._items = items;
   }
 
+  get isAdvancedDeveloper() {
+    return this.dataService.isAdvancedDeveloper
+  }
+
   constructor(
-    private devicelistService: DevicelistService,
+    private deviceConfigService: DeviceConfigService,
     private router: Router,
-    private addservice: AdddeviceService
+    private addservice: AdddeviceService,
+    private dataService: DataService
   ) { }
 
   ngAfterViewInit(): void {
-    this.devicelistService.loaded.subscribe(loaded => {
+    this.deviceConfigService.loaded.subscribe(loaded => {
       if (loaded) console.log(this.items);
     })
   }
 
   getItems(e: any) {
-    this.items = this.devicelistService.addDeviceList
+    this.items = this.deviceConfigService.addDeviceList
     let items2 = [];
     let val = e.target.value;
     if (val && val.trim() != '') {
@@ -60,8 +66,11 @@ export class AddDevicePage {
     this.isShowSearchbar = !this.isShowSearchbar;
   }
 
+  scanQrcode() {
+    this.router.navigate(['/adddevice/qrscanner'])
+  }
+
   gotoGuide(device) {
-    // console.log(device);
     this.addservice.isDev = device.isDev
     this.router.navigate(['/adddevice', device.deviceType])
   }

@@ -1,8 +1,7 @@
 <div class="bar">
   <div class="btns">
     <ng-container *ngFor="let button of widgetList;index as i">
-      <div class="btn" [ngClass]="{'begin':i==0,'end':i==widgetList.length-1}"
-        *ngIf="!((button.type=='joy' && device.config.mode=='mqtt') ||(button.type=='joy' && device.config.mode=='net' ) || (button.type=='deb' && hasDebug)||(button.type=='tim' && hasTiming))">
+      <div class="btn" [ngClass]="{'begin':i==0,'end':i==widgetList.length-1}">
         <div class="btn-inner " (click)="addWidget(button.type)">
           <div class="block">
             <i class="{{button.icon}}"></i>

@@ -1,0 +1,77 @@
+.tab-box {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 15px;
+
+    .tab {
+        width: 45vw;
+        height: 60px;
+        border-radius: 8px;
+        background-color: #FFF;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+}
+
+
+
+deviceblock-list {
+    .scrollHeight {
+        height: 25vw;
+    }
+}
+
+.selectBox {
+    .selectTitle {
+        padding: 15px 15px 15px 16px;
+    }
+}
+
+.marginh10 {
+    margin-top: 10px;
+}
+
+.devicebox {
+    position: absolute;
+    display: flex;
+    flex-flow: row; // margin-bottom: 160px;
+
+    .selected {
+        opacity: 1;
+        box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8) !important;
+    }
+
+    .unselected {
+        opacity: 0.6;
+    }
+
+    .actionblock {
+        display: flex;
+        align-items: center;
+        justify-content: center; // position: relative;
+        width: 23vw;
+        height: 23vw;
+        margin: 3px 0 0 3px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+}
+
+deviceblock {
+    position: relative;
+    width: 23vw;
+    height: 23vw;
+    margin: 3px 0 0 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+    .button {
+        height: 20%;
+        font-size: 11px;
+    }
+}
+
+.disable {
+    color: rgba(255, 255, 255, 0.5);
+}

@@ -6,6 +6,8 @@ import { Routes, RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 
 import { BwconfigPage } from './bwconfig';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { ConfigStateComponent } from './config-state/config-state.component';
 
 const routes: Routes = [
   {
@@ -19,8 +21,9 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     IonicModule,
+    DirectivesModule,
     RouterModule.forChild(routes)
   ],
-  declarations: [BwconfigPage]
+  declarations: [BwconfigPage,ConfigStateComponent]
 })
 export class BwconfigPageModule { }

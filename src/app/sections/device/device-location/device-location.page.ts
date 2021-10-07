@@ -1,10 +1,10 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { DeviceService } from 'src/app/core/services/device.service';
-import { UserService } from 'src/app/core/services/user.service';
 import { GeolocationService } from 'src/app/core/services/geolocation.service';
 import { ActivatedRoute } from '@angular/router';
-import { Events, NavController } from '@ionic/angular';
+import { NavController } from '@ionic/angular';
 import { DataService } from 'src/app/core/services/data.service';
+import { NoticeService } from 'src/app/core/services/notice.service';
 declare var L;
 
 @Component({
@@ -19,7 +19,7 @@ export class DeviceLocationPage implements OnInit {
   btnDisabled = true;
   id;
   device;
-  
+
   get isDiyDevice() {
     return this.device.config.isDiy
   }
@@ -40,24 +40,30 @@ export class DeviceLocationPage implements OnInit {
 
   constructor(
     private deviceService: DeviceService,
-    private userService: UserService,
     private dataService: DataService,
     private geolocationService: GeolocationService,
     private activatedRoute: ActivatedRoute,
-    private evevts: Events,
-    private navCtrl: NavController
+    private navCtrl: NavController,
+    private noticeService: NoticeService
   ) { }
 
   ngOnInit() {
-    this.id = this.activatedRoute.snapshot.params['id'];
-    this.device = this.dataService.device.dict[this.id]
+
   }
 
-  ngAfterContentInit() {
-    this.geolocationService.getUserPosition().then(result => {
+  ngAfterViewInit(): void {
+    this.dataService.initCompleted.subscribe(result => {
       if (result) {
-        this.initMap();
-        this.getAddress();
+        this.id = this.activatedRoute.snapshot.params['id'];
+        this.device = this.dataService.device.dict[this.id]
+        this.geolocationService.getUserPosition().then(result => {
+          if (result) {
+            // setTimeout(() => {
+              this.initMap();
+              this.getAddress();
+            // }, 100);
+          }
+        })
       }
     })
   }
@@ -81,7 +87,12 @@ export class DeviceLocationPage implements OnInit {
       maxZoom: 18,
       minZoom: 5
     }).addTo(this.mymap);
-    let marker = L.marker([latitude, longitude]).addTo(this.mymap);
+    let markerIcon = L.icon({
+      iconUrl: 'assets/img/marker.png',
+      iconSize: [36, 36],
+      className: 'mapicon'
+    });
+    let marker = L.marker([latitude, longitude], { icon: markerIcon }).addTo(this.mymap);
     marker.bindPopup(this.device.config.customName);
     this.mymap.on('move', () => {
       marker.setLatLng(this.mymap.getCenter())
@@ -107,7 +118,7 @@ export class DeviceLocationPage implements OnInit {
     console.log(newConfig);
     if (await this.deviceService.saveDeviceConfig(this.device, newConfig)) {
       this.deviceService.loadDeviceConfig(this.device);
-      this.evevts.publish("provider:notice", 'geolocationUpdated');
+      this.noticeService.showToast('geolocationUpdated')
       this.navCtrl.pop();
     }
   }

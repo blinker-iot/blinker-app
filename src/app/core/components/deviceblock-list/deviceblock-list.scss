@@ -1,4 +1,4 @@
-.sortablemenu{
+.sortablemenu {
     position: fixed;
     top: 0;
 }
@@ -8,31 +8,30 @@
     justify-content: space-between;
     flex-flow: row wrap;
     align-content: flex-start;
-    padding: 0 15px 0 15px;
+    padding: 0 10px;
     position: relative;
-    visibility: visible; 
+    visibility: visible;
     .schosen {
         opacity: 0.4;
-        border-radius: 5px;
+        border-radius: 8px;
     }
     .sdrag {
         opacity: 1 !important;
-        border-radius: 5px;
+        border-radius: 8px;
         box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8);
     }
     .sghost {
-        // visibility: visible !important;
         opacity: 0.4;
-        border-radius: 5px;
-        // box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8);
+        border-radius: 8px;
     }
 }
 
 deviceblock {
-    margin-top: 2.5vw; // margin-top: 3.5vw;
+    margin-top: 2.5vw;
+    height: 29vw;
 }
 
-.device-space{
+.device-space {
     margin-top: 2.5vw;
 }
 

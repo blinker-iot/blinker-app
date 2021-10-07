@@ -1,15 +1,17 @@
 import { Component } from '@angular/core';
-import { AlertController, Events, Platform, NavController, ModalController } from '@ionic/angular';
-import { deviceName12 } from 'src/app/core/functions/func';
-
+import { AlertController, Platform, NavController, ModalController } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
 import { ActivatedRoute } from '@angular/router';
 import { DeviceIconPage } from '../../../core/pages/device-icon/device-icon';
-import { ViewService } from 'src/app/view/view.service';
 import { ShareService } from '../../share/share.service';
 import { DataService } from 'src/app/core/services/data.service';
-// import { IeconfigPage } from 'src/app/core/device/layouter2/ieconfig/ieconfig.page';
+import { BlinkerDevice } from 'src/app/core/model/device.model';
+import { NoticeService } from 'src/app/core/services/notice.service';
+import { ImageList } from 'src/app/configs/app.config';
+import { ImageService } from 'src/app/core/services/image.service';
+import { FileTransfer, FileTransferObject } from '@ionic-native/file-transfer/ngx';
+import { File } from '@ionic-native/file/ngx';
 
 declare var window;
 
@@ -30,6 +32,10 @@ export class DeviceSettingsPage {
 
   get isSharedDevice() {
     return this.device.config.isShared
+  }
+
+  get isAdvancedDeveloper() {
+    return this.dataService.isAdvancedDeveloper
   }
 
   get isDevDevice() {
@@ -61,28 +67,30 @@ export class DeviceSettingsPage {
     private deviceService: DeviceService,
     private dataService: DataService,
     private alertCtrl: AlertController,
-    private events: Events,
+    private noticeService: NoticeService,
     public platform: Platform,
     private navCtrl: NavController,
     private modalCtrl: ModalController,
-    private viewService: ViewService,
-    private shareService: ShareService
+    private shareService: ShareService,
+    private imageService: ImageService,
+    private fileTransfer: FileTransfer,
+    private file: File
   ) {
   }
 
+  subscription;
   ngOnInit() {
-    this.dataService.userDataLoader.subscribe(loaded => {
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
       if (loaded) {
         this.id = this.activatedRoute.snapshot.params['id'];
         this.device = this.dataService.device.dict[this.id]
         this.loaded = loaded
       }
     })
-    this.viewService.setDarkStatusBar();
   }
 
   ngOnDestroy() {
-    this.viewService.setLightStatusBar();
+    this.subscription.unsubscribe();
     if (this.confirm)
       this.confirm.dismiss();
   }
@@ -135,6 +143,7 @@ export class DeviceSettingsPage {
       component: DeviceIconPage,
     });
     modal.onDidDismiss().then(async image => {
+      if (typeof image.data == 'undefined') return
       let newConfig = {
         "image": image.data
       }
@@ -165,11 +174,10 @@ export class DeviceSettingsPage {
             if (this.isSharedDevice) {
               if (await this.shareService.deleteSharedDevice(this.device.id))
                 this.navCtrl.navigateRoot('/')
-            } else {
-              if (await this.userService.delDevice(this.device)) {
-                this.navCtrl.navigateRoot('/');
-                this.userService.getAllInfo();
-              }
+              this.userService.getAllInfo();
+            } else if (await this.userService.delDevice(this.device)) {
+              this.navCtrl.navigateRoot('/');
+              this.userService.getAllInfo();
             }
           }
         }
@@ -184,7 +192,13 @@ export class DeviceSettingsPage {
       return;
     }
     if (!await this.checkSupportShort()) return;
-    let base64Data = await this.getBase64Image('assets/img/devices/icon/' + this.device.config.image)
+    // console.log(this.device.config.image);
+    let base64Data;
+    if (this.device.config.image.indexOf('https://') > -1 || this.device.config.image.indexOf('http://') > -1) {
+      base64Data = await this.getBase64ImageByUrl(this.device.config.image)
+    } else {
+      base64Data = await this.getBase64Image(this.getImagePath(this.device.config.image))
+    }
     let shortcut = {
       id: this.device.id,
       shortLabel: this.device.config.customName,
@@ -197,18 +211,35 @@ export class DeviceSettingsPage {
 
     window.plugins.Shortcuts.addPinned(shortcut,
       () => {
-        this.events.publish("provider:notice", 'ShortcutPinnedSuccessfully');
+        this.noticeService.showAlert('ShortcutPinnedSuccessfully')
       },
       error => {
-        window.alert('Error: ' + error);
-        console.log(error);
-        // this.androidPermissions.requestPermission(this.androidPermissions.PERMISSION.INSTALL_SHORTCUT);
+        // window.alert('Error: ' + error);ShortcutPinnedfailed
+        this.noticeService.showAlert('ShortcutPinnedfailed');
+        // console.log(error);
       })
   }
 
-  getBase64Image(imgurl): Promise<string> {
+  getBase64ImageByUrl(imgurl): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      console.log(imgurl);
+      let path = this.file.externalDataDirectory + 'temp.png';
+      const fileTransfer: FileTransferObject = this.fileTransfer.create();
+      fileTransfer.download(imgurl, path).then((entry) => {
+        console.log('download complete: ' + entry.toURL());
+        // let filename=entry.toURL().slice(entry.toURL().lastIndexOf("/"))
+        this.file.readAsDataURL(this.file.externalDataDirectory, 'temp.png').then(base64 => {
+          base64 = base64.replace("data:image/png;base64,", '');
+          return resolve(base64);
+        })
+      })
+    })
+  }
+
+  getBase64Image(imgurl) {
     return new Promise<string>((resolve, reject) => {
       let image = new Image();
+      image.setAttribute('crossOrigin', 'anonymous');
       image.src = imgurl;
       image.onload = () => {
         let canvas = document.createElement("canvas");
@@ -224,6 +255,20 @@ export class DeviceSettingsPage {
         return resolve(base64);
       }
     })
+  }
+
+  getImagePath(filename) {
+    let url
+    if (filename.indexOf('.png') > -1)
+      filename = filename.substring(0, filename.indexOf('.png'))
+    if (ImageList.indexOf(filename) > -1) {
+      url = `assets/img/devices/icon/${filename}.png`
+    } else if (this.imageService.deviceIconList.indexOf(filename) > -1) {
+      url = this.imageService.deviceIconDict[filename]
+    } else {
+      url = `assets/img/devices/icon/unknown.png`
+    }
+    return url
   }
 
   checkSupportShort(): Promise<boolean> {

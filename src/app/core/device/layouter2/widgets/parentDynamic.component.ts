@@ -1,14 +1,13 @@
-import { Component, Input, ViewEncapsulation, ElementRef, ChangeDetectionStrategy } from '@angular/core';
-import { ModalController, Events } from '@ionic/angular';
+import { Component, Input, ViewChild } from '@angular/core';
+import { ModalController } from '@ionic/angular';
 import { WidgetEditor } from '../widget-editor/widget-editor';
-import { Layouter2Service } from '../layouter2.service';
+import { LayouterService } from '../../layouter.service';
+import { Layouter2Widget } from './config';
 
 @Component({
   selector: 'widget-dynamic',
   templateUrl: './parentDynamic.component.html',
-  styleUrls: ['parentDynamic.component.scss'],
-  // changeDetection: ChangeDetectionStrategy.Default,
-  // encapsulation: ViewEncapsulation.None
+  styleUrls: ['parentDynamic.component.scss']
 })
 export class ParentDynamicComponent {
   @Input()
@@ -21,27 +20,25 @@ export class ParentDynamicComponent {
   @Input()
   isDemo = false;
 
+  @ViewChild('widgetComponent', { static: false }) widgetComponent: Layouter2Widget;
+
   public get mode() {
-    return this.layouter2Service.mode
+    return this.LayouterService.mode
+  }
+
+  get color() {
+    return this.widget.clr
   }
 
   @Input()
   lstyle;
 
   constructor(
-    private layouter2Service: Layouter2Service,
+    private LayouterService: LayouterService,
     private modalCtrl: ModalController,
-    private events: Events
   ) { }
 
   async edit(e) {
-    // e.stopPropagation()
-    // console.log(e);
-    // let dom = this.el.nativeElement.getBoundingClientRect()
-    // console.log(dom);
-    // this.renderer.setStyle(this.el.nativeElement, 'top', `${dom.top}px`)
-    // this.renderer.setStyle(this.el.nativeElement, 'left', `${dom.left}px`)
-    // this.renderer.addClass(this.el.nativeElement, 'enter-edit')
     let modal = await this.modalCtrl.create({
       component: WidgetEditor,
       componentProps: {
@@ -49,9 +46,12 @@ export class ParentDynamicComponent {
         'device': this.device
       }
     });
-    modal.onDidDismiss().then(() => {
-      this.events.publish(this.device.deviceName + ':refreshWidget', this.widget)
-    });
+    if (typeof this.widgetComponent != 'undefined') {
+      modal.onDidDismiss().then(() => {
+        this.widgetComponent.refresh();
+      });
+    }
+
     modal.present();
   }
 

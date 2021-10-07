@@ -7,7 +7,6 @@ import {
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
 import { Router } from '@angular/router';
-import { deviceName12 } from 'src/app/core/functions/func';
 import { NativeService } from '../../services/native.service';
 
 @Component({
@@ -45,7 +44,6 @@ export class Deviceblock {
     public router: Router,
     public deviceService: DeviceService,
     public userService: UserService,
-    private nativeService: NativeService
   ) { }
 
   ngAfterViewInit() {
@@ -72,7 +70,6 @@ export class Deviceblock {
   }
 
   waiting() {
-    this.nativeService.vibrate();
     //显示等待反馈动画
     let oldSwitch = this.device.data.switch
     this.device.data.switch = "waiting";

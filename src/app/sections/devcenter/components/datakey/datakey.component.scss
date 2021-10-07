@@ -1,83 +1,93 @@
-[device-card] {
-    background: #fff;
-    border-radius: 6px;
-    box-shadow: 0px 2px 8px 0px rgba(0, 0, 0, 0.06);
-    margin-bottom: 6px;
+b-item {
+    ::ng-deep {
 
-    [card-header] {
-        display: flex;
-        align-items: center;
-        height: 60px;
-
-        img {
-            margin: 0 15px;
-            height: 50px;
-        }
-
-        [device-info] {
-            font-size: 13px;
-
-            [name] {
-                color: #444444;
-                font-size: 15px;
-            }
-
-            [id] {
-                color: #999999;
-                font-size: 12px;
-            }
-        }
-    }
-
-    [linebox] {
-        height: 1px;
-        width: 100%;
-        padding: 0 15px;
-
-        [line] {
-            background: #e0e0e0;
-            height: 1px;
+        .data-box {
+            display: flex;
+            flex-direction: column;
             width: 100%;
         }
-    }
 
-    [card-footer] {
-        padding: 15px;
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        flex-flow: row wrap;
-
-        [key] {
-            background: #389BEE;
-            border-radius: 6px;
-            height: 40px;
-            width: 30%;
-            color: #fff;
-            position: relative;
+        [card-header] {
             display: flex;
-            justify-content: center;
             align-items: center;
-            margin-top: 15px;
+            height: 60px;
 
-            [delbtn] {
-                position: absolute;
-                top: -12px;
-                right: -10px;
-                border-radius: 50%;
-                width: 28px;
-                height: 28px;
-                color: #389BEE;
-                border: 1px solid #389BEE;
-                background: #fff;
+            b-device-img {
+                margin: 0 15px;
+
+                ::ng-deep {
+                    img {
+                        height: 50px;
+                    }
+
+                }
+
+            }
+
+            [device-info] {
+                font-size: 13px;
+
+                [name] {
+                    color: #444444;
+                    font-size: 15px;
+                }
+
+                [id] {
+                    color: #999999;
+                    font-size: 12px;
+                }
+            }
+        }
+
+        [linebox] {
+            height: 1px;
+            width: 100%;
+
+            [line] {
+                background: #e0e0e0;
+                height: 1px;
+                width: 100%;
+            }
+        }
+
+        [card-footer] {
+            margin-top: 5px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            flex-flow: row wrap;
+
+            [key] {
+                background: #389BEE;
+                border-radius: 6px;
+                height: 40px;
+                width: 30%;
+                color: #fff;
+                position: relative;
                 display: flex;
                 justify-content: center;
                 align-items: center;
-            }
-        }
+                margin-top: 15px;
 
-        .space {
-            margin-right: 4.2%;
+                [delbtn] {
+                    position: absolute;
+                    top: -12px;
+                    right: -10px;
+                    border-radius: 50%;
+                    width: 28px;
+                    height: 28px;
+                    color: #389BEE;
+                    border: 1px solid #389BEE;
+                    background: #fff;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
+            }
+
+            .space {
+                margin-right: 4.2%;
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
-<div device-bg #backgroundimg
+<div device-bg #backgroundimg class="animated fadeIn faster"
   [ngStyle]="{'height': config.background.isFull?'100vh':bgPosition}">
-  <img src={{config.background.img}}>
+  <img src={{config.background.img}} *ngIf="config.background.img !=''">
 </div>
 <div #gridsterBox device-box class="l2">
   <gridster [options]="options">
@@ -15,6 +15,6 @@
 <div class="animated slideInUp faster layouter-bar" *ngIf="mode=='1'">
   <widget-listbar></widget-listbar>
 </div>
-<div class="layouter-bgbar" *ngIf="mode=='2'">
+<!-- <div class="layouter-bgbar" *ngIf="mode=='2'">
   <layouter2-background (background)="backgroundChanged($event)"></layouter2-background>
-</div>
+</div> -->

@@ -1,48 +1,49 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>{{device.config.customName}} 分享管理</ion-title>
+    <ion-title>{{device.config.customName}} {{'SHARING.SHARING' | translate}}</ion-title>
   </ion-toolbar>
 </ion-header>
 <ion-content>
   <div class="noshared animated fadeIn" textcenter
     *ngIf="!shareData.share0[deviceName] && !shareData.share[deviceName]">
-    该设备没有分享给其他用户
+    {{'SHARING.NO_SHARING' | translate}}
   </div>
-  <ng-container *ngIf="shareData.share0[deviceName]">
-    <ng-container *ngFor="let item of shareData.share0[deviceName];index as i">
-      <div class="item" [ngClass]="{'animated zoomOut': i==share0Selected}">
-        <div class="avatar">
-          <img src="{{userService.avatar}}" onError="this.src='assets/img/avatar.png'">
+  <b-item-list>
+    <ng-container *ngIf="shareData.share0[deviceName]">
+      <b-item *ngFor="let item of shareData.share0[deviceName];index as i">
+        <div class="img-box">
+          <img class="avatar" src="{{AVATAR_API + item.userId+'.jpg'}}" onError="this.src='assets/img/avatar.png'">
         </div>
-        <div class="namebox">
+        <div class="text-box">
           <div class="name">{{item.username}}</div>
-          <div class="act">等待用户接受</div>
+          <div class="other">{{'SHARING.WAIT' | translate}}</div>
         </div>
-        <div class="btn" (click)="cancel0(item.uuid,i)">
-          取消共享
+        <div class="right-btn" (click)="cancel0(item.uuid,i)">
+          {{'SHARING.CANCEL' | translate}}
         </div>
-      </div>
+      </b-item>
     </ng-container>
-  </ng-container>
-  <ng-container *ngIf="shareData.share[deviceName]">
-    <ng-container *ngFor="let item of shareData.share[deviceName];index as i">
-      <div class="item" [ngClass]="{'animated zoomOut': i==shareSelected}">
-        <div class="avatar">
-          <img src="{{userService.avatar}}" onError="this.src='assets/img/avatar.png'">
+    <ng-container *ngIf="shareData.share[deviceName]">
+      <b-item *ngFor="let item of shareData.share[deviceName];index as i">
+        <div class="img-box">
+          <img class="avatar" src="{{AVATAR_API + item.userId+'.jpg'}}" onError="this.src='assets/img/avatar.png'">
         </div>
-        <div class="namebox">
+        <div class="text-box">
           <div class="name">{{item.username}}</div>
-          <div class="act">{{item.date | msToDate}} 共享</div>
+          <div class="other">{{item.date | msToDate}} 共享</div>
         </div>
-        <div class="btn" (click)="cancel(item.uuid,i)">
-          取消共享
+        <div class="right-btn" (click)="cancel(item.uuid,i)">
+          {{'SHARING.CANCEL' | translate}}
         </div>
-      </div>
+      </b-item>
     </ng-container>
-  </ng-container>
-  <div class="hspace"></div>
-  <div class="addbtn" (click)="addShare()">+ 添加共享</div>
+  </b-item-list>
 </ion-content>
+<ion-footer class="ion-no-border">
+  <ion-toolbar>
+    <b-bottom-btn (click)="addShare()">+  {{'SHARING.ADD' | translate}}</b-bottom-btn>
+  </ion-toolbar>
+</ion-footer>

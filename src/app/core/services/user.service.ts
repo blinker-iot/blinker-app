@@ -1,11 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Events } from '@ionic/angular';
 import { sha256 } from '../functions/func';
 import { NoticeService } from './notice.service';
-import { BehaviorSubject } from 'rxjs';
 import { BlinkerResponse } from '../model/response.model';
-import { API } from 'src/app/configs/app.config';
+import { API } from 'src/app/configs/api.config';
 import { DataService } from './data.service';
 
 
@@ -13,8 +11,6 @@ import { DataService } from './data.service';
   providedIn: 'root'
 })
 export class UserService {
-
-  loaded = new BehaviorSubject(false);
 
   get uuid() {
     return this.dataService.auth.uuid
@@ -26,26 +22,12 @@ export class UserService {
 
   constructor(
     private http: HttpClient,
-    private events: Events,
     private dataService: DataService,
     private noticeService: NoticeService,
   ) { }
 
-  // 用于其他手机登录检测
-  initCheckToken() {
-    this.events.unsubscribe('UserService:checkToken');
-    this.events.subscribe('UserService:checkToken', () => {
-      this.getUserInfo();
-    })
-  }
 
   async getAllInfo(): Promise<boolean> {
-    // console.log("uuid: " + this.uuid);
-    // console.log("token:" + this.token);
-    this.initCheckToken();
-    // 不知为何loading会卡住不出来 2019.9.9
-    // await this.noticeService.showLoading('load');
-
     return this.http.get<BlinkerResponse>(API.USER.ALL, {
       params: {
         uuid: this.uuid,
@@ -54,15 +36,13 @@ export class UserService {
     })
       .toPromise()
       .then(resp => {
-        console.log(resp);
+        console.log(JSON.parse(JSON.stringify(resp)));
         if (resp.message == 1000) {
           this.dataService.load(resp.detail)
           this.noticeService.hideLoading();
-          this.loaded.next(true);
           return true;
         }
         else {
-          this.events.publish("loading:hide", "hide");
           this.noticeService.hideLoading();
           return false;
         }
@@ -102,9 +82,6 @@ export class UserService {
         console.log(response);
         let data = JSON.parse(JSON.stringify(response));
         if (data.message == 1000) {
-          // this.deviceService.devices = data.detail.devices;
-          // this.deviceList = data.detail.deviceList;
-          // this.events.publish('deviceList', 'update')
           return true;
         } else
           return false;
@@ -227,6 +204,30 @@ export class UserService {
           console.log("头像上传失败");
           return false;
         }
+      })
+      .catch(this.handleError);
+  }
+
+  cancelAccount(password) {
+    console.log(password);
+    return this.http
+      .get(API.USER.CANCEL_ACCOUNT,
+        {
+          params: {
+            uuid: this.uuid,
+            token: this.token,
+            password: sha256(password)
+          }
+        }
+      )
+      .toPromise()
+      .then(response => {
+        console.log(response);
+        let data = JSON.parse(JSON.stringify(response));
+        if (data.message == 1000) {
+          return true;
+        } else
+          return false;
       })
       .catch(this.handleError);
   }

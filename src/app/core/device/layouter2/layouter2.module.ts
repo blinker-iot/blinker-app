@@ -10,28 +10,22 @@ import { Layouter2GuidePageModule } from './guide/layouter2-guide.module';
 import { BackgroundComponent } from './background/background.component';
 import { WidgetEditor } from './widget-editor/widget-editor';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Routes } from '@angular/router';
 import { IconListPageModule } from 'src/app/core/pages/icon-list/icon-list.module';
 import { ComponentsModule } from 'src/app/core/components/components.module';
-
-// const routes: Routes = [
-//   {
-//     path: 'device/:id/layouter',
-//     component: Layouter2
-//   }
-// ];
+import { DirectivesModule } from '../../directives/directives.module';
 
 @NgModule({
   imports: [
     CommonModule,
     IonicModule,
+    DirectivesModule,
     FormsModule,
     ComponentsModule,
     GridsterModule,
     WidgetsModule,
     WidgetListbarModule,
     Layouter2GuidePageModule,
-    IconListPageModule,
+    IconListPageModule
     // RouterModule.forChild(routes),
   ],
   declarations: [
@@ -41,10 +35,6 @@ import { ComponentsModule } from 'src/app/core/components/components.module';
   ],
   exports: [
     Layouter2
-  ],
-  entryComponents: [
-    Layouter2,
-    WidgetEditor
   ]
 })
 

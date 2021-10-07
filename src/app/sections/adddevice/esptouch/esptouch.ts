@@ -1,23 +1,25 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
 import {
   Platform,
-  Events,
   ModalController,
 } from '@ionic/angular';
 import { PermissionService } from 'src/app/core/services/permission.service';
 import { OpenNativeSettings } from '@ionic-native/open-native-settings/ngx';
 import { ConfigStatePage } from './config-state/config-state';
+import { Geolocation } from '@ionic-native/geolocation/ngx';
+import { NoticeService } from 'src/app/core/services/notice.service';
+import { Storage } from '@ionic/storage';
 
 declare var WifiWizard2;
 
 @Component({
   selector: 'esptouch',
   templateUrl: 'esptouch.html',
-  styleUrls: ['esptouch.scss']
+  styleUrls: ['../config.scss']
 })
 export class EsptouchPage {
-  myssid: string;
-  mypasswd: string;
+  myssid: string = '';
+  mypasswd: string = '';
 
   is5G: boolean;
 
@@ -25,14 +27,25 @@ export class EsptouchPage {
 
   platformResume;
 
+  savePassword = false
+
+  passwordList = {}
+
   constructor(
     private platform: Platform,
-    private events: Events,
+    private noticeService: NoticeService,
     private permissionService: PermissionService,
     private openNativeSettings: OpenNativeSettings,
     private changeDetectorRef: ChangeDetectorRef,
-    private modalCtrl: ModalController
+    private modalCtrl: ModalController,
+    private geo:Geolocation,
+    private storage: Storage
   ) {
+    this.geo.getCurrentPosition();
+  }
+
+  ngOnInit(): void {
+    this.loadSavePasswordConfig()
   }
 
   ngAfterViewInit() {
@@ -51,6 +64,10 @@ export class EsptouchPage {
   }
 
   ngOnDestroy() {
+    if (this.savePassword)
+      this.saveLocalPassowrd();
+    else
+      this.delLocalPassowrd()
     if (this.platform.is("cordova")) this.platformResume.unsubscribe();
   }
 
@@ -61,7 +78,7 @@ export class EsptouchPage {
       },
       error => {
         console.log(error);
-        this.events.publish("provider:notice", "openWifi");
+        this.noticeService.showAlert("openWifi");
       }
     )
     // WifiWizard2.getConnectedSSID(ssid => { this.ssidHandler(ssid) }, err => { this.ssidFail(err) })
@@ -72,28 +89,25 @@ export class EsptouchPage {
     //这里android会多返回两个冒号""
     if (this.platform.is('android'))
       // ssid = ssid.slice(1, ssid.length - 1);
-    console.log("当前WiFi：" + ssid);
+      console.log("当前WiFi：" + ssid);
     //WiFi打开，但未连接到任何网络
-    if (ssid == "unknown ssid") {
-      this.events.publish("provider:notice", "openWifi");
+    if (ssid == "unknown ssid" || ssid == '<unknown ssid>') {
+      this.noticeService.showAlert("openWifi");
     } else {
       this.myssid = ssid;
       this.is5G = false;
       if (this.myssid.toLowerCase().indexOf('5g') > -1)
         this.is5G = true;
+      this.loadLocalPassowrd();
     }
   };
-
-  // ssidFail(err) {
-  //   console.log(err);
-  //   this.events.publish("provider:notice", "openWifi");
-  // };
 
   openWifiSetting() {
     this.openNativeSettings.open("wifi");
   }
 
   async startConfig() {
+
     const modal = await this.modalCtrl.create({
       component: ConfigStatePage,
       componentProps: {
@@ -107,4 +121,39 @@ export class EsptouchPage {
   showPassword() {
     this.pwshow = !this.pwshow
   }
+
+  loadSavePasswordConfig() {
+    this.storage.get('saveWiFiPassword').then((val) => {
+      if (val == null) return
+      this.savePassword = val
+    });
+  }
+
+  clickSavePassword() {
+    this.savePassword = !this.savePassword
+    this.storage.set('saveWiFiPassword', this.savePassword);
+  }
+
+  saveLocalPassowrd() {
+    if (this.savePassword && this.myssid != 'unknown ssid' && this.myssid != '') {
+      this.passwordList[this.myssid] = this.mypasswd
+      this.storage.set('passwordList', this.passwordList);
+    }
+  }
+
+  loadLocalPassowrd() {
+    if (this.myssid != 'unknown ssid' && this.myssid != '') {
+      this.storage.get('passwordList').then((val) => {
+        if (val == null) return
+        if (typeof val[this.myssid] != 'undefined') {
+          this.mypasswd = val[this.myssid]
+        }
+      });
+    }
+  }
+
+  delLocalPassowrd() {
+    this.storage.set('passwordList', null);
+  }
+
 }

@@ -1,0 +1,60 @@
+<ion-header>
+  <ion-toolbar overlayPadding>
+    <ion-buttons slot="start">
+      <ion-menu-button><i class="iconfont icon-menu"></i></ion-menu-button>
+    </ion-buttons>
+    <ion-title>白河路56号院</ion-title>
+    <ion-buttons slot="end">
+      <ion-button [routerLink]="['/adddevice']">
+        <i class="iconfont icon-add-circle"></i>
+      </ion-button>
+      <ion-button (click)="changeView()">
+        <i class="iconfont icon-view"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content fullscreen=true scrollY=false>
+  <div #refreshZone></div>
+  <div class="slidesbox" #deviceZone>
+    <ng-container *ngIf="loaded">
+      <!-- <ion-slides #deviceZone [options]="slideOpts" (ionSlideDidChange)="slideChanged($event)">
+        <ion-slide *ngFor="let card of deviceDataList">
+          <div class="card-item animated fadeInDown">
+            <div class="device-info">小区南门</div>
+            <div class="switch"><i class="fal fa-key"></i></div>
+            <div class="more"></div>
+          </div>
+        </ion-slide>
+      </ion-slides> -->
+      <div class="swiper-pagination"></div>
+
+    </ng-container>
+  </div>
+  <div class="btn-box">
+    <div class="btn">
+      <i class="fas fa-scroll color0"></i>
+      物业公告
+    </div>
+    <div class="btn">
+      <i class="fas fa-lock-alt color1"></i>
+      访客密码
+    </div>
+    <div class="btn">
+      <i class="fas fa-phone-square color2"></i>
+      呼叫记录
+    </div>
+    <div class="btn">
+      <i class="fas fa-user-circle color3"></i>
+      人脸采集
+    </div>
+    <div class="btn">
+      <i class="fas fa-clipboard-list color4"></i>
+      开门记录
+    </div>
+    <div class="btn">
+      <i class="fas fa-user-alt color5"></i>
+      个人中心
+    </div>
+  </div>
+</ion-content>

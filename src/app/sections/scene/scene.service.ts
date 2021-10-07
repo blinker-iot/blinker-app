@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { API } from 'src/app/configs/app.config';
+import { API } from 'src/app/configs/api.config';
 import { DataService } from 'src/app/core/services/data.service';
 // import { LoaderService } from 'src/app/core/services/loader.service';
 

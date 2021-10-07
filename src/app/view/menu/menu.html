@@ -1,5 +1,6 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
+    <blinker-lang-selector></blinker-lang-selector>
     <ion-buttons slot="end">
       <ion-button (click)="goto('/message')">
         <i class="fal fa-envelope"></i>
@@ -10,35 +11,23 @@
 
 <ion-content fullscreen scrollY=false>
   <div class="menubox">
-    <!-- <div class="headerbox">
-    <div class="title">
-    </div>
-    <div class="mail" (click)="goto('/message')">
-      <i class="fal fa-envelope"></i>
-    </div>
-  </div> -->
     <div class="userbox" *ngIf="loaded" (click)="goto('/user')">
       <div class="avatar">
         <img src="{{user.avatar}}" onError="this.src='assets/img/avatar.png'">
       </div>
       <div class="textbox">
         <div>{{user.username}}</div>
-        <div class="text2">{{deviceNum}}个设备已接入</div>
-      </div>
-      <div class="arrow">
-        <img src="assets/img/icon/arrow.svg">
+        <div class="text2">{{deviceNum}} {{'MENU.DEVICE_NUM' | translate}}</div>
       </div>
     </div>
 
     <div class="itembox">
       <ng-container *ngFor="let item of menuList">
         <div class="item" [ngClass]="{'disabled': item.disabled}" (click)="goto(item.url,item)">
-          <!-- [routerDirection]="'root'" -->
           <div class="icon">
-            <!-- <img src="assets/img/menu/{{item.icon}}.png"> -->
             <i class="{{item.icon}}"></i>
           </div>
-          <div class="title">{{item.title}}</div>
+          <div class="title">{{item.title2 | translate}}</div>
           <div class="arrow">
             <img src="assets/img/icon/arrow.svg">
           </div>
@@ -46,7 +35,7 @@
       </ng-container>
     </div>
     <div class="version" (click)="checkCodePush()">
-      <div>当前版本：{{softVersion}}</div>
+      <div>{{'MENU.VERSION' | translate}} {{currentVersion}}</div>
       <img *ngIf="showNewVersion" class="cue" src="assets/img/new.png">
     </div>
   </div>

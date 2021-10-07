@@ -33,13 +33,18 @@ export class DatakeyComponent implements OnInit {
     private alertCtrl: AlertController
   ) { }
 
+  subscription;
   ngOnInit() {
-    this.dataService.userDataLoader.subscribe(loaded => {
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
       if (loaded) {
         this.loaded = loaded;
         this.devcenterService.getDataKeys();
       }
     })
+  }
+
+  ngOnDestroy() {
+    this.subscription.unsubscribe();
   }
 
   async delDataKey(deviceId, key, index) {

@@ -8,6 +8,7 @@ import { IonicModule } from '@ionic/angular';
 import { DocPage } from './doc.page';
 import { PipesModule } from '../../pipes/pipes.module';
 import { MarkdownModule } from 'ngx-markdown';
+import { DirectivesModule } from '../../directives/directives.module';
 
 // const routes: Routes = [
 //   {
@@ -20,9 +21,9 @@ import { MarkdownModule } from 'ngx-markdown';
   imports: [
     CommonModule,
     IonicModule,
+    DirectivesModule,
     MarkdownModule.forChild(),
   ],
-  declarations: [DocPage],
-  entryComponents: [DocPage]
+  declarations: [DocPage]
 })
 export class DocModule { }

@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
@@ -15,13 +15,29 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content padding whitebg>
+<ion-content>
   <div class="nomess animated fadeIn" *ngIf="messageList.length==0" textcenter>
     <img src="assets\img\icon\message.svg">
     <div textcenter>暂无消息</div>
   </div>
-  <ng-container *ngIf="messageList.length>0">
-    <mess-item *ngFor="let messageItem of messageList" [editMode]="editMode" [message]="messageItem"></mess-item>
-  </ng-container>
-
+  <b-item-list [editMode]="editMode" [enableSort]="false" *ngIf="messageList.length>0">
+    <ng-container *ngFor="let item of messageList;trackBy:trackByFn">
+      <b-item (delete)="delMess(item)" (enter)="enter(item)" (enter)="openMess(item)">
+        <div class="img-box">
+          <img src="{{getimgUrl(item)}}" onError="this.src='assets/img/blinker-icon.png'">
+        </div>
+        <div class="text-box">
+          <div class="name">{{item.title}}</div>
+          <div class="other">{{item.content}}</div>
+        </div>
+        <div class="date">
+          {{item.date | date:'MM/dd HH:mm'}}
+        </div>
+      </b-item>
+    </ng-container>
+  </b-item-list>
+  <ion-infinite-scroll threshold="100px" (ionInfinite)="loadData($event)">
+    <ion-infinite-scroll-content loadingSpinner="bubbles" loadingText="">
+    </ion-infinite-scroll-content>
+  </ion-infinite-scroll>
 </ion-content>

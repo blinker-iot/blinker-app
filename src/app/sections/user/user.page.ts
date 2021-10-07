@@ -1,48 +1,54 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import {
-  Events,
   ActionSheetController,
   AlertController,
-  ModalController,
-  NavController,
-  Platform
+  ModalController
 } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
-import { Camera, CameraOptions } from '@ionic-native/camera/ngx';
-// import { DeviceService } from 'src/app/core/services/device.service';
-import { Router } from '@angular/router';
 import { DataService } from 'src/app/core/services/data.service';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { Subscription } from 'rxjs';
+import { NoticeService } from 'src/app/core/services/notice.service';
+import { AvatarPickerComponent } from 'src/app/core/pages/avatar/avatar-picker.component';
 
 @Component({
   selector: 'app-user',
   templateUrl: './user.page.html',
-  styleUrls: ['./user.page.scss'],
-  providers: [Camera]
+  styleUrls: ['./user.page.scss']
 })
 export class UserPage {
   alert;
   actionSheet;
+  loaded = false;
 
   get user() {
     return this.dataService.user
   }
 
+  avatar = this.user.avatar;
+
   constructor(
     private authService: AuthService,
     private userService: UserService,
-    private camera: Camera,
     public actionSheetCtrl: ActionSheetController,
     private alertCtrl: AlertController,
     public modalCtrl: ModalController,
-    public events: Events,
-    private router: Router,
-    private navCtrl: NavController,
-    private platform: Platform,
+    public noticeService: NoticeService,
     private dataService: DataService
   ) { }
 
+  subscription: Subscription;
+
+  ngOnInit(): void {
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
+      if (loaded) {
+        this.loaded = loaded
+      }
+    })
+  }
+
   ngOnDestroy(): void {
+    this.subscription.unsubscribe();
     if (this.alert) {
       this.alert.dismiss();
     }
@@ -76,15 +82,15 @@ export class UserPage {
 
   changePassword(oldPassword, newPassword, newPassword2) {
     if (newPassword != newPassword2) {
-      this.events.publish("provider:notice", "newPasswordNotMatch");
+      this.noticeService.showToast("newPasswordNotMatch");
     }
     else if (newPassword.length < 8) {
-      this.events.publish("provider:notice", "needPasswordLength");
+      this.noticeService.showToast("needPasswordLength");
     } else {
       this.userService.changePassword(oldPassword, newPassword).then(result => {
         console.log(result);
         if (result == true) {
-          this.events.publish("provider:notice", 'changePasswordSuccess');
+          this.noticeService.showToast("changePasswordSuccess");
           this.logout()
         }
       })
@@ -111,10 +117,10 @@ export class UserPage {
   changeUserName(newName) {
     // 判断用户名不是手机号，再提交
     if (this.getStrLeng(newName) < 6) {
-      this.events.publish("provider:notice", "needUserNameLength");
+      this.noticeService.showToast("needUserNameLength");
     }
     else if (((newName.length == 11) && (parseInt(newName) >= 10000000000) && (parseInt(newName) <= 19999999999))) {
-      this.events.publish("provider:notice", "userNameLengthToLong");
+      this.noticeService.showToast("userNameLengthToLong");
     }
     else {
       this.userService.changeProfile(newName).then(result => {
@@ -179,42 +185,68 @@ export class UserPage {
   }
 
   //修改头像
-  gotoChangeAvatar() {
-    this.getPictureActionSheet();
+  async gotoChangeAvatar() {
+    const modal = await this.modalCtrl.create({
+      component: AvatarPickerComponent
+    });
+    await modal.present();
+    await modal.onWillDismiss();
+    this.dataService.updateAvatarCache();
   }
 
-  tempImgFile;
-  getPicture(sourceType) {
-    if (this.platform.is('cordova')) {
-      const options: CameraOptions = {
-        quality: 50,
-        sourceType: sourceType,
-        destinationType: this.camera.DestinationType.DATA_URL,
-        encodingType: this.camera.EncodingType.JPEG,
-        mediaType: this.camera.MediaType.PICTURE
-      }
-      this.camera.getPicture(options).then((imageData) => {
-        this.dataService.tempImgFile = 'data:image/jpeg;base64,' + imageData;
-        this.router.navigate(['/user/avatar'])
-      }, (err) => {
-        console.log("获取图片失败");
-      });
+  async showCancelAlert() {
+    if (this.dataService.device.list.length > 0) {
+      this.showCancelAlert2();
+      return
     }
-    else {
-      this.router.navigate(['/user/avatar']);
-      this.dataService.tempImgFile = 'assets/img/headerbg.jpg';
-    }
-  }
 
-  async getPictureActionSheet() {
-    this.actionSheet = await this.actionSheetCtrl.create({
-      header: '修改头像',
+    this.alert = await this.alertCtrl.create({
+      header: '注销账号',
+      subHeader: '输入密码确认注销操作',
+      message: `望知悉：账号注销后，相关数据将被永久删除，且无法找回！`,
+      inputs: [
+        { name: 'password', placeholder: '当前账号密码' },
+      ],
       buttons: [
-        { text: '手机拍照', handler: () => { this.getPicture(1); } },
-        { text: '本地图片', handler: () => { this.getPicture(0); } }
+        { text: '取消', handler: data => { } },
+        {
+          text: '确认修改', handler: data => {
+            this.cancelAccount(data.password);
+          }
+        }
       ]
     });
-    await this.actionSheet.present();
+    this.alert.present();
+  }
+
+  async showCancelAlert2() {
+    this.alert = await this.alertCtrl.create({
+      header: '注销账号',
+      message: `账号中有绑定${this.dataService.device.list.length}个设备，请先解绑所有设备，再进行注销操作`,
+      buttons: [
+        { text: '确认', handler: data => { } },
+      ]
+    });
+    this.alert.present();
+  }
+
+  async showCancelAlert3() {
+    this.alert = await this.alertCtrl.create({
+      header: '成功注销',
+      message: `期待您再次使用本方案`,
+      buttons: [
+        { text: '确认', handler: data => { this.logout() } },
+      ]
+    });
+    this.alert.present();
+  }
+
+  cancelAccount(password) {
+    this.userService.cancelAccount(password).then(result => {
+      if (result) {
+        this.showCancelAlert3();
+      }
+    });
   }
 
 }

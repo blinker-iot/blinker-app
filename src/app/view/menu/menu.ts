@@ -1,7 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { UserService } from 'src/app/core/services/user.service';
-import { DeviceService } from 'src/app/core/services/device.service';
-import { AppVersion } from '@ionic-native/app-version/ngx';
 import { Platform, MenuController } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { UpdateService } from 'src/app/core/services/update.service';
@@ -27,11 +24,15 @@ export class Menu implements OnInit {
 
   menuList;
 
-  softVersion: string = '0.0.0';
-  showNewVersion = false;
+  get showNewVersion() {
+    return this.updateService.hasNewVersion
+  }
+
+  get currentVersion() {
+    return this.updateService.currentVersion
+  }
 
   constructor(
-    private appVersion: AppVersion,
     private platform: Platform,
     private router: Router,
     private updateService: UpdateService,
@@ -39,8 +40,9 @@ export class Menu implements OnInit {
     private menu: MenuController
   ) { }
 
+  subscription;
   ngOnInit() {
-    this.dataService.userDataLoader.subscribe(state => {
+    this.subscription = this.dataService.userDataLoader.subscribe(state => {
       if (state) {
         this.loaded = true
       }
@@ -48,26 +50,18 @@ export class Menu implements OnInit {
     this.menuList = MENU_LIST;
   }
 
-  ngAfterViewInit() {
-    this.getVersionNumber()
-  }
-
-  async getVersionNumber() {
-    if (!this.platform.is("cordova")) return;
-    this.softVersion = await this.appVersion.getVersionNumber();
-    setTimeout(async () => {
-      this.showNewVersion = await this.updateService.checkForUpdate();
-    });
-  }
-
-  checkCodePush() {
-    this.updateService.checkCodePush();
+  ngOnDestroy() {
+    this.subscription.unsubscribe();
   }
 
   goto(page, item = { disabled: false }) {
     if (item.disabled) return;
     if (this.platform.is("ios")) this.menu.close();
     this.router.navigate([page])
+  }
+
+  checkCodePush(){
+    
   }
 
 }

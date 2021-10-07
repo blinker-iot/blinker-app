@@ -1,0 +1,12 @@
+<b-item-list>
+  <b-item *ngFor="let deviceId of itemList" (click)="selectDeviceId(deviceId)">
+    <div class="img-box">
+      <b-device-img [filename]="deviceDataDict[deviceId].config.image"></b-device-img>
+      <img *ngIf="deviceDataDict[deviceId].config.mode=='ble'" class="mode" src="assets/img/icon/ble.png" />
+    </div>
+    <div class="text-box">
+      <div class="name">{{deviceDataDict[deviceId].config.customName}}</div>
+      <div class="other">{{deviceId}}</div>
+    </div>
+  </b-item>
+</b-item-list>

@@ -6,18 +6,21 @@ import { IonicModule } from '@ionic/angular';
 
 import { AddDevicePage } from './adddevice';
 import { AdddeviceService } from './adddevice.service';
+import { ComponentsModule } from 'src/app/core/components/components.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { TranslateModule } from '@ngx-translate/core';
 
 const routes: Routes = [
   {
     path: 'adddevice',
     children: [
       { path: '', component: AddDevicePage, },
+      { path: 'qrscanner', loadChildren: './qrscanner/qrscanner.module#QrscannerPageModule' },
       { path: ':deviceType', loadChildren: './guide/guide.module#GuidePageModule' },
       { path: ':deviceType/espTouch', loadChildren: './esptouch/esptouch.module#EsptouchPageModule' },
       { path: ':deviceType/bleConfig', loadChildren: './bwconfig/bwconfig.module#BwconfigPageModule' },
       { path: ':deviceType/apConfig', loadChildren: './apconfig/apconfig.module#ApconfigPageModule' },
       { path: ':deviceType/KeyConfig', loadChildren: './mqttkey/mqttkey.module#MqttkeyPageModule' },
-      { path: ':deviceType/qrscanner', loadChildren: './qrscanner/qrscanner.module#QrscannerPageModule' }
     ]
   }
 ];
@@ -26,7 +29,10 @@ const routes: Routes = [
   imports: [
     CommonModule,
     IonicModule,
-    RouterModule.forChild(routes)
+    ComponentsModule,
+    DirectivesModule,
+    RouterModule.forChild(routes),
+    TranslateModule.forChild()
   ],
   providers: [AdddeviceService],
   declarations: [AddDevicePage]

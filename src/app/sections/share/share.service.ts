@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { API } from 'src/app/configs/app.config';
+import { API } from 'src/app/configs/api.config';
 import { UserService } from 'src/app/core/services/user.service';
 import { DataService } from 'src/app/core/services/data.service';
+import { BlinkerResponse } from 'src/app/core/model/response.model';
 // import { LoaderService } from 'src/app/core/services/loader.service';
 
 @Injectable({
@@ -70,19 +71,17 @@ export class ShareService {
   shareDevice2User(device, phone): Promise<boolean> {
     let sharedata = {}
     sharedata[device.deviceName] = [phone]
-    return this.http
-      .post(API.SHARE.SHARE_DEVIE,
-        {
-          uuid: this.uuid,
-          token: this.token,
-          devices: [sharedata]
-        })
+    return this.http.post<BlinkerResponse>(API.SHARE.SHARE_DEVIE,
+      {
+        uuid: this.uuid,
+        token: this.token,
+        devices: [sharedata]
+      })
       .toPromise()
-      .then(response => {
-        console.log(response);
-        let data = JSON.parse(JSON.stringify(response));
-        if (data.message == 1000) {
-          this.shareData = data.detail;
+      .then(resp => {
+        console.log(resp);
+        if (resp.message == 1000) {
+          this.shareData = resp.detail;
           return true;
         }
         return false;
@@ -94,18 +93,16 @@ export class ShareService {
   deleteShareDevice2User(deviceName, uuid): Promise<boolean> {
     let sharedata = {}
     sharedata[deviceName] = [uuid]
-    return this.http
-      .post(API.SHARE.DEL_SHARE, {
-        uuid: this.uuid,
-        token: this.token,
-        devices: JSON.stringify([sharedata])
-      })
+    return this.http.post<BlinkerResponse>(API.SHARE.DEL_SHARE, {
+      uuid: this.uuid,
+      token: this.token,
+      devices: JSON.stringify([sharedata])
+    })
       .toPromise()
-      .then(response => {
-        console.log(response);
-        let data = JSON.parse(JSON.stringify(response));
-        if (data.message == 1000) {
-          this.shareData = data.detail;
+      .then(resp => {
+        console.log(resp);
+        if (resp.message == 1000) {
+          this.shareData = resp.detail;
           return true;
         }
         return false;
@@ -116,18 +113,17 @@ export class ShareService {
 
   // 拉取shareList
   getShareList(): Promise<boolean> {
-    return this.http.get(API.SHARE.SHARE_LIST, {
+    return this.http.get<BlinkerResponse>(API.SHARE.SHARE_LIST, {
       params: {
         uuid: this.uuid,
         token: this.token
       }
     })
       .toPromise()
-      .then(response => {
-        console.log(response);
-        let data = JSON.parse(JSON.stringify(response));
-        if (data.message == 1000) {
-          this.shareData = data.detail;
+      .then(resp => {
+        console.log(resp);
+        if (resp.message == 1000) {
+          this.shareData = resp.detail;
           return true
         }
         return false;
@@ -137,19 +133,16 @@ export class ShareService {
 
   // 子用户同意分享
   acceptSharedDevice(taskId): Promise<boolean> {
-    return this.http
-      .post(API.SHARE.ACCEPT_SHARED, {
-        uuid: this.uuid,
-        token: this.token,
-        tasks: JSON.stringify([taskId])
-      })
+    return this.http.post<BlinkerResponse>(API.SHARE.ACCEPT_SHARED, {
+      uuid: this.uuid,
+      token: this.token,
+      tasks: JSON.stringify([taskId])
+    })
       .toPromise()
-      .then(response => {
-        console.log(response);
-        let data = JSON.parse(JSON.stringify(response));
-        if (data.message == 1000) {
-          this.shareData = data.detail
-          // this.getDeviceInfo();
+      .then(resp => {
+        console.log(resp);
+        if (resp.message == 1000) {
+          this.shareData = resp.detail
           return true;
         }
         return false;
@@ -159,18 +152,16 @@ export class ShareService {
 
   // 子用户拒绝分享
   refuseSharedDevice(taskId): Promise<boolean> {
-    return this.http
-      .post(API.SHARE.REFUSE_SHARED, {
-        uuid: this.uuid,
-        token: this.token,
-        tasks: JSON.stringify([taskId])
-      })
+    return this.http.post<BlinkerResponse>(API.SHARE.REFUSE_SHARED, {
+      uuid: this.uuid,
+      token: this.token,
+      tasks: JSON.stringify([taskId])
+    })
       .toPromise()
-      .then(response => {
-        console.log(response);
-        let data = JSON.parse(JSON.stringify(response));
-        if (data.message == 1000) {
-          this.shareData = data.detail
+      .then(resp => {
+        console.log(resp);
+        if (resp.message == 1000) {
+          this.shareData = resp.detail
           return true;
         }
         return false;
@@ -180,18 +171,16 @@ export class ShareService {
 
   // 子用户删除分享 
   deleteSharedDevice(deviceName): Promise<boolean> {
-    return this.http
-      .post(API.SHARE.DEL_SHARED, {
-        uuid: this.uuid,
-        token: this.token,
-        devices: JSON.stringify([deviceName])
-      })
+    return this.http.post<BlinkerResponse>(API.SHARE.DEL_SHARED, {
+      uuid: this.uuid,
+      token: this.token,
+      devices: JSON.stringify([deviceName])
+    })
       .toPromise()
-      .then(response => {
-        console.log(response);
-        let data = JSON.parse(JSON.stringify(response));
-        if (data.message == 1000) {
-          this.shareData = data.detail
+      .then(resp => {
+        console.log(resp);
+        if (resp.message == 1000) {
+          this.shareData = resp.detail
           // this.getDeviceInfo();
           return true;
         }

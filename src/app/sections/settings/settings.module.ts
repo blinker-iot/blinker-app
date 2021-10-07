@@ -7,6 +7,8 @@ import { IonicModule } from '@ionic/angular';
 
 import { SettingsPage } from './settings';
 import { ComponentsModule } from 'src/app/core/components/components.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { TranslateModule } from '@ngx-translate/core';
 
 const routes: Routes = [
   {
@@ -21,7 +23,9 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     RouterModule.forChild(routes),
-    ComponentsModule
+    ComponentsModule,
+    DirectivesModule,
+    TranslateModule.forChild()
   ],
   declarations: [SettingsPage]
 })

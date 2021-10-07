@@ -3,7 +3,7 @@ import { DevcenterService } from '../../devcenter.service';
 import { ActivatedRoute } from '@angular/router';
 import { AlertController, NavController, ModalController } from '@ionic/angular';
 import { DeviceIconPage } from 'src/app/core/pages/device-icon/device-icon';
-import { DevicelistService } from 'src/app/core/services/devicelist.service';
+import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 
 @Component({
   selector: 'prodevice-settings',
@@ -25,7 +25,7 @@ export class SettingsPage implements OnInit {
     private alertCtrl: AlertController,
     private navCtrl: NavController,
     private modalCtrl: ModalController,
-    private devicelistService: DevicelistService
+    private deviceConfigService: DeviceConfigService
   ) { }
 
   ngOnInit() {
@@ -34,7 +34,7 @@ export class SettingsPage implements OnInit {
   }
 
   ngOnDestroy() {
-    this.devicelistService.getDevDeviceConfig();
+    this.deviceConfigService.getDevDeviceConfig();
   }
 
   async selectIcon() {

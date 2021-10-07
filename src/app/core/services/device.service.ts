@@ -1,23 +1,28 @@
 import { Injectable } from '@angular/core';
-import { Platform, Events } from '@ionic/angular';
+import { Platform } from '@ionic/angular';
 import { Zeroconf } from '@ionic-native/zeroconf/ngx';
 import { BLE } from '@ionic-native/ble/ngx';
 import {
-  deviceName12,
   transcoding,
   str2ab,
   Uint8Array2hex,
   isJson,
   isNumber,
   mac2name,
-  isNewerVersion
+  isNewerVersion,
+  deviceName2id
 } from '../functions/func';
 import { DataService } from './data.service';
 import { HttpClient } from '@angular/common/http';
-import { API } from 'src/app/configs/app.config';
+import { API } from 'src/app/configs/api.config';
 import { BlinkerBroker } from '../model/broker.model';
 import { PermissionService } from './permission.service';
-import { Subscription } from 'rxjs';
+import { Subscription, Subject } from 'rxjs';
+import { DebugService } from 'src/app/debug/debug.service';
+import { BlinkerDevice } from '../model/device.model';
+import { NativeService } from './native.service';
+import { NoticeService } from './notice.service';
+import { ToastService } from './toast.service';
 
 declare var mqtt;
 
@@ -70,19 +75,25 @@ export class DeviceService {
   timer = [];
   userUrl: string;
 
+  newDeviceSubject = new Subject;
+
   constructor(
     private http: HttpClient,
     private zeroconf: Zeroconf,
     private plt: Platform,
-    private events: Events,
     private ble: BLE,
     private dataService: DataService,
-    private permissionService: PermissionService
+    private permissionService: PermissionService,
+    private debugService: DebugService,
+    private nativeService: NativeService,
+    private noticeService: NoticeService,
+    private toastService: ToastService
   ) { }
 
   init() {
     this.dataService.initCompleted.subscribe(loaded => {
       if (loaded) {
+        console.log('启动加载');
         this.connectMqttBrokers();
         this.searchLocalDevice();
       }
@@ -96,7 +107,16 @@ export class DeviceService {
 
   connectMqttBrokers() {
     for (let verder of this.brokerDataList) {
-      this.connectMqttBroker(this.brokerDataDict[verder])
+      // console.log(verder);
+      // console.log(this.brokerDataDict[verder]);
+
+      if (typeof this.brokerDataDict[verder].client == 'undefined') {
+        console.log("第一次创建");
+        this.connectMqttBroker(this.brokerDataDict[verder])
+      } else {
+        console.log("第二次连接");
+        this.reconnectMqttBroker(this.brokerDataDict[verder])
+      }
     }
   }
 
@@ -104,58 +124,74 @@ export class DeviceService {
   closeTimer;
   reconnectTimer
   connectMqttBroker(broker: BlinkerBroker) {
-    console.log('connectMqttBroker:' + broker.vender);
-    let mqttClient = mqtt.connect(broker.host, broker.options)
-    broker.client = mqttClient;
-    // console.log(broker);
-    mqttClient.on('connect', () => {
-      console.log('mqtt connect');
-      broker.connected.next(true)
-    });
-    mqttClient.on('message', (topic, message: any, packet) => {
-      // console.log('from:\n' + topic);
-      console.log('mqtt receive:\n' + message);
-      let data = JSON.parse(message);
-      // 2019.1.2 暂时修复阿里MQTT收到两条数据的问题
-      if (data.fromDevice != data.toDevice)
-        this.processMessage(data);
-    });
-    mqttClient.on('reconnect', () => {
-      console.log('mqtt reconnect');
-    });
-    mqttClient.on('error', err => {
-      console.error('mqtt error:' + err);
-    });
-    mqttClient.on('close', () => {
-      console.log('mqtt close');
-      this.closeCounter++;
-      clearTimeout(this.closeTimer)
-      this.closeTimer = setTimeout(() => {
-        this.closeCounter = 0
-      }, 3000);
-      if (this.closeCounter > 2) {
-        broker.connected.next(false)
-        this.dataService.authCheck.next(true)
-      }
-    });
-    mqttClient.on('offline', () => {
-      console.log('mqtt offline');
-    });
-    //订阅topic
-    mqttClient.subscribe(broker.topic.receive, { qos: 0 })
+    try {
+      console.log('connectMqttBroker:' + broker.vender);
+      let mqttClient = mqtt.connect(broker.host, broker.options)
+      broker.client = mqttClient;
+      // console.log(broker);
+      mqttClient.on('connect', () => {
+        console.log('mqtt connect:' + broker.vender);
+        broker.connected.next(true)
+      });
+      mqttClient.on('message', (topic, message: any, packet) => {
+        // console.log('from:\n' + topic);
+        console.log('mqtt receive:\n' + message);
+        let data = JSON.parse(message);
+        // 2019.1.2 暂时修复阿里MQTT收到两条数据的问题
+        if (data.fromDevice != data.toDevice)
+          this.processMessage(data);
+      });
+      mqttClient.on('reconnect', () => {
+        console.log('mqtt reconnect:' + broker.vender);
+        // if(broker.vender=='blinker'){
+        // console.log(broker);
+        // }
+      });
+      mqttClient.on('error', err => {
+        console.error('mqtt error:' + err);
+      });
+      mqttClient.on('close', () => {
+        console.log('mqtt close');
+        this.closeCounter++;
+        clearTimeout(this.closeTimer)
+        this.closeTimer = setTimeout(() => {
+          this.closeCounter = 0
+        }, 3000);
+        if (this.closeCounter > 5) {
+          broker.connected.next(false)
+          this.dataService.authCheck.next(true)
+        }
+      });
+      mqttClient.on('offline', () => {
+        console.log('mqtt offline');
+      });
+      //订阅topic
+      mqttClient.subscribe(broker.topic.receive, { qos: 0 })
+
+    } catch (error) {
+      console.log(error);
+
+    }
   }
 
-  disconnectMqttBrokers() {
+  reconnectMqttBroker(broker: BlinkerBroker) {
+    broker.client.reconnect();
+  }
+
+  async disconnectMqttBrokers() {
     if (typeof this.brokerDataList != 'undefined')
       for (const verder of this.brokerDataList)
-        this.disconnectMqttBroker(this.brokerDataDict[verder])
+        await this.disconnectMqttBroker(this.brokerDataDict[verder])
   }
 
-  disconnectMqttBroker(broker: BlinkerBroker) {
-    console.log("disconnectMqttBroker:" + broker.vender);
-    broker.client.end();
-    broker.client = null;
-    broker.connected.next(false);
+  disconnectMqttBroker(broker: BlinkerBroker): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      broker.client.end(false, {}, () => {
+        // broker.client = null;
+        broker.connected.next(false);
+        resolve(false)
+      });
+    })
   }
 
   pubMessage(device, message: string) {
@@ -164,19 +200,30 @@ export class DeviceService {
       if (this.lanDeviceList[device.deviceName].state == 'disconnected') {
         this.connectLocalDevice(device)
       } else {
+        if (typeof message == 'object')
+          message = JSON.stringify(message)
         this.lanDeviceList[device.deviceName].client.send(message);
         this.send2debug(device, 'send', message)
         return;
       }
     }
     let broker: BlinkerBroker = this.brokerDataDict[device.config.broker]
+
     if (typeof broker == 'undefined') return;
     let mqttJson = JSON.parse(JSON.stringify(broker.dataTemplate));
     mqttJson.toDevice = device.deviceName;
     mqttJson.deviceType = ((device.deviceType == 'DiyArduino' || device.deviceType == 'DiyLinux') ? device.deviceType : 'ProDevice');
-    mqttJson.data = JSON.parse(message);
+    try {
+      mqttJson.data = JSON.parse(message);
+    } catch (error) {
+      mqttJson.data = message;
+    }
     // 调试用
-    if (JSON.stringify(mqttJson.data) != '{"get":"state"}') console.log(`mqtt send:\n${JSON.stringify(mqttJson)}`);
+    if (JSON.stringify(mqttJson.data) != '{"get":"state"}')
+      console.log(`mqtt send:\n${JSON.stringify(mqttJson)}`);
+
+    // 
+
     broker.client.publish(broker.topic.send, JSON.stringify(mqttJson), { qos: 0 })
     this.send2debug(device, 'send', message);
   }
@@ -186,7 +233,7 @@ export class DeviceService {
     if (typeof this.lanDeviceList[device.deviceName] != 'undefined') {
       return true
     }
-    if (typeof this.bleDeviceList[deviceName12(device.deviceName)] != 'undefined') {
+    if (typeof this.bleDeviceList[deviceName2id(device.deviceName)] != 'undefined') {
       return true
     }
     return false;
@@ -252,14 +299,13 @@ export class DeviceService {
 
     //判断添加新设备
     if (JSON.stringify(message.data) == '{"message":"Registration successful"}') {
-      this.events.publish('device:new', message);
+      this.newDeviceSubject.next(deviceName2id(message.fromDevice))
       return
     }
-    // console.log(message.fromDevice);
-    this.message2Device(this.deviceDataDict[deviceName12(message.fromDevice)], message.data);
+    this.message2Device(this.deviceDataDict[deviceName2id(message.fromDevice)], message.data);
   }
 
-  message2Device(device, data) {
+  message2Device(device: BlinkerDevice, data) {
     // 这是对没有接收到心跳包的补救方式，如果接收到数据，则将设备设置为在线或已连接
     if (device.data.state == 'disconnected' || device.data.state == 'offline') {
       if (device.config.mode == 'mqtt') {
@@ -270,8 +316,6 @@ export class DeviceService {
     }
     // 处理未知数据，将其显示到debug组件中
     if (typeof (data) == 'string' || typeof (data) == "number") {
-      // this.events.publish(device.deviceName + ':unknownData', data.toString());
-      // this.events.publish('debug:unknownData', data.toString());
       this.send2debug(device, 'unknown', data.toString())
       return
     }
@@ -281,27 +325,23 @@ export class DeviceService {
       if (key == "config" || key == "deviceName" || key == "deviceType") break;
       // 本地通知功能
       if (key == "notice") {
-        this.events.publish("PusherService:local", data[key]);
-        break;
+        // this.pusherService.localNotify(data[key])
+        this.toastService.show({
+          device: device,
+          message: data[key]
+        });
       }
-      //实际通信数据暂存
+      //缓存数据
       device.data[key] = data[key];
-      this.events.publish(device.deviceName + ':' + key, 'loaded');
-      // 设备获取手机状态数据
-      if (key == "ahrs")
-        this.events.publish('native:ahrs', device);
-      if (JSON.stringify(data) == `{"get":"gps"}`)
-        this.events.publish('native:gps', device);
+
+      device.subject.next({ key: 'loaded' });
+
       if (key == "vibrate")
-        this.events.publish('native:vibrate', device);
+        this.nativeService.vibrate(data[key])
     }
 
     // 显示到degbug窗口
-    // this.events.publish(device.deviceName + ':receiveData', JSON.stringify(data));
     this.send2debug(device, 'receive', JSON.stringify(data))
-    //通知相关页面,关闭读取状态
-    this.events.publish(device.deviceName + ':deviceblock', 'loaded')
-    this.events.publish(device.deviceName + ':dashboard', 'loaded')
   }
 
   //搜索本地设备（局域网mdns）
@@ -313,35 +353,43 @@ export class DeviceService {
 
   protocol = '_blinker._tcp.';
   async scanMdnsDevice() {
-    // 断开之前的ws连接
     for (let deviceName in this.lanDeviceList) {
+      let deviceWsClient = this.lanDeviceList[deviceName].client
       try {
-        if (typeof this.lanDeviceList[deviceName].client.close == 'function')
-          this.lanDeviceList[deviceName].client.close();
+        if (typeof deviceWsClient.close == 'function')
+          deviceWsClient.close();
       } catch (error) {
         console.log(error);
       }
     }
     this.lanDeviceList = {};
-    // if (!(await this.wifiIsConnected())) return;
+
     if (this.plt.is('android')) {
       this.zeroconf.watchAddressFamily = 'ipv4';
       await this.zeroconf.reInit();
     }
     this.zeroconf.watch(this.protocol, 'local.').subscribe(result => {
       // console.log(result);
-      if ((!(result.service.name in this.lanDeviceList)) && (result.service.ipv4Addresses.length > 0))
-        this.lanDeviceList[result.service.name] = {
-          client: new Object,
-          state: 'disconnected',
-          ip: result.service.ipv4Addresses[0],
+      if (typeof result.service.txtRecord.mac == 'string')
+        if ((!(result.service.name in this.lanDeviceList)) && (result.service.ipv4Addresses.length > 0)) {
+          let device = {
+            client: new Object,
+            state: 'disconnected',
+            ip: result.service.ipv4Addresses[0],
+          }
+          this.lanDeviceList[result.service.name] = device
+          this.lanDeviceList[result.service.txtRecord.mac] = device
         }
     });
-    window.setTimeout(() => {
+    setTimeout(() => {
       console.log("mdns devices:");
       console.log(this.lanDeviceList);
       this.zeroconf.close();
     }, 30000);
+  }
+
+  closeScanMdnsDevice() {
+    this.zeroconf.close();
   }
 
   async scanBleDevice() {
@@ -349,7 +397,6 @@ export class DeviceService {
     if (!this.permissionService.CheckBleAvailability({ showNotice: false })) return;
     this.bleDeviceList = {};
     this.ble.scan([], 5).subscribe(result => {
-      // console.log(result);
       if (this.plt.is('android')) {
         let UUID = Uint8Array2hex(result.advertising).toUpperCase();
         //console.log(UUID);
@@ -372,25 +419,30 @@ export class DeviceService {
         }
       }
     });
-    window.setTimeout(() => {
+    setTimeout(() => {
       console.log("ble devices:");
       console.log(this.bleDeviceList);
-      this.ble.stopScan();
+      this.ble.stopScan().then(() => { console.log('ble scan stopped'); });
     }, 3900);
   }
 
-  //查询mqtt设备是否在线
+  // 查询mqtt设备是否在线
   queryDevice(device) {
-    //MQTT设备
-    if (device.config.mode == "mqtt") {
+    // MQTT设备,且APP已经在该broker中注册
+    if (device.config.mode == "mqtt" && this.brokerDataList.indexOf(device.config.broker) > -1) {
       let connected: Subscription = this.brokerDataDict[device.config.broker].connected.subscribe(state => {
         if (state) {
           device.data['oldState'] = device.data.state;
           device.data.state = 'waiting';
           this.pubMessage(device, `{"get":"state"}`);
-          window.setTimeout(() => {
-            if (device.data.state != "online") device.data.state = "offline";
+          setTimeout(() => {
+            if (device.data['oldState'] == 'online')
+              if (device.data.state != "online")
+                this.pubMessage(device, `{"get":"state"}`);
           }, 3000);
+          setTimeout(() => {
+            if (device.data.state != "online") device.data.state = "offline";
+          }, 6000);
           // return
           setTimeout(() => {
             connected.unsubscribe();
@@ -404,9 +456,14 @@ export class DeviceService {
   }
 
   queryDevices() {
-    for (let deviceName in this.deviceDataDict) {
-      this.queryDevice(this.deviceDataDict[deviceName]);
+    try {
+      for (let deviceName in this.deviceDataDict) {
+        this.queryDevice(this.deviceDataDict[deviceName]);
+      }
+    } catch (error) {
+      console.warn(error);
     }
+
   }
 
   connectDeviceTimer;
@@ -414,24 +471,28 @@ export class DeviceService {
     return new Promise<boolean>(async (resolve, reject) => {
       if (!this.plt.is('cordova')) return resolve(false);
       //连接超时6秒。移除连接定时器情况：1.连接成功；2.退出页面
-      this.connectDeviceTimer = window.setTimeout(() => {
-        if (mode == "show") this.events.publish("provider:notice", 'timeoutConnect');
+      this.connectDeviceTimer = setTimeout(() => {
+        if (mode == "show")
+          this.noticeService.showToast('timeoutConnect')
         this.disconnectDevice(device);
         return resolve(false);
       }, 6000);
       if (device.data.state != "disconnected") device.data.state = "disconnected";
-      // this.events.publish("device:" + device.deviceName, JSON.parse(`{"state":"disconnected"}`));
       if (device.config.mode == "ble") {
         if (!this.permissionService.CheckBleAvailability()) return resolve(false);
-        if (mode == "show") this.events.publish("loading:show", 'connect');
+        if (mode == "show")
+          await this.noticeService.showLoading('connect')
         let result = await this.connectBleDevice(device)
         return resolve(result);
-      } else if (device.config.mode == "net") {
-        if (!this.isWifiAvailable()) return resolve(false);
-        // if (!(await this.wifiIsConnected())) return resolve(false);
-        if (mode == "show") this.events.publish("loading:show", 'connect');
-        return resolve(await this.connectNetDevice(device));
       }
+      // 已废弃 
+      // else if (device.config.mode == "net") {
+      //   if (!this.isWifiAvailable()) return resolve(false);
+      //   // if (!(await this.wifiIsConnected())) return resolve(false);
+      //   if (mode == "show")
+      //     this.noticeService.showLoading('connect')
+      //   return resolve(await this.connectNetDevice(device));
+      // }
     })
   }
 
@@ -439,12 +500,14 @@ export class DeviceService {
     if (!this.plt.is('cordova')) return;
     //清除连接定时器
     window.clearTimeout(this.connectDeviceTimer);
-    this.events.publish("loading:hide", '');
+    this.noticeService.hideLoading();
     if (device.config.mode == "ble") {
       this.disconnectBleDevice(device);
-    } else if (device.config.mode == "net") {
-      this.disconnectNetDevice(device);
     }
+    // 已废弃 
+    // else if (device.config.mode == "net") {
+    //   this.disconnectNetDevice(device);
+    // }
   }
 
   sendTimerList = {};
@@ -453,16 +516,11 @@ export class DeviceService {
     // MQTT发送，带合并数据功能，如果不需要合并数据，直接使用pubMessage
     if (device.config.mode == "mqtt") {
       if (isJson(data)) {
-        // console.log("json数据")
         // 如果队列中有这个数据，进行合并
         if (typeof this.fullMqttDateList[device.deviceName] == 'undefined') this.fullMqttDateList[device.deviceName] = '';
-        // if (typeof this.sendTimerList[device.deviceName] != 'undefined') {
         let ob = this.fullMqttDateList[device.deviceName] == '' ? {} : JSON.parse(this.fullMqttDateList[device.deviceName]);
         let ob2 = JSON.parse(data)
         this.fullMqttDateList[device.deviceName] = JSON.stringify(Object.assign(ob, ob2))
-        // } else {
-        //   this.fullMqttDateList[device.deviceName] = JSON.parse(data);
-        // }
         if (typeof this.sendTimerList[device.deviceName] != 'undefined') window.clearTimeout(this.sendTimerList[device.deviceName]);
         //检查设备是否是本地设备,是否已连接
         let deviceInLocal = false;
@@ -470,14 +528,12 @@ export class DeviceService {
           if (this.lanDeviceList[device.deviceName].state == 'connected')
             deviceInLocal = true
         }
-        this.sendTimerList[device.deviceName] = window.setTimeout(() => {
+        this.sendTimerList[device.deviceName] = setTimeout(() => {
           this.pubMessage(device, this.fullMqttDateList[device.deviceName]);
           this.fullMqttDateList[device.deviceName] = '';
           delete this.sendTimerList[device.deviceName];
         }, deviceInLocal ? 100 : 300)
       } else {
-        if (!isNumber(data)) data = `"${data}"`
-
         this.pubMessage(device, data);
       }
     }
@@ -489,10 +545,11 @@ export class DeviceService {
     if (device.data.state != 'disconnected') {
       if (device.config.mode == "ble") {
         this.send2ble(device, data);
-      } else if (device.config.mode == "net") {
-        if (typeof this.wsClient != 'undefined')
-          this.send2net(device, data);
       }
+      // else if (device.config.mode == "net") {
+      //   if (typeof this.wsClient != 'undefined')
+      //     this.send2net(device, data);
+      // }
     }
   }
 
@@ -503,28 +560,26 @@ export class DeviceService {
 
   connectBleDevice(device): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
-      //this.events.publish("loading:show", 'connect');
-      // console.log("ble disconnect");
+      // this.noticeService.showLoading('connect');
       if (this.bleUUID != null)
         this.ble.disconnect(this.bleUUID);
       console.log("scanBle");
       this.ble.startScan([]).subscribe(result => {
         console.log(result);
         if (this.plt.is('android') || (typeof (result.advertising.kCBAdvDataManufacturerData) != 'undefined')) {
-          if (deviceName12(device.deviceName) == mac2name(result)) {
+          if (deviceName2id(device.deviceName) == mac2name(result)) {
             this.ble.stopScan();
             console.log('connect ble device:' + result.id)
             window.clearTimeout(this.connectDeviceTimer);
-            this.ble.connect(result.id).subscribe(data => {
-              // this.ble.stopScan();
+            this.ble.connect(result.id).subscribe(async data => {
               this.bleUUID = result.id;
               console.log(data);
-              this.events.publish("loading:hide", 'hide');
+              await this.noticeService.hideLoading();
               if (device.data.state != "connected") device.data.state = "connected";
               this.lastbuf.fill(0);
               this.lastbufcnt = 0;
-              this.ble.startNotification(result.id, 'ffe0', 'ffe1').subscribe(buffer => {
-                let buftmp = new Uint8Array(buffer);
+              this.ble.startNotification(result.id, 'FFE0', 'FFE1').subscribe(buffer => {
+                let buftmp = new Uint8Array(buffer[0]);
                 this.lastbuf.set(buftmp, this.lastbufcnt);
                 this.lastbufcnt += buftmp.length;
                 while (this.lastbuf.indexOf(10) > -1) {//找到/n，转字符串后测试是否能转json
@@ -566,7 +621,7 @@ export class DeviceService {
           console.log(error);
           // 提示开启手机定位服务
           if (error == 'Location Services are disabled') {
-            this.events.publish('provider:notice', 'bleNeedLocation');
+            this.noticeService.showAlert('bleNeedLocation');
           }
         }
       );
@@ -614,17 +669,16 @@ export class DeviceService {
   // keepalivedInterval;
   async connectNetDevice(device): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
-      // this.events.publish("device:" + device.deviceName, JSON.parse(`{"state":"disconnected"}`));
       if (this.plt.is('android')) {
         this.zeroconf.watchAddressFamily = 'ipv4';
       }
 
       this.zeroconf.watch('_' + device.deviceType + '._tcp.', 'local.').subscribe(result => {
         if (result.action == "resolved") {
-          if (result.service.name == deviceName12(device.deviceName) && result.service.ipv4Addresses.length > 0) {
+          if (result.service.name == deviceName2id(device.deviceName) && result.service.ipv4Addresses.length > 0) {
             window.clearTimeout(this.connectDeviceTimer);
             this.zeroconf.close();
-            this.events.publish("loading:hide", 'hide');
+            this.noticeService.hideLoading();
             this.disconnectNetDevice(device);
             this.wsClient = new WebSocket("ws://" + result.service.ipv4Addresses[0] + ":81");
             this.wsClient.onmessage = (event) => {
@@ -682,16 +736,16 @@ export class DeviceService {
     if (await this.permissionService.CheckWifiAvailability()) {
       return true;
     } else {
-      this.events.publish("provider:notice", "openWifi");
+      this.noticeService.showAlert('openWifi');
       return false;
     }
   }
 
   // 把发送的数据显示到debug组件
   send2debug(device, type, data) {
-    this.events.publish('debugService', { deviceName: device.deviceName, type: type, data: data });
+    if (this.debugService.enable)
+      this.debugService.update({ deviceName: device.deviceName, type: type, data: data });
   }
-
 
   //saveDeviceConfig后需要调用loadConifg更新本地的config
   saveDeviceConfig(device, deviceConfig) {
@@ -745,28 +799,31 @@ export class DeviceService {
   // 检查设备当前版本
   checkDeviceVersion(device): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
-      this.pubMessage(device, `{"get":"version"}`);
-      window.setTimeout(() => {
-        if (typeof device.data.version != 'undefined') {
+      if (typeof device.data.version == "undefined") {
+        this.pubMessage(device, `{"get":"version"}`);
+        setTimeout(() => {
+          if (typeof device.data.version != 'undefined') {
+            this.checkDeviceNewVersion(device);
+            return device.data.version
+          } else {
+            return '0.0.0'
+          }
+        }, 2500);
+      } else {
+        setTimeout(() => {
           this.checkDeviceNewVersion(device);
           return device.data.version
-        } else {
-          return '0.0.0'
-        }
-      }, 2500);
+        });
+      }
     })
   }
 
   // 查询设备最新版本号
   checkDeviceNewVersion(device): Promise<boolean> {
-    // console.log('checkDeviceVersion');
-    if (typeof device.data.version == 'undefined')
+    if (typeof device.data.version == 'undefined') {
+      console.log('no found version info');
       return new Promise((resolve, reject) => { resolve(false) })
-    // if (typeof device.data.newVersion != 'undefined')
-    //   if (device.data.newVersion != '0.0.0')
-    //     return new Promise((resolve, reject) => {
-    //       resolve(isNewerVersion(device.data.version, device.data.newVersion))
-    //     })
+    }
     if (device.data.version != '0.0.0' && typeof device.data.newVersion == 'undefined')
       return this.http.get(API.DEVICE.NEW_VERSION, {
         params: {
@@ -783,10 +840,6 @@ export class DeviceService {
             device.data['newVersion'] = data.detail.version
             if (device.data.newVersion == null) return false
             device.data['newVersionDescription'] = data.detail.description
-            //59秒后版本检查过期，app才会再次从服务器获取版本号
-            // window.setTimeout(() => {
-            //   device.data.newVersion = '0.0.0';
-            // }, 59000);
             if (isNewerVersion(device.data.version, device.data.newVersion)) {
               device.data['hasNewVersion'] = true;
               return true;

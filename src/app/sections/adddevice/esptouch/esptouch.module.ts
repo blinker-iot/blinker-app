@@ -7,6 +7,7 @@ import { IonicModule } from '@ionic/angular';
 
 import { EsptouchPage } from './esptouch';
 import { ConfigStatePageModule } from './config-state/config-state.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
 
 const routes: Routes = [
   {
@@ -21,6 +22,7 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     ConfigStatePageModule,
+    DirectivesModule,
     RouterModule.forChild(routes)
   ],
   declarations: [EsptouchPage]

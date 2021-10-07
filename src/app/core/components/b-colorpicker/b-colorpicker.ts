@@ -6,27 +6,13 @@ import {
   ChangeDetectorRef,
   Input,
   Output,
-  EventEmitter,
+  EventEmitter
 } from '@angular/core';
-import { Events } from '@ionic/angular';
-import { HammerGestureConfig, HAMMER_GESTURE_CONFIG } from '@angular/platform-browser';
-import * as Hammer from 'hammerjs';
-
-export class MyHammerConfig extends HammerGestureConfig {
-  overrides = <any>{
-    'pan': { direction: Hammer.DIRECTION_ALL, threshold: 99 }
-  }
-}
-
 
 @Component({
   selector: 'b-colorpicker',
   templateUrl: 'b-colorpicker.html',
-  styleUrls: ['b-colorpicker.scss'],
-  providers: [{
-    provide: HAMMER_GESTURE_CONFIG,
-    useClass: MyHammerConfig
-  }]
+  styleUrls: ['b-colorpicker.scss']
 })
 export class BColorpickerComponent {
 
@@ -69,8 +55,7 @@ export class BColorpickerComponent {
 
   constructor(
     private renderer: Renderer2,
-    public changeDetectorRef: ChangeDetectorRef,
-    public events: Events,
+    public changeDetectorRef: ChangeDetectorRef
   ) {
   }
 
@@ -78,23 +63,6 @@ export class BColorpickerComponent {
     this.loadColorImg();
     this.loaded = true;
   }
-
-  ngOnDestroy() {
-    // this.unsubscribe(this.key);
-  }
-
-  // subscribe(key) {
-  //   window.setTimeout(() => {
-  //     this.events.subscribe(this.device.deviceName + ':' + key, message => {
-  //       if (message == "loaded") {
-  //         if (this.device.data.hasOwnProperty(key)) {
-  //           this.processData(this.device.data[key])
-  //         }
-  //         this.changeDetectorRef.detectChanges();
-  //       }
-  //     });
-  //   }, 100);
-  // }
 
   processData(data) {
     if (typeof data != "undefined") {
@@ -117,17 +85,6 @@ export class BColorpickerComponent {
     }
   }
 
-  // unsubscribe(key) {
-  //   if (typeof (this.device) != 'undefined')
-  //     this.events.unsubscribe(this.device.deviceName + ':' + key);
-  // }
-
-  // moveKnob(x, y) {
-  //   this.renderer.setStyle(this.knob.nativeElement, 'left', `${(x - 10).toString()}px`);
-  //   this.renderer.setStyle(this.knob.nativeElement, 'top', `${(y - 10).toString()}px`);
-  // }
-
-  // pickerRect;
   getKnob(e) {
     let rect = this.pickerbox.nativeElement.getBoundingClientRect();
     let r = (rect.right - rect.left) / 2;

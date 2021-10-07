@@ -1,16 +1,18 @@
 <div #refreshZone></div>
 <div class="slidesbox" #deviceZone>
-  <ion-slides *ngIf="loaded" #deviceZone (ionSlideDidChange)="slideChanged($event)">
-    <ion-slide>
-      <div class="scroll" (scroll)="isScrollTop($event)">
-        <deviceblock-list (swipeEnabled)="swipeEnabledChanged($event)"></deviceblock-list>
-      </div>
-    </ion-slide>
-    <ion-slide *ngFor="let roomName of roomDataList">
-      <div class="scroll" (scroll)="isScrollTop($event)">
-        <deviceblock-list [roomName]="roomName" (swipeEnabled)="swipeEnabledChanged($event)">
-        </deviceblock-list>
-      </div>
-    </ion-slide>
-  </ion-slides>
+  <ng-container *ngIf="loaded">
+    <ion-slides #deviceZone (ionSlideDidChange)="slideChanged($event)">
+      <ion-slide>
+        <div class="scroll" (scroll)="isScrollTop($event)">
+          <deviceblock-list (swipeEnabled)="swipeEnabledChanged($event)"></deviceblock-list>
+        </div>
+      </ion-slide>
+      <ion-slide *ngFor="let roomName of roomDataList">
+        <div class="scroll" (scroll)="isScrollTop($event)">
+          <deviceblock-list [roomName]="roomName" (swipeEnabled)="swipeEnabledChanged($event)">
+          </deviceblock-list>
+        </div>
+      </ion-slide>
+    </ion-slides>
+  </ng-container>
 </div>

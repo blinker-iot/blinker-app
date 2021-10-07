@@ -1,12 +1,8 @@
 import {
   Component,
-  ViewChild,
-  ElementRef,
   ChangeDetectorRef
 } from '@angular/core';
 import {
-  Events,
-  Platform,
   NavController,
   ModalController,
 } from '@ionic/angular';
@@ -26,7 +22,7 @@ export class SpeechPage {
   }
   // @ViewChild("speechAudio", { read: ElementRef, static: true }) speechAudio: ElementRef;
 
-  speechContent: string = "等待语音指令";
+  speechContent = "等待语音指令";
 
   timer;
   timercnt;
@@ -34,9 +30,10 @@ export class SpeechPage {
   showSpeechCmdList;
   closeAnimate;
 
+  contentSubject;
+  actionSubject;
+
   constructor(
-    private plt: Platform,
-    private events: Events,
     private speechService: SpeechService,
     private navCtrl: NavController,
     private changeDetectorRef: ChangeDetectorRef,
@@ -50,7 +47,7 @@ export class SpeechPage {
   }
 
   ngAfterViewInit(): void {
-    this.events.subscribe('speech', (message) => {
+    this.contentSubject = this.speechService.action.subscribe(message => {
       if (message == 'Sent') {
         //成功控制设备
         if (this.speechContent == '打开设备') {
@@ -88,7 +85,7 @@ export class SpeechPage {
       }
     });
     //获取识别到的内容，并显示
-    this.events.subscribe('speech:content', (content) => {
+    this.actionSubject = this.speechService.content.subscribe((content: string) => {
       this.speechContent = content;
       this.changeDetectorRef.detectChanges();
     });
@@ -97,8 +94,8 @@ export class SpeechPage {
 
   ngOnDestroy(): void {
     this.speechService.end();
-    this.events.unsubscribe('speech');
-    this.events.unsubscribe('speech:content');
+    this.contentSubject.unsubscribe();
+    this.actionSubject.unsubscribe();
   }
 
   start() {
@@ -123,7 +120,6 @@ export class SpeechPage {
       this.closeAnimate = true;
       this.navCtrl.pop();
     }
-
   }
 
   play(action) {

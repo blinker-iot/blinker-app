@@ -1,5 +1,5 @@
 <ion-header>
-    <ion-toolbar>
+    <ion-toolbar overlayPadding>
         <ion-buttons slot="start">
             <ion-back-button text=""></ion-back-button>
         </ion-buttons>
@@ -10,32 +10,33 @@
 </ion-header>
 
 <ion-content>
-
-    <div class="textbox">基础资料</div>
-    <div class="item" (click)="gotoChangeAvatar()">
-        <div>头像</div>
-        <div class="avatar">
-            <img src="{{user.avatar}}" onError="this.src='assets/img/avatar.png'">
+    <ng-container *ngIf="loaded">
+        <div class="textbox">基础资料</div>
+        <div class="item" (click)="gotoChangeAvatar()">
+            <div>头像</div>
+            <div class="avatar">
+                <img src="{{user.avatar}}" onError="this.src='assets/img/avatar.png'">
+            </div>
         </div>
-    </div>
-    <div class="item" (click)="showChangeUserName()">
-        <div>用户名</div>
-        <div class="text2">{{user.username}}</div>
-    </div>
-    <div class="textbox">安全信息</div>
-    <div class="item" (click)="showChangePassword()">
-        <div>密码</div>
-        <div class="text1">修改密码</div>
-    </div>
-    <div class="item" (click)="showChangePhone()">
-        <div>手机号</div>
-        <div class="text2">{{user.phone}}</div>
-    </div>
-    <!-- <p>社交账号(暂不可用)</p>
-      <ion-item>QQ</ion-item>
-      <ion-item>微信</ion-item> -->
-
-    <div class="btnbox">
-        <div fullbtn (click)="logout()">退出登录</div>
-    </div>
+        <div class="item" (click)="showChangeUserName()">
+            <div>用户名</div>
+            <div class="text2">{{user.username}}</div>
+        </div>
+        <div class="textbox">安全信息</div>
+        <div class="item" (click)="showChangePassword()">
+            <div>密码</div>
+            <div class="text1">修改密码</div>
+        </div>
+        <div class="item" (click)="showChangePhone()">
+            <div>手机号</div>
+            <div class="text2">{{user.phone}}</div>
+        </div>
+        <div class="item" (click)="showCancelAlert()">
+            <div>其他操作</div>
+            <div class="text1">注销账号</div>
+        </div>
+        <div class="btnbox">
+            <div fullbtn (click)="logout()">退出登录</div>
+        </div>
+    </ng-container>
 </ion-content>

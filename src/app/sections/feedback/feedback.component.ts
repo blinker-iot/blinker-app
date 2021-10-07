@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { NavController } from '@ionic/angular';
 import { FeedbackService } from './feedback.service';
+import { DataService } from 'src/app/core/services/data.service';
 
 enum FeedbackType {
   "设备使用" = 0,
@@ -15,7 +16,9 @@ enum FeedbackType {
 })
 export class FeedbackPage implements OnInit {
 
-
+  get isDeveloper() {
+    return this.dataService.isDeveloper
+  }
 
   selectType;
   content;
@@ -23,12 +26,13 @@ export class FeedbackPage implements OnInit {
 
   constructor(
     private navCtrl: NavController,
-    private feedbackService: FeedbackService
+    private feedbackService: FeedbackService,
+    private dataService: DataService
   ) { }
 
-  ngOnInit() { }
+  ngOnInit() {
 
-
+  }
 
   select(type) {
     this.selectType = FeedbackType[type];

@@ -1,7 +1,8 @@
 <div class="scroll">
   <div class="block-box">
-    <div class="block" *ngFor="let deviceId of deviceDataList;index as i" [ngClass]="{'selected':selectedDeviceIndex==i}" (click)="selectDevice(i,deviceDataDict[deviceId])">
-      <img class="block-img" src="assets/img/devices/icon/{{deviceDataDict[deviceId].config.image}}" onError="this.src='assets/img/devices/unknown.png'" />
+    <div class="block" *ngFor="let deviceId of deviceDataList;index as i"
+      [ngClass]="{'selected':selectedDeviceIndex==i}" (click)="selectDevice(i,deviceDataDict[deviceId])">
+      <b-device-img [deviceId]="deviceId"></b-device-img>
       <div class="h-line"></div>
       <div class="block-text">
         <span>
@@ -9,8 +10,6 @@
         </span>
       </div>
       <img *ngIf="deviceDataDict[deviceId].config.mode=='ble'" class="mode" src="assets/img/icon/ble.png" />
-      <img *ngIf="deviceDataDict[deviceId].config.mode=='net'" class="mode" src="assets/img/icon/wifi.png" />
-      <img *ngIf="deviceDataDict[deviceId].config.mode=='mqtt'" class="mode" src="assets/img/icon/mqtt.png" />
     </div>
   </div>
 </div>

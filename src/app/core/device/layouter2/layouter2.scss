@@ -18,27 +18,25 @@ gridster {
 
     gridster-item {
         background: none;
+        border-radius: 5px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
     }
 
     .default {
         background-color: #fff;
-        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
-        border-radius: 6px;
     }
 
     .translucent {
         background-color: rgba(255, 255, 255, 0.5);
-        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
-        border-radius: 6px;
     }
 
     .transparent {
         background: none;
+        box-shadow: none;
     }
 
     .round {
         background-color: #fff;
-        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
         border-radius: 50%;
     }
 }

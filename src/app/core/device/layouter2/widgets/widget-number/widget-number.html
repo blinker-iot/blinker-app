@@ -8,11 +8,43 @@
     <div class="content" overflow>{{t0}}</div>
   </div>
 
-  <div class="numbox1" *ngIf="lstyle==1||lstyle==2">
-    <div class="progressBar" [ngClass]="{'progressBar2': lstyle==2}" #ProgressBar></div>
-    <div class="text-box" overflow [ngClass]="{'text-box2': lstyle==2}">
-      <div class="value" overflow [ngStyle]="{'color':color,'transform':fontScale}">{{value}} {{unit}}</div>
+  <div class="numbox1" *ngIf="lstyle==1">
+    <div class="left-box">
+      <i class="{{ico}}" [ngStyle]="{'color':color}"></i>
+    </div>
+    <div class="right-box">
+      <div class="valuebox" *ngIf="value||value==0" [ngStyle]="{'color':color,'transform':fontScale}">
+        <span class="value">{{value}}</span>
+        <span class="unit">{{unit}}</span>
+      </div>
       <div class="content" overflow>{{t0}}</div>
     </div>
   </div>
-</div>
+
+  <div class="numbox10" *ngIf="lstyle==2">
+    <div class="gauge-box" #Gauge>
+      <div class="label">{{t0}}</div>
+      <span class="value">{{value}} <span class="unit">{{unit}}</span></span>
+    </div>
+  </div>
+
+  <div class="numbox11" *ngIf="lstyle==3">
+    <div class="gauge-box" #Gauge>
+      <div class="label">{{t0}}</div>
+      <span class="value">{{value}} <span class="unit">{{unit}}</span></span>
+    </div>
+  </div>
+
+  <div class="numbox12" *ngIf="lstyle==4">
+    <div class="gauge-box" #Gauge>
+      <div class="label">{{t0}}</div>
+      <div class="label2">{{unit}}</div>
+    </div>
+  </div>
+
+  <div class="numbox13" *ngIf="lstyle==5">
+    <div class="gauge-box" #Gauge>
+      <div class="label">{{t0}}</div>
+      <div class="label2">{{unit}}</div>
+    </div>
+  </div>

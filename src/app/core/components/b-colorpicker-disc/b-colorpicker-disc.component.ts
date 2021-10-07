@@ -6,26 +6,14 @@ import {
   ChangeDetectorRef,
   Input,
   Output,
-  EventEmitter,
+  EventEmitter
 } from '@angular/core';
-import { Events } from '@ionic/angular';
-import { HammerGestureConfig, HAMMER_GESTURE_CONFIG } from '@angular/platform-browser';
-import * as Hammer from 'hammerjs';
 
-export class MyHammerConfig extends HammerGestureConfig {
-  overrides = <any>{
-    'pan': { direction: Hammer.DIRECTION_ALL, threshold: 99 }
-  }
-}
 
 @Component({
   selector: 'b-colorpicker-disc',
   templateUrl: './b-colorpicker-disc.component.html',
-  styleUrls: ['./b-colorpicker-disc.component.scss'],
-  providers: [{
-    provide: HAMMER_GESTURE_CONFIG,
-    useClass: MyHammerConfig
-  }]
+  styleUrls: ['./b-colorpicker-disc.component.scss']
 })
 export class BColorpickerDiscComponent {
 
@@ -71,7 +59,6 @@ export class BColorpickerDiscComponent {
   constructor(
     private renderer: Renderer2,
     public changeDetectorRef: ChangeDetectorRef,
-    public events: Events,
   ) {
   }
 
@@ -100,16 +87,6 @@ export class BColorpickerDiscComponent {
       }
     }
   }
-
-  // unsubscribe(key) {
-  //   if (typeof (this.device) != 'undefined')
-  //     this.events.unsubscribe(this.device.deviceName + ':' + key);
-  // }
-
-  // moveKnob(x, y) {
-  //   this.renderer.setStyle(this.knob.nativeElement, 'left', `${(x - 10).toString()}px`);
-  //   this.renderer.setStyle(this.knob.nativeElement, 'top', `${(y - 10).toString()}px`);
-  // }
 
   getKnob(e) {
     let rect = this.pickerbox.nativeElement.getBoundingClientRect();
@@ -169,7 +146,7 @@ export class BColorpickerDiscComponent {
   loadColorImg() {
     this.context = this.myCanvas.nativeElement.getContext("2d");
     this.image = new Image();
-    if (this.enableWhite) this.image.src = `assets/img/colorpicker.png`;
+    if (this.enableWhite) this.image.src = `assets/img/layouter/colorpicker.png`;
     else this.image.src = `assets/img/devices/ownlight/colorpicker.png`;
     this.image.onload = () => {
       window.setTimeout(() => {

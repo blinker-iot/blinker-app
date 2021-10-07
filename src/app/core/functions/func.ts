@@ -54,6 +54,10 @@ export function deviceName12(deviceName) {
     return deviceName.substr(0, 12)
 }
 
+export function deviceName2id(deviceName) {
+    return deviceName.substr(0, 12)
+}
+
 export function getDeviceId(device) {
     return device.deviceName.substr(0, 12)
 }
@@ -65,7 +69,7 @@ export function mac2deviceId(mac) {
 export function mac2name(result) {
     let deviceName = "";
     //android
-    if (typeof result.id == 'string') {
+    if (result.id.length == 17) {
         deviceName = result.id.replace(new RegExp(':', 'g'), '');
     }
     //ios
@@ -256,8 +260,6 @@ export function version2Num(version: string) {
 }
 
 export function isNewerVersion(version1: string, version2: string) {
-    console.log(version2);
-    
     let verList1 = version1.split('.')
     let verList2 = version2.split('.')
     for (let index = 0; index < verList2.length; index++) {
@@ -269,7 +271,7 @@ export function isNewerVersion(version1: string, version2: string) {
 
 export function randomNum(min, max) {
     if (max == 0)
-      return 0;
+        return 0;
     let Range = max - min;
     let Rand = Math.random();
     let num = min + Math.round(Rand * Range);

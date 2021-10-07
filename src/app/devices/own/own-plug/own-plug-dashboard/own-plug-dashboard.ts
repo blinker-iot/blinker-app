@@ -1,5 +1,4 @@
-﻿import { Component, ChangeDetectorRef, ViewChildren, ElementRef, QueryList, Input } from '@angular/core';
-import { NavController, Events, ModalController } from '@ionic/angular';
+﻿import { Component, Input } from '@angular/core';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { NativeService } from 'src/app/core/services/native.service';
 
@@ -35,10 +34,6 @@ export class OwnPlugDashboard {
   }
 
   constructor(
-    private navCtrl: NavController,
-    private changeDetectorRef: ChangeDetectorRef,
-    private events: Events,
-    private modalCtrl: ModalController,
     private deviceService: DeviceService,
     private nativeService: NativeService
   ) {
@@ -93,7 +88,7 @@ export class OwnPlugDashboard {
       message = `{"switch":"on"}`
     }
     this.deviceService.sendData(this.device, message);
-    this.nativeService.vibrate();
+    // this.nativeService.vibrate();
   }
 
   changeTab(tab) {

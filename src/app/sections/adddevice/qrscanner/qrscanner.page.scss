@@ -1,5 +1,14 @@
 .lightSwitch {
-    position : relative;
+    position: relative;
     opacity: 1;
     color: red;
+}
+
+ion-content {
+    --background: transparent !important;
+    .black{
+        background: rgba(0, 0, 0, 1);
+        width: 100vw;
+        height: 100vh;
+    }
 }

@@ -1,0 +1,12 @@
+@import "../repeat-selector-modal/repeat-selector-modal.component.scss";
+
+.select-modal {
+    height: 274px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.modal-footer {
+    width: 100% !important;
+    z-index: 99;
+}

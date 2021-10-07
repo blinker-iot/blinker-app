@@ -1,0 +1,22 @@
+.bottom-btn {
+    position: fixed;
+    bottom: 0;
+    left: 15px;
+    
+    box-shadow: 0 0 10px #ccc;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px 10px 20px;
+    background-color: #fff;
+    color: #389bee;
+    width: calc(100% - 32px);
+    height: 60px;
+    font-size: 15px;
+}
+
+.isios{
+    height: 70px;
+    padding-bottom:20px;
+}

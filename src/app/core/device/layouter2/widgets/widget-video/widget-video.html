@@ -1,3 +1,15 @@
-<div>
-  远程视频
+<div *ngIf="streamType=='mjpg'" style="display: flex;justify-content: center;align-items: center;height: 100%;">
+    <img src="{{url}}" onError="this.src='assets/img/url-error.png';this.style='width:2.5rem;opacity: 0.8;'"/>
+</div>
+<div *ngIf="streamType=='hls'" class="vidbox" (click)="switch()">
+    <video class="full" #video></video>
+    <div class="full" [ngClass]="{'showVideo': showVideo}">
+        <div class="vbat">
+            <i class="fas fa-play-circle"></i>
+        </div>
+    </div>
+    <div class="lb" *ngIf="showVideo">
+        <i class="fas fa-play" *ngIf="playerState == 'pause'||playerState== 'load'"></i>
+        <i class="fas fa-pause" *ngIf="playerState == 'play'"></i>
+    </div>
 </div>

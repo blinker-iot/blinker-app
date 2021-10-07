@@ -1,11 +1,7 @@
-<div layout-box>
+<div class="joystick-box">
   <div class="joyout">
-    <img src="assets/img/layout/joyout.png" />
+    <img src="assets/img/layouter/joyout.png" />
   </div>
-  <div class="joyin">
-    <div class="stick" #stick>
-      <img *ngIf="loaded" src="assets/img/layout/joyin.png" />
-    </div>
-  </div>
-  <div class="touch" #touchZone></div>
+  <div class="stick" #stick></div>
+  <div class="touch" #touchZone (panend)="panend($event)" (panmove)="panmove($event)"></div>
 </div>

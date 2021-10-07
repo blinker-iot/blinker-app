@@ -7,8 +7,8 @@ import { OwnAirdetectorChartPage } from './own-airdetector-chart/own-airdetector
 
 // const routes: Routes = [
 //   {
-//     path: '',
-//     component:OwnAirdetectorChartPage
+//     path: 'device/:deviceName/history',
+//     component: OwnAirdetectorChartPage,
 //   }
 // ];
 
@@ -20,8 +20,8 @@ import { OwnAirdetectorChartPage } from './own-airdetector-chart/own-airdetector
   imports: [
     CommonModule,
     IonicModule,
+    // RouterModule.forChild(routes)
   ],
-  exports: [OwnAirdetectorDashboard],
-  entryComponents: [OwnAirdetectorDashboard]
+  exports: [OwnAirdetectorDashboard, OwnAirdetectorChartPage]
 })
 export class OwnAirdetectorModule { }

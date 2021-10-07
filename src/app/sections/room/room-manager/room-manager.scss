@@ -1,40 +1,3 @@
-.item {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 10px 20px 10px 20px;
-    background-color: #FFF;
-    height: 8vh;
-    margin-top: 3px;
-    font-size: 15px;
-    position: relative;
-    .name {
-        position: absolute;
-        left: 20px;
-    }
-    .num {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #959595;
-        margin-right: 10px;
-    }
-    .arrow {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 21px;
-        color: #959595;
-        img {
-            height: 2.5vh;
-        }
-    }
-}
-
-.hspace {
-    height: 16vh;
-}
 
 .addbtn {
     border-top: 1px solid #d3d3d3;
@@ -51,13 +14,14 @@
     font-size: 15px;
 }
 
-.sortbox{
+.sortbox {
     position: relative;
 }
 
 .item-edit {
     position: relative;
     justify-content: flex-start;
+
     .delbtn {
         display: flex;
         align-items: center;
@@ -65,9 +29,11 @@
         font-size: 21px;
         color: red;
     }
+
     .name {
         position: relative;
     }
+
     .handle {
         display: flex;
         align-items: center;

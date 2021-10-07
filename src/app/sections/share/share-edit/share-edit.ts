@@ -1,11 +1,13 @@
 import { Component } from '@angular/core';
-import { AlertController, Events } from '@ionic/angular';
+import { AlertController } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
 import { deviceName12 } from 'src/app/core/functions/func';
 import { ActivatedRoute } from '@angular/router';
 import { ShareService } from '../share.service';
 import { DataService } from 'src/app/core/services/data.service';
+import { API } from 'src/app/configs/api.config';
+import { NoticeService } from 'src/app/core/services/notice.service';
 
 
 @Component({
@@ -28,6 +30,10 @@ export class ShareEditPage {
     return deviceName12(this.device.deviceName)
   }
 
+  get AVATAR_API() {
+    return API.USER.AVATAR + '/'
+  }
+
   constructor(
     private activatedRoute: ActivatedRoute,
     public userService: UserService,
@@ -35,7 +41,7 @@ export class ShareEditPage {
     private dataService: DataService,
     private shareService: ShareService,
     public alertCtrl: AlertController,
-    public events: Events
+    private noticeService: NoticeService
   ) {
   }
 
@@ -57,7 +63,7 @@ export class ShareEditPage {
     if (typeof this.shareData.share[this.deviceName] != 'undefined')
       shareLength = this.shareData.share[this.deviceName].length
     if (share0Length + shareLength >= 9) {
-      this.events.publish("provider:notice", 'deviceShareLimit');
+      this.noticeService.showToast('deviceShareLimit')
       return;
     }
 

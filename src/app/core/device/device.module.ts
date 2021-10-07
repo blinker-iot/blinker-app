@@ -10,6 +10,9 @@ import { Layouter2Module } from './layouter2/layouter2.module';
 import { DevicesModule } from 'src/app/devices/devices.module';
 import { BlinkerTimerModule } from 'src/app/sections/timer/timer.module';
 import { LayouterGuard } from '../guard/layouter.guard';
+import { Customizer } from './customizer/customizer.component';
+import { DirectivesModule } from '../directives/directives.module';
+import { TranslateModule } from '@ngx-translate/core';
 
 const routes: Routes = [
   {
@@ -25,11 +28,13 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     IonicModule,
+    DirectivesModule,
     BlinkerTimerModule,
     Layouter2Module,
     DevicesModule,
     RouterModule.forChild(routes),
+    TranslateModule.forChild()
   ],
-  declarations: [DevicePage]
+  declarations: [DevicePage, Customizer]
 })
 export class BlinkerDeviceModule { }

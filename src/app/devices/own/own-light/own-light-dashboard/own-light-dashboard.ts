@@ -2,6 +2,7 @@ import { Component, Input } from '@angular/core';
 import { NavController, ModalController } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { OwnLightSelectcolorPage } from '../own-light-selectcolor/own-light-selectcolor';
+import { NativeService } from 'src/app/core/services/native.service';
 
 @Component({
   selector: 'own-light-dashboard',
@@ -13,8 +14,23 @@ export class OwnLightDashboard {
   @Input() device;
 
   tab = 0;
-  timer;
   sendMode = "sun";
+  sendColortemp = 0;
+  sendBrightness = 0;
+  sendSpeed = 0;
+  sendColor = [0, 0, 0];
+  sendColorList=[];
+  
+  // _sendColorList;
+  // get sendColorList() {
+  //   if (typeof this._sendColorList == 'undefined')
+  //     return this.colorList
+  //   return this._sendColorList;
+  // }
+
+  // set sendColorList(colorList) {
+  //   this._sendColorList = colorList;
+  // }
 
   get switch() {
     if (this.device.data.switch == 'on')
@@ -53,24 +69,13 @@ export class OwnLightDashboard {
   }
 
   get colortemp() {
-    if (typeof this.device.data['temp'] == 'undefined') return 0;
-    return this.device.data['temp']
+    if (typeof this.device.data['crt'] == 'undefined') return 0;
+    return this.device.data['crt']
   }
 
   get colorList() {
-    if (typeof this.device.data['grdc'] == 'undefined') return [];
-    return this.device.data['grdc']
-  }
-
-  get isDebug() {
-    // return isDevMode()
-    return false
-  }
-
-  get switchState() {
-    if (typeof this.device.data['swi'] == 'undefined') return 'off';
-    if (this.device.data['swi'] != "on") return 'off';
-    return this.device.data['swi']
+    if (typeof this.device.data['crl'] == 'undefined') return [];
+    return this.device.data['crl']
   }
 
   get state() {
@@ -78,21 +83,10 @@ export class OwnLightDashboard {
     return this.device.data['state']
   }
 
-  _sendColorList;
-  get sendColorList() {
-    if (typeof this._sendColorList == 'undefined')
-      return this.colorList
-    return this._sendColorList;
-  }
-
-  set sendColorList(colorList) {
-    this._sendColorList = colorList;
-  }
-
   constructor(
-    public navCtrl: NavController,
-    public modalCtrl: ModalController,
-    private deviceService: DeviceService
+    private modalCtrl: ModalController,
+    private deviceService: DeviceService,
+    private nativeService: NativeService
   ) { }
 
 
@@ -117,13 +111,6 @@ export class OwnLightDashboard {
       this.sendSpeed = this.speed;
       this.sendColor = this.color;
     }, 500);
-
-    console.log(this.device);
-
-  }
-
-  ngOnDestroy() {
-    window.clearInterval(this.timer);
   }
 
   changeTab(tab) {
@@ -155,37 +142,47 @@ export class OwnLightDashboard {
     this.sendData();
   }
 
-  turn() {
+  turnSwitch() {
     let message;
-    if (this.switchState == 'on') {
-      message = `{"set":{"swi":"off"}}`
+    if (this.switch) {
+      message = `{"switch":"off"}`
     } else {
-      message = `{"set":{"swi":"on"}}`
+      message = `{"switch":"on"}`
     }
-    this.deviceService.sendData(this.device, message)
+    this.deviceService.sendData(this.device, message);
+    // this.nativeService.vibrate();
   }
 
-  sendColortemp = 0;
   colortempChange(e) {
     this.sendColortemp = e;
-    // this.sendData();
+    this.sendBrightness = this.brightness;
+    this.sendColor = this.color;
+    this.sendSpeed = this.speed;
   }
 
-  sendBrightness = 0;
   brightnessChange(e) {
     this.sendBrightness = e;
-    // this.sendData();
+    this.sendColortemp = this.colortemp;
+    this.sendColor = this.color;
+    this.sendSpeed = this.speed;
+
+    this.sendColorList = this.colorList
   }
 
-  sendSpeed = 0;
   speedChange(e) {
     this.sendSpeed = e;
-    // this.sendData();
+    this.sendBrightness = this.brightness;
+    this.sendColortemp = this.colortemp;
+    this.sendColor = this.color;
+
+    this.sendColorList = this.colorList
   }
-  sendColor = [0, 0, 0];
+
   colorChange(e) {
     this.sendColor = e;
-    this.sendData();
+    this.sendBrightness = this.brightness;
+    this.sendColortemp = this.colortemp;
+    this.sendSpeed = this.speed;
   }
 
   sendData() {
@@ -205,11 +202,9 @@ export class OwnLightDashboard {
         message = `{"set":{"mode":"${this.sendMode}","brt":${this.sendBrightness},"spd":${this.sendSpeed},"grdc":${JSON.stringify(this.sendColorList)}}}`;
       }
     }
-    // console.log(message)
     this.deviceService.sendData(this.device, message)
   }
 
-  // sendColorList;
   selectColorId = 99;
   async showColorDisk(id) {
     this.selectColorId = id;
@@ -220,12 +215,6 @@ export class OwnLightDashboard {
         id: this.selectColorId
       }
     });
-    //   modal.onDidDismiss({ data } => {
-    //     this.selectColorId = 99;
-    //     console.log(this.sendColorList);
-    //     if(this.sendColorList.length > 1)
-    //   this.sendData();
-    // });
     await modal.present();
     await modal.onWillDismiss();
     this.selectColorId = 99;
@@ -237,18 +226,10 @@ export class OwnLightDashboard {
     return `rgb(${this.sendColorList[i].toString()})`;
   }
 
-  addColor(e) {
+  addColor() {
     let newColor = []
     this.sendColorList.push(newColor);
     this.showColorDisk(this.sendColorList.length - 1);
-  }
-
-  gotoTiming() {
-    // this.navCtrl.push('Layout2TimerPage', this.device);
-  }
-
-  ionViewWillLeave() {
-    this.tab = 99;
   }
 
 

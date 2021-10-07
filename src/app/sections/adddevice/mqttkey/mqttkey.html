@@ -1,38 +1,61 @@
 <ion-header>
-  <ion-toolbar>
-    <ion-buttons slot="start">
+  <ion-toolbar overlayPadding>
+    <ion-buttons *ngIf="step!=2" slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>WiFi接入</ion-title>
+    <ion-title>网络接入</ion-title>
   </ion-toolbar>
 </ion-header>
 <ion-content padding whitebg>
-  <div class="desc">
-    <p>blinker商业版支持国内外多个服务商的iot服务</p>
-    <p>当前版本基于阿里Broker通信</p>
-  </div>
-
-  <div class="card" *ngIf="!showExit">
-    <ng-container *ngIf="!(showKey||showExit)">
-      <div class="loaderbox">
-        <div class="loader-inner ball-pulse">
-          <div></div>
-          <div></div>
-          <div></div>
-        </div>
+  <ng-container *ngIf="step==0">
+    <div class="desc">
+      <p>选择通信服务商</p>
+    </div>
+    <div class="broker-box">
+      <div class="broker-item" (click)="registerDevice('blinker')">
+        <img src="assets/img/broker/blinker.png" alt="">
+        <!-- <div class="beta">beta</div> -->
       </div>
-      <div class="loaddesc">正在注册设备</div>
-    </ng-container>
-    <ng-container *ngIf="showKey">
-      <div class="text">复制以下Secret Key到你的源程序中：</div>
-      <div keyvalue selectable>{{secretKey}}</div>
-      <button class="copybtn" (click)="copyKey()"><span>复制key</span></button>
-    </ng-container>
+      <!-- <div class="broker-item" (click)="registerDevice('aliyun')">
+        <img src="assets/img/broker/aliyun.png" alt="">
+      </div>
+      <div class="broker-item disable" (click)="showToast()">
+        <img src="assets/img/broker/qcloud.png" alt="">
+        <div class="beta">alpha</div>
+      </div> -->
+      <!-- <div class="broker-item disable">
+        <img src="assets/img/broker/onenet.png" alt="">
+        <div class="beta">alpha</div>
+      </div> -->
+      <!-- <div class="custom-btn" (click)="showToast()">使用私有Broker服务</div> -->
+    </div>
+  </ng-container>
+  <div class="card" *ngIf="step==1">
+    <div class="loaderbox">
+      <div class="loader-inner ball-pulse">
+        <div></div>
+        <div></div>
+        <div></div>
+      </div>
+    </div>
+    <div class="loaddesc">正在注册设备</div>
+  </div>
+  <div class="card" *ngIf="step==2">
+    <!-- <div class="text">设备已注册到{{}}</div> -->
+    <div class="broker-item" *ngIf="showBroker=='aliyun'">
+      <img src="assets/img/broker/aliyun.png" alt="">
+    </div>
+    <div class="broker-item" *ngIf="showBroker=='blinker'">
+      <img src="assets/img/broker/blinker.png" alt="">
+    </div>
 
+    <div class="text">复制以下Secret Key到你的源程序中：</div>
+    <div keyvalue selectable>{{secretKey}}</div>
+    <button class="copybtn" (click)="copyKey()"><span>复制key</span></button>
   </div>
 </ion-content>
-<div class="btnbox">
-  <button *ngIf="showKey||showExit" fullbtn (click)="gotoHome()">
+<div class="btnbox" *ngIf="step==2">
+  <button fullbtn (click)="gotoHome()">
     返回我的设备
   </button>
 </div>

@@ -1,0 +1,23 @@
+<ion-header>
+  <ion-toolbar overlayPadding>
+    <ion-buttons slot="start">
+      <ion-button (click)="close()">
+        <i class="fal fa-times"></i>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>添加动作</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="save()">
+        <i class="fal fa-check" [ngClass]="{'save-btn-disable': disableSave}"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <div>1.选择执行动作的设备</div>
+  <deviceblock-list2 (update)="updateSelectedDevice($event)"></deviceblock-list2>
+  <ng-container *ngIf="selectedDevice">
+    <div>2.选择动作</div>
+    <b-actcmd-list [device]="selectedDevice" (updateAct)="updateSelectedAction($event)"></b-actcmd-list>
+  </ng-container>
+</ion-content>

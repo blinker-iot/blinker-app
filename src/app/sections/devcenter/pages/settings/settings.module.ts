@@ -7,6 +7,8 @@ import { IonicModule } from '@ionic/angular';
 
 import { SettingsPage } from './settings.page';
 import { DeviceIconPageModule } from 'src/app/core/pages/device-icon/device-icon.module';
+import { ComponentsModule } from 'src/app/core/components/components.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
 
 const routes: Routes = [
   {
@@ -21,8 +23,10 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     DeviceIconPageModule,
+    ComponentsModule,
+    DirectivesModule,
     RouterModule.forChild(routes)
   ],
   declarations: [SettingsPage]
 })
-export class SettingsPageModule {}
+export class SettingsPageModule { }

@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef, Input, SimpleChanges, ChangeDetectorRef } from '@angular/core';
-import ProgressBar from 'progressbar.js';
+// import ProgressBar from 'progressbar.js';
 import { Brightness } from '@ionic-native/brightness/ngx';
 
 @Component({
@@ -19,7 +19,7 @@ export class BProgressbarComponent {
 
   @ViewChild('ProgressBar',{ read: ElementRef, static: true }) progressBar: ElementRef;
   constructor(
-    private changeDetectorRef: ChangeDetectorRef,
+    // private changeDetectorRef: ChangeDetectorRef,
     private brightness: Brightness
   ) { }
 
@@ -32,39 +32,39 @@ export class BProgressbarComponent {
   }
 
   ngAfterViewInit(): void {
-    this.bar = new ProgressBar.Circle(this.progressBar.nativeElement, {
-      strokeWidth: 5,
-      // easing: 'easeIn',
-      duration: 1000,
-      color: '#389BEE',
-      trailColor: '#eee',
-      trailWidth: 5,
-      from: { color: '#389BEE' },
-      to: { color: '#34AA54' },
-      step: (state, bar) => {
-        bar.path.setAttribute('stroke', state.color);
-        let value = Math.round(bar.value() * 100);
-        if (value === 0) {
-          bar.setText(value + '%');
-        } else if (value === 100) {
-          bar.setText('');
-          this.showDone = true;
-          this.text = '下载完成，即将重启应用'
-          this.changeDetectorRef.detectChanges();
-        } else {
-          bar.setText(value + '%');
-        }
-        bar.text.style.color = state.color;
-      }
-    });
-    this.bar.text.style.fontSize = '1.5rem';
-    setInterval(() => {
-      this.update()
-    }, 1000);
+    // this.bar = new ProgressBar.Circle(this.progressBar.nativeElement, {
+    //   strokeWidth: 5,
+    //   // easing: 'easeIn',
+    //   duration: 1000,
+    //   color: '#389BEE',
+    //   trailColor: '#eee',
+    //   trailWidth: 5,
+    //   from: { color: '#389BEE' },
+    //   to: { color: '#34AA54' },
+    //   step: (state, bar) => {
+    //     bar.path.setAttribute('stroke', state.color);
+    //     let value = Math.round(bar.value() * 100);
+    //     if (value === 0) {
+    //       bar.setText(value + '%');
+    //     } else if (value === 100) {
+    //       bar.setText('');
+    //       this.showDone = true;
+    //       this.text = '下载完成，即将重启应用'
+    //       this.changeDetectorRef.detectChanges();
+    //     } else {
+    //       bar.setText(value + '%');
+    //     }
+    //     bar.text.style.color = state.color;
+    //   }
+    // });
+    // this.bar.text.style.fontSize = '1.5rem';
+    // setInterval(() => {
+    //   this.update()
+    // }, 1000);
   }
 
   update() {
-    this.bar.animate(this.value);
+    // this.bar.animate(this.value);
   }
 
 }

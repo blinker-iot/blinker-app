@@ -1,0 +1,16 @@
+<div class="lang-selector">
+  <div class="lang-item" *ngIf="supportI18n" (click)="showMore=!showMore">
+    <img *ngIf="selectedLanguage=='简体中文'" src="assets/img/language/chinese.jpg" alt="">
+    <img *ngIf="selectedLanguage=='English'" src="assets/img/language/english.jpg" alt="">
+    <span class="lang-text">{{selectedLanguage}}</span>
+  </div>
+  <div style="margin-left: 15px;" class="animate__animated animate__faster animate__fadeInDown" *ngIf="showMore">
+    <ng-container *ngFor="let item of languageList">
+      <div class="lang-item" *ngIf="item!=selectedLanguage" (click)="showMore=!showMore;changeLanguage(item)">
+        <img *ngIf="item=='简体中文'" src="assets/img/language/chinese.jpg" alt="">
+        <img *ngIf="item=='English'" src="assets/img/language/english.jpg" alt="">
+        <span class="lang-text">{{item}}</span>
+      </div>
+    </ng-container>
+  </div>
+</div>

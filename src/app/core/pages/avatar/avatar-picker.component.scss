@@ -1,0 +1,51 @@
+.avatar-page {
+  height: 100%;
+  width: 100vw;
+}
+
+.chose-btn {
+  margin-top: 30vh;
+  margin-left: 20vw;
+  width: 60vw;
+  height: 45px;
+  padding: 10px 30px;
+  border-radius: 5px;
+  background: #4190f7;
+  color: #fff;
+}
+
+.imgbox {
+  height: 100%;
+  width: 100vw;
+  // background-color: black;
+  .source-img {
+    width: 50%;
+    visibility: hidden;
+  }
+}
+
+.btn {
+  position: absolute;
+  left: calc(50% - 30px);
+  bottom: 60px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #fff;
+  margin-left: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  color: #999;
+  ion-icon {
+    font-size: 36px;
+  }
+  .btn-text {
+    margin-top: 5px;
+    bottom: -25px;
+    color: #fff;
+    position: absolute;
+    font-size: 12px;
+  }
+}

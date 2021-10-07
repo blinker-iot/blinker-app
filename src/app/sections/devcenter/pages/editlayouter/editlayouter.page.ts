@@ -1,11 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { DevcenterService } from '../../devcenter.service';
-import { Device } from 'src/app/core/device/device.model';
 import { Observable, of } from 'rxjs';
-import { Events } from '@ionic/angular';
 import { Mode } from 'src/app/core/device/layouter2/layouter2-mode';
-import { DevicelistService } from 'src/app/core/services/devicelist.service';
+import { Device } from 'src/app/core/model/device.model';
+import { LayouterService } from 'src/app/core/device/layouter.service';
 
 @Component({
   selector: 'prodevice-editlayouter',
@@ -23,8 +22,7 @@ export class EditlayouterPage implements OnInit {
   constructor(
     private devcenterService: DevcenterService,
     private activatedRoute: ActivatedRoute,
-    private events: Events,
-    private devicelistService: DevicelistService
+    private LayouterService: LayouterService
   ) { }
 
   ngOnInit() {
@@ -50,7 +48,7 @@ export class EditlayouterPage implements OnInit {
   }
 
   lock() {
-    this.events.publish('layouter2', 'changeMode', Mode.Default);
+    this.LayouterService.changeMode(Mode.Default)
     this.editMode = false;
     this.saveLayouterData();
   }
@@ -64,21 +62,20 @@ export class EditlayouterPage implements OnInit {
   }
 
   unlock() {
-    this.events.publish('layouter2', 'changeMode', Mode.Edit);
+    this.LayouterService.changeMode(Mode.Edit)
     this.editMode = true;
   }
 
   editBackground() {
-    this.events.publish('layouter2', 'changeMode', Mode.EditBackground);
+    this.LayouterService.changeMode(Mode.EditBackground)
   }
 
   async cleanWidgets() {
-    this.events.publish('layouter2', 'cleanWidgets');
+    this.LayouterService.cleanWidgets()
   }
 
   canDeactivate(): Observable<boolean> | boolean {
     if (!this.editMode) return true;
-    // if (!this.deviceComponentRef.instance.isChanged) return true;
     return this.confirm();
   }
 
@@ -87,7 +84,7 @@ export class EditlayouterPage implements OnInit {
     return of(confirmation);
   };
 
-  gotoIeConfig(){
+  gotoIeConfig() {
 
   }
 

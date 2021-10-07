@@ -1,0 +1,17 @@
+<ion-header>
+  <ion-toolbar overlayPadding>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title *ngIf="device">{{device.config.customName}}触发器配置</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content padding>
+  <p>配置方式可见</p>
+  <p>https://diandeng.tech/doc/actions-and-triggers</p>
+  <textarea class="configzone" [(ngModel)]="configData"></textarea>
+  <div class="btnbox">
+    <div fullbtn class="btn40" (click)="saveData()">保存配置</div>
+  </div>
+</ion-content>

@@ -18,6 +18,8 @@ import { FormsModule } from '@angular/forms';
 import { WidgetMapComponent } from './widget-map/widget-map.component';
 import { WidgetTabComponent } from './widget-tab/widget-tab.component';
 import { WidgetInputComponent } from './widget-input/widget-input';
+import { WidgetImageComponent } from './widget-image/widget-image';
+import { ChartsModule } from 'src/app/core/charts/charts.module';
 
 @NgModule({
   declarations: [
@@ -35,6 +37,7 @@ import { WidgetInputComponent } from './widget-input/widget-input';
     WidgetMapComponent,
     WidgetTabComponent,
     WidgetInputComponent,
+    WidgetImageComponent
   ],
   imports: [
     CommonModule,
@@ -42,6 +45,7 @@ import { WidgetInputComponent } from './widget-input/widget-input';
     PipesModule,
     ComponentsModule,
     FormsModule,
+    ChartsModule
   ],
   exports: [
     WidgetTextComponent,
@@ -58,6 +62,7 @@ import { WidgetInputComponent } from './widget-input/widget-input';
     WidgetMapComponent,
     WidgetTabComponent,
     WidgetInputComponent,
+    WidgetImageComponent
   ]
 })
 export class WidgetsModule { }

@@ -13,6 +13,7 @@ log.txt
 npm-debug.log*
 package-lock.json
 
+dist
 .idea/
 .ionic/
 .sourcemaps/
@@ -25,6 +26,7 @@ node_modules/
 tmp/
 temp/
 platforms/
+platforms2/
 plugins/
 plugins/android.json
 plugins/ios.json

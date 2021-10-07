@@ -1,8 +1,9 @@
 <div widget>
-    <div class="chartbox" #chartbox [ngStyle]="{'visibility': !showNoData?'visible':'hidden'}">
-        <canvas class="chart" #chartCanvas></canvas>
+    <div class="chartbox" #chartbox [ngStyle]="{'visibility': !isHidden?'visible':'hidden'}">
+        <!-- <canvas class="chart" #chartCanvas></canvas> -->
+        <line-chart-area *ngIf="showChart" [data]="data" [color]="chartColor"></line-chart-area>
     </div>
-    <div class="nodata" *ngIf="showNoData">
+    <div class="nodata" *ngIf="isHidden">
         暂无数据
     </div>
     <div class="btnbox">
@@ -14,6 +15,7 @@
         </ng-container>
     </div>
     <select [(ngModel)]="quickCode" (ngModelChange)="changeQuickCode()">
+        <!-- <option value="rt">实时</option> -->
         <option value="1h">最近1小时</option>
         <option value="1d">最近1天</option>
         <option value="1w">最近1周</option>

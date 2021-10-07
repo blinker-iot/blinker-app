@@ -1,5 +1,5 @@
 import { Component, Input, ViewChild, ElementRef, ChangeDetectorRef, Renderer2 } from '@angular/core';
-import { Events, ModalController } from '@ionic/angular';
+import { ModalController } from '@ionic/angular';
 import { DebugService } from './debug.service';
 import { DeviceService } from '../core/services/device.service';
 import { NativeService } from '../core/services/native.service';
@@ -20,7 +20,7 @@ export class DebugComponent {
   boxHeight = '';
 
   oldDataLength = 0;
-
+  debugServiceSubject;
   get data() {
     return this.debugService.dataList[this.device.deviceName]
   }
@@ -39,30 +39,28 @@ export class DebugComponent {
   @ViewChild('myInput', { read: ElementRef, static: true }) myInput: ElementRef;
 
   constructor(
-    public events: Events,
     public changeDetectorRef: ChangeDetectorRef,
     public renderer: Renderer2,
     public modalCtrl: ModalController,
     private debugService: DebugService,
-    private deviceService: DeviceService,
-    private nativeService: NativeService
+    private deviceService: DeviceService
   ) { }
 
   ngAfterViewInit() {
     this.listenKeyboard();
-    this.events.subscribe('debugComponent', () => {
+    this.debugServiceSubject = this.debugService.state.subscribe(() => {
       setTimeout(() => {
         this.scrollToBottom();
-      }, 50);
-    });
+      }, 10);
+    })
     setTimeout(() => {
       this.myInput.nativeElement.focus();
     }, 300);
   }
 
   ngOnDestroy() {
+    this.debugServiceSubject.unsubscribe();
     this.unlistenKeyboard();
-    this.events.unsubscribe('debugComponent');
   }
 
   scrollToBottom() {
@@ -80,19 +78,17 @@ export class DebugComponent {
   send() {
     this.deviceService.sendData(this.device, this.sendmess);
     this.sendmess = '';
-    this.nativeService.vibrate();
+    // this.nativeService.vibrate();
     this.scrollToBottom();
   }
 
   tapSwitch() {
     if (this.device.config.mode != "mqtt") return;
     let message;
-    if (this.device.data.switch == "off") {
-      message = `{"switch":"on"}`;
-    } else if (this.device.data.switch == "on") {
+    if (this.device.data.switch == "on") {
       message = `{"switch":"off"}`;
     } else {
-      return;
+      message = `{"switch":"on"}`;
     }
     this.deviceService.pubMessage(this.device, message);
   }
@@ -105,10 +101,8 @@ export class DebugComponent {
   listenKeyboard() {
     this.listenKeyboardShow = this.renderer.listen('window', 'native.keyboardshow', e => {
       this.boxHeight = `calc( 100vh - ${e.keyboardHeight + 70}px )`;
-      console.log(this.boxHeight);
     });
     this.listenKeyboardHide = this.renderer.listen('window', 'native.keyboardhide', e => {
-      // this.modal.dismiss();
     });
   }
 

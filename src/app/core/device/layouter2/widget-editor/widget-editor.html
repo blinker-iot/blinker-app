@@ -1,15 +1,14 @@
 <ion-header>
-  <ion-toolbar>
-    <!-- <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
-    </ion-buttons> -->
+  <ion-toolbar overlayPadding>
+    <ion-buttons slot="start">
+      <ion-button (click)="close()">
+        <i class="fal fa-times"></i>
+      </ion-button>
+    </ion-buttons>
     <ion-title>组件编辑</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="delete()">
-        <i class="fal fa-trash-alt"></i>
-      </ion-button>
-      <ion-button (click)="save()">
-        <i class="fal fa-check-circle"></i>
+      <ion-button (click)="save()" style="margin-left: 15px">
+        <i class="fal fa-check"></i>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
@@ -17,372 +16,272 @@
 <ion-content>
   <div class="setting-content">
     <!-- 效果预览 -->
-    <div class="setting-title">
-      样式设置
-    </div>
-    <div class="scrollHeight">
-      <div demo-box [ngClass]="{'scale07': widget.type!='tex','scale04': widget.type=='col'}">
-        <ng-container *ngFor="let widgetItem of widgets;index as i">
-          <div class="widgetitem" #widgetItem (click)="changeStyle(i)"
-            [ngStyle]="{'box-shadow':widget.lstyle==i?'0 0 5px 3px rgba(60, 150, 255, 0.8)':''}"
-            [ngClass]="{'default':widget.bg==0,'translucent':widget.bg==1,'transparent':widget.bg==2,'round':widget.bg==3}">
-            <widget-dynamic [widget]="widget" [lstyle]="i" [device]="device" [isDemo]="true"></widget-dynamic>
-          </div>
-        </ng-container>
+    <div class="setting-box0">
+      <div class="setting-title">
+        <div>样式设置</div>
+        <div class="h-line"></div>
+      </div>
+      <div class="scrollHeight">
+        <div class="widgetitem-box"
+          [ngClass]="{'scale07': widget.type!='tex','scale04': widget.type=='vid','scale03':widget.type=='img'||widget.type=='col'}">
+          <ng-container *ngFor="let widgetItem of widgets;index as i">
+            <div class="widgetitem" #widgetItem (click)="changeStyle(i)"
+              [ngStyle]="{'box-shadow':widget.lstyle==i?'0 0 5px 3px rgba(60, 150, 255, 0.8)':''}"
+              [ngClass]="{'default':widget.bg==0,'translucent':widget.bg==1,'transparent':widget.bg==2,'round':widget.bg==3}">
+              <widget-dynamic [widget]="widget" [lstyle]="i" [device]="device" [isDemo]="true"></widget-dynamic>
+            </div>
+          </ng-container>
+          <div style="width: 15px;flex-shrink: 0;"></div>
+        </div>
       </div>
     </div>
-    <!-- 基础设置 -->
-    <div class="setting-title">
-      参数设置
-    </div>
+    <!-- 参数设置 -->
     <div class="setting-box" [ngClass]="{'showkeyboard':showKeyboard}">
-      <div class="tabs" *ngIf="widget.type=='btn'">
-        <div class="tab" [ngClass]="{'selected':tabSelected==0}" (click)="tabChange(0)"> 基础设置</div>
-        <div class="tab" [ngClass]="{'selected':tabSelected==1}" (click)="tabChange(1)"> 语音设置</div>
+      <div class="setting-title">
+        <div>参数设置</div>
+        <div class="h-line"></div>
       </div>
-      <div class="h-line" *ngIf="widget.type=='btn'">
-        <div class="h-line">
-          <div class="active" *ngIf="tabSelected==0"></div>
-        </div>
-        <div class="h-line">
-          <div class="active" *ngIf="tabSelected==1"></div>
+      <div setting-item *ngIf="widget.type=='tim'">
+        <div>该组件没有提供可设置的参数</div>
+      </div>
+      <div setting-item *ngIf="!(widget.type=='deb'|| widget.type=='vid' || widget.type=='tim')">
+        <div item-name>组件键名</div>
+        <div input-box>
+          <input type="text" placeholder={{widget.key}} [(ngModel)]="widget.key">
         </div>
       </div>
-      <div class="tabs notabs" *ngIf="widget.type!='btn'">
-        <div class="selected">基础设置</div>
-      </div>
-      <div class="h-line" *ngIf="widget.type!='btn'"></div>
-      <!-- 基础设置 -->
-      <div class="tabbox" *ngIf="tabSelected==0">
-        <div setting-item *ngIf="widget.type=='tim'">
-          <div>该组件没有提供可设置的参数</div>
+      <div setting-item *ngIf="widget.type=='btn'">
+        <div item-name>按键类型</div>
+        <div item-item class="btnmode">
+          <div [ngClass]="{'selected':widget.mode==0}" (click)="choseBtnMode(0)">
+            <i *ngIf="widget.mode==0" class="fal fa-check-square"></i>
+            <i *ngIf="widget.mode!=0" class="fal fa-square"></i>
+            普通按键
+          </div>
+          <div [ngClass]="{'selected':widget.mode==1}" (click)="choseBtnMode(1)">
+            <i *ngIf="widget.mode==1" class="fal fa-check-square"></i>
+            <i *ngIf="widget.mode!=1" class="fal fa-square"></i>
+            开关按键
+          </div>
+          <div [ngStyle]="{'color': widget.mode!=2?'#FFF':'#CCC'}" [ngClass]="{'selected':widget.mode==2}"
+            (click)="choseBtnMode(2)">
+            <i *ngIf="widget.mode==2" class="fal fa-check-square"></i>
+            <i *ngIf="widget.mode!=2" class="fal fa-square"></i>
+            自定义
+          </div>
         </div>
-        <div setting-item
-          *ngIf="!(widget.type=='deb'|| widget.type=='cha' || widget.type=='vid' || widget.type=='tim')">
-          <div item-name>数据键名</div>
+      </div>
+      <div setting-item *ngIf="widget.type=='btn'&&widget.mode==2">
+        <div item-name>承载内容</div>
+        <div input-box>
+          <input type="text" placeholder={{widget.cus}} [(ngModel)]="widget.cus">
+        </div>
+      </div>
+      <div setting-item
+        *ngIf="widget.type=='tex'||widget.type=='btn'||widget.type=='ran'||widget.type=='col'|| widget.type=='num'">
+        <div item-name>显示文本1</div>
+        <div input-box>
+          <input type="text" placeholder={{widget.t0}} [(ngModel)]="widget.t0">
+        </div>
+      </div>
+      <div setting-item *ngIf="widget.type=='tex'">
+        <div item-name>文本1字号</div>
+        <div input-box>
+          <input type="text" placeholder={{widget.size}} [(ngModel)]="widget.size">
+        </div>
+      </div>
+      <div setting-item *ngIf="widget.type=='tex'">
+        <div item-name>显示文本2</div>
+        <div input-box>
+          <input type="text" placeholder={{widget.t1}} [(ngModel)]="widget.t1">
+        </div>
+      </div>
+      <div setting-item *ngIf="widget.type=='num'">
+        <div item-name>数据单位</div>
+        <div input-box>
+          <input type="text" placeholder={{widget.uni}} [(ngModel)]="widget.uni">
+        </div>
+      </div>
+      <div setting-item *ngIf="widget.type=='ran'">
+        <div item-name>最小值</div>
+        <div input-box>
+          <input type="number" placeholder={{widget.min}} [(ngModel)]="widget.min">
+        </div>
+      </div>
+      <div setting-item *ngIf="widget.type=='ran'||widget.type=='num'">
+        <div item-name>最大值</div>
+        <div input-box>
+          <input type="number" placeholder={{widget.max}} [(ngModel)]="widget.max">
+        </div>
+      </div>
+      <div setting-item *ngIf="widget.type=='tex' || widget.type=='btn' || widget.type=='num'">
+        <div item-name>显示图标</div>
+        <div class="icon-box">
+          <div class="btn" (click)="changeIcon()">修改图标</div>
+        </div>
+      </div>
+      <div setting-item *ngIf="widget.type=='tex' || widget.type=='btn'||widget.type=='ran'|| widget.type=='num'">
+        <div item-name *ngIf="widget.type=='tex'">文本1颜色</div>
+        <div item-name *ngIf="widget.type=='btn'|| widget.type=='num'">颜色</div>
+        <div item-name *ngIf="widget.type=='ran'">滑动条颜色</div>
+        <div class="color-btn-box">
+          <b-colorpicker-btns [(selected)]="widget.clr">
+          </b-colorpicker-btns>
+        </div>
+      </div>
+      <!-- 图表配置项 begin -->
+      <ng-container *ngIf="widget.type=='cha'">
+        <div setting-item>
+          <div item-name>存储键名0</div>
           <div input-box>
-            <!-- <ion-input placeholder={{widget.key}} [(ngModel)]="widget.key"></ion-input> -->
-            <input type="text" placeholder={{widget.key}} [(ngModel)]="widget.key">
+            <input type="text" placeholder={{widget.key0}} [(ngModel)]="widget.key0">
           </div>
         </div>
-        <div setting-item *ngIf="widget.type=='btn'">
-          <div item-name>按键类型</div>
-          <div item-item class="btnmode">
-            <div [ngClass]="{'selected':widget.mode==0}" (click)="choseBtnMode(0)">
-              <i *ngIf="widget.mode==0" class="fal fa-check-square"></i>
-              <i *ngIf="widget.mode!=0" class="fal fa-square"></i>
-              普通按键</div>
-            <div [ngClass]="{'selected':widget.mode==1}" (click)="choseBtnMode(1)">
-              <i *ngIf="widget.mode==1" class="fal fa-check-square"></i>
-              <i *ngIf="widget.mode!=1" class="fal fa-square"></i>
-              开关按键</div>
-            <div [ngClass]="{'selected':widget.mode==2}" (click)="choseBtnMode(2)">
-              <i *ngIf="widget.mode==2" class="fal fa-check-square"></i>
-              <i *ngIf="widget.mode!=2" class="fal fa-square"></i>
-              自定义</div>
-          </div>
-        </div>
-        <div setting-item *ngIf="widget.type=='btn'&&widget.mode==2">
-          <div item-name>承载内容</div>
-          <div input-box>
-            <input type="text" placeholder={{widget.cus}} [(ngModel)]="widget.cus">
-          </div>
-        </div>
-        <div setting-item
-          *ngIf="widget.type=='tex'||widget.type=='btn'||widget.type=='ran'||widget.type=='col'|| widget.type=='num'">
-          <div item-name>显示文本1</div>
+        <div setting-item>
+          <div item-name>显示文本0</div>
           <div input-box>
             <input type="text" placeholder={{widget.t0}} [(ngModel)]="widget.t0">
           </div>
         </div>
-        <div setting-item *ngIf="widget.type=='tex'">
-          <div item-name>显示文本2</div>
-          <div input-box>
-            <input type="text" placeholder={{widget.t1}} [(ngModel)]="widget.t1">
-          </div>
-        </div>
-        <div setting-item *ngIf="widget.type=='num'">
-          <div item-name>数据单位</div>
-          <div input-box>
-            <input type="text" placeholder={{widget.uni}} [(ngModel)]="widget.uni">
-          </div>
-        </div>
-        <div setting-item *ngIf="widget.type=='ran'">
-          <div item-name>最小值</div>
-          <div input-box>
-            <input type="number" placeholder={{widget.min}} [(ngModel)]="widget.min">
-          </div>
-        </div>
-        <div setting-item *ngIf="widget.type=='ran'||widget.type=='num'">
-          <div item-name>最大值</div>
-          <div input-box>
-            <input type="number" placeholder={{widget.max}} [(ngModel)]="widget.max">
-          </div>
-        </div>
-        <div setting-item *ngIf="widget.type=='tex' || widget.type=='btn' || widget.type=='num'">
-          <div item-name>显示图标</div>
-          <div class="icon-box">
-            <div class="btn" (click)="changeIcon()">修改图标</div>
-          </div>
-        </div>
-        <div setting-item *ngIf="widget.type=='tex' || widget.type=='btn'||widget.type=='ran'|| widget.type=='num'">
-          <div item-name *ngIf="widget.type=='tex'">文字颜色</div>
-          <div item-name *ngIf="widget.type=='btn'|| widget.type=='num'">图标颜色</div>
-          <div item-name *ngIf="widget.type=='ran'">滑动条颜色</div>
+        <div setting-item>
+          <div item-name>数据颜色0</div>
           <div class="color-btn-box">
             <b-colorpicker-btns [(selected)]="widget.clr">
             </b-colorpicker-btns>
           </div>
         </div>
-        <!-- 图表配置项 begin -->
-        <ng-container *ngIf="widget.type=='cha'">
-          <div setting-item>
-            <div item-name>数据键名0</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.key}} [(ngModel)]="widget.key">
+        <div setting-item>
+          <div item-name>存储键名1</div>
+          <div input-box>
+            <input type="text" placeholder={{widget.key1}} [(ngModel)]="widget.key1">
+          </div>
+        </div>
+        <div setting-item>
+          <div item-name>显示文本1</div>
+          <div input-box>
+            <input type="text" placeholder={{widget.t1}} [(ngModel)]="widget.t1">
+          </div>
+        </div>
+        <div setting-item>
+          <div item-name>数据颜色1</div>
+          <div class="color-btn-box">
+            <b-colorpicker-btns [(selected)]="widget.clr1">
+            </b-colorpicker-btns>
+          </div>
+        </div>
+        <div setting-item>
+          <div item-name>存储键名2</div>
+          <div input-box>
+            <input type="text" placeholder={{widget.key2}} [(ngModel)]="widget.key2">
+          </div>
+        </div>
+        <div setting-item>
+          <div item-name>显示文本2</div>
+          <div input-box>
+            <input type="text" placeholder={{widget.t2}} [(ngModel)]="widget.t2">
+          </div>
+        </div>
+        <div setting-item>
+          <div item-name>数据颜色2</div>
+          <div class="color-btn-box">
+            <b-colorpicker-btns [(selected)]="widget.clr2">
+            </b-colorpicker-btns>
+          </div>
+        </div>
+      </ng-container>
+      <!-- 调试配置项 end -->
+      <div setting-item *ngIf="widget.type=='deb'">
+        <div item-name>显示内容</div>
+        <div item-item class="btnmode">
+          <div [ngClass]="{'selected':widget.mode==0}" (click)="choseBtnMode(0)">
+            <i *ngIf="widget.mode==0" class="fal fa-check-square"></i>
+            <i *ngIf="widget.mode!=0" class="fal fa-square"></i>
+            显示收发数据
+          </div>
+          <div [ngClass]="{'selected':widget.mode==1}" (click)="choseBtnMode(1)">
+            <i *ngIf="widget.mode==1" class="fal fa-check-square"></i>
+            <i *ngIf="widget.mode!=1" class="fal fa-square"></i>
+            显示接收数据
+          </div>
+        </div>
+      </div>
+      <!-- 视频配置项 -->
+      <ng-container *ngIf="widget.type=='vid'">
+        <div setting-item>
+          <div item-name>URL</div>
+          <div input-box>
+            <input type="text" placeholder={{widget.url}} [(ngModel)]="widget.url">
+          </div>
+        </div>
+        <div setting-item>
+          <div item-name>视频流</div>
+          <div item-item class="btnmode player">
+            <div [ngClass]="{'selected':widget.str=='mjpg'}" (click)="choseStream('mjpg')">
+              <i *ngIf="widget.str=='mjpg'" class="fal fa-check-square"></i>
+              <i *ngIf="widget.str!='mjpg'" class="fal fa-square"></i>
+              mjpg
+            </div>
+            <div class="item2" [ngClass]="{'selected':widget.str=='hls'}" (click)="choseStream('hls')">
+              <i *ngIf="widget.str=='hls'" class="fal fa-check-square"></i>
+              <i *ngIf="widget.str!='hls'" class="fal fa-square"></i>
+              hls
             </div>
           </div>
-          <div setting-item>
-            <div item-name>显示文本0</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.t0}} [(ngModel)]="widget.t0">
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>数据颜色0</div>
-            <div class="color-btn-box">
-              <b-colorpicker-btns [(selected)]="widget.clr">
-              </b-colorpicker-btns>
-            </div>
-          </div>
-          <!-- <div setting-item>
-            <div item-name>风格设置</div>
-            <div item-item class="btnmode">
-              <div [ngClass]="{'selected':widget.bg==0}" (click)="choseBgMode(0)">
-                <i *ngIf="widget.bg==0" class="fal fa-check-square"></i>
-                <i *ngIf="widget.bg!=0" class="fal fa-square"></i>
-                平滑</div>
-              <div [ngClass]="{'selected':widget.bg==1}" (click)="choseBgMode(1)">
-                <i *ngIf="widget.bg==1" class="fal fa-check-square"></i>
-                <i *ngIf="widget.bg!=1" class="fal fa-square"></i>
-                阴影</div>
-              <div [ngClass]="{'selected':widget.bg==2}" (click)="choseBgMode(2)">
-                <i *ngIf="widget.bg==2" class="fal fa-check-square"></i>
-                <i *ngIf="widget.bg!=2" class="fal fa-square"></i>
-                柱状</div>
-            </div>
-          </div> -->
-          <div setting-item>
-            <div item-name>数据键名1</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.key1}} [(ngModel)]="widget.key1">
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>显示文本1</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.t1}} [(ngModel)]="widget.t1">
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>数据颜色1</div>
-            <div class="color-btn-box">
-              <b-colorpicker-btns [(selected)]="widget.clr1">
-              </b-colorpicker-btns>
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>数据键名2</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.key2}} [(ngModel)]="widget.key2">
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>显示文本2</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.t2}} [(ngModel)]="widget.t2">
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>数据颜色2</div>
-            <div class="color-btn-box">
-              <b-colorpicker-btns [(selected)]="widget.clr2">
-              </b-colorpicker-btns>
-            </div>
-          </div>
-        </ng-container>
-        <!-- 选项卡配置项 begin -->
-        <ng-container *ngIf="widget.type=='tab'">
-          <!-- <div setting-item>
-            <div item-name>数据键名</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.key}} [(ngModel)]="widget.key">
-            </div>
-          </div> -->
-          <div setting-item>
-            <div item-name>选中颜色</div>
-            <div class="color-btn-box">
-              <b-colorpicker-btns [(selected)]="widget.clr">
-              </b-colorpicker-btns>
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>显示图标0</div>
-            <div class="icon-box">
-              <div class="btn" (click)="selectIcon('ico')">修改图标</div>
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>显示文本0</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.t0}} [(ngModel)]="widget.t0">
-            </div>
-          </div>
-          <!-- <div setting-item>
-            <div item-name>承载内容0</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.val}} [(ngModel)]="widget.val">
-            </div>
-          </div> -->
-          <div setting-item>
-            <div item-name>显示图标1</div>
-            <div class="icon-box">
-              <div class="btn" (click)="selectIcon('ico1')">修改图标</div>
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>显示文本1</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.t1}} [(ngModel)]="widget.t1">
-            </div>
-          </div>
-          <!-- <div setting-item>
-            <div item-name>承载内容1</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.val1}} [(ngModel)]="widget.val1">
-            </div>
-          </div> -->
-          <div setting-item>
-            <div item-name>显示图标2</div>
-            <div class="icon-box">
-              <div class="btn" (click)="selectIcon('ico2')">修改图标</div>
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>显示文本2</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.t2}} [(ngModel)]="widget.t2">
-            </div>
-          </div>
-          <!-- <div setting-item>
-            <div item-name>承载内容2</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.val2}} [(ngModel)]="widget.val2">
-            </div>
-          </div> -->
-          <div setting-item>
-            <div item-name>显示图标3</div>
-            <div class="icon-box">
-              <div class="btn" (click)="selectIcon('ico3')">修改图标</div>
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>显示文本3</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.t3}} [(ngModel)]="widget.t3">
-            </div>
-          </div>
-          <!-- <div setting-item>
-            <div item-name>承载内容3</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.val3}} [(ngModel)]="widget.val3">
-            </div>
-          </div> -->
-          <div setting-item>
-            <div item-name>显示图标4</div>
-            <div class="icon-box">
-              <div class="btn" (click)="selectIcon('ico4')">修改图标</div>
-            </div>
-          </div>
-          <div setting-item>
-            <div item-name>显示文本4</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.t4}} [(ngModel)]="widget.t4">
-            </div>
-          </div>
-          <!-- <div setting-item>
-            <div item-name>承载内容4</div>
-            <div input-box>
-              <input type="text" placeholder={{widget.val4}} [(ngModel)]="widget.val4">
-            </div>
-          </div> -->
-        </ng-container>
-        <!-- 调试配置项 end -->
-        <div setting-item *ngIf="widget.type=='deb'">
-          <div item-name>显示内容</div>
-          <div item-item class="btnmode">
-            <div [ngClass]="{'selected':widget.mode==0}" (click)="choseBtnMode(0)">
+        </div>
+        <div setting-item *ngIf="widget.str=='hls'">
+          <div item-name>自动播放</div>
+          <div item-item class="btnmode player">
+            <div [ngClass]="{'selected':widget.mode==0}" (click)="chosePlayMode(0)">
               <i *ngIf="widget.mode==0" class="fal fa-check-square"></i>
               <i *ngIf="widget.mode!=0" class="fal fa-square"></i>
-              显示收发数据</div>
-            <div [ngClass]="{'selected':widget.mode==1}" (click)="choseBtnMode(1)">
+              自动播放
+            </div>
+            <div class="item2" [ngClass]="{'selected':widget.mode==1}" (click)="chosePlayMode(1)">
               <i *ngIf="widget.mode==1" class="fal fa-check-square"></i>
               <i *ngIf="widget.mode!=1" class="fal fa-square"></i>
-              显示接收数据</div>
+              手动播放
+            </div>
           </div>
         </div>
-        <div setting-item *ngIf="widget.type!='deb'">
-          <div item-name>背景设置</div>
-          <div item-item class="btnmode">
-            <div [ngClass]="{'selected':widget.bg==0}" (click)="choseBgMode(0)">
-              <i *ngIf="widget.bg==0" class="fal fa-check-square"></i>
-              <i *ngIf="widget.bg!=0" class="fal fa-square"></i>
-              正常</div>
-            <div [ngClass]="{'selected':widget.bg==1}" (click)="choseBgMode(1)">
-              <i *ngIf="widget.bg==1" class="fal fa-check-square"></i>
-              <i *ngIf="widget.bg!=1" class="fal fa-square"></i>
-              半透明</div>
-            <div [ngClass]="{'selected':widget.bg==2}" (click)="choseBgMode(2)">
-              <i *ngIf="widget.bg==2" class="fal fa-check-square"></i>
-              <i *ngIf="widget.bg!=2" class="fal fa-square"></i>
-              透明</div>
-            <div *ngIf="widget.type=='btn'||widget.type=='tim'" [ngClass]="{'selected':widget.bg==3}"
-              (click)="choseBgMode(3)">
-              <i *ngIf="widget.bg==3" class="fal fa-check-square"></i>
-              <i *ngIf="widget.bg!=3" class="fal fa-square"></i>
-              圆形</div>
+      </ng-container>
+      <!-- 图片配置项 -->
+      <ng-container *ngIf="widget.type=='img'">
+        <div setting-item *ngFor="let item of widget.list;index as i">
+          <div item-name>图片{{i}}</div>
+          <div input-box>
+            <input type="text" [(ngModel)]="item.url">
+          </div>
+        </div>
+      </ng-container>
+      <div setting-item *ngIf="widget.type!='deb'">
+        <div item-name>背景设置</div>
+        <div item-item class="btnmode">
+          <div [ngClass]="{'selected':widget.bg==0}" (click)="choseBgMode(0)">
+            <i *ngIf="widget.bg==0" class="fal fa-check-square"></i>
+            <i *ngIf="widget.bg!=0" class="fal fa-square"></i>
+            正常
+          </div>
+          <div [ngClass]="{'selected':widget.bg==1}" (click)="choseBgMode(1)">
+            <i *ngIf="widget.bg==1" class="fal fa-check-square"></i>
+            <i *ngIf="widget.bg!=1" class="fal fa-square"></i>
+            半透明
+          </div>
+          <div [ngClass]="{'selected':widget.bg==2}" (click)="choseBgMode(2)">
+            <i *ngIf="widget.bg==2" class="fal fa-check-square"></i>
+            <i *ngIf="widget.bg!=2" class="fal fa-square"></i>
+            透明
+          </div>
+          <div *ngIf="widget.type=='btn'||widget.type=='tim'" [ngClass]="{'selected':widget.bg==3}"
+            (click)="choseBgMode(3)">
+            <i *ngIf="widget.bg==3" class="fal fa-check-square"></i>
+            <i *ngIf="widget.bg!=3" class="fal fa-square"></i>
+            圆形
           </div>
         </div>
       </div>
-      <!-- 语音设置 -->
-      <div class="tabbox" *ngIf="tabSelected==1">
-        <div class="speech-table">
-          <div class="speech-title" setting-item>
-            <div class="col1">
-              语音内容
-            </div>
-            <div>
-              动作
-            </div>
-            <div class="speech-del-button">
-            </div>
-          </div>
-          <div setting-item *ngFor="let speechCmd of widget.speech;index as i">
-            <div input-box>
-              <input type="text" placeholder={{speechCmd.cmd}} [(ngModel)]="speechCmd.cmd">
-            </div>
-            <div>{{speechCmd.act}}</div>
-            <div class="speech-del-button" (click)="delSpeechCmd(i)">
-              <ion-icon name="close"></ion-icon>
-            </div>
-          </div>
-
-        </div>
-        <div *ngIf="widget.speech.length < 10" class="speech-add-button" (click)="showSpeechCmd()">
-          添加语音指令
-        </div>
-      </div>
-
     </div>
   </div>
 </ion-content>
+<b-bottom-btn (click)="delete()">
+  删除组件
+</b-bottom-btn>

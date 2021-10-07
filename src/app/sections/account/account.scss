@@ -1,0 +1,56 @@
+ion-content {
+    --background: #fff;
+}
+
+ion-back-button {
+    --color: #000 !important;
+    padding-right: 20px;
+}
+
+input {
+    color: #333;
+}
+
+i {
+    color: #666;
+}
+
+.other {
+    width: 100%;
+    text-align: center;
+    z-index: 1;
+    position: absolute;
+    bottom: 15px;
+    font-size: 13px;
+    color: #333;
+}
+
+// .footer-box {
+//     position: fixed;
+//     bottom: 15px;
+//     width: 100%;
+//     display: flex;
+//     justify-content: center;
+//     align-items: center;
+//     font-size: 12px;
+
+//     img {
+//         margin-left: 15px;
+//         height: 18px;
+//     }
+// }
+
+.title-box {
+    margin-bottom: 1rem;
+    padding: 0 1.5rem;
+    .title1 {
+        font-size: 2rem;
+        font-weight: 500;
+        color: #333;
+    }
+    .title2 {
+        color: #666;
+        margin-top: 0.3rem;
+        font-size: 1rem;
+    }
+}

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { DataService } from './data.service';
 import { HttpClient } from '@angular/common/http';
 import { BlinkerResponse } from '../model/response.model';
-import { API } from 'src/app/configs/app.config';
+import { API } from 'src/app/configs/api.config';
 
 @Injectable({
     providedIn: 'root'
@@ -58,6 +58,18 @@ export class CloudStorageService {
                 return false;
             })
             .catch(this.handleError);
+    }
+
+    getNewTsData(device, datakey, quickCode) {
+        this.http.get('', {
+            params: {
+                uuid: this.uuid,
+                token: this.token,
+                device: device.deviceName,
+                code: quickCode,
+                keyword: [datakey]
+            }
+        })
     }
 
     handleError(error: any): boolean {

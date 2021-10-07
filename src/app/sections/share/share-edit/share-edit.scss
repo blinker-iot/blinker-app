@@ -1,66 +1,17 @@
-.item {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 10px 20px 10px 20px;
-    background-color: #FFF;
-    height: 10vh;
-    margin-top: 3px;
-    font-size: 15px;
-
-    .avatar {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        overflow: hidden;
-    }
-
-    .namebox {
-        margin-left: 20px;
-
-        .name {}
-
-        .act {
-            margin-top: 5px;
-            font-size: 13px;
-            color: #959595;
-        }
-    }
-
-    .btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: absolute;
-        right: 0;
-        padding: 20px;
-        font-size: 13px;
-        color: #389BEE;
-    }
-}
-
-.hspace {
-    width: 100%;
-    height: 9vh;
-}
-
-.addbtn {
-    border-top: 1px solid #d3d3d3;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 20px 10px 20px;
-    background-color: #FFF;
-    color: #389BEE;
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    height: 8vh;
-    font-size: 15px;
-}
+// .btn {
+//   display: flex;
+//   align-items: center;
+//   justify-content: center;
+//   position: absolute;
+//   right: 0;
+//   height: 60px;
+//   padding-right: 20px;
+//   font-size: 13px;
+//   color: #389bee;
+// }
 
 .noshared {
-    color: #8E8E8E;
-    padding-top: 20px;
+  color: #8e8e8e;
+  padding-top: 20px;
+  font-size: 14px;
 }

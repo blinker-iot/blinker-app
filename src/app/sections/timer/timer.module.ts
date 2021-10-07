@@ -1,20 +1,24 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Routes, RouterModule } from '@angular/router';
-
 import { IonicModule } from '@ionic/angular';
-
 import { TimerPage } from './timer';
 import { ComponentsModule } from 'src/app/core/components/components.module';
-import { TimerComponentsModule } from './components/timer-components.module';
 import { TimerService } from './timer.service';
 import { TimingComponent } from './components/timing/timing';
 import { CountdownComponent } from './components/countdown/countdown';
 import { LoopComponent } from './components/loop/loop';
+import { TimingEditPage } from './components/timing-edit/timing-edit';
+import { BActcmdListModule } from 'src/app/core/components/b-actcmd-list/b-actcmd-list.module';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { TranslateModule } from '@ngx-translate/core';
+import { PipesModule } from 'src/app/core/pipes/pipes.module';
+import { NgZorroAntdMobileModule } from 'ng-zorro-antd-mobile';
+import { ModalsModule } from 'src/app/core/modals/modals.module';
 
 const routes: Routes = [
   {
-    path: 'timer/:id',
+    path: 'timer/:deviceId',
     component: TimerPage,
     children: [
       {
@@ -28,12 +32,6 @@ const routes: Routes = [
     ]
 
   },
-  // { path: 'timing/:id', component: TimingComponent },
-  // { path: 'countdown/:id', component: CountdownComponent },
-  // { path: 'loop/:id', component: LoopComponent },
-  // { path: ':id/timing-edit', loadChildren:'./timing-edit/timing-edit.module#TimingEditPageModule' }
-  // ]
-  // }
 ];
 
 @NgModule({
@@ -41,14 +39,23 @@ const routes: Routes = [
     CommonModule,
     IonicModule,
     ComponentsModule,
-    TimerComponentsModule,
-    RouterModule.forChild(routes)
+    BActcmdListModule,
+    DirectivesModule,
+    PipesModule,
+    RouterModule.forChild(routes),
+    TranslateModule.forChild(),
+    NgZorroAntdMobileModule,
+    ModalsModule
   ],
   providers: [
     TimerService
   ],
   declarations: [
-    TimerPage
+    TimerPage,
+    TimingComponent,
+    CountdownComponent,
+    LoopComponent,
+    TimingEditPage
   ]
 })
 export class BlinkerTimerModule { }
