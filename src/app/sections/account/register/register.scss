@@ -1,58 +1,37 @@
 @import "../account.scss";
 
-.form-box {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  justify-content: center;
-  width: 100%;
-  padding: 0 1.5rem;
-  .input-box {
-    width: 100%;
+.other {
     display: flex;
     align-items: center;
-    flex-direction: row;
-    justify-content: flex-start;
-    padding: 12px;
-    border-bottom: 1px solid #c8c7cc;
-    position: relative;
-    .item-img {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      width: 30px;
-      margin-right: 10px;
-      i {
-        color: #333;
-      }
-    }
-    input {
-      flex-grow: 1;
-    }
-    .sendsms {
-      position: absolute;
-      right: 0;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      .v-line {
-        width: 1px;
-        height: 30px;
-        background-color: #979797;
-      }
-      button {
+    justify-content: center;
+
+    .check-box {
+        width: 50px;
+        height: 50px;
         display: flex;
-        align-items: center;
         justify-content: center;
-        font-size: 1rem;
-        background-color: transparent;
-      }
+        align-items: center;
+        margin-right: -10px;
+
+        .inner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #666;
+            border-radius: 3px;
+            margin-right: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .check {
+            background-color: #389bee;
+            border: 2px solid #389bee;
+
+            i {
+                color: #FFF;
+            }
+
+        }
     }
-  }
-  [fullbtn] {
-    margin-top: 60px;
-  }
 }

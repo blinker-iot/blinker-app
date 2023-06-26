@@ -11,25 +11,24 @@ import { BehaviorSubject } from 'rxjs';
 export class LineChartAreaComponent implements OnInit {
   echartsInstance;
   chartOption: EChartsOption = {
+    // animation: false,
     grid: {
       left: 50,
       right: 10,
-      top: 15,
+      top: 10,
       bottom: 35,
     },
     xAxis: {
       type: 'time',
-      // boundaryGap: false,
-      axisTick: {
-        // length:50
-      },
       axisLabel: {
-        rotate: 45
-      }
+        rotate: 45,
+      },
+      animation: false,
     },
     yAxis: {
       type: 'value',
-      // show: false
+      animation: false,
+      scale: true
     },
     dataZoom: {
       type: 'inside'
@@ -56,6 +55,9 @@ export class LineChartAreaComponent implements OnInit {
 
   @Input() data;
   @Input() color;
+  @Input() quickCode = "1h";
+
+  formatter = '{HH}:{mm}';
 
   constructor() { }
 
@@ -63,9 +65,6 @@ export class LineChartAreaComponent implements OnInit {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (typeof changes['color'] != 'undefined') {
-      console.log(this.color);
-    }
     if (typeof changes['data'] != 'undefined') {
       let subscription = this.loaded.subscribe(result => {
         if (result) {
@@ -75,6 +74,32 @@ export class LineChartAreaComponent implements OnInit {
           }, 10)
         }
       })
+    }
+    if (typeof changes['color'] != 'undefined') {
+      setTimeout(() => {
+        this.updata()
+      }, 10)
+    }
+    if (typeof changes['quickCode'] != 'undefined') {
+      switch (this.quickCode) {
+        case 'rt':
+          this.formatter = '{mm}:{ss}'
+          break;
+        case '1h':
+          this.formatter = '{HH}:{mm}'
+          break;
+        case '1d':
+          this.formatter = '{HH}:{mm}'
+          break;
+        case '1w':
+          this.formatter = '{M}-{dd}'
+          break;
+        case '1m':
+          this.formatter = '{M}-{dd}'
+          break;
+        default:
+          break;
+      }
     }
   }
 
@@ -88,9 +113,13 @@ export class LineChartAreaComponent implements OnInit {
     this.data.forEach(item => {
       let time = new Date(item.date)
       dataList.push([time, item.value])
-      // console.log(dataList);
 
       this.echartsInstance.setOption({
+        xAxis: {
+          axisLabel: {
+            formatter: this.formatter
+          }
+        },
         series: [
           {
             data: dataList,
@@ -103,7 +132,7 @@ export class LineChartAreaComponent implements OnInit {
                 },
                 {
                   offset: 0.8,
-                  color: this.color+'99'
+                  color: this.color + '99'
                 }
               ])
             },

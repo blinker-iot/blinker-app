@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { NavController, ModalController } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
 import { checkPhone, checkPassword, checkSmscode } from 'src/app/core/functions/check';
-import { PusherService } from 'src/app/core/services/pusher.service';
+// import { PusherService } from 'src/app/core/services/pusher.service';
 import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CONFIG } from 'src/app/configs/app.config';
@@ -21,7 +21,9 @@ export class RegisterPage {
   smscodeButton: string = "ACCOUNT.SEND_SMSCODE";
   smscodeButtonDisabled: boolean = true;
   registerButtonDisabled: boolean = true;
-  // waiting: boolean = false;
+
+  check = false;
+  rock = false;
 
   countdownString = '';
 
@@ -33,7 +35,7 @@ export class RegisterPage {
     private authService: AuthService,
     private userService: UserService,
     private navCtrl: NavController,
-    private pusherService: PusherService,
+    // private pusherService: PusherService,
     private deviceConfigService: DeviceConfigService,
     private modalCtrl: ModalController,
   ) { }
@@ -68,10 +70,17 @@ export class RegisterPage {
   }
 
   async onRegisterButton() {
+    if (!this.check) {
+      this.rock = true
+      setTimeout(() => {
+        this.rock = false
+      }, 1000);
+      return
+    }
     if (await this.authService.register(this.phone, this.smscode, this.password)) {
       await this.userService.getAllInfo();
       this.deviceConfigService.init()
-      this.pusherService.init();
+      // this.pusherService.init();
       this.navCtrl.navigateRoot('/');
     }
   }

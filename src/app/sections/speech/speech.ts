@@ -8,6 +8,7 @@ import {
 } from '@ionic/angular';
 import { SpeechService } from './speech.service';
 import { randomNum } from 'src/app/core/functions/func';
+import { AudioService } from 'src/app/core/services/audio.service';
 
 
 @Component({
@@ -20,7 +21,6 @@ export class SpeechPage {
   get speechTextList() {
     return this.speechService.speechTextList
   }
-  // @ViewChild("speechAudio", { read: ElementRef, static: true }) speechAudio: ElementRef;
 
   speechContent = "等待语音指令";
 
@@ -37,7 +37,8 @@ export class SpeechPage {
     private speechService: SpeechService,
     private navCtrl: NavController,
     private changeDetectorRef: ChangeDetectorRef,
-    private modalCtrl: ModalController
+    private modalCtrl: ModalController,
+    private audio: AudioService
   ) {
   }
 
@@ -86,7 +87,7 @@ export class SpeechPage {
     });
     //获取识别到的内容，并显示
     this.actionSubject = this.speechService.content.subscribe((content: string) => {
-      this.speechContent = content;
+      this.speechContent = content.replace('。', '');
       this.changeDetectorRef.detectChanges();
     });
     this.start();
@@ -124,7 +125,7 @@ export class SpeechPage {
 
   play(action) {
     let audioName = this.speechService.audio[action][randomNum(0, this.speechService.audio[action].length - 1)];
-    this.speechService.playAudio.next(audioName);
+    this.audio.play(audioName)
   }
 
   help() {

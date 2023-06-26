@@ -1,13 +1,12 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Routes, RouterModule } from '@angular/router';
-
 import { IonicModule } from '@ionic/angular';
-
 import { DashboardPage } from './dashboard';
 import { ComponentsModule } from 'src/app/core/components/components.module';
-import { DashboardBlockComponent } from './dashboard-block/dashboard-block';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { GridsterModule } from 'angular-gridster2';
+import { WidgetsModule } from './widgets/widgets.module';
 
 const routes: Routes = [
     {
@@ -22,8 +21,10 @@ const routes: Routes = [
         IonicModule,
         ComponentsModule,
         RouterModule.forChild(routes),
-        DirectivesModule
+        DirectivesModule,
+        GridsterModule,
+        WidgetsModule
     ],
-    declarations: [DashboardPage,DashboardBlockComponent]
+    declarations: [DashboardPage]
 })
 export class DashboardPageModule { }

@@ -6,6 +6,7 @@ import { Menu } from './menu';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
 import { TranslateModule } from '@ngx-translate/core';
 import { ComponentsModule } from 'src/app/core/components/components.module';
+import { LangSelectorModule } from 'src/app/core/components/lang-selector/lang-selector.module';
 
 @NgModule({
   imports: [
@@ -14,6 +15,7 @@ import { ComponentsModule } from 'src/app/core/components/components.module';
     IonicModule,
     DirectivesModule,
     ComponentsModule,
+    LangSelectorModule,
     TranslateModule.forChild()
   ],
   declarations: [Menu],

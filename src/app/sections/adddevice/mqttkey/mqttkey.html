@@ -14,20 +14,7 @@
     <div class="broker-box">
       <div class="broker-item" (click)="registerDevice('blinker')">
         <img src="assets/img/broker/blinker.png" alt="">
-        <!-- <div class="beta">beta</div> -->
       </div>
-      <!-- <div class="broker-item" (click)="registerDevice('aliyun')">
-        <img src="assets/img/broker/aliyun.png" alt="">
-      </div>
-      <div class="broker-item disable" (click)="showToast()">
-        <img src="assets/img/broker/qcloud.png" alt="">
-        <div class="beta">alpha</div>
-      </div> -->
-      <!-- <div class="broker-item disable">
-        <img src="assets/img/broker/onenet.png" alt="">
-        <div class="beta">alpha</div>
-      </div> -->
-      <!-- <div class="custom-btn" (click)="showToast()">使用私有Broker服务</div> -->
     </div>
   </ng-container>
   <div class="card" *ngIf="step==1">
@@ -41,11 +28,7 @@
     <div class="loaddesc">正在注册设备</div>
   </div>
   <div class="card" *ngIf="step==2">
-    <!-- <div class="text">设备已注册到{{}}</div> -->
-    <div class="broker-item" *ngIf="showBroker=='aliyun'">
-      <img src="assets/img/broker/aliyun.png" alt="">
-    </div>
-    <div class="broker-item" *ngIf="showBroker=='blinker'">
+    <div class="broker-item">
       <img src="assets/img/broker/blinker.png" alt="">
     </div>
 

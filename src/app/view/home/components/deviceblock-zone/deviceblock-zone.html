@@ -1,0 +1,16 @@
+<div #refreshZone></div>
+<div class="slidesbox" #deviceZone>
+  <ng-container *ngIf="loaded">
+    <swiper class="mySwiper" (swiper)="onSwiper($event)" (slideChange)="slideChanged()">
+      <ng-template swiperSlide>
+        <deviceblock-list *ngIf="currentIndex<2" (swipeEnabled)="swipeEnabledChanged($event)"
+          (refresherEnabled)="refresherEnabledChanged($event)"></deviceblock-list>
+      </ng-template>
+      <ng-template swiperSlide *ngFor="let roomName of roomDataList;index as i">
+        <deviceblock-list *ngIf="abs(i)" [roomName]="roomName" (swipeEnabled)="swipeEnabledChanged($event)"
+          (refresherEnabled)="refresherEnabledChanged($event)">
+        </deviceblock-list>
+      </ng-template>
+    </swiper>
+  </ng-container>
+</div>

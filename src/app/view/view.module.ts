@@ -14,11 +14,11 @@ const routes: Routes = [
     // redirectTo:'/view/home',
     // canActivate: [AuthGuard],
     children: [
-      { path: 'home', loadChildren: './home/view-home.module#ViewHomePageModule' },
-      { path: 'gis', loadChildren: './gis/view-gis.module#ViewGisPageModule' },
-      { path: 'list', loadChildren: './list/view-list.module#ViewListPageModule' },
-      { path: 'dashboard', loadChildren: './dashboard/dashboard.module#DashboardPageModule' },
-      { path: 'card', loadChildren: './card/card.module#CardPageModule' },
+      { path: 'home', loadChildren: () => import('./home/view-home.module').then(m => m.ViewHomePageModule) },
+      { path: 'gis', loadChildren: () => import('./gis/view-gis.module').then(m => m.ViewGisPageModule) },
+      { path: 'list', loadChildren: () => import('./list/view-list.module').then(m => m.ViewListPageModule) },
+      { path: 'dashboard', loadChildren: () => import('./dashboard/dashboard.module').then(m => m.DashboardPageModule) },
+      { path: 'card', loadChildren: () => import('./card/card.module').then(m => m.CardPageModule) },
     ]
   }
 ];

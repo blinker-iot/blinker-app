@@ -5,18 +5,22 @@
     </ion-buttons>
     <ion-title>{{'HOME.ADD_DEVICE' | translate}}</ion-title>
     <ion-buttons slot="end">
+      <ion-button (click)="switchShowMode()">
+        <ion-icon class="icon2" *ngIf="showMode=='block'" name="list-outline"></ion-icon>
+        <ion-icon class="icon2" *ngIf="showMode=='list'" name="apps-outline"></ion-icon>
+      </ion-button>
       <ion-button (click)="scanQrcode()">
         <ion-icon class="icon1" name="scan-circle-outline"></ion-icon>
       </ion-button>
       <ion-button (click)="switchSearchbar()">
-        <ion-icon class="icon2" name="search-circle-outline"></ion-icon>
+        <ion-icon class="icon1" name="search-circle-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 <ion-searchbar *ngIf="isShowSearchbar" (ionInput)="getItems($event)"></ion-searchbar>
 <ion-content>
-  <div class="box" *ngFor="let item of items">
+  <div class="box" *ngFor="let item of items" [ngClass]="{'list': showMode=='list','block': showMode=='block'}">
     <div class="vender-box">
       <div class="vender-name">{{item.vendername}}</div>
       <div class="device-box">
@@ -26,7 +30,7 @@
               <b-device-img [filename]="device.image"></b-device-img>
               <div class="divice-name">{{device.name}}</div>
             </div>
-          </ng-container> 
+          </ng-container>
         </ng-container>
       </div>
     </div>

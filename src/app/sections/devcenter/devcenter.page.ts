@@ -9,7 +9,7 @@ import { DataService } from 'src/app/core/services/data.service';
 })
 export class DevcenterPage implements OnInit {
 
-  selectedTab = 0;
+  selectedTab = 2;
 
   get isDev() {
     // return isDevMode()

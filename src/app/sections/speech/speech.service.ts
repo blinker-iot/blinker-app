@@ -111,7 +111,7 @@ export class SpeechService {
           }
           case "asrFinish": {
             console.log("识别结果：" + this.result);
-            this.process(this.result);
+            this.process(this.result.replace('。',''));
             break;
           }
           case "asrCancel": {

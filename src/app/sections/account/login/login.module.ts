@@ -8,7 +8,8 @@ import { IonicModule } from '@ionic/angular';
 import { LoginPage } from './login';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
 import { TranslateModule } from '@ngx-translate/core';
-import { ComponentsModule } from 'src/app/core/components/components.module';
+import { FirstModalModule } from '../first-modal/first-modal.module';
+import { LangSelectorModule } from 'src/app/core/components/lang-selector/lang-selector.module';
 
 const routes: Routes = [
   {
@@ -25,7 +26,8 @@ const routes: Routes = [
     DirectivesModule,
     RouterModule.forChild(routes),
     TranslateModule.forChild(),
-    ComponentsModule
+    LangSelectorModule,
+    FirstModalModule
   ],
   declarations: [LoginPage]
 })

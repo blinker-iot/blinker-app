@@ -2,9 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { DevcenterService } from '../../devcenter.service';
 import { Observable, of } from 'rxjs';
-import { Mode } from 'src/app/core/device/layouter2/layouter2-mode';
 import { Device } from 'src/app/core/model/device.model';
-import { LayouterService } from 'src/app/core/device/layouter.service';
+import { LayouterService } from 'src/app/device/layouter.service';
+import { Mode } from 'src/app/device/layouter2/layouter2-mode';
 
 @Component({
   selector: 'prodevice-editlayouter',

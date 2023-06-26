@@ -1,0 +1,18 @@
+<div class="full">
+  <div class="inner-box">
+    <div class="scroll">
+      <div class="title">用户协议及隐私政策</div>
+      <div class="text">欢迎使用 {{APP_NAME}}！我们将通过 <span (click)="openUrl(USER_AGREEMENT,'用户协议')">《用户协议》</span> 和 <span
+          (click)="openUrl(PRIVACY_POLICY,'隐私政策')">《隐私政策》</span>
+        帮助您了解本软件所提供服务以及我们搜集、使用、存储和共享您个人信息的情况，并告知您所享有的相关权利及可能须承担的义务。</div>
+      <div class="text">请您务必在使用本软件前，仔细阅读前述法律文件。如您同意，请点击下方"同意"按钮后开始使用我们的服务。</div>
+      <div class="text">以下事项我们已在<span (click)="openUrl(PRIVACY_POLICY,'隐私政策')">《隐私政策》</span>中说明，还需您特别留意：</div>
+      <div class="text">1.本App是一款物联网控制软件，需要通过蓝牙或WiFi连接您的设备。 </div>
+      <div class="text">2.由于操作系统权限要求，本App在使用蓝牙及WiFi功能时，会请求定位权限，此权限请求，仅为正常使用相应功能，此时本App不会记录用户位置信息。 </div>
+    </div>
+    <div class="btn-box">
+      <div class="exit" (click)="exit()">拒绝并退出</div>
+      <div class="btn" (click)="enter()">同意</div>
+    </div>
+  </div>
+</div>

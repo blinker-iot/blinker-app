@@ -5,8 +5,8 @@ const routes: Routes = [
     {
         path: 'room-manager',
         children: [
-            { path: '', loadChildren: './room-manager/room-manager.module#RoomManagerPageModule' },
-            { path: ':room', loadChildren: './room-edit/room-edit.module#RoomEditPageModule' },
+            { path: '', loadChildren: () => import('./room-manager/room-manager.module').then(m => m.RoomManagerPageModule) },
+            { path: ':room', loadChildren: () => import('./room-edit/room-edit.module').then(m => m.RoomEditPageModule) },
         ]
     }
 ];

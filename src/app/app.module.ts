@@ -19,14 +19,14 @@ import { PusherService } from 'src/app/core/services/pusher.service';
 
 import { ServerInterceptor } from './core/injectable/server.interceptor';
 import { OpenNativeSettings } from '@ionic-native/open-native-settings/ngx';
-import { Zeroconf } from '@ionic-native/zeroconf/ngx';
+import { Zeroconf } from '@awesome-cordova-plugins/zeroconf/ngx';
 import { Network } from '@ionic-native/network/ngx';
-import { BLE } from '@ionic-native/ble/ngx';
-import { Diagnostic } from '@ionic-native/diagnostic/ngx';
+import { BLE } from '@awesome-cordova-plugins/ble/ngx';
+import { Diagnostic } from '@awesome-cordova-plugins/diagnostic/ngx';
 
 import { GridsterModule } from 'angular-gridster2';
 import { Geolocation } from '@ionic-native/geolocation/ngx';
-import { AndroidPermissions } from '@ionic-native/android-permissions/ngx';
+import { AndroidPermissions } from '@awesome-cordova-plugins/android-permissions/ngx';
 
 import { AppMinimize } from '@ionic-native/app-minimize/ngx';
 import { ViewService } from './core/services/view.service';
@@ -39,7 +39,6 @@ import { BlinkerShareManagerModule } from './sections/share/share.module';
 import { BlinkerSettingsModule } from './sections/settings/settings.module';
 import { BlinkerTimerModule } from './sections/timer/timer.module';
 import { BlinkerUserModule } from './sections/user/user.module';
-// import { JPush } from '@jiguang-ionic/jpush/ngx';
 import { Brightness } from '@ionic-native/brightness/ngx';
 import { BlinkerMessageModule } from './sections/message/message.module';
 import { BlinkerDevCenterModule } from './sections/devcenter/devcenter.module';
@@ -48,7 +47,6 @@ import { UpdateService } from './core/services/update.service';
 import { DeviceConfigService } from './core/services/device-config.service';
 import { DebugModule } from './debug/debug.module';
 import { DocModule } from './core/pages/doc/doc.module';
-import { BlinkerDeviceModule } from './core/device/device.module';
 import { MarkdownModule } from 'ngx-markdown';
 import { Vibration } from '@ionic-native/vibration/ngx';
 import { AppVersion } from '@ionic-native/app-version/ngx';
@@ -69,7 +67,9 @@ import { BlinkerSceneManagerModule } from './sections/scene/scene.module';
 import { AliyunPush } from 'libs/@ionic-native/aliyun-push/ngx';
 import { BrowserModule, HAMMER_GESTURE_CONFIG, HammerGestureConfig, HammerModule } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
-// import { NgZorroAntdMobileModule } from 'ng-zorro-antd-mobile';
+import { ServiceWorkerModule } from '@angular/service-worker';
+import { environment } from '../environments/environment';
+import { BlinkerDeviceModule } from './device/device.module';
 
 declare var Hammer: any;
 @Injectable()
@@ -115,7 +115,11 @@ export class MyHammerConfig extends HammerGestureConfig {
     AboutModule,
     BlinkerSpeechModule,
     BlinkerFeedbackModule,
-    HammerModule
+    HammerModule,
+    ServiceWorkerModule.register('ngsw-worker.js', {
+      enabled: environment.production,
+      registrationStrategy: 'registerWhenStable:30000'
+    })
   ],
   providers: [
     StatusBar,
@@ -143,13 +147,11 @@ export class MyHammerConfig extends HammerGestureConfig {
     Network,
     BLE,
     Diagnostic,
-    // CodePush,
     Vibration,
     // Deeplinks,
     Geolocation,
     AndroidPermissions,
     AppMinimize,
-    // JPush,
     Brightness,
     AppVersion,
     FileTransfer,

@@ -48,8 +48,6 @@ export class MqttkeyPage {
   }
 
   ngAfterViewInit() {
-    // this.deviceType = this.activatedRoute.snapshot.params['deviceType'];
-    // this.registerDevice();
     this.registerDevice('blinker')
   }
 
@@ -77,13 +75,15 @@ export class MqttkeyPage {
     }
     console.log('get position');
 
-    if (await this.geolocationService.getUserPosition()) {
-      device.config['position'] = {
-        "location": [this.longitude, this.latitude],
-        "address": this.address
-      }
-      device.config['public'] = 1;
-    }
+    // 获取设备地址
+    // if (await this.geolocationService.getUserPosition()) {
+    //   device.config['position'] = {
+    //     "location": [this.longitude, this.latitude],
+    //     "address": this.address
+    //   }
+    //   device.config['public'] = 1;
+    // }
+
     let newDevice = await this.adddeviceService.getMqttKey(device)
     if (newDevice) {
       this.secretKey = newDevice.authKey;

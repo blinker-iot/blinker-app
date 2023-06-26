@@ -1,11 +1,11 @@
-import { Component, ChangeDetectorRef, ViewChild, ViewContainerRef } from '@angular/core';
+import { Component, ChangeDetectorRef, ViewChild, ViewContainerRef, ElementRef } from '@angular/core';
 import { Platform, NavController } from '@ionic/angular';
 import { SplashScreen } from '@ionic-native/splash-screen/ngx';
 import { StatusBar } from '@ionic-native/status-bar/ngx';
 import { UserService } from 'src/app/core/services/user.service';
 import { ViewService } from './core/services/view.service';
 import { NoticeService } from './core/services/notice.service';
-import { PusherService } from './core/services/pusher.service';
+// import { PusherService } from './core/services/pusher.service';
 import { UpdateService } from './core/services/update.service';
 import { DeviceConfigService } from './core/services/device-config.service';
 import { DataService } from './core/services/data.service';
@@ -17,6 +17,7 @@ import { ImageService } from './core/services/image.service';
 import { ToastService } from './core/services/toast.service';
 import { TipService } from './core/services/tip.service';
 import { TranslationService } from './core/services/translation.service';
+import { AudioService } from './core/services/audio.service';
 
 @Component({
   selector: 'app-root',
@@ -37,6 +38,8 @@ export class AppComponent {
     return this.tipService.list
   }
 
+  @ViewChild("audio", { read: ElementRef, static: true }) audio: ElementRef;
+
   constructor(
     private platform: Platform,
     private splashScreen: SplashScreen,
@@ -46,7 +49,7 @@ export class AppComponent {
     private userService: UserService,
     private dataService: DataService,
     private noticeService: NoticeService,
-    private pusherService: PusherService,
+    // private pusherService: PusherService,
     private updateService: UpdateService,
     private networkService: NetworkService,
     private deviceConfigService: DeviceConfigService,
@@ -56,7 +59,8 @@ export class AppComponent {
     private imageService: ImageService,
     private toastService: ToastService,
     private tipService: TipService,
-    private translationService: TranslationService
+    private translationService: TranslationService,
+    private audioService: AudioService
   ) { }
 
   ngOnInit() {
@@ -93,9 +97,11 @@ export class AppComponent {
     this.deviceService.init();
     this.networkService.init();
     this.noticeService.init();
-    this.pusherService.init();
     this.imageService.init();
     this.translationService.init()
+    this.audioService.init(this.audio.nativeElement)
+    // 应相关部门要求，在通过同意后，才能使用推送服务
+    // if (localStorage.getItem('showFirstModal') == '1') this.pusherService.init()
   }
 
   checkLoginStatus() {

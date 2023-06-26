@@ -44,18 +44,10 @@ ion-toolbar {
 .bg {
     width: 100vw;
     height: 100vh;
-    background-image: url(/assets/img/w-bg.jpg);
-    background-size: auto 100%;
     position: fixed;
     top: 0;
     left: 0;
-    filter: blur(5px);
-    // background: linear-gradient(135deg, #5ca3fb 30%, #216bff 100%);
-    // img {
-    //     position: absolute;
-    //     max-width: 118%;
-    //     bottom: -5px;
-    // }
+    // filter: blur(5px);
 }
 
 .contentbox {

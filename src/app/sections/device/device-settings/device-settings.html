@@ -10,7 +10,7 @@
 <ion-content *ngIf="loaded">
   <div class="infobox">
     <div class="imgbox">
-      <b-device-img [filename]="device.config.image"></b-device-img>
+      <b-device-img style="width: 60%;" [filename]="device.config.image"></b-device-img>
       <div class="uploadimg" *ngIf="!isSharedDevice" (click)="selectIcon()">{{'DEVICE.CHANGE_ICON' | translate}}</div>
     </div>
     <div class="itembox">
@@ -21,11 +21,12 @@
       <div class="item" *ngIf="isSharedDevice">{{'DEVICE.NAME' | translate}}: <span>{{device.config.customName}}</span>
       </div>
       <div class="item">{{'DEVICE.TYPE' | translate}}: {{device | device2name}}</div>
-      <div class="item">
+      <!-- 显示broker提供商 -->
+      <!-- <div class="item">
         <div style="margin-right: 5px;">{{'DEVICE.BROKER' | translate}}: </div>
         <img *ngIf="device.config.broker=='aliyun'" src="assets/img/broker/aliyun.png" alt="">
         <img *ngIf="device.config.broker=='blinker'" src="assets/img/broker/blinker.png" alt="">
-      </div>
+      </div> -->
       <div class="item">{{'DEVICE.ID' | translate}}: {{device.id}}</div>
       <div class="item" *ngIf="device.config.authKey && !isSharedDevice">{{'DEVICE.SECRET' | translate}}:
         <span *ngIf="!showKey" (click)="showAuthKey()">************ <i class="fal fa-eye"></i></span>

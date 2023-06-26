@@ -7,8 +7,11 @@
     margin-top: 15vh;
     font-size: 14px;
 
-    img {
-        width: 21%;
+    // img {
+    //     width: 21%;
+    // }
+    i {
+        font-size: 90px;
     }
 
     [ver] {
@@ -17,7 +20,7 @@
     }
 
     [ver2] {
-        color: #FBA613;
+        color: #fba613;
         margin-top: 2vh;
     }
 
@@ -39,10 +42,10 @@
     }
 
     [btn] {
-        width: 95%;
+        width: 90%;
         height: 40px;
         border-radius: 20px;
-        border: solid 1px #DDDDDD;
+        border: solid 1px #dddddd;
         position: absolute;
         bottom: 10vh;
         display: flex;
@@ -50,4 +53,18 @@
         align-items: center;
         text-align: center;
     }
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(359deg);
+    }
+}
+
+.updating {
+    animation: rotate 3s linear infinite;
 }

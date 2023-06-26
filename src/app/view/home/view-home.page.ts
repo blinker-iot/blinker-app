@@ -1,7 +1,7 @@
 import {
   Component,
-  ViewChild,
-  ElementRef,
+  Input,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { Router } from '@angular/router';
@@ -17,7 +17,15 @@ import { DataService } from 'src/app/core/services/data.service';
 
 export class ViewHomePage {
 
-  roomid = -1;
+  _roomid = -1;
+  @Input()
+  set roomid(roomid) {
+    this._roomid = roomid
+    this.cd.detectChanges()
+  };
+  get roomid() {
+    return this._roomid;
+  }
 
   get deviceNum() {
     if (typeof this.dataService.device == 'undefined')
@@ -31,16 +39,6 @@ export class ViewHomePage {
 
   showBg = false;
 
-  // @ViewChild('sceneZone', { read: ElementRef, static: false }) sceneZone: ElementRef;
-  // @ViewChild('headerZone', { read: ElementRef, static: false }) headerZone: ElementRef;
-
-  // get bgPosition() {
-  //   if (typeof this.sceneZone == 'undefined') return `0px`
-  //   if (this.sceneZone.nativeElement.getBoundingClientRect().bottom == 0) return `0px`
-  //   this.bgPosition0 = `${this.sceneZone.nativeElement.getBoundingClientRect().bottom + 10}px`
-  //   return this.bgPosition0
-  // }
-  // bgPosition0 = null;
   bgPosition = `114px`
 
 
@@ -64,18 +62,11 @@ export class ViewHomePage {
     private router: Router,
     private platform: Platform,
     private viewService: ViewService,
-    private dataService: DataService
+    private dataService: DataService,
+    private cd: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
-    // 判断是否为ios、iphonex，以便做适配
-    if (this.platform.is('ios')) {
-      this.isIos = true;
-      if ((window.screen.width == 375) && (window.screen.height == 812)) {
-        this.isIphonex = true;
-      }
-    }
-
     this.userDataLoader = this.dataService.userDataLoader.subscribe(state => {
       if (state) {
         this.loaded = true;

@@ -39,7 +39,7 @@ export class AddprodevicePage {
       "mode": this.mode,
       "vender": this.username,
       "image": this.image,
-      // "description": this.description
+      "broker":'blinker'
     }
     this.devcenterService.addProDevice(config).then(() => {
       this.devcenterService.getProDevices();

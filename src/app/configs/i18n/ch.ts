@@ -15,7 +15,7 @@ export const locale = {
 			PRIVACY_POLICY: "隐私政策",
 			AND: '和',
 			REGISTER_TEXT: '欢迎使用点灯物联网解决方案',
-			REGISTER_TEXT2: '注册账号即表示您同意并遵守点灯',
+			REGISTER_TEXT2: '同意并遵守点灯',
 			RETRIEVE_TEXT: '感谢使用点灯物联网解决方案',
 			PHONENUM: '手机号',
 			SMSCODE: '验证码',

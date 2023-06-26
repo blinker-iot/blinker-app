@@ -32,6 +32,10 @@
     </div>
   </div>
   <div class="btnbox">
+    <div class="btn" [ngClass]="{'selected': selectedTab==2}" (click)="selectTab(2)">
+      <span class="iconfont icon-dev"></span>
+      <div> {{'DEV.TOOL' | translate}}</div>
+    </div>
     <div class="btn" [ngClass]="{'selected': selectedTab==0}" (click)="selectTab(0)">
       <span class="iconfont icon-data"></span>
       <div> {{'DEV.DATA_MANAGER' | translate}}</div>
@@ -39,10 +43,6 @@
     <div class="btn" [ngClass]="{'selected': selectedTab==1}" (click)="selectTab(1)">
       <span class="iconfont icon-device"></span>
       <div> {{'DEV.PRO_MANAGER' | translate}}</div>
-    </div>
-    <div class="btn" [ngClass]="{'selected': selectedTab==2}" (click)="selectTab(2)">
-      <span class="iconfont icon-dev"></span>
-      <div> {{'DEV.TOOL' | translate}}</div>
     </div>
   </div>
   <div class="list">

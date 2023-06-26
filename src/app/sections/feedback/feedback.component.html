@@ -8,7 +8,7 @@
 </ion-header>
 <ion-content whitebg padding>
   <!-- <ng-container> -->
-    <ng-container *ngIf="!isDone  && !isDeveloper">
+  <!-- <ng-container *ngIf="!isDone  && !isDeveloper">
     <div>
       <div class="title">问题类型</div>
       <div class="item-box">
@@ -19,7 +19,6 @@
 
       <div class="title">问题描述</div>
       <textarea rows="8" [(ngModel)]="content"></textarea>
-      <!-- <div class="upload-btn">上传图片</div> -->
     </div>
     <div class="btnbox" (click)="submit()">
       <button fullbtn>提交</button>
@@ -40,5 +39,6 @@
   </ng-container>
   <ng-container *ngIf="isDeveloper">
     <div textcenter class="tip">开发者请通过 <b>官网>开发者社区</b> 提交反馈</div>
-  </ng-container>
+  </ng-container> -->
+  <div textcenter class="tip">开发者请通过 <b>点灯官网 > 开发者社区</b> 提交反馈</div>
 </ion-content>

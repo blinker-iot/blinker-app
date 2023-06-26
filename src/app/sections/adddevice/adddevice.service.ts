@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Platform } from '@ionic/angular';
-import { Zeroconf } from '@ionic-native/zeroconf/ngx';
-import { BLE } from '@ionic-native/ble/ngx';
+import { Zeroconf } from '@awesome-cordova-plugins/zeroconf/ngx';
+import { BLE } from '@awesome-cordova-plugins/ble/ngx';
 import { Network } from '@ionic-native/network/ngx';
 import { DataService } from 'src/app/core/services/data.service';
 import { Uint8Array2hex, name2mac, mac2name } from 'src/app/core/functions/func';
-import { Diagnostic } from '@ionic-native/diagnostic/ngx';
+import { Diagnostic } from '@awesome-cordova-plugins/diagnostic/ngx';
 import { API } from 'src/app/configs/api.config';
 import { HttpClient } from '@angular/common/http';
 import { BlinkerResponse } from 'src/app/core/model/response.model';

@@ -6,8 +6,8 @@ import { Routes, RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 
 import { EditlayouterPage } from './editlayouter.page';
-import { Layouter2Module } from 'src/app/core/device/layouter2/layouter2.module';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { Layouter2Module } from 'src/app/device/layouter2/layouter2.module';
 
 const routes: Routes = [
   {

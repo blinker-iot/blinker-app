@@ -1,0 +1,66 @@
+<ion-header *ngIf="loaded && device" no-border [ngClass]="{'dark': headerStyle=='dark','light':headerStyle=='light'}">
+  <!-- <ion-header *ngIf="loaded && device" no-border > -->
+  <ion-toolbar color="transparent" overlayPadding>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title (click)="enterDebug()">
+      <div class="name">{{device.config.customName}}</div>
+      <div class="state" [ngClass]="{'showState': device.data.state!='waiting'}">
+        <ng-container *ngIf="device.config.mode=='ble'">
+          <ng-container
+            *ngIf="(device.data.state=='connected') || (device.data.oldState=='connected' && device.data.state=='waiting')">
+            ({{'DEVICE.CONNECTED' | translate}})
+          </ng-container>
+          <ng-container *ngIf="device.data.state=='disconnected'">({{'DEVICE.NOT_CONNECTED' | translate}})
+          </ng-container>
+        </ng-container>
+        <ng-container *ngIf="device.config.mode=='mqtt'">
+          <ng-container *ngIf="device.data.enable;else offline">
+            ({{'DEVICE.ONLINE' | translate}})
+            <i *ngIf="deviceService.islocalDevice(device)" class="fal fa-exchange"></i>
+            <i *ngIf="!deviceService.islocalDevice(device)" class="fal fa-cloud"></i>
+          </ng-container>
+          <ng-template #offline>
+            ({{'DEVICE.OFFLINE' | translate}})
+          </ng-template>
+        </ng-container>
+      </div>
+    </ion-title>
+    <ion-buttons slot="end">
+      <!-- 连接 -->
+      <ion-button (click)="connectDevice()" *ngIf="!editMode && device.data.state=='disconnected'">
+        <i class="fal fa-link "></i>
+      </ion-button>
+      <!-- 设置 -->
+      <ion-button [routerLink]="['/device-manager',id]" *ngIf="!editMode">
+        <!-- <i class="fal fa-cog"></i> -->
+        <i class="iconfont icon-more"></i>
+        <div redpoint *ngIf="device.data.hasNewVersion"></div>
+      </ion-button>
+      <!-- 清空布局器 -->
+      <ion-button (click)="cleanWidgets()" *ngIf="editMode && deviceComponent.indexOf('Layouter')>-1">
+        <!-- <i class="fal fa-trash-alt"></i> -->
+        <i class="iconfont icon-trash"></i>
+      </ion-button>
+      <!-- 背景设置 -->
+      <ion-button (click)="editBackground()" *ngIf="editMode && deviceComponent.indexOf('Layouter')>-1">
+        <!-- <i class="fal fa-file-image"></i> -->
+        <i class="iconfont icon-pic"></i>
+      </ion-button>
+      <!-- 编辑/保存 -->
+      <ion-button (click)="unlock()" *ngIf="!editMode && isDiyDevice && !isSharedDevice">
+        <!-- <i class="fal fa-edit"></i> -->
+        <i class="iconfont icon-edit"></i>
+      </ion-button>
+      <ion-button (click)="lock()" *ngIf="editMode && deviceComponent.indexOf('Layouter')>-1">
+        <!-- <i class="fal fa-lock"></i> -->
+        <i class="iconfont icon-lock"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content *ngIf="loaded" [ngClass]="{'offline': device.data.state=='offline'}" fullscreen=true scrollY=false>
+  <ng-template #deviceView></ng-template>
+  <!-- <router-outlet></router-outlet> -->
+</ion-content>

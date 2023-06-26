@@ -164,7 +164,7 @@ export class ViewService {
   }
 
   changeStatusBar(url) {
-    console.log('url:', url);
+    // console.log('url:', url);
     // if (url == '/view/home' || url == '/view/gis') this.setDarkStatusBar()
     // else if (url == '/device-manager/') this.setDarkStatusBar()
     // else if (url == '/device-manager') this.setLightStatusBar()
@@ -172,6 +172,7 @@ export class ViewService {
     // else if (url == '/location') this.setLightStatusBar()
     setTimeout(() => {
       let els = document.querySelectorAll('ion-header')
+      if (typeof els[els.length - 1] == 'undefined') return
       if (typeof els[els.length - 1].attributes['whitebg'] != 'undefined') {
         this.setDarkStatusBar()
       } else {

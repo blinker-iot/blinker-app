@@ -74,13 +74,12 @@ export class SceneEditor {
       if (loaded) {
         this.sceneName = this.activatedRoute.snapshot.params['scene'];
         this.currentSceneData = this.sceneDataDict[this.sceneName]
-        console.log(this.currentSceneData);
-
+        // console.log(this.currentSceneData);
         this.tempSceneName = this.sceneName;
         // 移除已解绑设备
         let newActs = []
         for (let action of this.acts) {
-          if (typeof this.deviceDataDict[action.deviceId] != 'undefined') {
+          if (typeof this.deviceDataDict[action.deviceId] != 'undefined' || typeof action.delay != 'undefined') {
             newActs.push(action);
           }
         }

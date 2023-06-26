@@ -1,3 +1,4 @@
+export const BROKER_HOST = 'wss://broker.diandeng.tech:1886';
 const SERVER_URL_BASE = "https://iot.diandeng.tech";
 const SERVER_URL = SERVER_URL_BASE + "/api/v1";
 const SERVER_URL2 = SERVER_URL_BASE + "/api/v2";

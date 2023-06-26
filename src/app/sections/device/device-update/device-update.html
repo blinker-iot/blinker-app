@@ -1,4 +1,4 @@
-<ion-header>
+<ion-header *ngIf="loaded">
   <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
@@ -7,64 +7,85 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content padding>
-  <ng-container *ngIf="!hasNewVersion && !isUpdating">
-    <div updatebox>
-      <img src="./assets/img/icon/update-gray.png">
+<ion-content padding *ngIf="loaded">
+  <!-- 设备在线 -->
+  <ng-container *ngIf="deviceEnable || updateState!=0;else offline">
+
+    <!-- 有更新版本 -->
+    <div updatebox *ngIf="updateState == 0 && hasNewVersion">
+      <!-- <img src="./assets/img/icon/update-blue.png"> -->
+      <i class="fal fa-sync" style="color: #007bb7;"></i>
       <div ver>当前版本：{{device.data.version}}</div>
-      <div ver2>当前固件是最新版本</div>
+      <div ver2>新的版本：{{device.data.newVersion}}</div>
+      <div des-title>更新说明：</div>
+      <div des *ngIf="device.data.newVersionDescription" [innerHTML]="device.data.newVersionDescription | wrap"></div>
+      <div btn (click)="updateDevice()">
+        <div>立即更新</div>
+      </div>
+    </div>
+    <!-- 已经是最新版本 -->
+    <ng-container *ngIf="updateState == 0 && !hasNewVersion">
+      <div updatebox>
+        <!-- <img src="./assets/img/icon/update-gray.png"> -->
+        <i class="fal fa-clipboard-check" style="color:#a2a2a2"></i>
+        <div ver>当前版本：{{device.data.version}}</div>
+        <div ver2>当前固件是最新版本</div>
+      </div>
+    </ng-container>
+
+    <div updatebox *ngIf="updateState == 1">
+      <!-- <img src="./assets/img/icon/update-blue.png"> -->
+      <i class="fal fa-sync updating" style="color: #007bb7"></i>
+      <div ver>下载中···</div>
+      <div ver2>固件下载中，请勿断电，等待更新完成再使用本设备</div>
+    </div>
+
+    <div updatebox *ngIf="updateState == -2">
+      <!-- <img src="./assets/img/icon/update-blue.png"> -->
+      <i class="fal fa-times-circle" style="color:#d91500"></i>
+      <div ver>下载失败</div>
+      <div ver2>固件下载失败，请稍后尝试更新</div>
+      <div btn (click)="updateDevice()">
+        <div>重新尝试更新</div>
+      </div>
+    </div>
+
+    <div updatebox *ngIf="updateState == 99">
+      <!-- <img src="./assets/img/icon/update-blue.png"> -->
+      <i class="fal fa-sync updating" style="color: #007bb7"></i>
+      <div ver>更新中···</div>
+      <div ver2>固件更新中，请勿断电，等待更新完成再使用本设备</div>
+    </div>
+
+    <div updatebox *ngIf="updateState == 100">
+      <!-- <img src="./assets/img/icon/update-done.png"> -->
+      <i class="fal fa-check-circle" style="color:#00880b"></i>
+      <div ver>更新成功</div>
+      <div ver2>当前版本：{{device.data.version}}</div>
+      <div btn (click)="popDevicePage()">
+        <div>确定</div>
+      </div>
+    </div>
+
+    <div updatebox *ngIf="updateState == -1">
+      <i class="fal fa-times-circle" style="color:#d91500"></i>
+      <!-- <img src="./assets/img/icon/update-fail.png"> -->
+      <div ver>更新失败</div>
+      <div ver2>固件更新失败，请稍后尝试更新</div>
+      <div btn (click)="updateDevice()">
+        <div>重新尝试更新</div>
+      </div>
     </div>
   </ng-container>
 
-  <div updatebox *ngIf="(updateState == 100 ||updateState == 2 || updateState == 0)&& hasNewVersion">
-    <img src="./assets/img/icon/update-blue.png">
-    <div ver>当前版本：{{device.data.version}}</div>
-    <div ver2>新的版本：{{device.data.newVersion}}</div>
-    <div des-title>更新说明：</div>
-    <div des *ngIf="device.data.newVersionDescription" [innerHTML]="device.data.newVersionDescription | wrap"></div>
-    <div btn (click)="updateDevice()">
-      <div>立即更新</div>
+  <!-- 设备不在线 -->
+  <ng-template #offline>
+    <div updatebox style="margin-top:0">
+      <div ver style="text-align: center;margin-top:0;">
+        <p>当前设备处于离线状态</p>
+        <p>请先上线设备，再尝试更新固件</p>
+      </div>
     </div>
-  </div>
-
-  <div updatebox *ngIf="updateState == 1">
-    <img src="./assets/img/icon/update-blue.png">
-    <div ver>下载中···</div>
-    <div ver2>固件下载中，请勿断电，等待更新完成再使用本设备</div>
-  </div>
-
-  <div updatebox *ngIf="updateState == -2">
-    <img src="./assets/img/icon/update-blue.png">
-    <div ver>下载失败</div>
-    <div ver2>固件下载失败，请稍后尝试更新</div>
-    <div btn (click)="updateDevice()">
-      <div>重新尝试更新</div>
-    </div>
-  </div>
-
-  <div updatebox *ngIf="updateState == 99">
-    <img src="./assets/img/icon/update-blue.png">
-    <div ver>更新中···</div>
-    <div ver2>固件更新中，请勿断电，等待更新完成再使用本设备</div>
-  </div>
-
-  <div updatebox *ngIf="updateState == 100 && isUpdating && !hasNewVersion">
-    <img src="./assets/img/icon/update-done.png">
-    <div ver>更新成功</div>
-    <div ver2>当前版本：{{device.data.version}}</div>
-
-    <div btn (click)="popDevicePage()">
-      <div>确定</div>
-    </div>
-  </div>
-
-  <div updatebox *ngIf="updateState == -1">
-    <img src="./assets/img/icon/update-fail.png">
-    <div ver>更新失败</div>
-    <div ver2>固件更新失败，请稍后尝试更新</div>
-    <div btn (click)="updateDevice()">
-      <div>重新尝试更新</div>
-    </div>
-  </div>
+  </ng-template>
 
 </ion-content>

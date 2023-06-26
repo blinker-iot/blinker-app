@@ -3,26 +3,63 @@
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>EspTouch快捷配置</ion-title>
+    <ion-title>
+      <div class="name">智能配网</div>
+      <div class="state" [ngClass]="{'showState': stateIndex}">
+        <ng-container [ngSwitch]="stateIndex">
+          <ng-container *ngSwitchCase="1">
+            WiFi信息获取中...
+          </ng-container>
+          <ng-container *ngSwitchCase="2">
+            WiFi连接中...
+          </ng-container>
+          <ng-container *ngSwitchCase="-2">
+            未开启位置服务
+          </ng-container>
+          <ng-container *ngSwitchCase="-1">
+            WiFi未连接
+          </ng-container>
+          <ng-container *ngSwitchCase="11">
+            espTouch v1模式
+          </ng-container>
+          <ng-container *ngSwitchCase="12">
+            espTouch v2模式
+          </ng-container>
+        </ng-container>
+      </div>
+    </ion-title>
+    <ion-buttons *ngIf="showModeBtn" slot="end">
+      <ion-button class="end-btns" (click)="changeMode()">
+        <ng-container *ngIf="mode==1">切换V2</ng-container>
+        <ng-container *ngIf="mode==2">切换V1</ng-container>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
   <div flex-box>
-    <div class="box">
-      1.确保设备已进入等待配置状态<br>
-      2.输入WiFi密码，并点击开始配置
+    <div class="desc-box">
+      1. 确保设备已进入等待配置状态<br>
+      2. 输入WiFi热点密码，并点击开始配置
     </div>
     <div class="box mt10">
-      <div style="color:rgb(255, 95, 95);" *ngIf="is5G">该设备暂不支持5G WiFi</div>
+      <div style="color:rgb(255, 95, 95);" *ngIf="is5G">设备不支持5G WiFi热点，请更换2.4G热点</div>
       <div class="item">
-        <div class="title">WiFi 名称</div>
-        <input type="text" [(ngModel)]="myssid" disabled>
+        <div class="title">WiFi名称</div>
+        <input type="text" [(ngModel)]="myssid" [disabled]="!editable">
+        <!-- <i class="iconfont icon-edit" (click)="editable=true;myssid==''"></i> -->
       </div>
       <div class="item">
-        <div class="title">WiFi 密码</div>
+        <div class="title">WiFi密码</div>
         <input class="password" type="{{pwshow?'text':'password'}}" [(ngModel)]="mypasswd">
         <i class="iconfont" [ngClass]="{'icon-eye-open': pwshow,'icon-eye-close':!pwshow}" (click)="showPassword()"></i>
+      </div>
+      <div class="item" *ngIf="mode==2&&showModeBtn">
+        <div class="title">设备密钥</div>
+        <input class="password" type="{{cdshow?'text':'password'}}" [(ngModel)]="customData">
+        <i class="iconfont" [ngClass]="{'icon-eye-open': cdshow,'icon-eye-close':!cdshow}"
+          (click)="showCustomData()"></i>
       </div>
       <div class="savepw">
         <div class="savepw2" (click)="clickSavePassword()">
@@ -32,7 +69,7 @@
           <div>记住密码</div>
         </div>
       </div>
-      <button fullbtn (click)="startConfig()">开始配置</button>
+      <button fullbtn (click)="startConfig()" [ngStyle]="{'opacity': this.myssid == ''?'0.6':'1'}">开始配置</button>
       <div textcenter (click)="openWifiSetting()">选择其他WiFi</div>
     </div>
   </div>

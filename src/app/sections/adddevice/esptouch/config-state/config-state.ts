@@ -9,6 +9,7 @@ import { Device } from 'src/app/core/model/device.model';
 import { DeviceService } from 'src/app/core/services/device.service';
 
 declare var esptouch;
+declare var esptouch2;
 
 @Component({
   selector: 'config-state',
@@ -19,6 +20,9 @@ export class ConfigStatePage {
 
   @Input() ssid;
   @Input() password;
+
+  @Input() mode;
+  @Input() customData;
 
   step = 0;
   stepArray = [
@@ -94,15 +98,26 @@ export class ConfigStatePage {
       this.date1 = new Date();
       console.log("开始配置");
       this.stepTo(1);
-      esptouch.start(this.ssid, "00:00:00:00:00:00", this.password, "9", "1",
-        result => {
-          this.stepTo(2);
-          if (this.isDevtool)
-            this.configComplete4diy(result)
-          else
-            this.configComplete(result)
-        },
-        error => { this.configError(error) });
+      if (this.mode == 1)
+        esptouch.start(this.ssid, this.password,
+          result => {
+            this.stepTo(2);
+            if (this.isDevtool)
+              this.configComplete4diy(result)
+            else
+              this.configComplete(result)
+          },
+          error => { this.configError(error) });
+      else
+        esptouch2.start(this.ssid, this.password, this.customData,
+          result => {
+            this.stepTo(2);
+            if (this.isDevtool)
+              this.configComplete4diy(result)
+            else
+              this.configComplete(result)
+          },
+          error => { this.configError(error) });
     } else {
       this.step = 1;
       setTimeout(() => {
@@ -209,6 +224,13 @@ export class ConfigStatePage {
 
   isDone(i) {
     return this.step > i
+  }
+
+  esptouchStop() {
+    if (this.mode == 1)
+      esptouch.stop(res => { console.log('esptouch stop') }, err => { console.log(err) });
+    else if (this.mode == 2)
+      esptouch2.stop(res => { console.log('esptouch stop') }, err => { console.log(err) });
   }
 
 }

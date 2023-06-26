@@ -6,7 +6,7 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import CryptoJS from 'crypto-js';
 import { getDeviceId, randomId } from '../functions/func';
 import { BlinkerBroker } from '../model/broker.model';
-import { API } from 'src/app/configs/api.config';
+import { API, BROKER_HOST } from 'src/app/configs/api.config';
 import { AuthData, UserData, OrderData, ShareDate } from '../model/data.model';
 
 @Injectable({
@@ -50,6 +50,8 @@ export class DataService {
 
     brokers: OrderData;
     tempImgFile: any;
+
+    hasProDevice = false;
 
     constructor(
         private storage: Storage,
@@ -170,11 +172,14 @@ export class DataService {
     initDevices(devices) {
         let deviceDict = {};
         for (const device of devices) {
+            // 判断用户是否有专属设备
+            if (!this.hasProDevice && device.deviceType != 'DiyArduino') {
+                this.hasProDevice = true
+            }
             let id = getDeviceId(device);
             let newDevice = device;
             newDevice['id'] = id;
             newDevice['subject'] = new Subject;
-            // if (typeof this.device != 'undefined') {
             if (typeof this.device != 'undefined' && typeof this.device.dict[id] != "undefined") {
                 if (typeof this.device.dict[id].data != "undefined")
                     newDevice['data'] = this.device.dict[id].data
@@ -232,6 +237,7 @@ export class DataService {
 
 
     initBlinkerBroker(broker) {
+        // console.log(broker);
         let options = {
             keepalive: 65,
             clientId: broker.deviceName,
@@ -255,7 +261,7 @@ export class DataService {
         }
         return {
             vender: "blinker",
-            host: 'wss://broker.diandeng.tech:1886',
+            host: BROKER_HOST,
             options: options,
             topic: topic,
             dataTemplate: dataTemplate,

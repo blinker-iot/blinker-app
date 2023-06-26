@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { AndroidPermissions } from '@ionic-native/android-permissions/ngx'
+import { AndroidPermissions } from '@awesome-cordova-plugins/android-permissions/ngx'
 import { Platform } from '@ionic/angular';
-import { Diagnostic } from '@ionic-native/diagnostic/ngx';
+import { Diagnostic } from '@awesome-cordova-plugins/diagnostic/ngx';
 import { NoticeService } from './notice.service';
 
 @Injectable({
@@ -65,6 +65,7 @@ export class PermissionService {
 
   async CheckBleAvailability(options = { showNotice: true }) {
     if (await this.diagnostic.getBluetoothState() == this.diagnostic.bluetoothState.POWERED_ON) {
+      await this.androidPermissions.checkPermission(this.androidPermissions.PERMISSION.ACCESS_COARSE_LOCATION);
       return true;
     } else {
       if (options.showNotice)

@@ -57,11 +57,12 @@ export class AuthenticationComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    this.vender = this.dataService.user.username;
+    // this.vender = this.dataService.user.username;
   }
 
   upload() {
     if (typeof this.img0 == 'undefined') return;
+    if (this.vender == '') return;
     let authInfo = {
       type: this.type,
       vender: this.vender,

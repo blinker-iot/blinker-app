@@ -7,14 +7,14 @@ import { IonicModule } from '@ionic/angular';
 
 import { ViewHomePage } from './view-home.page';
 import { ComponentsModule } from 'src/app/core/components/components.module';
-import { RoomListComponent } from './room-list/room-list';
-import { DeviceblockHomelistComponent } from './deviceblock-homelist/deviceblock-homelist';
+import { DeviceblockZone } from './components/deviceblock-zone/deviceblock-zone';
 import { BlinkerSpeechModule } from 'src/app/sections/speech/speech.module';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
 import { TranslateModule } from '@ngx-translate/core';
-// import { SpeechPageModule } from 'src/app/sections/speech/speech.module';
-// import { SortablejsModule } from 'angular-sortablejs';
-// import { AuthGuard } from 'src/app/core/guard/auth.guard';
+import { SwiperModule } from 'swiper/angular';
+import { RoomListComponent } from './components/room-list/room-list';
+import { DeviceblockListComponent } from './components/deviceblock-list/deviceblock-list';
+import { Deviceblock } from './components/deviceblock/deviceblock';
 
 const routes: Routes = [
   {
@@ -32,12 +32,15 @@ const routes: Routes = [
     BlinkerSpeechModule,
     RouterModule.forChild(routes),
     DirectivesModule,
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    SwiperModule
   ],
   declarations: [
     ViewHomePage,
     RoomListComponent,
-    DeviceblockHomelistComponent
+    DeviceblockZone,
+    DeviceblockListComponent,
+    Deviceblock
   ],
   exports: [ViewHomePage]
 })

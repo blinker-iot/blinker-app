@@ -1,162 +1,61 @@
-.stb {
-    position: fixed;
-    height: 20px;
-    width: 100%;
-    background-color: rgba(0, 0, 0, 0.1);
-    z-index: 99;
+ion-toolbar {
+    --background: transparent !important;
+    --ion-color-base: transparent !important;
 }
 
-ion-header {
-    .toolbar-background {
-        background-color: #FFF;
-    }
-
-    .toolbar-title-ios {
-        color: #595959 !important;
-    }
-
-    .button-inner {
-        color: #575757;
-    }
-}
-
-.scroll-content {
-    background-color: #FAFAFA;
-}
-
-.noshared {
-    color: #8E8E8E;
-    padding-top: 20px;
-}
-
-.mask {
-    position: fixed;
+[device-box] {
+    position: relative;
+    // transition: all 0.3s;
+    // transform-origin: center top 0px;
+    width: 100vw;
     height: 100%;
-    width: 100%;
-    background-color: rgba(0, 0, 0, 0.1);
-    opacity: 0.1;
-    top: 0;
-    left: 0;
-    z-index: 99;
 }
 
-// .dashboardbox {
-//     display: flex;
-//     align-items: center;
-//     // justify-content: space-between;
-//     justify-content: flex-start;
-//     flex-flow: row wrap;
-//     padding: 0 15px 15px 15px;
-//     top: 0;
-//     transition: all 0.6s;
-//     .groupbox {
-//         width: 100%;
-//     }
-//     .group {
-//         margin-top: 4vw;
-//         width: 100%;
-//         height: 8vw;
-//         display: flex;
-//         align-items: center;
-//         justify-content: space-between;
-//     }
-.sortbox {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-flow: row wrap;
-    width: 100%;
-    padding: 0 15px 15px 15px;
-    top: 0;
-    transition: all 0.6s;
-}
-
-// .group-add {
-//     margin-top: 4vw;
-//     width: 100%;
-//     height: 8vw;
-//     display: flex;
-//     align-items: center;
-//     justify-content: center;
-//     color: #389BEE;
-//     font-size: 3vw;
-//     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-//     background-color: #fff;
-//     border-radius: 5px;
-// }
-dashboard-block {
-    margin-top: 3vw; // margin-right: 3.5vw;
-
-    .delbtn {
-        position: absolute;
-        top: -2vh;
-        left: -3vw;
-        color: #B50000;
-        font-size: 2.5vh;
-        padding: 1vh 2vw;
-    }
-
-    .handle {
-        position: absolute;
-        top: 0;
-        right: 0;
-        color: #979797;
-        padding: 1vh 2vw;
-        font-size: 1.5vh;
-    }
-}
-
-.block-space {
-    position: relative;
-    width: 28vw;
-}
-
-.block-add {
-    margin-top: 3vw;
-    position: relative;
-    width: 28vw;
-    height: 20vw;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    border-radius: 5px;
-    background-color: #fff;
-    background-image: url(../assets/img/icon/add2.png);
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 7vw;
-}
-
-.toggle-box {
-    position: relative;
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    background-color: #389BEE;
-    border-radius: 9px;
-    width: 36px;
-    height: 19px;
+gridster {
+    background: transparent;
+    width: 100vw;
+    height: 100%;
     transition: all 0.3s;
+    transform-origin: center;
+    &.edit {
+        transform: scale(0.97);
+    }
+    gridster-item {
+        background: none;
+        ::ng-deep {
+            [widget-box] {
+                height: 100%;
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 8px;
+                > div {
+                    border-radius: 20px;
+                    background: #fff;
+                    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+                    height: 100%;
+                    width: 100%;
+                }
+            }
+        }
+    }
 
-    .toggle-inner {
+    .default {
+        background-color: #fff;
+    }
+
+    .translucent {
+        background-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .transparent {
+        background: none;
+        box-shadow: none;
+    }
+
+    .round {
+        background-color: #fff;
         border-radius: 50%;
-        background: #fff;
-        height: 16px;
-        width: 16px;
-        position: absolute; // transition: all 0.3s;
-    }
-
-    .on {
-        right: 1px;
-    }
-
-    .off {
-        right: calc(100% - 23px);
     }
 }
-
-// dashboard-addblockmodal {
-//     height: 100%;
-//     width: 100%;
-//     position: fixed;
-//     z-index: 9;
-//     background-color: #22222222;
-// }

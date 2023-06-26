@@ -1,74 +1,35 @@
-<ion-header>
+<ion-header whitebg>
   <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-menu-button><i class="iconfont icon-menu"></i></ion-menu-button>
     </ion-buttons>
-    <ion-title>聚合视图beta
-    </ion-title>
+    <ion-title></ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="lock()" *ngIf="editMode">
+      <ion-button (click)="lock()" *ngIf="options.draggable.enabled">
         <i class="iconfont icon-lock"></i>
       </ion-button>
-      <ion-button (click)="unlock()" *ngIf="!editMode">
+      <ion-button (click)="unlock()" *ngIf="!options.draggable.enabled">
         <i class="iconfont icon-edit"></i>
       </ion-button>
-      <ion-button (click)="changeView()" *ngIf="!editMode">
+      <ion-button (click)="changeView()">
         <i class="iconfont icon-view"></i>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
-<ion-content>
-  <div class="sortbox" #dashboardbox>
-    <!-- <ng-container *ngFor="let blockId of blockList.order;index as i">
-      <dashboard-block class="dashboard-block" [editMode]="editMode" [blockId]="blockId" data-id="{{blockId}}">
-        <div *ngIf="editMode" class="delbtn" (click)="delBlock(blockId,i)">
-          <ion-icon name="close-circle"></ion-icon>
-        </div>
-        <div *ngIf="editMode" class="handle">
-          <ion-icon name="menu"></ion-icon>
-        </div>
-      </dashboard-block>
-    </ng-container> -->
-    <div *ngIf="editMode" class="block-add" (click)="showAddBlockModal($event)">
-    </div>
-    <div class="block-space"></div>
+<ion-content fullscreen=true>
+  <div device-box #gridsterBox *ngIf="loaded">
+    <gridster [options]="options" [ngClass]="{'edit':mode=='edit'}">
+      <ng-container *ngFor="let widget of dashboardData">
+        <gridster-item [item]="widget">
+          <blinker-button *ngIf="widget.type=='btn'" [widget]="widget"></blinker-button>
+          <blinker-slider *ngIf="widget.type=='sli'" [widget]="widget"></blinker-slider>
+          <blinker-text *ngIf="widget.type=='tex'" [widget]="widget"></blinker-text>
+        </gridster-item>
+      </ng-container>
+    </gridster>
   </div>
+  <!-- <div class="animated slideInUp faster layouter-bar" *ngIf="mode=='1'">
+    <widget-listbar></widget-listbar>
+  </div> -->
 </ion-content>
-<div *ngIf="showBlockList" class="mask animated fadeIn"></div>
-<!-- <div class="dashboardbox" #dashboardbox>
-    <ng-container *ngFor="let groupName of groupList">
-      <div class="groupbox">
-        <div class="group">
-          <div class="name">{{groupName}}</div>
-          <div *ngIf="!editMode" class="toggle-box">
-            <div class="toggle-inner on">
-            </div>
-          </div>
-          <div *ngIf="editMode" class="handle2">
-            <ion-icon name="menu"></ion-icon>
-          </div>
-        </div>
-        <div class="sortbox" #sortbox>
-          <ng-container *ngFor="let blockId of groupData[groupName]">
-            <dashboard-block class="dashboard-block" [block]="blockData[blockId]">
-              <div *ngIf="editMode" class="delbtn" (click)="delBlock(groupName,blockId)">
-                <ion-icon name="close-circle"></ion-icon>
-              </div>
-              <div *ngIf="editMode" class="handle">
-                <ion-icon name="menu"></ion-icon>
-              </div>
-            </dashboard-block>
-          </ng-container>
-          <div *ngIf="editMode" class="block-add" (click)="addblock($event,groupName)">
-          </div>
-          <div class="block-space"></div>
-        </div>
-      </div>
-    </ng-container>
-    <div *ngIf="editMode" class="group-add">
-      <div>+ 添加分组</div>
-    </div>
-  </div>
-</ion-content>
-<div *ngIf="showBlockList" class="mask animated fadeIn"></div> -->

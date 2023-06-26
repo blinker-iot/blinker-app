@@ -1,0 +1,18 @@
+[button-box] {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    i {
+        font-size: 30px;
+    }
+    .text {
+        position: absolute;
+        bottom: 3px;
+        font-size: 11px;
+    }
+    &:active {
+        transform: scale(0.95);
+    }
+}

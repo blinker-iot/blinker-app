@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { Platform } from '@ionic/angular';
 import { DataService } from 'src/app/core/services/data.service';
 import { DeviceService } from 'src/app/core/services/device.service';
-import { PusherService } from 'src/app/core/services/pusher.service';
+// import { PusherService } from 'src/app/core/services/pusher.service';
 import { ViewService } from 'src/app/core/services/view.service';
 
 @Component({
@@ -38,7 +38,7 @@ export class CardPage implements OnInit {
   constructor(
     public deviceService: DeviceService,
     private router: Router,
-    public pusherService: PusherService,
+    // public pusherService: PusherService,
     private plt: Platform,
     public viewService: ViewService,
     private dataService: DataService

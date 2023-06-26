@@ -33,6 +33,15 @@ export class AddDevicePage {
     private dataService: DataService
   ) { }
 
+  ngOnInit(): void {
+    let temp = localStorage.getItem('addDevicePage:showMode')
+    if (temp != null) {
+      this.showMode = temp
+    } else {
+      this.showMode = 'list'
+    }
+  }
+
   ngAfterViewInit(): void {
     this.deviceConfigService.loaded.subscribe(loaded => {
       if (loaded) console.log(this.items);
@@ -73,6 +82,12 @@ export class AddDevicePage {
   gotoGuide(device) {
     this.addservice.isDev = device.isDev
     this.router.navigate(['/adddevice', device.deviceType])
+  }
+
+  showMode = 'list'
+  switchShowMode() {
+    this.showMode = this.showMode == 'list' ? 'block' : 'list';
+    localStorage.setItem('addDevicePage:showMode', this.showMode)
   }
 
 }

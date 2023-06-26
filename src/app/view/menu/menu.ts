@@ -56,7 +56,7 @@ export class Menu implements OnInit {
 
   goto(page, item = { disabled: false }) {
     if (item.disabled) return;
-    if (this.platform.is("ios")) this.menu.close();
+    // if (this.platform.is("ios")) this.menu.close();
     this.router.navigate([page])
   }
 

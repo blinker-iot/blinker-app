@@ -1,0 +1,25 @@
+@import "swiper/scss";
+@import "swiper/scss/virtual";
+
+.slidesbox {
+    width: 100vw;
+    height: 100%;
+    ::ng-deep {
+        .swiper {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .swiper-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: row;
+            .swiper-slide {
+                // width: 100vw;
+                flex-shrink: 0;
+            }
+        }
+    }
+}

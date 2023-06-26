@@ -79,7 +79,10 @@ export class ConfigStatePage {
   }
 
   ngOnDestroy() {
-    if (this.deviceSsid != "") WifiWizard2.disconnect(this.deviceSsid);
+    if (this.deviceSsid != "") {
+      WifiWizard2.disconnect(this.deviceSsid)
+      WifiWizard2.connect(this.ssid, true, this.password, 'WPA')
+    }
     this.brightness.setKeepScreenOn(false);
     if (!this.isDevtool) {
       clearTimeout(this.checktimer2);
@@ -94,16 +97,15 @@ export class ConfigStatePage {
   listenResumeAndGetSsid() {
     this.platformResume = this.platform.resume.subscribe(() => {
       console.log("Resume And Get Ssid")
-      WifiWizard2.getConnectedSSID().then(
-        ssid => {
-          if (ssid.indexOf(this.deviceType + "_") > -1) {
-            this.platformResume.unsubscribe();
-            this.deviceService.closeScanMdnsDevice();
-            this.deviceSsid = ssid;
-            this.changeDetectorRef.detectChanges();
-            this.configStart()
-          }
-        },
+      WifiWizard2.getConnectedSSID().then(ssid => {
+        if (ssid.indexOf(this.deviceType) > -1) {
+          this.platformResume.unsubscribe();
+          this.deviceService.closeScanMdnsDevice();
+          this.deviceSsid = ssid;
+          this.changeDetectorRef.detectChanges();
+          this.configStart()
+        }
+      },
         error => {
           console.log(error);
         }
@@ -112,6 +114,16 @@ export class ConfigStatePage {
   }
 
   cancel() {
+    if (this.platform.is('cordova')) {
+      WifiWizard2.getConnectedSSID().then(ssid => {
+        if (this.ssid != ssid) {
+          if (this.platform.is('android'))
+            WifiWizard2.disconnect(ssid)
+          else
+            WifiWizard2.iOSDisconnectNetwork(ssid)
+        }
+      })
+    }
     this.modalCtrl.dismiss();
   }
 
@@ -241,7 +253,8 @@ export class ConfigStatePage {
         if (apInfo.SSID.indexOf(this.deviceType) > -1) {
           notFoundDevice = false;
           this.deviceService.closeScanMdnsDevice();
-          await this.connectAp(apInfo);
+          await this.connectDeviceAp(apInfo);
+          this.connectTargetAP();
         }
       });
       //配置失败,没有发现设备
@@ -253,46 +266,66 @@ export class ConfigStatePage {
   deviceSsid = "";
   deviceBssid = "";
   deviceName = "";
-  connectAp(apInfo: ApInfo): Promise<any> {
-    console.log("连接设备：" + apInfo.SSID);
-    return WifiWizard2.connect(apInfo.SSID, true)
-      .then(result => {
-        // console.log(result);
-        this.deviceSsid = apInfo.SSID;
-        this.deviceBssid = apInfo.SSID.split('_')[1];
-        this.deviceName = apInfo.SSID;
-        console.log('已连接到设备，正在发送配网数据');
-        this.stepTo(2);
-        this.ws = new WebSocket('ws://192.168.4.1:81');
-        this.ws.onopen = () => {
-          this.ws.send(`{"ssid":"${this.ssid}","pswd":"${this.password}"}`);
+  connectDeviceAp(apInfo: ApInfo) {
+    return new Promise<boolean>((resolve, reject) => {
+      console.log("连接设备：" + apInfo.SSID);
+      return WifiWizard2.connect(apInfo.SSID, true)
+        .then(result => {
+          // console.log(result);
+          this.deviceSsid = apInfo.SSID;
+          this.deviceBssid = apInfo.SSID.split('_')[1];
+          this.deviceName = apInfo.SSID;
+          console.log('已连接到设备，正在发送配网数据');
+          this.stepTo(2);
           setTimeout(() => {
-            this.ws.close();
-            // WifiWizard2.disconnect(this.deviceSsid);
-            this.deviceSsid = "";
-            console.log('断开设备连接');
-            WifiWizard2.connect(this.ssid, true, this.password, 'WPA').then(() => {
-              let waiter = this.networkService.stateWatcher.subscribe(state => {
-                if (state == "wifi")
-                  WifiWizard2.getConnectedSSID().then(ssid => {
-                    console.log("当前ssid:" + ssid);
-                    waiter.unsubscribe();
-                    if (this.isDevtool) {
-                      this.waitDeviceMdns();
-                    } else {
-                      this.configComplete({
-                        bssid: this.deviceBssid,
-                      })
-                    }
-                  })
+            this.ws = new WebSocket('ws://192.168.4.1:81/');
+            this.ws.onopen = () => {
+              console.log('WebSocket onopen!');
+              this.ws.send(`{"ssid":"${this.ssid}","pswd":"${this.password}"}`);
+              setTimeout(() => {
+                this.ws.close();
+                console.log('onopen>断开设备连接');
+                resolve(true);
+              }, 3000);
+            };
+            this.ws.onerror = (e) => {
+              console.log('websocket error: ', e);
+              setTimeout(() => {
+                this.ws.send(`{"ssid":"${this.ssid}","pswd":"${this.password}"}`);
+              }, 3000);
+              setTimeout(() => {
+                this.ws.close();
+                console.log('onerror>断开设备连接');
+                resolve(true);
+              }, 6000);
+            }
+          }, 2000);
+
+        }
+        ).catch(error => {
+          console.log(error);
+        });
+    })
+  }
+
+  // 连接到原WiFi并注册设备  
+  connectTargetAP() {
+    WifiWizard2.connect(this.ssid, true, this.password, 'WPA').then(() => {
+      let waiter = this.networkService.stateWatcher.subscribe(state => {
+        if (state == "wifi")
+          WifiWizard2.getConnectedSSID().then(ssid => {
+            console.log("当前ssid:" + ssid);
+            waiter.unsubscribe();
+            if (this.isDevtool) {
+              this.waitDeviceMdns();
+            } else {
+              this.configComplete({
+                bssid: this.deviceBssid,
               })
-            })
-          }, 1000);
-        };
-      }
-      ).catch(error => {
-        console.log(error);
-      });
+            }
+          })
+      })
+    })
   }
 
   sendInfoForIos() {

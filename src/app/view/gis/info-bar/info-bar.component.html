@@ -17,7 +17,11 @@
     <div name>{{device.config.customName}}</div>
     <div mess>{{device.config.position.address}}</div>
   </div>
-  <div close-btn (click)="close()">
+  <!-- <div close-btn (click)="close()">
     <i class="fal fa-times"></i>
+  </div> -->
+  <div class="nav" (click)="gotoNav()">
+    <i class="fal fa-location-circle"></i>
+    导航
   </div>
 </div>

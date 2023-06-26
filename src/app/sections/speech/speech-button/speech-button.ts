@@ -1,5 +1,8 @@
 import { Component, ViewChild, ElementRef } from '@angular/core';
 import { ModalController } from '@ionic/angular';
+import { AudioService } from 'src/app/core/services/audio.service';
+import { DataService } from 'src/app/core/services/data.service';
+import { NoticeService } from 'src/app/core/services/notice.service';
 import { SpeechPage } from 'src/app/sections/speech/speech';
 import { SpeechService } from '../speech.service';
 
@@ -10,30 +13,22 @@ import { SpeechService } from '../speech.service';
 })
 export class SpeechButtonComponent {
 
-  @ViewChild("speechAudio", { read: ElementRef, static: true }) speechAudio: ElementRef;
-
   constructor(
     private modalCtrl: ModalController,
-    private speechService: SpeechService
+    private dataService: DataService,
+    private noticeService: NoticeService,
   ) { }
 
-  ngAfterViewInit() {
-    this.speechService.playAudio.subscribe(audioName => {
-      this.play(audioName)
-    });
-  }
-
   async speech() {
+    if ((!this.dataService.isAdvancedDeveloper) && (!this.dataService.hasProDevice)) {
+      this.noticeService.showToast('该功能仅限点灯专业版使用')
+      return
+    }
     const modal = await this.modalCtrl.create({
       component: SpeechPage,
       backdropDismiss: false,
     });
     modal.present();
-  }
-
-  play(audioName) {
-    this.speechAudio.nativeElement.src = `assets/aac/Speech_${audioName}.aac`;
-    this.speechAudio.nativeElement.play();
   }
 
 }

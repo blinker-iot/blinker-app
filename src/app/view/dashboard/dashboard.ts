@@ -2,140 +2,140 @@ import { Component, ViewChild, Renderer2, ElementRef, ViewChildren, QueryList } 
 import { ModalController } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
 import { DataService } from 'src/app/core/services/data.service';
+import { DisplayGrid, GridsterConfig, GridType } from 'angular-gridster2';
 import { ViewService } from 'src/app/core/services/view.service';
 
 @Component({
   selector: 'page-dashboard',
   templateUrl: 'dashboard.html',
+  styleUrls: ['dashboard.scss']
 })
 export class DashboardPage {
 
-  showBlockList = false;
-  editMode = false;
-  oldBlockListData;
+  editMode = false
 
-  delSelected = 99;
+  options: GridsterConfig = {
+    margin: 5,
+    outerMargin: true,
+    // gridType: GridType.Fixed,
+    gridType: GridType.ScrollVertical,
+    displayGrid: DisplayGrid.None,
+    mobileBreakpoint: 0,
+    outerMarginLeft: 13,
+    outerMarginRight: 13,
+    minCols: 8,
+    maxCols: 8,
+    minRows: 14,
+    maxRows: 20,
+    maxItemCols: 8,
+    minItemCols: 1,
+    maxItemRows: 8,
+    minItemRows: 1,
+    maxItemArea: 64,
+    minItemArea: 1,
+    defaultItemCols: 1,
+    defaultItemRows: 1,
+    // 多层配置
+    allowMultiLayer: true,
+    defaultLayerIndex: 1,
+    baseLayerIndex: 2,
+    maxLayerIndex: 2,
+    // 
+    scrollSensitivity: 0,
+    scrollSpeed: 0,
+    ignoreMarginInRow: false,
+    draggable: {
+      enabled: false
+    },
+    resizable: {
+      enabled: false
+    },
+    swap: true,
+    swapWhileDragging: true,
+    pushItems: false,
+    disableWindowResize: false,
+    disableWarnings: false,
+    scrollToNewItems: false,
+    // itemInitCallback: (GridsterItem, GridsterItemComponent) => this.iteminitCallback(GridsterItem, GridsterItemComponent),
+    // itemResizeCallback: (item) => this.resizeEvent.emit(item)
+  };
 
-  @ViewChildren("sortbox") sortbox: QueryList<ElementRef>;
-
-  // block type三种类型：
-  // swi:开关按键
-  // num1:数据1组
-  // num2:数组2组
-  // txt:文字数据
-
-  get blockList() {
-    return this.dataService.block
-  }
-
-  set blockList(newblockList) {
-    this.dataService.block = newblockList
-  }
-
-  // blockList = {
-  // order: [],
-  // data: {}
-  // "order": ['abcde', 'ghjkl'],
-  // "data": {
-  //   'abcde': { deviceName: "C2B62032KKFZ", txt: "温度", ico: "fal fa-question", key: "temp", type: "num1", unit: "℃" },
-  //   'ghjkl': { deviceName: "C2B62032KKFZ", txt: "开关", ico: "fal fa-question", key: "switch", type: "swi" }
-  // }
-  // }
-
-  // groupList = ["照明设备", "室内数据", "办公室"]
-  // groupData = {
-  //   "照明设备": ['abcdef'],
-  //   "室内数据": ['ghjkl'],
-  //   "办公室": [],
-  // }
-  // blockData = {
-  //   // 'qwert': { deviceName: "C2B62032KKFZ", txt: "温度", ico: "fal fa-question", key: "temp", type: "num1", unit: "℃" },
-  //   'abcdef': { deviceName: "C2B62032KKFZ", txt: "温度", ico: "fal fa-question", key: "temp", type: "num1", unit: "℃" },
-  //   'ghjkl': { deviceName: "C2B62032KKFZ", txt: "开关", ico: "fal fa-question", key: "switch", type: "swi" }
-  // }
-
-  // @ViewChild(Content,{ read: ElementRef, static: true }) content: Content;
-  @ViewChild('dashboardbox', { read: ElementRef, static: true }) dashboardbox: ElementRef;
+  dashboardData = [
+    { "type": "tex", "mode": 0, "t0": "点我开关灯", "clr": "#389BEE", "text": "文本", "cols": 4, "rows": 1, "key": "btn-abc", "x": 0, "y": 0 },
+    { "type": "btn", "ico": "fad fa-siren-on", "mode": 0, "t0": "点我开关灯", "clr": "#389BEE", "t1": "文本2", "bg": 0, "cols": 2, "rows": 2, "key": "btn-abc", "x": 6, "y": 0 },
+    { "type": "btn", "ico": "fad fa-siren-on", "mode": 0, "t0": "点我开关灯", "clr": "#389BEE", "t1": "文本2", "bg": 0, "cols": 2, "rows": 2, "key": "btn-abc", "x": 0, "y": 0 },
+    { "type": "btn", "ico": "fad fa-siren-on", "mode": 0, "t0": "点我开关灯", "clr": "#389BEE", "t1": "文本2", "bg": 0, "cols": 2, "rows": 2, "key": "btn-abc", "x": 2, "y": 0, },
+    { "type": "btn", "ico": "fad fa-siren-on", "mode": 0, "t0": "点我开关灯", "clr": "#389BEE", "t1": "文本2", "bg": 0, "cols": 2, "rows": 2, "key": "btn-abc", "x": 4, "y": 0 },
+    { "type": "btn", "ico": "fad fa-siren-on", "mode": 0, "t0": "点我开关灯", "clr": "#389BEE", "t1": "文本2", "bg": 0, "cols": 2, "rows": 2, "key": "btn-abc", "x": 0, "y": 2, },
+    { "type": "sli", "dir": "x", "tex": "测试", "ico": "fad fa-american-sign-language-interpreting", "clr": "#389BEE", "min": 0, "max": 100, "uni": "次", "bg": 0, "cols": 4, "rows": 2, "key": "num-abc", "x": 0, "y": 4, "speech": [], "lstyle": 1 },
+    { "type": "sli", "dir": "y", "tex": "测试", "ico": "fad fa-american-sign-language-interpreting", "clr": "#ff4f4f", "min": 0, "max": 100, "uni": "次", "bg": 0, "cols": 2, "rows": 4, "key": "num-abc", "x": 4, "y": 2, "speech": [], "lstyle": 1 },
+    { "type": "btn", "ico": "fad fa-hand-point-down", "mode": 0, "t0": "点我计数", "t1": "文本2", "bg": 0, "cols": 2, "rows": 2, "key": "btn-123", "x": 2, "y": 2, "speech": [], "lstyle": 0, "clr": "#389BEE" }
+  ]
 
   constructor(
     public modalCtrl: ModalController,
     public render: Renderer2,
     public userService: UserService,
     private dataService: DataService,
-    private viewService: ViewService
+    private viewService: ViewService,
   ) {
-    this.oldBlockListData = JSON.stringify(this.blockList)
+
+  }
+  subscription;
+  loaded = false;
+
+  mode = 'default';  // edit
+
+  ngOnInit(): void {
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
+      if (loaded) {
+        this.loaded = loaded
+      }
+    })
   }
 
-  ngAfterViewInit(): void {
-    this.initSortable()
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.changedOptions();
+    }, 50);
+
   }
 
-  gotoSettings() {
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe()
+  }
 
+
+  lock() {
+    this.disableDrag()
+    console.log(JSON.stringify(this.dashboardData));
+    this.mode = 'default'
   }
 
   unlock() {
-    this.editMode = true;
+    this.enableDrag()
+    this.mode = 'edit'
   }
 
-  lock() {
-    this.editMode = false;
-    if (this.oldBlockListData == JSON.stringify(this.blockList)) return;
-    this.saveConfig();
+  enableDrag() {
+    this.options.draggable.enabled = true;
+    this.changedOptions();
   }
 
-  saveConfig() {
-    let userConfig = {
-      "blockList": this.blockList
+  disableDrag() {
+    this.options.draggable.enabled = false;
+    this.changedOptions();
+  }
+
+  changedOptions() {
+    if (this.options.api) {
+      console.log('changedOptions');
+      this.options.api.optionsChanged();
     }
-    this.userService.saveUserConfig(userConfig);
   }
 
-  restorePosition() {
-    this.render.setStyle(this.dashboardbox.nativeElement, 'top', '0px');
-  }
 
-  showAddBlockModal(e) {
-    this.showBlockList = true;
-    this.render.setStyle(this.dashboardbox.nativeElement, 'position', 'absolute');
-    this.render.setStyle(this.dashboardbox.nativeElement, 'top', `${-e.srcElement.offsetTop + 10}px`);
-    // let modal = this.modalCtrl.create('DashboardAddblockPage');
-    // modal.onDidDismiss(data => {
-    //   this.restorePosition();
-    //   this.showBlockList = false;
-    // });
-    // modal.present();
-  }
-
-  delBlock(blockId, index) {
-    if (index > -1) this.blockList.list.splice(index, 1);
-    delete this.blockList.dict[blockId];
-  }
-
-  sortable;
-  initSortable() {
-    // this.sortable = new Sortable(this.dashboardbox.nativeElement, {
-    //   handle: ".handle",
-    //   animation: 150,
-    //   chosenClass: "schosen",
-    //   dragClass: "sdrag",
-    //   dataIdAttr: "id",
-    //   draggable: '.dashboard-block',
-    //   // filter: ".block-add",
-    //   scroll: false,
-    //   onEnd: (event: any) => {
-    //     this.saveList();
-    //   },
-    // });
-
-  }
-
-  saveList() {
-    console.log(this.sortable.toArray());
-    this.blockList.list = this.sortable.toArray();
-  }
-
+  // 弹出视图模式菜单
   changeView() {
     this.viewService.changeView();
   }

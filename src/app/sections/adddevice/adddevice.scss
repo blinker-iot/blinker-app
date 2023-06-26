@@ -22,29 +22,24 @@
 
     .device-box {
       display: flex;
-      flex-direction: row;
-      flex-flow: row wrap;
       position: relative;
 
       .device {
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        width: 33.3%;
-        height: 30vw;
         border-bottom: 1px solid #e6e6e6;
-        // border-left: 1px solid #e6e6e6;
         border-right: 1px solid #e6e6e6;
-
-        b-device-img {
-          width: 65%;
-        }
 
         .divice-name {
           margin-top: 5px;
           font-size: 13px;
           color: #595959;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          width: 95%;
+          overflow: hidden;
+          text-align: center;
         }
       }
 
@@ -65,14 +60,48 @@
 
 ::ng-deep {
   .icon1 {
-    font-size: 28px;
-  }
-  .icon2 {
     font-size: 30px;
+  }
+
+  .icon2 {
+    font-size: 27px;
   }
 }
 
 ion-searchbar {
-  background-color: #FFF;
-  // --background: #fff;
+  background-color: #fff;
+}
+
+.block {
+  .device-box {
+    flex-direction: row;
+    flex-flow: row wrap;
+  }
+
+  .device {
+    flex-direction: column;
+    width: 33.3%;
+    height: 30vw;
+  }
+
+  b-device-img {
+    width: 65%;
+  }
+}
+
+.list {
+  .device-box {
+    flex-direction: column;
+
+    .device {
+      width: 100%;
+      height: 60px;
+      flex-direction: row;
+    }
+
+    b-device-img {
+      width: 50px;
+      margin-left: 15px;
+    }
+  }
 }

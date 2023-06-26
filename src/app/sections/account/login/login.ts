@@ -6,6 +6,7 @@ import { AuthService } from 'src/app/core/services/auth.service';
 import { CONFIG } from 'src/app/configs/app.config';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
 import { NoticeService } from 'src/app/core/services/notice.service';
+import { FirstModalComponent } from '../first-modal/first-modal.component';
 
 @Component({
   selector: 'page-login',
@@ -31,11 +32,12 @@ export class LoginPage {
     private noticeService: NoticeService,
     private navCtrl: NavController,
     private viewService: ViewService,
-    private modalCtrl: ModalController,
+    private modalCtrl: ModalController
   ) {
   }
 
   ngOnInit(): void {
+    if (localStorage.getItem('showFirstModal') == null) this.openFirstModal()
     this.viewService.setDarkStatusBar();
   }
 
@@ -78,6 +80,14 @@ export class LoginPage {
         'docTitle': title,
         'docUrl': url,
       }
+    });
+    modal.present();
+  }
+
+  async openFirstModal() {
+    const modal = await this.modalCtrl.create({
+      component: FirstModalComponent,
+      backdropDismiss: false,
     });
     modal.present();
   }

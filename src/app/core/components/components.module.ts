@@ -1,11 +1,9 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Deviceblock } from './deviceblock/deviceblock';
 import { IonicModule } from '@ionic/angular';
 import { PipesModule } from '../pipes/pipes.module';
 import { SceneButtonGroupComponent } from './scene-button-group/scene-button-group';
 import { DeviceblockList2Component } from './deviceblock-list2/deviceblock-list2';
-import { DeviceblockListComponent } from './deviceblock-list/deviceblock-list';
 import { BRangeComponent } from './b-range/b-range';
 import { BColorpickerComponent } from './b-colorpicker/b-colorpicker';
 import { BColorpickerBtnsComponent } from './b-colorpicker-btns/b-colorpicker-btns.component';
@@ -23,19 +21,16 @@ import { BTopBoxComponent } from './b-top-box/b-top-box.component';
 import { BDeviceListComponent } from './b-device-list/b-device-list.component';
 import { BToastComponent } from './b-toast/b-toast.component';
 import { BTipComponent } from './b-tip/b-tip.component';
-import { LangSelectorComponent } from './lang-selector/lang-selector.component';
 import { BItemListComponent } from './b-item-list/b-item-list.component';
 import { BItemComponent } from './b-item-list/b-item/b-item';
 import { SceneButtonComponent } from './scene-button-group/scene-button/scene-button';
 
 @NgModule({
   declarations: [
-    Deviceblock,
     SceneButtonGroupComponent,
     BItemListComponent,
     BItemComponent,
     DeviceblockList2Component,
-    DeviceblockListComponent,
     BRangeComponent,
     BColorpickerComponent,
     BColorpickerBtnsComponent,
@@ -51,24 +46,21 @@ import { SceneButtonComponent } from './scene-button-group/scene-button/scene-bu
     BDeviceListComponent,
     BToastComponent,
     BTipComponent,
-    LangSelectorComponent,
     SceneButtonComponent
   ],
   imports: [
     CommonModule,
     IonicModule,
     PipesModule,
-    FormsModule,
+    FormsModule
   ],
   exports: [
-    Deviceblock,
     PipesModule,
     SceneButtonComponent,
     SceneButtonGroupComponent,
     BItemComponent,
     BItemListComponent,
     DeviceblockList2Component,
-    DeviceblockListComponent,
     BRangeComponent,
     BColorpickerComponent,
     BColorpickerBtnsComponent,
@@ -83,7 +75,6 @@ import { SceneButtonComponent } from './scene-button-group/scene-button/scene-bu
     BDeviceListComponent,
     BToastComponent,
     BTipComponent,
-    LangSelectorComponent
   ]
 })
 export class ComponentsModule { }

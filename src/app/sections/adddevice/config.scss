@@ -4,11 +4,18 @@
     height: 100%;
 }
 
+.desc-box {
+    background-color: #FFFFFF;
+    padding: 15px;
+    color: #595959;
+    font-size: 14px;
+    line-height: 28px;
+}
+
 .box {
     background-color: #FFFFFF;
     padding: 30px 15px;
     color: #595959;
-    font-size: 13px;
     line-height: 25px;
 
     .item {
@@ -115,4 +122,9 @@ ion-title {
         height: 12px;
         opacity: 1;
     }
+}
+
+.end-btns {
+    font-size: 10px;
+    color: #fff;
 }

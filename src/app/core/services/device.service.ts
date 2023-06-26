@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Platform } from '@ionic/angular';
-import { Zeroconf } from '@ionic-native/zeroconf/ngx';
-import { BLE } from '@ionic-native/ble/ngx';
+import { Zeroconf } from '@awesome-cordova-plugins/zeroconf/ngx';
+import { BLE } from '@awesome-cordova-plugins/ble/ngx';
 import {
   transcoding,
   str2ab,
@@ -25,6 +25,8 @@ import { NoticeService } from './notice.service';
 import { ToastService } from './toast.service';
 
 declare var mqtt;
+
+const DEBUG_MODE = false
 
 @Injectable({
   providedIn: 'root'
@@ -87,13 +89,13 @@ export class DeviceService {
     private debugService: DebugService,
     private nativeService: NativeService,
     private noticeService: NoticeService,
-    private toastService: ToastService
+    private toastService: ToastService,
   ) { }
 
   init() {
     this.dataService.initCompleted.subscribe(loaded => {
       if (loaded) {
-        console.log('启动加载');
+        // console.log('启动加载');
         this.connectMqttBrokers();
         this.searchLocalDevice();
       }
@@ -111,10 +113,10 @@ export class DeviceService {
       // console.log(this.brokerDataDict[verder]);
 
       if (typeof this.brokerDataDict[verder].client == 'undefined') {
-        console.log("第一次创建");
+        // console.log("第一次创建");
         this.connectMqttBroker(this.brokerDataDict[verder])
       } else {
-        console.log("第二次连接");
+        // console.log("第二次连接");
         this.reconnectMqttBroker(this.brokerDataDict[verder])
       }
     }
@@ -135,9 +137,12 @@ export class DeviceService {
       });
       mqttClient.on('message', (topic, message: any, packet) => {
         // console.log('from:\n' + topic);
-        console.log('mqtt receive:\n' + message);
+        if (DEBUG_MODE) {
+          console.log('mqtt receive:\n' + message);
+        }
         let data = JSON.parse(message);
         // 2019.1.2 暂时修复阿里MQTT收到两条数据的问题
+        // console.log('r:', data);
         if (data.fromDevice != data.toDevice)
           this.processMessage(data);
       });
@@ -309,11 +314,12 @@ export class DeviceService {
     // 这是对没有接收到心跳包的补救方式，如果接收到数据，则将设备设置为在线或已连接
     if (device.data.state == 'disconnected' || device.data.state == 'offline') {
       if (device.config.mode == 'mqtt') {
-        device['data']['state'] = 'online'
+        device.data['state'] = 'online'
       } else {
-        device['data']['state'] = 'connected'
+        device.data['state'] = 'connected'
       }
     }
+    device.data['enable'] = true
     // 处理未知数据，将其显示到debug组件中
     if (typeof (data) == 'string' || typeof (data) == "number") {
       this.send2debug(device, 'unknown', data.toString())
@@ -333,15 +339,13 @@ export class DeviceService {
       }
       //缓存数据
       device.data[key] = data[key];
-
-      device.subject.next({ key: 'loaded' });
-
       if (key == "vibrate")
         this.nativeService.vibrate(data[key])
     }
 
     // 显示到degbug窗口
     this.send2debug(device, 'receive', JSON.stringify(data))
+    device.subject.next({ key: 'loaded' });
   }
 
   //搜索本地设备（局域网mdns）
@@ -394,7 +398,8 @@ export class DeviceService {
 
   async scanBleDevice() {
     if (!this.plt.is('cordova')) return;
-    if (!this.permissionService.CheckBleAvailability({ showNotice: false })) return;
+    // 检查蓝牙是否打开
+    if (!await this.permissionService.CheckBleAvailability({ showNotice: false })) return
     this.bleDeviceList = {};
     this.ble.scan([], 5).subscribe(result => {
       if (this.plt.is('android')) {
@@ -426,24 +431,25 @@ export class DeviceService {
     }, 3900);
   }
 
-  // 查询mqtt设备是否在线
-  queryDevice(device) {
+  // 查询设备是否在线
+  queryDevice(device: BlinkerDevice) {
     // MQTT设备,且APP已经在该broker中注册
     if (device.config.mode == "mqtt" && this.brokerDataList.indexOf(device.config.broker) > -1) {
       let connected: Subscription = this.brokerDataDict[device.config.broker].connected.subscribe(state => {
         if (state) {
-          device.data['oldState'] = device.data.state;
-          device.data.state = 'waiting';
+          device.data['state'] = 'waiting';
           this.pubMessage(device, `{"get":"state"}`);
+          // 如果之前在线，但3秒后，设备没有反馈，那么再发一次心跳，确保设备状态正确查询
           setTimeout(() => {
-            if (device.data['oldState'] == 'online')
-              if (device.data.state != "online")
-                this.pubMessage(device, `{"get":"state"}`);
+            if (device.data['enable'] && device.data.state != "online")
+              this.pubMessage(device, `{"get":"state"}`);
           }, 3000);
           setTimeout(() => {
-            if (device.data.state != "online") device.data.state = "offline";
+            if (device.data.state != "online") {
+              device.data.state = "offline";
+              device.data['enable'] = false
+            }
           }, 6000);
-          // return
           setTimeout(() => {
             connected.unsubscribe();
           }, 100);
@@ -455,6 +461,14 @@ export class DeviceService {
       this.sendData(device, `{"get":"state"}`);
   }
 
+  // 查询实时数据
+  queryRealtimeData(device) {        
+    let realtimeKeys = device.data['layouterData'].rt;
+    if (typeof realtimeKeys == 'undefined') return
+    if (realtimeKeys.length > 0)
+      this.sendData(device, JSON.stringify({ "rt": realtimeKeys }));
+  }
+
   queryDevices() {
     try {
       for (let deviceName in this.deviceDataDict) {
@@ -463,7 +477,6 @@ export class DeviceService {
     } catch (error) {
       console.warn(error);
     }
-
   }
 
   connectDeviceTimer;
@@ -479,20 +492,12 @@ export class DeviceService {
       }, 6000);
       if (device.data.state != "disconnected") device.data.state = "disconnected";
       if (device.config.mode == "ble") {
-        if (!this.permissionService.CheckBleAvailability()) return resolve(false);
+        if (! await this.permissionService.CheckBleAvailability()) return resolve(false);
         if (mode == "show")
           await this.noticeService.showLoading('connect')
         let result = await this.connectBleDevice(device)
         return resolve(result);
       }
-      // 已废弃 
-      // else if (device.config.mode == "net") {
-      //   if (!this.isWifiAvailable()) return resolve(false);
-      //   // if (!(await this.wifiIsConnected())) return resolve(false);
-      //   if (mode == "show")
-      //     this.noticeService.showLoading('connect')
-      //   return resolve(await this.connectNetDevice(device));
-      // }
     })
   }
 
@@ -504,10 +509,6 @@ export class DeviceService {
     if (device.config.mode == "ble") {
       this.disconnectBleDevice(device);
     }
-    // 已废弃 
-    // else if (device.config.mode == "net") {
-    //   this.disconnectNetDevice(device);
-    // }
   }
 
   sendTimerList = {};
@@ -546,10 +547,6 @@ export class DeviceService {
       if (device.config.mode == "ble") {
         this.send2ble(device, data);
       }
-      // else if (device.config.mode == "net") {
-      //   if (typeof this.wsClient != 'undefined')
-      //     this.send2net(device, data);
-      // }
     }
   }
 
@@ -661,74 +658,6 @@ export class DeviceService {
     else {
       this.ble.writeWithoutResponse(this.bleUUID, 'ffe0', 'ffe1', str2ab(message))
     }
-    this.send2debug(device, 'send', message)
-  }
-
-  //搜索并连接到指定net设备
-  //zeroconf.close的情况:1.连接成功；2.连接超时；3.还未连接即退出layout页面
-  // keepalivedInterval;
-  async connectNetDevice(device): Promise<boolean> {
-    return new Promise<boolean>((resolve, reject) => {
-      if (this.plt.is('android')) {
-        this.zeroconf.watchAddressFamily = 'ipv4';
-      }
-
-      this.zeroconf.watch('_' + device.deviceType + '._tcp.', 'local.').subscribe(result => {
-        if (result.action == "resolved") {
-          if (result.service.name == deviceName2id(device.deviceName) && result.service.ipv4Addresses.length > 0) {
-            window.clearTimeout(this.connectDeviceTimer);
-            this.zeroconf.close();
-            this.noticeService.hideLoading();
-            this.disconnectNetDevice(device);
-            this.wsClient = new WebSocket("ws://" + result.service.ipv4Addresses[0] + ":81");
-            this.wsClient.onmessage = (event) => {
-              // this.lastGetTime = new Date().getTime();
-              let message = {};
-              message["fromDevice"] = device.deviceName;
-              try {
-                message["data"] = JSON.parse(event.data);
-              }
-              catch (e) {
-                message["data"] = event.data;
-              }
-              this.processMessage(message);
-            }
-            this.wsClient.onopen = (event) => {
-              console.log("ws open");
-              console.log(event);
-              if (device.data.state != "connected") device.data.state = "connected";
-              return resolve(true);
-            };
-            this.wsClient.onerror = (event) => {
-              console.log("ws error");
-              console.log(event);
-            }
-            this.wsClient.onclose = (event) => {
-              console.log("ws close");
-              console.log(event);
-              if (device.data.state != "disconnected") device.data.state = "disconnected";
-            }
-            // return resolve(true);
-          }
-        }
-      });
-    })
-  }
-
-  disconnectNetDevice(device) {
-    // console.log('guanguangguan');
-    if (typeof (this.wsClient) != "undefined")
-      this.wsClient.close();
-    // this.wsClient.
-    //处理还未连接上，便退出layout的情况  
-    this.zeroconf.close();
-  }
-
-  //发送net数据
-  send2net(device, message: string) {
-    // if (this.wsClient.readyState == "OPEN") 
-    // console.log("发送getstate");
-    this.wsClient.send(message);
     this.send2debug(device, 'send', message)
   }
 

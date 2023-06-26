@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+// import { NoticeService } from 'src/app/core/services/notice.service';
 import { DevcenterService } from '../../devcenter.service';
 
 @Component({
@@ -19,7 +20,8 @@ export class ProdeviceComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private devcenterService: DevcenterService
+    private devcenterService: DevcenterService,
+    // private notice: NoticeService
   ) { }
 
   ngOnInit() {
@@ -28,6 +30,7 @@ export class ProdeviceComponent implements OnInit {
 
   add() {
     this.router.navigate(['/devcenter/prodevice/add'])
+    // this.notice.showToast('该功能已迁移到点灯管理台')
   }
 
   edit(prodevice) {

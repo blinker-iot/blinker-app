@@ -7,10 +7,13 @@ import { PermissionService } from 'src/app/core/services/permission.service';
 import { OpenNativeSettings } from '@ionic-native/open-native-settings/ngx';
 import { ConfigStatePage } from './config-state/config-state';
 import { Geolocation } from '@ionic-native/geolocation/ngx';
-import { NoticeService } from 'src/app/core/services/notice.service';
+// import { NoticeService } from 'src/app/core/services/notice.service';
 import { Storage } from '@ionic/storage';
+import { Location } from '@angular/common';
+import { NoticeService } from 'src/app/core/services/notice.service';
+import { Subscription } from 'rxjs';
 
-declare var WifiWizard2;
+declare var wifi;
 
 @Component({
   selector: 'esptouch',
@@ -18,14 +21,25 @@ declare var WifiWizard2;
   styleUrls: ['../config.scss']
 })
 export class EsptouchPage {
+
+  mode = 1;  //esptouch v1:1 , esptouch v2:2
+
+  editable = false;
+
+  showModeBtn = false
+
   myssid: string = '';
   mypasswd: string = '';
+  customData: string = '';
+
+  stateIndex: number;  //见html
 
   is5G: boolean;
 
-  pwshow = false;
+  pwshow = false; //密码可见
+  cdshow = false; //密钥可见, 仅esptouch v2
 
-  platformResume;
+  platformResume: Subscription;
 
   savePassword = false
 
@@ -33,32 +47,45 @@ export class EsptouchPage {
 
   constructor(
     private platform: Platform,
-    private noticeService: NoticeService,
-    private permissionService: PermissionService,
     private openNativeSettings: OpenNativeSettings,
     private changeDetectorRef: ChangeDetectorRef,
     private modalCtrl: ModalController,
-    private geo:Geolocation,
-    private storage: Storage
+    private geo: Geolocation,
+    private storage: Storage,
+    private location: Location,
+    private notice: NoticeService
   ) {
-    this.geo.getCurrentPosition();
   }
 
   ngOnInit(): void {
-    this.loadSavePasswordConfig()
+    let path = this.location.path()
+    if (path.includes('/devcenter/tool/espTouch')) {
+      this.showModeBtn = true
+    } else if (path.includes('/espTouchV2')) {
+      this.mode = 2
+    } else if (path.includes('/espTouch')) {
+      this.mode = 1
+    }
   }
 
   ngAfterViewInit() {
     if (!this.platform.is("cordova")) return;
-    // android 9.0获取ssid需要定位权限
-    if (this.platform.is("android"))
-      this.permissionService.checkCoarseLocation().then((result) => {
-        if (result) this.getSsid();
-      })
-    else this.getSsid();
+    this.loadSavePasswordConfig();
+    if (this.platform.is("android")) {
+      wifi.checkLocation(result => {
+        if (!result) {
+          this.notice.showToast('请开启位置服务，以获取WiFi信息');
+          this.stateIndex = -2;
+        } else {
+          this.getConnectedInfo();
+        }
+      });
+    } else if (this.platform.is("ios")) {
+      this.geo.getCurrentPosition();
+      this.getConnectedInfo();
+    }
     this.platformResume = this.platform.resume.subscribe(() => {
-      console.log("resume getwifissid")
-      this.getSsid();
+      this.getConnectedInfo();
       this.changeDetectorRef.detectChanges();
     });
   }
@@ -71,48 +98,48 @@ export class EsptouchPage {
     if (this.platform.is("cordova")) this.platformResume.unsubscribe();
   }
 
-  getSsid() {
-    WifiWizard2.getConnectedSSID().then(
-      ssid => {
-        this.ssidHandler(ssid);
+  getConnectedInfo() {
+    this.stateIndex = 1;
+    this.changeDetectorRef.detectChanges();
+    wifi.getConnectedInfo(
+      info => {
+        console.log('getConnectedInfo:', info);
+        if (this.platform.is('android')) {
+          if (this.mode == 1) this.stateIndex = 11
+          else if (this.mode == 2) this.stateIndex = 12
+          this.myssid = info.ssid;
+          this.is5G = info.is5G;
+          this.loadLocalPassowrd();
+          this.changeDetectorRef.detectChanges();
+        }
       },
       error => {
-        console.log(error);
-        this.noticeService.showAlert("openWifi");
+        if (error.state == 'Connecting') {
+          this.stateIndex = 2
+          setTimeout(() => {
+            this.getConnectedInfo()
+          }, 1000)
+        } else if (error.state == 'NotConnected') {
+          this.stateIndex = -1
+          this.notice.showToast('请先连接到WiFi热点，再进行配置');
+        }
       }
     )
-    // WifiWizard2.getConnectedSSID(ssid => { this.ssidHandler(ssid) }, err => { this.ssidFail(err) })
-    // WifiWizard2.getConnectedBSSID(ssid => { console.log(ssid) }, err => { console.log(err) })
   }
-
-  ssidHandler(ssid) {
-    //这里android会多返回两个冒号""
-    if (this.platform.is('android'))
-      // ssid = ssid.slice(1, ssid.length - 1);
-      console.log("当前WiFi：" + ssid);
-    //WiFi打开，但未连接到任何网络
-    if (ssid == "unknown ssid" || ssid == '<unknown ssid>') {
-      this.noticeService.showAlert("openWifi");
-    } else {
-      this.myssid = ssid;
-      this.is5G = false;
-      if (this.myssid.toLowerCase().indexOf('5g') > -1)
-        this.is5G = true;
-      this.loadLocalPassowrd();
-    }
-  };
 
   openWifiSetting() {
     this.openNativeSettings.open("wifi");
   }
 
   async startConfig() {
-
+    if (this.myssid == '') return
     const modal = await this.modalCtrl.create({
       component: ConfigStatePage,
       componentProps: {
-        'ssid': this.myssid,
-        'password': this.mypasswd
+        ssid: this.myssid,
+        password: this.mypasswd,
+        mode: this.mode,
+        customData: this.customData
       }
     });
     modal.present();
@@ -120,6 +147,10 @@ export class EsptouchPage {
 
   showPassword() {
     this.pwshow = !this.pwshow
+  }
+
+  showCustomData() {
+    this.cdshow = !this.cdshow
   }
 
   loadSavePasswordConfig() {
@@ -154,6 +185,16 @@ export class EsptouchPage {
 
   delLocalPassowrd() {
     this.storage.set('passwordList', null);
+  }
+
+  changeMode() {
+    if (this.mode == 1) {
+      this.mode = 2
+      this.stateIndex = 12
+    } else {
+      this.mode = 1
+      this.stateIndex = 11
+    }
   }
 
 }

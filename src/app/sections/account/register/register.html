@@ -41,15 +41,21 @@
       {{'ACCOUNT.REGISTER' | translate}}</button>
   </form>
   <div class="other">
-    <div>
-      {{'ACCOUNT.REGISTER_TEXT2' | translate}}
-      <span link-text (click)="openUrl(USER_AGREEMENT,'用户协议')">
-        {{'ACCOUNT.USER_AGREEMENT' | translate}}
-      </span>
-      {{'ACCOUNT.AND' | translate}}
-      <span link-text (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
-        {{'ACCOUNT.PRIVACY_POLICY' | translate}}
-      </span>
+
+    <div class="check-box" (click)="check=!check">
+      <div class="inner animate__animated" [ngClass]="{'check': check,'animate__wobble':rock}">
+        <i class="far fa-check" *ngIf="check"></i>
+      </div>
     </div>
+    <!-- <div class="text"> -->
+    <div (click)="check=!check">{{'ACCOUNT.REGISTER_TEXT2' | translate}}</div>
+    <span link-text (click)="openUrl(USER_AGREEMENT,'用户协议')">
+      {{'ACCOUNT.USER_AGREEMENT' | translate}}
+    </span>
+    {{'ACCOUNT.AND' | translate}}
+    <span link-text (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
+      {{'ACCOUNT.PRIVACY_POLICY' | translate}}
+    </span>
+    <!-- </div> -->
   </div>
 </ion-content>

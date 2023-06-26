@@ -19,6 +19,12 @@ export class DeviceActionComponent implements OnInit {
   configData;
   layouterData;
 
+  get dashboard() {
+    return this.layouterData['dashboard']
+  }
+
+  subscription;
+
   constructor(
     private noticeService: NoticeService,
     private deviceService: DeviceService,
@@ -26,24 +32,68 @@ export class DeviceActionComponent implements OnInit {
     private dataService: DataService
   ) { }
 
-
   ngOnInit(): void {
-    this.id = this.activatedRoute.snapshot.params['id'];
-    this.device = this.dataService.device.dict[this.id]
-    console.log(this.id);
-    console.log(this.device);
-    this.layouterData = JSON.parse(this.device.config.layouter);
-    console.log(this.device);
-    console.log(this.layouterData);
-    if (this.layouterData == null) {
-      this.configData = `[\n]`
-      return
-    }
-    if (typeof this.layouterData.actions == 'undefined') {
-      this.configData = `[\n]`
-      return
-    }
-    this.configData = JSON.stringify(this.layouterData.actions)
+
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
+      if (loaded) {
+        this.id = this.activatedRoute.snapshot.params['id'];
+        this.device = this.dataService.device.dict[this.id]
+        console.log(this.id);
+        console.log(this.device);
+        this.layouterData = JSON.parse(this.device.config.layouter);
+        console.log(this.device);
+        console.log(this.layouterData);
+        if (this.layouterData == null) {
+          this.configData = `[\n]`
+          return
+        }
+        if (typeof this.layouterData.actions == 'undefined') {
+          this.configData = `[\n]`
+          return
+        }
+        this.configData = JSON.stringify(this.layouterData.actions)
+      }
+    })
+  }
+
+  ngOnDestroy() {
+    this.subscription.unsubscribe();
+  }
+
+  // 通过Layouter布局自动生成动作列表
+  layouter2Actions() {
+    let actions = []
+    this.dashboard.map(widget => {
+      if (widget.type == 'btn') {
+        switch (widget.mode) {
+          case 0:
+            let cmd = {}
+            cmd[widget.key] = 'tap'
+            actions.push({
+              "cmd": cmd,
+              "text": widget.t0
+            })
+            break;
+          case 1:
+            let cmd_on = {}
+            let cmd_off = {}
+            cmd_on[widget.key] = 'on'
+            cmd_off[widget.key] = 'off'
+            actions.push({
+              "cmd": cmd_on,
+              "text": '打开' + widget.t0
+            })
+            actions.push({
+              "cmd": cmd_off,
+              "text": '关闭' + widget.t0
+            })
+            break;
+          default:
+            break;
+        }
+      }
+    })
+    this.configData = JSON.stringify(actions)
   }
 
   saveData() {

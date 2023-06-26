@@ -15,16 +15,15 @@
     </ion-toolbar>
 </ion-header>
 <ion-content fullscreen=true scrollY=false>
-    <!-- <div class="bg" [ngStyle]="{'height': bgPosition}"></div> -->
     <div class="bg"></div>
     <div class="contentbox" *ngIf="loaded" [ngClass]="{'show-scene-button-group': sceneDataList.length>0}">
         <scene-button-group *ngIf="sceneDataList.length>0"></scene-button-group>
         <ng-container *ngIf="deviceNum>0;else nodevice">
             <room-list [(roomid)]=" roomid">
             </room-list>
-            <div #deviceZone class="deviceZone animated fadeIn">
-                <deviceblock-homelist [(roomid)]="roomid">
-                </deviceblock-homelist>
+            <div class="deviceZone animated fadeIn">
+                <deviceblock-zone [(roomid)]="roomid">
+                </deviceblock-zone>
             </div>
         </ng-container>
         <ng-template #nodevice>
@@ -37,8 +36,8 @@
             </div>
         </ng-template>
     </div>
-    <div class="speech" *ngIf="!isIos">
-        <div class="speech-button" [ngClass]="{'iphonex': isIphonex}">
+    <div class="speech">
+        <div class="speech-button">
             <speech-button></speech-button>
         </div>
     </div>

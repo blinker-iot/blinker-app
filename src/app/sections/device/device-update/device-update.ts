@@ -4,6 +4,7 @@ import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
 import { ActivatedRoute } from '@angular/router';
 import { DataService } from 'src/app/core/services/data.service';
+import { Subscription } from 'rxjs';
 
 
 @Component({
@@ -14,8 +15,10 @@ import { DataService } from 'src/app/core/services/data.service';
 export class DeviceUpdatePage {
   id;
   device;
-  
-  isUpdating = false;
+
+  get deviceEnable() {
+    return this.device.data['enable']
+  }
 
   get updateState() {
     return this.device.data['upgradeData']['step']
@@ -41,49 +44,70 @@ export class DeviceUpdatePage {
     private navCtrl: NavController
   ) { }
 
+  subscription: Subscription;
+  loaded = false;
   ngOnInit(): void {
-    this.id = this.activatedRoute.snapshot.params['id'];
-    this.device = this.dataService.device.dict[this.id]
-    if (typeof this.device.data.upgrade == 'undefined' || typeof this.device.data.upgradeData == 'undefined') {
-      this.device.data['upgrade'] = false;
-      this.device.data['upgradeData'] = {
-        step: 0
+    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
+      if (loaded) {
+        this.id = this.activatedRoute.snapshot.params['id'];
+        this.device = this.dataService.device.dict[this.id]
+        if (typeof this.device.data.upgrade == 'undefined' || typeof this.device.data.upgradeData == 'undefined') {
+          this.device.data['upgrade'] = false;
+          this.device.data['upgradeData'] = {
+            step: 0
+          }
+        }
+        this.deviceService.checkDeviceUpdate(this.device).then(result => {
+          console.log('OTA State', result);
+          this.updateState = result
+          if (this.updateState == 1 || this.updateState == 99)
+            this.getUpdateState()
+        });
+        this.deviceService.queryDevice(this.device)
+        this.loaded = loaded
       }
-    }
-    this.deviceService.checkDeviceUpdate(this.device).then(result => {
-      this.updateState = result
-      if (this.updateState == 1 || this.updateState == 99)
-        this.getUpdateState()
-    });
+    })
   }
 
   ngOnDestroy() {
+    this.subscription.unsubscribe();
     clearInterval(this.timer);
   }
 
   updateDevice() {
     this.deviceService.sendData(this.device, '{"set":{"upgrade":true}}');
     this.updateState = 1;
-    this.isUpdating = true;
     this.getUpdateState()
   }
 
   timer;
+  tryTimes;
   getUpdateState() {
-    this.timer = window.setInterval(async () => {
-      this.updateState = await this.deviceService.checkDeviceUpdate(this.device);
-      if (this.updateState == 100) {
-        this.device.data.hasNewVersion = false;
-        clearInterval(this.timer);
-      } else if (this.updateState == -1 || this.updateState == -2) {
-        clearInterval(this.timer);
+    this.tryTimes = 0;
+    this.timer = setInterval(async () => {
+      let state = await this.deviceService.checkDeviceUpdate(this.device);
+      // 因为发送更新指令后，设备可能还没进入下载固件状态，因此前两次状态检测跳过
+      if (state == 0 || state == -1 || state == -2) {
+        this.tryTimes++;
+        if (this.tryTimes < 3) {
+          return
+        }
       }
-    }, 11000)
+      if (state == 100) {
+        this.updateState = state
+        this.hasNewVersion = false;
+        clearInterval(this.timer);
+      } else if (state < 0) {
+        this.updateState = state
+        clearInterval(this.timer);
+      } else if (state > 0) {
+        this.updateState = state
+      }
+    }, 9000)
   }
 
   popDevicePage() {
-    this.device.data.hasNewVersion = false;
+    this.hasNewVersion = false;
     this.navCtrl.pop();
   }
-
 }

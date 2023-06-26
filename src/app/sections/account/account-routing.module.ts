@@ -5,9 +5,9 @@ const routes: Routes = [
     {
         path: '',
         children: [
-            { path: 'login', loadChildren: './login/login.module#LoginPageModule' },
-            { path: 'register', loadChildren: './register/register.module#RegisterPageModule' },
-            { path: 'retrieve', loadChildren: './retrieve/retrieve.module#RetrievePageModule' }
+            { path: 'login', loadChildren: () => import('./login/login.module').then(m => m.LoginPageModule) },
+            { path: 'register', loadChildren: () => import('./register/register.module').then(m => m.RegisterPageModule) },
+            { path: 'retrieve', loadChildren: () => import('./retrieve/retrieve.module').then(m => m.RetrievePageModule) }
         ]
     }
 ];

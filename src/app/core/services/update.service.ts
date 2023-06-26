@@ -107,12 +107,17 @@ export class UpdateService {
   }
 
   async showConfirm(lastApk) {
+    let shipUpdateVersion = localStorage.getItem('shipUpdateVersion');
+    if (shipUpdateVersion == lastApk.version) {
+      return
+    }
     const confirm = await this.alertCtrl.create({
       header: '发现更新的版本',
       message: `blinker App ${lastApk.version}已发布，是否立即更新？`,
       buttons: [{
-        text: '稍后再说',
+        text: '暂不更新',
         handler: () => {
+          localStorage.setItem('shipUpdateVersion', lastApk.version);
         }
       }, {
         text: '下载并更新',

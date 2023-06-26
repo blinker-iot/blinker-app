@@ -87,7 +87,7 @@ export class ApconfigPage {
     WifiWizard2.getConnectedSSID().then(
       ssid => {
         if (ssid == "unknown ssid" || ssid == '<unknown ssid>') {
-          this.noticeService.showAlert('openWifi');
+          // this.noticeService.showAlert('openWifi');
         } else {
           this.myssid = ssid;
           this.isConnecting = false;
@@ -108,7 +108,7 @@ export class ApconfigPage {
             this.getSsid()
           }, 1000);
         } else {
-          this.noticeService.showAlert('openWifi');
+          // this.noticeService.showAlert('openWifi');
         }
       }
     )

@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { Platform } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
-import { PusherService } from 'src/app/core/services/pusher.service';
+// import { PusherService } from 'src/app/core/services/pusher.service';
 
 
 @Component({
@@ -15,7 +15,7 @@ export class SettingsPage {
   constructor(
     public userService: UserService,
     public plt: Platform,
-    public pusher: PusherService
+    // public pusher: PusherService
   ) {
     if (plt.is('android')) this.isAndroid = true;
   }

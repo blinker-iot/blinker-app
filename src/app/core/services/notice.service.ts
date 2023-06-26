@@ -57,13 +57,13 @@ export class NoticeService {
   lastCode = 0;
 
 
-  async showToast(code) {
+  async showToast(code, delay = 5000) {
     this.hideLoading();
-    console.log(code);
+    // console.log(code);
     if (typeof this.mess[code.toString()] != 'undefined')
       this.tipService.show(this.mess[code.toString()])
     else
-      this.tipService.show({ message: code.toString() })
+      this.tipService.show({ message: code.toString(), delay: delay })
   }
 
   showAlert(code) {
@@ -348,8 +348,8 @@ export class NoticeService {
       }]
     },
     "openLocation": {
-      header: '手机未打开定位服务,或没有开启位置权限',
-      message: '请开启位置权限，或者在打开隐私定位服务',
+      header: '手机未打开定位服务',
+      message: '本功能依赖定位服务，需开启后方可使用',
       buttons: [{
         text: '确认',
         handler: () => {
