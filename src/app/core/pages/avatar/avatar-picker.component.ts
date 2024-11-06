@@ -1,14 +1,16 @@
+// 需修复 12.27
+
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import * as Cropper from 'cropperjs/dist/cropper';
 import { ModalController, ActionSheetController, Platform } from '@ionic/angular';
-import { Camera, CameraOptions } from '@ionic-native/camera/ngx';
+// import { Camera, CameraOptions } from '@awesome-cordova-plugins/camera/ngx';
 import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-avatar-picker',
   templateUrl: './avatar-picker.component.html',
   styleUrls: ['./avatar-picker.component.scss'],
-  providers: [Camera]
+  // providers: [Camera]
 })
 export class AvatarPickerComponent implements OnInit {
   showCommitment = true;
@@ -24,7 +26,7 @@ export class AvatarPickerComponent implements OnInit {
     private userService: UserService,
     private actionSheetCtrl: ActionSheetController,
     private platform: Platform,
-    private camera: Camera
+    // private camera: Camera
   ) { }
 
   ngOnInit() {
@@ -55,20 +57,20 @@ export class AvatarPickerComponent implements OnInit {
   tempImgFile;
   getPicture(sourceType) {
     if (this.platform.is('cordova')) {
-      const options: CameraOptions = {
-        quality: 50,
-        sourceType: sourceType,
-        destinationType: this.camera.DestinationType.DATA_URL,
-        encodingType: this.camera.EncodingType.JPEG,
-        mediaType: this.camera.MediaType.PICTURE
-      }
-      this.camera.getPicture(options).then((imageData) => {
-        this.tempImgFile = 'data:image/jpeg;base64,' + imageData;
-        // this.router.navigate(['/user/avatar'])
-        this.cropImage()
-      }, (err) => {
-        console.log("获取图片失败");
-      });
+      // const options: CameraOptions = {
+      //   quality: 50,
+      //   sourceType: sourceType,
+      //   destinationType: this.camera.DestinationType.DATA_URL,
+      //   encodingType: this.camera.EncodingType.JPEG,
+      //   mediaType: this.camera.MediaType.PICTURE
+      // }
+      // this.camera.getPicture(options).then((imageData) => {
+      //   this.tempImgFile = 'data:image/jpeg;base64,' + imageData;
+      //   // this.router.navigate(['/user/avatar'])
+      //   this.cropImage()
+      // }, (err) => {
+      //   console.log("获取图片失败");
+      // });
     }
     else {
       this.tempImgFile = 'assets/img/panda.jpg';

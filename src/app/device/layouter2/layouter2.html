@@ -1,17 +1,25 @@
-<div device-bg #backgroundimg class="animated fadeIn faster"
-  [ngStyle]="{'height': config.background.isFull?'100vh':bgPosition}">
-  <img src={{config.background.img}} *ngIf="config.background.img !=''">
+<div class="layouter-box" [ngClass]="{'scale': isScale}" overlayPadding #LayouterBox>
+  <div device-bg [ngStyle]="backgroundCss">
+  </div>
+  <div device-header>
+  </div>
+  <div device-box #gridsterBox>
+    <gridster [options]="options">
+      <ng-container *ngFor="let widget of dashboard">
+        <gridster-item [item]="widget" [ngClass]="{
+          'selected':widget==selectedWidget,
+          'editMode':mode==1,
+          'ct':mode==0&&(widget.type=='ico' || widget.type=='tex')
+        }">
+          <widget-dynamic [widget]="widget" [device]="device"></widget-dynamic>
+        </gridster-item>
+      </ng-container>
+    </gridster>
+  </div>
+  <div device-footer>
+  </div>
 </div>
-<div device-box #gridsterBox>
-  <gridster [options]="options">
-    <ng-container *ngFor="let widget of dashboard">
-      <gridster-item [item]="widget"
-        [ngClass]="{'default':widget.bg==0,'translucent':widget.bg==1,'transparent':widget.bg==2,'round':widget.bg==3}">
-        <widget-dynamic [widget]="widget" [device]="device" [resizeEvent]="resizeEvent"></widget-dynamic>
-      </gridster-item>
-    </ng-container>
-  </gridster>
-</div>
-<div class="animated slideInUp faster layouter-bar" *ngIf="mode=='1'">
-  <widget-listbar></widget-listbar>
+<div class="layouter-bar" *ngIf="mode==1">
+  <widget-listbar *ngIf="!selectedWidget"></widget-listbar>
+  <widget-toolbar *ngIf="selectedWidget" [widget]="selectedWidget" [device]="device"></widget-toolbar>
 </div>

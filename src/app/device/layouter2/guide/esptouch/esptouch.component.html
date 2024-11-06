@@ -1,0 +1,58 @@
+<div class="esptouch-box">
+  <div class="item-box">
+    <div class="item">
+      <div class="title">WiFi名称</div>
+      <div class="input-box">
+        <input type="text" [(ngModel)]="ssid" [disabled]="state==1||state==2">
+        <div class="icon-btn" (click)="openWifiSetting()">
+          <i class="fa-light fa-ballot-check"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="title">WiFi密码</div>
+      <div class="input-box">
+        <input class="password" type="{{pwshow?'text':'password'}}" [(ngModel)]="password"
+          [disabled]="state==1||state==2">
+        <div class="icon-btn">
+          <i class="iconfont" [ngClass]="{'icon-eye-open': pwshow,'icon-eye-close':!pwshow}"
+            (click)="showPassword()"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="title">设备密钥</div>
+      <div class="input-box">
+        <input class="password" type="{{cdshow?'text':'password'}}" [(ngModel)]="customData"
+          [disabled]="state==1||state==2">
+        <div class="icon-btn">
+          <i class="iconfont" [ngClass]="{'icon-eye-open': cdshow,'icon-eye-close':!cdshow}"
+            (click)="showCustomData()"></i>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="savepw-box">
+      <div class="savepw" (click)="clickSavePassword()">
+        <i class="fa-light fa-circle" *ngIf="!savePassword"></i>
+        <i class="fa-light fa-circle-check" *ngIf="savePassword"></i>
+        <div>记住密码</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="more-box">
+    <div>注意事项：</div>
+    <div>1. 大部分硬件均不支持5G热点连接，请连接2.4G热点</div>
+    <div>2. 配网开始前，请确保设备已进入等待配网状态</div>
+    <div>3. 设定好要连接的热点及热点密码后，再点击 开始配置</div>
+  </div>
+</div>
+
+<nui-bottom-btn class="dark animate__animated animate__fadeInUp"
+  [ngClass]="{'red': state==-1,'blue':state==1||state==0,'green':state==2}" [icon]="btnIcon" [title]="btnTitle"
+  [text]="btnText" (click)="onClick()">
+</nui-bottom-btn>

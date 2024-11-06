@@ -1,6 +1,6 @@
 import { Component, Input, ChangeDetectorRef } from '@angular/core';
 import { NavController, ModalController, Platform } from '@ionic/angular';
-import { Brightness } from '@ionic-native/brightness/ngx';
+// import { Brightness } from '@awesome-cordova-plugins/brightness/ngx';
 import { UserService } from 'src/app/core/services/user.service';
 import { PlatformLocation } from '@angular/common';
 import { DeviceConfigService } from 'src/app/core/services/device-config.service';
@@ -49,7 +49,7 @@ export class ConfigStatePage {
     private location: PlatformLocation,
     private platform: Platform,
     private navCtrl: NavController,
-    private brightness: Brightness,
+    // private brightness: Brightness,
     private modalCtrl: ModalController,
     private changeDetectorRef: ChangeDetectorRef,
     private deviceListService: DeviceConfigService,
@@ -69,13 +69,13 @@ export class ConfigStatePage {
   }
 
   ngAfterViewInit() {
-    this.brightness.setKeepScreenOn(true);
+    // this.brightness.setKeepScreenOn(true);
     this.configStart();
   }
 
   ngOnDestroy() {
     esptouch.stop(res => { console.log('esptouch stop') }, err => { console.log(err) });
-    this.brightness.setKeepScreenOn(false);
+    // this.brightness.setKeepScreenOn(false);
     if (!this.isDevtool) {
       clearTimeout(this.t1);
       clearInterval(this.checkTimer);

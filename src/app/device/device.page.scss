@@ -1,45 +1,14 @@
-ion-header.dark {
-  ion-toolbar {
-    ion-title {
-      color: #fff;
-    }
-
-    ion-back-button {
-      --color: #fff;
-    }
-
-    ion-icon {
-      color: #fff;
-    }
-
-    i {
-      color: #fff;
-    }
-  }
-}
-
-ion-header.light {
-  ion-toolbar {
-    ion-title {
-      color: #555;
-    }
-
-    ion-back-button {
-      --color: #555;
-    }
-
-    ion-icon {
-      color: #555;
-    }
-
-    i {
-      color: #555;
-    }
-  }
-}
-
 ion-header {
   ion-toolbar {
+
+    &.dark {
+      color: #FFF;
+    }
+
+    &.light {
+      --color: #333;
+    }
+
     ion-title {
       display: flex;
       flex-direction: column;
@@ -58,12 +27,14 @@ ion-header {
         flex-direction: row;
         align-items: center;
         justify-content: center;
-        transition: height 0.6s, opacity 1.2s;
+        transition: height 0.5s, opacity 1s;
         opacity: 0;
+
         i {
           margin-left: 3px;
         }
       }
+
       .showState {
         height: 12px;
         opacity: 1;
@@ -83,20 +54,32 @@ ion-header {
 }
 
 ion-content {
-  transition: filter 1s;
+  transition: filter 0.3s;
+  // --background: #AAA;
+}
 
-  ::ng-deep {
-    [device-box] {
-      height: 100%;
-    }
+ion-content {
+  &.offline {
+    filter: grayscale(30%);
+  }
+
+  &.blur {
+    filter: blur(3px);
+  }
+
+  &.exitBlur {
+    filter: blur(0px)
   }
 }
 
-ion-content.offline {
-  filter: grayscale(30%);
-}
+
+
 
 [redpoint] {
   top: 6px;
   right: 6px;
+}
+
+.animate__animated {
+  --animate-duration: 0.3s;
 }

@@ -1,0 +1,100 @@
+<div class="edit-box" overlayPadding>
+    <div class="header">
+        <div class="tabs">
+            <div class="tab btn" (click)="selectTab(0)" [ngClass]="{'active': tabIndex==0}">
+                <i class="fa-light fa-mobile"></i>
+            </div>
+            <!-- <div class="tab btn" (click)="selectTab(1)" [ngClass]="{'active': tabIndex==1}">
+                <i class="fa-light fa-paper-plane"></i>
+            </div>
+            <div class="tab btn" (click)="selectTab(2)" [ngClass]="{'active': tabIndex==2}">
+                <i class="fa-light fa-chart-line"></i>
+            </div> -->
+            <div class="tab btn" (click)="selectTab(9)" [ngClass]="{'active': tabIndex==9}">
+                <i class="fa-light fa-file-pen"></i>
+            </div>
+        </div>
+        <div class="btn save" (click)="save()">
+            <i class="fa-light fa-check"></i>
+        </div>
+    </div>
+    <div class="setting-content">
+        <!-- 顶部文字&&背景设置 -->
+        <ng-container *ngIf="tabIndex==0">
+            <div setting-item>
+                <div item-name (click)="debug()">顶部背景颜色</div>
+                <div input-box>
+                    <color-picker [(value)]="layouterData.header.background"></color-picker>
+                </div>
+            </div>
+            <div setting-item>
+                <div item-name>顶部文字颜色</div>
+                <div input-box>
+                    <color-picker [(value)]="layouterData.header.color"></color-picker>
+                </div>
+            </div>
+            <div setting-item>
+                <div item-name>页面背景颜色</div>
+                <div input-box>
+                    <color-picker [(value)]="layouterData.background.background"></color-picker>
+                </div>
+            </div>
+        </ng-container>
+        <!-- 动作设定 -->
+        <ng-container *ngIf="tabIndex==1">
+            <div class="action-list">
+                <div class="line">
+                    <div>描述文本</div>
+                    <div>动作指令</div>
+                </div>
+                <div class="item line" *ngFor="let action of layouterData.actions">
+                    <div>
+                        <input type="text" placeholder={{action.text}} [(ngModel)]="action.text">
+                    </div>
+                    <div>
+                        <input type="text" placeholder={{action.cmd}} [(ngModel)]="action.cmd">
+                    </div>
+                    <i class="fa-thin fa-circle-xmark"></i>
+                </div>
+            </div>
+            <nui-bottom-btn (click)="addAction()" class="blue" style="margin-left: -15px" icon="fa-light fa-plus"
+                title="添加新动作">
+            </nui-bottom-btn>
+        </ng-container>
+        <!-- 实时数据管理 -->
+        <ng-container *ngIf="tabIndex==2">
+            <div class="action-list">
+                <div class="line">
+                    <div>数据key</div>
+                    <div>更新频率</div>
+                </div>
+                <div class="item line" *ngFor="let action of layouterData.actions">
+                    <div>
+                        <input type="text" placeholder={{action.text}} [(ngModel)]="action.text">
+                    </div>
+                    <div>
+                        <input type="text" placeholder={{action.cmd}} [(ngModel)]="action.cmd">
+                    </div>
+                    <i class="fa-thin fa-circle-xmark"></i>
+                </div>
+            </div>
+            <nui-bottom-btn (click)="addAction()" class="blue" style="margin-left: -15px" icon="fa-light fa-plus"
+                title="添加新数据key">
+            </nui-bottom-btn>
+        </ng-container>
+        <!-- 配置导入导出 -->
+        <ng-container *ngIf="tabIndex==9">
+            <div class="toolbar">
+                <div class="btn" (click)="copyConfig()">
+                    <i class="fa-thin fa-paste"></i>
+                    复制配置
+                </div>
+                <div class="btn" (click)="importConfig()">
+                    <i class="fa-thin fa-file-import"></i>
+                    导入配置
+                </div>
+            </div>
+            <div #jsoneditor style="height:calc(100% - 55px);width:100%;"></div>
+        </ng-container>
+    </div>
+</div>

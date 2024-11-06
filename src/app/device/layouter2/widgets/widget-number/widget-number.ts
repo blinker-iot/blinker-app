@@ -1,16 +1,25 @@
-import { Component, Input, ViewChild, ElementRef, ChangeDetectorRef, SimpleChanges } from '@angular/core';
-import { Layouter2Widget } from '../config';
-// import {Gauge} from 'svg-gauge-latest';
+import {
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  Input,
+  SimpleChanges,
+  ViewChild,
+} from "@angular/core";
+import { Layouter2Widget } from "../config";
+import { convertToRgba } from "src/app/core/functions/func";
+import { Layouter2Service } from "../../layouter2.service";
 
 @Component({
-  selector: 'widget-number',
-  templateUrl: 'widget-number.html',
-  styleUrls: ['widget-number.scss']
+  selector: "widget-number",
+  templateUrl: "widget-number.html",
+  styleUrls: ["widget-number.scss"],
 })
 export class WidgetNumberComponent implements Layouter2Widget {
-  @Input() widget;
-  @Input() device;
-  @Input() isDemo = false;
+  @Input()
+  widget;
+  @Input()
+  device;
 
   oldLstyle;
 
@@ -18,79 +27,78 @@ export class WidgetNumberComponent implements Layouter2Widget {
     return this.widget.key;
   }
 
-  get t0() {
-    return this.getValue(['tex', 't0'])
+  get tex() {
+    return this.getValue(["tex", "t0"]);
   }
 
   get ico() {
-    return this.getValue(['ico', 'icon'])
+    return this.getValue(["ico", "icon"]);
   }
 
-  @Input()
-  set color(color) {
-    this.setValue('clr', color);
-  }
   get color() {
-    return this.getValue(['clr', 'col', 'color'])
+    return this.getValue(["clr", "col", "color"]);
   }
 
   get value() {
-    let val = this.getValue(['val', 'value'])
-    if (typeof val == 'undefined')
-      return 0
-    try {
-      if ((val.toString()).indexOf(".") > -1)
-        return Math.floor(val * 100) / 100
-    } catch (error) {
-
+    let val = this.getValue(["val", "value"]);
+    if (typeof val == "undefined") {
+      return 0;
     }
-    return val
+    try {
+      if ((val.toString()).indexOf(".") > -1) {
+        return Math.floor(val * 100) / 100;
+      }
+    } catch (error) {
+    }
+    return val;
   }
 
   get unit() {
-    return this.getValue(['uni', 'unit'])
+    return this.getValue(["uni", "unit"]);
+  }
+
+  get min() {
+    return this.getValue(["min"]);
   }
 
   get max() {
-    return this.getValue(['max'])
+    return this.getValue(["max"]);
   }
 
   setValue(valueKey, value) {
-    if (typeof this.device.data[this.key] == 'undefined')
-      this.device.data[this.key] = {}
+    if (typeof this.device.data[this.key] == "undefined") {
+      this.device.data[this.key] = {};
+    }
     this.device.data[this.key][valueKey] = value;
   }
 
   getValue(valueKeys: string[]): any {
     for (let valueKey of valueKeys) {
-      if (typeof this.device.data[this.key] != 'undefined')
-        if (typeof this.device.data[this.key][valueKey] != 'undefined')
-          return this.device.data[this.key][valueKey]
-      if (typeof this.widget[valueKey] != 'undefined')
-        return this.widget[valueKey]
-    };
-    return
+      if (typeof this.device.data[this.key] != "undefined") {
+        if (typeof this.device.data[this.key][valueKey] != "undefined") {
+          return this.device.data[this.key][valueKey];
+        }
+      }
+      if (typeof this.widget[valueKey] != "undefined") {
+        return this.widget[valueKey];
+      }
+    }
+    return;
   }
 
-  _lstyle
+  _lstyle;
   @Input()
   set lstyle(lstyle) {
-    this._lstyle = lstyle
+    this._lstyle = lstyle;
   }
   get lstyle() {
-    if (typeof this._lstyle != 'undefined')
-      return this._lstyle
-    if (typeof this.widget.lstyle != 'undefined')
-      return this.widget.lstyle
+    if (typeof this._lstyle != "undefined") {
+      return this._lstyle;
+    }
+    if (typeof this.widget.lstyle != "undefined") {
+      return this.widget.lstyle;
+    }
     return 0;
-  }
-
-  get valueWithUnit() {
-    return `${this.value} ${this.unit}`
-  }
-
-  get valuePer() {
-    return (this.value / this.max).toFixed(2)
   }
 
   get is2Long() {
@@ -98,156 +106,156 @@ export class WidgetNumberComponent implements Layouter2Widget {
     return false;
   }
 
-  @ViewChild('Gauge', { read: ElementRef, static: false }) progressBar: ElementRef;
+  get valuePer() {
+    return Number(((this.value - this.min) / (this.max - this.min)).toFixed(2));
+  }
 
   scale = 1;
   fontScale = `scale(${this.scale})`;
+  elWidth;
 
   constructor(
-    private cd: ChangeDetectorRef
+    private cd: ChangeDetectorRef,
+    private el: ElementRef,
+    private LayouterService: Layouter2Service
   ) { }
 
-  timer;
-  scaleInterval
   ngAfterViewInit() {
-    this.initChart();
-    if (this.isDemo) return;
-    this.cd.detectChanges();
-    this.scaleInterval = setInterval(() => {
-      let textLength = this.value.toString().length + this.unit.length
-      if (textLength > 9)
-        this.scale = 0.6
-      else if (textLength > 6)
-        this.scale = 0.8
-      else
-        this.scale = 1
-      this.fontScale = `scale(${this.scale})`;
-    }, 1111)
+    if (this.myCanvas) {
+      this.initProgressBar();
+    }
+    this.intervalTimer = setInterval(() => {
+      this.listenWidth();
+      if (this.myCanvas) {
+        this.drawProgressBar(this.currentPercent, this.valuePer);
+      }
+    }, 1100);
+    setTimeout(() => {
+      this.elWidth = this.el.nativeElement.getBoundingClientRect().width;
+      if (this.widget.sty == 2) {
+        this.elWidth = this.elWidth /2;
+      }
+      this.initStyle();
+    }, 500);
+
+    // 监听组件配置改变
+    this.LayouterService.changeWidgetSubject.subscribe((widget: any) => {
+      if (widget.key == this.widget.key) {
+        this.initStyle()
+      }
+    });
   }
 
   ngOnDestroy() {
-    clearInterval(this.scaleInterval);
-    this.destroyBar();
+    clearInterval(this.intervalTimer);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (typeof this.bar != 'undefined') {
-      console.log('change color');
-      // this.bar.destroy()
-      this.refresh()
+  }
+
+  currentPercent = 0;
+  intervalTimer;
+  @ViewChild("myCanvas")
+  myCanvas: ElementRef;
+  initProgressBar() {
+    this.drawProgressBar(0, this.valuePer);
+  }
+
+  drawProgressBar(
+    startPercent: number,
+    targetPercent: number,
+    opts: { lineWidth?} = { lineWidth: 5 },
+  ) {
+    this.currentPercent = startPercent;
+    var canvas: any = this.myCanvas.nativeElement;
+    var ctx = canvas.getContext("2d");
+    // 清除canvas内容
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 画底色圆环
+    var centerX = canvas.width / 2;
+    var centerY = canvas.height / 2;
+    var radius = Math.min(centerX, centerY) - opts.lineWidth / 2;
+    var startAngle = -0.5 * Math.PI; // 开始于顶部
+    var endAngle = startAngle + 2 * Math.PI; // 全圆
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+    ctx.lineWidth = opts.lineWidth;
+    ctx.strokeStyle = convertToRgba(this.color, 0.2);
+    ctx.stroke();
+
+    // 画圆形进度条
+    var centerX = canvas.width / 2;
+    var centerY = canvas.height / 2;
+    var radius = Math.min(centerX, centerY) - opts.lineWidth / 2;
+    var startAngle = -0.5 * Math.PI; // 开始于顶部
+    var endAngle = startAngle + 2 * Math.PI * startPercent; // 根据百分比计算结束角度
+
+    ctx.beginPath();
+    ctx.lineCap = "round"; // 线两端呈现圆形
+    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+    ctx.lineWidth = opts.lineWidth;
+    ctx.strokeStyle = this.color;
+    ctx.stroke();
+
+    var nextPercent;
+    if (startPercent < targetPercent) {
+      nextPercent = startPercent + 0.01;
+      if (nextPercent > targetPercent) nextPercent = targetPercent;
+      requestAnimationFrame(() => {
+        this.drawProgressBar(nextPercent, targetPercent);
+      });
+    } else if (startPercent > targetPercent) {
+      nextPercent = startPercent - 0.01;
+      if (nextPercent < targetPercent) nextPercent = targetPercent;
+      requestAnimationFrame(() => {
+        this.drawProgressBar(nextPercent, targetPercent);
+      });
     }
   }
 
-  bar;
-  interval;
-  initValue;
-  initColor;
-  initChart() {
-    if (this.oldLstyle == 1 || this.oldLstyle == 2) {
-      this.destroyBar();
+  // 检测.s2的宽度，如果宽度超过组件宽度，就使用transform: scale()缩小元素
+  listenWidth() {
+    let s2 = this.el.nativeElement.querySelector(".s2");
+    if (s2) {
+      let s2Width = s2.getBoundingClientRect().width;
+      // console.log('s2Width:', s2Width,'this.elWidth:', this.elWidth);
+      // console.log(s2Width > this.elWidth);
+      // console.log(this.scale);
+
+
+      if (s2Width > this.elWidth) {
+        this.scale = this.elWidth / s2Width;
+        this.fontScale = `scale(${this.scale})`;
+        this.cd.detectChanges();
+      } else if (s2Width < this.elWidth && this.scale !== 1) {
+        this.scale = 1;
+        this.fontScale = `scale(${this.scale})`;
+        this.cd.detectChanges();
+      }
     }
-    if (this.lstyle == 0) {
-      this.oldLstyle = 0;
-    } else if (this.lstyle == 1) {
-      this.oldLstyle = 1;
-    } else if (this.lstyle == 2) {
-      this.initSemiCircle();
-      this.oldLstyle = 2;
-    } else if (this.lstyle == 3) {
-      this.initSemiCircle2();
-      this.oldLstyle = 3;
-    } else if (this.lstyle == 4) {
-      this.initSemiCircle3();
-      this.oldLstyle = 4;
-    } else if (this.lstyle == 5) {
-      this.initCircle();
-      this.oldLstyle = 5;
+  }
+
+  translateX = `translateX(0px)`;
+
+  initStyle() {
+    if (this.widget.sty == 0) {
+      this.translateX = `translateX(0px)`;
+    } else if (this.widget.sty == 1) {
+      this.translateX = `translateX(-${this.elWidth}px)`;
     }
-
-  }
-
-  // 上半圆
-  initSemiCircle() {
-    // this.bar = Gauge(this.progressBar.nativeElement, {
-    //   min: 0,
-    //   max: this.max,
-    //   dialStartAngle: 180,
-    //   dialEndAngle: 0,
-    //   value: 0,
-    //   showValue: false,
-    //   color: () => {
-    //     return this.color
-    //   }
-    // })
-    // this.interval = setInterval(() => {
-    //   this.update()
-    // }, 1100);
-  }
-
-  // 下半圆
-  initSemiCircle2() {
-    // this.bar = Gauge(this.progressBar.nativeElement, {
-    //   min: 0,
-    //   max: this.max,
-    //   dialStartAngle: 0,
-    //   dialEndAngle: -180,
-    //   value: 0,
-    //   showValue: false,
-    //   color: () => {
-    //     return this.color
-    //   }
-    // })
-    // this.interval = setInterval(() => {
-    //   this.update()
-    // }, 1100);
   }
 
 
-  initSemiCircle3() {
-    // this.bar = Gauge(this.progressBar.nativeElement, {
-    //   min: 0,
-    //   max: this.max,
-    //   value: 0,
-    //   color: () => {
-    //     return this.color
-    //   }
-    // })
-    // this.interval = setInterval(() => {
-    //   this.update()
-    // }, 1100);
+  // lock = false;
+  switchStyle() {
+    if (this.widget.sty == 2) return;
+    // this.lock = true;
+    if (this.translateX == 'translateX(0px)') {
+      this.translateX = `translateX(-${this.elWidth}px)`;
+    } else {
+      this.translateX = `translateX(0px)`;
+    }
   }
-
-  initCircle() {
-    // this.bar = Gauge(this.progressBar.nativeElement, {
-    //   min: 0,
-    //   max: this.max,
-    //   dialStartAngle: -90,
-    //   dialEndAngle: -90.001,
-    //   value: 0,
-    //   color: () => {
-    //     return this.color
-    //   }
-    // })
-    // this.interval = setInterval(() => {
-    //   this.update()
-    // }, 1100);
-  }
-
-
-
-  update() {
-    this.bar.setValueAnimated(this.value, 1);
-  }
-
-  destroyBar() {
-    clearInterval(this.interval);
-  }
-
-  refresh() {
-    if (typeof this.progressBar != 'undefined')
-      if (this.progressBar.nativeElement.querySelector('svg') != null)
-        this.progressBar.nativeElement.removeChild(this.progressBar.nativeElement.querySelector('svg'))
-    this.initChart();
-  }
-
 }

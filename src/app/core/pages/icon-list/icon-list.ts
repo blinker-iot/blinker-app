@@ -1,17 +1,20 @@
+// 需修复 12.27
+
 import { Component, Input } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { IconList } from 'src/app/configs/app.config';
-import { InAppBrowser } from '@ionic-native/in-app-browser/ngx';
+// import { InAppBrowser } from '@awesome-cordova-plugins/in-app-browser/ngx';
 
 @Component({
   selector: 'icon-list',
   templateUrl: 'icon-list.html',
   styleUrls: ['icon-list.scss'],
-  providers: [InAppBrowser]
+  // providers: [InAppBrowser]
 })
 export class IconListPage {
   @Input() item;
   @Input() iconId;
+  @Input() icon;
 
   iconList;
 
@@ -19,7 +22,7 @@ export class IconListPage {
 
   constructor(
     private modalCtrl: ModalController,
-    private iab: InAppBrowser
+    // private iab: InAppBrowser
   ) {
   }
 
@@ -28,12 +31,12 @@ export class IconListPage {
   }
 
   async select(icon) {
-    if (typeof this.iconId == 'undefined')
-      this.item['ico'] = icon;
-    else
-      this.item[this.iconId] = icon;
-    // this.modalCtrl.dismiss();
-    (await this.modalCtrl.getTop()).dismiss()
+    if (this.item)
+      if (typeof this.iconId == 'undefined')
+        this.item['ico'] = icon;
+      else
+        this.item[this.iconId] = icon;
+    (await this.modalCtrl.getTop()).dismiss(icon)
   }
 
   async close() {
@@ -42,7 +45,7 @@ export class IconListPage {
   }
 
   open(url) {
-    let browser = this.iab.create(url, '_system', 'location=no,hidden=no');
+    // let browser = this.iab.create(url, '_system', 'location=no,hidden=no');
   }
 
   selectStyle(style) {

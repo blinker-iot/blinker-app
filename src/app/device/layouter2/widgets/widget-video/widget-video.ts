@@ -12,7 +12,6 @@ export class WidgetVideoComponent implements Layouter2Widget {
   @Input() device;
   @Input() widget;
   @Input() key;
-  @Input() isDemo = false;
 
   videoPlayer: HTMLVideoElement;
   @ViewChild('video', { read: ElementRef }) video: ElementRef;
@@ -58,7 +57,6 @@ export class WidgetVideoComponent implements Layouter2Widget {
   constructor() { }
 
   ngAfterViewInit() {
-    if (this.isDemo) return;
     if (this.streamType == 'hls')
       this.initHls();
   }

@@ -25,7 +25,6 @@
     box-shadow: 0 0 10px #CCC;
     border-radius: 8px;
     background-color: #FFF;
-    font-size: 15px;
     width: 100%;
     position: relative;
     transition: margin-left 0.5s, opacity 0.5s;
@@ -88,11 +87,18 @@
             .icon-box {
                 display: flex;
                 align-items: center;
-                width: 45px;
+                justify-content: center;
+                width: 30px;
+                height: 30px;
                 color: #389BEE;
+                margin-right: 10px;
 
                 i {
-                    font-size: 30px !important;
+                    font-size: 18px !important;
+
+                    &.red {
+                        color: #f00000;
+                    }
                 }
             }
 

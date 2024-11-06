@@ -11,7 +11,6 @@ import { DeviceblockZone } from './components/deviceblock-zone/deviceblock-zone'
 import { BlinkerSpeechModule } from 'src/app/sections/speech/speech.module';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
 import { TranslateModule } from '@ngx-translate/core';
-import { SwiperModule } from 'swiper/angular';
 import { RoomListComponent } from './components/room-list/room-list';
 import { DeviceblockListComponent } from './components/deviceblock-list/deviceblock-list';
 import { Deviceblock } from './components/deviceblock/deviceblock';
@@ -32,8 +31,7 @@ const routes: Routes = [
     BlinkerSpeechModule,
     RouterModule.forChild(routes),
     DirectivesModule,
-    TranslateModule.forChild(),
-    SwiperModule
+    TranslateModule.forChild()
   ],
   declarations: [
     ViewHomePage,

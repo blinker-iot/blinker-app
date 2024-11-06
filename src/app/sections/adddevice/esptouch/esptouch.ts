@@ -4,11 +4,9 @@ import {
   ModalController,
 } from '@ionic/angular';
 import { PermissionService } from 'src/app/core/services/permission.service';
-import { OpenNativeSettings } from '@ionic-native/open-native-settings/ngx';
+// import { OpenNativeSettings } from '@awesome-cordova-plugins/open-native-settings/ngx';
 import { ConfigStatePage } from './config-state/config-state';
-import { Geolocation } from '@ionic-native/geolocation/ngx';
-// import { NoticeService } from 'src/app/core/services/notice.service';
-import { Storage } from '@ionic/storage';
+// import { Geolocation } from '@awesome-cordova-plugins/geolocation/ngx';
 import { Location } from '@angular/common';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { Subscription } from 'rxjs';
@@ -47,11 +45,10 @@ export class EsptouchPage {
 
   constructor(
     private platform: Platform,
-    private openNativeSettings: OpenNativeSettings,
+    // private openNativeSettings: OpenNativeSettings,
     private changeDetectorRef: ChangeDetectorRef,
     private modalCtrl: ModalController,
     private geo: Geolocation,
-    private storage: Storage,
     private location: Location,
     private notice: NoticeService
   ) {
@@ -81,7 +78,7 @@ export class EsptouchPage {
         }
       });
     } else if (this.platform.is("ios")) {
-      this.geo.getCurrentPosition();
+      // this.geo.getCurrentPosition();
       this.getConnectedInfo();
     }
     this.platformResume = this.platform.resume.subscribe(() => {
@@ -104,14 +101,13 @@ export class EsptouchPage {
     wifi.getConnectedInfo(
       info => {
         console.log('getConnectedInfo:', info);
-        if (this.platform.is('android')) {
-          if (this.mode == 1) this.stateIndex = 11
-          else if (this.mode == 2) this.stateIndex = 12
-          this.myssid = info.ssid;
+        if (this.mode == 1) this.stateIndex = 11
+        else if (this.mode == 2) this.stateIndex = 12
+        this.myssid = info.ssid;
+        if (this.platform.is('android'))
           this.is5G = info.is5G;
-          this.loadLocalPassowrd();
-          this.changeDetectorRef.detectChanges();
-        }
+        this.loadLocalPassowrd();
+        this.changeDetectorRef.detectChanges();
       },
       error => {
         if (error.state == 'Connecting') {
@@ -128,7 +124,7 @@ export class EsptouchPage {
   }
 
   openWifiSetting() {
-    this.openNativeSettings.open("wifi");
+    // this.openNativeSettings.open("wifi");
   }
 
   async startConfig() {
@@ -154,37 +150,36 @@ export class EsptouchPage {
   }
 
   loadSavePasswordConfig() {
-    this.storage.get('saveWiFiPassword').then((val) => {
-      if (val == null) return
-      this.savePassword = val
-    });
+    let val = localStorage.getItem('saveWiFiPassword')
+    if (val == 'null') return
+    this.savePassword = val == 'true' ? true : false
   }
 
   clickSavePassword() {
     this.savePassword = !this.savePassword
-    this.storage.set('saveWiFiPassword', this.savePassword);
+    localStorage.setItem('saveWiFiPassword', JSON.stringify(this.savePassword));
   }
 
   saveLocalPassowrd() {
     if (this.savePassword && this.myssid != 'unknown ssid' && this.myssid != '') {
       this.passwordList[this.myssid] = this.mypasswd
-      this.storage.set('passwordList', this.passwordList);
+      localStorage.setItem('passwordList', JSON.stringify(this.passwordList));
     }
   }
 
   loadLocalPassowrd() {
     if (this.myssid != 'unknown ssid' && this.myssid != '') {
-      this.storage.get('passwordList').then((val) => {
-        if (val == null) return
-        if (typeof val[this.myssid] != 'undefined') {
-          this.mypasswd = val[this.myssid]
-        }
-      });
+      let val = localStorage.getItem('passwordList')
+      if (val == null) return
+      let passwordList = JSON.parse(val)
+      if (typeof passwordList[this.myssid] != 'undefined') {
+        this.mypasswd = passwordList[this.myssid]
+      }
     }
   }
 
   delLocalPassowrd() {
-    this.storage.set('passwordList', null);
+    localStorage.removeItem('passwordList');
   }
 
   changeMode() {

@@ -1,0 +1,29 @@
+.number-input {
+    position: relative;
+    height: 40px;
+    display: flex;
+    align-items: center;
+
+    input {
+        padding-left: 10px;
+        height: 100%;
+        width: 100%;
+        text-align: left;
+    }
+
+    .btn-box {
+        height: 100%;
+        display: flex;
+
+        .btn {
+            border-left: 1px solid #CCC;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 38px;
+            width: 40px;
+
+        }
+    }
+
+}

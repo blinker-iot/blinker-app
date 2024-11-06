@@ -1,3 +1,7 @@
+[widget]{
+    overflow: hidden;
+}
+
 .box {
     display: flex;
     flex-direction: column;
@@ -30,6 +34,7 @@
 }
 
 .display {
+    width: 100%;
     flex-grow: 1;
     overflow-y: scroll;
     position: relative;

@@ -1,0 +1,7 @@
+<div class="check-list">
+  <ng-container *ngFor="let item of items">
+    <div class="item" [ngClass]="{'selected': selected==item}" (click)="select(item)">
+      <i class="fa-light {{item.icon}}"></i>
+    </div>
+  </ng-container>
+</div>

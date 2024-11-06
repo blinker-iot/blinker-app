@@ -3,10 +3,7 @@ import { UserService } from 'src/app/core/services/user.service';
 import { DeviceService } from '../../../../core/services/device.service';
 import { DataService } from 'src/app/core/services/data.service';
 import PullToRefresh from 'pulltorefreshjs';
-
-import SwiperCore, { Swiper, Virtual } from 'swiper';
-
-SwiperCore.use([Virtual]);
+import Splide from '@splidejs/splide';
 
 @Component({
   selector: 'deviceblock-zone',
@@ -15,8 +12,6 @@ SwiperCore.use([Virtual]);
 })
 export class DeviceblockZone {
   refresherEnabled = true;
-
-  swiper: Swiper;
 
   loaded;
 
@@ -59,21 +54,24 @@ export class DeviceblockZone {
 
   ngAfterViewInit() {
     this.initRefresh();
+    this.initSplide();
   }
 
-  onSwiper(swiper) {
-    this.swiper = swiper
-  }
-
-  slideChanged() {
-    this.currentIndex = this.swiper.activeIndex
-    if (this.currentIndex < this.swiper.slides.length)
+  splide;
+  initSplide() {
+    this.splide = new Splide('.splide', {
+      arrows: false,
+      pagination: false
+    }).mount();
+    this.splide.on('active', (e) => {
+      this.currentIndex = this.splide.index
       this.roomidChange.emit(this.currentIndex - 1);
+    });
   }
 
   goToSlide(index) {
-    if (typeof this.swiper != 'undefined')
-      this.swiper.slideTo(index);
+    if (this.splide)
+      this.splide.go(index);
   }
 
   initRefresh() {
@@ -106,22 +104,18 @@ export class DeviceblockZone {
 
   swipeEnabledChanged(e) {
     this.refresherEnabled = e;
-    if (e) {
-      this.initRefresh()
-      this.swiper.enable()
-    }
-    else {
-      this.destroyRefresh()
-      this.swiper.disable()
-    }
+    // if (e) {
+    //   this.initRefresh()
+    //   this.swiper.enable()
+    // }
+    // else {
+    //   this.destroyRefresh()
+    //   this.swiper.disable()
+    // }
   }
 
   refresherEnabledChanged(e) {
     this.refresherEnabled = e;
-  }
-
-  abs(index) {
-    return Math.abs(this.currentIndex - 1 - index) < 2
   }
 
 }

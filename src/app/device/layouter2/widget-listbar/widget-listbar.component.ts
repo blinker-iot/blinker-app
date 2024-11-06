@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { widgetList } from '../widgets/config';
 import { ActivatedRoute } from '@angular/router';
 import { DataService } from 'src/app/core/services/data.service';
-import { LayouterService } from '../../layouter.service';
+import { Layouter2Service } from '../layouter2.service';
 
 @Component({
   selector: 'widget-listbar',
@@ -21,7 +21,7 @@ export class WidgetListbarComponent implements OnInit {
   constructor(
     private activatedRoute: ActivatedRoute,
     private dataService: DataService,
-    private LayouterService: LayouterService
+    private LayouterService: Layouter2Service
   ) { }
 
   ngOnInit(): void {

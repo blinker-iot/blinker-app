@@ -1,0 +1,27 @@
+<div setting-title>
+  滑动条设置
+</div>
+<div setting-item>
+  <div item-name>图标(ico)</div>
+  <div input-box>
+    <icon-picker [(value)]="widget.ico"></icon-picker>
+  </div>
+</div>
+<div setting-item>
+  <div item-name>颜色(clr)</div>
+  <div input-box>
+    <color-picker [(value)]="widget.clr"></color-picker>
+  </div>
+</div>
+<div setting-item>
+  <div item-name>最小值</div>
+  <div input-box>
+    <input type="number" [(ngModel)]="widget.min">
+  </div>
+</div>
+<div setting-item>
+  <div item-name>最大值</div>
+  <div input-box>
+    <input type="number" [(ngModel)]="widget.max">
+  </div>
+</div>

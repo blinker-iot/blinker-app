@@ -1,7 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { DeviceService } from 'src/app/core/services/device.service';
-import { stringify, parse } from 'zipson';
-import { Clipboard } from '@ionic-native/clipboard/ngx';
+// import { stringify, parse } from 'zipson';
+// import { Clipboard } from '@awesome-cordova-plugins/clipboard/ngx';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
 @Component({
@@ -31,24 +31,24 @@ export class IeconfigComponent {
   }
 
   async importData() {
-    this.device.config.layouter = JSON.stringify(parse(this.configData))
-    console.log(this.device.config.layouter);
-    let layouterDataConfig = {
-      "layouter": this.device.config.layouter
-    }
-    this.deviceService.saveDeviceConfig(this.device, layouterDataConfig).then(result => {
-      if (result)
-        this.noticeService.showToast('importSuccess')
-    });
+    // this.device.config.layouter = JSON.stringify(parse(this.configData))
+    // console.log(this.device.config.layouter);
+    // let layouterDataConfig = {
+    //   "layouter": this.device.config.layouter
+    // }
+    // this.deviceService.saveDeviceConfig(this.device, layouterDataConfig).then(result => {
+    //   if (result)
+    //     this.noticeService.showToast('importSuccess')
+    // });
   }
 
   exportData() {
-    this.configData = stringify(JSON.parse(this.device.config.layouter))
+    // this.configData = stringify(JSON.parse(this.device.config.layouter))
   }
 
   copy() {
-    this.clipboard.copy(this.configData);
-    this.noticeService.showToast('copySuccess')
+    // this.clipboard.copy(this.configData);
+    // this.noticeService.showToast('copySuccess')
   }
 
 }

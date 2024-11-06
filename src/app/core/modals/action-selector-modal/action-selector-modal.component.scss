@@ -8,9 +8,17 @@
     overflow-y: scroll;
     justify-content: flex-start;
     height: 100%;
+    font-size: 14px;
 
     .item {
         flex-grow: 0;
         flex-shrink: 0;
     }
 }
+
+.btn{
+    padding: 15px;
+    text-align: center;
+    color:#389BEE;
+}
+

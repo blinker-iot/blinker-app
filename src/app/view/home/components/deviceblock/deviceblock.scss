@@ -5,7 +5,7 @@
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   background: #fff;
-  font-size: 13px;
+  font-size: 12px;
   color: #666666;
 
   .lt {
@@ -16,8 +16,8 @@
     b-device-img {
       ::ng-deep {
         img {
-          max-width: 70px;
-          max-height: 70px;
+          max-width: 65px;
+          max-height: 65px;
         }
       }
     }
@@ -26,34 +26,43 @@
 
   .lb {
     position: absolute;
-    bottom: 10%;
+    bottom: 7%;
     left: 7%;
+
+    .gray {
+      color: #bbb;
+    }
+
+    .more-info {
+      color: #5aaff5;
+      font-size: 10px;
+    }
   }
 
-  .rt {
-    position: absolute;
-    top: 8%;
-    right: 8%;
-  }
-
-  .rb {
+  .btns {
     position: absolute;
     right: 0;
-    bottom: 0;
-    padding: 3% 6% 6% 3%;
+    top: 0;
+    padding: 5% 5% 5% 5%;
+
+    .btn {
+      height: 8vw;
+      width: 8vw;
+      border-radius: 50%;
+      background-color: #f4f4f4;
+      font-size: 1rem;
+      color: #389bee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      // margin-bottom: 4vw;
+
+      // &:last-child {
+      //   margin-bottom: 0;
+      // }
+    }
   }
 
-  .switch {
-    height: 9vw;
-    width: 9vw;
-    border-radius: 50%;
-    background-color: #f4f4f4;
-    font-size: 1rem;
-    color: #389bee;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
 }
 
 .block.on {

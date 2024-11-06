@@ -1,6 +1,6 @@
 import { Component, Input, Renderer2, ViewChild, ElementRef, Injectable } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { LayouterService } from '../../../layouter.service';
+import { Layouter2Service } from '../../layouter2.service';
 
 
 @Component({
@@ -37,7 +37,7 @@ export class WidgetJoystickComponent implements Layouter2Widget {
 
   constructor(
     private renderer: Renderer2,
-    private LayouterService: LayouterService
+    private LayouterService: Layouter2Service
   ) {
   }
 

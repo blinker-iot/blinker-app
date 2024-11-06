@@ -1,12 +1,16 @@
-<ion-header *ngIf="loaded && device" no-border [ngClass]="{'dark': headerStyle=='dark','light':headerStyle=='light'}">
-  <!-- <ion-header *ngIf="loaded && device" no-border > -->
+<ion-header *ngIf="loaded && device" no-border>
   <ion-toolbar color="transparent" overlayPadding>
+    <!-- <ion-toolbar color="transparent" overlayPadding [ngStyle]="headerCss"> -->
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
+      <!-- 清空布局器 -->
+      <ion-button (click)="cleanWidgets()" *ngIf="mode==1 && deviceComponent.indexOf('Layouter')>-1">
+        <i class="fa-light fa-trash"></i>
+      </ion-button>
     </ion-buttons>
     <ion-title (click)="enterDebug()">
       <div class="name">{{device.config.customName}}</div>
-      <div class="state" [ngClass]="{'showState': device.data.state!='waiting'}">
+      <div class="state" [ngClass]="{'showState': showState}">
         <ng-container *ngIf="device.config.mode=='ble'">
           <ng-container
             *ngIf="(device.data.state=='connected') || (device.data.oldState=='connected' && device.data.state=='waiting')">
@@ -27,40 +31,38 @@
         </ng-container>
       </div>
     </ion-title>
-    <ion-buttons slot="end">
+    <ion-buttons slot="end" [ngStyle]="{'color':headerCss?headerCss.color:''}">
       <!-- 连接 -->
-      <ion-button (click)="connectDevice()" *ngIf="!editMode && device.data.state=='disconnected'">
-        <i class="fal fa-link "></i>
+      <ion-button (click)="connectDevice()" *ngIf="mode==0 && device.data.state=='disconnected'">
+        <i class="fa-light fa-link-horizontal"></i>
+      </ion-button>
+      <!-- 更多配置 -->
+      <!-- <ion-button (click)="openConfigEditor()" *ngIf="mode==1 && deviceComponent.indexOf('Layouter')>-1">
+        <i class="fa-light fa-gear"></i>
+      </ion-button> -->
+      <!-- <ion-button (click)="editBackground()" *ngIf="mode==1 && deviceComponent.indexOf('Layouter')>-1">
+        <i class="iconfont icon-pic"></i>
+      </ion-button> -->
+      <!-- 编辑/保存 -->
+      <ion-button (click)="unlock()" *ngIf="mode==0 && isDiyDevice && !isSharedDevice && !showGuide">
+        <i class="fa-light fa-pen-to-square"></i>
+      </ion-button>
+      <ion-button (click)="lock()" *ngIf="mode==1 && deviceComponent.indexOf('Layouter')>-1">
+        <i class="fa-light fa-lock-keyhole"></i>
       </ion-button>
       <!-- 设置 -->
-      <ion-button [routerLink]="['/device-manager',id]" *ngIf="!editMode">
-        <!-- <i class="fal fa-cog"></i> -->
-        <i class="iconfont icon-more"></i>
+      <ion-button [routerLink]="['/device-manager',id]" *ngIf="mode==0">
+        <i class="fa-light fa-circle-ellipsis"></i>
         <div redpoint *ngIf="device.data.hasNewVersion"></div>
-      </ion-button>
-      <!-- 清空布局器 -->
-      <ion-button (click)="cleanWidgets()" *ngIf="editMode && deviceComponent.indexOf('Layouter')>-1">
-        <!-- <i class="fal fa-trash-alt"></i> -->
-        <i class="iconfont icon-trash"></i>
-      </ion-button>
-      <!-- 背景设置 -->
-      <ion-button (click)="editBackground()" *ngIf="editMode && deviceComponent.indexOf('Layouter')>-1">
-        <!-- <i class="fal fa-file-image"></i> -->
-        <i class="iconfont icon-pic"></i>
-      </ion-button>
-      <!-- 编辑/保存 -->
-      <ion-button (click)="unlock()" *ngIf="!editMode && isDiyDevice && !isSharedDevice">
-        <!-- <i class="fal fa-edit"></i> -->
-        <i class="iconfont icon-edit"></i>
-      </ion-button>
-      <ion-button (click)="lock()" *ngIf="editMode && deviceComponent.indexOf('Layouter')>-1">
-        <!-- <i class="fal fa-lock"></i> -->
-        <i class="iconfont icon-lock"></i>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
-<ion-content *ngIf="loaded" [ngClass]="{'offline': device.data.state=='offline'}" fullscreen=true scrollY=false>
+<ion-content *ngIf="loaded"
+  [ngClass]="{'offline': !device.data.enable,'blur':showGuide,'exitBlur':willCloseGuide&&showGuide}" fullscreen=true
+  scrollY=false>
   <ng-template #deviceView></ng-template>
-  <!-- <router-outlet></router-outlet> -->
 </ion-content>
+<layouter2-guide *ngIf="showGuide" class="animate__animated animate__fadeIn"
+  [ngClass]="{'animate__fadeOut': willCloseGuide}" (closeGuide)="closeGuide()"></layouter2-guide>
+<!-- <widget-editor *ngIf="mode=='3'" (closeEvent)="mode='1'"></widget-editor> -->

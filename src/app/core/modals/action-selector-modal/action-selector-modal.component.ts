@@ -70,4 +70,8 @@ export class ActionSelectorModalComponent implements OnInit {
     this.cancel.emit()
     this.modalController.dismiss()
   }
+
+  genActs(){
+    
+  }
 }

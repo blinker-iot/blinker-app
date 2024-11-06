@@ -1,0 +1,8 @@
+<div class="check-list">
+  <ng-container *ngFor="let item of items">
+    <div class="item" [ngStyle]="{'width': (100/items.length)+'%'}" [ngClass]="{'selected': isSelected(item)}"
+      (click)="select(item)">
+      {{item.name}}
+    </div>
+  </ng-container>
+</div>

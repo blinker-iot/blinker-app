@@ -1,0 +1,58 @@
+<div setting-title>
+  文本设置
+</div>
+<div setting-item>
+  <div item-name>图标(ico)</div>
+  <div input-box>
+    <icon-picker [(value)]="widget.ico" (valueChange)="textChange($event)"></icon-picker>
+  </div>
+</div>
+<div setting-item>
+  <div item-name>文本(tex)</div>
+  <div input-box>
+    <input type="text" [(ngModel)]="widget.tex" (ngModelChange)="textChange($event)">
+  </div>
+</div>
+<div setting-item>
+  <div item-name>颜色(clr)</div>
+  <div input-box>
+    <color-picker [(value)]="widget['clr']"></color-picker>
+  </div>
+</div>
+<!-- <div setting-item>
+  <div item-name>文本1(tex1)</div>
+  <div input-box>
+    <input type="text" [(ngModel)]="widget.tex1" (ngModelChange)="textChange($event)">
+  </div>
+</div>
+<div setting-item>
+  <div item-name>文本1颜色(clr1)</div>
+  <div input-box>
+    <color-picker [(value)]="widget['clr1']"></color-picker>
+  </div>
+</div> -->
+<!-- <div setting-item>
+  <div item-name>图标颜色(iclr)</div>
+  <div input-box>
+    <color-picker [(value)]="widget['iclr']"></color-picker>
+  </div>
+</div> -->
+<!-- <div setting-item>
+  <div item-name>字号</div>
+  <div input-box>
+    <number-input [(value)]="widget.text['font-size']"></number-input>
+  </div>
+</div> -->
+<!-- <div setting-item>
+  <div item-name>加粗</div>
+  <div input-box>
+    <check-list [items]="[{name:'纤细',value:300},{name:'正常',value:500},{name:'加粗',value:800}]"
+      [(selected)]="widget.text['font-weight']" [radio]="true"></check-list>
+  </div>
+</div> -->
+<!-- <div setting-item class="align-box">
+  <div item-name>对齐方式</div>
+  <div input-box>
+    <align-selector [selected]="widget.box" (selectedChange)="alignChange($event)"></align-selector>
+  </div>
+</div> -->

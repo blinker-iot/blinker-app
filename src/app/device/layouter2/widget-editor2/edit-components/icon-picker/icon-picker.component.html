@@ -1,0 +1,8 @@
+<div class="color-picker">
+  <input type="text" [(ngModel)]="value" (ngModelChange)="change($event)">
+  <div class="btn-box">
+    <div class="btn" (click)="selectIcon()">
+      <i class="{{value}}"></i>
+    </div>
+  </div>
+</div>

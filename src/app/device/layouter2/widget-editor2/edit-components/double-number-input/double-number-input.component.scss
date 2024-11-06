@@ -1,0 +1,30 @@
+.double-number-input {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    display: flex;
+    align-items: center;
+
+    input {
+        padding-left: 10px;
+        height: 100%;
+        width: calc(50% - 80px);
+        text-align: left;
+    }
+
+    .btn-box {
+        height: 100%;
+        display: flex;
+
+        .btn {
+            border-left: 1px solid #CCC;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 38px;
+            width: 40px;
+
+        }
+    }
+
+}

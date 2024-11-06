@@ -1,0 +1,29 @@
+<div setting-title>
+  组件背景
+  <div class="clear clear2" (click)="init()">默认背景</div>
+  <div class="clear" (click)="clear()">删除背景</div>
+</div>
+<div setting-item>
+  <div item-name>背景颜色</div>
+  <div input-box>
+    <color-picker [(value)]="widget.background.background"></color-picker>
+  </div>
+</div>
+<div setting-item>
+  <div item-name>边框</div>
+  <div input-box>
+    <input type="text" [(ngModel)]="widget.background.border">
+  </div>
+</div>
+<div setting-item>
+  <div item-name>边框圆角</div>
+  <div input-box>
+    <number-input [(value)]="widget.background['border-radius']"></number-input>
+  </div>
+</div>
+<div setting-item>
+  <div item-name>阴影</div>
+  <div input-box>
+    <input type="text" [(ngModel)]="widget.background['box-shadow']">
+  </div>
+</div>

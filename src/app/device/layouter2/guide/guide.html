@@ -1,0 +1,27 @@
+<div class="guide-box dark animate__animated animate__fadeIn animate__faster" overlayPadding>
+    <div class="header" [ngClass]="{'fold animate__fadeOut':willEnterState}">
+        本设备还未进行配置，你可以进行如下操作：
+    </div>
+    <nui-item-list (indexChange)="indexChange($event)" (willEnter)="willEnter($event)" (willExit)="willExit($event)">
+        <nui-item [icon]="'fa-light fa-wifi'" [title]="'进行网络配置'"
+            [text]="device.data.enable?'设备已在线':'使用 EspTouch v2 进行网络配置'" [state]="device.data.enable?'done':''"
+            class="dark">
+        </nui-item>
+        <nui-item [icon]="'fa-light fa-mobile-button'" [title]="'载入示例界面'"
+            [text]="dashboard.length>0?'界面已加载':'载入点灯提供的预设设备界面'" [state]="dashboard.length>0?'done':''" class="dark">
+        </nui-item>
+    </nui-item-list>
+    <div *ngIf="index!=-1" class="guide-content animate__animated animate__fadeIn"
+        [ngClass]="{'animate__fadeOut':willExitState}">
+        <blinker-guide-esptouch *ngIf="index==0"></blinker-guide-esptouch>
+        <blinker-guide-examples *ngIf="index==1"></blinker-guide-examples>
+    </div>
+</div>
+
+<nui-bottom-btn *ngIf="index==-1&&(!device.data.enable||dashboard.length==0)"
+    class="dark red animate__animated animate__fadeInUp" [ngClass]="{'animate__fadeOutDown':willEnterState}"
+    [icon]="'fa-light fa-forward'" [title]="'跳过配置向导'" [text]="'进入设备界面，之后再进行配置'" (click)="close()"></nui-bottom-btn>
+
+<nui-bottom-btn *ngIf="index==-1&&(device.data.enable&&dashboard.length>0)"
+    class="dark green animate__animated animate__fadeInUp" [ngClass]="{'animate__fadeOutDown':willEnterState}"
+    [icon]="'fa-light fa-check'" [title]="'配置完成'" [text]="'进入设备界面，开始使用设备'" (click)="close()"></nui-bottom-btn>

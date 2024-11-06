@@ -1,0 +1,25 @@
+.check-list {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+
+    .item {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 5px;
+        border-right: 1px solid #CCC;
+        height: 100%;
+        color: #666;
+
+        &.selected {
+            background-color: #389bee;
+            color: #FFF;
+        }
+
+        &:last-child {
+            border-right: none;
+        }
+    }
+}

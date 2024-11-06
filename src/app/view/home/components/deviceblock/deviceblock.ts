@@ -19,7 +19,7 @@ export class Deviceblock {
 
   get switch() {
     if (typeof this.device == 'undefined')
-      return
+      return null
     if (this.device.data.switch == 'on')
       return true
     else

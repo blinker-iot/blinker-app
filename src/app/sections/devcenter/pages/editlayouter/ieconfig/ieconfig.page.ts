@@ -1,8 +1,8 @@
 import { Component, Input } from '@angular/core';
-import { stringify, parse } from 'zipson';
+// import { stringify, parse } from 'zipson';
 import { DevcenterService } from '../../../devcenter.service';
 import { ActivatedRoute } from '@angular/router';
-import { Clipboard } from '@ionic-native/clipboard/ngx';
+// import { Clipboard } from '@awesome-cordova-plugins/clipboard/ngx';
 import { Device } from 'src/app/core/model/device.model';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
@@ -10,7 +10,7 @@ import { NoticeService } from 'src/app/core/services/notice.service';
   selector: 'blinker-ieconfig',
   templateUrl: './ieconfig.page.html',
   styleUrls: ['./ieconfig.page.scss'],
-  providers: [Clipboard]
+  // providers: [Clipboard]
 })
 export class IeconfigPage {
 
@@ -26,7 +26,7 @@ export class IeconfigPage {
   configData;
 
   constructor(
-    private clipboard: Clipboard,
+    // private clipboard: Clipboard,
     private devcenterService: DevcenterService,
     private activatedRoute: ActivatedRoute,
     private noticeService: NoticeService,
@@ -54,19 +54,19 @@ export class IeconfigPage {
   }
 
   async importData() {
-    let data = JSON.stringify(parse(this.configData));
-    let layouterConfig = {
-      "layouter": data
-    }
-    this.devcenterService.setProDeviceConfig(this.deviceType, layouterConfig).then(result => {
-      if (result) this.noticeService.showToast("importSuccess")
-    });
+    // let data = JSON.stringify(parse(this.configData));
+    // let layouterConfig = {
+    //   "layouter": data
+    // }
+    // this.devcenterService.setProDeviceConfig(this.deviceType, layouterConfig).then(result => {
+    //   if (result) this.noticeService.showToast("importSuccess")
+    // });
   }
 
   exportData() {
-    this.configData = stringify(JSON.parse(this.layouterData))
-    this.clipboard.copy(this.configData);
-    this.noticeService.showToast("copySuccess")
+    // this.configData = stringify(JSON.parse(this.layouterData))
+    // this.clipboard.copy(this.configData);
+    // this.noticeService.showToast("copySuccess")
   }
 
 }

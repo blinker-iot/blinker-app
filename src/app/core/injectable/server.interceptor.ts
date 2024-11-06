@@ -8,7 +8,7 @@ import {
   HttpInterceptor,
   HttpParams
 } from "@angular/common/http";
-import { Observable } from "rxjs";
+import { Observable, throwError } from "rxjs";
 import { map, catchError } from 'rxjs/operators';
 import { NavController } from '@ionic/angular';
 import { AuthService } from "../services/auth.service";
@@ -35,7 +35,7 @@ export class ServerInterceptor implements HttpInterceptor {
     private dataService: DataService
   ) { }
 
-  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<any> {
     // console.log(req.params.has('uuid'));
     let newReq;
     if (!req.params.has('uuid') && typeof this.token != 'undefined') {
@@ -46,7 +46,7 @@ export class ServerInterceptor implements HttpInterceptor {
       newReq = req.clone()
     }
     return next.handle(newReq).pipe(
-      map((event: HttpEvent<any>) => {
+      map((event: any) => {
         if (event instanceof HttpResponse && event.status == 200) {
           if (typeof event.body.message != 'undefined' && event.body.message != 1000) {
             this.processErrorCode(event.body.message)
@@ -56,15 +56,9 @@ export class ServerInterceptor implements HttpInterceptor {
       }),
       catchError((err: any, caught) => {
         if (err instanceof HttpErrorResponse) {
-          // if (err.status === 403) {
-          //   console.info('err.error =', err.error, ';');
-          // }
-          // if (err.status >= 500) {
-          //   console.info('err.error =', err.error, ';');
-          // }
           console.log('ErrorResponse', err.status, err);
           this.processErrorResponse(err.status);
-          return Observable.throw(err);
+          return throwError(err);
         }
       })
     );

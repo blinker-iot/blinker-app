@@ -1,0 +1,100 @@
+.edit-box {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background-color: #fff;
+  border-radius: 15px 15px 0 0;
+  box-shadow: 0 0 10px #CCC;
+
+  .header {
+    height: 45px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    font-size: 24px;
+    border-bottom: 1px solid #389bee;
+
+    .btn {
+      height: 45px;
+      width: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .tabs {
+      display: flex;
+      color: #666;
+
+      .tab {
+        border-top-left-radius: 15px;
+        border-top-right-radius: 15px;
+
+        &.active {
+          color: #fff;
+          background-color: #389bee;
+        }
+      }
+    }
+
+    .save {
+      position: absolute;
+      top: 0;
+      right: 0;
+      color: rgb(83, 172, 104);
+    }
+  }
+
+  .setting-box {
+    overflow-y: scroll;
+    overflow-x: hidden;
+  }
+
+  .setting-content {
+    padding: 15px;
+    height: calc(60% - 45px);
+    overflow-y: scroll;
+  }
+}
+
+[setting-title] {
+  border-bottom: 1px solid #389bee;
+  padding-bottom: 6px;
+  margin: 10px 0 5px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #389bee;
+  position: relative;
+}
+
+[setting-item] {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: row;
+  width: 100%;
+  height: 40px;
+  margin-bottom: 5px;
+
+  [item-name] {
+    width: 25%;
+    font-size: 12px;
+  }
+
+  [input-box] {
+    position: static;
+    width: 70%;
+    height: 40px;
+    border-radius: 3px;
+    border: 1px solid #b5b5b5;
+    position: relative;
+
+    input {
+      height: 100%;
+      font-size: 14px;
+      border: 0;
+      width: 100%;
+      padding-left: 10px;
+    }
+  }
+}

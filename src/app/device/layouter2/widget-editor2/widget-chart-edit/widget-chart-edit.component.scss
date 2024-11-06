@@ -1,0 +1,31 @@
+@import "../widget-editor.scss";
+
+[input-box] {
+    display: flex;
+
+    input {
+        width: calc(50% - 20px) !important;
+        border-right: 1px solid #cccccc !important;
+    }
+
+    color-picker {
+        width: 38px;
+
+        ::ng-deep {
+            input {
+                display: none;
+            }
+        }
+    }
+}
+
+.add-btn {
+    width: 70%;
+    font-size: 14px;
+    background: #389bee;
+    color: #FFF;
+    height: 36px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

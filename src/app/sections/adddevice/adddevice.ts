@@ -43,9 +43,9 @@ export class AddDevicePage {
   }
 
   ngAfterViewInit(): void {
-    this.deviceConfigService.loaded.subscribe(loaded => {
-      if (loaded) console.log(this.items);
-    })
+    // this.deviceConfigService.loaded.subscribe(loaded => {
+    //   if (loaded) console.log(this.items);
+    // })
   }
 
   getItems(e: any) {

@@ -4,7 +4,7 @@ import {
   LoadingController,
   AlertController
 } from '@ionic/angular';
-import { OpenNativeSettings } from '@ionic-native/open-native-settings/ngx';
+// import { OpenNativeSettings } from '@awesome-cordova-plugins/open-native-settings/ngx';
 import { TipService } from './tip.service';
 
 @Injectable({
@@ -45,7 +45,7 @@ export class NoticeService {
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
     private alertCtrl: AlertController,
-    private openNativeSettings: OpenNativeSettings,
+    // private openNativeSettings: OpenNativeSettings,
     private tipService: TipService
   ) {
   }
@@ -66,12 +66,15 @@ export class NoticeService {
       this.tipService.show({ message: code.toString(), delay: delay })
   }
 
-  showAlert(code) {
+  async showAlert(code) {
     this.hideLoading();
-    this.alert = this.alertCtrl.create(this.mess[code.toString()])
-      .then(
-        alert => alert.present()
-      );
+    if (typeof code == 'string')
+      this.alert = await this.alertCtrl.create({
+        message: code,
+      })
+    else
+      this.alert = await this.alertCtrl.create(this.mess[code.toString()])
+    this.alert.present()
   }
 
   async showLoading(content) {
@@ -333,7 +336,7 @@ export class NoticeService {
       buttons: [{
         text: '打开蓝牙',
         handler: () => {
-          this.openNativeSettings.open("bluetooth");
+          // this.openNativeSettings.open("bluetooth");
         }
       }]
     },
@@ -343,7 +346,7 @@ export class NoticeService {
       buttons: [{
         text: '确认',
         handler: () => {
-          this.openNativeSettings.open("wifi");
+          // this.openNativeSettings.open("wifi");
         }
       }]
     },
@@ -353,7 +356,7 @@ export class NoticeService {
       buttons: [{
         text: '确认',
         handler: () => {
-          this.openNativeSettings.open("Location");
+          // this.openNativeSettings.open("Location");
         }
       }]
     },
@@ -454,7 +457,7 @@ export class NoticeService {
       buttons: [{
         text: '确认',
         handler: () => {
-          this.openNativeSettings.open("application_details");
+          // this.openNativeSettings.open("application_details");
         }
       }]
     },

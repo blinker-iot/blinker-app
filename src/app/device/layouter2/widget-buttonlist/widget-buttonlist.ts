@@ -1,6 +1,5 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectorRef, ViewChildren, QueryList, ElementRef, Renderer2 } from '@angular/core';
 import { AlertController } from '@ionic/angular';
-import { styleList } from '../widgets/config';
 
 @Component({
   selector: 'widget-buttonlist',
@@ -50,25 +49,25 @@ export class widgetButtonListComponent {
       }
     }
     this.changeDetectorRef.detectChanges();
-    this.resizeDemo();
+    // this.resizeDemo();
   }
 
   //动态调整demo组件的尺寸
-  length = 38;
-  margin = 5;
-  resizeDemo() {
-    let i = 0;
-    for (let demo of this.demoList.toArray()) {
-      if (typeof this.buttonList[i].lstyle == 'undefined') this.buttonList[i].lstyle = 0;
-      let cols = styleList.btn[this.buttonList[i].lstyle].cols;
-      let rows = styleList.btn[this.buttonList[i].lstyle].rows;
-      let width = cols * this.length + ((cols - 1) * this.margin);
-      let height = (rows * this.length) + ((rows - 1) * this.margin);
-      this.renderer.setStyle(demo.nativeElement, 'width', `${width}px`);
-      this.renderer.setStyle(demo.nativeElement, 'height', `${height}px`);
-      i++;
-    }
-  }
+  // length = 38;
+  // margin = 5;
+  // resizeDemo() {
+  //   let i = 0;
+  //   for (let demo of this.demoList.toArray()) {
+  //     if (typeof this.buttonList[i].lstyle == 'undefined') this.buttonList[i].lstyle = 0;
+  //     let cols = styleList.btn[this.buttonList[i].lstyle].cols;
+  //     let rows = styleList.btn[this.buttonList[i].lstyle].rows;
+  //     let width = cols * this.length + ((cols - 1) * this.margin);
+  //     let height = (rows * this.length) + ((rows - 1) * this.margin);
+  //     this.renderer.setStyle(demo.nativeElement, 'width', `${width}px`);
+  //     this.renderer.setStyle(demo.nativeElement, 'height', `${height}px`);
+  //     i++;
+  //   }
+  // }
 
   isSelected(btn) {
     if (this.actList.length == 0) return false;

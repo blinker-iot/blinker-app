@@ -256,6 +256,27 @@ export const locale = {
 			PENDING: 'Pending',
 			CLOSED: 'Closed',
 			PAY: 'Pay'
+		},
+		WIDGET:{
+			TEXT:'Text',
+			BUTTON:'Button',
+			DATA:'Data',
+			SLIDER:'Slider',
+			SELECT: "Select",
+			COLOR:'Color',
+			STICK:'Stick',
+			CHART:'Chart',
+			MAP:'Map',
+			VIDEO:'Video',
+			INPUT:'Input',
+			IMAGE:'Image',
+			DEBUG:'Debug',
+			CUSTOM:'Custom',
+			EDIT:'Edit',
+			DELETE:'Delete',
+			CANCEL:'Cancel',
+			POSITION:'Position',
+			SIZE:'Size',
 		}
 	}
 };

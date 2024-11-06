@@ -21,9 +21,9 @@ export const CONFIG = {
 //可用的图片文件名
 export const ImageList = [
     'unknown',
-    'diyarduino', 'arduino-red',
+    'diyarduino','arduino-mega', 'arduino-red',
     'wifiduino', 'wifiduino-blue', 'esp32',
-    'diylinux', 'raspberrypi-blue', 'raspberrypi-zero',
+    'diylinux', 'raspberrypi-blue', 'raspberrypi-zero','raspberrypi-pico',
     'linux-logo', 'raspberrypi-logo',
     'ownplug', 'ownairdetector',
     'plant1', 'plant2', 'plant3', 'fan', 'humidifier', 'heater', 'hygrothermograph', 'airconditioner',

@@ -1,5 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { LayouterService } from '../../../layouter.service';
+import { Layouter2Service } from '../../layouter2.service';
 import { Layouter2Widget } from '../config';
 
 @Component({
@@ -53,7 +53,7 @@ export class WidgetImageComponent implements Layouter2Widget {
   }
 
   constructor(
-    private LayouterService: LayouterService
+    private LayouterService: Layouter2Service
   ) { }
 
   // 预加载图片，避免切换时再加载一时显示不出来

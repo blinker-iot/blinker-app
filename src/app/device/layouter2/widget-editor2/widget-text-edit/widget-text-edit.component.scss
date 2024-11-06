@@ -1,0 +1,15 @@
+@import "../widget-editor.scss";
+
+.align-box {
+    height: 90px;
+    align-items: flex-start;
+    margin-top: 6px;
+
+    [item-name] {
+        margin-top: 10px;
+    }
+
+    [input-box] {
+        border: none
+    }
+}

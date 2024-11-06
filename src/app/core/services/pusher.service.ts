@@ -1,40 +1,55 @@
 import { Injectable } from '@angular/core';
 import { Platform } from '@ionic/angular';
-// import { JPush } from '@jiguang-ionic/jpush/ngx';
 import { DataService } from './data.service';
 import { Router } from '@angular/router';
-import { AliyunPush } from 'libs/@ionic-native/aliyun-push/ngx';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PusherService {
   id = 1;
-  jpush;
   constructor(
     private platform: Platform,
     private dataService: DataService,
     private router: Router,
-    private aliPush: AliyunPush
   ) {
   }
 
 
-  init() {
-    if (!this.platform.is('cordova')) return;
-    this.aliPush.getRegisterId().then(id => {
-      console.log(id);
-      this.aliPush.onMessage().subscribe(mess => {
-        console.log(mess);
-      })
-      this.dataService.userDataLoader.subscribe(loaded => {
-        if (loaded) {
-          this.aliPush.bindAccount(this.dataService.user.phone);
-        }
-      });
-    }).catch(err => {
-      console.log(err);
-    })
+  async init() {
+    await PushNotifications.addListener('registration', token => {
+      console.info('Registration token: ', token.value);
+    });
+
+    await PushNotifications.addListener('registrationError', err => {
+      console.error('Registration error: ', err.error);
+    });
+
+    await PushNotifications.addListener('pushNotificationReceived', notification => {
+      console.log('Push notification received: ', notification);
+    });
+
+    await PushNotifications.addListener('pushNotificationActionPerformed', notification => {
+      console.log('Push notification action performed', notification.actionId, notification.inputValue);
+    });
+
+    await this.registerNotifications();
+  }
+
+
+  async registerNotifications() {
+    let permStatus = await PushNotifications.checkPermissions();
+
+    if (permStatus.receive === 'prompt') {
+      permStatus = await PushNotifications.requestPermissions();
+    }
+
+    if (permStatus.receive !== 'granted') {
+      throw new Error('User denied permissions!');
+    }
+
+    await PushNotifications.register();
   }
 
   // 本地推送

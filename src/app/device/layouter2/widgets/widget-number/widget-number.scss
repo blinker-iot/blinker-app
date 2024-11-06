@@ -1,370 +1,77 @@
-.numbox {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+@import "../widget-button/widget-button.scss";
+
+[widget] {
     overflow: hidden;
-    padding: 0.5rem;
+}
+
+[widget-content] {
+    justify-content: flex-start;
+    transition: all 0.3s;
+}
+
+.data-box {
+    margin-top: 1px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+
+    .unit {
+        font-size: 10px;
+        transform: scale(0.9);
+    }
+}
+
+[chart] {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    z-index: 99;
+}
+
+.s1 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
     width: 100%;
-    height: 100%;
 
     i {
-        font-size: 1.5rem;
-    }
-
-    .valuebox {
-        display: flex;
-        justify-content: flex-start;
-        align-items: flex-end;
-        flex-direction: row;
-        transition: transform 0.2s;
-        font-size: 1.3rem;
-        line-height: 1.3rem;
-        transform-origin: left;
-        margin-top: 0.25rem;
-
-        .value {
-            color: #3c3c3c;
-            font-weight: bold;
-        }
-
-        .unit {
-            color: #898989;
-            font-size: 0.7rem;
-            line-height: 0.9rem;
-            white-space: nowrap;
-        }
-    }
-
-    .content {
-        font-size: 0.7rem;
-        position: absolute;
-        bottom: 0.25rem;
-        left: 0.5rem;
+        margin-left: 1px;
     }
 }
 
-.numbox10 {
+.s2 {
+    flex-shrink: 0;
     width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    align-items: flex-end;
+    transition: all 0.3s;
 
-    // ::ng-deep {
-    //     svg.gauge {
-    //         .text-container {
-    //             transform: translate(0%, -23%);
-    //             display: inline-block;
-    //         }
-    //         .value-text {
-    //             // transform: translate(0%, -23%);
-    //             display: inline-block;
-    //         }
-    //     }
-    // }
-
-    .label {
-        bottom: 0 !important;
-    }
     .value {
-        position: absolute;
-        bottom: 22px !important;
-        color: #3c3c3c;
-        font-weight: bold;
-        font-size: 18px;
-        width: 100%;
-        text-align: center;
-        .unit {
-            font-size: 12px;
-            font-weight: normal;
-        }
+        font-size: 24px;
+        line-height: 24px;
+        font-weight: 600;
+    }
+
+    .unit {
+        font-size: 12px;
+        color: #666;
     }
 }
 
-.numbox11 {
+.s3 {
     width: 100%;
     height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    ::ng-deep {
-        svg.gauge {
-            position: absolute;
-            bottom: 0;
-            // .text-container {
-            //     transform: translate(0%, 27%);
-            //     display: inline-block;
-            // }
-            // .value-text {
-            //     // transform: translate(0%, 27%);
-            //     display: inline-block;
-            // }
-        }
-    }
-
-    .label {
-        top: 0 !important;
-    }
-    .value {
-        position: absolute;
-        top: 22px !important;
-        color: #3c3c3c;
-        font-weight: bold;
-        font-size: 18px;
-        width: 100%;
-        text-align: center;
-        .unit {
-            font-size: 12px;
-            font-weight: normal;
-        }
-    }
+    background-color: rgba(253, 133, 133, 0.5);
+    position: absolute;
+    right: 0;
 }
 
-.numbox12 {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    .label {
-        top: 25%;
-    }
-    ::ng-deep {
-        .value {
-            stroke-dasharray: 17.9 1 !important;
-        }
-    }
-}
-
-.numbox13 {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    .label {
-        top: 25%;
-    }
-
-    ::ng-deep {
-        .value {
-            stroke-dasharray: 24.15 1 !important;
-        }
-    }
-}
-
-.numbox3 {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    .gauge {
-        bottom: 0;
-    }
-
-    .text-box {
-        position: absolute;
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        bottom: 5%;
-
-        .value {
-            font-size: 1rem;
-            white-space: nowrap;
-        }
-
-        .content {
-            font-size: 0.7rem;
-            text-align: center;
-        }
-    }
-
-    .text-box2 {
-        position: absolute;
-        height: 100%;
-
-        .value {
-            margin-top: 1.5rem;
-        }
-    }
-
+.x44 {
     .s1 {
-        top: 45%;
-        font-size: 1rem;
-        font-weight: bold;
+        width: 50%;
     }
 
     .s2 {
-        font-size: 1.6rem;
-        font-weight: bold;
-        top: 33%;
+        width: 50%;
     }
 }
-
-.numbox1 {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-
-    .left-box {
-        height: 100%;
-        width: 40%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-
-        i {
-            font-size: 2.1rem;
-        }
-    }
-
-    .right-box {
-        display: flex;
-        flex-direction: column;
-        font-size: 0.7rem;
-    }
-
-    .valuebox {
-        display: flex;
-        align-items: flex-end;
-
-        .value {
-            font-size: 25px;
-            line-height: 25px;
-            font-weight: 700;
-        }
-
-        .unit {
-            margin-left: 5px;
-        }
-    }
-}
-
-.chartbox {
-    width: 100%;
-    height: 100%;
-}
-
-.content {
-    color: #959595;
-    width: 100%;
-}
-
-.unit {
-    margin-left: 0.1rem;
-}
-
-[overflow] {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.numbox4 {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-
-    .progressBar {
-        width: 90%;
-        border-radius: 10px;
-        overflow: auto;
-    }
-
-    .value {
-        position: absolute;
-        top: 5%;
-    }
-
-    .content {
-        position: absolute;
-        bottom: 5%;
-        font-size: 0.7rem;
-        text-align: center;
-    }
-}
-
-// .gauge-box {
-//     width: 100%;
-
-// }
-
-.gauge-box {
-    height: 100%;
-    width: 100% !important;
-    position: relative;
-    // display: flex;
-    // justify-content: center;
-    // align-items: center;
-
-    .label {
-        font-size: 12px;
-        font-weight: 100;
-        width: 100%;
-        text-align: center;
-        position: absolute;
-        // top: 22%;
-        color: rgb(153, 153, 153);
-        display: inline-block;
-    }
-
-    .label2 {
-        font-size: 18px;
-        font-weight: 100;
-        width: 100%;
-        text-align: center;
-        position: absolute;
-        bottom: 23%;
-        color: rgb(153, 153, 153);
-        // color: #fff;
-        display: inline-block;
-    }
-}
-
-.gauge-box {
-    ::ng-deep {
-        svg.gauge {
-            width: 100% !important;
-        }
-
-        svg > path.dial {
-            stroke: #dcdcdc;
-            stroke-width: 5;
-        }
-
-        svg > path.value {
-            stroke: #f8774b;
-            stroke-dasharray: 11.57 1;
-            stroke-width: 5;
-        }
-
-        svg > .value-lable {
-            fill: #fff;
-            font-size: 1.5em;
-        }
-    }
-}
-
-.numbox10 {
-    .gauge-box {
-        position: absolute;
-        top: -7px;
-    }
-}
-
-.numbox11 {
-    .gauge-box {
-        position: absolute;
-        bottom: -7px;
-    }
-}
-

@@ -3,27 +3,30 @@
     <b-device-img [filename]="device.config.image"></b-device-img>
   </div>
   <div class="lb">
-    {{device.config.customName}}
-    <span class="dev" *ngIf="device.config.isDev">
-      <i class="fal fa-code"></i>
-    </span>
-    <span class="dev" *ngIf="device.config.mode=='ble'">
-      <i class="fab fa-bluetooth-b"></i>
-    </span>
-  </div>
-  <div class="rt">
-    <ng-container *ngIf="device.config.mode=='ble'">
-      <span class="blue animated fadeIn" *ngIf="deviceService.islocalDevice(device)">可连接</span>
-      <span class="gray animated fadeIn" *ngIf="!deviceService.islocalDevice(device)">蓝牙设备</span>
-    </ng-container>
-    <ng-container *ngIf="device.config.mode=='mqtt'">
-      <span class="blue animated fadeIn" *ngIf="device.data.enable">在线</span>
-      <span class="gray animated fadeIn" *ngIf="!device.data.enable">离线</span>
-    </ng-container>
-  </div>
-  <div class="rb" *ngIf="device.data.switch" (click)="tapSwitch($event)">
-    <div class="switch">
-      <i class="fal fa-power-off"></i>
+    <div>
+      {{device.config.customName}}
+      <span class="dev" *ngIf="device.config.isDev">
+        <i class="fal fa-code"></i>
+      </span>
+      <span class="dev" *ngIf="device.config.mode=='ble'">
+        <i class="fab fa-bluetooth-b"></i>
+      </span>
+    </div>
+    <div class="more-info" [ngStyle]="{'color': device.data.enable?'#5aaff5':'#666'}">
+      <ng-container *ngIf="device.config.mode=='ble'">
+        <span class="blue animated fadeIn" *ngIf="deviceService.islocalDevice(device)">可连接</span>
+        <span class="gray animated fadeIn" *ngIf="!deviceService.islocalDevice(device)">蓝牙设备</span>
+      </ng-container>
+      <ng-container *ngIf="device.config.mode=='mqtt'">
+        <span class="blue animated fadeIn" *ngIf="device.data.enable">在线</span>
+        <span class="gray animated fadeIn" *ngIf="!device.data.enable">离线</span>
+      </ng-container>
+      <ng-container *ngIf="device.data.summary"> | {{device.data.summary}}</ng-container>
     </div>
   </div>
+  <!-- <div class="btns" (click)="tapSwitch($event)">
+    <div class="btn">
+      <i class="fa-light fa-power-off"></i>
+    </div>
+  </div> -->
 </div>

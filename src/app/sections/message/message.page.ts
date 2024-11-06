@@ -1,8 +1,9 @@
+// 需修复 12.27
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { MessageService } from './message.service';
 import { Router } from '@angular/router';
 import { DataService } from 'src/app/core/services/data.service';
-import { InAppBrowser } from '@ionic-native/in-app-browser/ngx';
+// import { InAppBrowser } from '@awesome-cordova-plugins/in-app-browser/ngx';
 import { API } from 'src/app/configs/api.config';
 import { IonInfiniteScroll } from '@ionic/angular';
 
@@ -10,7 +11,7 @@ import { IonInfiniteScroll } from '@ionic/angular';
   selector: 'app-message',
   templateUrl: './message.page.html',
   styleUrls: ['./message.page.scss'],
-  providers: [InAppBrowser]
+  // providers: [InAppBrowser]
 })
 export class MessagePage implements OnInit {
 
@@ -27,7 +28,7 @@ export class MessagePage implements OnInit {
   constructor(
     private messageService: MessageService,
     private dataService: DataService,
-    private iab: InAppBrowser,
+    // private iab: InAppBrowser,
     private router: Router
   ) { }
 
@@ -59,7 +60,7 @@ export class MessagePage implements OnInit {
   enter(messItem) {
     if (this.editMode) return;
     if (messItem.url.indexOf('http') > -1) {
-      this.iab.create(messItem.url, '_system', 'location=no,hidden=no');
+      // this.iab.create(messItem.url, '_system', 'location=no,hidden=no');
     } else if (messItem.url.indexOf('/device') > -1) {
       this.router.navigateByUrl(messItem.url)
     } else if (messItem.url.indexOf('/share-manager') > -1) {

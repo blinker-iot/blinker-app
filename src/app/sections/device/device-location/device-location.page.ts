@@ -1,42 +1,46 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
-import { DeviceService } from 'src/app/core/services/device.service';
-import { GeolocationService } from 'src/app/core/services/geolocation.service';
-import { ActivatedRoute } from '@angular/router';
-import { NavController } from '@ionic/angular';
-import { DataService } from 'src/app/core/services/data.service';
-import { NoticeService } from 'src/app/core/services/notice.service';
-declare var L;
+import { Component, ElementRef, OnInit, ViewChild } from "@angular/core";
+import { DeviceService } from "src/app/core/services/device.service";
+import { GeolocationService } from "src/app/core/services/geolocation.service";
+import { ActivatedRoute } from "@angular/router";
+import { IonicModule, NavController } from "@ionic/angular";
+import { DataService } from "src/app/core/services/data.service";
+import { NoticeService } from "src/app/core/services/notice.service";
+import { DirectivesModule } from "src/app/core/directives/directives.module";
+import { FormsModule } from "@angular/forms";
+import { CommonModule } from "@angular/common";
+import * as maptalks from "maptalks";
+import { toBD09, toWsg84 } from "src/app/core/functions/func";
 
 @Component({
-  selector: 'app-device-location',
-  templateUrl: './device-location.page.html',
-  styleUrls: ['./device-location.page.scss'],
+  selector: "app-device-location",
+  templateUrl: "./device-location.page.html",
+  styleUrls: ["./device-location.page.scss"],
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    IonicModule,
+    DirectivesModule,
+  ],
 })
 export class DeviceLocationPage implements OnInit {
-
   mymap;
+  devicePosition;
   centerPosition;
   btnDisabled = true;
   id;
   device;
 
   get isDiyDevice() {
-    return this.device.config.isDiy
-  }
-
-  get latitude() {
-    return this.geolocationService.latitude
-  }
-
-  get longitude() {
-    return this.geolocationService.longitude
+    return this.device.config.isDiy;
   }
 
   get address() {
-    return this.geolocationService.address
+    return this.geolocationService.address;
   }
 
-  @ViewChild('mapbox', { read: ElementRef, static: true }) map: ElementRef;
+  @ViewChild("mapbox", { read: ElementRef, static: true })
+  map: ElementRef;
 
   constructor(
     private deviceService: DeviceService,
@@ -44,99 +48,94 @@ export class DeviceLocationPage implements OnInit {
     private geolocationService: GeolocationService,
     private activatedRoute: ActivatedRoute,
     private navCtrl: NavController,
-    private noticeService: NoticeService
-  ) { }
+    private noticeService: NoticeService,
+  ) {}
 
   ngOnInit() {
-
   }
 
   ngAfterViewInit(): void {
-    this.dataService.initCompleted.subscribe(result => {
+    this.dataService.initCompleted.subscribe(async (result) => {
       if (result) {
-        this.id = this.activatedRoute.snapshot.params['id'];
-        this.device = this.dataService.device.dict[this.id]
-        this.geolocationService.getUserPosition().then(result => {
-          if (result) {
-            // setTimeout(() => {
-              this.initMap();
-              this.getAddress();
-            // }, 100);
-          }
-        })
+        this.id = this.activatedRoute.snapshot.params["id"];
+        this.device = this.dataService.device.dict[this.id];
+        this.devicePosition = await this.geolocationService.getDevicePosition(
+          this.device,
+        );
+        this.initMap(this.devicePosition);
       }
-    })
+    });
   }
 
-  initMap() {
-    let longitude, latitude
-    if (typeof this.device.config.position.location != 'undefined' && this.device.config.position.location.length != 0) {
-      longitude = this.device.config.position.location[0]
-      latitude = this.device.config.position.location[1]
-      console.log(longitude, latitude);
-    } else {
-      longitude = this.longitude
-      latitude = this.latitude
-    }
-    this.mymap = L.map(this.map.nativeElement, {
-      center: [latitude, longitude],
+  initMap(wsg04Position) {
+    let position = toBD09(wsg04Position);
+    this.centerPosition = position;
+    this.mymap = new maptalks.Map(this.map.nativeElement, {
+      center: position,
       zoom: 13,
-      attributionControl: false
+      minZoom: 1,
+      maxZoom: 19,
+      spatialReference: {
+        projection: "baidu",
+      },
+      baseLayer: new maptalks.TileLayer("base", {
+        "urlTemplate":
+          "https://gss{s}.bdstatic.com/8bo_dTSlRsgBo1vgoIiO_jowehsv/tile/?qt=tile&x={x}&y={y}&z={z}&styles=pl&scaler=1&udt=20170927",
+        "subdomains": [0, 1, 2, 3],
+        "attribution":
+          '&copy; <a target="_blank" href="http://map.baidu.com">Baidu</a>',
+      }),
     });
-    L.tileLayer.chinaProvider('GaoDe.Normal.Map', {
-      maxZoom: 18,
-      minZoom: 5
-    }).addTo(this.mymap);
-    let markerIcon = L.icon({
-      iconUrl: 'assets/img/marker.png',
-      iconSize: [36, 36],
-      className: 'mapicon'
+
+    let marker = new maptalks.Marker(
+      position,
+      {
+        "symbol": {
+          "markerFile": "./assets/img/map/marker.png",
+          "markerWidth": 40,
+          "markerHeight": 40,
+          "markerDx": 0,
+          "markerDy": 0,
+          "markerOpacity": 1,
+        },
+      },
+    );
+    // let userMarker = new maptalks.Marker(
+    //   position,
+    //   {
+    //     "symbol": {
+    //       "markerFile": "./assets/img/map/user.png",
+    //       "markerWidth": 30,
+    //       "markerHeight": 30,
+    //       "markerDx": 0,
+    //       "markerDy": 0,
+    //       "markerOpacity": 0.5,
+    //     },
+    //   },
+    // );
+    // new maptalks.VectorLayer("userMarker", userMarker).addTo(this.mymap);
+    new maptalks.VectorLayer("marker", marker).addTo(this.mymap);
+    this.mymap.on("moving", (e) => {
+      let newPosition = this.mymap.getCenter();
+      this.centerPosition = toWsg84([newPosition.x, newPosition.y]);
+      marker.setCoordinates(newPosition);
     });
-    let marker = L.marker([latitude, longitude], { icon: markerIcon }).addTo(this.mymap);
-    marker.bindPopup(this.device.config.customName);
-    this.mymap.on('move', () => {
-      marker.setLatLng(this.mymap.getCenter())
-    });
-    this.mymap.on('moveend', () => {
-      this.getAddress();
+    this.mymap.on("moveend", (e) => {
       this.btnDisabled = false;
     });
-  }
-
-  getAddress() {
-    this.centerPosition = this.mymap.getCenter();
-    this.geolocationService.getAddress([this.centerPosition.lng, this.centerPosition.lat]);
   }
 
   async saveGeolocation() {
     let newConfig = {
       "position": {
-        "location": [this.centerPosition.lng, this.centerPosition.lat],
-        "address": this.address
-      }
-    }
-    console.log(newConfig);
+        "location": this.centerPosition,
+        "address": "",
+      },
+    };
     if (await this.deviceService.saveDeviceConfig(this.device, newConfig)) {
       this.deviceService.loadDeviceConfig(this.device);
-      this.noticeService.showToast('geolocationUpdated')
+      this.noticeService.showToast("geolocationUpdated");
       this.navCtrl.pop();
     }
   }
-
-  get publicMode() {
-    return this.device.config.public != 0
-  }
-
-  set publicMode(val) {
-    this.device.config.public = val ? 1 : 0;
-  }
-
-  changePublicMode() {
-    let newConfig = {
-      "public": this.publicMode
-    }
-    this.deviceService.saveDeviceConfig(this.device, newConfig)
-  }
-
-
 }

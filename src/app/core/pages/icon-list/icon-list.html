@@ -1,11 +1,11 @@
 <ion-header>
   <ion-toolbar overlayPadding>
-    <ion-buttons slot="start">
+    <ion-title>请选择图标</ion-title>
+    <ion-buttons slot="end">
       <ion-button (click)="close()">
-        <i class="fal fa-times"></i>
+        <i class="fa-light fa-times"></i>
       </ion-button>
     </ion-buttons>
-    <ion-title>请选择图标</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -15,11 +15,11 @@
     <div>使用方法见：https://diandeng.tech/doc/</div>
   </div> -->
   <div class="tab-box">
-    <div class="text">图标风格<span>更多图标见https://diandeng.tech/doc/icon</span></div>
+    <div class="text">图标风格<span>更多图标见 https://diandeng.tech/doc/icon</span></div>
     <div class="tab" (click)="selectStyle('fad')" [ngClass]="{'selected': style=='fad'}">双色</div>
-    <div class="tab"  (click)="selectStyle('fas')" [ngClass]="{'selected': style=='fas'}">实体</div>
-    <div class="tab"  (click)="selectStyle('far')" [ngClass]="{'selected': style=='far'}">常规</div>
-    <div class="tab"  (click)="selectStyle('fal')" [ngClass]="{'selected': style=='fal'}">纤细</div>
+    <div class="tab" (click)="selectStyle('fas')" [ngClass]="{'selected': style=='fas'}">实体</div>
+    <div class="tab" (click)="selectStyle('far')" [ngClass]="{'selected': style=='far'}">常规</div>
+    <div class="tab" (click)="selectStyle('fal')" [ngClass]="{'selected': style=='fal'}">纤细</div>
   </div>
   <div class="icon-box">
     <div class="class-box" *ngFor="let iconClass of iconList">

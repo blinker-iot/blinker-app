@@ -6,8 +6,8 @@ import { DeviceConfigService } from 'src/app/core/services/device-config.service
 import { DataService } from 'src/app/core/services/data.service';
 import { Subject } from 'rxjs';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
-
-declare var cordova;
+// import { SpeechRecognition } from "@capacitor-community/speech-recognition";
+// declare var cordova;
 
 @Injectable()
 export class SpeechService {
@@ -74,80 +74,100 @@ export class SpeechService {
   ) {
   }
 
-  recognize() {
-    cordova.plugins.bdasr.addEventListener((res) => {
-      this.ngzone.run(() => {
-        if (!res) {
-          return;
-        }
-        switch (res.type) {
-          case "asrReady": {
-            // console.log("等待语音输入")
-            break;
-          }
-          case "asrBegin": {
-            // console.log("开始语音输入")
-            break;
-          }
-          case "asrEnd": {
-            console.log("等待识别结果")
-            break;
-          }
-          case "asrText": {
-            console.log(res.message);
-            if (this.plt.is('android')) {
-              this.result = JSON.parse(res.message).best_result;
-            }
-            else {
-              if (typeof (res.message.origin_result.result.word[0]) != "undefined")
-                this.result = res.message.origin_result.result.word[0].toString();
-              else if (typeof (res.message.results_recognition) != "undefined")
-                this.result = res.message.results_recognition.toString();
-              else this.result = "";
-            }
-            console.log("识别结果：" + this.result);
-            this.content.next(this.result);
-            break;
-          }
-          case "asrFinish": {
-            console.log("识别结果：" + this.result);
-            this.process(this.result.replace('。',''));
-            break;
-          }
-          case "asrCancel": {
-            // 语音识别取消
-            console.log("语音识别取消");
-            break;
-          }
-          default:
-            break;
-        }
-      })
+  async init() {
+    // console.log("SpeechService init");
+    // let state = await SpeechRecognition.available()
+    // console.log(state);
+    // if (state) {
+    //   // SpeechRecognition.hasPermission();
+    //   // SpeechRecognition.requestPermission();
+    //   SpeechRecognition.start({
+    //     language: "en-US",
+    //     maxResults: 2,
+    //     prompt: "Say something",
+    //     partialResults: true,
+    //     popup: true,
+    //   });
+    //   SpeechRecognition.addListener("partialResults", (data: any) => {
+    //     console.log("partialResults was fired", data.matches);
+    //   });
+    // }
+  }
 
-    }, (err) => {
-      this.ngzone.run(() => {
-        this.action.next('Error')
-      })
-    });
+  recognize() {
+    // cordova.plugins.bdasr.addEventListener((res) => {
+    //   this.ngzone.run(() => {
+    //     if (!res) {
+    //       return;
+    //     }
+    //     switch (res.type) {
+    //       case "asrReady": {
+    //         // console.log("等待语音输入")
+    //         break;
+    //       }
+    //       case "asrBegin": {
+    //         // console.log("开始语音输入")
+    //         break;
+    //       }
+    //       case "asrEnd": {
+    //         console.log("等待识别结果")
+    //         break;
+    //       }
+    //       case "asrText": {
+    //         console.log(res.message);
+    //         if (this.plt.is('android')) {
+    //           this.result = JSON.parse(res.message).best_result;
+    //         }
+    //         else {
+    //           if (typeof (res.message.origin_result.result.word[0]) != "undefined")
+    //             this.result = res.message.origin_result.result.word[0].toString();
+    //           else if (typeof (res.message.results_recognition) != "undefined")
+    //             this.result = res.message.results_recognition.toString();
+    //           else this.result = "";
+    //         }
+    //         console.log("识别结果：" + this.result);
+    //         this.content.next(this.result);
+    //         break;
+    //       }
+    //       case "asrFinish": {
+    //         console.log("识别结果：" + this.result);
+    //         this.process(this.result.replace('。', ''));
+    //         break;
+    //       }
+    //       case "asrCancel": {
+    //         // 语音识别取消
+    //         console.log("语音识别取消");
+    //         break;
+    //       }
+    //       default:
+    //         break;
+    //     }
+    //   })
+
+    // }, (err) => {
+    //   this.ngzone.run(() => {
+    //     this.action.next('Error')
+    //   })
+    // });
   }
 
   start() {
-    if (this.plt.is('cordova')) {
-      this.ngzone.run(() => {
-        cordova.plugins.bdasr.startSpeechRecognize();
-        this.recognize();
-      })
+    // if (this.plt.is('cordova')) {
+    //   this.ngzone.run(() => {
+    //     cordova.plugins.bdasr.startSpeechRecognize();
+    //     this.recognize();
+    //   })
 
-    }
+    // }
   }
 
   end() {
-    if (this.plt.is('cordova')) {
-      this.ngzone.run(() => {
-        cordova.plugins.bdasr.cancelSpeechRecognize();
-        this.recognize();
-      })
-    }
+    // if (this.plt.is('cordova')) {
+    //   this.ngzone.run(() => {
+    //     cordova.plugins.bdasr.cancelSpeechRecognize();
+    //     this.recognize();
+    //   })
+    // }
   }
 
   // 分发数据
@@ -163,7 +183,7 @@ export class SpeechService {
     }
     else {
       this.action.next('Wait')
-      let result = await this.deviceService.connectDevice(this.speechCmdList[str].device, "hide");
+      let result: any = await this.deviceService.connectDevice(this.speechCmdList[str].device, "hide");
       if (result) {
         window.setTimeout(() => {
           this.deviceService.sendData(this.speechCmdList[str].device, this.speechCmdList[str].act);

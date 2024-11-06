@@ -1,7 +1,8 @@
 import { Component, Input, ElementRef, ViewChild, Renderer2, Injectable } from '@angular/core';
 import { Layouter2Widget } from '../config';
 import { NativeService } from 'src/app/core/services/native.service';
-import { LayouterService } from '../../../layouter.service';
+import { Layouter2Service } from '../../layouter2.service';
+import { convertToRgba } from 'src/app/core/functions/func';
 
 
 
@@ -23,16 +24,27 @@ export class WidgetButtonComponent implements Layouter2Widget {
     return this.getValue(['tex', 't0', 'text'])
   }
 
+  get t1() {
+    return this.getValue(['tex1', 't1'])
+  }
+
   get ico() {
     return this.getValue(['ico', 'icon'])
   }
 
+
   get color() {
+    if (this.state == 'on') return '#FFF';
     return this.getValue(['clr', 'col', 'color'])
   }
 
+  get backgroundColor() {
+    if (this.state == 'on') return this.getValue(['clr', 'col', 'color'])
+    return '#FFF'
+  }
+
   get state() {
-    this.device.data[this.key] 
+    this.device.data[this.key]
     if (typeof this.device.data[this.key] == 'string') {
       return this.device.data[this.key]
     }
@@ -58,19 +70,6 @@ export class WidgetButtonComponent implements Layouter2Widget {
     return
   }
 
-  _lstyle
-  @Input()
-  set lstyle(lstyle) {
-    this._lstyle = lstyle
-  }
-  get lstyle() {
-    if (typeof this._lstyle != 'undefined')
-      return this._lstyle
-    if (typeof this.widget.lstyle != 'undefined')
-      return this.widget.lstyle
-    return 0;
-  }
-
   pressed = false;
 
   @ViewChild("button", { read: ElementRef, static: true }) button: ElementRef;
@@ -78,8 +77,13 @@ export class WidgetButtonComponent implements Layouter2Widget {
   constructor(
     public render: Renderer2,
     private nativeService: NativeService,
-    private LayouterService: LayouterService
+    private LayouterService: Layouter2Service
   ) { }
+
+  ngOnInit() {
+    // console.log(JSON.stringify(this.widget));
+
+  }
 
   ngAfterViewInit() {
     this.listenGesture();
@@ -106,6 +110,7 @@ export class WidgetButtonComponent implements Layouter2Widget {
     this.pressed = true;
     let data = `{"${this.key}":"press"}\n`;
     this.LayouterService.send(data + '\n')
+    this.nativeService.vibrate();
   }
 
   pressup(event) {
@@ -113,6 +118,7 @@ export class WidgetButtonComponent implements Layouter2Widget {
       this.pressed = false;
       let data = `{"${this.key}":"pressup"}\n`;
       this.LayouterService.send(data + '\n')
+      this.nativeService.vibrate();
     }
   }
 
@@ -126,7 +132,7 @@ export class WidgetButtonComponent implements Layouter2Widget {
       data = `{"${this.key}":"${this.custom}"}`;
     }
     this.LayouterService.send(data + '\n')
-    // this.nativeService.vibrate();
+    this.nativeService.vibrate();
   }
 
 }

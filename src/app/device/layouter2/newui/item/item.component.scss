@@ -1,0 +1,96 @@
+:host {
+    position: absolute;
+    width: calc(100% - 15px);
+    height: 80px;
+
+    &.red {
+        .icon-box {
+            color: rgb(185, 88, 88);
+        }
+    }
+
+    &.green {
+        .icon-box {
+            color: rgb(83, 172, 104);
+        }
+    }
+
+    &.dark {
+        .item-box {
+            color: #ccc;
+            border-top: 1px solid #777;
+
+            .text-box {
+                .title {
+                    color: #fff;
+                }
+            }
+        }
+    }
+
+    &.selected {
+        .item-box {
+            border-top: 1px solid transparent;
+            border-bottom: 1px solid #777;
+        }
+    }
+}
+
+.item-box {
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+    margin-left: 15px;
+    color: #666;
+    border-top: 1px solid #CCC;
+
+    .icon-box {
+        border-radius: 15px;
+        border: 2px #ccc solid;
+        height: 50px;
+        width: 50px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 22px;
+    }
+
+    .text-box {
+        margin-left: 15px;
+        display: flex;
+        flex-direction: column;
+
+        .title {
+            color: #333;
+            font-size: 16px;
+        }
+
+        .text {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+    }
+
+    .act-box {
+        position: absolute;
+        right: 30px;
+        font-size: 30px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        i {
+            position: absolute;
+        }
+    }
+}
+
+.fa-circle-check {
+    color: rgb(83, 172, 104);
+}
+
+.fa-xmark {
+    margin-right: 7px;
+    opacity: 0;
+}

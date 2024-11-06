@@ -43,7 +43,8 @@ export class DebugComponent {
     public renderer: Renderer2,
     public modalCtrl: ModalController,
     private debugService: DebugService,
-    private deviceService: DeviceService
+    private deviceService: DeviceService,
+    private nativeService:NativeService
   ) { }
 
   ngAfterViewInit() {
@@ -78,7 +79,6 @@ export class DebugComponent {
   send() {
     this.deviceService.sendData(this.device, this.sendmess);
     this.sendmess = '';
-    // this.nativeService.vibrate();
     this.scrollToBottom();
   }
 

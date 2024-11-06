@@ -16,10 +16,14 @@ import { ParentDynamicComponent } from './parentDynamic.component';
 import { ComponentsModule } from 'src/app/core/components/components.module';
 import { FormsModule } from '@angular/forms';
 import { WidgetMapComponent } from './widget-map/widget-map.component';
-import { WidgetTabComponent } from './widget-tab/widget-tab.component';
 import { WidgetInputComponent } from './widget-input/widget-input';
 import { WidgetImageComponent } from './widget-image/widget-image';
 import { ChartsModule } from 'src/app/core/charts/charts.module';
+import { WidgetCustomComponent } from './widget-custom/widget-custom';
+// import { NgxEchartsModule } from 'ngx-echarts';
+import { BToggleComponent } from 'src/app/core/components/b-toggle/b-toggle.component';
+import { BlinkerWidgetDirective } from './widget.directive';
+import { WidgetSelectComponent } from './widget-select/widget-select';
 
 @NgModule({
   declarations: [
@@ -35,9 +39,11 @@ import { ChartsModule } from 'src/app/core/charts/charts.module';
     WidgetTimerComponent,
     WidgetVideoComponent,
     WidgetMapComponent,
-    WidgetTabComponent,
     WidgetInputComponent,
-    WidgetImageComponent
+    WidgetImageComponent,
+    WidgetCustomComponent,
+    BlinkerWidgetDirective,
+    WidgetSelectComponent
   ],
   imports: [
     CommonModule,
@@ -45,7 +51,10 @@ import { ChartsModule } from 'src/app/core/charts/charts.module';
     PipesModule,
     ComponentsModule,
     FormsModule,
-    ChartsModule
+    ChartsModule,
+    // NgxEchartsModule.forRoot({
+    //   echarts: () => import('echarts'),
+    // }),
   ],
   exports: [
     WidgetTextComponent,
@@ -60,9 +69,9 @@ import { ChartsModule } from 'src/app/core/charts/charts.module';
     WidgetVideoComponent,
     ParentDynamicComponent,
     WidgetMapComponent,
-    WidgetTabComponent,
     WidgetInputComponent,
-    WidgetImageComponent
+    WidgetImageComponent,
+    WidgetCustomComponent
   ]
 })
 export class WidgetsModule { }

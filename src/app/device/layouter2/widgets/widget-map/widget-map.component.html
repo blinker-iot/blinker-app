@@ -1,9 +1,10 @@
-<div widget>
-  <div class="mapbox" #widgetmap></div>
+<div widget  >
+  <div class="mapbox" id="map-container" #widgetMap></div>
   <div class="bottom-box">
     <div class="address">
       {{address}}
     </div>
+    <!-- <i class="fal fa-route"></i> -->
     <i class="fal fa-location-circle" (click)="gotoNav()"></i>
   </div>
 </div>

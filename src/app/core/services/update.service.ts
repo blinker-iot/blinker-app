@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
-// import { CodePush, InstallMode } from '@ionic-native/code-push/ngx';
+// import { CodePush, InstallMode } from '@awesome-cordova-plugins/code-push/ngx';
 import { AlertController, Platform } from '@ionic/angular';
-import { AppVersion } from '@ionic-native/app-version/ngx';
-import { FileOpener } from '@ionic-native/file-opener/ngx';
+// import { AppVersion } from '@awesome-cordova-plugins/app-version/ngx';
+// import { FileOpener } from '@awesome-cordova-plugins/file-opener/ngx';
 import { HttpClient } from '@angular/common/http';
-import { FileTransfer, FileTransferObject } from '@ionic-native/file-transfer/ngx';
-import { File } from '@ionic-native/file/ngx';
+// import { FileTransfer, FileTransferObject } from '@awesome-cordova-plugins/file-transfer/ngx';
+// import { File } from '@awesome-cordova-plugins/file/ngx';
 import { CONFIG } from 'src/app/configs/app.config';
+import { App } from '@capacitor/app';
 
 @Injectable({
   providedIn: 'root'
@@ -17,30 +18,39 @@ export class UpdateService {
   currentVersion;
   hasNewVersion;
 
+  info;
+
   constructor(
     // private codePush: CodePush,
-    private appVersion: AppVersion,
-    private file: File,
-    private fileOpener: FileOpener,
+    // private appVersion: AppVersion,
+    // private file: File,
+    // private fileOpener: FileOpener,
+    // private fileTransfer: FileTransfer,
     private alertCtrl: AlertController,
     private http: HttpClient,
-    private fileTransfer: FileTransfer,
     private platform: Platform,
   ) { }
 
-  checkUpdate() {
-    this.checkApkUpdate().then(result => {
-      if (result) {
-        this.hasNewVersion = true
-        this.showConfirm(this.lastApk);
-      } else {
-        // try {
-        //   this.checkCodePush()
-        // } catch (error) {
-        //   console.log('code push bei qiang');
-        // }
-      }
+  init(){
+    App.getInfo().then(info => {
+      this.info = info;
+      this.currentVersion = info.version;
     })
+  }
+
+  checkUpdate() {
+    // this.checkApkUpdate().then(result => {
+    //   if (result) {
+    //     this.hasNewVersion = true
+    //     this.showConfirm(this.lastApk);
+    //   } else {
+    //     // try {
+    //     //   this.checkCodePush()
+    //     // } catch (error) {
+    //     //   console.log('code push bei qiang');
+    //     // }
+    //   }
+    // })
   }
 
 
@@ -88,18 +98,18 @@ export class UpdateService {
     return new Promise((reslove, reject) => { reslove(false) })
   }
 
-  checkApkUpdate(): Promise<boolean> {
-    return new Promise<boolean>(
-      async (resolve) => {
-        if (this.platform.is('ios')) resolve(false);
-        this.currentVersion = await this.appVersion.getVersionNumber();
-        this.lastApk = await this.http.get(CONFIG.UPDATE_FILE).toPromise();
-        if (this.toNum(this.lastApk.version) > this.toNum(this.currentVersion)) {
-          return resolve(true);
-        } else {
-          return resolve(false);
-        }
-      })
+  checkApkUpdate() {
+    // return new Promise<boolean>(
+    //   async (resolve) => {
+    //     if (this.platform.is('ios')) resolve(false);
+    //     this.currentVersion = await this.appVersion.getVersionNumber();
+    //     this.lastApk = await this.http.get(CONFIG.UPDATE_FILE).toPromise();
+    //     if (this.toNum(this.lastApk.version) > this.toNum(this.currentVersion)) {
+    //       return resolve(true);
+    //     } else {
+    //       return resolve(false);
+    //     }
+    //   })
   }
 
   toNum(version: string) {
@@ -130,24 +140,24 @@ export class UpdateService {
   }
 
   downloadApk(url) {
-    let path = this.file.externalDataDirectory + 'lastblinker.apk';
-    // let path = this.file.externalRootDirectory + `download/blinker-${version}.apk`;
-    const fileTransfer: FileTransferObject = this.fileTransfer.create();
-    fileTransfer.onProgress(progressEvent => {
-      var present = new Number((progressEvent.loaded / progressEvent.total) * 100);
-      console.log('当前进度为：' + present.toFixed(0));
-      // var presentInt = present.toFixed(0);
-      // this.loadingService.presentProgress(presentInt);
-    });
-    fileTransfer.download(url, path).then((entry) => {
-      console.log('download complete: ' + entry.toURL());
+    // let path = this.file.externalDataDirectory + 'lastblinker.apk';
+    // // let path = this.file.externalRootDirectory + `download/blinker-${version}.apk`;
+    // const fileTransfer: FileTransferObject = this.fileTransfer.create();
+    // fileTransfer.onProgress(progressEvent => {
+    //   var present = new Number((progressEvent.loaded / progressEvent.total) * 100);
+    //   console.log('当前进度为：' + present.toFixed(0));
+    //   // var presentInt = present.toFixed(0);
+    //   // this.loadingService.presentProgress(presentInt);
+    // });
+    // fileTransfer.download(url, path).then((entry) => {
+    //   console.log('download complete: ' + entry.toURL());
 
-      this.fileOpener.open(entry.toURL(), "application/vnd.android.package-archive")
-        .then(() => console.log('打开apk包成功！'))
-        .catch(e => console.warn('打开apk包失败！', e));
+    //   this.fileOpener.open(entry.toURL(), "application/vnd.android.package-archive")
+    //     .then(() => console.log('打开apk包成功！'))
+    //     .catch(e => console.warn('打开apk包失败！', e));
 
-    }, (error) => {
-      // handle error
-    });
+    // }, (error) => {
+    //   // handle error
+    // });
   }
 }

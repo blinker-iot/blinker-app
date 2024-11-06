@@ -1,7 +1,7 @@
 {
-  "name": "blinker-app",
+  "name": "diandeng-app",
   "integrations": {
-    "cordova": {}
+    "capacitor": {}
   },
   "type": "angular"
 }

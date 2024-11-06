@@ -1,0 +1,17 @@
+<div setting-title>
+  选择设置
+</div>
+<div setting-item *ngFor="let opt of widget.opts;index as i">
+  <div item-name>选项{{i+1}}</div>
+  <div input-box>
+    <input placeholder="数据值" type="text" [(ngModel)]="opt.value">
+    <input placeholder="显示名" style="border-right: none !important" type="text" [(ngModel)]="opt.name">
+    <color-picker [(value)]="opt.clr"></color-picker>
+  </div>
+</div>
+<div setting-item *ngIf="widget.opts.length<10">
+  <div item-name></div>
+  <div class="add-btn" (click)="addItem()">
+    添加选项
+  </div>
+</div>

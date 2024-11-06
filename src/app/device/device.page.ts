@@ -1,24 +1,25 @@
-import { Component, OnInit, ComponentFactoryResolver, ViewChild, ViewContainerRef, Type, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewContainerRef, ChangeDetectorRef } from '@angular/core';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { ActivatedRoute } from '@angular/router';
 import { ModalController } from '@ionic/angular';
-import { Mode } from './layouter2/layouter2-mode';
 import { Observable, of } from 'rxjs';
 import { ViewService } from 'src/app/core/services/view.service';
 import { DebugService } from 'src/app/debug/debug.service';
 import { DebugComponent } from 'src/app/debug/debug.component';
-import { deviceComponentDict } from 'src/app/configs/components.config';
-import { LayouterService } from './layouter.service';
 import { BlinkerDevice } from '../core/model/device.model';
 import { DataService } from '../core/services/data.service';
 import { DeviceConfigService } from '../core/services/device-config.service';
-
-declare var window;
+// import { Customizer } from './customizer/customizer.component';
+import { Layouter2Component } from './layouter2/layouter2';
+import { Layouter2Service } from './layouter2/layouter2.service';
+import { ConfigEditorComponent } from './layouter2/config-editor/config-editor.component';
+import { Layouter2Data } from './layouter2/layouter.interface';
+import { LayouterVersion } from './layouter2/layouter.config';
 
 @Component({
   selector: 'app-device',
   templateUrl: './device.page.html',
-  styleUrls: ['./device.page.scss'],
+  styleUrls: ['./device.page.scss']
 })
 export class DevicePage implements OnInit {
 
@@ -31,7 +32,8 @@ export class DevicePage implements OnInit {
 
   deviceConfig;
 
-  headerStyle = 'dark';
+  showGuide = false;
+  willCloseGuide = false;
 
   get isSharedDevice() {
     return this.device.config.isShared
@@ -41,16 +43,37 @@ export class DevicePage implements OnInit {
     return this.device.config.isDiy
   }
 
-  get layouterData() {
-    return this.device.data.layouterData
-  }
-
-  editMode = false;
   deviceComponentRef;
 
   deviceComponent;
 
   deviceSubject;
+
+  showState = false
+
+  get mode(): any {
+    return this.layouter2Service.mode
+  }
+
+  set mode(mode: any) {
+    this.layouter2Service.mode = mode
+  }
+
+  get layouterData(): Layouter2Data {
+    return this.layouter2Service.layouterData
+  }
+
+  get headerCss() {
+    if (this.mode == 1)
+      return {
+        "color": "#666"
+      }
+    return this.layouter2Service.headerCss
+  }
+
+  debug() {
+    console.log(this.layouterData);
+  }
 
   @ViewChild("deviceView", { read: ViewContainerRef, static: false }) deviceViewContainer: ViewContainerRef;
 
@@ -59,18 +82,17 @@ export class DevicePage implements OnInit {
     public deviceService: DeviceService,
     private dataService: DataService,
     private viewService: ViewService,
-    private componentFactoryResolver: ComponentFactoryResolver,
     private deviceConfigService: DeviceConfigService,
     private debugService: DebugService,
     private modalCtrl: ModalController,
-    private LayouterService: LayouterService,
+    private layouter2Service: Layouter2Service,
     private cd: ChangeDetectorRef,
   ) { }
 
   ngOnInit() {
     this.activatedRoute.params.subscribe(params => {
       this.id = params['id']
-      console.log('load device:' + this.id);
+      console.log('load device: ' + this.id);
     })
     this.initCompleted = this.dataService.initCompleted.subscribe(state => {
       if (state) {
@@ -88,26 +110,18 @@ export class DevicePage implements OnInit {
       }
     });
     this.debugService.init();
-    this.LayouterService.action.subscribe(act => {
-      if (act.name == 'changeMode') {
-        if (act.data == Mode.Default) {
-          this.editMode = false
-        } else {
-          this.editMode = true
-        }
+
+    this.layouter2Service.action.subscribe(act => {
+      switch (act.name) {
+        case 'showGuide':
+          setTimeout(() => {
+            this.showGuide = true
+          }, 500);
+          break;
+        default:
+          break;
       }
     })
-    // 加载layouter指定的headerStyle
-    this.LayouterService.updateConfig.subscribe(() => {
-      // console.log('updateConfig');
-      if (typeof this.device.data != 'undefined')
-        if (typeof this.device.data['layouterData'] != 'undefined')
-          if (typeof this.device.data['layouterData']['config'] != 'undefined')
-            setTimeout(() => {
-              this.headerStyle = this.device.data['layouterData']['config'].headerStyle
-            })
-    })
-
   }
 
   ngOnDestroy() {
@@ -132,6 +146,7 @@ export class DevicePage implements OnInit {
         this.deviceService.checkDeviceVersion(this.device)
       }, 2000);
   }
+
   customizerUrl;
   loadDevice() {
     this.deviceConfigService.loaded.subscribe(loaded => {
@@ -141,34 +156,19 @@ export class DevicePage implements OnInit {
           this.deviceComponent = 'Layouter2';
         else
           this.deviceComponent = this.deviceConfig.component;
-        if (this.deviceComponent.indexOf('Customizer?') > -1) {
-          this.customizerUrl = this.deviceComponent.substr(11)
-          console.log(this.customizerUrl);
-          this.deviceComponent = 'Customizer'
-        }
         console.log('load component:' + this.deviceComponent);
-
-        let factoryClass = deviceComponentDict[this.deviceComponent]
-        let componentFactory = this.componentFactoryResolver.resolveComponentFactory(factoryClass);
-        this.deviceComponentRef = this.deviceViewContainer.createComponent(componentFactory);
-        this.deviceComponentRef.instance.device = this.device;
-
+        if (this.deviceComponent == 'Layouter2') {
+          this.deviceComponentRef = this.deviceViewContainer.createComponent(Layouter2Component);
+          this.deviceComponentRef.instance.device = this.device;
+          this.layouter2Service.init(this.device)
+        }
         // Customizer数据加载
-        if (this.deviceComponent == 'Customizer') {
-          this.deviceComponentRef.instance.customizerUrl = this.customizerUrl;
-        }
-        // Layouter2数据加载
-        else if (this.deviceComponent.indexOf('Layouter') > -1) {
-          let layouterData;
-
-          if (typeof this.deviceConfig.layouter != 'undefined') {
-            layouterData = this.deviceConfig.layouter;
-          } else {
-            layouterData = this.device.config.layouter;
-          }
-          this.deviceComponentRef.instance.layouterData = layouterData;
-        }
-        this.headerStyle = this.deviceConfig.headerStyle
+        // else if (this.deviceComponent.indexOf('Customizer?') > -1) {
+        //   this.customizerUrl = this.deviceComponent.substr(11)
+        //   this.deviceComponentRef = this.deviceViewContainer.createComponent(Customizer);
+        //   this.deviceComponentRef.instance.customizerUrl = this.customizerUrl;
+        //   this.deviceComponentRef.instance.device = this.device;
+        // }
       }
     })
   }
@@ -181,13 +181,14 @@ export class DevicePage implements OnInit {
       await this.deviceService.connectDevice(this.device);
     }
     clearInterval(this.heartbeatTimer);
-    // window.clearTimeout(this.heartbeatTimer2);
-    // if (this.device.config.mode == "ble") return;
     setTimeout(() => {
       this.deviceService.queryDevice(this.device);
-    }, this.device.config.mode == "mqtt" ? 10 : 1000)
+    }, this.device.config.mode == "mqtt" ? 100 : 1000)
+    setTimeout(() => {
+      this.showState = true
+    }, this.device.config.mode == "mqtt" ? 200 : 2000);
     // 心跳连接
-    this.heartbeatTimer = window.setInterval(() => {
+    this.heartbeatTimer = setInterval(() => {
       this.deviceService.queryDevice(this.device);
     }, this.device.config.mode == "mqtt" ? 59001 : 29001)
 
@@ -199,23 +200,20 @@ export class DevicePage implements OnInit {
   }
 
   lock() {
-    this.LayouterService.changeMode(Mode.Default)
-    // this.editMode = false;
+    // this.layouter3Service.exitEditMode()
+    this.layouter2Service.exitEditMode()
     this.saveLayouterData();
   }
 
   oldLayouterData;
   unlock() {
-    if (this.deviceComponent.indexOf('Layouter') > -1)
-      this.LayouterService.changeMode(Mode.Edit)
-    // else
-    //   this.layouterService.changeMode(newMode.EditWidget)
-    // this.editMode = true;
-    this.oldLayouterData = JSON.stringify(this.device.data['layouterData']);
+    this.layouter2Service.enterEditMode()
+    this.oldLayouterData = JSON.stringify(this.layouterData);
   }
 
   saveLayouterData() {
-    let data = JSON.stringify(this.device.data['layouterData']);
+    this.layouterData.version = LayouterVersion;
+    let data = JSON.stringify(this.layouterData);
     if (this.oldLayouterData == data) return;
     let layouterConfig = {
       "layouter": data
@@ -226,15 +224,23 @@ export class DevicePage implements OnInit {
   }
 
   editBackground() {
-    this.LayouterService.changeMode(Mode.EditBackground)
+    this.layouter2Service.editBackground()
   }
 
   cleanWidgets() {
-    this.LayouterService.cleanWidgets()
+    this.layouter2Service.cleanWidgets()
   }
 
-  canDeactivate(): Observable<boolean> | boolean {
-    if (!this.editMode) return true;
+  canDeactivate(): Observable<boolean> | Promise<boolean> | boolean {
+    if (this.showGuide) {
+      return new Promise<boolean>((resolve, reject) => {
+        this.willCloseGuide = true
+        setTimeout(() => {
+          resolve(true)
+        }, 300);
+      })
+    }
+    if (this.mode == 0) return true;
     if (!this.deviceComponentRef.instance.isChanged) return true;
     return this.confirm();
   }
@@ -247,6 +253,7 @@ export class DevicePage implements OnInit {
   clickTime = 0;
   timer;
   enterDebug() {
+    this.debug()
     clearTimeout(this.timer);
     if (this.clickTime != 0) {
       this.timer = setTimeout(() => {
@@ -264,10 +271,35 @@ export class DevicePage implements OnInit {
     const modal = await this.modalCtrl.create({
       component: DebugComponent,
       backdropDismiss: false,
+      initialBreakpoint: 1,
+      breakpoints: [1],
       componentProps: {
         'device': this.device,
       }
     });
+    modal.present();
+  }
+
+  closeGuide() {
+    console.log('closeGuide');
+
+    this.willCloseGuide = true
+    setTimeout(() => {
+      this.showGuide = false
+    }, 300);
+  }
+
+
+  // openConfigEditor() {
+  //   this.layouter2Service.openConfigEditor()
+  // }
+
+  async openConfigEditor() {
+    let modal = await this.modalCtrl.create({
+      component: ConfigEditorComponent,
+      initialBreakpoint: 0.3,
+      breakpoints: [0.3, 0.5, 1]
+    })
     modal.present();
   }
 

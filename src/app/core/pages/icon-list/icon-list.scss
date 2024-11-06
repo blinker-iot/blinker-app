@@ -1,3 +1,7 @@
+.fa-times {
+    color: #FFF;
+}
+
 .text-box {
     font-size: 14px;
     padding: 15px;
@@ -16,11 +20,12 @@
     font-size: 14px;
     z-index: 99;
 
-    .text{
+    .text {
         position: absolute;
         top: 15px;
         left: 15px;
-        span{
+
+        span {
             margin-left: 15px;
             color: #BBB;
             font-size: 12px;
@@ -49,6 +54,7 @@
     display: flex;
     flex-direction: column;
     border-bottom: 1px solid #ddd;
+
     .title {
         font-size: 14px;
         margin-top: 15px;
@@ -74,6 +80,7 @@
     align-items: center;
     justify-content: center;
     color: #389bee;
+
     i {
         font-size: 32px;
     }

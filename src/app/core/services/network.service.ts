@@ -1,5 +1,7 @@
+// 需修复 12.27
+
 import { Injectable } from '@angular/core';
-import { Network } from '@ionic-native/network/ngx';
+// import { Network } from '@awesome-cordova-plugins/network/ngx';
 import { Platform } from '@ionic/angular';
 import { DeviceService } from './device.service';
 import { BehaviorSubject } from 'rxjs';
@@ -18,7 +20,7 @@ export class NetworkService {
   watchNetworkTimer;
 
   constructor(
-    private network: Network,
+    // private network: Network,
     private platform: Platform,
     private deviceService: DeviceService,
     private dataService: DataService,
@@ -40,19 +42,19 @@ export class NetworkService {
   }
 
   watch() {
-    this.connectSubscription = this.network.onConnect().subscribe(() => {
-      // console.log('当前网络状态：' + this.network.type);
-      window.clearTimeout(this.watchNetworkTimer)
-      this.watchNetworkTimer = window.setTimeout(() => {
-        if (this.network.type != 'none') {
-          // this.deviceService.disconnectMqttBrokers();
-          // this.deviceService.connectMqttBrokers();
-          this.deviceService.scanMdnsDevice();
-          // this.noticeService.showToast('connected');
-          this.stateWatcher.next(this.network.type);
-        }
-      }, 2900);
-    });
+    // this.connectSubscription = this.network.onConnect().subscribe(() => {
+    //   // console.log('当前网络状态：' + this.network.type);
+    //   window.clearTimeout(this.watchNetworkTimer)
+    //   this.watchNetworkTimer = window.setTimeout(() => {
+    //     if (this.network.type != 'none') {
+    //       // this.deviceService.disconnectMqttBrokers();
+    //       // this.deviceService.connectMqttBrokers();
+    //       this.deviceService.scanMdnsDevice();
+    //       // this.noticeService.showToast('connected');
+    //       this.stateWatcher.next(this.network.type);
+    //     }
+    //   }, 2900);
+    // });
   }
 
   unWatch() {

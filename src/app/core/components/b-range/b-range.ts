@@ -34,7 +34,6 @@ export class BRangeComponent {
       return this.bar.nativeElement.clientWidth;
     }
   }
-  moveX;
 
   isMoving = false
 

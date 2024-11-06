@@ -1,0 +1,11 @@
+<div class="number-input">
+  <input type="text" [(ngModel)]="value" (ngModelChange)="change($event)">
+  <div class="btn-box">
+    <div class="btn" (click)="minus()">
+      <i class="fa-light fa-minus"></i>
+    </div>
+    <div class="btn" (click)="plus()">
+      <i class="fa-light fa-plus-large"></i>
+    </div>
+  </div>
+</div>

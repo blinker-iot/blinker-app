@@ -1,0 +1,27 @@
+.color-picker {
+    position: relative;
+    height: 40px;
+    display: flex;
+    align-items: center;
+
+    .btn-box {
+        position: absolute;
+        right: 0;
+    }
+
+    ngx-colors {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-left: 1px solid #CCC;
+    }
+
+    input {
+        padding-left: 10px;
+        height: 100%;
+        width: 100%;
+        text-align: left;
+    }
+}

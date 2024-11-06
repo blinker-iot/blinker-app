@@ -1,11 +1,8 @@
 // 数据服务
 // 用于服务和组件间共享数据、数据加载与初始化
 import { Injectable } from '@angular/core';
-import { Storage } from '@ionic/storage';
 import { BehaviorSubject, Subject } from 'rxjs';
-import CryptoJS from 'crypto-js';
-import { getDeviceId, randomId } from '../functions/func';
-import { BlinkerBroker } from '../model/broker.model';
+import { getDeviceId } from '../functions/func';
 import { API, BROKER_HOST } from 'src/app/configs/api.config';
 import { AuthData, UserData, OrderData, ShareDate } from '../model/data.model';
 
@@ -54,7 +51,7 @@ export class DataService {
     hasProDevice = false;
 
     constructor(
-        private storage: Storage,
+        // private storage: Storage,
     ) { }
 
     async init() {
@@ -62,18 +59,18 @@ export class DataService {
     }
 
     async loadAuthData() {
-        let auth = await this.storage.get('auth')
-        if (auth != null) {
-            this.auth = auth
+        let auth = localStorage.getItem('auth')
+        if (auth != null && auth != '') {
+            this.auth = JSON.parse(auth)
         }
     }
 
     saveAuthData() {
-        this.storage.set('auth', this.auth);
+        localStorage.setItem('auth', JSON.stringify(this.auth))
     }
 
     removeAuthData() {
-        this.storage.remove('auth');
+        localStorage.setItem('auth', '')
         this.auth = null;
         this.initCompleted.next(false);
         this.firstBoot = true;
@@ -202,6 +199,7 @@ export class DataService {
         for (let broker of brokers) {
             // 不再适配onenet
             if (broker.vender == 'onenet') continue
+            if (broker.vender == 'aliyun') continue
             if (typeof this.brokers != 'undefined' && typeof this.brokers.dict[broker.vender] != 'undefined' && !this.firstBoot) {
                 newBrokers[broker.vender] = this.brokers.dict[broker.vender]
                 // 点灯broker每次刷新都会生成新的username、password，这里替换为新username、password
@@ -211,17 +209,7 @@ export class DataService {
                 }
             } else if (broker.vender == "blinker") {
                 newBrokers['blinker'] = this.initBlinkerBroker(broker)
-            } else if (broker.vender == "aliyun") {
-                newBrokers['aliyun'] = this.initAliyunBroker(broker);
             }
-
-            // if (broker.vender == "blinker" && this.brokers.dict[broker.vender] != 'undefined') {
-            //     newBrokers['blinker'].client.options.password = this.initBlinkerBroker(broker).options.password
-            //     // newBrokers['blinker'].options = this.initBlinkerBroker(broker).options
-            // }
-            // else if (broker.vender == "onenet") {
-            //     newBrokers['blinker'] = this.initBlinkerBroker(broker)
-            // }
         }
         return newBrokers
     }
@@ -230,6 +218,7 @@ export class DataService {
         let brokerArray = []
         for (let broker of brokers) {
             if (broker.vender == 'onenet') continue
+            if (broker.vender == 'aliyun') continue
             brokerArray.push(broker.vender)
         }
         return brokerArray
@@ -262,48 +251,6 @@ export class DataService {
         return {
             vender: "blinker",
             host: BROKER_HOST,
-            options: options,
-            topic: topic,
-            dataTemplate: dataTemplate,
-            connected: new BehaviorSubject(false)
-        }
-    }
-
-    initAliyunBroker(broker): BlinkerBroker {
-        let clientId = randomId();
-        let productKey = broker.productKey;
-        let deviceName = broker.deviceName;
-        let timestamp = "789";
-        let deviceSecret = broker.deviceSecret;
-        let mqttClientId = clientId + '|securemode=2,signmethod=hmacsha1,timestamp=789|';
-        let mqttusername = deviceName + '&' + productKey;
-        let message = "clientId" + clientId + "deviceName" + deviceName + "productKey" + productKey + "timestamp" + timestamp;
-        let mqttpassword = CryptoJS.HmacSHA1(message, deviceSecret).toString();
-        let mqttHost = broker.url;
-        let options = {
-            keepalive: 65,
-            clientId: mqttClientId,
-            protocolId: 'MQTT',
-            protocolVersion: 4,
-            clean: true,
-            reconnectPeriod: 1000,
-            connectTimeout: 30 * 1000,
-            username: mqttusername,
-            password: mqttpassword,
-        }
-        let dataTemplate = {
-            fromDevice: broker.deviceName,
-            toDevice: '',
-            deviceType: '',
-            data: ''
-        }
-        let topic = {
-            receive: '/' + broker.productKey + '/' + broker.deviceName + '/r',
-            send: '/' + broker.productKey + '/' + broker.deviceName + '/s',
-        }
-        return {
-            vender: "aliyun",
-            host: mqttHost,
             options: options,
             topic: topic,
             dataTemplate: dataTemplate,

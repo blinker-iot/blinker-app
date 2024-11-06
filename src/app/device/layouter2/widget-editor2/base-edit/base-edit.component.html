@@ -1,0 +1,29 @@
+<!-- <div setting-title>
+  基础设置
+</div> -->
+<div setting-item>
+  <div item-name>组件键名</div>
+  <div input-box>
+    <input type="text" [(ngModel)]="widget.key">
+  </div>
+</div>
+<!-- <div setting-item>
+  <div item-name>位置</div>
+  <div input-box>
+    <double-number-input [(value)]="widget.x" [(value2)]="widget.y" (valueChange)="valueChange()"
+      (value2Change)="valueChange()"></double-number-input>
+  </div>
+</div> -->
+<div setting-item *ngIf="widget.type=='tex'">
+  <div item-name>长高</div>
+  <div input-box>
+    <double-number-input [(value)]="widget.cols" [valueMin]="2" [valueMax]="8" [(value2)]="widget.rows" [value2Min]="1"
+      [value2Max]="8" (valueChange)="valueChange()" (value2Change)="valueChange()" [mode]="2"></double-number-input>
+  </div>
+</div>
+<div setting-item *ngIf="widget.type!='cha'">
+  <div item-name>标题</div>
+  <div input-box>
+    <input [(ngModel)]="widget.tit">
+  </div>
+</div>

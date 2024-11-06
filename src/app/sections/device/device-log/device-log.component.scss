@@ -1,0 +1,38 @@
+.log-box {
+    padding: 5px 15px;
+
+    .header {
+        font-weight: bold;
+
+        >div {
+            text-align: center;
+        }
+    }
+
+    .line {
+        display: flex;
+        position: relative;
+        margin-top: 5px;
+
+        >div {
+            font-size: 12px;
+
+            &:first-child {
+                color: #666;
+                width: 35%;
+            }
+
+            &:nth-child(2) {
+                color: #3171e0;
+                // margin-left: 5px;
+                width: 15%;
+            }
+
+            &:last-child {
+                color: #333;
+                margin-left: 5px;
+                width: 52%;
+            }
+        }
+    }
+}

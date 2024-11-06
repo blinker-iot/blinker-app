@@ -1,0 +1,24 @@
+.check-list {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    height: 100%;
+    width: 105px;
+
+    .item {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 5px;
+        border: 1px solid #CCC;
+        height: 35px;
+        width: 35px;
+        color: #666;
+
+        &.selected {
+            background-color: #389bee;
+            color: #FFF;
+        }
+    }
+}

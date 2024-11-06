@@ -1,34 +1,21 @@
-<div widget [ngClass]="{'flex-row-box': lstyle==2 || lstyle==3}">
-  <div class="jj-box jj-box2" *ngIf="lstyle==3">
-    <div class="jj-btn" (click)="jian()">
-      <i class="fal fa-minus"></i>
-    </div>
-  </div>
-  <div class="rangebox" #rangbox [ngClass]="{'full': lstyle==2||lstyle==3||lstyle==4||lstyle==5}">
-    <div class="textbox">
-      <span>{{t0}}</span>
-      <span>{{value}}</span>
-    </div>
-    <b-range [min]="min" [max]="max" [(value)]="value" (valueChange)="sendData($event)" [barcolor]="'#D8D8D8'"
-      [activecolor]="color">
-      <div class="textbox top" [ngStyle]="{'width': textBoxWidth}">
-        <span>{{t0}}</span>
-        <span>{{value}}</span>
+<div widget >
+  <div widget-name>{{widget.tit}}</div>
+  <div widget-content class="range-box">
+    <div class="slider" [ngClass]="{'slider':direction == 'x' , 'slider-y':direction == 'y'}">
+      <div class="bar" #bar [ngStyle]="{'background':color2}">
+        <div class="text-box" [ngStyle]="{'color':color}">
+          <div class="text"><i class="{{ico}}" [ngStyle]="{'color':color}"></i></div>
+          <div class="value">{{value}}</div>
+        </div>
+        <div class="activebar" [ngStyle]="{'background':color}" #barActive>
+          <div class="text-box" [ngStyle]="{'width': textBoxWidth}">
+            <div class="text"><i class="{{ico}}" [ngStyle]="{'color':'#FFF'}"></i></div>
+            <div class="value">{{value}}</div>
+          </div>
+        </div>
       </div>
-    </b-range>
-  </div>
-  <!-- 加减按键 -->
-  <div class="jj-box" *ngIf="lstyle==2">
-    <div class="jj-btn" (click)="jia()">
-      <i class="fal fa-plus"></i>
-    </div>
-    <div class="jj-btn" (click)="jian()">
-      <i class="fal fa-minus"></i>
-    </div>
-  </div>
-  <div class="jj-box  jj-box2" *ngIf="lstyle==3">
-    <div class="jj-btn" (click)="jia()">
-      <i class="fal fa-plus"></i>
+      <div class="layer" (tap)="tapEvent($event)" (panstart)="panstartEvent($event)" (panmove)="panmoveEvent($event)"
+        (panend)="panendEvent($event)" #touchBar></div>
     </div>
   </div>
 </div>

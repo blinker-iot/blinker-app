@@ -1,10 +1,10 @@
 <ion-app [ngClass]="{'pwa': isPWA}">
   <ion-router-outlet [swipeGesture]="swipeEnable"></ion-router-outlet>
-  <div tip-box>
-    <b-tip [tip]="tip" *ngFor="let tip of tipList"></b-tip>
-  </div>
-  <div toast-box>
-    <b-toast [toast]="toast" *ngFor="let toast of toastList"></b-toast>
-  </div>
-  <audio autoplay="autoplay" #audio></audio>
 </ion-app>
+<div tip-box>
+  <b-tip [tip]="tip" *ngFor="let tip of tipList"></b-tip>
+</div>
+<div toast-box>
+  <b-toast [toast]="toast" *ngFor="let toast of toastList"></b-toast>
+</div>
+<audio autoplay="autoplay" #audio></audio>

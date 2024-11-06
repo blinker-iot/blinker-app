@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { OpenNativeSettings } from '@ionic-native/open-native-settings/ngx';
+// import { OpenNativeSettings } from '@awesome-cordova-plugins/open-native-settings/ngx';
 import { ModalController } from '@ionic/angular';
 
 @Component({
@@ -16,7 +16,7 @@ export class IosGuideComponent implements OnInit {
   @Input() deviceType = '';
 
   constructor(
-    private openNativeSettings: OpenNativeSettings,
+    // private openNativeSettings: OpenNativeSettings,
     private modalCtrl: ModalController
   ) { }
 
@@ -24,7 +24,7 @@ export class IosGuideComponent implements OnInit {
 
 
   openWifiSetting() {
-    this.openNativeSettings.open("wifi");
+    // this.openNativeSettings.open("wifi");
   }
 
   close() {

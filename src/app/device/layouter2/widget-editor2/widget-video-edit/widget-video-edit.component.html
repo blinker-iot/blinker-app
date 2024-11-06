@@ -1,0 +1,36 @@
+<div setting-item>
+  <div item-name>URL</div>
+  <div input-box>
+    <input type="text" placeholder={{widget.url}} [(ngModel)]="widget.url">
+  </div>
+</div>
+<div setting-item>
+  <div item-name>视频流</div>
+  <div item-item class="btnmode player">
+    <div [ngClass]="{'selected':widget.str=='mjpg'}" (click)="choseStream('mjpg')">
+      <i *ngIf="widget.str=='mjpg'" class="fal fa-check-square"></i>
+      <i *ngIf="widget.str!='mjpg'" class="fal fa-square"></i>
+      mjpg
+    </div>
+    <div class="item2" [ngClass]="{'selected':widget.str=='hls'}" (click)="choseStream('hls')">
+      <i *ngIf="widget.str=='hls'" class="fal fa-check-square"></i>
+      <i *ngIf="widget.str!='hls'" class="fal fa-square"></i>
+      hls
+    </div>
+  </div>
+</div>
+<div setting-item *ngIf="widget.str=='hls'">
+  <div item-name>自动播放</div>
+  <div item-item class="btnmode player">
+    <div [ngClass]="{'selected':widget.mode==0}" (click)="chosePlayMode(0)">
+      <i *ngIf="widget.mode==0" class="fal fa-check-square"></i>
+      <i *ngIf="widget.mode!=0" class="fal fa-square"></i>
+      自动播放
+    </div>
+    <div class="item2" [ngClass]="{'selected':widget.mode==1}" (click)="chosePlayMode(1)">
+      <i *ngIf="widget.mode==1" class="fal fa-check-square"></i>
+      <i *ngIf="widget.mode!=1" class="fal fa-square"></i>
+      手动播放
+    </div>
+  </div>
+</div>

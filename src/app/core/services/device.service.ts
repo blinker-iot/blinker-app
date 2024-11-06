@@ -1,7 +1,9 @@
+// 需修复 12.27
+
 import { Injectable } from '@angular/core';
 import { Platform } from '@ionic/angular';
-import { Zeroconf } from '@awesome-cordova-plugins/zeroconf/ngx';
-import { BLE } from '@awesome-cordova-plugins/ble/ngx';
+// import { Zeroconf } from '@awesome-cordova-plugins/zeroconf/ngx';
+// import { BLE } from '@awesome-cordova-plugins/ble/ngx';
 import {
   transcoding,
   str2ab,
@@ -81,9 +83,9 @@ export class DeviceService {
 
   constructor(
     private http: HttpClient,
-    private zeroconf: Zeroconf,
     private plt: Platform,
-    private ble: BLE,
+    // private zeroconf: Zeroconf,
+    // private ble: BLE,
     private dataService: DataService,
     private permissionService: PermissionService,
     private debugService: DebugService,
@@ -109,9 +111,6 @@ export class DeviceService {
 
   connectMqttBrokers() {
     for (let verder of this.brokerDataList) {
-      // console.log(verder);
-      // console.log(this.brokerDataDict[verder]);
-
       if (typeof this.brokerDataDict[verder].client == 'undefined') {
         // console.log("第一次创建");
         this.connectMqttBroker(this.brokerDataDict[verder])
@@ -226,8 +225,6 @@ export class DeviceService {
     // 调试用
     if (JSON.stringify(mqttJson.data) != '{"get":"state"}')
       console.log(`mqtt send:\n${JSON.stringify(mqttJson)}`);
-
-    // 
 
     broker.client.publish(broker.topic.send, JSON.stringify(mqttJson), { qos: 0 })
     this.send2debug(device, 'send', message);
@@ -368,67 +365,67 @@ export class DeviceService {
     }
     this.lanDeviceList = {};
 
-    if (this.plt.is('android')) {
-      this.zeroconf.watchAddressFamily = 'ipv4';
-      await this.zeroconf.reInit();
-    }
-    this.zeroconf.watch(this.protocol, 'local.').subscribe(result => {
-      // console.log(result);
-      if (typeof result.service.txtRecord.mac == 'string')
-        if ((!(result.service.name in this.lanDeviceList)) && (result.service.ipv4Addresses.length > 0)) {
-          let device = {
-            client: new Object,
-            state: 'disconnected',
-            ip: result.service.ipv4Addresses[0],
-          }
-          this.lanDeviceList[result.service.name] = device
-          this.lanDeviceList[result.service.txtRecord.mac] = device
-        }
-    });
-    setTimeout(() => {
-      console.log("mdns devices:");
-      console.log(this.lanDeviceList);
-      this.zeroconf.close();
-    }, 30000);
+    // if (this.plt.is('android')) {
+    //   this.zeroconf.watchAddressFamily = 'ipv4';
+    //   await this.zeroconf.reInit();
+    // }
+    // this.zeroconf.watch(this.protocol, 'local.').subscribe(result => {
+    //   // console.log(result);
+    //   if (typeof result.service.txtRecord.mac == 'string')
+    //     if ((!(result.service.name in this.lanDeviceList)) && (result.service.ipv4Addresses.length > 0)) {
+    //       let device = {
+    //         client: new Object,
+    //         state: 'disconnected',
+    //         ip: result.service.ipv4Addresses[0],
+    //       }
+    //       this.lanDeviceList[result.service.name] = device
+    //       this.lanDeviceList[result.service.txtRecord.mac] = device
+    //     }
+    // });
+    // setTimeout(() => {
+    //   console.log("mdns devices:");
+    //   console.log(this.lanDeviceList);
+    //   this.zeroconf.close();
+    // }, 30000);
   }
 
   closeScanMdnsDevice() {
-    this.zeroconf.close();
+    // this.zeroconf.close();
   }
 
   async scanBleDevice() {
     if (!this.plt.is('cordova')) return;
     // 检查蓝牙是否打开
-    if (!await this.permissionService.CheckBleAvailability({ showNotice: false })) return
-    this.bleDeviceList = {};
-    this.ble.scan([], 5).subscribe(result => {
-      if (this.plt.is('android')) {
-        let UUID = Uint8Array2hex(result.advertising).toUpperCase();
-        //console.log(UUID);
-        //在这里添加其他的蓝牙服务ID来过滤
-        if ((UUID.indexOf("02E0FF") != -1) || (UUID.indexOf("02F0FF") != -1) || (UUID.indexOf("03E0FF") != -1) || (UUID.indexOf("03F0FF") != -1))
-          this.bleDeviceList[mac2name(result)] = "ble";
-      }
-      else if (typeof (result.advertising.kCBAdvDataServiceUUIDs) != 'undefined') {
-        let UUIDs = result.advertising.kCBAdvDataServiceUUIDs;
-        for (let i = 0; i < UUIDs.length; i++) {
-          if ((UUIDs[i].indexOf("FFE0") != -1) || ((UUIDs[i].indexOf("FFF0") != -1))) {
-            console.log(UUIDs[i]);
-            if (typeof (result.advertising.kCBAdvDataManufacturerData) != 'undefined') {
-              let data = new Uint8Array(result.advertising.kCBAdvDataManufacturerData);
-              if (data.length <= 12) {
-                this.bleDeviceList[mac2name(result)] = "ble";
-              }
-            }
-          }
-        }
-      }
-    });
-    setTimeout(() => {
-      console.log("ble devices:");
-      console.log(this.bleDeviceList);
-      this.ble.stopScan().then(() => { console.log('ble scan stopped'); });
-    }, 3900);
+    // if (!await this.permissionService.CheckBleAvailability({ showNotice: false })) return
+    // this.bleDeviceList = {};
+    // this.ble.scan([], 5).subscribe(result => {
+    //   if (this.plt.is('android')) {
+    //     let UUID = Uint8Array2hex(result.advertising).toUpperCase();
+    //     //console.log(UUID);
+    //     //在这里添加其他的蓝牙服务ID来过滤
+    //     if ((UUID.indexOf("02E0FF") != -1) || (UUID.indexOf("02F0FF") != -1) || (UUID.indexOf("03E0FF") != -1) || (UUID.indexOf("03F0FF") != -1))
+    //       this.bleDeviceList[mac2name(result)] = "ble";
+    //   }
+    //   else if (typeof (result.advertising.kCBAdvDataServiceUUIDs) != 'undefined') {
+    //     let UUIDs = result.advertising.kCBAdvDataServiceUUIDs;
+    //     for (let i = 0; i < UUIDs.length; i++) {
+    //       if ((UUIDs[i].indexOf("FFE0") != -1) || ((UUIDs[i].indexOf("FFF0") != -1))) {
+    //         console.log(UUIDs[i]);
+    //         if (typeof (result.advertising.kCBAdvDataManufacturerData) != 'undefined') {
+    //           let data = new Uint8Array(result.advertising.kCBAdvDataManufacturerData);
+    //           if (data.length <= 12) {
+    //             this.bleDeviceList[mac2name(result)] = "ble";
+    //           }
+    //         }
+    //       }
+    //     }
+    //   }
+    // });
+    // setTimeout(() => {
+    //   console.log("ble devices:");
+    //   console.log(this.bleDeviceList);
+    //   this.ble.stopScan().then(() => { console.log('ble scan stopped'); });
+    // }, 3900);
   }
 
   // 查询设备是否在线
@@ -462,8 +459,8 @@ export class DeviceService {
   }
 
   // 查询实时数据
-  queryRealtimeData(device) {        
-    let realtimeKeys = device.data['layouterData'].rt;
+  queryRealtimeData(device, layouterData) {
+    let realtimeKeys = layouterData['rt'];
     if (typeof realtimeKeys == 'undefined') return
     if (realtimeKeys.length > 0)
       this.sendData(device, JSON.stringify({ "rt": realtimeKeys }));
@@ -480,7 +477,7 @@ export class DeviceService {
   }
 
   connectDeviceTimer;
-  connectDevice(device: any, mode: string = "show"): Promise<boolean> {
+  connectDevice(device: any, mode: string = "show") {
     return new Promise<boolean>(async (resolve, reject) => {
       if (!this.plt.is('cordova')) return resolve(false);
       //连接超时6秒。移除连接定时器情况：1.连接成功；2.退出页面
@@ -492,13 +489,14 @@ export class DeviceService {
       }, 6000);
       if (device.data.state != "disconnected") device.data.state = "disconnected";
       if (device.config.mode == "ble") {
-        if (! await this.permissionService.CheckBleAvailability()) return resolve(false);
+        // if (! await this.permissionService.CheckBleAvailability()) return resolve(false);
         if (mode == "show")
           await this.noticeService.showLoading('connect')
-        let result = await this.connectBleDevice(device)
+        let result:any = await this.connectBleDevice(device)
         return resolve(result);
       }
     })
+
   }
 
   disconnectDevice(device) {
@@ -514,7 +512,7 @@ export class DeviceService {
   sendTimerList = {};
   fullMqttDateList = {};
   sendData(device, data) {
-    // MQTT发送，带合并数据功能，如果不需要合并数据，直接使用pubMessage
+    // MQTT发送，带合并数据功能，如果不需要合并数据，直接使用pubMessage    
     if (device.config.mode == "mqtt") {
       if (isJson(data)) {
         // 如果队列中有这个数据，进行合并
@@ -533,7 +531,7 @@ export class DeviceService {
           this.pubMessage(device, this.fullMqttDateList[device.deviceName]);
           this.fullMqttDateList[device.deviceName] = '';
           delete this.sendTimerList[device.deviceName];
-        }, deviceInLocal ? 100 : 300)
+        }, deviceInLocal ? 10 : 100)  // 这个修改合并频率
       } else {
         this.pubMessage(device, data);
       }
@@ -555,119 +553,119 @@ export class DeviceService {
   lastbufcnt = 0;
   bleUUID = null;
 
-  connectBleDevice(device): Promise<boolean> {
-    return new Promise<boolean>((resolve, reject) => {
-      // this.noticeService.showLoading('connect');
-      if (this.bleUUID != null)
-        this.ble.disconnect(this.bleUUID);
-      console.log("scanBle");
-      this.ble.startScan([]).subscribe(result => {
-        console.log(result);
-        if (this.plt.is('android') || (typeof (result.advertising.kCBAdvDataManufacturerData) != 'undefined')) {
-          if (deviceName2id(device.deviceName) == mac2name(result)) {
-            this.ble.stopScan();
-            console.log('connect ble device:' + result.id)
-            window.clearTimeout(this.connectDeviceTimer);
-            this.ble.connect(result.id).subscribe(async data => {
-              this.bleUUID = result.id;
-              console.log(data);
-              await this.noticeService.hideLoading();
-              if (device.data.state != "connected") device.data.state = "connected";
-              this.lastbuf.fill(0);
-              this.lastbufcnt = 0;
-              this.ble.startNotification(result.id, 'FFE0', 'FFE1').subscribe(buffer => {
-                let buftmp = new Uint8Array(buffer[0]);
-                this.lastbuf.set(buftmp, this.lastbufcnt);
-                this.lastbufcnt += buftmp.length;
-                while (this.lastbuf.indexOf(10) > -1) {//找到/n，转字符串后测试是否能转json
-                  let index = this.lastbuf.indexOf(10);
-                  let fullMessage = transcoding(this.lastbuf);
-                  console.log(fullMessage);
-                  let message = {};
-                  message["fromDevice"] = device.deviceName;
-                  if (fullMessage.indexOf('{') > -1) {
-                    try {
-                      message["data"] = JSON.parse(fullMessage);
-                    }
-                    catch (e) {
-                      message["data"] = fullMessage;
-                    }
-                  }
-                  else message["data"] = fullMessage;
-                  // console.log(message)
-                  this.processMessage(message);
-                  let slicetmp = this.lastbuf.slice(index + 1, this.lastbufcnt);
-                  this.lastbuf.fill(0);
-                  this.lastbuf.set(slicetmp);
-                  this.lastbufcnt -= index + 1;
-                }
-              });
-              return resolve(true);
-            },
-              error => {
-                this.bleUUID = null;
-                if (device.data.state != "disconnected") device.data.state = "disconnected";
-                console.log(error);
-                return resolve(false);
-              }
-            );
-          }
-        }
-      },
-        error => {
-          console.log(error);
-          // 提示开启手机定位服务
-          if (error == 'Location Services are disabled') {
-            this.noticeService.showAlert('bleNeedLocation');
-          }
-        }
-      );
-    })
+  connectBleDevice(device) {
+    // return new Promise<boolean>((resolve, reject) => {
+    //   // this.noticeService.showLoading('connect');
+    //   if (this.bleUUID != null)
+    //     this.ble.disconnect(this.bleUUID);
+    //   console.log("scanBle");
+    //   this.ble.startScan([]).subscribe(result => {
+    //     console.log(result);
+    //     if (this.plt.is('android') || (typeof (result.advertising.kCBAdvDataManufacturerData) != 'undefined')) {
+    //       if (deviceName2id(device.deviceName) == mac2name(result)) {
+    //         this.ble.stopScan();
+    //         console.log('connect ble device:' + result.id)
+    //         window.clearTimeout(this.connectDeviceTimer);
+    //         this.ble.connect(result.id).subscribe(async data => {
+    //           this.bleUUID = result.id;
+    //           console.log(data);
+    //           await this.noticeService.hideLoading();
+    //           if (device.data.state != "connected") device.data.state = "connected";
+    //           this.lastbuf.fill(0);
+    //           this.lastbufcnt = 0;
+    //           this.ble.startNotification(result.id, 'FFE0', 'FFE1').subscribe(buffer => {
+    //             let buftmp = new Uint8Array(buffer[0]);
+    //             this.lastbuf.set(buftmp, this.lastbufcnt);
+    //             this.lastbufcnt += buftmp.length;
+    //             while (this.lastbuf.indexOf(10) > -1) {//找到/n，转字符串后测试是否能转json
+    //               let index = this.lastbuf.indexOf(10);
+    //               let fullMessage = transcoding(this.lastbuf);
+    //               console.log(fullMessage);
+    //               let message = {};
+    //               message["fromDevice"] = device.deviceName;
+    //               if (fullMessage.indexOf('{') > -1) {
+    //                 try {
+    //                   message["data"] = JSON.parse(fullMessage);
+    //                 }
+    //                 catch (e) {
+    //                   message["data"] = fullMessage;
+    //                 }
+    //               }
+    //               else message["data"] = fullMessage;
+    //               // console.log(message)
+    //               this.processMessage(message);
+    //               let slicetmp = this.lastbuf.slice(index + 1, this.lastbufcnt);
+    //               this.lastbuf.fill(0);
+    //               this.lastbuf.set(slicetmp);
+    //               this.lastbufcnt -= index + 1;
+    //             }
+    //           });
+    //           return resolve(true);
+    //         },
+    //           error => {
+    //             this.bleUUID = null;
+    //             if (device.data.state != "disconnected") device.data.state = "disconnected";
+    //             console.log(error);
+    //             return resolve(false);
+    //           }
+    //         );
+    //       }
+    //     }
+    //   },
+    //     error => {
+    //       console.log(error);
+    //       // 提示开启手机定位服务
+    //       if (error == 'Location Services are disabled') {
+    //         this.noticeService.showAlert('bleNeedLocation');
+    //       }
+    //     }
+    //   );
+    // })
   }
 
   async disconnectBleDevice(device) {
-    this.ble.stopScan();
-    this.ble.stopStateNotifications();
-    this.ble.disconnect(this.bleUUID);
-    if (device.data.state != "disconnected") device.data.state = "disconnected";
-    this.bleUUID = null;
-    //清空缓存
-    this.lastbuf.fill(0);
+    // this.ble.stopScan();
+    // this.ble.stopStateNotifications();
+    // this.ble.disconnect(this.bleUUID);
+    // if (device.data.state != "disconnected") device.data.state = "disconnected";
+    // this.bleUUID = null;
+    // //清空缓存
+    // this.lastbuf.fill(0);
   }
 
   //发送ble数据
   lastSendTime = 0;
   send2ble(device, message: string) {
-    console.log('send2ble');
-    if (this.plt.is('android')) {
-      // console.log("ble message");
-      console.log(message);
-      let t = this.lastSendTime - new Date().getTime();
-      this.lastSendTime = new Date().getTime();
-      if (t < 0) t = 0;
-      let i = 0;
-      for (i = 0; i < message.length; i += 20) {
-        let tmp = message.slice(i, i + 20);
-        let delay = i + t;
-        setTimeout(() => {
-          this.ble.writeWithoutResponse(this.bleUUID, 'ffe0', 'ffe1', str2ab(tmp))
-        }, delay);
-      }
-      this.lastSendTime = this.lastSendTime + i + t;
-    }
-    else {
-      this.ble.writeWithoutResponse(this.bleUUID, 'ffe0', 'ffe1', str2ab(message))
-    }
-    this.send2debug(device, 'send', message)
+    // console.log('send2ble');
+    // if (this.plt.is('android')) {
+    //   // console.log("ble message");
+    //   console.log(message);
+    //   let t = this.lastSendTime - new Date().getTime();
+    //   this.lastSendTime = new Date().getTime();
+    //   if (t < 0) t = 0;
+    //   let i = 0;
+    //   for (i = 0; i < message.length; i += 20) {
+    //     let tmp = message.slice(i, i + 20);
+    //     let delay = i + t;
+    //     setTimeout(() => {
+    //       this.ble.writeWithoutResponse(this.bleUUID, 'ffe0', 'ffe1', str2ab(tmp))
+    //     }, delay);
+    //   }
+    //   this.lastSendTime = this.lastSendTime + i + t;
+    // }
+    // else {
+    //   this.ble.writeWithoutResponse(this.bleUUID, 'ffe0', 'ffe1', str2ab(message))
+    // }
+    // this.send2debug(device, 'send', message)
   }
 
   async isWifiAvailable() {
-    if (await this.permissionService.CheckWifiAvailability()) {
-      return true;
-    } else {
-      this.noticeService.showAlert('openWifi');
-      return false;
-    }
+    // if (await this.permissionService.CheckWifiAvailability()) {
+    //   return true;
+    // } else {
+    //   this.noticeService.showAlert('openWifi');
+    //   return false;
+    // }
   }
 
   // 把发送的数据显示到debug组件

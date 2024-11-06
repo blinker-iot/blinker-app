@@ -3,6 +3,30 @@ ion-toolbar {
     --ion-color-base: transparent !important;
 }
 
+ion-menu-button {
+    position: absolute;
+    height: 48px;
+
+    .avatar {
+        width: 40px;
+        border-radius: 50%;
+        box-shadow: 0 0 3px 1px #389bee;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        &.offline{
+            box-shadow: 0 0 3px 1px #a70000;
+        }
+
+        img {
+            width: 40px;
+            height: 40px;
+        }
+    }
+}
+
 .nodevice {
     display: flex;
     flex-direction: column;

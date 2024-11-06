@@ -1,23 +1,13 @@
-<div widget [ngStyle]="{'color': color}">
-  <div class="textbox" *ngIf="lstyle==0 || lstyle==1 || lstyle==5">
-    <i *ngIf="ico!=''" class="{{ico}}"></i>
-    <div class="title" overflow [ngStyle]="{'font-size': size+'px'}">{{t0}}</div>
-  </div>
-  <div class="textbox2" *ngIf="lstyle==2">
-    <i *ngIf="ico!=''" class="{{ico}}"></i>
-    <div class="contentbox">
-      <div class="title" overflow [ngStyle]="{'font-size': size+'px'}">{{t0}}</div>
-      <div class="content" overflow>{{t1}}</div>
+<div widget class="ccenter">
+  <div widget-name>{{widget.tit}}</div>
+  <div widget-content [ngStyle]="{'color':widget.clr}">
+    <div class="icon-box" [ngStyle]="{'width':widget.ico?gridSize+'px':'0px'}">
+      <i class="{{widget.ico}}"></i>
     </div>
-  </div>
-  <div class="textbox3" *ngIf="lstyle==3 || lstyle==6">
-    <i *ngIf="ico!=''" class="{{ico}}"></i>
-    <div class="contentbox">
-      <div class="title" overflow [ngStyle]="{'font-size': size+'px'}">{{t0}}</div>
-      <div class="content" overflow>{{t1}}</div>
+    <div class="text-box">
+      <div class="text" #textBox>
+        {{tex}}
+      </div>
     </div>
-  </div>
-  <div class="textbox4" *ngIf="lstyle==4">
-    <i *ngIf="ico!=''" class="{{ico}}"></i>
   </div>
 </div>

@@ -1,12 +1,10 @@
 import { Component, Input, ViewChild, ElementRef } from '@angular/core';
 import { Layouter2Widget } from '../config';
 import { CloudStorageService } from 'src/app/core/services/cloudStorage.service';
-import { LayouterService } from '../../../layouter.service';
+import { Layouter2Service } from '../../layouter2.service';
 import { DataService } from 'src/app/core/services/data.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
-import { Storage } from '@ionic/storage';
-
 
 @Component({
   selector: 'widget-chart',
@@ -17,8 +15,6 @@ export class WidgetChartComponent implements Layouter2Widget {
 
   @Input() device: BlinkerDevice;
   @Input() widget;
-  @Input() isDemo = false;
-  // chart;
 
   showNoData = false;
   showChart = false;
@@ -48,81 +44,12 @@ export class WidgetChartComponent implements Layouter2Widget {
     }
   }
 
-  selected0 = true;
-  selected1 = true;
-  selected2 = true;
-  selectedKey;
+  get selectedKey() {
+    return this.selectedItem.key
+  }
 
   get key() {
     return this.widget.key;
-  }
-
-  get keys() {
-    return [this.key0, this.key1, this.key2];
-  }
-
-  get ts() {
-    return [this.t0, this.t1, this.t2];
-  }
-
-  get chartStyle() {
-    if (this.selectedKey == this.key0) return this.style0
-    if (this.selectedKey == this.key1) return this.style1
-    if (this.selectedKey == this.key2) return this.style2
-  }
-
-  get chartColor() {
-    if (this.selectedKey == this.key0) return this.color0
-    if (this.selectedKey == this.key1) return this.color1
-    if (this.selectedKey == this.key2) return this.color2
-  }
-
-  get key0() {
-    return this.widget.key0;
-  }
-
-  get key1() {
-    return this.widget.key1;
-  }
-
-  get key2() {
-    return this.widget.key2;
-  }
-
-  get t0() {
-    return this.getValue(['t0']);
-  }
-
-  get t1() {
-    return this.getValue(['t1']);
-  }
-
-  get t2() {
-    return this.getValue(['t2']);
-  }
-
-  get style0() {
-    return this.getValue(['sty']);
-  }
-
-  get style1() {
-    return this.getValue(['sty1']);
-  }
-
-  get style2() {
-    return this.getValue(['sty2']);
-  }
-
-  get color0() {
-    return this.getValue(['clr']);
-  }
-
-  get color1() {
-    return this.getValue(['clr1']);
-  }
-
-  get color2() {
-    return this.getValue(['clr2']);
   }
 
   getValue(valueKeys: string[]): any {
@@ -151,15 +78,14 @@ export class WidgetChartComponent implements Layouter2Widget {
 
   constructor(
     private cloudStorageService: CloudStorageService,
-    private LayouterService: LayouterService,
+    private LayouterService: Layouter2Service,
     private dataService: DataService,
-    private noticeService: NoticeService,
-    private storage: Storage,
+    private noticeService: NoticeService
   ) { }
 
   async ngOnInit() {
-    this.selectedKey = this.key0;
-    this.quickCode = await this.storage.get(`${this.device.deviceName}:${this.key}`) ?? '1h'
+    this.selectedItem = this.widget.items[0];
+    this.quickCode = localStorage.getItem(`${this.device.deviceName}:${this.key}`) ?? '1h'
     setTimeout(() => {
       this.showChart = true
     }, 500)
@@ -174,13 +100,12 @@ export class WidgetChartComponent implements Layouter2Widget {
     if (this.device.config.mode == 'test') return
     setTimeout(() => {
       this.changeQuickCode()
-    }, this.isDemo ? 500 : 100);
-    if (!this.isDemo)
-      this.LayouterService.action.subscribe(act => {
-        if (act.data == this.widget) {
-          this.changeQuickCode()
-        }
-      })
+    }, 100);
+    this.LayouterService.action.subscribe(act => {
+      if (act.data == this.widget) {
+        this.changeQuickCode()
+      }
+    })
 
   }
 
@@ -200,12 +125,6 @@ export class WidgetChartComponent implements Layouter2Widget {
     this.data = data
   }
 
-  switch(item) {
-    if (item == 0) this.selected0 = !this.selected0;
-    if (item == 1) this.selected1 = !this.selected1;
-    if (item == 2) this.selected2 = !this.selected2;
-  }
-
   changeQuickCode() {
     if (this.quickCode == 'rt') {
       this.renderRtChart();
@@ -213,19 +132,18 @@ export class WidgetChartComponent implements Layouter2Widget {
       clearInterval(this.updateTimer)
       this.getDataFromCloud();
     }
-    this.storage.set(`${this.device.deviceName}:${this.key}`, this.quickCode)
+    localStorage.setItem(`${this.device.deviceName}:${this.key}`, this.quickCode)
   }
 
-  changeKey(key) {
-    if (this.selectedKey == key) return;
-    this.selectedKey = key;
+  selectedItem;
+  selectItem(item) {
+    if (this.selectedItem == item) return;
+    this.selectedItem = item;
     if (this.quickCode == 'rt') {
       this.renderRtChart();
     } else {
       this.getDataFromCloud();
     }
-
-
   }
 
   getDataFromCloud() {

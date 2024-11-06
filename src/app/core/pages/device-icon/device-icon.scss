@@ -1,3 +1,7 @@
+.fa-times {
+    color: #fff;
+}
+
 .custom-box {
     padding: 15px;
     display: flex;
@@ -14,6 +18,7 @@
         position: absolute;
         top: 15px;
         left: 15px;
+
         span {
             margin-left: 15px;
             color: #bbb;
@@ -26,6 +31,7 @@
         justify-content: space-between;
         align-items: center;
         width: 100%;
+
         input {
             border: 1px solid #ccc;
             border-radius: 5px;

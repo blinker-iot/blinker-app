@@ -1,0 +1,14 @@
+<div class="examples-box">
+  <div class="item animate__animated animate__fadeIn" *ngFor="let item of templateList" (click)="select(item)">
+    <div class="image" [ngClass]="{'selected': selected==item}">
+      <img src="{{item.img}}" alt="">
+    </div>
+    <div>{{item.name}}</div>
+  </div>
+  <div style="width: 100%;height: 132px;">
+  </div>
+</div>
+
+
+<nui-bottom-btn *ngIf="selected" class="dark green animate__animated animate__fadeInUp" [icon]="'fa-light fa-download'"
+  [title]="'加载界面'" (click)="done()"></nui-bottom-btn>

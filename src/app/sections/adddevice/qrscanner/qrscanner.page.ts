@@ -1,5 +1,5 @@
-import { Component, NgZone, OnInit } from '@angular/core';
-import { QRScanner, QRScannerStatus } from '@ionic-native/qr-scanner/ngx';
+import { Component, NgZone } from '@angular/core';
+// import { QRScanner, QRScannerStatus } from '@awesome-cordova-plugins/qr-scanner/ngx';
 import { NavController } from '@ionic/angular';
 import { AdddeviceService } from '../adddevice.service';
 import { UserService } from 'src/app/core/services/user.service';
@@ -9,15 +9,14 @@ import { Router } from '@angular/router';
 @Component({
   selector: 'qrscanner',
   templateUrl: './qrscanner.page.html',
-  styleUrls: ['./qrscanner.page.scss'],
-  providers: [QRScanner]
+  styleUrls: ['./qrscanner.page.scss']
 })
 export class QrscannerPage {
 
   isShow = false;
 
   constructor(
-    private qrScanner: QRScanner,
+    // private qrScanner: QRScanner,
     private navCtrl: NavController,
     private adddeviceService: AdddeviceService,
     private userService: UserService,
@@ -36,7 +35,7 @@ export class QrscannerPage {
 
   ngOnDestroy() {
     this.exitScannerMode();
-    this.qrScanner.destroy();
+    // this.qrScanner.destroy();
   }
 
   ionViewDidEnter() {
@@ -58,60 +57,60 @@ export class QrscannerPage {
   }
 
   scan() {
-    this.qrScanner.prepare()
-      .then((status: QRScannerStatus) => {
-        if (status.authorized) {
-          this.qrScanner.show();
-          this.startScan();
-        } else if (status.denied) {
-          // camera permission was permanently denied
-          // you must use QRScanner.openSettings() method to guide the user to the settings page
-          // then they can grant the permission from there
-        } else {
-          // permission was denied, but not permanently. You can ask for permission again at a later time.
-        }
-      })
-      .catch((e: any) => console.log('Error is', e));
+    // this.qrScanner.prepare()
+    //   .then((status: QRScannerStatus) => {
+    //     if (status.authorized) {
+    //       this.qrScanner.show();
+    //       this.startScan();
+    //     } else if (status.denied) {
+    //       // camera permission was permanently denied
+    //       // you must use QRScanner.openSettings() method to guide the user to the settings page
+    //       // then they can grant the permission from there
+    //     } else {
+    //       // permission was denied, but not permanently. You can ask for permission again at a later time.
+    //     }
+    //   })
+    //   .catch((e: any) => console.log('Error is', e));
   }
 
   timeout = 0;
 
   startScan() {
-    setTimeout(() => {
-      this.timeout = 5000
-      let scanSub = this.qrScanner.scan().subscribe((text: string) => {
-        this.ngzone.run(() => {
-          scanSub.unsubscribe();
-          console.log(text);
-          let device;
-          try {
-            device = JSON.parse(text)
-          } catch (error) {
+    // setTimeout(() => {
+    //   this.timeout = 5000
+    //   let scanSub = this.qrScanner.scan().subscribe((text: string) => {
+    //     this.ngzone.run(() => {
+    //       scanSub.unsubscribe();
+    //       console.log(text);
+    //       let device;
+    //       try {
+    //         device = JSON.parse(text)
+    //       } catch (error) {
 
-          }
-          if (typeof device != 'undefined' && typeof device.deviceType != 'undefined') {
-            // this.exitScannerMode();
-            // this.qrScanner.destroy();
-            this.gotoGuide(device);
-          } else if (text.indexOf('IMEI:') > -1) {
-            // NBiot设备
-            let imei = text.match(/IMEI:(\S*);/)[1]
-            this.adddeviceService.addDeviceByScan(imei).then(result => {
-              if (result) {
-                this.exitScannerMode();
-                this.qrScanner.hide();
-                this.gotoHome()
-              } else {
-                this.startScan()
-              }
-            })
-          } else {
-            this.noticeService.showToast('无效的二维码')
-            this.startScan()
-          }
-        })
-      });
-    }, this.timeout);
+    //       }
+    //       if (typeof device != 'undefined' && typeof device.deviceType != 'undefined') {
+    //         // this.exitScannerMode();
+    //         // this.qrScanner.destroy();
+    //         this.gotoGuide(device);
+    //       } else if (text.indexOf('IMEI:') > -1) {
+    //         // NBiot设备
+    //         let imei = text.match(/IMEI:(\S*);/)[1]
+    //         this.adddeviceService.addDeviceByScan(imei).then(result => {
+    //           if (result) {
+    //             this.exitScannerMode();
+    //             // this.qrScanner.hide();
+    //             this.gotoHome()
+    //           } else {
+    //             this.startScan()
+    //           }
+    //         })
+    //       } else {
+    //         this.noticeService.showToast('无效的二维码')
+    //         this.startScan()
+    //       }
+    //     })
+    //   });
+    // }, this.timeout);
   }
 
 

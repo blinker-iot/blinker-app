@@ -1,11 +1,29 @@
-:host {
-    width: 100%;
-    height: 100%;
-    position: relative;
+// :host {
+//     width: 100%;
+//     height: 100%;
+//     position: relative;
 
-    [echarts] {
-        width: 100%;
-        height: 100%;
+//     [echarts] {
+//         width: 100%;
+//         height: 100%;
+//     }
+
+// }
+
+.chart-box {
+    margin: 10px;
+    height: calc(100% - 10px);
+    width: calc(100% - 5px);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #ccc;
+
+    ::ng-deep {
+        #tv-attr-logo {
+            visibility: hidden;
+        }
     }
-
 }

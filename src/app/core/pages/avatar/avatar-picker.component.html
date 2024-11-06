@@ -15,7 +15,7 @@
 </ion-header>
 
 <ion-content>
-    <div class="avatar-page animated fadeIn faster">
+    <div class="avatar-page animate__animated animate__fadeIn animate__faster">
         <button *ngIf="!tempImgFile" class="chose-btn" (click)="showActionSheet()">选择图片或拍摄照片</button>
         <div *ngIf="tempImgFile" class="imgbox animated fadeIn">
             <img class="source-img" src="{{tempImgFile}}" #image>

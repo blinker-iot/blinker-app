@@ -1,0 +1,41 @@
+<div setting-title>
+  数据设置
+</div>
+<div setting-item>
+  <div item-name>风格</div>
+  <div input-box>
+    <check-list [items]="[{name:'风格1',value:0},{name:'风格2',value:1},{name:'风格3',value:2}]" [(selected)]="widget.sty"
+      (selectedChange)="styleChange($event)" [radio]="true">
+    </check-list>
+  </div>
+</div>
+<div setting-item>
+  <div item-name>图标(ico)</div>
+  <div input-box>
+    <icon-picker [(value)]="widget.ico"></icon-picker>
+  </div>
+</div>
+<div setting-item>
+  <div item-name>颜色(clr)</div>
+  <div input-box>
+    <color-picker [(value)]="widget.clr"></color-picker>
+  </div>
+</div>
+<div setting-item>
+  <div item-name>数据单位</div>
+  <div input-box>
+    <input type="text" placeholder={{widget.uni}} [(ngModel)]="widget.uni">
+  </div>
+</div>
+<div setting-item>
+  <div item-name>最小值</div>
+  <div input-box>
+    <input type="number" placeholder={{widget.min}} [(ngModel)]="widget.min">
+  </div>
+</div>
+<div setting-item>
+  <div item-name>最大值</div>
+  <div input-box>
+    <input type="number" placeholder={{widget.max}} [(ngModel)]="widget.max">
+  </div>
+</div>

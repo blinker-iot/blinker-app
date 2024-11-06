@@ -1,16 +1,27 @@
 import { Component } from '@angular/core';
-import { NavController } from '@ionic/angular';
+import { IonicModule, NavController } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
 import { ActivatedRoute } from '@angular/router';
 import { DataService } from 'src/app/core/services/data.service';
 import { Subscription } from 'rxjs';
-
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { PipesModule } from 'src/app/core/pipes/pipes.module';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'page-device-update',
   templateUrl: 'device-update.html',
-  styleUrls: ['device-update.scss']
+  styleUrls: ['device-update.scss'],
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    IonicModule,
+    PipesModule,
+    DirectivesModule
+  ]
 })
 export class DeviceUpdatePage {
   id;

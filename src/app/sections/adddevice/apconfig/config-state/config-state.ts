@@ -1,6 +1,6 @@
 import { Component, Input, ChangeDetectorRef } from '@angular/core';
 import { NavController, ModalController, Platform } from '@ionic/angular';
-import { Brightness } from '@ionic-native/brightness/ngx';
+// import { Brightness } from '@awesome-cordova-plugins/brightness/ngx';
 import { PlatformLocation } from '@angular/common';
 import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 import { AdddeviceService } from '../../adddevice.service';
@@ -48,7 +48,7 @@ export class ConfigStatePage {
     private location: PlatformLocation,
     private platform: Platform,
     private navCtrl: NavController,
-    private brightness: Brightness,
+    // private brightness: Brightness,
     private modalCtrl: ModalController,
     private changeDetectorRef: ChangeDetectorRef,
     private deviceListService: DeviceConfigService,
@@ -60,17 +60,20 @@ export class ConfigStatePage {
   }
 
   ngOnInit() {
-    if (this.location.pathname == '/devcenter/tool/apconfig') {
+    if (this.location.pathname == '/devcenter/tool/apConfig') {
       this.isDevtool = true;
       this.stepArray = ["发现设备"]
       this.deviceType = "Diy";
     } else {
       this.deviceType = this.location.pathname.split('/')[2];
     }
+    // console.log(this.location.pathname);
+    // console.log(this.deviceType);
+    
   }
 
   ngAfterViewInit() {
-    this.brightness.setKeepScreenOn(true);
+    // this.brightness.setKeepScreenOn(true);
     this.deviceService.disconnectMqttBrokers();
     if (this.platform.is('ios'))
       this.listenResumeAndGetSsid()
@@ -83,7 +86,7 @@ export class ConfigStatePage {
       WifiWizard2.disconnect(this.deviceSsid)
       WifiWizard2.connect(this.ssid, true, this.password, 'WPA')
     }
-    this.brightness.setKeepScreenOn(false);
+    // this.brightness.setKeepScreenOn(false);
     if (!this.isDevtool) {
       clearTimeout(this.checktimer2);
       clearInterval(this.checktimer1);

@@ -1,88 +1,105 @@
-import { Injectable, NgZone } from '@angular/core';
-import { ActionSheetController, NavController, Platform, MenuController, ModalController } from '@ionic/angular';
-// import { StatusBar } from '@ionic-native/status-bar/ngx';
-import { AppMinimize } from '@ionic-native/app-minimize/ngx';
-import { PlatformLocation } from '@angular/common';
-import { NavigationEnd, NavigationStart, Router } from '@angular/router';
-import { BehaviorSubject, Subject } from 'rxjs';
-
-declare var window;
-declare var StatusBar;
+import { Injectable, NgZone } from "@angular/core";
+import {
+  ActionSheetController,
+  MenuController,
+  ModalController,
+  NavController,
+  Platform,
+} from "@ionic/angular";
+import { PlatformLocation } from "@angular/common";
+import { NavigationEnd, Router } from "@angular/router";
+import { Subject } from "rxjs";
+import { App } from "@capacitor/app";
+import { StatusBar, Style } from "@capacitor/status-bar";
+import { SafeArea } from "@aashu-dubey/capacitor-statusbar-safe-area";
+// import { ScreenOrientation,OrientationType } from '@capacitor/screen-orientation';
+import { AndroidShortcuts } from "capacitor-android-shortcuts";
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: "root",
 })
 export class ViewService {
-  viewMode = 'home';
+  viewMode = "home";
   swipeEnable = true;
   menuSwipeEnable = false;
   showSpeechModal = false;
   devicePageIsRoot = false;
 
-  // statusBar = StatusBar
-  statusBarHeight = new BehaviorSubject(0);
-  appReady = new BehaviorSubject(false);
-
   get isIos() {
-    return this.platform.is('ios');
+    return this.platform.is("ios");
+  }
+
+  get keyboardHeight() {
+    let val = localStorage.getItem("keyboardHeight");
+    if (val == null) return 0;
+    return JSON.parse(localStorage.getItem("keyboardHeight"));
   }
 
   constructor(
     private actionSheetController: ActionSheetController,
     private navCtrl: NavController,
     private platform: Platform,
-    // private statusBar: StatusBar,
     private platformLocation: PlatformLocation,
     private menu: MenuController,
-    private appMinimize: AppMinimize,
     private router: Router,
     private modalCtrl: ModalController,
-    private ngzone: NgZone
-  ) { }
+    private ngzone: NgZone,
+  ) {}
 
   async init() {
-    this.platform.ready().then(result => {
-      if (result) this.appReady.next(true)
-    })
-    this.getStatusBarHeight().then(value => {
-      this.statusBarHeight.next(value)
-    })
-    this.listenRouter();
     this.listenBackButton();
     this.checkShortcut();
+    this.listenRouter();
+    // ScreenOrientation.lock({ type: OrientationType.Portrait });
+    StatusBar.setOverlaysWebView({ overlay: true });
+    this.getStatusBarHeight();
+  }
+
+  themeToggle = false;
+  initializeDarkTheme(isDark) {
+    this.themeToggle = isDark;
+    this.toggleDarkTheme(isDark);
+  }
+
+  toggleDarkTheme(shouldAdd) {
+    document.body.classList.toggle("dark", shouldAdd);
   }
 
   listenBackButton() {
     this.platform.backButton.subscribeWithPriority(9999, async () => {
-      if (typeof await this.modalCtrl.getTop() != 'undefined') {
-        console.log('close modal');
+      if (typeof await this.modalCtrl.getTop() != "undefined") {
+        console.log("close modal");
         this.modalCtrl.dismiss();
-      } else if (this.menuSwipeEnable && this.platformLocation.pathname.indexOf('/view') > -1) {
-        console.log('close menu');
+      } else if (
+        this.menuSwipeEnable &&
+        this.platformLocation.pathname.indexOf("/view") > -1
+      ) {
+        console.log("close menu");
         this.menu.close();
       } else if (this.showSpeechModal) {
-        this.showSpeechModal = false
-      }
-      else if (this.platformLocation.pathname.indexOf('/view') > -1) {
-        this.appMinimize.minimize();
-      }
-      else if (this.devicePageIsRoot && this.platformLocation.pathname.indexOf('/device/') > -1) {
-        this.appMinimize.minimize();
+        this.showSpeechModal = false;
+      } else if (this.platformLocation.pathname.indexOf("/view") > -1) {
+        App.minimizeApp();
+      } else if (
+        this.devicePageIsRoot &&
+        this.platformLocation.pathname.indexOf("/device/") > -1
+      ) {
+        App.minimizeApp();
       } else {
-        this.navCtrl.pop()
+        this.navCtrl.pop();
       }
-    })
+    });
   }
 
   disableSwipeBack() {
     setTimeout(() => {
-      this.swipeEnable = false
+      this.swipeEnable = false;
     });
   }
 
   enableSwipeBack() {
     setTimeout(() => {
-      this.swipeEnable = true
+      this.swipeEnable = true;
     });
   }
 
@@ -96,22 +113,20 @@ export class ViewService {
 
   async changeView() {
     const actionSheet = await this.actionSheetController.create({
-      header: '视图模式切换',
+      header: "视图模式切换",
       buttons: [{
-        text: '常规视图',
+        text: "常规视图",
         handler: () => {
-          this.viewMode = 'home'
-          this.navCtrl.navigateRoot('/view/home')
-        }
-      },
-      {
-        text: '地理视图',
+          this.viewMode = "home";
+          this.navCtrl.navigateRoot("/view/home");
+        },
+      }, {
+        text: "地理视图",
         handler: () => {
-          this.viewMode = 'gis'
-          this.navCtrl.navigateRoot('/view/gis');
-        }
-      },
-        // {
+          this.viewMode = "gis";
+          this.navCtrl.navigateRoot("/view/gis");
+        },
+      }// {
         //   text: '卡片视图',
         //   handler: () => {
         //     this.viewMode = 'card'
@@ -132,35 +147,33 @@ export class ViewService {
         //     this.navCtrl.navigateRoot('/view/dashboard');
         //   }
         // }
-      ]
+      ],
     });
     await actionSheet.present();
   }
 
-  // lastStatusBar = 'dark';
-  currentStatusBar = 'dark'
+  lastStatusBar = "dark";
+  currentStatusBar = "dark";
   setLightStatusBar() {
-    if (!this.platform.is('cordova')) return;
-    // this.lastStatusBar = this.currentStatusBar;
-    StatusBar.styleLightContent();
-    this.currentStatusBar = 'light';
+    this.lastStatusBar = this.currentStatusBar;
+    // StatusBar.setStyle({ style: Style.Light });
+    this.currentStatusBar = "light";
   }
 
   setDarkStatusBar() {
-    if (!this.platform.is('cordova')) return;
-    // this.lastStatusBar = this.currentStatusBar;
-    StatusBar.styleDefault();
-    this.currentStatusBar = 'dark';
+    this.lastStatusBar = this.currentStatusBar;
+    // StatusBar.setStyle({ style: Style.Dark });
+    this.currentStatusBar = "dark";
   }
 
   // 用于改变StatusBar颜色
   listenRouter() {
-    this.changeStatusBar(this.router.url)
-    this.router.events.subscribe(e => {
+    this.changeStatusBar(this.router.url);
+    this.router.events.subscribe((e) => {
       if (e instanceof NavigationEnd) {
-        this.changeStatusBar(e.url)
+        this.changeStatusBar(e.url);
       }
-    })
+    });
   }
 
   changeStatusBar(url) {
@@ -171,47 +184,42 @@ export class ViewService {
     // else if (url == '/timer/') this.setDarkStatusBar()
     // else if (url == '/location') this.setLightStatusBar()
     setTimeout(() => {
-      let els = document.querySelectorAll('ion-header')
-      if (typeof els[els.length - 1] == 'undefined') return
-      if (typeof els[els.length - 1].attributes['whitebg'] != 'undefined') {
-        this.setDarkStatusBar()
+      let els = document.querySelectorAll("ion-header");
+      if (typeof els[els.length - 1] == "undefined") return;
+      if (typeof els[els.length - 1].attributes["whitebg"] != "undefined") {
+        this.setDarkStatusBar();
       } else {
-        this.setLightStatusBar()
+        this.setLightStatusBar();
       }
     }, 800);
-
   }
 
   // 从shortcut进入app
   newIntentData = new Subject<any>();
   checkShortcut() {
-    if (!this.platform.is("cordova")) return
-    this.getIntentData().then(url => {
-      if (url != null) {
-        this.devicePageIsRoot = true;
-        this.navCtrl.navigateRoot(url);
-      }
-    })
-    this.getNewIntentData();
-    this.newIntentData.subscribe(url => {
-      console.log(url);
-      this.ngzone.run(() => {
-        if (url == null) {
-          if (this.platformLocation.pathname.indexOf('/device/') > -1) {
-            this.navCtrl.navigateRoot('/');
-          }
-        } else {
-          if (this.platformLocation.pathname.indexOf('/device/') > -1 && this.devicePageIsRoot) {
-            this.navCtrl.navigateRoot(url);
-            setTimeout(() => {
-              this.devicePageIsRoot = true;
-            }, 500);
-          } else
-            this.router.navigate([url]);
+    AndroidShortcuts.addListener("shortcut", (response: any) => {
+      // response.data contains the content of the 'data' property of the created shortcut
+      let url = response.data;
+      if (url == null) {
+        if (this.platformLocation.pathname.indexOf("/device/") > -1) {
+          this.navCtrl.navigateRoot("/");
         }
-      })
+      } else {
+        if (
+          this.platformLocation.pathname.indexOf("/device/") > -1 &&
+          this.devicePageIsRoot
+        ) {
+          this.navCtrl.navigateRoot(url);
+          setTimeout(() => {
+            this.devicePageIsRoot = true;
+          }, 500);
+        } else {
+          this.router.navigate([url]);
+        }
+      }
+    });
 
-    })
+   
     // window.plugins.Shortcuts.getIntent(intent => {
     //   if (typeof intent.data != 'undefined') {
     //     this.devicePageIsRoot = true;
@@ -234,45 +242,24 @@ export class ViewService {
     //     this.navCtrl.navigateRoot('/');
     //   }
     // })
-
   }
 
-  getIntentData(): Promise<any> {
-    return new Promise((resolve, reject) => {
-      window.plugins.Shortcuts.getIntent(intent => {
-        if (typeof intent.data != 'undefined') {
-          resolve(intent.data)
-        } else
-          resolve(null)
-      })
-    })
+  statusBarHeight = 0;
+  async getStatusBarHeight() {
+    const { height } = await SafeArea.getStatusBarHeight();
+    this.statusBarHeight = height;
   }
 
-  getNewIntentData() {
-    window.plugins.Shortcuts.onNewIntent(intent => {
-      console.log(intent);
-      if (typeof intent.data != 'undefined') {
-        this.newIntentData.next(intent.data)
-      }
-    })
+  listenKeyboardShow;
+  listenKeyboardHide;
+  listenKeyboard() {
+    // this.listenKeyboardShow = this.renderer.listen('window', 'native.keyboardshow', e => {
+    //   // this.keyboardHeight = e.keyboardHeight
+    //   localStorage.setItem('keyboardHeight', JSON.stringify(e.keyboardHeight))
+    // });
   }
 
-  getStatusBarHeight(): Promise<number> {
-    return new Promise((resolve, reject) => {
-      if (!this.platform.is("cordova"))
-        resolve(0)
-      else
-        this.platform.ready().then(() => {
-          StatusBar.height((height) => {
-            resolve(height)
-          }, (error) => {
-            console.log(error);
-            resolve(0)
-          });
-        })
-
-    })
+  unlistenKeyboard() {
+    // if (typeof (this.listenKeyboardShow) === 'function') this.listenKeyboardShow();
   }
-
 }
-

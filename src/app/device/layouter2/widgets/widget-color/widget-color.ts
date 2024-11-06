@@ -1,6 +1,6 @@
 import { Component, Input, ChangeDetectorRef } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { LayouterService } from '../../../layouter.service';
+import { Layouter2Service } from '../../layouter2.service';
 
 @Component({
   selector: 'widget-color',
@@ -64,7 +64,7 @@ export class WidgetColorComponent implements Layouter2Widget {
 
   constructor(
     private changeDetectorRef: ChangeDetectorRef,
-    private LayouterService: LayouterService
+    private LayouterService: Layouter2Service
   ) { }
 
   timer;

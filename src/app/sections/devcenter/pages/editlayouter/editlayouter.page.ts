@@ -3,8 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { DevcenterService } from '../../devcenter.service';
 import { Observable, of } from 'rxjs';
 import { Device } from 'src/app/core/model/device.model';
-import { LayouterService } from 'src/app/device/layouter.service';
-import { Mode } from 'src/app/device/layouter2/layouter2-mode';
+import { Layouter2Service } from 'src/app/device/layouter2/layouter2.service';
 
 @Component({
   selector: 'prodevice-editlayouter',
@@ -22,7 +21,7 @@ export class EditlayouterPage implements OnInit {
   constructor(
     private devcenterService: DevcenterService,
     private activatedRoute: ActivatedRoute,
-    private LayouterService: LayouterService
+    private LayouterService: Layouter2Service
   ) { }
 
   ngOnInit() {
@@ -48,7 +47,7 @@ export class EditlayouterPage implements OnInit {
   }
 
   lock() {
-    this.LayouterService.changeMode(Mode.Default)
+    // this.LayouterService.exitEditMode()
     this.editMode = false;
     this.saveLayouterData();
   }
@@ -62,12 +61,12 @@ export class EditlayouterPage implements OnInit {
   }
 
   unlock() {
-    this.LayouterService.changeMode(Mode.Edit)
+    // this.LayouterService.enterEditMode()
     this.editMode = true;
   }
 
   editBackground() {
-    this.LayouterService.changeMode(Mode.EditBackground)
+    // this.LayouterService.changeMode(Mode.EditBackground)
   }
 
   async cleanWidgets() {

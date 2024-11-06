@@ -1,0 +1,39 @@
+<ion-header whitebg>
+  <ion-toolbar overlayPadding>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{device?.config.customName}} 存储</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class=" top-box">
+    <div class="blinker-box">
+      <div>存储使用情况： 15/20</div>
+      <div style="margin-top: 5px;">最长存储时长： 30天</div>
+    </div>
+  </div>
+  <b-item-list>
+    <b-item icon="fa-light fa-database" [text]="'humi'">
+    </b-item>
+    <b-item icon="fa-light fa-database" [text]="'temp'">
+    </b-item>
+    <b-item icon="fa-light fa-database" [text]="'co2'">
+    </b-item>
+    <b-item icon="fa-light fa-database" [text]="'pm25'">
+    </b-item>
+    <b-item icon="fa-light fa-database" [text]="'pm25'">
+    </b-item>
+    <b-item icon="fa-light fa-database" [text]="'pm25'">
+    </b-item>
+    <b-item icon="fa-light fa-database" [text]="'pm25'">
+    </b-item>
+    <b-item icon="fa-light fa-database" [text]="'pm25'">
+    </b-item>
+    <b-item icon="fa-light fa-database" [text]="'pm25'">
+    </b-item>
+    <b-item icon="fa-light fa-database" [text]="'pm25'">
+    </b-item>
+  </b-item-list>
+</ion-content>

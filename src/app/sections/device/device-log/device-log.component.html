@@ -1,11 +1,29 @@
-<ion-header>
+<ion-header whitebg>
   <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>设备运行记录</ion-title>
+    <ion-title>{{device?.config.customName}} 记录</ion-title>
   </ion-toolbar>
 </ion-header>
 <ion-content>
-  <div textcenter-temp>当前版本暂不支持此功能</div>
+  <!-- <div textcenter-temp>当前版本暂不支持此功能</div> -->
+  <div class="top-box">
+    <div class="blinker-box">
+      <div>存储使用情况： 15/20</div>
+      <div style="margin-top: 5px;">最长存储时长： 30天</div>
+    </div>
+  </div>
+  <div class="log-box">
+    <div class="line header">
+      <div>时间</div>
+      <div>类型</div>
+      <div>内容</div>
+    </div>
+    <div class="line blinker-box" *ngFor="let log of logList">
+      <div>{{log.date| date:'MM-dd hh:mm:ss'}}</div>
+      <div>{{log.type}}</div>
+      <div>{{log.data}}</div>
+    </div>
+  </div>
 </ion-content>

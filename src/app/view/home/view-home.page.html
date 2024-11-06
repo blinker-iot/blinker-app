@@ -1,16 +1,20 @@
 ﻿<ion-header whitebg>
     <ion-toolbar overlayPadding>
         <ion-buttons slot="start">
-            <ion-menu-button><i class="iconfont icon-menu"></i></ion-menu-button>
+            <ion-menu-button *ngIf="user">
+                <div class="avatar" [ngClass]="{'offline':!connected}">
+                    <img src="{{user.avatar}}" onError="this.src='assets/img/avatar.png'">
+                </div>
+            </ion-menu-button>
         </ion-buttons>
         <ion-title></ion-title>
         <ion-buttons slot="end">
-            <ion-button [routerLink]="['/adddevice']">
+            <ion-button [routerLink]="['/adddevice/DiyArduino']">
                 <i class="iconfont icon-add-circle"></i>
             </ion-button>
-            <ion-button (click)="changeView()">
+            <!-- <ion-button (click)="changeView()">
                 <i class="iconfont icon-view"></i>
-            </ion-button>
+            </ion-button> -->
         </ion-buttons>
     </ion-toolbar>
 </ion-header>

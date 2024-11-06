@@ -34,7 +34,7 @@ export class SettingsPage implements OnInit {
   }
 
   ngOnDestroy() {
-    this.deviceConfigService.getDevDeviceConfig();
+    // this.deviceConfigService.getDevDeviceConfig();
   }
 
   async selectIcon() {

@@ -10,7 +10,7 @@
 <ion-content *ngIf="loaded">
   <div class="infobox">
     <div class="imgbox">
-      <b-device-img style="width: 60%;" [filename]="device.config.image"></b-device-img>
+      <b-device-img style="width: 50%;" [filename]="device.config.image"></b-device-img>
       <div class="uploadimg" *ngIf="!isSharedDevice" (click)="selectIcon()">{{'DEVICE.CHANGE_ICON' | translate}}</div>
     </div>
     <div class="itembox">
@@ -20,13 +20,7 @@
       </div>
       <div class="item" *ngIf="isSharedDevice">{{'DEVICE.NAME' | translate}}: <span>{{device.config.customName}}</span>
       </div>
-      <div class="item">{{'DEVICE.TYPE' | translate}}: {{device | device2name}}</div>
-      <!-- 显示broker提供商 -->
-      <!-- <div class="item">
-        <div style="margin-right: 5px;">{{'DEVICE.BROKER' | translate}}: </div>
-        <img *ngIf="device.config.broker=='aliyun'" src="assets/img/broker/aliyun.png" alt="">
-        <img *ngIf="device.config.broker=='blinker'" src="assets/img/broker/blinker.png" alt="">
-      </div> -->
+      <!-- <div class="item">{{'DEVICE.TYPE' | translate}}: {{device | device2name}}</div> -->
       <div class="item">{{'DEVICE.ID' | translate}}: {{device.id}}</div>
       <div class="item" *ngIf="device.config.authKey && !isSharedDevice">{{'DEVICE.SECRET' | translate}}:
         <span *ngIf="!showKey" (click)="showAuthKey()">************ <i class="fal fa-eye"></i></span>
@@ -37,41 +31,40 @@
 
   <!-- 操作菜单 -->
   <b-item-list>
-    <b-item showArrow="true" [routerLink]="[ '/timer',id]">
-      <div class="title-box">{{'DEVICE.TIMING_TASK' | translate}}<div redpoint *ngIf="hasTimerTask"></div>
-      </div>
+    <!-- 定时任务 -->
+    <b-item showArrow="true" icon="fa-light fa-timer" [text]="'DEVICE.TIMING_TASK' | translate"
+      [routerLink]="[ '/device-manager', id, 'timer']">
+      <div redpoint *ngIf="hasTimerTask"></div>
     </b-item>
-    <b-item showArrow="true" [routerLink]="[ '/device-manager', id, 'location' ]" *ngIf="!isSharedDevice">
-      <div class="title-box">{{'DEVICE.POSITION' | translate}}</div>
-    </b-item>
-    <!-- <b-item [routerLink]="[ '/device-manager', id, 'log' ]" *ngIf="!isSharedDevice">
-      <div class="title-box">{{'DEVICE.LOG' | translate}}</div>
+    <!-- 数据存储 -->
+    <!-- <b-item showArrow="true" icon="fa-light fa-database" [text]="'DEVICE.DATA_KEY' | translate"
+      [routerLink]="[ '/device-manager', id, 'storage' ]">
     </b-item> -->
-    <b-item showArrow="true" [routerLink]="[ '/device-manager', id, 'trigger-config' ]"
-      *ngIf="!isSharedDevice && (device.deviceType=='DiyArduino' || device.deviceType=='DiyLinux')">
-      <div class="title-box">{{'DEVICE.TRIGGER' | translate}}</div>
-    </b-item>
-    <b-item showArrow="true" [routerLink]="[ '/device-manager', id, 'action-config' ]"
-      *ngIf="!isSharedDevice && (device.deviceType=='DiyArduino' || device.deviceType=='DiyLinux')">
-      <div class="title-box">{{'DEVICE.ACTION' | translate}}</div>
-    </b-item>
-    <b-item showArrow="true" [routerLink]="[ '/device-manager', id, 'ieconfig' ]"
-      *ngIf="!isSharedDevice && (device.deviceType=='DiyArduino' || device.deviceType=='DiyLinux')">
-      <div class="title-box">{{'DEVICE.LAYOUTER2' | translate}}</div>
-    </b-item>
-    <b-item showArrow="true" [routerLink]="[ '/share-manager', id ]" *ngIf="!isSharedDevice&&!isDevDevice">
-      <div class="title-box">{{'MENU.DEVICE_SHARING' | translate}}</div>
-    </b-item>
-    <b-item showArrow="true" *ngIf="device.config.mode=='mqtt'&& !isSharedDevice && device.deviceType.indexOf('Diy')<0"
+    <!-- 设备位置 -->
+    <!-- <b-item showArrow="true" icon="fa-light fa-map-location-dot" [text]="'DEVICE.POSITION' | translate"
+      [routerLink]="[ '/device-manager', id, 'location' ]">
+    </b-item> -->
+    <!-- 运行日志 -->
+    <!-- <b-item showArrow="true" icon="fa-light fa-list-check" [text]="'DEVICE.LOG' | translate"
+      [routerLink]="[ '/device-manager', id, 'log' ]">
+    </b-item> -->
+    <!-- 设备共享 -->
+    <!-- <b-item showArrow="true" icon="fa-light fa-share-nodes" [text]="'MENU.DEVICE_SHARING' | translate"
+      [routerLink]="[ '/device-manager', id,'share' ]" *ngIf="!isSharedDevice">
+    </b-item> -->
+    <!-- 固件更新 -->
+    <!-- <b-item showArrow="true" icon="fa-light fa-download" [text]="'DEVICE.OTA' | translate"
       [routerLink]="[ '/device-manager', id, 'update' ]">
-      <div class="title-box">{{'DEVICE.OTA' | translate}}<div redpoint *ngIf="hasNewVersion"></div>
-      </div>
+      <div redpoint *ngIf="hasNewVersion"></div>
+    </b-item> -->
+    <!-- 添加到桌面 -->
+    <b-item icon="fa-light fa-font-awesome" [text]="'DEVICE.SHORTCUT' | translate" (click)="addShortcut()">
     </b-item>
-    <b-item (click)="addShortcut()" *ngIf="platform.is('android')">
-      {{'DEVICE.SHORTCUT' | translate}}
+    <!-- 配置向导 -->
+    <b-item icon="fa-light fa-message-bot" [text]="'DEVICE.GUIDE' | translate" (click)="showGuide()">
     </b-item>
-    <b-item (click)="unbind()">
-      <div style="color: #f00000;">{{'DEVICE.UNBIND' | translate}}</div>
+    <!-- 删除设备 -->
+    <b-item icon="fa-light fa-xmark-large red" [text]="'DEVICE.UNBIND' | translate" (click)="unbind()">
     </b-item>
   </b-item-list>
 </ion-content>

@@ -1,7 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { ModalController } from '@ionic/angular';
-import { InputBoxComponent } from 'src/app/core/components/input-box/input-box.component';
+import { DeviceService } from 'src/app/core/services/device.service';
 
 @Component({
   selector: 'widget-input',
@@ -60,23 +59,16 @@ export class WidgetInputComponent implements Layouter2Widget {
   sendmess;
 
   constructor(
-    private modalCtrl: ModalController,
+    private deviceService: DeviceService,
   ) {}
 
+  async showInputModal() {
 
-  send(){
- 
   }
 
-  async showInputModal() {
-    const modal = await this.modalCtrl.create({
-      component: InputBoxComponent,
-      backdropDismiss: false,
-      componentProps: {
-        'device': this.device
-      }
-    });
-    modal.present();
+  send() {
+    this.deviceService.sendData(this.device, this.sendmess);
+    this.sendmess = '';
   }
 
 }

@@ -4,10 +4,10 @@ import {
   ModalController,
 } from '@ionic/angular';
 import { PermissionService } from 'src/app/core/services/permission.service';
-import { OpenNativeSettings } from '@ionic-native/open-native-settings/ngx';
+// import { OpenNativeSettings } from '@awesome-cordova-plugins/open-native-settings/ngx';
 import { ConfigStatePage } from './config-state/config-state';
 import { NoticeService } from 'src/app/core/services/notice.service';
-import { Storage } from '@ionic/storage';
+// import { Storage } from '@ionic/storage-angular';
 
 declare var WifiWizard2;
 
@@ -40,11 +40,11 @@ export class ApconfigPage {
   constructor(
     private platform: Platform,
     private changeDetectorRef: ChangeDetectorRef,
-    private permissionService: PermissionService,
-    private openNativeSettings: OpenNativeSettings,
+    // private permissionService: PermissionService,
+    // private openNativeSettings: OpenNativeSettings,
     private modalCtrl: ModalController,
-    private noticeService: NoticeService,
-    private storage: Storage
+    // private noticeService: NoticeService,
+    // private storage: Storage
   ) {
   }
 
@@ -55,10 +55,10 @@ export class ApconfigPage {
   ngAfterViewInit() {
     if (!this.platform.is("cordova")) return;
     // android 9.0获取ssid需要定位权限
-    if (this.platform.is("android"))
-      this.permissionService.checkCoarseLocation().then((result) => {
-        if (result) this.getSsid();
-      })
+    // if (this.platform.is("android"))
+    //   this.permissionService.checkCoarseLocation().then((result) => {
+    //     if (result) this.getSsid();
+    //   })
     else this.getSsid();
     this.listenResume();
   }
@@ -115,7 +115,7 @@ export class ApconfigPage {
   }
 
   openWifiSetting() {
-    this.openNativeSettings.open("wifi");
+    // this.openNativeSettings.open("wifi");
   }
 
   async startConfig() {
@@ -140,37 +140,37 @@ export class ApconfigPage {
   }
 
   loadSavePasswordConfig() {
-    this.storage.get('saveWiFiPassword').then((val) => {
-      if (val == null) return
-      this.savePassword = val
-    });
+    let val = localStorage.getItem('saveWiFiPassword')
+    if (val == null) return
+    this.savePassword = JSON.parse(val)
+
   }
 
   clickSavePassword() {
     this.savePassword = !this.savePassword
-    this.storage.set('saveWiFiPassword', this.savePassword);
+    localStorage.setItem('saveWiFiPassword', JSON.stringify(this.savePassword))
   }
 
   saveLocalPassowrd() {
     if (this.savePassword && this.myssid != 'unknown ssid' && this.myssid != '') {
       this.passwordList[this.myssid] = this.mypasswd
-      this.storage.set('passwordList', this.passwordList);
+      localStorage.setItem('passwordList', JSON.stringify(this.passwordList))
     }
   }
 
   loadLocalPassowrd() {
     if (this.myssid != 'unknown ssid' && this.myssid != '') {
-      this.storage.get('passwordList').then((val) => {
-        if (val == null) return
-        if (typeof val[this.myssid] != 'undefined') {
-          this.mypasswd = val[this.myssid]
-        }
-      });
+      let val = localStorage.getItem('passwordList')
+      if (val == null) return
+      let passwordList = JSON.parse(val)
+      if (typeof passwordList[this.myssid] != 'undefined') {
+        this.mypasswd = passwordList[this.myssid]
+      }
     }
   }
 
   delLocalPassowrd() {
-    this.storage.set('passwordList', null);
+    localStorage.setItem('passwordList', null);
   }
 
 

@@ -1,3 +1,45 @@
+:host {
+    ::ng-deep {
+        [widget] {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: #FFF;
+            border: 0px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0px 0px 5px 0px #ccc;
+        }
+
+        [widget-name] {
+            height: 20px;
+            width: 100%;
+            padding-left: 2vw;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            flex-grow: 0;
+            flex-shrink: 0;
+            color: #666;
+            transition: height 0.3s;
+        }
+
+        [widget-content] {
+            height: calc(100% - 20px);
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            flex-grow: 0;
+            flex-shrink: 0;
+        }
+    }
+}
+
 .editMode {
     width: 100%;
     height: 100%;

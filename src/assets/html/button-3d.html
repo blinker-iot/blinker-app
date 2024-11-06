@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <button class="button3d" onclick="tapButton()" id="switch">打开</button>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .button3d {
+            width: 100%;
+            height: 100%;
+            font-size: 1.5em;
+            padding: 10px 20px;
+            color: white;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.3s;
+            background-color: #007BFF;
+            box-shadow: 0 15px #0056b3;
+            position: relative;
+            top: 0;
+            border-radius: 10px;
+            user-select: none;
+        }
+
+        .button3d.on {
+            box-shadow: 0 5px #0056b3;
+            transform: translateY(10px);
+        }
+    </style>
+    <script>
+        // 这里是blinker相关代码，请保留
+        window.addEventListener("message", receiveMessage, false);
+        function receiveMessage(e) {
+            // console.log(e.data);
+            if (e.data.deviceData)
+                Object.assign(device, e.data.deviceData)
+            if (e.data.widgetData)
+                Object.assign(device, e.data.widgetData)
+            update()
+        }
+        // 这个对象用于存储状态
+        let device = {}
+        let widget = {}
+        // 发送数据到设备
+        function send2Device(data) {
+            window.parent.postMessage(data, '*')
+        }
+        // 在本函数中每次数据交换后更新视图
+        function update() {
+            console.log(device);
+            updateButtonEl()
+        }
+
+
+        // 你自己的相关函数
+        var buttonEl = document.querySelector('#switch');
+        function tapButton() {
+            if (device['switch'] == 'on')
+                send2Device({ 'switch': 'off' })
+            else
+                send2Device({ 'switch': 'on' })
+        }
+
+        function updateButtonEl() {
+            if (device['switch'] == 'on') {
+                buttonEl.innerText = '关闭'
+                buttonEl.classList.add('on')
+            } else {
+                buttonEl.innerText = '打开'
+                buttonEl.classList.remove('on')
+            }
+        }
+
+    </script>
+</body>
+
+</html>

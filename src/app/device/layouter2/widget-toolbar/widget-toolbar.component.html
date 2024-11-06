@@ -1,0 +1,68 @@
+<div class="bar">
+  <!-- <div class="infos">
+    <div>{{'WIDGET.POSITION'| translate}}: {{widget.x +','+widget.y}}</div>
+    <div>{{'WIDGET.SIZE'| translate}}: {{widget.cols +','+widget.rows}}</div>
+  </div> -->
+  <div class="btns left">
+    <div class="btn delete">
+      <div class="btn-inner " (click)="del()">
+        <div class="block">
+          <i class="fa-light fa-trash"></i>
+        </div>
+        <div class="name">{{'WIDGET.DELETE'| translate}}</div>
+      </div>
+    </div>
+    <!-- <div class="btn">
+      <div class="btn-inner " (click)="changStyle(0)">
+        <div class="block">
+          <i class="fa-light fa-pen-to-square"></i>
+        </div>
+        <div class="name ">默认</div>
+      </div>
+    </div>
+    <div class="btn">
+      <div class="btn-inner " (click)="changStyle(1)">
+        <div class="block">
+          <i class="fa-light fa-pen-to-square"></i>
+        </div>
+        <div class="name ">风格1</div>
+      </div>
+    </div>
+    <div class="btn">
+      <div class="btn-inner " (click)="changStyle(2)">
+        <div class="block">
+          <i class="fa-light fa-pen-to-square"></i>
+        </div>
+        <div class="name ">风格2</div>
+      </div>
+    </div> -->
+  </div>
+
+  <div class="btns">
+    <div class="btn">
+      <div class="btn-inner " (click)="edit()">
+        <div class="block">
+          <i class="fa-light fa-pen-to-square"></i>
+        </div>
+        <div class="name ">{{'WIDGET.EDIT'| translate}}</div>
+      </div>
+    </div>
+    <!-- <div class="btn">
+      <div class="btn-inner " (click)="layer()">
+        <div class="block">
+          <i class="fa-light fa-layer-group"></i>
+          <label>{{widget.layerIndex}}</label>
+        </div>
+        <div class="name">层级</div>
+      </div>
+    </div> -->
+    <div class="btn">
+      <div class="btn-inner " (click)="close()">
+        <div class="block">
+          <i class="fa-light fa-xmark"></i>
+        </div>
+        <div class="name ">{{'WIDGET.CANCEL'| translate}}</div>
+      </div>
+    </div>
+  </div>
+</div>

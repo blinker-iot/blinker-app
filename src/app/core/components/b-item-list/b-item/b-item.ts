@@ -8,13 +8,15 @@ import { Component, Input, Output, EventEmitter, HostBinding } from '@angular/co
 export class BItemComponent {
 
   @Input() icon;
+  @Input() text;
   @Input() content;
   @Input() height = 60;
   @Input() id;
 
   @Input() editMode = false;
 
-  @Input() showArrow = false;
+  @Input() showArrow:any = false;
+  @Input() showAdd:any = false;
   @Input() disabled = false;
 
   @Output() delete = new EventEmitter;

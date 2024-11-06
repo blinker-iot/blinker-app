@@ -1,0 +1,15 @@
+<div setting-item *ngIf="widget.type=='deb'">
+  <div item-name>显示内容</div>
+  <div item-item class="btnmode">
+    <div [ngClass]="{'selected':widget.mode==0}" (click)="choseBtnMode(0)">
+      <i *ngIf="widget.mode==0" class="fal fa-check-square"></i>
+      <i *ngIf="widget.mode!=0" class="fal fa-square"></i>
+      显示收发数据
+    </div>
+    <div [ngClass]="{'selected':widget.mode==1}" (click)="choseBtnMode(1)">
+      <i *ngIf="widget.mode==1" class="fal fa-check-square"></i>
+      <i *ngIf="widget.mode!=1" class="fal fa-square"></i>
+      显示接收数据
+    </div>
+  </div>
+</div>

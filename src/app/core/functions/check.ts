@@ -9,7 +9,7 @@ export function checkPhone(phone) {
 }
 
 export function checkSmscode(smscode) {
-    if ((smscode.length == 6) && (parseInt(smscode) != NaN)) return true;
+    if (smscode.length == 6) return true;
     return false;
 }
 

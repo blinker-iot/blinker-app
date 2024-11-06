@@ -6,13 +6,13 @@ export var MENU_LIST = [
         // icon: 'device'
         icon: "fal fa-server"
     },
-    {
-        title: '设备共享',
-        title2: 'MENU.DEVICE_SHARING',
-        url: '/share-manager',
-        // icon: 'share'
-        icon: "fal fa-user-friends"
-    },
+    // {
+    //     title: '设备共享',
+    //     title2: 'MENU.DEVICE_SHARING',
+    //     url: '/share-manager',
+    //     // icon: 'share'
+    //     icon: "fal fa-user-friends"
+    // },
     {
         title: '场景管理',
         title2: 'MENU.SCENE_MANAGER',
@@ -39,13 +39,13 @@ export var MENU_LIST = [
     //     icon: 'help',
     //     disabled: true
     // },
-    {
-        title: '开发者',
-        title2: 'MENU.DEV',
-        url: '/devcenter',
-        // icon: 'tool',
-        icon: "fal fa-code"
-    },
+    // {
+    //     title: '开发者',
+    //     title2: 'MENU.DEV',
+    //     url: '/devcenter',
+    //     // icon: 'tool',
+    //     icon: "fal fa-code"
+    // },
     {
         title: '用户反馈',
         title2: 'MENU.FEEDBACK',

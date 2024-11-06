@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CONFIG } from 'src/app/configs/app.config'
 import { BehaviorSubject } from 'rxjs';
-// import { Storage } from '@ionic/storage';
 
 @Injectable({
     providedIn: 'root'
@@ -15,17 +14,13 @@ export class ImageService {
     loader = new BehaviorSubject(false)
 
     constructor(
-        private http: HttpClient,
-        // private storage: Storage
+        private http: HttpClient
     ) { }
 
     init() {
         this.http.get(CONFIG.ICON_FILE + `?date=${new Date().getTime()}`)
             .subscribe(async resp => {
                 this.deviceIconDict = resp;
-                // if (await this.storage.get('deviceIconDict') != JSON.stringify(this.deviceIconDict)) {
-                //     this.storage.set('deviceIconDict', JSON.stringify(this.deviceIconDict));
-                // }
 
                 for (const key in this.deviceIconDict) {
                     this.deviceIconList.push(key);

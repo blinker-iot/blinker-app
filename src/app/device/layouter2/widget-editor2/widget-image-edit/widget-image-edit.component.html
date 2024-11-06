@@ -1,0 +1,6 @@
+<div setting-item *ngFor="let item of widget.list;index as i">
+  <div item-name>图片{{i}}</div>
+  <div input-box>
+    <input type="text" [(ngModel)]="item.url">
+  </div>
+</div>

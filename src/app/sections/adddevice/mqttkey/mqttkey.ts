@@ -1,17 +1,16 @@
 import { Component } from '@angular/core';
 import { NavController } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
-import { Clipboard } from '@ionic-native/clipboard/ngx';
 import { ActivatedRoute } from '@angular/router';
 import { GeolocationService } from 'src/app/core/services/geolocation.service';
 import { AdddeviceService } from '../adddevice.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
+import { Clipboard } from '@capacitor/clipboard';
 
 @Component({
   selector: 'page-mqttkey',
   templateUrl: 'mqttkey.html',
   styleUrls: ['mqttkey.scss'],
-  providers: [Clipboard]
 })
 export class MqttkeyPage {
   showKey = false;
@@ -38,7 +37,6 @@ export class MqttkeyPage {
     private noticeService: NoticeService,
     private activatedRoute: ActivatedRoute,
     private navCtrl: NavController,
-    private clipboard: Clipboard,
     private geolocationService: GeolocationService,
   ) {
   }
@@ -51,7 +49,7 @@ export class MqttkeyPage {
     this.registerDevice('blinker')
   }
 
-  async registerDevice(broker = 'aliyun') {
+  async registerDevice(broker = 'blinker') {
     this.showBroker = broker;
     this.step++;
     let image;
@@ -95,7 +93,9 @@ export class MqttkeyPage {
   }
 
   copyKey() {
-    this.clipboard.copy(this.secretKey);
+    Clipboard.write({
+      string: this.secretKey
+    })
     this.noticeService.showToast('copySuccess')
   }
 

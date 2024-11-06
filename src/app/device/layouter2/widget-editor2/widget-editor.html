@@ -1,0 +1,71 @@
+<div class="edit-box">
+  <div class="header">
+    <div class="tabs">
+      <div class="tab btn" (click)="selectTab(0)" [ngClass]="{'active': tabIndex==0}">
+        <i class="fa-light fa-sidebar"></i>
+      </div>
+      <!-- <div class="tab btn" (click)="tabIndex=1" [ngClass]="{'active': tabIndex==1}">
+        <i class="fa-light fa-objects-column"></i>
+      </div> -->
+      <!-- <div class="tab btn" (click)="selectTab(9)" [ngClass]="{'active': tabIndex==9}">
+        <i class="fa-light fa-rectangle-code"></i>
+      </div> -->
+    </div>
+    <div class="btn save" (click)="save()">
+      <i class="fa-light fa-check"></i>
+    </div>
+  </div>
+  <div class="setting-content" #settingContent>
+    <ng-container *ngIf="tabIndex==0">
+      <widget-base-edit [widget]="widget"></widget-base-edit>
+      <!-- 按键 -->
+      <widget-button-edit [widget]="widget" *ngIf="widget.type=='btn'"></widget-button-edit>
+      <!-- 文本 -->
+      <widget-text-edit [widget]="widget" [dom]="dom" *ngIf="widget.type=='tex'"></widget-text-edit>
+      <!-- 数字 -->
+      <widget-number-edit [widget]="widget" *ngIf="widget.type=='num'"></widget-number-edit>
+      <!-- 图标 -->
+      <widget-icon-edit [widget]="widget" *ngIf="widget.type=='ico'"></widget-icon-edit>
+      <!-- 滑动条 -->
+      <widget-slider-edit [widget]="widget" *ngIf="widget.type=='ran'"></widget-slider-edit>
+      <!-- 图片 -->
+      <widget-image-edit [widget]="widget" *ngIf="widget.type=='img'"></widget-image-edit>
+      <!-- 图表 -->
+      <widget-chart-edit [widget]="widget" *ngIf="widget.type=='cha'"></widget-chart-edit>
+      <!-- 选择 -->
+      <widget-select-edit [widget]="widget" *ngIf="widget.type=='sel'"></widget-select-edit>
+      <!-- 地图 -->
+      <!-- <widget-map-edit [widget]="widget" *ngIf="widget.type=='map'"></widget-map-edit> -->
+      <!-- 视频 -->
+      <!-- <widget-video-edit [widget]="widget" *ngIf="widget.type=='vid'"></widget-video-edit> -->
+      <!-- 输入框 -->
+      <!-- <widget-input-edit [widget]="widget" *ngIf="widget.type=='inp'"></widget-input-edit> -->
+      <!-- 调试 -->
+      <!-- <widget-debug-edit [widget]="widget" *ngIf="widget.type=='deb'"></widget-debug-edit> -->
+      <!-- 定时器 -->
+      <!-- <widget-timer-edit [widget]="widget" *ngIf="widget.type=='tim'"></widget-timer-edit> -->
+      <!-- 颜色 -->
+      <!-- <widget-color-edit [widget]="widget" *ngIf="widget.type=='col'"></widget-color-edit> -->
+      <!-- 摇杆 -->
+      <!-- <widget-joystick-edit [widget]="widget" *ngIf="widget.type=='joy'"></widget-joystick-edit> -->
+      <!-- 自定义 -->
+      <widget-custom-edit [widget]="widget" *ngIf="widget.type=='cus'"></widget-custom-edit>
+      <!-- 背景-公共 -->
+      <!-- <widget-background-edit [widget]="widget" *ngIf="widget.type=='btn'||widget.type=='tex'"></widget-background-edit> -->
+      <!-- 关联组件 -->
+      <!-- <div setting-title>
+        组件联动
+      </div>
+      <div setting-item>
+        <div item-name>关联组件名</div>
+        <div input-box>
+          <input type="text" [(ngModel)]="widget.link">
+        </div>
+      </div> -->
+      <div style="min-height: 45px;" [ngStyle]="{'height': keyboardPadding+'px'}"></div>
+    </ng-container>
+    <ng-container *ngIf="tabIndex==9">
+      <div #jsoneditor style="height:100%;width:100%;"></div>
+    </ng-container>
+  </div>
+</div>

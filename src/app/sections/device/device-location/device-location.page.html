@@ -1,31 +1,31 @@
-<ion-header>
+<ion-header whitebg>
   <ion-toolbar overlayPadding>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
-    <ion-title *ngIf="device">{{device.config.customName}} 位置</ion-title>
+    <ion-title>{{device?.config.customName}} 位置</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
   <div class="mapbox" #mapbox>
   </div>
-
-  <!-- <div>
-    <div>当前位置</div>
-    <div>历史轨迹</div>
-    <div>位置设定</div>
-  </div> -->
-
-  <!-- 位置设定 -->
-  <div *ngIf="device" class="blinker-box">
-    <div class="addr">
-      <div class="title">当前设定位置：</div>
-      <div>{{address}}</div>
+  <div class="blinker-box">
+    <div class="line">
+      设备位置(WGS84)：
+      <div *ngIf="devicePosition">
+        {{devicePosition[0]}} , {{devicePosition[1]}}
+      </div>
+    </div>
+    <div class="line">
+      选择位置(WGS84)：
+      <div *ngIf="centerPosition">
+        {{centerPosition[0]}} , {{centerPosition[1]}}
+      </div>
     </div>
     <div class="btnbox">
       <button [disabled]="btnDisabled" [ngStyle]="{'opacity': btnDisabled?'0.5':'1'}" class="savebtn" fullbtn
-        (click)="saveGeolocation()">更新位置</button>
+        (click)="saveGeolocation()">更新设备位置</button>
     </div>
   </div>
 </ion-content>

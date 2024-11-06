@@ -1,0 +1,16 @@
+<div class="item-box">
+  <div class="icon-box">
+    <i class="{{icon}}"></i>
+  </div>
+  <div class="text-box">
+    <div class="title">{{title}}</div>
+    <div class="text">
+      {{text}}
+    </div>
+  </div>
+  <div class="act-box">
+    <!-- <i class="fa-thin fa-circle-chevron-right"></i> -->
+    <i class="fa-thin" [ngClass]="{'fa-circle-chevron-right': state=='','fa-circle-check':state=='done'}"></i>
+    <i class="fa-thin fa-xmark"></i>
+  </div>
+</div>

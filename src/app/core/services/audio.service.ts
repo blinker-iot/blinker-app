@@ -24,6 +24,11 @@ export class AudioService {
         this.audioEl.play();
     }
 
+    click(){
+        this.audioEl.src = `assets/aac/Click.aac`;
+        this.audioEl.play();
+    }
+
     play(audioName) {
         this.audioEl.src = `assets/aac/Speech_${audioName}.aac`;
         this.audioEl.play();

@@ -1,20 +1,12 @@
 .dismiss {
-    background: #000;
-    opacity: 0.3;
-    height: 100vh;
-    width: 100vw;
-}
-
-.modal-bg {
-    position: fixed;
-    background: #000;
-    opacity: 0.3;
+    // background: #000;
+    // opacity: 0.3;
     height: 100vh;
     width: 100vw;
 }
 
 .select-modal {
-    max-height: 55vh;
+    // max-height: 60vh;
     width: calc(100% - 30px);
     background-color: #FFF;
     padding: 0 15px;
@@ -23,7 +15,7 @@
     box-shadow: 0 0 5px #666;
     position: absolute;
     bottom: 0;
-    overflow: scroll;
+    // overflow: scroll;
 
     .modal-footer {
         // margin-top: 10px;

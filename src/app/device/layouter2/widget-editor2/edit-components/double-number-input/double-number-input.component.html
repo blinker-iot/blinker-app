@@ -1,0 +1,24 @@
+<div class="double-number-input">
+  <input type="number" [(ngModel)]="value" (ngModelChange)="change($event)">
+  <div class="btn-box">
+    <div class="btn" (click)="minus()">
+      <i class="fa-light fa-chevron-left" *ngIf="mode==1"></i>
+      <i class="fa-light fa-arrow-left-from-line" *ngIf="mode==2"></i>
+    </div>
+    <div class="btn" (click)="plus()" style="border-right: 1px solid #CCC;">
+      <i class="fa-light fa-chevron-right" *ngIf="mode==1"></i>
+      <i class="fa-light fa-arrow-right-from-line" *ngIf="mode==2"></i>
+    </div>
+  </div>
+  <input type="number" [(ngModel)]="value2" (ngModelChange)="change2($event)">
+  <div class="btn-box">
+    <div class="btn" (click)="minus2()">
+      <i class="fa-light fa-chevron-up" *ngIf="mode==1"></i>
+      <i class="fa-light fa-arrow-up-from-line" *ngIf="mode==2"></i>
+    </div>
+    <div class="btn" (click)="plus2()">
+      <i class="fa-light fa-chevron-down" *ngIf="mode==1"></i>
+      <i class="fa-light fa-arrow-down-from-line" *ngIf="mode==2"></i>
+    </div>
+  </div>
+</div>

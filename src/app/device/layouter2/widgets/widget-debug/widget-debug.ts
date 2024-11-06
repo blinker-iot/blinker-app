@@ -14,7 +14,6 @@ export class WidgetDebugComponent implements Layouter2Widget {
   debugServiceSubject;
   @Input() device;
   @Input() widget;
-  @Input() lstyle = 0;
   @Input() key;
   @Input() mode = 0;
 

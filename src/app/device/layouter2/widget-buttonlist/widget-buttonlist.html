@@ -3,7 +3,7 @@
     <ng-container *ngFor="let widget of buttonList;index as i">
       <div class="widgetitem" #widgetItem (click)="changeAction(i)"
         [ngClass]="{'selected':isSelected(widget),'default':widget.bg==0,'translucent':widget.bg==1,'transparent':widget.bg==2,'round':widget.bg==3}">
-        <widget-dynamic [widget]="widget" [device]="device" [isDemo]="true"></widget-dynamic>
+        <widget-dynamic [widget]="widget" [device]="device"></widget-dynamic>
       </div>
     </ng-container>
   </div>

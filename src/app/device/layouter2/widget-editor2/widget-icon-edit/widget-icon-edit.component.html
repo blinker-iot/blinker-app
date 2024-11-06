@@ -1,0 +1,18 @@
+<div setting-item>
+  <div item-name>图标</div>
+  <div input-box>
+    <icon-picker [(value)]="widget.ico"></icon-picker>
+  </div>
+</div>
+<div setting-item>
+  <div item-name>图标大小</div>
+  <div input-box>
+    <number-input [(value)]="widget.css['font-size']"></number-input>
+  </div>
+</div>
+<div setting-item>
+  <div item-name>图标颜色</div>
+  <div input-box>
+    <color-picker [(value)]="widget.css.color"></color-picker>
+  </div>
+</div>

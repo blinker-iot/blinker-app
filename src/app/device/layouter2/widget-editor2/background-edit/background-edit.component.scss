@@ -1,0 +1,21 @@
+@import "../widget-editor.scss";
+
+.clear {
+    position: absolute;
+    right: 0;
+    top: 0;
+    padding: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    background: #389bee;
+
+    i {
+        margin-right: 5px;
+        font-size: 14px;
+    }
+}
+
+.clear2{
+    right: 61px;
+}

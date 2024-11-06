@@ -1,0 +1,42 @@
+<ion-header>
+  <ion-toolbar overlayPadding>
+    <ion-buttons slot="start">
+      <ion-back-button text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>
+      <ng-container *ngIf="mode=='new'">
+        {{'TIMING.NEW_TIMING_TASK' | translate}}
+      </ng-container>
+      <ng-container *ngIf="mode=='edit'">
+        {{'TIMING.EDIT_TIMING_TASK' | translate}}
+      </ng-container>
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <b-item-list *ngIf="device">
+    <b-item showArrow="true" (click)="openTimeModal()">
+      <div>任务时间</div>
+      <div class="right-box">{{timeInfo}}</div>
+    </b-item>
+    <b-item showArrow="true" (click)="openRepeatModal()">
+      <div>重复设置</div>
+      <div class="right-box">{{timingData.day | days2text}}</div>
+    </b-item>
+    <b-item showArrow="true" (click)="openActionModal()">
+      <div>执行动作</div>
+      <div class="right-box">{{ this.timingData.act[0] | actcmd2text:device.id}}</div>
+    </b-item>
+  </b-item-list>
+  <div class="bottom-box">
+    <b-item-list *ngIf="device">
+      <b-item icon="fa-light fa-trash" (click)="save()">
+        保存任务
+      </b-item>
+      <b-item icon="fa-light fa-floppy-disk" (click)="delete()">
+        删除任务
+      </b-item>
+    </b-item-list>
+  </div>
+</ion-content>

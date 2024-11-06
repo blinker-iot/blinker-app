@@ -1,0 +1,8 @@
+<div class="color-picker">
+  <input type="text" [(ngModel)]="value" (ngModelChange)="change($event)">
+  <div class="btn-box">
+    <ngx-colors ngx-colors-trigger [(ngModel)]="value" (ngModelChange)="change($event)" [hideTextInput]="true"
+      acceptLabel="确认" cancelLabel="取消">
+    </ngx-colors>
+  </div>
+</div>

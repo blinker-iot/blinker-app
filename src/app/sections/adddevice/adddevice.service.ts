@@ -1,11 +1,13 @@
+// 需修复 12.17
+
 import { Injectable } from '@angular/core';
 import { Platform } from '@ionic/angular';
-import { Zeroconf } from '@awesome-cordova-plugins/zeroconf/ngx';
-import { BLE } from '@awesome-cordova-plugins/ble/ngx';
-import { Network } from '@ionic-native/network/ngx';
+// import { Zeroconf } from '@awesome-cordova-plugins/zeroconf/ngx';
+// import { BLE } from '@awesome-cordova-plugins/ble/ngx';
+// import { Network } from '@awesome-cordova-plugins/network/ngx';
 import { DataService } from 'src/app/core/services/data.service';
 import { Uint8Array2hex, name2mac, mac2name } from 'src/app/core/functions/func';
-import { Diagnostic } from '@awesome-cordova-plugins/diagnostic/ngx';
+// import { Diagnostic } from '@awesome-cordova-plugins/diagnostic/ngx';
 import { API } from 'src/app/configs/api.config';
 import { HttpClient } from '@angular/common/http';
 import { BlinkerResponse } from 'src/app/core/model/response.model';
@@ -39,11 +41,11 @@ export class AdddeviceService {
 
   constructor(
     private http: HttpClient,
-    private zeroconf: Zeroconf,
     public plt: Platform,
-    private ble: BLE,
-    private diagnostic: Diagnostic,
-    public network: Network,
+    // private zeroconf: Zeroconf,
+    // private ble: BLE,
+    // private diagnostic: Diagnostic,
+    // public network: Network,
     private dataService: DataService,
     private noticeService: NoticeService
   ) { }
@@ -57,114 +59,112 @@ export class AdddeviceService {
   }
 
   async isBluetoothAvailable() {
-    if (await this.diagnostic.getBluetoothState() == this.diagnostic.bluetoothState.POWERED_ON) {
-      return true;
-    } else {
-      this.noticeService.showAlert('openBluetooth')
-      return false;
-    }
+    // if (await this.diagnostic.getBluetoothState() == this.diagnostic.bluetoothState.POWERED_ON) {
+    //   return true;
+    // } else {
+    //   this.noticeService.showAlert('openBluetooth')
+    //   return false;
+    // }
   }
 
   // 搜索局域网中的mdns设备
   async scanMdnsDeviceType(deviceType) {
-    // if (!this.isWifiAvailable()) return;
-    // if (!(await this.wifiIsConnected())) return;
-    this.deviceTypeList = [];
-    if (this.plt.is('android')) {
-      this.zeroconf.watchAddressFamily = 'ipv4';
-      await this.zeroconf.reInit();
-    }
-    this.zeroconf.watch('_' + deviceType + '._tcp.', 'local.').subscribe(result => {
-      // console.log(result);
-      if (result.action == "resolved") {
-        console.log(result.service);
-        let item = {
-          "mac": name2mac(result.service.name),
-          "deviceName": result.service.name,
-          "name": result.service.type,
-          "mode": "net",
-          "registed": this.isRegisted(result.service.name)
-        }
-        for (let i = 0; i < this.deviceTypeList.length; i++) {
-          if (item.mac == this.deviceTypeList[i].mac) return;//修正mac下mdns设备出现两次的问题
-        }
-        this.deviceTypeList.push(item);
-      }
-    });
+    // this.deviceTypeList = [];
+    // if (this.plt.is('android')) {
+    //   this.zeroconf.watchAddressFamily = 'ipv4';
+    //   await this.zeroconf.reInit();
+    // }
+    // this.zeroconf.watch('_' + deviceType + '._tcp.', 'local.').subscribe(result => {
+    //   // console.log(result);
+    //   if (result.action == "resolved") {
+    //     console.log(result.service);
+    //     let item = {
+    //       "mac": name2mac(result.service.name),
+    //       "deviceName": result.service.name,
+    //       "name": result.service.type,
+    //       "mode": "net",
+    //       "registed": this.isRegisted(result.service.name)
+    //     }
+    //     for (let i = 0; i < this.deviceTypeList.length; i++) {
+    //       if (item.mac == this.deviceTypeList[i].mac) return;//修正mac下mdns设备出现两次的问题
+    //     }
+    //     this.deviceTypeList.push(item);
+    //   }
+    // });
   }
 
   // 搜索蓝牙设备
   async scanBleDeviceType(bleType) {
-    if (!this.isBluetoothAvailable()) return;
-    // 待添加ACCESS_COARSE_LOCATION权限检查，待测试
-    let BluetoothIsOpen = (await this.diagnostic.getBluetoothState() == this.diagnostic.bluetoothState.POWERED_ON)
-    if (BluetoothIsOpen) {
-      console.log("scanBle");
-      this.deviceTypeList = [];
-      this.ble.scan([], 5).subscribe(result => {
-        console.log(result);
-        if (this.plt.is('android')) {
-          let UUID = Uint8Array2hex(result.advertising).toUpperCase();
-          //console.log(UUID);
-          //在这里添加其他的蓝牙服务ID来过滤 by 王翔
-          if ((UUID.indexOf("02E0FF") != -1) || (UUID.indexOf("02F0FF") != -1) || (UUID.indexOf("03E0FF") != -1) || (UUID.indexOf("03F0FF") != -1)) {
-            let name = "";
-            if (typeof (result.name) != "undefined") name = result.name;
-            else name = "未知设备";
-            let item = {
-              "mac": result.id,
-              "deviceName": mac2name(result),
-              "name": name,
-              "mode": "ble",
-              "rssi": result.rssi,
-              "registed": this.isRegisted(mac2name(result))
-            }
-            this.deviceTypeList.push(item);
-          }
-        }
-        else if (typeof (result.advertising.kCBAdvDataServiceUUIDs) != 'undefined') {
-          for (let i = 0; i < this.deviceTypeList.length; i++) {
-            if (result.id == this.deviceTypeList[i].mac) return;//修正mac下蓝牙设备出现两次的问题
-          }
-          let UUIDs = result.advertising.kCBAdvDataServiceUUIDs;
-          for (let i = 0; i < UUIDs.length; i++) {
-            if ((UUIDs[i].indexOf("FFE0") != -1) || ((UUIDs[i].indexOf("FFF0") != -1))) {
-              console.log(UUIDs[i]);
-              if (typeof (result.advertising.kCBAdvDataManufacturerData) != 'undefined') {
-                let data = new Uint8Array(result.advertising.kCBAdvDataManufacturerData);
-                if (data.length <= 12) {
-                  let name = "";
-                  if (typeof (result.advertising.kCBAdvDataLocalName) != 'undefined') name = result.advertising.kCBAdvDataLocalName;
-                  else if (typeof (result.name) != "undefined") name = result.name;
-                  else name = "未知设备";
-                  let item = {
-                    "mac": result.id,
-                    "deviceName": mac2name(result),
-                    "name": name,
-                    "mode": "ble",
-                    "rssi": result.rssi,
-                    "registed": this.isRegisted(mac2name(result))
-                  }
-                  this.deviceTypeList.push(item);
-                  break;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
+    // if (!this.isBluetoothAvailable()) return;
+    // // 待添加ACCESS_COARSE_LOCATION权限检查，待测试
+    // let BluetoothIsOpen = (await this.diagnostic.getBluetoothState() == this.diagnostic.bluetoothState.POWERED_ON)
+    // if (BluetoothIsOpen) {
+    //   console.log("scanBle");
+    //   this.deviceTypeList = [];
+    //   this.ble.scan([], 5).subscribe(result => {
+    //     console.log(result);
+    //     if (this.plt.is('android')) {
+    //       let UUID = Uint8Array2hex(result.advertising).toUpperCase();
+    //       //console.log(UUID);
+    //       //在这里添加其他的蓝牙服务ID来过滤 by 王翔
+    //       if ((UUID.indexOf("02E0FF") != -1) || (UUID.indexOf("02F0FF") != -1) || (UUID.indexOf("03E0FF") != -1) || (UUID.indexOf("03F0FF") != -1)) {
+    //         let name = "";
+    //         if (typeof (result.name) != "undefined") name = result.name;
+    //         else name = "未知设备";
+    //         let item = {
+    //           "mac": result.id,
+    //           "deviceName": mac2name(result),
+    //           "name": name,
+    //           "mode": "ble",
+    //           "rssi": result.rssi,
+    //           "registed": this.isRegisted(mac2name(result))
+    //         }
+    //         this.deviceTypeList.push(item);
+    //       }
+    //     }
+    //     else if (typeof (result.advertising.kCBAdvDataServiceUUIDs) != 'undefined') {
+    //       for (let i = 0; i < this.deviceTypeList.length; i++) {
+    //         if (result.id == this.deviceTypeList[i].mac) return;//修正mac下蓝牙设备出现两次的问题
+    //       }
+    //       let UUIDs = result.advertising.kCBAdvDataServiceUUIDs;
+    //       for (let i = 0; i < UUIDs.length; i++) {
+    //         if ((UUIDs[i].indexOf("FFE0") != -1) || ((UUIDs[i].indexOf("FFF0") != -1))) {
+    //           console.log(UUIDs[i]);
+    //           if (typeof (result.advertising.kCBAdvDataManufacturerData) != 'undefined') {
+    //             let data = new Uint8Array(result.advertising.kCBAdvDataManufacturerData);
+    //             if (data.length <= 12) {
+    //               let name = "";
+    //               if (typeof (result.advertising.kCBAdvDataLocalName) != 'undefined') name = result.advertising.kCBAdvDataLocalName;
+    //               else if (typeof (result.name) != "undefined") name = result.name;
+    //               else name = "未知设备";
+    //               let item = {
+    //                 "mac": result.id,
+    //                 "deviceName": mac2name(result),
+    //                 "name": name,
+    //                 "mode": "ble",
+    //                 "rssi": result.rssi,
+    //                 "registed": this.isRegisted(mac2name(result))
+    //               }
+    //               this.deviceTypeList.push(item);
+    //               break;
+    //             }
+    //           }
+    //         }
+    //       }
+    //     }
+    //   });
+    // }
   }
 
 
 
   stopScanDevice() {
-    if (!this.plt.is('cordova')) return;
-    if (this.mode == 'ble') {
-      this.ble.stopScan();
-    } else if (this.mode == 'net') {
-      this.zeroconf.close();
-    }
+    // if (!this.plt.is('cordova')) return;
+    // if (this.mode == 'ble') {
+    //   this.ble.stopScan();
+    // } else if (this.mode == 'net') {
+    //   this.zeroconf.close();
+    // }
   }
 
   startScanDevice(deviceType, mode) {

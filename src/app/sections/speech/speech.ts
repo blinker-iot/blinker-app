@@ -48,53 +48,54 @@ export class SpeechPage {
   }
 
   ngAfterViewInit(): void {
-    this.contentSubject = this.speechService.action.subscribe(message => {
-      if (message == 'Sent') {
-        //成功控制设备
-        if (this.speechContent == '打开设备') {
-          this.play("DeviceOpened");
-        } else if (this.speechContent == '关闭设备') {
-          this.play("DeviceClosed");
-        } else if (this.speechContent.indexOf('打开') != -1) {
-          this.play("Opened");
-        } else if (this.speechContent.indexOf('关闭') != -1) {
-          this.play("Closed");
-        } else {
-          this.play("Get");
-        }
-        this.close();
-      } else if (message == 'Wait') {
-        if (this.speechContent.indexOf('打开') != -1) {
-          this.play("Opening");
-        } else if (this.speechContent.indexOf('关闭') != -1) {
-          this.play("Closing");
-        } else {
-          this.play("Wait");
-        }
-      } else if (message == 'Done') {
-        if (this.speechContent.indexOf('打开') != -1) {
-          this.play("Opened2");
-        } else if (this.speechContent.indexOf('关闭') != -1) {
-          this.play("Closed2");
-        } else {
-          this.play("Done");
-        }
-        this.close();
-      }
-      else {
-        this.play(message);
-      }
-    });
-    //获取识别到的内容，并显示
-    this.actionSubject = this.speechService.content.subscribe((content: string) => {
-      this.speechContent = content.replace('。', '');
-      this.changeDetectorRef.detectChanges();
-    });
-    this.start();
+    this.speechService.init();
+    // this.contentSubject = this.speechService.action.subscribe(message => {
+    //   if (message == 'Sent') {
+    //     //成功控制设备
+    //     if (this.speechContent == '打开设备') {
+    //       this.play("DeviceOpened");
+    //     } else if (this.speechContent == '关闭设备') {
+    //       this.play("DeviceClosed");
+    //     } else if (this.speechContent.indexOf('打开') != -1) {
+    //       this.play("Opened");
+    //     } else if (this.speechContent.indexOf('关闭') != -1) {
+    //       this.play("Closed");
+    //     } else {
+    //       this.play("Get");
+    //     }
+    //     this.close();
+    //   } else if (message == 'Wait') {
+    //     if (this.speechContent.indexOf('打开') != -1) {
+    //       this.play("Opening");
+    //     } else if (this.speechContent.indexOf('关闭') != -1) {
+    //       this.play("Closing");
+    //     } else {
+    //       this.play("Wait");
+    //     }
+    //   } else if (message == 'Done') {
+    //     if (this.speechContent.indexOf('打开') != -1) {
+    //       this.play("Opened2");
+    //     } else if (this.speechContent.indexOf('关闭') != -1) {
+    //       this.play("Closed2");
+    //     } else {
+    //       this.play("Done");
+    //     }
+    //     this.close();
+    //   }
+    //   else {
+    //     this.play(message);
+    //   }
+    // });
+    // //获取识别到的内容，并显示
+    // this.actionSubject = this.speechService.content.subscribe((content: string) => {
+    //   this.speechContent = content.replace('。', '');
+    //   this.changeDetectorRef.detectChanges();
+    // });
+    // this.start();
   }
 
   ngOnDestroy(): void {
-    this.speechService.end();
+    // this.speechService.end();
     this.contentSubject.unsubscribe();
     this.actionSubject.unsubscribe();
   }

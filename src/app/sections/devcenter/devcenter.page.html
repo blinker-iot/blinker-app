@@ -50,11 +50,12 @@
       <devcenter-datakey></devcenter-datakey>
     </ng-container>
     <ng-container *ngIf="selectedTab==1">
-      <ng-container *ngIf="developerInfo.userLevel==0">
+      <div textcenter-temp>本版本暂不支持专属设备开发</div>
+      <!-- <ng-container *ngIf="developerInfo.userLevel==0">
         <div textcenter-temp>{{'DEV.TEXT' | translate}}</div>
         <div textcenter-temp>{{'DEV.MORE' | translate}}<br>https://diandeng.tech/doc/prodevice</div>
       </ng-container>
-      <devcenter-prodevice *ngIf="developerInfo.userLevel>0"></devcenter-prodevice>
+      <devcenter-prodevice *ngIf="developerInfo.userLevel>0"></devcenter-prodevice> -->
     </ng-container>
     <ng-container *ngIf="selectedTab==2">
       <devcenter-devtool></devcenter-devtool>

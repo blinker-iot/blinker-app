@@ -1,10 +1,20 @@
+.joystick-box {
+    height: 100%;
+    width: calc(100% - 20px);
+    position: relative;
+}
+
 .joyout {
     position: absolute;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 85%;
-    width: 85%;
+    height: 100%;
+    width: 100%;
+
+    img {
+        max-height: 100%;
+    }
 }
 
 .stick {
@@ -18,17 +28,9 @@
 }
 
 .touch {
+    position: relative;
     height: 100%;
     width: 100%;
     border-radius: 50%;
     z-index: 1;
-}
-
-.joystick-box {
-    height: 100%;
-    width: 100%;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }

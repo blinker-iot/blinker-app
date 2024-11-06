@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LineChartAreaComponent } from './line-chart-area/line-chart-area.component';
-import { NgxEchartsModule } from 'ngx-echarts';
+// import { NgxEchartsModule } from 'ngx-echarts';
 // import * as echarts from 'echarts/core';
 // import { SVGRenderer } from 'echarts/renderers';
 
@@ -11,9 +11,9 @@ import { NgxEchartsModule } from 'ngx-echarts';
   declarations: [LineChartAreaComponent],
   imports: [
     CommonModule,
-    NgxEchartsModule.forRoot({
-      echarts: () => import('echarts'),
-    })
+    // NgxEchartsModule.forRoot({
+    //   echarts: () => import('echarts'),
+    // })
   ],
   exports: [
     LineChartAreaComponent

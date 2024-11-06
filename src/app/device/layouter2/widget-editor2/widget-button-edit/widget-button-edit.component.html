@@ -1,0 +1,34 @@
+<div setting-title>
+  按键设置
+</div>
+<div setting-item>
+  <div item-name>类型</div>
+  <div input-box>
+    <check-list [items]="[{name:'普通按键',value:0},{name:'开关按键',value:1}]" [(selected)]="widget.mode" [radio]="true">
+    </check-list>
+  </div>
+</div>
+<div setting-item>
+  <div item-name>图标(ico)</div>
+  <div input-box>
+    <icon-picker [(value)]="widget.ico"></icon-picker>
+  </div>
+</div>
+<!-- <div setting-item>
+  <div item-name>图标大小</div>
+  <div input-box>
+    <number-input [(value)]="widget.icon['font-size']"></number-input>
+  </div>
+</div> -->
+<div setting-item>
+  <div item-name>颜色(clr)</div>
+  <div input-box>
+    <color-picker [(value)]="widget.clr"></color-picker>
+  </div>
+</div>
+<!-- <div setting-item>
+  <div item-name>反馈方式</div>
+  <div input-box>
+    <check-list [items]="[{name:'动画',value:0},{name:'震动',value:1},{name:'声音',value:2}]" [(selected)]="widget.mode2"></check-list>
+  </div>
+</div> -->

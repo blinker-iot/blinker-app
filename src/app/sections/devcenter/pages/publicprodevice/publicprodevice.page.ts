@@ -4,7 +4,7 @@ import { DevcenterService } from '../../devcenter.service';
 import { ActivatedRoute } from '@angular/router';
 import { NavController } from '@ionic/angular';
 import { CONFIG } from 'src/app/configs/app.config';
-// import { Camera } from '@ionic-native/camera/ngx';
+// import { Camera } from '@awesome-cordova-plugins/camera/ngx';
 
 @Component({
   selector: 'prodevice-public',

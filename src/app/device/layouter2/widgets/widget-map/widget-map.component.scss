@@ -1,7 +1,12 @@
+[widget]{
+    overflow: hidden;
+}
+
 .mapbox {
-    position: relative;
+    position: absolute;
+    top: 0;
     width: 100%;
-    height: 100%;
+    height: calc(100% + 36px);
 }
 
 .bottom-box {

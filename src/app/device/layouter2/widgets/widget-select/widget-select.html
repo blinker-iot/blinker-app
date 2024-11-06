@@ -1,0 +1,23 @@
+<div widget>
+  <div widget-name>{{widget.tit}}</div>
+  <div widget-content>
+    <div class="select-box ccenter">
+      <div class="inner ccenter" [ngStyle]="{'color':current.clr}">
+        <div class="icon-box">
+          <i class="{{current.ico}}"></i>
+        </div>
+        <div class="text ccenter">{{current.name}}</div>
+        <select [(ngModel)]="value" (ngModelChange)="selectChange($event)">
+          @for (opt of widget.opts; track $index) {
+          @if (opt.name!='') {
+          <option value="{{opt.value}}">{{opt.name}}</option>
+          }
+          }
+        </select>
+      </div>
+      <div class="arrow">
+        <i class="fa-regular fa-angle-down"></i>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="../fontawesome6/css/all.min.css" />
+</head>
+
+<body>
+    <div class="button-box">
+        <div class="circle">
+            <i class="fa-light fa-face-awesome"></i>
+        </div>
+        <div class="text">
+            功能1
+        </div>
+    </div>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .button-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .circle {
+            width: 60px;
+            height: 60px;
+            background: #eee;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+            font-size: 26px;
+            color: #333;
+        }
+
+        .circle:active {
+            transform: scale(0.99);
+        }
+
+        .text {
+            margin-top: 3px;
+            font-size: 12px;
+            color: #333;
+        }
+    </style>
+    <script>
+        // 这里是blinker相关代码，请保留
+        // window.addEventListener("message", receiveMessage, false);
+        // function receiveMessage(e) {
+        //     // console.log(e.data);
+        //     if (e.data.deviceData)
+        //         Object.assign(device, e.data.deviceData)
+        //     if (e.data.widgetData)
+        //         Object.assign(device, e.data.widgetData)
+        //     update()
+        // }
+        // // 这个对象用于存储状态
+        // let device = {}
+        // let widget = {}
+        // // 发送数据到设备
+        // function send2Device(data) {
+        //     window.parent.postMessage(data, '*')
+        // }
+        // // 在本函数中每次数据交换后更新视图
+        // function update() {
+        //     console.log(device);
+        //     updateButtonEl()
+        // }
+
+
+        // 你自己的相关函数
+        var buttonEl = document.querySelector('#switch');
+        function tapButton() {
+            // if (device['switch'] == 'on')
+            //     send2Device({ 'switch': 'off' })
+            // else
+            //     send2Device({ 'switch': 'on' })
+        }
+
+        // function updateButtonEl() {
+        //     if (device['switch'] == 'on') {
+        //         buttonEl.innerText = '关闭'
+        //         buttonEl.classList.add('on')
+        //     } else {
+        //         buttonEl.innerText = '打开'
+        //         buttonEl.classList.remove('on')
+        //     }
+        // }
+
+    </script>
+</body>
+
+</html>

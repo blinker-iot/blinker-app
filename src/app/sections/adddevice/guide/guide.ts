@@ -17,7 +17,7 @@ export class GuidePage {
 
   get guideText() {
     if (this.isDev)
-      return this.deviceConfigService.devDeviceConfig[this.deviceType]["guide"]
+      return this.deviceConfigService.devDeviceConfig[this.deviceType]["guide"]    
     return this.deviceConfigService.deviceConfigs[this.deviceType]["guide"]
   }
 

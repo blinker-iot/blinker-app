@@ -1,135 +1,111 @@
-.rangebox {
+[widget] {}
+
+.range-box {
+    position: relative;
+    width: 100%;
+    padding: 0 2vw;
+}
+
+
+.text-box {
+    position: absolute;
+    top: 0;
+    color: #333;
+    display: flex;
+    height: 100%;
+    width: 100%;
+    padding: 0 20px;
+    align-items: center;
+    pointer-events: none;
+    font-size: 12px;
+
+    .text {
+        display: flex;
+        align-items: center;
+
+        i {
+            margin-right: 6px;
+            font-size: 26px;
+        }
+    }
+
+    .value {
+        position: absolute;
+        right: 15px;
+    }
+}
+
+
+.slider {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    padding: 0 0.6rem;
-    position: relative;
 
-    b-range {
+    .bar {
         width: 100%;
+        height: 75%;
+        border-radius: 5px;
+        overflow: hidden;
+        background: rgba(238, 238, 238, 0.5);
+        position: relative;
 
-        .slider {
-            height: 30px;
-        }
+        .activebar {
+            border-radius: 5px;
+            width: 0%;
+            height: 100%;
+            background: #333;
+            overflow: hidden;
+            color: #FFF;
+            transition: background-color 0.5s;
+            white-space: nowrap;
+            position: relative;
 
-        .knob {
-            border: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        .layer {
-            height: 50px;
-            margin-top: -20px;
+            .text-box {
+                color: #fff;
+            }
         }
     }
 
-    .textbox {
-        position: absolute;
-        top: 0.5rem;
-        font-size: 0.7rem;
-        color: #959595;
-        width: 90%;
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-    }
-}
-
-.rangebox.full {
-    padding: 0;
-
-    .textbox {
+    .layer {
+        width: 100%;
+        height: 100%;
         position: absolute;
         top: 0;
-        color: #333;
-        display: flex;
-        height: 100%;
-        width: 100%;
-        padding: 0 15px;
-        align-items: center;
-        pointer-events: none;
-
-        &.top {
-            color: #eee;
-        }
-    }
-
-    .mark-box {
-        position: absolute;
         left: 0;
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-
-        .mark {
-            height: 15px;
-            width: 1px;
-            background-color: #ddd;
-        }
-
-        .point {
-            height: 0px !important;
-        }
-    }
-
-    b-range {
-        width: 100%;
-        height: 100%;
-
-        ::ng-deep {
-            .slider {
-                height: 100%;
-                padding: 0;
-            }
-
-            .bar {
-                height: 100%;
-                width: 100%;
-                position: relative;
-                background: transparent !important;
-
-                // .activebar {
-                //     // border-radius: 8px;
-                //     // transition: background-color 1s;
-                // }
-            }
-
-            .knob {
-                visibility: hidden;
-            }
-        }
     }
 }
 
-.flex-row-box {
-    display: flex;
-    align-items: center;
-}
+// .slider-y {
+//     position: relative;
+//     display: flex;
+//     display: -webkit-flex;
+//     align-items: center;
+//     justify-content: center;
+//     flex-direction: row;
+//     height: 100%;
+//     min-width: 20px;
+//     min-height: 50px;
+//     padding: 10px 0;
 
-.jj-box {
-    color: #666;
-    width: 50px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+//     .bar {
+//         width: 5px;
+//         height: 100%;
+//         border-radius: 2.5px;
+//     }
 
-    .jj-btn {
-        height: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        i {
-            font-size: 16px;
-        }
-    }
-}
+//     .bar-active {
+//         position: absolute;
+//         bottom: 0;
+//         height: 0%;
+//     }
 
-.jj-box2 {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+//     .touch {
+//         width: 150%;
+//         height: 100%;
+//         position: absolute;
+//         left: 0;
+//     }
+// }

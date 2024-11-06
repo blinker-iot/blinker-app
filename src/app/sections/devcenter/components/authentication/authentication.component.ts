@@ -1,5 +1,5 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
-import { Camera, CameraOptions } from '@ionic-native/camera/ngx';
+// import { Camera, CameraOptions } from '@awesome-cordova-plugins/camera/ngx';
 import { Platform, ActionSheetController } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
 import { DevcenterService } from '../../devcenter.service';
@@ -35,7 +35,7 @@ function base64ToBlob(base64) {
   selector: 'dev-authentication',
   templateUrl: './authentication.component.html',
   styleUrls: ['./authentication.component.scss'],
-  providers: [Camera]
+  // providers: [Camera]
 })
 export class AuthenticationComponent implements OnInit {
 
@@ -47,7 +47,7 @@ export class AuthenticationComponent implements OnInit {
   @Output() confirm = new EventEmitter();
 
   constructor(
-    private camera: Camera,
+    // private camera: Camera,
     private platform: Platform,
     private userService: UserService,
     private dataService: DataService,
@@ -96,21 +96,21 @@ export class AuthenticationComponent implements OnInit {
 
   getPicture(sourceType, imgNum) {
     if (this.platform.is('cordova')) {
-      const options: CameraOptions = {
-        quality: 50,
-        sourceType: sourceType,
-        destinationType: this.camera.DestinationType.DATA_URL,
-        encodingType: this.camera.EncodingType.JPEG,
-        mediaType: this.camera.MediaType.PICTURE
-      }
-      this.camera.getPicture(options).then((imageData) => {
-        if (imgNum == 0)
-          this.img0 = 'data:image/jpeg;base64,' + imageData;
-        else
-          this.img1 = 'data:image/jpeg;base64,' + imageData;
-      }, (err) => {
-        console.log("获取图片失败");
-      });
+      // const options: CameraOptions = {
+      //   quality: 50,
+      //   sourceType: sourceType,
+      //   destinationType: this.camera.DestinationType.DATA_URL,
+      //   encodingType: this.camera.EncodingType.JPEG,
+      //   mediaType: this.camera.MediaType.PICTURE
+      // }
+      // this.camera.getPicture(options).then((imageData) => {
+      //   if (imgNum == 0)
+      //     this.img0 = 'data:image/jpeg;base64,' + imageData;
+      //   else
+      //     this.img1 = 'data:image/jpeg;base64,' + imageData;
+      // }, (err) => {
+      //   console.log("获取图片失败");
+      // });
     }
     else {
       console.log("当前功能只支持真机使用");

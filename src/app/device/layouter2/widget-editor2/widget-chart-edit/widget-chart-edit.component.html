@@ -1,0 +1,17 @@
+<div setting-title>
+  图表设置
+</div>
+<div setting-item *ngFor="let item of widget.items;index as i">
+  <div item-name>数据{{i+1}}</div>
+  <div input-box>
+    <input placeholder="数据key" type="text" [(ngModel)]="item.key">
+    <input placeholder="显示名" style="border-right: none !important" type="text" [(ngModel)]="item.name">
+    <color-picker [(value)]="item.color"></color-picker>
+  </div>
+</div>
+<div setting-item *ngIf="widget.items.length<3">
+  <div item-name></div>
+  <div class="add-btn" (click)="addItem()">
+    添加数据
+  </div>
+</div>

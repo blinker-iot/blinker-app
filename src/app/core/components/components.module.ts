@@ -10,7 +10,6 @@ import { BColorpickerBtnsComponent } from './b-colorpicker-btns/b-colorpicker-bt
 import { BTimepickerComponent } from './b-timepicker/b-timepicker.component';
 import { BProgressbarComponent } from './b-progressbar/b-progressbar.component';
 import { BColorpickerDiscComponent } from './b-colorpicker-disc/b-colorpicker-disc.component';
-import { InputBoxComponent } from './input-box/input-box.component';
 import { FormsModule } from '@angular/forms';
 import { BChartComponent } from './b-chart/b-chart.component';
 import { BDeviceImgComponent } from './b-device-img/b-device-img.component';
@@ -37,7 +36,6 @@ import { SceneButtonComponent } from './scene-button-group/scene-button/scene-bu
     BTimepickerComponent,
     BProgressbarComponent,
     BColorpickerDiscComponent,
-    InputBoxComponent,
     BChartComponent,
     BDeviceImgComponent,
     BBottomBtnComponent,

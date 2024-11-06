@@ -1,9 +1,8 @@
 import { Component, Input, ViewChild, ElementRef } from '@angular/core';
-import { UserService } from 'src/app/core/services/user.service';
-import { GeolocationService } from 'src/app/core/services/geolocation.service';
 import { Layouter2Widget } from '../config';
 import { ActionSheetController } from '@ionic/angular';
-declare var L;
+import coordtransform from 'coordtransform';
+import { GeolocationService } from 'src/app/core/services/geolocation.service';
 
 @Component({
   selector: 'widget-map',
@@ -12,7 +11,8 @@ declare var L;
 })
 export class WidgetMapComponent implements Layouter2Widget {
 
-  mymap;
+  AMap;
+  map;
 
   @Input() device;
   @Input() widget;
@@ -22,13 +22,13 @@ export class WidgetMapComponent implements Layouter2Widget {
   }
 
   get longitude() {
-    if (typeof this.device.config.position == 'undefined')
+    if (!this.device.config.position.location[0])
       return 104.07
     return this.device.config.position.location[0]
   }
 
   get latitude() {
-    if (typeof this.device.config.position == 'undefined')
+    if (!this.device.config.position.location[1])
       return 30.67
     return this.device.config.position.location[1]
   }
@@ -39,6 +39,8 @@ export class WidgetMapComponent implements Layouter2Widget {
     return this.device.config.position.address
   }
 
+  userPosition;
+
   getValue(valueKey) {
     if (typeof this.device.data[this.key] != 'undefined')
       if (typeof this.device.data[this.key][valueKey] != 'undefined')
@@ -48,60 +50,85 @@ export class WidgetMapComponent implements Layouter2Widget {
     return ''
   }
 
-  _lstyle
-  @Input()
-  set lstyle(lstyle) {
-    this._lstyle = lstyle
-  }
-  get lstyle() {
-    if (typeof this._lstyle != 'undefined')
-      return this._lstyle
-    if (typeof this.widget.lstyle != 'undefined')
-      return this.widget.lstyle
-    return 0;
-  }
-
-  @ViewChild('widgetmap', { read: ElementRef, static: true }) map: ElementRef;
+  @ViewChild('widgetMap', { read: ElementRef, static: true }) mapEl: ElementRef;
 
   constructor(
-    private actionSheetController: ActionSheetController
+    private actionSheetController: ActionSheetController,
+    private geolocationService: GeolocationService
   ) { }
 
   ngOnInit() {
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.initMap();
-    }, 100);
+    this.initMap();
   }
 
-  initMap() {
-    this.mymap = L.map(this.map.nativeElement, {
-      center: [this.latitude, this.longitude],
-      zoom: 10,
-      attributionControl: false
-    });
-    L.tileLayer.chinaProvider('GaoDe.Normal.Map', {
-      maxZoom: 18,
-      minZoom: 5
-    }).addTo(this.mymap);
-    let markerIcon = L.icon({
-      iconUrl: 'assets/img/marker.png',
-      iconSize: [36, 36],
-      className: 'mapicon'
-    });
-    let marker = L.marker([this.latitude, this.longitude], { icon: markerIcon }).addTo(this.mymap);
-    marker.bindPopup(this.device.config.customName);
+  async initMap() {
+    let position;
+    if (this.device.config.position.location.length == 2) {
+      position = this.device.config.position.location
+    } else {
+      position = await this.geolocationService.getUserPosition()
+    }
+    // AMapLoader.load({
+    //   "key": "6f02b1056c81d1638ecf21c8469f7b61",
+    //   "version": "2.0"
+    // }).then((AMap: any) => {
+    //   this.AMap = AMap;
+    //   this.map = new AMap.Map('map-container', {
+    //     center: position,
+    //     zoom: 14
+    //   });
+    //   this.addDeviceMarker()
+    //   this.addUserMarker()
+    // }).catch((e: any) => {
+    //   console.log(e);
+    // })
   }
 
-  loadRoutingData() {
-    L.Routing.control({
-      waypoints: [
-        L.latLng(57.74, 11.94),
-        L.latLng(57.6792, 11.949)
-      ]
-    }).addTo(this.mymap);
+  addDeviceMarker() {
+    if (this.device.config.position.location.length == 0) {
+      return
+    }
+    let marker = this.addMarker({
+      position: [this.longitude, this.latitude],
+      title: this.device.config.customName,
+      icon: 'assets/img/map/device.png'
+    })
+    marker.on('click', () => {
+      let infoWindow = new this.AMap.InfoWindow({
+        content: this.device.config.customName,
+        offset: new this.AMap.Pixel(0, -30)
+      });
+      infoWindow.open(this.map, marker.getPosition());
+    });
+  }
+
+  async addUserMarker() {
+    let marker = this.addMarker({
+      position: await this.geolocationService.getUserPosition(),
+      title: '我的位置',
+      icon: 'assets/img/map/user.png'
+    })
+    marker.on('click', () => {
+      let infoWindow = new this.AMap.InfoWindow({
+        content: marker.getTitle(),
+        offset: new this.AMap.Pixel(0, -30)
+      });
+      infoWindow.open(this.map, marker.getPosition());
+    });
+  }
+
+  addMarker({ position: [longitude, latitude], title, icon = 'assets/img/map/marker.png' }) {
+    let marker = new this.AMap.Marker({
+      position: [longitude, latitude],
+      title,
+      icon,
+      anchor: 'center'
+    });
+    this.map.add(marker)
+    return marker
   }
 
   async gotoNav() {

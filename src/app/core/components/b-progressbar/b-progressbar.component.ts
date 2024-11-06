@@ -1,6 +1,8 @@
 import { Component, ViewChild, ElementRef, Input, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 // import ProgressBar from 'progressbar.js';
-import { Brightness } from '@ionic-native/brightness/ngx';
+// import { Brightness } from '@awesome-cordova-plugins/brightness/ngx';
+
+// var brightness = cordova.plugins.brightness;
 
 @Component({
   selector: 'b-progressbar',
@@ -20,15 +22,15 @@ export class BProgressbarComponent {
   @ViewChild('ProgressBar',{ read: ElementRef, static: true }) progressBar: ElementRef;
   constructor(
     // private changeDetectorRef: ChangeDetectorRef,
-    private brightness: Brightness
+    // private brightness: Brightness
   ) { }
 
   ngOnInit(): void {
-    this.brightness.setKeepScreenOn(true);
+    // cordova.plugins.brightness.setKeepScreenOn(true);
   }
 
   ngOnDestroy(): void {
-    this.brightness.setKeepScreenOn(false);
+    // cordova.plugins.brightness.setKeepScreenOn(false);
   }
 
   ngAfterViewInit(): void {

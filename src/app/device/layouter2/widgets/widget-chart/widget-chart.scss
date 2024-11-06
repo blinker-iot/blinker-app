@@ -1,8 +1,13 @@
+[widget-content] {
+    height: 100%;
+}
+
 .chartbox {
     position: absolute;
     bottom: 0;
     width: 100%;
     height: calc(100% - 32px);
+    overflow: hidden;
 }
 
 .nodata {
@@ -23,39 +28,50 @@
     position: absolute;
     top: 10px;
     left: 10px;
-    width: 100%;
     display: flex;
     align-items: center;
     flex-direction: row;
 
     .item {
         border: 1px solid #cccccc;
-        border-radius: 4px;
         width: 16vw;
+        max-width: 90px;
         height: 22px;
-        margin-right: 3vw;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
+        font-size: 12px;
         line-height: 13px;
-        color: #666666;
+        color: #666;
         overflow: hidden;
         white-space: nowrap;
+
+        &:first-child {
+            border-top-left-radius: 5px;
+            border-bottom-left-radius: 5px;
+            border-right: none;
+        }
+
+        &:last-child {
+            border-top-right-radius: 5px;
+            border-bottom-right-radius: 5px;
+            border-left: none;
+        }
     }
 
     .selected {
         color: #fff;
-        background-color: #389bee;
+        // background-color: #389bee;
         border: none;
     }
 
     .unselected {
-        background-color: #fff !important;
+        background-color: transparent !important;
     }
 }
 
 select {
+    color: #666;
     position: absolute;
     top: 10px;
     right: 10px;
@@ -63,7 +79,7 @@ select {
     width: 100px;
     border: 1px solid #cccccc;
     border-radius: 4px;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 13px;
     background-color: #fff0;
     display: flex;

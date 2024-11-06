@@ -8,6 +8,7 @@
     </ng-container>
     <ng-container *ngIf="actions.length==0">
       <div class="noitem">{{'DEVICE.NO_ACTION' | translate}}</div>
+      <div class="btn" (click)="genActs()">自动生成动作</div>
     </ng-container>
   </div>
 </div>

@@ -13,11 +13,15 @@ import { DataService } from './data.service';
 export class UserService {
 
   get uuid() {
-    return this.dataService.auth.uuid
+    if (this.dataService.auth)
+      return this.dataService.auth.uuid
+    return null
   }
 
   get token() {
-    return this.dataService.auth.token
+    if (this.dataService.auth)
+      return this.dataService.auth.token
+    return null
   }
 
   constructor(

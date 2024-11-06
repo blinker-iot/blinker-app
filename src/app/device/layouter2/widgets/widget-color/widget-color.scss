@@ -1,41 +1,8 @@
-.color-box {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 0.3rem 0;
 
-    .content {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        color: #898989;
-    }
+[widget]{
 
-    b-colorpicker-disc {
-        height: 70%;
-        width: calc(70% - 5px);
-    }
+}
 
-    b-colorpicker-disc.full{
-        height: 100%;
-        width: calc(100% - 10px);
-    }
-
-    .brightness {
-        margin-top: 2%;
-        height: 16%;
-        width: 100%;
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: center;
-        color: #a3a3a3;
-
-        b-range {
-            width: 80%;
-            margin: 0 5px;
-        }
-    }
+b-colorpicker-disc {
+    height: 100%;
 }

@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { deviceTypes } from '../../configs/devices.config';
 import { HttpClient } from '@angular/common/http';
-import { Storage } from '@ionic/storage';
+// import { Storage } from '@ionic/storage-angular';
 import { DataService } from './data.service';
 import { CONFIG } from 'src/app/configs/app.config';
 import { API } from 'src/app/configs/api.config';
@@ -31,7 +31,7 @@ export class DeviceConfigService {
 
   _addPublicDeviceList = [];
   set addPublicDeviceList(list: any[]) {
-    this.storage.set('addPublicDeviceList', list)
+    localStorage.setItem('addPublicDeviceList', JSON.stringify(list))
     this._addPublicDeviceList = list
   }
 
@@ -41,7 +41,7 @@ export class DeviceConfigService {
 
   _addLocalDeviceList = [];
   set addLocalDeviceList(list: any[]) {
-    this.storage.set('addLocalDeviceList', list)
+    localStorage.setItem('addLocalDeviceList', JSON.stringify(list))
     this._addLocalDeviceList = list
   }
 
@@ -51,7 +51,7 @@ export class DeviceConfigService {
 
   _addDevDeviceList = [];
   set addDevDeviceList(list: any[]) {
-    this.storage.set('addDevDeviceList', list)
+    localStorage.setItem('addDevDeviceList', JSON.stringify(list))
     this._addDevDeviceList = list
   }
 
@@ -65,7 +65,7 @@ export class DeviceConfigService {
 
   _publicDeviceConfig = {};
   set publicDeviceConfig(config) {
-    this.storage.set('publicDeviceConfig', config)
+    localStorage.setItem('publicDeviceConfig', JSON.stringify(config))
     this._publicDeviceConfig = config
   }
 
@@ -75,7 +75,7 @@ export class DeviceConfigService {
 
   _localDeviceConfig = {};
   set localDeviceConfig(config) {
-    this.storage.set('localDeviceConfig', config)
+    localStorage.setItem('localDeviceConfig', JSON.stringify(config))
     this._localDeviceConfig = config
   }
 
@@ -85,7 +85,7 @@ export class DeviceConfigService {
 
   _devDeviceConfig = {};
   set devDeviceConfig(config) {
-    this.storage.set('devDeviceConfig', config)
+    localStorage.setItem('devDeviceConfig', JSON.stringify(config))
     this._devDeviceConfig = config
   }
 
@@ -98,72 +98,76 @@ export class DeviceConfigService {
   constructor(
     private http: HttpClient,
     private dataService: DataService,
-    private storage: Storage
+    // private storage: Storage
   ) { }
 
   async init() {
     this.dataService.initCompleted.subscribe(async (state) => {
       if (state) {
-        this._addDevDeviceList = await this.storage.get('addDevDeviceList')
-        this._addPublicDeviceList = await this.storage.get('addPublicDeviceList')
+        this._addDevDeviceList = JSON.parse(localStorage.getItem('addDevDeviceList'))
+        this._addPublicDeviceList = JSON.parse(localStorage.getItem('addPublicDeviceList'))
+        this._devDeviceConfig = JSON.parse(localStorage.getItem('devDeviceConfig'))
+        this._publicDeviceConfig = JSON.parse(localStorage.getItem('publicDeviceConfig'))
 
-        this._devDeviceConfig = await this.storage.get('devDeviceConfig')
-        this._publicDeviceConfig = await this.storage.get('publicDeviceConfig')
+        // this._addDevDeviceList = await this.storage.get('addDevDeviceList')
+        // this._addPublicDeviceList = await this.storage.get('addPublicDeviceList')
+        // this._devDeviceConfig = await this.storage.get('devDeviceConfig')
+        // this._publicDeviceConfig = await this.storage.get('publicDeviceConfig')
 
         this.getLocalDeviceConfig();
-        await this.getPublicDeviceConfig();
-        await this.getDevDeviceConfig();
+        // await this.getPublicDeviceConfig();
+        // await this.getDevDeviceConfig();
         this.loaded.next(true)
       }
     })
   }
 
-  // 获取开发中的设备
-  getDevDeviceConfig() {
-    if (window.hasDevCenterModule)
-      return this.http.get(API.DEVICE_CONFIG.DEV, {
-        params: {
-          uuid: this.uuid,
-          token: this.token
-        }
-      })
-        .toPromise()
-        .then(response => {
-          console.log(response);
-          let data = JSON.parse(JSON.stringify(response));
-          if (data.message == 1000) {
-            this.devDeviceConfig = data.detail
-            this.addDevDeviceList = this.pushAddDeviceList(this.devDeviceConfig, { isDev: true });
-          }
-        })
-        .catch(this.handleError);
-  }
+  // // 获取开发中的设备
+  // getDevDeviceConfig() {
+  //   if (window.hasDevCenterModule)
+  //     return this.http.get(API.DEVICE_CONFIG.DEV, {
+  //       params: {
+  //         uuid: this.uuid,
+  //         token: this.token
+  //       }
+  //     })
+  //       .toPromise()
+  //       .then(response => {
+  //         console.log(response);
+  //         let data = JSON.parse(JSON.stringify(response));
+  //         if (data.message == 1000) {
+  //           this.devDeviceConfig = data.detail
+  //           this.addDevDeviceList = this.pushAddDeviceList(this.devDeviceConfig, { isDev: true });
+  //         }
+  //       })
+  //       .catch(this.handleError);
+  // }
 
-  // 获取已发布的设备列表
-  getPublicDeviceConfig() {
-    return this.http.get(API.DEVICE_CONFIG.PUBLIC, {
-      params: {
-        uuid: this.uuid,
-        token: this.token
-      }
-    })
-      .toPromise()
-      .then(response => {
-        console.log(response);
-        let data = JSON.parse(JSON.stringify(response));
-        if (data.message == 1000) {
-          this.publicDeviceConfig = data.detail
-          this.addPublicDeviceList = this.pushAddDeviceList(this.publicDeviceConfig);
-        }
-      })
-      .catch(this.handleError);
-  }
+  // // 获取已发布的设备列表
+  // getPublicDeviceConfig() {
+  //   return this.http.get(API.DEVICE_CONFIG.PUBLIC, {
+  //     params: {
+  //       uuid: this.uuid,
+  //       token: this.token
+  //     }
+  //   })
+  //     .toPromise()
+  //     .then(response => {
+  //       console.log(response);
+  //       let data = JSON.parse(JSON.stringify(response));
+  //       if (data.message == 1000) {
+  //         this.publicDeviceConfig = data.detail
+  //         this.addPublicDeviceList = this.pushAddDeviceList(this.publicDeviceConfig);
+  //       }
+  //     })
+  //     .catch(this.handleError);
+  // }
 
   // 获取本地存储的设备列表
   async getLocalDeviceConfig() {
     if (CONFIG.BUILTIN_DEVICES.ENABLE) {
-      this._addLocalDeviceList = await this.storage.get('addLocalDeviceList')
-      this._localDeviceConfig = await this.storage.get('localDeviceConfig')
+      this._addLocalDeviceList = JSON.parse(localStorage.getItem('addLocalDeviceList'))
+      this._localDeviceConfig = JSON.parse(localStorage.getItem('localDeviceConfig'))
       this.localDeviceConfig = deviceTypes
       this.addLocalDeviceList = this.pushAddDeviceList(this.localDeviceConfig);
     }
