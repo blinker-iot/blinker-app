@@ -38,6 +38,15 @@
               "node_modules/hammerjs/hammer.min.js",
               "node_modules/marked/marked.min.js",
               "node_modules/mqtt/dist/mqtt.min.js"
+            ],
+            "allowedCommonJsDependencies": [
+              "pickerjs",
+              "coordtransform",
+              "crypto-js",
+              "text-encoding",
+              "cropperjs",
+              "jsoneditor",
+              "pulltorefreshjs"
             ]
           },
           "configurations": {
