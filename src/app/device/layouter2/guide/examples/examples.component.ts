@@ -7,9 +7,10 @@ import { Layouter2Service } from '../../layouter2.service';
 import { NewuiService } from '../../newui/newui.service';
 
 @Component({
-  selector: 'blinker-guide-examples',
-  templateUrl: './examples.component.html',
-  styleUrls: ['./examples.component.scss'],
+    selector: 'blinker-guide-examples',
+    templateUrl: './examples.component.html',
+    styleUrls: ['./examples.component.scss'],
+    standalone: false
 })
 export class ExamplesComponent implements OnInit {
 

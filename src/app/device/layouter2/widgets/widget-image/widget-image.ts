@@ -3,9 +3,10 @@ import { Layouter2Service } from '../../layouter2.service';
 import { Layouter2Widget } from '../config';
 
 @Component({
-  selector: 'widget-image',
-  templateUrl: 'widget-image.html',
-  styleUrls: ['widget-image.scss']
+    selector: 'widget-image',
+    templateUrl: 'widget-image.html',
+    styleUrls: ['widget-image.scss'],
+    standalone: false
 })
 export class WidgetImageComponent implements Layouter2Widget {
 

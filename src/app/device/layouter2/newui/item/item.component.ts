@@ -1,9 +1,10 @@
 import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
-  selector: 'nui-item',
-  templateUrl: './item.component.html',
-  styleUrls: ['./item.component.scss'],
+    selector: 'nui-item',
+    templateUrl: './item.component.html',
+    styleUrls: ['./item.component.scss'],
+    standalone: false
 })
 export class ItemComponent implements OnInit {
 

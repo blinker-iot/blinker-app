@@ -2,9 +2,10 @@ import { Component, Input, Output, EventEmitter, ChangeDetectorRef, ViewChildren
 import { AlertController } from '@ionic/angular';
 
 @Component({
-  selector: 'widget-buttonlist',
-  templateUrl: 'widget-buttonlist.html',
-  styleUrls: ['widget-buttonlist.scss']
+    selector: 'widget-buttonlist',
+    templateUrl: 'widget-buttonlist.html',
+    styleUrls: ['widget-buttonlist.scss'],
+    standalone: false
 })
 export class widgetButtonListComponent {
 

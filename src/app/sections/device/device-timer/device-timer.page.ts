@@ -13,21 +13,20 @@ import { ComponentsModule } from "src/app/core/components/components.module";
 import { ModalsModule } from "src/app/core/modals/modals.module";
 
 @Component({
-  selector: "device-timer",
-  templateUrl: "./device-timer.page.html",
-  styleUrls: ["./device-timer.page.scss"],
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonicModule,
-    PipesModule,
-    RouterModule,
-    TranslateModule,
-    ComponentsModule,
-    ModalsModule,
-  ],
-  providers: [TimerService],
+    selector: "device-timer",
+    templateUrl: "./device-timer.page.html",
+    styleUrls: ["./device-timer.page.scss"],
+    imports: [
+        CommonModule,
+        FormsModule,
+        IonicModule,
+        PipesModule,
+        RouterModule,
+        TranslateModule,
+        ComponentsModule,
+        ModalsModule,
+    ],
+    providers: [TimerService]
 })
 export class DeviceTimerPage implements OnInit {
   id;

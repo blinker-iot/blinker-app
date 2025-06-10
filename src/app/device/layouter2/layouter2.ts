@@ -25,9 +25,10 @@ import { DefaultLayouterData } from "./layouter.config";
 import { WidgetEditor } from "./widget-editor2/widget-editor";
 
 @Component({
-  selector: "layouter2",
-  templateUrl: "layouter2.html",
-  styleUrls: ["layouter2.scss"],
+    selector: "layouter2",
+    templateUrl: "layouter2.html",
+    styleUrls: ["layouter2.scss"],
+    standalone: false
 })
 export class Layouter2Component implements DeviceComponent {
   static deviceType = "Layouter2";

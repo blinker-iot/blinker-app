@@ -4,9 +4,10 @@ import { ModalController } from '@ionic/angular';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
 
 @Component({
-  selector: 'blinker-about',
-  templateUrl: './about.page.html',
-  styleUrls: ['./about.page.scss'],
+    selector: 'blinker-about',
+    templateUrl: './about.page.html',
+    styleUrls: ['./about.page.scss'],
+    standalone: false
 })
 export class AboutPage implements OnInit {
 

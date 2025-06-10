@@ -4,9 +4,10 @@ import { Router } from '@angular/router';
 import { DevcenterService } from '../../devcenter.service';
 
 @Component({
-  selector: 'devcenter-prodevice',
-  templateUrl: './prodevice.component.html',
-  styleUrls: ['./prodevice.component.scss']
+    selector: 'devcenter-prodevice',
+    templateUrl: './prodevice.component.html',
+    styleUrls: ['./prodevice.component.scss'],
+    standalone: false
 })
 export class ProdeviceComponent implements OnInit {
 

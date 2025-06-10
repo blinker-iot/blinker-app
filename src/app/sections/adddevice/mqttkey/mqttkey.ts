@@ -8,9 +8,10 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 import { Clipboard } from '@capacitor/clipboard';
 
 @Component({
-  selector: 'page-mqttkey',
-  templateUrl: 'mqttkey.html',
-  styleUrls: ['mqttkey.scss'],
+    selector: 'page-mqttkey',
+    templateUrl: 'mqttkey.html',
+    styleUrls: ['mqttkey.scss'],
+    standalone: false
 })
 export class MqttkeyPage {
   showKey = false;

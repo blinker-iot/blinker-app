@@ -3,9 +3,10 @@ import { DataService } from 'src/app/core/services/data.service';
 
 
 @Component({
-  selector: 'page-device-manager',
-  templateUrl: 'device-manager.html',
-  styleUrls: ['device-manager.scss']
+    selector: 'page-device-manager',
+    templateUrl: 'device-manager.html',
+    styleUrls: ['device-manager.scss'],
+    standalone: false
 })
 export class DeviceManagerPage {
 

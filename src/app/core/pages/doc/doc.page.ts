@@ -3,9 +3,10 @@ import { DocService } from '../../services/doc.service';
 import { ModalController } from '@ionic/angular';
 
 @Component({
-  selector: 'app-doc',
-  templateUrl: './doc.page.html',
-  styleUrls: ['./doc.page.scss'],
+    selector: 'app-doc',
+    templateUrl: './doc.page.html',
+    styleUrls: ['./doc.page.scss'],
+    standalone: false
 })
 export class DocPage implements OnInit {
 

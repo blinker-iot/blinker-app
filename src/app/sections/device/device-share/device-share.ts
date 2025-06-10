@@ -13,16 +13,15 @@ import { ComponentsModule } from "src/app/core/components/components.module";
 import { TranslateModule } from "@ngx-translate/core";
 
 @Component({
-  selector: "device-share",
-  templateUrl: "device-share.html",
-  styleUrls: ["device-share.scss"],
-  standalone: true,
-  imports: [
-    IonicModule,
-    CommonModule,
-    ComponentsModule,
-    TranslateModule
-  ],
+    selector: "device-share",
+    templateUrl: "device-share.html",
+    styleUrls: ["device-share.scss"],
+    imports: [
+        IonicModule,
+        CommonModule,
+        ComponentsModule,
+        TranslateModule
+    ]
 })
 export class DeviceSharePage {
   id;

@@ -12,16 +12,15 @@ import { CommonModule } from "@angular/common";
 import { toBD09, toWsg84 } from "src/app/core/functions/func";
 
 @Component({
-  selector: "app-device-location",
-  templateUrl: "./device-location.page.html",
-  styleUrls: ["./device-location.page.scss"],
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonicModule,
-    DirectivesModule,
-  ],
+    selector: "app-device-location",
+    templateUrl: "./device-location.page.html",
+    styleUrls: ["./device-location.page.scss"],
+    imports: [
+        CommonModule,
+        FormsModule,
+        IonicModule,
+        DirectivesModule,
+    ]
 })
 export class DeviceLocationPage implements OnInit {
   mymap;

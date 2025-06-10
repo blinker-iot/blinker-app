@@ -5,9 +5,10 @@ import Sortable from 'sortablejs';
 import { DataService } from '../../services/data.service';
 
 @Component({
-  selector: 'scene-button-group',
-  templateUrl: 'scene-button-group.html',
-  styleUrls: ['scene-button-group.scss']
+    selector: 'scene-button-group',
+    templateUrl: 'scene-button-group.html',
+    styleUrls: ['scene-button-group.scss'],
+    standalone: false
 })
 export class SceneButtonGroupComponent {
 

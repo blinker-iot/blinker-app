@@ -4,9 +4,10 @@ import { Layouter2Service } from '../../layouter2.service';
 
 
 @Component({
-  selector: 'widget-joystick',
-  templateUrl: 'widget-joystick.html',
-  styleUrls: ['widget-joystick.scss']
+    selector: 'widget-joystick',
+    templateUrl: 'widget-joystick.html',
+    styleUrls: ['widget-joystick.scss'],
+    standalone: false
 })
 export class WidgetJoystickComponent implements Layouter2Widget {
 

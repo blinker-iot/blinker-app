@@ -4,9 +4,10 @@ import { Router } from '@angular/router';
 import { deviceName12 } from 'src/app/core/functions/func';
 
 @Component({
-  selector: 'widget-timer',
-  templateUrl: 'widget-timer.html',
-  styleUrls: ['widget-timer.scss']
+    selector: 'widget-timer',
+    templateUrl: 'widget-timer.html',
+    styleUrls: ['widget-timer.scss'],
+    standalone: false
 })
 export class WidgetTimerComponent implements Layouter2Widget {
 

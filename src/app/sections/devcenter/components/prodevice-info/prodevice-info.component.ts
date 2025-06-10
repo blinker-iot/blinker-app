@@ -4,9 +4,10 @@ import { ActivatedRoute } from '@angular/router';
 import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 
 @Component({
-  selector: 'dev-prodevice-info',
-  templateUrl: './prodevice-info.component.html',
-  styleUrls: ['./prodevice-info.component.scss'],
+    selector: 'dev-prodevice-info',
+    templateUrl: './prodevice-info.component.html',
+    styleUrls: ['./prodevice-info.component.scss'],
+    standalone: false
 })
 export class ProdeviceInfoComponent implements OnInit {
 

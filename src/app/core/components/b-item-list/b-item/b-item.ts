@@ -1,9 +1,10 @@
 import { Component, Input, Output, EventEmitter, HostBinding } from '@angular/core';
 
 @Component({
-  selector: 'b-item',
-  templateUrl: 'b-item.html',
-  styleUrls: ['b-item.scss'],
+    selector: 'b-item',
+    templateUrl: 'b-item.html',
+    styleUrls: ['b-item.scss'],
+    standalone: false
 })
 export class BItemComponent {
 

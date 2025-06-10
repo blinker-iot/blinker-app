@@ -2,9 +2,10 @@ import { Component, ElementRef, Input } from '@angular/core';
 import { Layouter2Service } from '../layouter2.service';
 
 @Component({
-  selector: 'widget-dynamic',
-  templateUrl: './parentDynamic.component.html',
-  styleUrls: ['parentDynamic.component.scss']
+    selector: 'widget-dynamic',
+    templateUrl: './parentDynamic.component.html',
+    styleUrls: ['parentDynamic.component.scss'],
+    standalone: false
 })
 export class ParentDynamicComponent {
   @Input()

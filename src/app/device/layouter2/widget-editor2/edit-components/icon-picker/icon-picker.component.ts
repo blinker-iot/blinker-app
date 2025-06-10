@@ -3,9 +3,10 @@ import { ModalController } from '@ionic/angular';
 import { IconListPage } from 'src/app/core/pages/icon-list/icon-list';
 
 @Component({
-  selector: 'icon-picker',
-  templateUrl: './icon-picker.component.html',
-  styleUrls: ['./icon-picker.component.scss'],
+    selector: 'icon-picker',
+    templateUrl: './icon-picker.component.html',
+    styleUrls: ['./icon-picker.component.scss'],
+    standalone: false
 })
 export class IconPickerComponent implements OnInit {
 

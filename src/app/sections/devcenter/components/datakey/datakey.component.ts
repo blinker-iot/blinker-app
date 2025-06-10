@@ -7,9 +7,10 @@ import { UserService } from 'src/app/core/services/user.service';
 import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
-  selector: 'devcenter-datakey',
-  templateUrl: './datakey.component.html',
-  styleUrls: ['./datakey.component.scss']
+    selector: 'devcenter-datakey',
+    templateUrl: './datakey.component.html',
+    styleUrls: ['./datakey.component.scss'],
+    standalone: false
 })
 export class DatakeyComponent implements OnInit {
 

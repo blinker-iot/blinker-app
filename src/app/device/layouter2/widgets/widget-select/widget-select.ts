@@ -7,9 +7,10 @@ import { color2Rgba, convertToRgba } from 'src/app/core/functions/func';
 
 
 @Component({
-  selector: 'widget-select',
-  templateUrl: 'widget-select.html',
-  styleUrls: ['widget-select.scss']
+    selector: 'widget-select',
+    templateUrl: 'widget-select.html',
+    styleUrls: ['widget-select.scss'],
+    standalone: false
 })
 export class WidgetSelectComponent implements Layouter2Widget {
 

@@ -8,17 +8,16 @@ import { PipesModule } from "src/app/core/pipes/pipes.module";
 import { DataService } from "src/app/core/services/data.service";
 
 @Component({
-  selector: "blinker-device-log",
-  templateUrl: "./device-log.component.html",
-  styleUrls: ["./device-log.component.scss"],
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonicModule,
-    DirectivesModule,
-    PipesModule,
-  ],
+    selector: "blinker-device-log",
+    templateUrl: "./device-log.component.html",
+    styleUrls: ["./device-log.component.scss"],
+    imports: [
+        CommonModule,
+        FormsModule,
+        IonicModule,
+        DirectivesModule,
+        PipesModule,
+    ]
 })
 export class DeviceLogComponent implements OnInit {
   id;

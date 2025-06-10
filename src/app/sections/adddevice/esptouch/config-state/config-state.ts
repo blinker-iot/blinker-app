@@ -12,9 +12,10 @@ declare var esptouch;
 declare var esptouch2;
 
 @Component({
-  selector: 'config-state',
-  templateUrl: 'config-state.html',
-  styleUrls: ['config-state.scss']
+    selector: 'config-state',
+    templateUrl: 'config-state.html',
+    styleUrls: ['config-state.scss'],
+    standalone: false
 })
 export class ConfigStatePage {
 

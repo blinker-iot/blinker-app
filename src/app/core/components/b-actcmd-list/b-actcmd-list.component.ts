@@ -2,9 +2,10 @@ import { Component, Input, Output, EventEmitter, SimpleChanges } from '@angular/
 import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 
 @Component({
-  selector: 'b-actcmd-list',
-  templateUrl: './b-actcmd-list.component.html',
-  styleUrls: ['./b-actcmd-list.component.scss'],
+    selector: 'b-actcmd-list',
+    templateUrl: './b-actcmd-list.component.html',
+    styleUrls: ['./b-actcmd-list.component.scss'],
+    standalone: false
 })
 export class BActcmdListComponent {
 

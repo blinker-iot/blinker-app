@@ -2,9 +2,10 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 
 @Component({
-  selector: 'blinker-selector-modal',
-  templateUrl: './selector-modal.component.html',
-  styleUrls: ['./selector-modal.component.scss'],
+    selector: 'blinker-selector-modal',
+    templateUrl: './selector-modal.component.html',
+    styleUrls: ['./selector-modal.component.scss'],
+    standalone: false
 })
 export class SelectorModalComponent implements OnInit {
 

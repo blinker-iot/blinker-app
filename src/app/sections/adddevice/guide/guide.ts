@@ -4,9 +4,10 @@ import { DeviceConfigService } from 'src/app/core/services/device-config.service
 import { AdddeviceService } from '../adddevice.service';
 
 @Component({
-  selector: 'adddevice-guide',
-  templateUrl: 'guide.html',
-  styleUrls: ['guide.scss']
+    selector: 'adddevice-guide',
+    templateUrl: 'guide.html',
+    styleUrls: ['guide.scss'],
+    standalone: false
 })
 export class GuidePage {
   deviceType = 'CustomDevice';

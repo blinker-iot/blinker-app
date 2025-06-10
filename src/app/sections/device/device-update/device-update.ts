@@ -11,17 +11,16 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'page-device-update',
-  templateUrl: 'device-update.html',
-  styleUrls: ['device-update.scss'],
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonicModule,
-    PipesModule,
-    DirectivesModule
-  ]
+    selector: 'page-device-update',
+    templateUrl: 'device-update.html',
+    styleUrls: ['device-update.scss'],
+    imports: [
+        CommonModule,
+        FormsModule,
+        IonicModule,
+        PipesModule,
+        DirectivesModule
+    ]
 })
 export class DeviceUpdatePage {
   id;

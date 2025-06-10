@@ -1,7 +1,8 @@
 import { Directive, ElementRef, ViewContainerRef } from '@angular/core';
 
 @Directive({
-  selector: '[widget-name]'
+    selector: '[widget-name]',
+    standalone: false
 })
 export class BlinkerWidgetDirective {
 

@@ -5,9 +5,10 @@ import { Component, ViewChild, ElementRef, Input, SimpleChanges, ChangeDetectorR
 // var brightness = cordova.plugins.brightness;
 
 @Component({
-  selector: 'b-progressbar',
-  templateUrl: './b-progressbar.component.html',
-  styleUrls: ['./b-progressbar.component.scss'],
+    selector: 'b-progressbar',
+    templateUrl: './b-progressbar.component.html',
+    styleUrls: ['./b-progressbar.component.scss'],
+    standalone: false
 })
 export class BProgressbarComponent {
   bar;

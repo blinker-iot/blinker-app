@@ -15,9 +15,10 @@ import { SceneEditorAddact } from '../components/scene-editor-addact/scene-edit-
 import { NoticeService } from 'src/app/core/services/notice.service';
 
 @Component({
-  selector: 'scene-edit',
-  templateUrl: 'scene-edit.html',
-  styleUrls: ['scene-edit.scss']
+    selector: 'scene-edit',
+    templateUrl: 'scene-edit.html',
+    styleUrls: ['scene-edit.scss'],
+    standalone: false
 })
 export class SceneEditor {
 

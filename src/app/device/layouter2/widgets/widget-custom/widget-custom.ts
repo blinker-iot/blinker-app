@@ -3,9 +3,10 @@ import { Layouter2Widget } from '../config';
 import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
-  selector: 'widget-custom',
-  templateUrl: 'widget-custom.html',
-  styleUrls: ['widget-custom.scss']
+    selector: 'widget-custom',
+    templateUrl: 'widget-custom.html',
+    styleUrls: ['widget-custom.scss'],
+    standalone: false
 })
 export class WidgetCustomComponent implements Layouter2Widget {
 

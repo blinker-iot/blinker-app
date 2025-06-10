@@ -4,9 +4,10 @@ import { BehaviorSubject } from 'rxjs';
 import { color2Rgba } from '../../functions/func';
 
 @Component({
-  selector: 'line-chart-area',
-  templateUrl: './line-chart-area.component.html',
-  styleUrls: ['./line-chart-area.component.scss']
+    selector: 'line-chart-area',
+    templateUrl: './line-chart-area.component.html',
+    styleUrls: ['./line-chart-area.component.scss'],
+    standalone: false
 })
 export class LineChartAreaComponent implements OnInit {
 

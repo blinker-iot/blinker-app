@@ -4,9 +4,10 @@ import { ActivatedRoute } from '@angular/router';
 import { AlertController, NavController } from '@ionic/angular';
 
 @Component({
-  selector: 'prodevice-editinfo',
-  templateUrl: './editinfo.page.html',
-  styleUrls: ['./editinfo.page.scss'],
+    selector: 'prodevice-editinfo',
+    templateUrl: './editinfo.page.html',
+    styleUrls: ['./editinfo.page.scss'],
+    standalone: false
 })
 export class EditinfoPage {
 

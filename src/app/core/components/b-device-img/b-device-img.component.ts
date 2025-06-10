@@ -4,9 +4,10 @@ import { ImageList } from 'src/app/configs/app.config';
 import { DataService } from '../../services/data.service';
 
 @Component({
-  selector: 'b-device-img',
-  templateUrl: './b-device-img.component.html',
-  styleUrls: ['./b-device-img.component.scss'],
+    selector: 'b-device-img',
+    templateUrl: './b-device-img.component.html',
+    styleUrls: ['./b-device-img.component.scss'],
+    standalone: false
 })
 export class BDeviceImgComponent {
 

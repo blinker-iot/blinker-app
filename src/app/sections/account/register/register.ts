@@ -9,9 +9,10 @@ import { CONFIG } from 'src/app/configs/app.config';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
 
 @Component({
-  selector: 'page-register',
-  templateUrl: 'register.html',
-  styleUrls: ['register.scss'],
+    selector: 'page-register',
+    templateUrl: 'register.html',
+    styleUrls: ['register.scss'],
+    standalone: false
 })
 export class RegisterPage {
 

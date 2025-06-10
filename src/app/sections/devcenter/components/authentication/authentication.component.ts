@@ -32,10 +32,10 @@ function base64ToBlob(base64) {
 };
 
 @Component({
-  selector: 'dev-authentication',
-  templateUrl: './authentication.component.html',
-  styleUrls: ['./authentication.component.scss'],
-  // providers: [Camera]
+    selector: 'dev-authentication',
+    templateUrl: './authentication.component.html',
+    styleUrls: ['./authentication.component.scss'],
+    standalone: false
 })
 export class AuthenticationComponent implements OnInit {
 

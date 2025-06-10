@@ -6,9 +6,10 @@ import PullToRefresh from 'pulltorefreshjs';
 import Splide from '@splidejs/splide';
 
 @Component({
-  selector: 'deviceblock-zone',
-  templateUrl: 'deviceblock-zone.html',
-  styleUrls: ['deviceblock-zone.scss']
+    selector: 'deviceblock-zone',
+    templateUrl: 'deviceblock-zone.html',
+    styleUrls: ['deviceblock-zone.scss'],
+    standalone: false
 })
 export class DeviceblockZone {
   refresherEnabled = true;

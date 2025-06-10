@@ -3,9 +3,10 @@ import { timeToMinute, minuteToTime } from 'src/app/core/functions/func';
 import Picker from 'pickerjs';
 
 @Component({
-  selector: 'b-timepicker',
-  templateUrl: './b-timepicker.component.html',
-  styleUrls: ['./b-timepicker.component.scss'],
+    selector: 'b-timepicker',
+    templateUrl: './b-timepicker.component.html',
+    styleUrls: ['./b-timepicker.component.scss'],
+    standalone: false
 })
 export class BTimepickerComponent {
 

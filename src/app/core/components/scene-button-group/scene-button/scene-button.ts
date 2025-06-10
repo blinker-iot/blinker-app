@@ -3,9 +3,10 @@ import { DeviceService } from 'src/app/core/services/device.service';
 import { DataService } from '../../../services/data.service';
 
 @Component({
-  selector: 'scene-button',
-  templateUrl: 'scene-button.html',
-  styleUrls: ['scene-button.scss']
+    selector: 'scene-button',
+    templateUrl: 'scene-button.html',
+    styleUrls: ['scene-button.scss'],
+    standalone: false
 })
 export class SceneButtonComponent {
 

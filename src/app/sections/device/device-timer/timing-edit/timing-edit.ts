@@ -23,16 +23,15 @@ import { DataService } from "src/app/core/services/data.service";
 import { ActivatedRoute, Router } from "@angular/router";
 
 @Component({
-  selector: "timing-edit",
-  templateUrl: "timing-edit.html",
-  styleUrls: ["timing-edit.scss"],
-  standalone: true,
-  imports: [
-    IonicModule,
-    ComponentsModule,
-    CommonModule,
-    TranslateModule,
-  ],
+    selector: "timing-edit",
+    templateUrl: "timing-edit.html",
+    styleUrls: ["timing-edit.scss"],
+    imports: [
+        IonicModule,
+        ComponentsModule,
+        CommonModule,
+        TranslateModule,
+    ]
 })
 export class TimingEditPage {
   id;

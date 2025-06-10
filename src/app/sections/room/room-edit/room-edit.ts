@@ -6,9 +6,10 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 
 
 @Component({
-  selector: 'page-room-edit',
-  templateUrl: 'room-edit.html',
-  styleUrls: ['room-edit.scss']
+    selector: 'page-room-edit',
+    templateUrl: 'room-edit.html',
+    styleUrls: ['room-edit.scss'],
+    standalone: false
 })
 export class RoomEditPage {
   roomName;

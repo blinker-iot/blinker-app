@@ -13,9 +13,10 @@ import Sortable from 'sortablejs';
 import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
-  selector: 'deviceblock-list',
-  templateUrl: 'deviceblock-list.html',
-  styleUrls: ['deviceblock-list.scss'],
+    selector: 'deviceblock-list',
+    templateUrl: 'deviceblock-list.html',
+    styleUrls: ['deviceblock-list.scss'],
+    standalone: false
 })
 export class DeviceblockListComponent {
 

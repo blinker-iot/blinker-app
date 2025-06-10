@@ -13,17 +13,16 @@ import { ImageService } from "src/app/core/services/image.service";
 import { ComponentsModule } from "src/app/core/components/components.module";
 
 @Component({
-  selector: "device-storage",
-  templateUrl: "./device-storage.page.html",
-  styleUrls: ["./device-storage.page.scss"],
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonicModule,
-    PipesModule,
-    ComponentsModule
-  ],
+    selector: "device-storage",
+    templateUrl: "./device-storage.page.html",
+    styleUrls: ["./device-storage.page.scss"],
+    imports: [
+        CommonModule,
+        FormsModule,
+        IonicModule,
+        PipesModule,
+        ComponentsModule
+    ]
 })
 export class DeviceStoragePage implements OnInit {
 

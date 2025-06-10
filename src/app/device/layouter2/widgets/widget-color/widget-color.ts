@@ -3,9 +3,10 @@ import { Layouter2Widget } from '../config';
 import { Layouter2Service } from '../../layouter2.service';
 
 @Component({
-  selector: 'widget-color',
-  templateUrl: 'widget-color.html',
-  styleUrls: ['widget-color.scss']
+    selector: 'widget-color',
+    templateUrl: 'widget-color.html',
+    styleUrls: ['widget-color.scss'],
+    standalone: false
 })
 
 export class WidgetColorComponent implements Layouter2Widget {

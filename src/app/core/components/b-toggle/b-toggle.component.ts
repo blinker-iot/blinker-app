@@ -1,9 +1,10 @@
 import { Component, OnInit, Input, Output, EventEmitter, HostListener } from '@angular/core';
 
 @Component({
-  selector: 'b-toggle',
-  templateUrl: './b-toggle.component.html',
-  styleUrls: ['./b-toggle.component.scss'],
+    selector: 'b-toggle',
+    templateUrl: './b-toggle.component.html',
+    styleUrls: ['./b-toggle.component.scss'],
+    standalone: false
 })
 export class BToggleComponent implements OnInit {
 

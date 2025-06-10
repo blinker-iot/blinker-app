@@ -3,9 +3,10 @@ import { ModalController } from '@ionic/angular';
 import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
-  selector: 'blinker-device-selector-modal',
-  templateUrl: './device-selector-modal.component.html',
-  styleUrls: ['./device-selector-modal.component.scss'],
+    selector: 'blinker-device-selector-modal',
+    templateUrl: './device-selector-modal.component.html',
+    styleUrls: ['./device-selector-modal.component.scss'],
+    standalone: false
 })
 export class DeviceSelectorModalComponent implements OnInit {
 

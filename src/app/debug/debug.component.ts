@@ -5,9 +5,10 @@ import { DeviceService } from '../core/services/device.service';
 import { NativeService } from '../core/services/native.service';
 
 @Component({
-  selector: 'app-debug',
-  templateUrl: './debug.component.html',
-  styleUrls: ['./debug.component.scss'],
+    selector: 'app-debug',
+    templateUrl: './debug.component.html',
+    styleUrls: ['./debug.component.scss'],
+    standalone: false
 })
 export class DebugComponent {
 

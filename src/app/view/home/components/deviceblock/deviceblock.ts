@@ -9,9 +9,10 @@ import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { AudioService } from 'src/app/core/services/audio.service';
 
 @Component({
-  selector: 'deviceblock',
-  templateUrl: 'deviceblock.html',
-  styleUrls: ['deviceblock.scss']
+    selector: 'deviceblock',
+    templateUrl: 'deviceblock.html',
+    styleUrls: ['deviceblock.scss'],
+    standalone: false
 })
 export class Deviceblock {
 

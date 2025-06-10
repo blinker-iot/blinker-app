@@ -2,9 +2,10 @@ import { Component, Input, OnInit } from '@angular/core';
 import { tipOptions } from '../../model/tip.model';
 
 @Component({
-  selector: 'b-tip',
-  templateUrl: './b-tip.component.html',
-  styleUrls: ['./b-tip.component.scss'],
+    selector: 'b-tip',
+    templateUrl: './b-tip.component.html',
+    styleUrls: ['./b-tip.component.scss'],
+    standalone: false
 })
 export class BTipComponent implements OnInit {
   @Input() tip: tipOptions;

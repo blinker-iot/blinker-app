@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'ownplugAct2str',
+    name: 'ownplugAct2str',
+    standalone: false
 })
 export class OwnplugAct2strPipe implements PipeTransform {
 

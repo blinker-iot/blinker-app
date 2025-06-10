@@ -10,9 +10,10 @@ import {
 } from '@angular/core';
 
 @Component({
-  selector: 'b-colorpicker',
-  templateUrl: 'b-colorpicker.html',
-  styleUrls: ['b-colorpicker.scss']
+    selector: 'b-colorpicker',
+    templateUrl: 'b-colorpicker.html',
+    styleUrls: ['b-colorpicker.scss'],
+    standalone: false
 })
 export class BColorpickerComponent {
 

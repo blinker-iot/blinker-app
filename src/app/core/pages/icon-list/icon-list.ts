@@ -6,10 +6,10 @@ import { IconList } from 'src/app/configs/app.config';
 // import { InAppBrowser } from '@awesome-cordova-plugins/in-app-browser/ngx';
 
 @Component({
-  selector: 'icon-list',
-  templateUrl: 'icon-list.html',
-  styleUrls: ['icon-list.scss'],
-  // providers: [InAppBrowser]
+    selector: 'icon-list',
+    templateUrl: 'icon-list.html',
+    styleUrls: ['icon-list.scss'],
+    standalone: false
 })
 export class IconListPage {
   @Input() item;

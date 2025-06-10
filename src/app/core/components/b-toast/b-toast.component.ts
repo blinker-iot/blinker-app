@@ -3,9 +3,10 @@ import { toastOptions } from '../../model/toast.model';
 
 
 @Component({
-  selector: 'b-toast',
-  templateUrl: './b-toast.component.html',
-  styleUrls: ['./b-toast.component.scss'],
+    selector: 'b-toast',
+    templateUrl: './b-toast.component.html',
+    styleUrls: ['./b-toast.component.scss'],
+    standalone: false
 })
 export class BToastComponent implements OnInit {
 

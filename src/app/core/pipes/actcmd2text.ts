@@ -3,7 +3,8 @@ import { DataService } from '../services/data.service';
 import { DeviceConfigService } from '../services/device-config.service';
 
 @Pipe({
-  name: 'actcmd2text',
+    name: 'actcmd2text',
+    standalone: false
 })
 export class Act2TextPipe implements PipeTransform {
 

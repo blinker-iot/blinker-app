@@ -1,9 +1,10 @@
 import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
-  selector: 'widget-custom-edit',
-  templateUrl: './widget-custom-edit.component.html',
-  styleUrls: ['./widget-custom-edit.component.scss'],
+    selector: 'widget-custom-edit',
+    templateUrl: './widget-custom-edit.component.html',
+    styleUrls: ['./widget-custom-edit.component.scss'],
+    standalone: false
 })
 export class WidgetCustomEditComponent implements OnInit {
 

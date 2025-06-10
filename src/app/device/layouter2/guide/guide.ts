@@ -5,9 +5,10 @@ import { DataService } from 'src/app/core/services/data.service';
 import { Layouter2Service } from '../layouter2.service';
 
 @Component({
-  selector: 'layouter2-guide',
-  templateUrl: 'guide.html',
-  styleUrls: ['guide.scss']
+    selector: 'layouter2-guide',
+    templateUrl: 'guide.html',
+    styleUrls: ['guide.scss'],
+    standalone: false
 })
 export class Layouter2GuidePage {
 

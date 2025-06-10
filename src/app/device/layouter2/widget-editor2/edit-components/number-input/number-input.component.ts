@@ -1,9 +1,10 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 
 @Component({
-  selector: 'number-input',
-  templateUrl: './number-input.component.html',
-  styleUrls: ['./number-input.component.scss'],
+    selector: 'number-input',
+    templateUrl: './number-input.component.html',
+    styleUrls: ['./number-input.component.scss'],
+    standalone: false
 })
 export class NumberInputComponent implements OnInit {
 

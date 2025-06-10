@@ -11,9 +11,10 @@ import { convertToRgba } from "src/app/core/functions/func";
 import { Layouter2Service } from "../../layouter2.service";
 
 @Component({
-  selector: "widget-number",
-  templateUrl: "widget-number.html",
-  styleUrls: ["widget-number.scss"],
+    selector: "widget-number",
+    templateUrl: "widget-number.html",
+    styleUrls: ["widget-number.scss"],
+    standalone: false
 })
 export class WidgetNumberComponent implements Layouter2Widget {
   @Input()

@@ -12,9 +12,10 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 
 
 @Component({
-  selector: 'room-manager',
-  templateUrl: 'room-manager.html',
-  styleUrls: ['room-manager.scss']
+    selector: 'room-manager',
+    templateUrl: 'room-manager.html',
+    styleUrls: ['room-manager.scss'],
+    standalone: false
 })
 export class RoomManagerPage {
 

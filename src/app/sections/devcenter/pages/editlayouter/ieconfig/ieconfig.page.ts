@@ -7,10 +7,10 @@ import { Device } from 'src/app/core/model/device.model';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
 @Component({
-  selector: 'blinker-ieconfig',
-  templateUrl: './ieconfig.page.html',
-  styleUrls: ['./ieconfig.page.scss'],
-  // providers: [Clipboard]
+    selector: 'blinker-ieconfig',
+    templateUrl: './ieconfig.page.html',
+    styleUrls: ['./ieconfig.page.scss'],
+    standalone: false
 })
 export class IeconfigPage {
 

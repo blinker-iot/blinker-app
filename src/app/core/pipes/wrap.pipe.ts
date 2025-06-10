@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'wrap'
+    name: 'wrap',
+    standalone: false
 })
 export class WrapPipe implements PipeTransform {
 

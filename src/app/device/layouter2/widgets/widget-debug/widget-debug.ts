@@ -6,9 +6,10 @@ import { DebugService } from 'src/app/debug/debug.service';
 import { DeviceService } from 'src/app/core/services/device.service';
 
 @Component({
-  selector: 'widget-debug',
-  templateUrl: 'widget-debug.html',
-  styleUrls: ['widget-debug.scss']
+    selector: 'widget-debug',
+    templateUrl: 'widget-debug.html',
+    styleUrls: ['widget-debug.scss'],
+    standalone: false
 })
 export class WidgetDebugComponent implements Layouter2Widget {
   debugServiceSubject;

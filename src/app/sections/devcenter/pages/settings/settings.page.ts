@@ -6,9 +6,10 @@ import { DeviceIconPage } from 'src/app/core/pages/device-icon/device-icon';
 import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 
 @Component({
-  selector: 'prodevice-settings',
-  templateUrl: './settings.page.html',
-  styleUrls: ['./settings.page.scss'],
+    selector: 'prodevice-settings',
+    templateUrl: './settings.page.html',
+    styleUrls: ['./settings.page.scss'],
+    standalone: false
 })
 export class SettingsPage implements OnInit {
 

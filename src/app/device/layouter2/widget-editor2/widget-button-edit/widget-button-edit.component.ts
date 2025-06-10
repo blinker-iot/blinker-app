@@ -1,9 +1,10 @@
 import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
-  selector: 'widget-button-edit',
-  templateUrl: './widget-button-edit.component.html',
-  styleUrls: ['./widget-button-edit.component.scss'],
+    selector: 'widget-button-edit',
+    templateUrl: './widget-button-edit.component.html',
+    styleUrls: ['./widget-button-edit.component.scss'],
+    standalone: false
 })
 export class WidgetButtonEditComponent implements OnInit {
 

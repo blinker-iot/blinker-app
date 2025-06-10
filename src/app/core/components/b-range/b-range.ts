@@ -9,9 +9,10 @@ import {
 } from '@angular/core';
 
 @Component({
-  selector: 'b-range',
-  templateUrl: 'b-range.html',
-  styleUrls: ['b-range.scss']
+    selector: 'b-range',
+    templateUrl: 'b-range.html',
+    styleUrls: ['b-range.scss'],
+    standalone: false
 })
 export class BRangeComponent {
 

@@ -10,9 +10,10 @@ import { DataService } from 'src/app/core/services/data.service';
 import { Observable } from 'rxjs';
 
 @Component({
-  selector: 'view-home',
-  templateUrl: 'view-home.page.html',
-  styleUrls: ['view-home.page.scss'],
+    selector: 'view-home',
+    templateUrl: 'view-home.page.html',
+    styleUrls: ['view-home.page.scss'],
+    standalone: false
 })
 
 export class ViewHomePage {

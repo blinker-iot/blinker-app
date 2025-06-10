@@ -12,9 +12,10 @@ import { AudioService } from 'src/app/core/services/audio.service';
 
 
 @Component({
-  selector: 'page-speech',
-  templateUrl: 'speech.html',
-  styleUrls: ['speech.scss']
+    selector: 'page-speech',
+    templateUrl: 'speech.html',
+    styleUrls: ['speech.scss'],
+    standalone: false
 })
 export class SpeechPage {
 

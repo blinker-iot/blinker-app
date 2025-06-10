@@ -6,9 +6,10 @@ import { Device } from 'src/app/core/model/device.model';
 import { Layouter2Service } from 'src/app/device/layouter2/layouter2.service';
 
 @Component({
-  selector: 'prodevice-editlayouter',
-  templateUrl: './editlayouter.page.html',
-  styleUrls: ['./editlayouter.page.scss'],
+    selector: 'prodevice-editlayouter',
+    templateUrl: './editlayouter.page.html',
+    styleUrls: ['./editlayouter.page.scss'],
+    standalone: false
 })
 export class EditlayouterPage implements OnInit {
   deviceType = '';

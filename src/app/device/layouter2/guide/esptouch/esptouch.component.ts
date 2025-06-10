@@ -15,9 +15,10 @@ import { Esptouch } from 'capacitor-esptouch';
 declare var wifi;
 
 @Component({
-  selector: 'blinker-guide-esptouch',
-  templateUrl: './esptouch.component.html',
-  styleUrls: ['./esptouch.component.scss'],
+    selector: 'blinker-guide-esptouch',
+    templateUrl: './esptouch.component.html',
+    styleUrls: ['./esptouch.component.scss'],
+    standalone: false
 })
 export class EsptouchComponent implements OnInit {
 

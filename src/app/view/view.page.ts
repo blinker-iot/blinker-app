@@ -2,9 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { ViewService } from '../core/services/view.service';
 
 @Component({
-  selector: 'blinker-view',
-  templateUrl: './view.page.html',
-  styleUrls: ['./view.page.scss'],
+    selector: 'blinker-view',
+    templateUrl: './view.page.html',
+    styleUrls: ['./view.page.scss'],
+    standalone: false
 })
 export class BlinkerView implements OnInit {
 

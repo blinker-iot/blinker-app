@@ -12,9 +12,10 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 import { AvatarPickerComponent } from 'src/app/core/pages/avatar/avatar-picker.component';
 
 @Component({
-  selector: 'app-user',
-  templateUrl: './user.page.html',
-  styleUrls: ['./user.page.scss']
+    selector: 'app-user',
+    templateUrl: './user.page.html',
+    styleUrls: ['./user.page.scss'],
+    standalone: false
 })
 export class UserPage {
   alert;

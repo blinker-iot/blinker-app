@@ -14,9 +14,10 @@ import { Subscription } from 'rxjs';
 declare var wifi;
 
 @Component({
-  selector: 'esptouch',
-  templateUrl: 'esptouch.html',
-  styleUrls: ['../config.scss']
+    selector: 'esptouch',
+    templateUrl: 'esptouch.html',
+    styleUrls: ['../config.scss'],
+    standalone: false
 })
 export class EsptouchPage {
 

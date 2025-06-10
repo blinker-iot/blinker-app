@@ -3,9 +3,10 @@ import { DataService } from 'src/app/core/services/data.service';
 
 
 @Component({
-  selector: 'room-list',
-  templateUrl: 'room-list.html',
-  styleUrls: ['room-list.scss']
+    selector: 'room-list',
+    templateUrl: 'room-list.html',
+    styleUrls: ['room-list.scss'],
+    standalone: false
 })
 export class RoomListComponent {
 

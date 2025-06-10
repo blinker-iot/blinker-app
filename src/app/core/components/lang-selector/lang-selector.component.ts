@@ -3,9 +3,10 @@ import { TranslationService } from '../../services/translation.service';
 import { CONFIG } from 'src/app/configs/app.config';
 
 @Component({
-  selector: 'blinker-lang-selector',
-  templateUrl: './lang-selector.component.html',
-  styleUrls: ['./lang-selector.component.scss'],
+    selector: 'blinker-lang-selector',
+    templateUrl: './lang-selector.component.html',
+    styleUrls: ['./lang-selector.component.scss'],
+    standalone: false
 })
 export class LangSelectorComponent implements OnInit {
   supportI18n;

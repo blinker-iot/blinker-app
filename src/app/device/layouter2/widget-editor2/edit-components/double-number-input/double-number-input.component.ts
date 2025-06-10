@@ -1,9 +1,10 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 
 @Component({
-  selector: 'double-number-input',
-  templateUrl: './double-number-input.component.html',
-  styleUrls: ['./double-number-input.component.scss'],
+    selector: 'double-number-input',
+    templateUrl: './double-number-input.component.html',
+    styleUrls: ['./double-number-input.component.scss'],
+    standalone: false
 })
 export class DoubleNumberInputComponent implements OnInit {
   @Input() mode = 1;

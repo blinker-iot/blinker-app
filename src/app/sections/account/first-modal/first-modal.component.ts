@@ -5,9 +5,10 @@ import { DocPage } from 'src/app/core/pages/doc/doc.page';
 import { PusherService } from 'src/app/core/services/pusher.service';
 
 @Component({
-  selector: 'blinker-first-modal',
-  templateUrl: './first-modal.component.html',
-  styleUrls: ['./first-modal.component.scss'],
+    selector: 'blinker-first-modal',
+    templateUrl: './first-modal.component.html',
+    styleUrls: ['./first-modal.component.scss'],
+    standalone: false
 })
 export class FirstModalComponent implements OnInit {
 

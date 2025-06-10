@@ -3,9 +3,10 @@ import { Layouter2Widget } from "../config";
 import { Layouter2Service } from "../../layouter2.service";
 
 @Component({
-  selector: "widget-text",
-  templateUrl: "widget-text.html",
-  styleUrls: ["widget-text.scss"],
+    selector: "widget-text",
+    templateUrl: "widget-text.html",
+    styleUrls: ["widget-text.scss"],
+    standalone: false
 })
 export class WidgetTextComponent implements Layouter2Widget {
   @Input()

@@ -6,9 +6,10 @@ import { MENU_LIST } from 'src/app/configs/menu.config';
 import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
-  selector: 'blinker-menu',
-  templateUrl: './menu.html',
-  styleUrls: ['./menu.scss']
+    selector: 'blinker-menu',
+    templateUrl: './menu.html',
+    styleUrls: ['./menu.scss'],
+    standalone: false
 })
 export class Menu implements OnInit {
 

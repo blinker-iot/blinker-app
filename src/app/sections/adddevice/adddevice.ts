@@ -5,9 +5,10 @@ import { AdddeviceService } from './adddevice.service';
 import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
-  selector: 'page-adddevice',
-  templateUrl: 'adddevice.html',
-  styleUrls: ['adddevice.scss'],
+    selector: 'page-adddevice',
+    templateUrl: 'adddevice.html',
+    styleUrls: ['adddevice.scss'],
+    standalone: false
 })
 export class AddDevicePage {
   searchQuery: string = '';

@@ -3,9 +3,10 @@ import { Layouter2Widget } from '../config';
 import Hls from 'hls.js';
 
 @Component({
-  selector: 'widget-video',
-  templateUrl: 'widget-video.html',
-  styleUrls: ['widget-video.scss']
+    selector: 'widget-video',
+    templateUrl: 'widget-video.html',
+    styleUrls: ['widget-video.scss'],
+    standalone: false
 })
 export class WidgetVideoComponent implements Layouter2Widget {
 

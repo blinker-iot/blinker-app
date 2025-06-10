@@ -3,9 +3,10 @@ import { DataService } from '../../services/data.service';
 import { DeviceConfigService } from '../../services/device-config.service';
 
 @Component({
-  selector: 'b-device-list',
-  templateUrl: './b-device-list.component.html',
-  styleUrls: ['./b-device-list.component.scss'],
+    selector: 'b-device-list',
+    templateUrl: './b-device-list.component.html',
+    styleUrls: ['./b-device-list.component.scss'],
+    standalone: false
 })
 export class BDeviceListComponent {
 

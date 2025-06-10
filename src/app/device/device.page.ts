@@ -17,9 +17,10 @@ import { Layouter2Data } from './layouter2/layouter.interface';
 import { LayouterVersion } from './layouter2/layouter.config';
 
 @Component({
-  selector: 'app-device',
-  templateUrl: './device.page.html',
-  styleUrls: ['./device.page.scss']
+    selector: 'app-device',
+    templateUrl: './device.page.html',
+    styleUrls: ['./device.page.scss'],
+    standalone: false
 })
 export class DevicePage implements OnInit {
 

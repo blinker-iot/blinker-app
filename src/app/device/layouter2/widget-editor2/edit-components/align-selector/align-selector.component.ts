@@ -1,9 +1,10 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 
 @Component({
-  selector: 'align-selector',
-  templateUrl: './align-selector.component.html',
-  styleUrls: ['./align-selector.component.scss'],
+    selector: 'align-selector',
+    templateUrl: './align-selector.component.html',
+    styleUrls: ['./align-selector.component.scss'],
+    standalone: false
 })
 export class AlignSelectorComponent implements OnInit {
 

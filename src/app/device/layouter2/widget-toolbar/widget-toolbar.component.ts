@@ -4,13 +4,12 @@ import { Layouter2Service } from "../layouter2.service";
 import { TranslateModule } from "@ngx-translate/core";
 
 @Component({
-  selector: "widget-toolbar",
-  templateUrl: "./widget-toolbar.component.html",
-  styleUrls: ["./widget-toolbar.component.scss"],
-  standalone: true,
-  imports: [
-    TranslateModule,
-  ],
+    selector: "widget-toolbar",
+    templateUrl: "./widget-toolbar.component.html",
+    styleUrls: ["./widget-toolbar.component.scss"],
+    imports: [
+        TranslateModule,
+    ]
 })
 export class WidgetToolbarComponent implements OnInit {
   @Input()

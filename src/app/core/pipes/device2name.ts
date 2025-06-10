@@ -4,6 +4,7 @@ import { DeviceConfigService } from '../services/device-config.service';
 
 @Pipe({
     name: 'device2name',
+    standalone: false
 })
 export class Device2NamePipe implements PipeTransform {
 

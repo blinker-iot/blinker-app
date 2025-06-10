@@ -7,9 +7,10 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
 
 @Component({
-  selector: 'widget-chart',
-  templateUrl: 'widget-chart.html',
-  styleUrls: ['widget-chart.scss']
+    selector: 'widget-chart',
+    templateUrl: 'widget-chart.html',
+    styleUrls: ['widget-chart.scss'],
+    standalone: false
 })
 export class WidgetChartComponent implements Layouter2Widget {
 

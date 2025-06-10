@@ -5,9 +5,10 @@ import { DataService } from 'src/app/core/services/data.service';
 import { Layouter2Service } from '../layouter2.service';
 
 @Component({
-  selector: 'widget-listbar',
-  templateUrl: './widget-listbar.component.html',
-  styleUrls: ['./widget-listbar.component.scss']
+    selector: 'widget-listbar',
+    templateUrl: './widget-listbar.component.html',
+    styleUrls: ['./widget-listbar.component.scss'],
+    standalone: false
 })
 export class WidgetListbarComponent implements OnInit {
 

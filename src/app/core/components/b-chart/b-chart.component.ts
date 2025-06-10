@@ -3,9 +3,10 @@ import { Component, Input, ViewChild, ElementRef, OnInit } from '@angular/core';
 import { CloudStorageService } from 'src/app/core/services/cloudStorage.service';
 
 @Component({
-  selector: 'b-chart',
-  templateUrl: './b-chart.component.html',
-  styleUrls: ['./b-chart.component.scss'],
+    selector: 'b-chart',
+    templateUrl: './b-chart.component.html',
+    styleUrls: ['./b-chart.component.scss'],
+    standalone: false
 })
 export class BChartComponent implements OnInit {
 

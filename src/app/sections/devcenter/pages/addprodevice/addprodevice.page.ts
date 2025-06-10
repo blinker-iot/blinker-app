@@ -5,9 +5,10 @@ import { DeviceIconPage } from 'src/app/core/pages/device-icon/device-icon';
 import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
-  selector: 'prodevice-add',
-  templateUrl: './addprodevice.page.html',
-  styleUrls: ['./addprodevice.page.scss'],
+    selector: 'prodevice-add',
+    templateUrl: './addprodevice.page.html',
+    styleUrls: ['./addprodevice.page.scss'],
+    standalone: false
 })
 export class AddprodevicePage {
 

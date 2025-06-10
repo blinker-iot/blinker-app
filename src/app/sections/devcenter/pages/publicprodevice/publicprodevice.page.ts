@@ -7,9 +7,10 @@ import { CONFIG } from 'src/app/configs/app.config';
 // import { Camera } from '@awesome-cordova-plugins/camera/ngx';
 
 @Component({
-  selector: 'prodevice-public',
-  templateUrl: './publicprodevice.page.html',
-  styleUrls: ['./publicprodevice.page.scss'],
+    selector: 'prodevice-public',
+    templateUrl: './publicprodevice.page.html',
+    styleUrls: ['./publicprodevice.page.scss'],
+    standalone: false
 })
 export class PublicprodevicePage implements OnInit {
   step = 0;

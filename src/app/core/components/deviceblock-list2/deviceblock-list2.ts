@@ -2,9 +2,10 @@ import { Component, Output, EventEmitter, Input } from '@angular/core';
 import { DataService } from '../../services/data.service';
 
 @Component({
-  selector: 'deviceblock-list2',
-  templateUrl: 'deviceblock-list2.html',
-  styleUrls: ['deviceblock-list2.scss']
+    selector: 'deviceblock-list2',
+    templateUrl: 'deviceblock-list2.html',
+    styleUrls: ['deviceblock-list2.scss'],
+    standalone: false
 })
 export class DeviceblockList2Component {
   selectedDeviceIndex;

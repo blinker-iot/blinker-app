@@ -3,9 +3,10 @@ import { ModalController } from '@ionic/angular';
 import Picker from 'pickerjs';
 
 @Component({
-  selector: 'blinker-time-selector-modal',
-  templateUrl: './time-selector-modal.component.html',
-  styleUrls: ['./time-selector-modal.component.scss'],
+    selector: 'blinker-time-selector-modal',
+    templateUrl: './time-selector-modal.component.html',
+    styleUrls: ['./time-selector-modal.component.scss'],
+    standalone: false
 })
 export class TimeSelectorModalComponent implements OnInit {
   timePicker;

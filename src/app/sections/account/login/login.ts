@@ -9,9 +9,10 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 import { FirstModalComponent } from '../first-modal/first-modal.component';
 
 @Component({
-  selector: 'page-login',
-  templateUrl: 'login.html',
-  styleUrls: ['login.scss'],
+    selector: 'page-login',
+    templateUrl: 'login.html',
+    styleUrls: ['login.scss'],
+    standalone: false
 })
 export class LoginPage {
   LOGO = CONFIG.LOGIN_LOGO;

@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 // import { getCmdList } from 'src/app/devices/config'
 @Pipe({
-  name: 'objToStr',
+    name: 'objToStr',
+    standalone: false
 })
 export class ObjToStrPipe implements PipeTransform {
 

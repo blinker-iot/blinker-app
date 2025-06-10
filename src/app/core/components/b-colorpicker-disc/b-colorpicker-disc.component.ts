@@ -11,9 +11,10 @@ import {
 
 
 @Component({
-  selector: 'b-colorpicker-disc',
-  templateUrl: './b-colorpicker-disc.component.html',
-  styleUrls: ['./b-colorpicker-disc.component.scss']
+    selector: 'b-colorpicker-disc',
+    templateUrl: './b-colorpicker-disc.component.html',
+    styleUrls: ['./b-colorpicker-disc.component.scss'],
+    standalone: false
 })
 export class BColorpickerDiscComponent {
 

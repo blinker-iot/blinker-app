@@ -2,9 +2,10 @@ import { Component, Input, OnInit } from '@angular/core';
 // import { DefaultBackgroundCss, TransparentBackgroundCss } from '../../widgets/config';
 
 @Component({
-  selector: 'widget-background-edit',
-  templateUrl: './background-edit.component.html',
-  styleUrls: ['./background-edit.component.scss'],
+    selector: 'widget-background-edit',
+    templateUrl: './background-edit.component.html',
+    styleUrls: ['./background-edit.component.scss'],
+    standalone: false
 })
 export class BackgroundEditComponent implements OnInit {
 

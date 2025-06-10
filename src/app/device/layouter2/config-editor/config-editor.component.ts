@@ -13,12 +13,10 @@ import { NewuiModule } from '../newui/newui.module';
 import { EditComponentsModule } from '../widget-editor2/edit-components/edit-components.module';
 
 @Component({
-  selector: 'config-editor',
-  templateUrl: './config-editor.component.html',
-  styleUrls: ['./config-editor.component.scss'],
-  // providers: [Clipboard],
-  standalone: true,
-  imports: [CommonModule, FormsModule, NewuiModule, EditComponentsModule]
+    selector: 'config-editor',
+    templateUrl: './config-editor.component.html',
+    styleUrls: ['./config-editor.component.scss'],
+    imports: [CommonModule, FormsModule, NewuiModule, EditComponentsModule]
 })
 export class ConfigEditorComponent {
 

@@ -4,9 +4,10 @@ import { Layouter2Service } from '../../layouter2.service';
 import { convertToRgba } from 'src/app/core/functions/func';
 
 @Component({
-  selector: 'widget-range',
-  templateUrl: 'widget-range.html',
-  styleUrls: ['widget-range.scss']
+    selector: 'widget-range',
+    templateUrl: 'widget-range.html',
+    styleUrls: ['widget-range.scss'],
+    standalone: false
 })
 export class WidgetRangeComponent implements Layouter2Widget {
 

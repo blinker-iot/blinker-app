@@ -3,9 +3,10 @@ import { ItemComponent } from '../item/item.component';
 import { NewuiService } from '../newui.service';
 
 @Component({
-  selector: 'nui-item-list',
-  templateUrl: './item-list.component.html',
-  styleUrls: ['./item-list.component.scss'],
+    selector: 'nui-item-list',
+    templateUrl: './item-list.component.html',
+    styleUrls: ['./item-list.component.scss'],
+    standalone: false
 })
 export class ItemListComponent implements OnInit {
 

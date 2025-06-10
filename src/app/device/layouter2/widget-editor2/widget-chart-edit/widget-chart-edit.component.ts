@@ -1,9 +1,10 @@
 import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
-  selector: 'widget-chart-edit',
-  templateUrl: './widget-chart-edit.component.html',
-  styleUrls: ['./widget-chart-edit.component.scss'],
+    selector: 'widget-chart-edit',
+    templateUrl: './widget-chart-edit.component.html',
+    styleUrls: ['./widget-chart-edit.component.scss'],
+    standalone: false
 })
 export class WidgetChartEditComponent implements OnInit {
 

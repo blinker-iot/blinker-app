@@ -7,9 +7,10 @@ import { SpeechPage } from 'src/app/sections/speech/speech';
 import { SpeechService } from '../speech.service';
 
 @Component({
-  selector: 'speech-button',
-  templateUrl: 'speech-button.html',
-  styleUrls: ['speech-button.scss'],
+    selector: 'speech-button',
+    templateUrl: 'speech-button.html',
+    styleUrls: ['speech-button.scss'],
+    standalone: false
 })
 export class SpeechButtonComponent {
 

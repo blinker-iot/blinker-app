@@ -7,9 +7,10 @@ import { convertToRgba } from 'src/app/core/functions/func';
 
 
 @Component({
-  selector: 'widget-button',
-  templateUrl: 'widget-button.html',
-  styleUrls: ['widget-button.scss']
+    selector: 'widget-button',
+    templateUrl: 'widget-button.html',
+    styleUrls: ['widget-button.scss'],
+    standalone: false
 })
 export class WidgetButtonComponent implements Layouter2Widget {
 

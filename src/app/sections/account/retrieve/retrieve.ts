@@ -5,9 +5,10 @@ import { AuthService } from 'src/app/core/services/auth.service';
 import { CONFIG } from 'src/app/configs/app.config';
 
 @Component({
-  selector: 'page-retrieve',
-  templateUrl: 'retrieve.html',
-  styleUrls: ['retrieve.scss'],
+    selector: 'page-retrieve',
+    templateUrl: 'retrieve.html',
+    styleUrls: ['retrieve.scss'],
+    standalone: false
 })
 export class RetrievePage {
 

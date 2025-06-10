@@ -3,9 +3,10 @@ import { DevcenterService } from './devcenter.service';
 import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
-  selector: 'app-devcenter',
-  templateUrl: './devcenter.page.html',
-  styleUrls: ['./devcenter.page.scss'],
+    selector: 'app-devcenter',
+    templateUrl: './devcenter.page.html',
+    styleUrls: ['./devcenter.page.scss'],
+    standalone: false
 })
 export class DevcenterPage implements OnInit {
 

@@ -2,8 +2,9 @@ import { Directive, ElementRef, OnInit } from '@angular/core';
 import { ViewService } from '../services/view.service';
 
 @Directive({
-  selector: '[overlayPadding]',
-  exportAs: 'appOverlayPadding'
+    selector: '[overlayPadding]',
+    exportAs: 'appOverlayPadding',
+    standalone: false
 })
 export class StatuabrOverlayPaddingDirective implements OnInit {
 

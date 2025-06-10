@@ -9,9 +9,10 @@ import { ImageService } from '../../services/image.service';
 
 
 @Component({
-  selector: 'page-device-icon',
-  templateUrl: 'device-icon.html',
-  styleUrls: ['device-icon.scss']
+    selector: 'page-device-icon',
+    templateUrl: 'device-icon.html',
+    styleUrls: ['device-icon.scss'],
+    standalone: false
 })
 export class DeviceIconPage {
   id;

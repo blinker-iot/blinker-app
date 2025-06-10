@@ -1,9 +1,10 @@
 import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
-  selector: 'widget-image-edit',
-  templateUrl: './widget-image-edit.component.html',
-  styleUrls: ['./widget-image-edit.component.scss'],
+    selector: 'widget-image-edit',
+    templateUrl: './widget-image-edit.component.html',
+    styleUrls: ['./widget-image-edit.component.scss'],
+    standalone: false
 })
 export class WidgetImageEditComponent implements OnInit {
 

@@ -3,9 +3,10 @@ import { Layouter2Widget } from '../config';
 import { DeviceService } from 'src/app/core/services/device.service';
 
 @Component({
-  selector: 'widget-input',
-  templateUrl: 'widget-input.html',
-  styleUrls: ['widget-input.scss']
+    selector: 'widget-input',
+    templateUrl: 'widget-input.html',
+    styleUrls: ['widget-input.scss'],
+    standalone: false
 })
 export class WidgetInputComponent implements Layouter2Widget {
 

@@ -2,9 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'devcenter-devtool',
-  templateUrl: './devtool.component.html',
-  styleUrls: ['./devtool.component.scss']
+    selector: 'devcenter-devtool',
+    templateUrl: './devtool.component.html',
+    styleUrls: ['./devtool.component.scss'],
+    standalone: false
 })
 export class DevtoolComponent implements OnInit {
 

@@ -27,21 +27,20 @@ import { ShareService } from "../device-share/share.service";
 import { Layouter2Service } from "src/app/device/layouter2/layouter2.service";
 
 @Component({
-  selector: "device-settings",
-  templateUrl: "device-settings.html",
-  styleUrls: ["device-settings.scss"],
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonicModule,
-    PipesModule,
-    DeviceIconPageModule,
-    ComponentsModule,
-    DirectivesModule,
-    TranslateModule,
-    RouterModule
-  ]
+    selector: "device-settings",
+    templateUrl: "device-settings.html",
+    styleUrls: ["device-settings.scss"],
+    imports: [
+        CommonModule,
+        FormsModule,
+        IonicModule,
+        PipesModule,
+        DeviceIconPageModule,
+        ComponentsModule,
+        DirectivesModule,
+        TranslateModule,
+        RouterModule
+    ]
 })
 export class DeviceSettingsPage {
   id;
