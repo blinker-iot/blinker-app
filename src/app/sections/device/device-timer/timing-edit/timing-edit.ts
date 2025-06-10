@@ -48,12 +48,6 @@ export class TimingEditPage {
 
   mode = "new";
 
-  get deviceConfig() {
-    return this.device.config.isDev
-      ? this.deviceConfigService.devDeviceConfig
-      : this.deviceConfigService.deviceConfigs;
-  }
-
   cmdList = [];
   cmds;
 
@@ -67,7 +61,6 @@ export class TimingEditPage {
     private deviceService: DeviceService,
     private noticeService: NoticeService,
     private modalCtrl: ModalController,
-    private deviceConfigService: DeviceConfigService,
     private dataService: DataService,
     private activatedRoute: ActivatedRoute,
     private router: Router,

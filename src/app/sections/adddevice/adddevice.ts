@@ -80,7 +80,7 @@ export class AddDevicePage {
   }
 
   gotoGuide(device) {
-    this.addservice.isDev = device.isDev
+    // this.addservice.isDev = device.isDev
     this.router.navigate(['/adddevice', device.deviceType])
   }
 

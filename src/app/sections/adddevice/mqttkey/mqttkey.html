@@ -7,16 +7,6 @@
   </ion-toolbar>
 </ion-header>
 <ion-content padding whitebg>
-  <ng-container *ngIf="step==0">
-    <div class="desc">
-      <p>选择通信服务商</p>
-    </div>
-    <div class="broker-box">
-      <div class="broker-item" (click)="registerDevice('blinker')">
-        <img src="assets/img/broker/blinker.png" alt="">
-      </div>
-    </div>
-  </ng-container>
   <div class="card" *ngIf="step==1">
     <div class="loaderbox">
       <div class="loader-inner ball-pulse">

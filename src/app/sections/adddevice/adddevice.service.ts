@@ -34,7 +34,7 @@ export class AdddeviceService {
     return this.dataService.device.list
   }
 
-  isDev = false;
+  // isDev = false;
   deviceType;
   mode;
   deviceTypeList = [];

@@ -25,10 +25,10 @@ const routes: Routes = [
       { path: 'prodevice/editlayouter/ieconfig/:deviceType', loadChildren: () => import('./pages/editlayouter/ieconfig/ieconfig.module').then(m => m.IeconfigPageModule) },
       { path: 'prodevice/editinfo/:deviceType', loadChildren: () => import('./pages/editinfo/editinfo.module').then(m => m.EditinfoPageModule) },
       { path: 'prodevice/public/:deviceType', loadChildren: () => import('./pages/publicprodevice/publicprodevice.module').then(m => m.PublicprodevicePageModule) },
-      { path: 'tool/espTouch', loadChildren: () => import('../adddevice/esptouch/esptouch.module').then(m => m.EsptouchPageModule) },
-      { path: 'tool/apConfig', loadChildren: () => import('../adddevice/apconfig/apconfig.module').then(m => m.ApconfigPageModule) },
-      { path: 'tool/qrScanner', loadChildren: () => import('../adddevice/qrscanner/qrscanner.module').then(m => m.QrscannerPageModule) },
-      { path: 'tool/bleConfig', loadChildren: () => import('../adddevice/bleconfig/bleconfig.module').then(m => m.BleconfigModule) }
+      // { path: 'tool/espTouch', loadChildren: () => import('../adddevice/esptouch/esptouch.module').then(m => m.EsptouchPageModule) },
+      // { path: 'tool/apConfig', loadChildren: () => import('../adddevice/apconfig/apconfig.module').then(m => m.ApconfigPageModule) },
+      // { path: 'tool/qrScanner', loadChildren: () => import('../adddevice/qrscanner/qrscanner.module').then(m => m.QrscannerPageModule) },
+      // { path: 'tool/bleConfig', loadChildren: () => import('../adddevice/bleconfig/bleconfig.module').then(m => m.BleconfigModule) }
     ]
   }
 ];

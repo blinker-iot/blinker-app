@@ -16,9 +16,8 @@ export class MqttkeyPage {
   showKey = false;
   showExit = false;
 
-  step = 0;
+  step = 1;
   secretKey: string;
-  showBroker: string;
   deviceType;
 
   get latitude() {
@@ -46,33 +45,20 @@ export class MqttkeyPage {
   }
 
   ngAfterViewInit() {
-    this.registerDevice('blinker')
+    this.registerDevice();
   }
 
-  async registerDevice(broker = 'blinker') {
-    this.showBroker = broker;
-    this.step++;
-    let image;
-    let customName;
-    if (this.deviceType == 'DiyArduino') {
-      image = "diyarduino.png"
-      customName = "Arduino";
-    } else if (this.deviceType == 'DiyLinux') {
-      image = "diylinux.png";
-      customName = "Linux设备";
-    }
+  async registerDevice() {
     let device = {
-      "deviceType": this.deviceType,
+      "deviceType": 'DiyArduino',
       "config": {
         "mode": "mqtt",
-        "broker": broker,
-        "image": image,
+        "broker": 'blinker',
+        "image": "diyarduino.png",
         "customName": "新的设备",
         "showSwitch": true
       }
     }
-    console.log('get position');
-
     // 获取设备地址
     // if (await this.geolocationService.getUserPosition()) {
     //   device.config['position'] = {

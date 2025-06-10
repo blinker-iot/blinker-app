@@ -41,10 +41,6 @@ export class ConfigStatePage {
   time;
   t1;
 
-  get isDev() {
-    return this.adddeviceService.isDev
-  }
-
   constructor(
     private location: PlatformLocation,
     private platform: Platform,
@@ -170,11 +166,11 @@ export class ConfigStatePage {
       console.log('注册设备' + res.bssid);
       esptouch.stop();
       // 判断是否为开发者正在开发的设备
-      if (this.isDev) {
-        this.device.setDevMode();
-        this.device.setCustomName(this.deviceListService.devDeviceConfig[this.deviceType].name);
-        this.device.setImage(this.deviceListService.devDeviceConfig[this.deviceType].image);
-      }
+      // if (this.isDev) {
+      //   this.device.setDevMode();
+      //   this.device.setCustomName(this.deviceListService.devDeviceConfig[this.deviceType].name);
+      //   this.device.setImage(this.deviceListService.devDeviceConfig[this.deviceType].image);
+      // }
       if (!await this.adddeviceService.addDevice(this.device)) {
         console.log("设备注册失败");
         this.stepTo(99);

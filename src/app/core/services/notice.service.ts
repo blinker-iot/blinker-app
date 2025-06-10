@@ -280,7 +280,7 @@ export class NoticeService {
     },
     '1510': {
       header: 'MQTT设备数量超出限制',
-      message: '当前用户Diy设备已达上限,如需更多设备，请联系blinker团队',
+      message: '当前账户设备数量已达上限,如需更多设备，请通过点灯官网(https://diandeng.tech)购买服务',
       buttons: ['确认']
     },
     '1801': {

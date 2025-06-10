@@ -9,33 +9,21 @@ import { AdddeviceService } from '../adddevice.service';
   styleUrls: ['guide.scss']
 })
 export class GuidePage {
-  deviceType;
-
-  get isDev() {
-    return this.addservice.isDev
-  }
+  deviceType = 'CustomDevice';
 
   get guideText() {
-    if (this.isDev)
-      return this.deviceConfigService.devDeviceConfig[this.deviceType]["guide"]    
     return this.deviceConfigService.deviceConfigs[this.deviceType]["guide"]
   }
 
   get descriptionText() {
-    if (this.isDev)
-      return this.deviceConfigService.devDeviceConfig[this.deviceType]["description"]
     return this.deviceConfigService.deviceConfigs[this.deviceType]["description"]
   }
 
   get tools() {
-    if (this.isDev)
-      return this.deviceConfigService.devDeviceConfig[this.deviceType]["configurator"]
     return this.deviceConfigService.deviceConfigs[this.deviceType]["configurator"]
   }
 
   get image() {
-    if (this.isDev)
-      return this.deviceConfigService.devDeviceConfig[this.deviceType]["image"]
     return this.deviceConfigService.deviceConfigs[this.deviceType]["image"]
   }
 
@@ -46,9 +34,9 @@ export class GuidePage {
   ) { }
 
   ngOnInit() {
-    this.deviceType = this.activatedRoute.snapshot.params['deviceType'];
+    // this.deviceType = this.activatedRoute.snapshot.params['deviceType'];
     // console.log(this.deviceConfigService.deviceConfigs);
-    
+
   }
 
 }

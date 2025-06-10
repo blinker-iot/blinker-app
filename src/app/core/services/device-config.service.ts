@@ -1,6 +1,6 @@
 // 该服务用于生成设备列表
 import { Injectable } from '@angular/core';
-import { deviceTypes } from '../../configs/devices.config';
+import { DeviceTypes } from '../../configs/devices.config';
 import { HttpClient } from '@angular/common/http';
 // import { Storage } from '@ionic/storage-angular';
 import { DataService } from './data.service';
@@ -26,52 +26,53 @@ export class DeviceConfigService {
   }
 
   get addDeviceList() {
-    return (this.addDevDeviceList.concat(this.addLocalDeviceList)).concat(this.addPublicDeviceList)
+    // return (this.addDevDeviceList.concat(this.addLocalDeviceList)).concat(this.addPublicDeviceList)
+    return {}
   }
 
-  _addPublicDeviceList = [];
-  set addPublicDeviceList(list: any[]) {
-    localStorage.setItem('addPublicDeviceList', JSON.stringify(list))
-    this._addPublicDeviceList = list
-  }
+  // _addPublicDeviceList = [];
+  // set addPublicDeviceList(list: any[]) {
+  //   localStorage.setItem('addPublicDeviceList', JSON.stringify(list))
+  //   this._addPublicDeviceList = list
+  // }
 
-  get addPublicDeviceList(): any[] {
-    return this._addPublicDeviceList
-  }
+  // get addPublicDeviceList(): any[] {
+  //   return this._addPublicDeviceList
+  // }
 
-  _addLocalDeviceList = [];
-  set addLocalDeviceList(list: any[]) {
-    localStorage.setItem('addLocalDeviceList', JSON.stringify(list))
-    this._addLocalDeviceList = list
-  }
+  // _addLocalDeviceList = [];
+  // set addLocalDeviceList(list: any[]) {
+  //   localStorage.setItem('addLocalDeviceList', JSON.stringify(list))
+  //   this._addLocalDeviceList = list
+  // }
 
-  get addLocalDeviceList(): any[] {
-    return this._addLocalDeviceList
-  }
+  // get addLocalDeviceList(): any[] {
+  //   return this._addLocalDeviceList
+  // }
 
-  _addDevDeviceList = [];
-  set addDevDeviceList(list: any[]) {
-    localStorage.setItem('addDevDeviceList', JSON.stringify(list))
-    this._addDevDeviceList = list
-  }
+  // _addDevDeviceList = [];
+  // set addDevDeviceList(list: any[]) {
+  //   localStorage.setItem('addDevDeviceList', JSON.stringify(list))
+  //   this._addDevDeviceList = list
+  // }
 
-  get addDevDeviceList(): any[] {
-    return this._addDevDeviceList
-  }
+  // get addDevDeviceList(): any[] {
+  //   return this._addDevDeviceList
+  // }
 
   get deviceConfigs() {
-    return Object.assign({}, this.publicDeviceConfig, this.localDeviceConfig);
+    return DeviceTypes;
   }
 
-  _publicDeviceConfig = {};
-  set publicDeviceConfig(config) {
-    localStorage.setItem('publicDeviceConfig', JSON.stringify(config))
-    this._publicDeviceConfig = config
-  }
+  // _publicDeviceConfig = {};
+  // set publicDeviceConfig(config) {
+  //   localStorage.setItem('publicDeviceConfig', JSON.stringify(config))
+  //   this._publicDeviceConfig = config
+  // }
 
-  get publicDeviceConfig() {
-    return this._publicDeviceConfig
-  }
+  // get publicDeviceConfig() {
+  //   return this._publicDeviceConfig
+  // }
 
   _localDeviceConfig = {};
   set localDeviceConfig(config) {
@@ -83,15 +84,15 @@ export class DeviceConfigService {
     return this._localDeviceConfig
   }
 
-  _devDeviceConfig = {};
-  set devDeviceConfig(config) {
-    localStorage.setItem('devDeviceConfig', JSON.stringify(config))
-    this._devDeviceConfig = config
-  }
+  // _devDeviceConfig = {};
+  // set devDeviceConfig(config) {
+  //   localStorage.setItem('devDeviceConfig', JSON.stringify(config))
+  //   this._devDeviceConfig = config
+  // }
 
-  get devDeviceConfig() {
-    return this._devDeviceConfig
-  }
+  // get devDeviceConfig() {
+  //   return this._devDeviceConfig
+  // }
 
   loaded = new BehaviorSubject(false);
 
@@ -104,17 +105,17 @@ export class DeviceConfigService {
   async init() {
     this.dataService.initCompleted.subscribe(async (state) => {
       if (state) {
-        this._addDevDeviceList = JSON.parse(localStorage.getItem('addDevDeviceList'))
-        this._addPublicDeviceList = JSON.parse(localStorage.getItem('addPublicDeviceList'))
-        this._devDeviceConfig = JSON.parse(localStorage.getItem('devDeviceConfig'))
-        this._publicDeviceConfig = JSON.parse(localStorage.getItem('publicDeviceConfig'))
+        // this._addDevDeviceList = JSON.parse(localStorage.getItem('addDevDeviceList'))
+        // this._addPublicDeviceList = JSON.parse(localStorage.getItem('addPublicDeviceList'))
+        // this._devDeviceConfig = JSON.parse(localStorage.getItem('devDeviceConfig'))
+        // this._publicDeviceConfig = JSON.parse(localStorage.getItem('publicDeviceConfig'))
 
         // this._addDevDeviceList = await this.storage.get('addDevDeviceList')
         // this._addPublicDeviceList = await this.storage.get('addPublicDeviceList')
         // this._devDeviceConfig = await this.storage.get('devDeviceConfig')
         // this._publicDeviceConfig = await this.storage.get('publicDeviceConfig')
 
-        this.getLocalDeviceConfig();
+        // this.getLocalDeviceConfig();
         // await this.getPublicDeviceConfig();
         // await this.getDevDeviceConfig();
         this.loaded.next(true)
@@ -164,14 +165,14 @@ export class DeviceConfigService {
   // }
 
   // 获取本地存储的设备列表
-  async getLocalDeviceConfig() {
-    if (CONFIG.BUILTIN_DEVICES.ENABLE) {
-      this._addLocalDeviceList = JSON.parse(localStorage.getItem('addLocalDeviceList'))
-      this._localDeviceConfig = JSON.parse(localStorage.getItem('localDeviceConfig'))
-      this.localDeviceConfig = deviceTypes
-      this.addLocalDeviceList = this.pushAddDeviceList(this.localDeviceConfig);
-    }
-  }
+  // async getLocalDeviceConfig() {
+  //   if (CONFIG.BUILTIN_DEVICES.ENABLE) {
+  //     // this._addLocalDeviceList = JSON.parse(localStorage.getItem('addLocalDeviceList'))
+  //     // this._localDeviceConfig = JSON.parse(localStorage.getItem('localDeviceConfig'))
+  //     this.localDeviceConfig = deviceTypes
+  //     this.addLocalDeviceList = this.pushAddDeviceList(this.localDeviceConfig);
+  //   }
+  // }
 
   pushAddDeviceList(deviceConfig, options = { isDev: false }) {
     let venders = []
@@ -200,7 +201,7 @@ export class DeviceConfigService {
     return addDeviceList
   }
 
-  getDeviceConfig(obj): BlinkerDeviceConfig {
+  getDeviceConfig(obj): BlinkerDeviceConfig | any {
     let device: BlinkerDevice;
     if (typeof obj == 'object') {
       device = obj;
@@ -208,12 +209,8 @@ export class DeviceConfigService {
     else if (typeof obj == 'string') {
       device = this.dataService.device.dict[obj]
     }
-    return device.config.isDev ? this.devDeviceConfig[device.deviceType] : this.deviceConfigs[device.deviceType];
-  }
-
-  private handleError(error: any): boolean {
-    console.error('An error occurred', error);
-    return false;
+    // return this.deviceConfigs[device.deviceType];
+    return {}
   }
 
 }

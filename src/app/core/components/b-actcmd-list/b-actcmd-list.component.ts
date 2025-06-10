@@ -16,7 +16,7 @@ export class BActcmdListComponent {
   cmdList = [];
 
   get deviceConfig() {
-    return this.device.config.isDev ? this.deviceConfigService.devDeviceConfig : this.deviceConfigService.deviceConfigs;
+    return this.deviceConfigService.deviceConfigs;
   }
 
   get isDiy() {

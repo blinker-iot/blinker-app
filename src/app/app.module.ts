@@ -21,7 +21,7 @@ import { BlinkerUserModule } from './sections/user/user.module';
 import { BlinkerMessageModule } from './sections/message/message.module';
 import { BlinkerDevCenterModule } from './sections/devcenter/devcenter.module';
 import { ComponentsModule } from './core/components/components.module';
-import { DeviceConfigService } from './core/services/device-config.service';
+// import { DeviceConfigService } from './core/services/device-config.service';
 import { DebugModule } from './debug/debug.module';
 import { DocModule } from './core/pages/doc/doc.module';
 import { MarkdownModule } from 'ngx-markdown';
@@ -103,7 +103,7 @@ export class MyHammerConfig extends HammerGestureConfig {
     ViewService,
     PermissionService,
     PusherService,
-    DeviceConfigService,
+    // DeviceConfigService,
     ImageService,
     // Zeroconf,
     // Network,

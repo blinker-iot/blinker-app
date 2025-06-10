@@ -5,7 +5,7 @@ import { ViewService } from './core/services/view.service';
 import { NoticeService } from './core/services/notice.service';
 import { PusherService } from './core/services/pusher.service';
 import { UpdateService } from './core/services/update.service';
-import { DeviceConfigService } from './core/services/device-config.service';
+// import { DeviceConfigService } from './core/services/device-config.service';
 import { DataService } from './core/services/data.service';
 import { DeviceService } from './core/services/device.service';
 import { AuthService } from './core/services/auth.service';
@@ -48,10 +48,10 @@ export class AppComponent {
     private userService: UserService,
     private dataService: DataService,
     private noticeService: NoticeService,
-    private pusherService: PusherService,
+    // private pusherService: PusherService,
     private updateService: UpdateService,
     private networkService: NetworkService,
-    private deviceConfigService: DeviceConfigService,
+    // private deviceConfigService: DeviceConfigService,
     private navCtrl: NavController,
     private deviceService: DeviceService,
     // private screenOrientation: ScreenOrientation,
@@ -84,7 +84,7 @@ export class AppComponent {
     await this.dataService.init();
     this.checkLoginStatus();
     this.authService.init();
-    this.deviceConfigService.init();
+    // this.deviceConfigService.init();
     this.deviceService.init();
     this.noticeService.init();
     this.imageService.init();
