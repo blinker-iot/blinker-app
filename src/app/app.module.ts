@@ -3,7 +3,7 @@ import { RouteReuseStrategy } from '@angular/router';
 import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
@@ -50,75 +50,56 @@ export class MyHammerConfig extends HammerGestureConfig {
   }
 }
 
-@NgModule({
-  declarations: [AppComponent],
-  imports: [
-    BrowserModule,
-    IonicModule.forRoot({
-      mode: 'ios',
-      scrollAssist: true,
-      scrollPadding: false
-    }),
-    BrowserAnimationsModule,
-    TranslateModule.forRoot(),
-    MarkdownModule.forRoot(),
-    AppRoutingModule,
-    HttpClientModule,
-    GridsterModule,
-    ComponentsModule,
-    HammerModule,
-    // --blinker module--
-    BlinkerAccountModule,
-    BlinkerUserModule,
-    BlinkerViewModule,
-    BlinkerDeviceModule,
-    BlinkerAddDeviceModule,
-    BlinkerDeviceManagerModule,
-    BlinkerRoomManagerModule,
-    BlinkerSceneManagerModule,
-    BlinkerMessageModule,
-    BlinkerDevCenterModule,
-    DebugModule,
-    DocModule,
-    AboutModule,
-    BlinkerSpeechModule,
-    BlinkerFeedbackModule,
-  ],
-  providers: [
-    // StatusBar,
-    // SplashScreen,
-    // ScreenOrientation,
-    { provide: HAMMER_GESTURE_CONFIG, useClass: HammerGestureConfig },
-    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
-    { provide: HTTP_INTERCEPTORS, useClass: ServerInterceptor, multi: true },
-    { provide: HAMMER_GESTURE_CONFIG, useClass: MyHammerConfig },
-    AuthService,
-    DataService,
-    UserService,
-    AdddeviceService,
-    DeviceService,
-    NetworkService,
-    NoticeService,
-    // UpdateService,
-    ViewService,
-    PermissionService,
-    PusherService,
-    // DeviceConfigService,
-    ImageService,
-    // Zeroconf,
-    // Network,
-    // BLE,
-    // Diagnostic,
-    // Deeplinks,
-    // Geolocation,
-    // AndroidPermissions,
-    // AppVersion,
-    // FileTransfer,
-    // FileOpener,
-    // File,
-    // ScreenOrientation,
-    // AliyunPush
-  ],
-  bootstrap: [AppComponent]
-})
+@NgModule({ declarations: [AppComponent],
+    bootstrap: [AppComponent], imports: [BrowserModule,
+        IonicModule.forRoot({
+            mode: 'ios',
+            scrollAssist: true,
+            scrollPadding: false
+        }),
+        BrowserAnimationsModule,
+        TranslateModule.forRoot(),
+        MarkdownModule.forRoot(),
+        AppRoutingModule,
+        GridsterModule,
+        ComponentsModule,
+        HammerModule,
+        // --blinker module--
+        BlinkerAccountModule,
+        BlinkerUserModule,
+        BlinkerViewModule,
+        BlinkerDeviceModule,
+        BlinkerAddDeviceModule,
+        BlinkerDeviceManagerModule,
+        BlinkerRoomManagerModule,
+        BlinkerSceneManagerModule,
+        BlinkerMessageModule,
+        BlinkerDevCenterModule,
+        DebugModule,
+        DocModule,
+        AboutModule,
+        BlinkerSpeechModule,
+        BlinkerFeedbackModule], providers: [
+        // StatusBar,
+        // SplashScreen,
+        // ScreenOrientation,
+        { provide: HAMMER_GESTURE_CONFIG, useClass: HammerGestureConfig },
+        { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
+        { provide: HTTP_INTERCEPTORS, useClass: ServerInterceptor, multi: true },
+        { provide: HAMMER_GESTURE_CONFIG, useClass: MyHammerConfig },
+        AuthService,
+        DataService,
+        UserService,
+        AdddeviceService,
+        DeviceService,
+        NetworkService,
+        NoticeService,
+        // UpdateService,
+        ViewService,
+        PermissionService,
+        PusherService,
+        // DeviceConfigService,
+        ImageService,
+        provideHttpClient(withInterceptorsFromDi()),
+    ] })
 export class AppModule { }

@@ -1,13 +1,5 @@
 import { Injectable } from "@angular/core";
-import {
-  HttpRequest,
-  HttpResponse,
-  HttpErrorResponse,
-  HttpEvent,
-  HttpHandler,
-  HttpInterceptor,
-  HttpParams
-} from "@angular/common/http";
+import { HttpRequest, HttpResponse, HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpParams } from "@angular/common/http";
 import { Observable, throwError } from "rxjs";
 import { map, catchError } from 'rxjs/operators';
 import { NavController } from '@ionic/angular';
