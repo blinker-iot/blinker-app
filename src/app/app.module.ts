@@ -19,7 +19,6 @@ import { BlinkerDeviceManagerModule } from './sections/device/device-manager-rou
 import { BlinkerRoomManagerModule } from './sections/room/room-manager-routing.module';
 import { BlinkerUserModule } from './sections/user/user.module';
 import { BlinkerMessageModule } from './sections/message/message.module';
-import { BlinkerDevCenterModule } from './sections/devcenter/devcenter.module';
 import { ComponentsModule } from './core/components/components.module';
 // import { DeviceConfigService } from './core/services/device-config.service';
 import { DebugModule } from './debug/debug.module';
@@ -50,56 +49,60 @@ export class MyHammerConfig extends HammerGestureConfig {
   }
 }
 
-@NgModule({ declarations: [AppComponent],
-    bootstrap: [AppComponent], imports: [BrowserModule,
-        IonicModule.forRoot({
-            mode: 'ios',
-            scrollAssist: true,
-            scrollPadding: false
-        }),
-        BrowserAnimationsModule,
-        TranslateModule.forRoot(),
-        MarkdownModule.forRoot(),
-        AppRoutingModule,
-        GridsterModule,
-        ComponentsModule,
-        HammerModule,
-        // --blinker module--
-        BlinkerAccountModule,
-        BlinkerUserModule,
-        BlinkerViewModule,
-        BlinkerDeviceModule,
-        BlinkerAddDeviceModule,
-        BlinkerDeviceManagerModule,
-        BlinkerRoomManagerModule,
-        BlinkerSceneManagerModule,
-        BlinkerMessageModule,
-        BlinkerDevCenterModule,
-        DebugModule,
-        DocModule,
-        AboutModule,
-        BlinkerSpeechModule,
-        BlinkerFeedbackModule], providers: [
-        // StatusBar,
-        // SplashScreen,
-        // ScreenOrientation,
-        { provide: HAMMER_GESTURE_CONFIG, useClass: HammerGestureConfig },
-        { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
-        { provide: HTTP_INTERCEPTORS, useClass: ServerInterceptor, multi: true },
-        { provide: HAMMER_GESTURE_CONFIG, useClass: MyHammerConfig },
-        AuthService,
-        DataService,
-        UserService,
-        AdddeviceService,
-        DeviceService,
-        NetworkService,
-        NoticeService,
-        // UpdateService,
-        ViewService,
-        PermissionService,
-        PusherService,
-        // DeviceConfigService,
-        ImageService,
-        provideHttpClient(withInterceptorsFromDi()),
-    ] })
+@NgModule({
+  declarations: [AppComponent],
+  bootstrap: [AppComponent], imports: [
+    BrowserModule,
+    IonicModule.forRoot({
+      mode: 'ios',
+      scrollAssist: true,
+      scrollPadding: false
+    }),
+    BrowserAnimationsModule,
+    TranslateModule.forRoot(),
+    MarkdownModule.forRoot(),
+    AppRoutingModule,
+    GridsterModule,
+    ComponentsModule,
+    HammerModule,
+    // --blinker module--
+    BlinkerAccountModule,
+    BlinkerUserModule,
+    BlinkerViewModule,
+    BlinkerDeviceModule,
+    BlinkerAddDeviceModule,
+    BlinkerDeviceManagerModule,
+    BlinkerRoomManagerModule,
+    BlinkerSceneManagerModule,
+    BlinkerMessageModule,
+    DebugModule,
+    DocModule,
+    AboutModule,
+    BlinkerSpeechModule,
+    BlinkerFeedbackModule
+  ],
+  providers: [
+    // StatusBar,
+    // SplashScreen,
+    // ScreenOrientation,
+    { provide: HAMMER_GESTURE_CONFIG, useClass: HammerGestureConfig },
+    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
+    { provide: HTTP_INTERCEPTORS, useClass: ServerInterceptor, multi: true },
+    { provide: HAMMER_GESTURE_CONFIG, useClass: MyHammerConfig },
+    AuthService,
+    DataService,
+    UserService,
+    AdddeviceService,
+    DeviceService,
+    NetworkService,
+    NoticeService,
+    // UpdateService,
+    ViewService,
+    PermissionService,
+    PusherService,
+    // DeviceConfigService,
+    ImageService,
+    provideHttpClient(withInterceptorsFromDi()),
+  ]
+})
 export class AppModule { }
