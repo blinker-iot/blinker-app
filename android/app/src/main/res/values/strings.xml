@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">点灯·blinker</string>
+    <string name="title_activity_main">点灯·blinker</string>
+    <string name="package_name">iot.diandeng.tech</string>
+    <string name="custom_url_scheme">iot.diandeng.tech</string>
+</resources>
