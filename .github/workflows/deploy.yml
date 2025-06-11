@@ -26,11 +26,27 @@ jobs:
         run: |
           npm run build
       
-      - name: Deploy
-        uses: Dylan700/sftp-upload-action@latest
+      - name: Compress files
+        run: |
+          tar -czf dist.tar.gz www/
+        
+      - name: Upload and deploy
+        uses: appleboy/scp-action@master
         with:
-          server: ${{ secrets.HOST }}
+          host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
-          password: ${{secrets.PASSWORD}}
-          uploads: |
-            www => ${{ secrets.TARGET }}
+          password: ${{ secrets.PASSWORD }}
+          source: "dist.tar.gz"
+          target: "/tmp"
+          strip_components: 0
+
+      - name: Extract files
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          script: |
+            mkdir -p ${{ secrets.TARGET }}
+            tar -xzf /tmp/dist.tar.gz -C ${{ secrets.TARGET }} --strip-components=1
+            rm /tmp/dist.tar.gz
