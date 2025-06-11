@@ -20,7 +20,7 @@ jobs:
       - name: Dependent environment
         run: |
           npm i -g @angular/cli
-          npm i
+          npm i --force
       
       - name: Compile
         run: |
