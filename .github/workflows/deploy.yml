@@ -1,0 +1,36 @@
+name: CI&&CD
+
+on:
+  push:
+    branches:
+      - deploy
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: '18.x'
+      
+      - name: Dependent environment
+        run: |
+          npm i -g @angular/cli
+          npm i
+      
+      - name: Compile
+        run: |
+          npm run build
+      
+      - name: Deploy
+        uses: Dylan700/sftp-upload-action@latest
+        with:
+          server: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{secrets.PASSWORD}}
+          uploads: |
+            www => ${{ secrets.TARGET }}
