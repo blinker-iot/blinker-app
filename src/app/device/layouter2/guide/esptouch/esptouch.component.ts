@@ -24,8 +24,8 @@ export class EsptouchComponent implements OnInit {
 
   id: string;
   device: BlinkerDevice
-
   ssid: string = '';
+  bssid: string = '';
   password: string = '';
   customData: string = '';
 
@@ -72,6 +72,18 @@ export class EsptouchComponent implements OnInit {
   ngAfterViewInit() {
     if (!this.platform.is("cordova")) return;
     this.loadSavePasswordConfig();
+    
+    // 添加错误处理监听器
+    if (this.platform.is("cordova")) {
+      Esptouch.addListener('provisioningEvent', (event) => {
+        console.log('Provisioning event:', event);
+        if (event.type === 'error') {
+          console.error('配网错误:', event.message);
+          this.configFail(event.message || '配网过程中发生错误');
+        }
+      });
+    }
+    
     if (this.platform.is("android")) {
       wifi.checkLocation(result => {
         if (!result) {
@@ -90,7 +102,6 @@ export class EsptouchComponent implements OnInit {
       this.changeDetectorRef.detectChanges();
     });
   }
-
   ngOnDestroy() {
     this.subscription.unsubscribe();
     if (this.savePassword)
@@ -99,10 +110,11 @@ export class EsptouchComponent implements OnInit {
       this.delLocalPassowrd()
     if (this.platform.is("cordova")) {
       this.platformResume.unsubscribe();
-      Esptouch.stop();
+      Esptouch.stopProvisioning();
+      Esptouch.close();
+      Esptouch.removeAllListeners();
     }
   }
-
   getConnectedInfo() {
     this.stateIndex = 1;
     this.changeDetectorRef.detectChanges();
@@ -112,6 +124,7 @@ export class EsptouchComponent implements OnInit {
         if (this.mode == 1) this.stateIndex = 11
         else if (this.mode == 2) this.stateIndex = 12
         this.ssid = info.ssid;
+        this.bssid = info.bssid || '00:00:00:00:00:00';
         if (this.platform.is('android'))
           this.is5G = info.is5G;
         this.loadLocalPassowrd();
@@ -173,12 +186,11 @@ export class EsptouchComponent implements OnInit {
   delLocalPassowrd() {
     localStorage.removeItem('passwordList');
   }
-
   onClick() {
     if (this.state == 0 || this.state == -1) {
       this.configBegin()
     } else if (this.state == 1) {
-      Esptouch.stop();
+      Esptouch.stopProvisioning();
       this.updateState(0)
     } else if (this.state == 2) {
       this.newuiService.goBack()
@@ -190,8 +202,7 @@ export class EsptouchComponent implements OnInit {
   time;
   timeoutTimer;
   mac;
-  ip;
-  btnIcon = 'fa-light fa-wifi';
+  ip;  btnIcon = 'fa-light fa-wifi';
   btnIconList = ['fa-light fa-wifi-weak', 'fa-light fa-wifi-fair', 'fa-light fa-wifi']
   btnTitle = '开始配置'
   btnText = '';
@@ -202,25 +213,46 @@ export class EsptouchComponent implements OnInit {
       this.date1 = new Date();
       console.log("开始配置");
       this.updateState(1);
-      // esptouch2.start(this.ssid, this.password, this.customData,
-      //   result => {
-      //     this.updateState(2);
-      //     this.configComplete(result)
-      //   },
-      //   error => { this.configFail(error) }
-      // );
-      Esptouch.start({
-        ssid: this.ssid,
-        bssid: '00:00:00:00:00:00',
-        password: this.password,
-        aesKey: '1234567890123456',
-        customData: this.customData,
-      }).then(result => {
-        this.updateState(2);
-        this.configComplete(result)
-      }).catch(error => {
-        this.configFail(error)
-      })
+      
+      try {
+        // 清理之前的监听器
+        await Esptouch.removeAllListeners();
+        
+        // 添加监听器来接收配网结果
+        await Esptouch.addListener('provisioningResult', (result) => {
+          console.log('配网结果:', result);
+          if (result.success) {
+            clearTimeout(this.timeoutTimer);
+            this.configComplete(result);
+          } else {
+            this.configFail('配网失败');
+          }
+        });
+
+        // 添加错误事件监听器
+        await Esptouch.addListener('provisioningEvent', (event) => {
+          console.log('配网事件:', event);
+          if (event.type === 'error') {
+            console.error('配网错误:', event.message);
+            this.configFail(event.message || '配网过程中发生错误');
+          }
+        });
+
+        // 开始配网
+        await Esptouch.startProvisioning({
+          ssid: this.ssid,
+          bssid: this.bssid,
+          password: this.password,
+          reservedData: this.customData,
+          aesKey: '1234567890123456'
+        });
+
+      } catch (error) {
+        console.error('配网启动失败:', error);
+        this.configFail(error);
+      }
+      
+      // 设置超时
       this.timeoutTimer = setTimeout(() => {
         this.configFail('config timeout')
       }, 60000);
@@ -271,20 +303,24 @@ export class EsptouchComponent implements OnInit {
       this.changeDetectorRef.detectChanges();
     });
   }
-
-  configFail(err) {
+  async configFail(err) {
     console.log(err)
+    clearTimeout(this.timeoutTimer);
+    try {
+      await Esptouch.stopProvisioning();
+    } catch (error) {
+      console.error('停止配网失败:', error);
+    }
     this.updateState(-1);
   }
-
   async configComplete(res) {
     clearTimeout(this.timeoutTimer)
     console.log(res);
     this.date2 = new Date();
     this.time = this.date2.getTime() - this.date1.getTime();
     console.log("SmartConfig成功,耗时：" + this.time + "ms");
-    Esptouch.stop();
-    this.mac = res.bssid;
+    await Esptouch.stopProvisioning();
+    this.mac = res.mac;
     this.ip = res.ip;
     this.updateState(2);
   }
