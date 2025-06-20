@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar overlayPadding>
+  <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
@@ -18,7 +18,7 @@
   <!-- 开始配置按钮 -->
 </ion-content>
 <ion-footer class="ion-no-border">
-  <ion-toolbar overlayPadding>
+  <ion-toolbar>
     <div class="btnbox">
       <div class="btn" [ngClass]="{'onebtn': tools.length==1}" *ngFor="let tool of tools"
         [routerLink]="[ '/adddevice', deviceType, tool ]">

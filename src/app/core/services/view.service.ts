@@ -43,7 +43,7 @@ export class ViewService {
     private router: Router,
     private modalCtrl: ModalController,
     private ngzone: NgZone,
-  ) {}
+  ) { }
 
   async init() {
     this.listenBackButton();
@@ -218,7 +218,7 @@ export class ViewService {
       }
     });
 
-   
+
     // window.plugins.Shortcuts.getIntent(intent => {
     //   if (typeof intent.data != 'undefined') {
     //     this.devicePageIsRoot = true;
@@ -245,8 +245,16 @@ export class ViewService {
 
   statusBarHeight = 0;
   async getStatusBarHeight() {
-    // const { height } = await SafeArea.getStatusBarHeight();
-    // this.statusBarHeight = height;
+    const tempElement = document.createElement('div');
+    tempElement.style.position = 'fixed';
+    tempElement.style.top = 'env(safe-area-inset-top)';
+    tempElement.style.visibility = 'hidden';
+    document.body.appendChild(tempElement);
+
+    const statusBarHeight = parseInt(getComputedStyle(tempElement).top) || 0;
+    document.body.removeChild(tempElement);
+    this.statusBarHeight = statusBarHeight;
+    console.log("Status Bar Height:", this.statusBarHeight);
   }
 
   listenKeyboardShow;
