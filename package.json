@@ -14,7 +14,6 @@
   },
   "private": true,
   "dependencies": {
-    "@aashu-dubey/capacitor-statusbar-safe-area": "^4.0.0",
     "@angular/animations": "^19.2.14",
     "@angular/common": "^19.2.14",
     "@angular/compiler": "^19.2.14",
@@ -43,7 +42,7 @@
     "angular-gridster2": "^19.0.0",
     "animate.css": "^4.1.1",
     "capacitor-android-shortcuts": "^7.0.0",
-    "capacitor-esptouch": "file:../capacitor-esptouch/capacitor-esptouch",
+    "capacitor-esptouch": "file:../capacitor-esptouch",
     "capacitor-native-settings": "^7.0.1",
     "capacitor-zeroconf": "^4.0.0",
     "coordtransform": "^2.1.2",

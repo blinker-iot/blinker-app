@@ -16,12 +16,13 @@ import { TipService } from './core/services/tip.service';
 import { TranslationService } from './core/services/translation.service';
 import { AudioService } from './core/services/audio.service';
 import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 @Component({
-    selector: 'app-root',
-    templateUrl: 'app.component.html',
-    styleUrls: ['./app.component.scss'],
-    standalone: false
+  selector: 'app-root',
+  templateUrl: 'app.component.html',
+  styleUrls: ['./app.component.scss'],
+  standalone: false
 })
 export class AppComponent {
   isPWA;
@@ -43,7 +44,6 @@ export class AppComponent {
   constructor(
     private platform: Platform,
     // private splashScreen: SplashScreen,
-    // private statusBar: StatusBar,
     private viewService: ViewService,
     private authService: AuthService,
     private userService: UserService,
@@ -62,26 +62,32 @@ export class AppComponent {
     private translationService: TranslationService,
     private audioService: AudioService
   ) { }
-  
+
   ngAfterViewInit() {
     this.initApp();
   }
 
-  initApp() {
-      this.initService()
-      //   // if (!isDevMode() && this.platform.is("android")) this.checkApkUpdate();
-      //   // if (!isDevMode())
-      //   this.updateService.checkUpdate();
-      //   // this.watchProgressbar();
-      //   // this.splashScreen.hide();
-      // } else {
-      //   this.isPWA = true
-      // }
+  async initApp() {
+    this.initService();
+
+    // 设置状态栏为透明
+    await StatusBar.setOverlaysWebView({ overlay: true });
+    // 设置状态栏样式（可选）
+    await StatusBar.setStyle({ style: Style.Light });
+
+    //   // if (!isDevMode() && this.platform.is("android")) this.checkApkUpdate();
+    //   // if (!isDevMode())
+    //   this.updateService.checkUpdate();
+    //   // this.watchProgressbar();
+    //   // this.splashScreen.hide();
+    // } else {
+    //   this.isPWA = true
+    // }
   }
 
   async initService() {
     console.log('init service');
-    
+
     await this.dataService.init();
     this.checkLoginStatus();
     this.authService.init();
@@ -93,7 +99,7 @@ export class AppComponent {
     this.audioService.init(this.audio.nativeElement)
 
     // 原生内容加载
-    if(Capacitor.isNativePlatform()){
+    if (Capacitor.isNativePlatform()) {
       console.log('init native service');
       this.viewService.init(); // 适配手机样式
       this.networkService.init();
@@ -102,8 +108,6 @@ export class AppComponent {
       // this.pusherService.init();
     }
 
-    // 应相关部门要求，在通过同意后，才能使用推送服务
-    // if (localStorage.getItem('showFirstModal') == '1') this.pusherService.init()
   }
 
   checkLoginStatus() {

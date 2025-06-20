@@ -39,6 +39,7 @@ html, body {
 
 ion-content {
     --background: #f5f5f5;
+    --padding-top: env(safe-area-inset-top);
 }
 
 ion-content[whitebg] {

@@ -11,7 +11,6 @@ import { NavigationEnd, Router } from "@angular/router";
 import { Subject } from "rxjs";
 import { App } from "@capacitor/app";
 import { StatusBar, Style } from "@capacitor/status-bar";
-import { SafeArea } from "@aashu-dubey/capacitor-statusbar-safe-area";
 // import { ScreenOrientation,OrientationType } from '@capacitor/screen-orientation';
 import { AndroidShortcuts } from "capacitor-android-shortcuts";
 
@@ -246,8 +245,8 @@ export class ViewService {
 
   statusBarHeight = 0;
   async getStatusBarHeight() {
-    const { height } = await SafeArea.getStatusBarHeight();
-    this.statusBarHeight = height;
+    // const { height } = await SafeArea.getStatusBarHeight();
+    // this.statusBarHeight = height;
   }
 
   listenKeyboardShow;
