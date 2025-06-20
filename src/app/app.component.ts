@@ -69,12 +69,9 @@ export class AppComponent {
 
   async initApp() {
     this.initService();
-
-    // 设置状态栏为透明
-    await StatusBar.setOverlaysWebView({ overlay: true });
-    // 设置状态栏样式（可选）
-    await StatusBar.setStyle({ style: Style.Light });
-
+    if (Capacitor.isNativePlatform()) {
+      await StatusBar.setOverlaysWebView({ overlay: true });
+    }
     //   // if (!isDevMode() && this.platform.is("android")) this.checkApkUpdate();
     //   // if (!isDevMode())
     //   this.updateService.checkUpdate();
@@ -87,7 +84,6 @@ export class AppComponent {
 
   async initService() {
     console.log('init service');
-
     await this.dataService.init();
     this.checkLoginStatus();
     this.authService.init();
