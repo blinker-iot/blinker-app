@@ -35,7 +35,6 @@ import { ImageService } from './core/services/image.service';
 import { BlinkerSceneManagerModule } from './sections/scene/scene.module';
 import { BrowserModule, HAMMER_GESTURE_CONFIG, HammerGestureConfig, HammerModule } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
-// import { environment } from '../environments/environment';
 import { BlinkerDeviceModule } from './device/device.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 

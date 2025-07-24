@@ -57,13 +57,6 @@ export class HomePage {
   };
 
   loaded = false;
-  showSceneButtonGroup = false;
-  showSpinner = false;
-
-  showBg = false;
-
-  bgPosition = `114px`
-
 
   get sceneDataList() {
     if (typeof this.dataService.scene != 'undefined')
