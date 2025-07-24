@@ -5,3 +5,80 @@
 .toast-box {
     z-index: 99999;
 }
+
+.app-container {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    
+    &.pc-mobile-view {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        box-sizing: border-box;
+        
+        ion-app {
+            width: 430px;
+            height: 900px;
+            max-width: 430px;
+            max-height: 900px;
+            border-radius: 20px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.3),
+                0 8px 25px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            position: relative;
+            background-color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .tip-box, .toast-box {
+            position: fixed;
+            z-index: 99999;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        audio {
+            display: none;
+        }
+    }
+}
+
+// 确保在PC浏览器模式下，内容不会超出容器
+.pc-mobile-view {
+    ion-app {
+        ion-router-outlet {
+            height: 100%;
+            overflow: hidden;
+        }
+    }
+}
+
+// 响应式设计 - 当屏幕太小时调整尺寸
+@media (max-height: 950px) {
+    .app-container.pc-mobile-view {
+        padding: 10px;
+        
+        ion-app {
+            height: calc(100vh - 20px);
+            max-height: 850px;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .app-container.pc-mobile-view {
+        padding: 0;
+        
+        ion-app {
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            box-shadow: none;
+            border: none;
+        }
+    }
+}

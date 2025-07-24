@@ -1,11 +1,11 @@
 import { Component, Input, Output, EventEmitter, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UserService } from 'src/app/core/services/user.service';
-import { DeviceService } from '../../../../core/services/device.service';
 import { DataService } from 'src/app/core/services/data.service';
 import PullToRefresh from 'pulltorefreshjs';
 import Splide from '@splidejs/splide';
 import { DeviceblockListComponent } from '../deviceblock-list/deviceblock-list';
+import { DeviceService } from 'src/app/core/services/device.service';
 
 @Component({
     selector: 'deviceblock-zone',

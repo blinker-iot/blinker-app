@@ -8,19 +8,18 @@ import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { DeviceService } from 'src/app/core/services/device.service';
 import { Router } from '@angular/router';
-import { ViewService } from '../../core/services/view.service';
-import { DataService } from 'src/app/core/services/data.service';
-import { Observable } from 'rxjs';
-import { ComponentsModule } from 'src/app/core/components/components.module';
 import { RoomListComponent } from './components/room-list/room-list';
 import { DeviceblockZone } from './components/deviceblock-zone/deviceblock-zone';
+import { ViewService } from '../core/services/view.service';
+import { DataService } from '../core/services/data.service';
+import { DeviceService } from '../core/services/device.service';
+import { ComponentsModule } from '../core/components/components.module';
 
 @Component({
-    selector: 'view-home',
-    templateUrl: 'view-home.page.html',
-    styleUrls: ['view-home.page.scss'],
+    selector: 'blinker-home',
+    templateUrl: 'home.page.html',
+    styleUrls: ['home.page.scss'],
     standalone: true,
     imports: [
         CommonModule,
@@ -34,7 +33,7 @@ import { DeviceblockZone } from './components/deviceblock-zone/deviceblock-zone'
     ]
 })
 
-export class ViewHomePage {
+export class HomePage {
 
   _roomid = -1;
   @Input()

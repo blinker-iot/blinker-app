@@ -1,11 +1,10 @@
-import { Component, ViewChild, ElementRef } from '@angular/core';
+import { Component, ViewChild, ElementRef, HostListener, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Platform, NavController } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
 import { ViewService } from './core/services/view.service';
 import { NoticeService } from './core/services/notice.service';
 import { PusherService } from './core/services/pusher.service';
 import { UpdateService } from './core/services/update.service';
-// import { DeviceConfigService } from './core/services/device-config.service';
 import { DataService } from './core/services/data.service';
 import { DeviceService } from './core/services/device.service';
 import { AuthService } from './core/services/auth.service';
@@ -24,8 +23,9 @@ import { StatusBar, Style } from '@capacitor/status-bar';
   styleUrls: ['./app.component.scss'],
   standalone: false
 })
-export class AppComponent {
-  isPWA;
+export class AppComponent implements OnInit {
+  isPWA = false;
+  isPcBrowser = false;
 
   get swipeEnable() {
     return this.viewService.swipeEnable
@@ -60,8 +60,14 @@ export class AppComponent {
     private toastService: ToastService,
     private tipService: TipService,
     private translationService: TranslationService,
-    private audioService: AudioService
+    private audioService: AudioService,
+    private cdr: ChangeDetectorRef
   ) { }
+
+  ngOnInit() {
+    // 在 ngOnInit 中初始化 isPcBrowser 以避免 ExpressionChangedAfterItHasBeenCheckedError
+    this.isPcBrowser = this.checkIsPcBrowser();
+  }
 
   ngAfterViewInit() {
     this.initApp();
@@ -72,8 +78,13 @@ export class AppComponent {
     if (Capacitor.isNativePlatform()) {
       await StatusBar.setOverlaysWebView({ overlay: true });
     }
-    //   // if (!isDevMode() && this.platform.is("android")) this.checkApkUpdate();
-    //   // if (!isDevMode())
+    if (this.isPcBrowser) {
+      console.log('当前是PC端浏览器访问');
+      
+    }
+
+    // if (!isDevMode() && this.platform.is("android")) this.checkApkUpdate();
+    // if (!isDevMode())
     //   this.updateService.checkUpdate();
     //   // this.watchProgressbar();
     //   // this.splashScreen.hide();
@@ -82,7 +93,15 @@ export class AppComponent {
     // }
   }
 
-  async initService() {
+  @HostListener('window:resize', ['$event'])
+  onWindowResize() {
+    const newIsPcBrowser = this.checkIsPcBrowser();
+    if (this.isPcBrowser !== newIsPcBrowser) {
+      this.isPcBrowser = newIsPcBrowser;
+      // 手动触发变更检测
+      this.cdr.detectChanges();
+    }
+  }  async initService() {
     console.log('init service');
     await this.dataService.init();
     this.checkLoginStatus();
@@ -114,6 +133,10 @@ export class AppComponent {
     }
   }
 
+  checkIsPcBrowser(): boolean {
+    // 判断屏幕宽度是否大于等于600px，且不是原生平台
+    return window.innerWidth >= 600 && !Capacitor.isNativePlatform();
+  }
 }
 
 
