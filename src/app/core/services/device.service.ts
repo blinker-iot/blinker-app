@@ -25,8 +25,7 @@ import { BlinkerDevice } from '../model/device.model';
 import { NativeService } from './native.service';
 import { NoticeService } from './notice.service';
 import { ToastService } from './toast.service';
-
-declare var mqtt;
+import mqtt from "mqtt"; 
 
 const DEBUG_MODE = false
 

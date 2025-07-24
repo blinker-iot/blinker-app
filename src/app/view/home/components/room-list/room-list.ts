@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Output, Input, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { DataService } from 'src/app/core/services/data.service';
 
 
@@ -6,7 +7,8 @@ import { DataService } from 'src/app/core/services/data.service';
     selector: 'room-list',
     templateUrl: 'room-list.html',
     styleUrls: ['room-list.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule]
 })
 export class RoomListComponent {
 

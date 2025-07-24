@@ -147,8 +147,8 @@ export class BColorpickerDiscComponent {
   loadColorImg() {
     this.context = this.myCanvas.nativeElement.getContext("2d");
     this.image = new Image();
-    if (this.enableWhite) this.image.src = `assets/img/layouter/colorpicker.png`;
-    else this.image.src = `assets/img/devices/ownlight/colorpicker.png`;
+    if (this.enableWhite) this.image.src = `img/layouter/colorpicker.png`;
+    else this.image.src = `img/devices/ownlight/colorpicker.png`;
     this.image.onload = () => {
       window.setTimeout(() => {
         this.length = this.pickerbox.nativeElement.clientHeight;

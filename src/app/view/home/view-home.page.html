@@ -1,20 +1,15 @@
 ﻿<ion-header whitebg>
-    <ion-toolbar>
+    <ion-toolbar [ngClass]="{'offline':!connected}">
         <ion-buttons slot="start">
             <ion-menu-button *ngIf="user">
-                <div class="avatar" [ngClass]="{'offline':!connected}">
-                    <img src="{{user.avatar}}" onError="this.src='assets/img/avatar.png'">
-                </div>
+                <i class="fa-regular fa-bars"></i>
             </ion-menu-button>
         </ion-buttons>
         <ion-title></ion-title>
         <ion-buttons slot="end">
             <ion-button [routerLink]="['/adddevice/DiyArduino']">
-                <i class="iconfont icon-add-circle"></i>
+                <i class="fa-regular fa-plus"></i>
             </ion-button>
-            <!-- <ion-button (click)="changeView()">
-                <i class="iconfont icon-view"></i>
-            </ion-button> -->
         </ion-buttons>
     </ion-toolbar>
 </ion-header>
@@ -40,9 +35,9 @@
             </div>
         </ng-template>
     </div>
-    <div class="speech">
+    <!-- <div class="speech">
         <div class="speech-button">
             <speech-button></speech-button>
         </div>
-    </div>
+    </div> -->
 </ion-content>

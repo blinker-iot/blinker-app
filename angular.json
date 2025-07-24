@@ -22,8 +22,7 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "src/assets",
-                "output": "assets"
+                "input": "public"
               }
             ],
             "styles": [
@@ -32,12 +31,12 @@
               "node_modules/cropperjs/dist/cropper.css",
               "node_modules/pickerjs/dist/picker.css",
               "node_modules/animate.css/animate.min.css",
+              "node_modules/loaders.css/loaders.min.css",
               "node_modules/jsoneditor/dist/jsoneditor.min.css"
             ],
             "scripts": [
               "node_modules/hammerjs/hammer.min.js",
-              "node_modules/marked/marked.min.js",
-              "node_modules/mqtt/dist/mqtt.min.js"
+              "node_modules/marked/marked.min.js"
             ],
             "allowedCommonJsDependencies": [
               "pickerjs",
@@ -117,21 +116,14 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "src/assets",
-                "output": "assets"
-              },
-              {
-                "glob": "**/*.svg",
-                "input": "node_modules/ionicons/dist/ionicons/svg",
-                "output": "./svg"
+                "input": "public"
               }
             ],
             "styles": [
               "src/theme/variables.scss",
               "src/global.scss"
             ],
-            "scripts": [
-            ]
+            "scripts": []
           },
           "configurations": {
             "ci": {

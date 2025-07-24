@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Routes, RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 import { BlinkerView } from './view.page';
-import { MenuModule } from './menu/menu.module';
+import { Menu } from './home/components/menu/menu';
 
 const routes: Routes = [
   {
@@ -21,7 +21,7 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     IonicModule,
-    MenuModule,
+    Menu,
     RouterModule.forChild(routes)
   ],
   declarations: [BlinkerView]

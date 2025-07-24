@@ -37,6 +37,7 @@ export class ConfigStatePage {
   deviceMac: string;
   isDevtool;
   device = new Device;
+  
   date1;
   date2;
   time;

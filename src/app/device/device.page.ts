@@ -15,12 +15,13 @@ import { Layouter2Service } from './layouter2/layouter2.service';
 import { ConfigEditorComponent } from './layouter2/config-editor/config-editor.component';
 import { Layouter2Data } from './layouter2/layouter.interface';
 import { LayouterVersion } from './layouter2/layouter.config';
+import { DeviceConfig } from './device.interface';
 
 @Component({
-    selector: 'app-device',
-    templateUrl: './device.page.html',
-    styleUrls: ['./device.page.scss'],
-    standalone: false
+  selector: 'app-device',
+  templateUrl: './device.page.html',
+  styleUrls: ['./device.page.scss'],
+  standalone: false
 })
 export class DevicePage implements OnInit {
 
@@ -31,17 +32,13 @@ export class DevicePage implements OnInit {
 
   device: BlinkerDevice;
 
-  deviceConfig;
+  deviceConfig: DeviceConfig;
 
   showGuide = false;
   willCloseGuide = false;
 
   get isSharedDevice() {
     return this.device.config.isShared
-  }
-
-  get isDiyDevice() {
-    return this.device.config.isDiy
   }
 
   deviceComponentRef;
@@ -153,16 +150,18 @@ export class DevicePage implements OnInit {
     this.deviceConfigService.loaded.subscribe(loaded => {
       if (loaded) {
         this.deviceConfig = this.deviceConfigService.getDeviceConfig(this.device);
-        if (typeof this.deviceConfig == 'undefined')
-          this.deviceComponent = 'Layouter2';
-        else
-          this.deviceComponent = this.deviceConfig.component;
-        console.log('load component:' + this.deviceComponent);
-        if (this.deviceComponent == 'Layouter2') {
-          this.deviceComponentRef = this.deviceViewContainer.createComponent(Layouter2Component);
-          this.deviceComponentRef.instance.device = this.device;
-          this.layouter2Service.init(this.device)
-        }
+        console.log('load device config:', this.deviceConfig);
+        
+        // if (typeof this.deviceConfig == 'undefined')
+        //   this.deviceComponent = 'Layouter2';
+        // else
+        //   this.deviceComponent = this.deviceConfig.component;
+        // console.log('load component:' + this.deviceComponent);
+        // if (this.deviceComponent == 'Layouter2') {
+        this.deviceComponentRef = this.deviceViewContainer.createComponent(Layouter2Component);
+        this.deviceComponentRef.instance.device = this.device;
+        this.layouter2Service.init(this.device)
+        // }
         // Customizer数据加载
         // else if (this.deviceComponent.indexOf('Customizer?') > -1) {
         //   this.customizerUrl = this.deviceComponent.substr(11)
@@ -213,7 +212,7 @@ export class DevicePage implements OnInit {
   }
 
   saveLayouterData() {
-    this.layouterData.version = LayouterVersion;
+    this.layouterData['version'] = LayouterVersion;
     let data = JSON.stringify(this.layouterData);
     if (this.oldLayouterData == data) return;
     let layouterConfig = {

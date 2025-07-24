@@ -18,12 +18,6 @@ export interface Layouter2Config {
     background: any
 }
 
-// interface Layouter2ConfigBackground {
-//     img: string,
-//     isFull: boolean
-// }
-
-
 export interface WidgetData {
 
 }

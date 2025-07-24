@@ -15,7 +15,7 @@
     <ng-container *ngIf="shareData.share0[deviceName]">
       <b-item *ngFor="let item of shareData.share0[deviceName];index as i">
         <div class="img-box">
-          <img class="avatar" src="{{AVATAR_API + item.userId+'.jpg'}}" onError="this.src='assets/img/avatar.png'">
+          <img class="avatar" src="{{AVATAR_API + item.userId+'.jpg'}}" >
         </div>
         <div class="text-box">
           <div class="name">{{item.username}}</div>
@@ -29,7 +29,7 @@
     <ng-container *ngIf="shareData.share[deviceName]">
       <b-item *ngFor="let item of shareData.share[deviceName];index as i">
         <div class="img-box">
-          <img class="avatar" src="{{AVATAR_API + item.userId+'.jpg'}}" onError="this.src='assets/img/avatar.png'">
+          <img class="avatar" src="{{AVATAR_API + item.userId+'.jpg'}}" >
         </div>
         <div class="text-box">
           <div class="name">{{item.username}}</div>

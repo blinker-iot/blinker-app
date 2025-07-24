@@ -31,14 +31,10 @@ const routes: Routes = [
     BlinkerSpeechModule,
     RouterModule.forChild(routes),
     DirectivesModule,
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    ViewHomePage
   ],
   declarations: [
-    ViewHomePage,
-    RoomListComponent,
-    DeviceblockZone,
-    DeviceblockListComponent,
-    Deviceblock
   ],
   exports: [ViewHomePage]
 })

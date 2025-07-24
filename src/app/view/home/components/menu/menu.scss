@@ -1,10 +1,12 @@
 ion-toolbar {
   --background: #2c3b48 !important;
+
   ::ng-deep {
     .toolbar-background {
       background-color: transparent !important;
     }
   }
+
   ion-buttons {
     margin-right: 15px;
 
@@ -55,8 +57,10 @@ ion-content {
   .avatar {
     width: 50px;
     height: 50px;
-    border-radius: 50%;
-    overflow: hidden;
+
+    i {
+      font-size: 45px;
+    }
   }
 
   .textbox {
@@ -66,14 +70,12 @@ ion-content {
 
     .text2 {
       margin-top: 5px;
-      font-size: 11px;
+      font-size: 12px;
+      color: #999;
     }
   }
 
   .arrow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     margin-left: auto;
 
     img {
@@ -95,14 +97,8 @@ ion-content {
     justify-content: flex-start;
     align-items: center;
     flex-direction: row;
-    font-size: 13px;
+    font-size: 14px;
 
-    // .icon {
-    //     img {
-    //         height: 4vh;
-    //         margin-right: 3vw;
-    //     }
-    // }
     .icon {
       height: 4vh;
       width: 2.3rem;
@@ -160,9 +156,9 @@ ion-content {
   background-color: red;
 }
 
-blinker-lang-selector{
-  ::ng-deep{
-    .lang-text{
+blinker-lang-selector {
+  ::ng-deep {
+    .lang-text {
       color: #fff;
     }
   }

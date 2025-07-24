@@ -1,15 +1,31 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { IonicModule } from '@ionic/angular';
 import { Platform, MenuController } from '@ionic/angular';
 import { Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { UpdateService } from 'src/app/core/services/update.service';
 import { MENU_LIST } from 'src/app/configs/menu.config';
 import { DataService } from 'src/app/core/services/data.service';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { ComponentsModule } from 'src/app/core/components/components.module';
+import { LangSelectorModule } from 'src/app/core/components/lang-selector/lang-selector.module';
 
 @Component({
     selector: 'blinker-menu',
     templateUrl: './menu.html',
     styleUrls: ['./menu.scss'],
-    standalone: false
+    standalone: true,
+    imports: [
+        CommonModule,
+        FormsModule,
+        IonicModule,
+        DirectivesModule,
+        ComponentsModule,
+        LangSelectorModule,
+        TranslateModule
+    ]
 })
 export class Menu implements OnInit {
 

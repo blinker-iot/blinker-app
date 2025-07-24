@@ -12,19 +12,21 @@
 /** fonts **/
 @font-face {
     font-family: 'MiSans';
-    src: url('/assets/fonts/MiSans-Regular.woff2') format('woff2');
+    src: url('/fonts/MiSans-Regular.woff2') format('woff2');
     font-weight: normal;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'MiSans';
-    src: url('/assets/fonts/MiSans-Demibold.woff2') format('woff2');
-    font-weight: 600; /* Demibold 一般用较重的字体权重 */
+    src: url('/fonts/MiSans-Demibold.woff2') format('woff2');
+    font-weight: 600;
+    /* Demibold 一般用较重的字体权重 */
     font-style: normal;
 }
 
-html, body {
+html,
+body {
     --ion-font-family: 'MiSans', sans-serif;
 }
 
@@ -38,7 +40,7 @@ html, body {
 }
 
 ion-content {
-    --background: #f5f5f5;
+    --background: linear-gradient(135deg, #ececec, #f5f5f5);
     --padding-top: env(safe-area-inset-top);
 }
 
@@ -57,7 +59,7 @@ ion-header {
     --border: none;
 
     ion-toolbar {
-        --background: #389bee;
+        --background: #2a3b49;
         --color: #fff;
         --border-width: 0 !important;
 
@@ -297,7 +299,7 @@ i.r315 {
     }
 }
 
-.ccenter{
+.ccenter {
     display: flex;
     justify-content: center;
     align-items: center;

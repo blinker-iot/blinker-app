@@ -1,6 +1,6 @@
 export const CONFIG = {
     NAME: "点灯·blinker",
-    LOGIN_LOGO: "assets/img/login-logo.png",
+    LOGIN_LOGO: "img/login-logo.png",
     WEBSITE: "https://diandeng.tech",
     USER_AGREEMENT: "https://iot.diandeng.tech/public/user.md",
     PRIVACY_POLICY: "https://iot.diandeng.tech/public/privacy.md",

@@ -18,19 +18,19 @@ export class AudioService {
 
     switch(state) {
         if (state == 'on')
-            this.audioEl.src = `assets/aac/Switch_On.aac`;
+            this.audioEl.src = `aac/Switch_On.aac`;
         else
-            this.audioEl.src = `assets/aac/Switch_Off.aac`;
+            this.audioEl.src = `aac/Switch_Off.aac`;
         this.audioEl.play();
     }
 
     click(){
-        this.audioEl.src = `assets/aac/Click.aac`;
+        this.audioEl.src = `aac/Click.aac`;
         this.audioEl.play();
     }
 
     play(audioName) {
-        this.audioEl.src = `assets/aac/Speech_${audioName}.aac`;
+        this.audioEl.src = `aac/Speech_${audioName}.aac`;
         this.audioEl.play();
     }
 

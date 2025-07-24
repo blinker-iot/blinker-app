@@ -2,17 +2,21 @@ import {
   Component,
   Input
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { IonicModule } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
 import { Router } from '@angular/router';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { AudioService } from 'src/app/core/services/audio.service';
+import { ComponentsModule } from 'src/app/core/components/components.module';
 
 @Component({
     selector: 'deviceblock',
     templateUrl: 'deviceblock.html',
     styleUrls: ['deviceblock.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule, IonicModule, ComponentsModule]
 })
 export class Deviceblock {
 

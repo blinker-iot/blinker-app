@@ -7,16 +7,19 @@ import {
   QueryList,
   ElementRef,
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { UserService } from 'src/app/core/services/user.service';
 import { Router } from '@angular/router';
 import Sortable from 'sortablejs';
 import { DataService } from 'src/app/core/services/data.service';
+import { Deviceblock } from '../deviceblock/deviceblock';
 
 @Component({
     selector: 'deviceblock-list',
     templateUrl: 'deviceblock-list.html',
     styleUrls: ['deviceblock-list.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule, Deviceblock]
 })
 export class DeviceblockListComponent {
 

@@ -1,15 +1,18 @@
 import { Component, Input, Output, EventEmitter, ElementRef, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { UserService } from 'src/app/core/services/user.service';
 import { DeviceService } from '../../../../core/services/device.service';
 import { DataService } from 'src/app/core/services/data.service';
 import PullToRefresh from 'pulltorefreshjs';
 import Splide from '@splidejs/splide';
+import { DeviceblockListComponent } from '../deviceblock-list/deviceblock-list';
 
 @Component({
     selector: 'deviceblock-zone',
     templateUrl: 'deviceblock-zone.html',
     styleUrls: ['deviceblock-zone.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule, DeviceblockListComponent]
 })
 export class DeviceblockZone {
   refresherEnabled = true;
@@ -105,14 +108,6 @@ export class DeviceblockZone {
 
   swipeEnabledChanged(e) {
     this.refresherEnabled = e;
-    // if (e) {
-    //   this.initRefresh()
-    //   this.swiper.enable()
-    // }
-    // else {
-    //   this.destroyRefresh()
-    //   this.swiper.disable()
-    // }
   }
 
   refresherEnabledChanged(e) {

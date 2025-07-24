@@ -3,17 +3,35 @@ import {
   Input,
   ChangeDetectorRef,
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { IonicModule } from '@ionic/angular';
+import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { Router } from '@angular/router';
 import { ViewService } from '../../core/services/view.service';
 import { DataService } from 'src/app/core/services/data.service';
 import { Observable } from 'rxjs';
+import { ComponentsModule } from 'src/app/core/components/components.module';
+import { RoomListComponent } from './components/room-list/room-list';
+import { DeviceblockZone } from './components/deviceblock-zone/deviceblock-zone';
 
 @Component({
     selector: 'view-home',
     templateUrl: 'view-home.page.html',
     styleUrls: ['view-home.page.scss'],
-    standalone: false
+    standalone: true,
+    imports: [
+        CommonModule,
+        FormsModule,
+        IonicModule,
+        RouterModule,
+        TranslateModule,
+        ComponentsModule,
+        RoomListComponent,
+        DeviceblockZone
+    ]
 })
 
 export class ViewHomePage {

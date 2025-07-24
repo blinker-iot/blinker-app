@@ -281,11 +281,11 @@ export class DeviceSettingsPage {
       filename = filename.substring(0, filename.indexOf(".png"));
     }
     if (ImageList.indexOf(filename) > -1) {
-      url = `assets/img/devices/icon/${filename}.png`;
+      url = `img/devices/icon/${filename}.png`;
     } else if (this.imageService.deviceIconList.indexOf(filename) > -1) {
       url = this.imageService.deviceIconDict[filename];
     } else {
-      url = `assets/img/devices/icon/unknown.png`;
+      url = `img/devices/icon/unknown.png`;
     }
     return url;
   }
