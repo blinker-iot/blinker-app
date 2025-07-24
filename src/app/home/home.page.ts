@@ -69,8 +69,6 @@ export class HomePage {
   isIphonex = false;
   isCordova = false;
 
-  sortableMode = false;
-
   userDataLoader;
 
   connected = false;

@@ -5,7 +5,8 @@
       <ul class="splide__list">
         <li class="splide__slide">
           <deviceblock-list (swipeEnabled)="swipeEnabledChanged($event)"
-            (refresherEnabled)="refresherEnabledChanged($event)"></deviceblock-list>
+            (refresherEnabled)="refresherEnabledChanged($event)">
+          </deviceblock-list>
         </li>
         <li class="splide__slide" *ngFor="let roomName of roomDataList">
           <deviceblock-list [roomName]="roomName" (swipeEnabled)="swipeEnabledChanged($event)"

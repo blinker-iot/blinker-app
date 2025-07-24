@@ -1,5 +1,5 @@
 <div class="device-list" #sortbox (scroll)="isScrollTop($event)">
   @for (deviceId of deviceDataList; track deviceId) {
-  <deviceblock [device]="deviceDataDict[deviceId]" data-id="{{deviceId}}"></deviceblock>
+  <deviceblock class="deviceblock" [device]="deviceDataDict[deviceId]" data-id="{{deviceId}}"></deviceblock>
   }
 </div>

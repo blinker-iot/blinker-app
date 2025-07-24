@@ -6,6 +6,7 @@ import {
   ViewChildren,
   QueryList,
   ElementRef,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UserService } from 'src/app/core/services/user.service';
@@ -23,7 +24,6 @@ import { Deviceblock } from '../deviceblock/deviceblock';
 })
 export class DeviceblockListComponent {
 
-  @Input() sortableMode = false;
   @Output() swipeEnabled: EventEmitter<boolean> = new EventEmitter();
   @Output() refresherEnabled: EventEmitter<boolean> = new EventEmitter();
 
@@ -46,25 +46,30 @@ export class DeviceblockListComponent {
     return this.dataService.device.dict
   }
 
-  @ViewChildren("sortbox") sortbox: QueryList<ElementRef>;
+  @ViewChild("sortbox") sortbox: ElementRef;
 
   options = {
     delay: 500,
-    // delayOnTouchOnly: false,
-    // supportPointer:false,
     animation: 200,
     touchStartThreshold: 5,
     ghostClass: "sghost",
     chosenClass: "schosen",
     dragClass: "sdrag",
     draggable: ".deviceblock",
-    filter: '.device-space',
     dataIdAttr: 'id',
     onChoose: (event: any) => {
+      console.log("onChoose", event);
+      
       this.swipeEnabled.emit(false);
       this.waitSaveDeviceList();
     },
+    onStart: (event: any) => {
+      console.log("onStart", event);
+      // this.swipeEnabled.emit(false);
+      // this.waitSaveDeviceList();
+    },
     onEnd: (event: any) => {
+      console.log("onEnd", event);
       this.swipeEnabled.emit(true);
       this.saveDeviceList();
     },
@@ -89,11 +94,8 @@ export class DeviceblockListComponent {
 
   sortable;
   initSortable() {
-    let box = this.sortbox.first;
-    // let box = this.content.getNativeElement()
-    if (typeof box == 'undefined') return;
-    // console.log("init Sortablejs");
-    this.sortable = new Sortable(box.nativeElement, this.options);
+    this.sortable = new Sortable(this.sortbox.nativeElement, this.options);
+    console.log("sortable", this.sortbox.nativeElement, this.sortable);
   }
 
   destroySortable() {
@@ -121,11 +123,6 @@ export class DeviceblockListComponent {
     this.saveDeviceListTimer = window.setTimeout(() => {
       this.userService.saveUserConfig(userConfig);
     }, 3000)
-  }
-
-  gotoDeviceDashboard(deviceId) {
-    if (this.sortableMode) return
-    this.router.navigate(['/device', deviceId])
   }
 
   isScrollTop(event) {
