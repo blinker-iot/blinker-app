@@ -7,6 +7,7 @@ import {
   QueryList,
   ElementRef,
   ViewChild,
+  Renderer2,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UserService } from 'src/app/core/services/user.service';
@@ -16,11 +17,11 @@ import { DataService } from 'src/app/core/services/data.service';
 import { Deviceblock } from '../deviceblock/deviceblock';
 
 @Component({
-    selector: 'deviceblock-list',
-    templateUrl: 'deviceblock-list.html',
-    styleUrls: ['deviceblock-list.scss'],
-    standalone: true,
-    imports: [CommonModule, Deviceblock]
+  selector: 'deviceblock-list',
+  templateUrl: 'deviceblock-list.html',
+  styleUrls: ['deviceblock-list.scss'],
+  standalone: true,
+  imports: [CommonModule, Deviceblock]
 })
 export class DeviceblockListComponent {
 
@@ -48,10 +49,11 @@ export class DeviceblockListComponent {
 
   @ViewChild("sortbox") sortbox: ElementRef;
 
+  // @ViewChild("deviceblock", { read: ElementRef, static: true }) deviceblock: ElementRef;
+
   options = {
-    delay: 500,
-    animation: 200,
-    touchStartThreshold: 5,
+    delay: 200,
+    touchStartThreshold: 0,
     ghostClass: "sghost",
     chosenClass: "schosen",
     dragClass: "sdrag",
@@ -59,8 +61,7 @@ export class DeviceblockListComponent {
     dataIdAttr: 'id',
     onChoose: (event: any) => {
       console.log("onChoose", event);
-      
-      this.swipeEnabled.emit(false);
+      // this.swipeEnabled.emit(false);
       this.waitSaveDeviceList();
     },
     onStart: (event: any) => {
@@ -69,6 +70,7 @@ export class DeviceblockListComponent {
       // this.waitSaveDeviceList();
     },
     onEnd: (event: any) => {
+      console.log('onEnd');
       console.log("onEnd", event);
       this.swipeEnabled.emit(true);
       this.saveDeviceList();
@@ -78,14 +80,15 @@ export class DeviceblockListComponent {
   constructor(
     private userService: UserService,
     private router: Router,
-    private dataService: DataService
+    private dataService: DataService,
+    // public render: Renderer2
   ) {
   }
 
   ngAfterViewInit() {
     setTimeout(() => {
       this.initSortable();
-    }, 1000);
+    }, 2000);
   }
 
   ngOnDestroy() {
@@ -95,7 +98,7 @@ export class DeviceblockListComponent {
   sortable;
   initSortable() {
     this.sortable = new Sortable(this.sortbox.nativeElement, this.options);
-    console.log("sortable", this.sortbox.nativeElement, this.sortable);
+    // console.log("sortable", this.sortbox.nativeElement, this.sortable);
   }
 
   destroySortable() {
@@ -132,4 +135,62 @@ export class DeviceblockListComponent {
       this.refresherEnabled.emit(false)
     }
   }
+
+  gotoDashboard(deviceId) {
+    this.router.navigate(['device/' + deviceId])
+  }
+
+  press(){
+    console.log('press');
+    
+  }
+
+  // isSorting = false;
+  // longPressTimer: any;
+  // LONG_PRESS_DELAY = 500;
+
+  // press(event) {
+  //   // event.stopPropagation();
+  //   console.log(event);
+
+  //   if (this.isSorting) return;
+  //   this.longPressTimer = setTimeout(() => {
+  //     this.enterSortingMode();
+  //   }, this.LONG_PRESS_DELAY);
+  // }
+
+  // pressup(event) {
+  //   console.log('pressup');
+    
+  //   clearTimeout(this.longPressTimer);
+  //   this.exitSortingMode();
+  // }
+
+  // enterSortingMode() {
+  //   this.isSorting = true;
+  //   this.swipeEnabled.emit(false); // 禁用父组件滑动
+  //   setTimeout(() => {
+  //     console.log('进入排序模式');
+  //     this.initSortable();
+  //   }, 0);
+  // }
+
+  // exitSortingMode() {
+  //   this.isSorting = false;
+  //   this.swipeEnabled.emit(true); // 恢复父组件滑动
+  //   this.destroySortable();
+  // }
+
+  // mouseupEvent;
+  // touchendEvent;
+  // listenGesture() {
+  //   // 修复手指移动后无法触发pressup的问题
+  //   this.mouseupEvent = this.render.listen(this.sortbox.nativeElement, 'mouseup', e => this.pressup(e));
+  //   this.touchendEvent = this.render.listen(this.sortbox.nativeElement, 'touchend', e => this.pressup(e));
+  // }
+
+  // unlistenGesture() {
+  //   this.mouseupEvent();
+  //   this.touchendEvent();
+  // }
 }

@@ -8,11 +8,11 @@ import { DeviceblockListComponent } from '../deviceblock-list/deviceblock-list';
 import { DeviceService } from 'src/app/core/services/device.service';
 
 @Component({
-    selector: 'deviceblock-zone',
-    templateUrl: 'deviceblock-zone.html',
-    styleUrls: ['deviceblock-zone.scss'],
-    standalone: true,
-    imports: [CommonModule, DeviceblockListComponent]
+  selector: 'deviceblock-zone',
+  templateUrl: 'deviceblock-zone.html',
+  styleUrls: ['deviceblock-zone.scss'],
+  standalone: true,
+  imports: [CommonModule, DeviceblockListComponent]
 })
 export class DeviceblockZone {
   refresherEnabled = true;
@@ -107,6 +107,11 @@ export class DeviceblockZone {
   }
 
   swipeEnabledChanged(e) {
+    if (e) {
+      this.initSplide();
+    } else {
+      this.splide.destroy();
+    }
     this.refresherEnabled = e;
   }
 

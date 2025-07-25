@@ -45,10 +45,6 @@ export class Deviceblock {
     private audio: AudioService
   ) { }
 
-  gotoDashboard() {
-    this.router.navigate(['device/' + this.device.id])
-  }
-
   tapSwitch(e) {
     e.stopPropagation();
     if (this.device.config.mode != "mqtt") return;

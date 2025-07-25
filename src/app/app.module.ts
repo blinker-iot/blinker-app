@@ -43,7 +43,7 @@ declare var Hammer: any;
 export class MyHammerConfig extends HammerGestureConfig {
   override overrides = <any>{
     'pan': { direction: Hammer.DIRECTION_ALL, threshold: 5 },
-    'press': { time: 300, threshold: 99 }
+    'press': { time: 500, threshold: 99 }
   }
 }
 
