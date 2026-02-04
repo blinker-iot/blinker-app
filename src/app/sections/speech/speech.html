@@ -1,7 +1,7 @@
 <div class="speech-lay animated faster" [ngClass]="{'fadeInUp': !closeAnimate,'fadeOutDown':closeAnimate}">
   <div *ngIf="!showSpeechCmdList" class="speech-text">{{speechContent}}</div>
   <div *ngIf="!showSpeechCmdList" class="speech-svg">
-    <img src="assets/svg/speech.svg" />
+    <img src="svg/speech.svg" />
   </div>
   <div *ngIf="showSpeechCmdList" class="speech-cmdlist animated fadeIn">
     <div class="speech-cmd" *ngFor="let cmd of speechTextList">

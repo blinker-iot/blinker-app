@@ -1,0 +1,22 @@
+.community-content {
+    padding: 16px;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    color: var(--ion-color-medium);
+
+    i {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    p {
+        font-size: 14px;
+    }
+}

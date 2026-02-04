@@ -123,5 +123,5 @@ export let configList = {
     images: [{ url: "" }, { url: "" }, { url: "" }, { url: "" }, { url: "" }],
     img: 0,
   },
-  "cus": { type: "cus", cols: 2, rows: 2, src: "assets/html/button.html" },
+  "cus": { type: "cus", cols: 2, rows: 2, src: "html/button.html" },
 };

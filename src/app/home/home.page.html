@@ -1,43 +1,30 @@
-﻿<ion-header whitebg>
-    <ion-toolbar [ngClass]="{'offline':!connected}">
-        <ion-buttons slot="start">
-            <ion-menu-button *ngIf="user">
-                <i class="fa-regular fa-bars"></i>
-            </ion-menu-button>
-        </ion-buttons>
-        <ion-title></ion-title>
-        <ion-buttons slot="end">
-            <ion-button [routerLink]="['/adddevice/DiyArduino']">
-                <i class="fa-regular fa-plus"></i>
-            </ion-button>
-        </ion-buttons>
-    </ion-toolbar>
-</ion-header>
-<ion-content fullscreen=true scrollY=false>
-    <div class="bg"></div>
-    <div class="contentbox" *ngIf="loaded" [ngClass]="{'show-scene-button-group': sceneDataList.length>0}">
-        <scene-button-group *ngIf="sceneDataList.length>0"></scene-button-group>
-        <ng-container *ngIf="deviceNum>0;else nodevice">
-            <room-list [(roomid)]=" roomid">
-            </room-list>
-            <div class="deviceZone animated fadeIn">
-                <deviceblock-zone [(roomid)]="roomid">
-                </deviceblock-zone>
-            </div>
-        </ng-container>
-        <ng-template #nodevice>
-            <div class="nodevice">
-                <img src="assets/img/nodevice.svg">
-                <div class="text">{{'HOME.WELCOME' | translate}}</div>
-                <button [routerLink]="['/adddevice/DiyArduino']">
-                    <i class="fal fa-plus"></i><span>{{'HOME.ADD_DEVICE' | translate}}</span>
-                </button>
-            </div>
-        </ng-template>
-    </div>
-    <!-- <div class="speech">
-        <div class="speech-button">
-            <speech-button></speech-button>
-        </div>
-    </div> -->
-</ion-content>
+﻿<ion-tabs>
+    <ion-tab tab="device">
+        <tab-device></tab-device>
+    </ion-tab>
+
+    <ion-tab tab="community">
+        <tab-community></tab-community>
+    </ion-tab>
+
+    <ion-tab tab="profile">
+        <tab-profile></tab-profile>
+    </ion-tab>
+
+    <ion-tab-bar slot="bottom">
+        <ion-tab-button tab="device">
+            <i class="fa-regular fa-house-chimney"></i>
+            <ion-label>设备</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="community">
+            <i class="fa-regular fa-users"></i>
+            <ion-label>社区</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="profile">
+            <i class="fa-regular fa-user"></i>
+            <ion-label>我的</ion-label>
+        </ion-tab-button>
+    </ion-tab-bar>
+</ion-tabs>

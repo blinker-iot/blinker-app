@@ -73,7 +73,7 @@ export class AvatarPickerComponent implements OnInit {
       // });
     }
     else {
-      this.tempImgFile = 'assets/img/panda.jpg';
+      this.tempImgFile = 'img/panda.jpg';
       this.cropImage()
     }
   }

@@ -1,0 +1,126 @@
+.profile-content {
+    padding: 16px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    margin-bottom: 16px;
+    background: var(--ion-card-background);
+    border-radius: 12px;
+    cursor: pointer;
+
+    .avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--ion-color-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 16px;
+        overflow: hidden;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        i {
+            font-size: 36px;
+            color: white;
+        }
+    }
+
+    .info {
+        flex: 1;
+
+        .name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .device-num {
+            font-size: 13px;
+            color: var(--ion-color-medium);
+        }
+    }
+
+    .arrow {
+        i {
+            font-size: 16px;
+            color: var(--ion-color-medium);
+        }
+    }
+}
+
+.menu-list {
+    background: var(--ion-card-background);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+
+    .menu-item {
+        display: flex;
+        align-items: center;
+        padding: 14px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        &:active {
+            background: var(--ion-color-light);
+        }
+
+        &.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .icon {
+            width: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+
+            i {
+                font-size: 18px;
+                color: var(--ion-color-primary);
+            }
+        }
+
+        .title {
+            flex: 1;
+            font-size: 15px;
+        }
+
+        .arrow {
+            i {
+                font-size: 14px;
+                color: var(--ion-color-medium);
+            }
+        }
+    }
+}
+
+.version {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    font-size: 13px;
+    color: var(--ion-color-medium);
+    cursor: pointer;
+
+    .cue {
+        width: 24px;
+        margin-left: 6px;
+    }
+}

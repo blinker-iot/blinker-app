@@ -1,0 +1,47 @@
+<ion-header whitebg>
+    <ion-toolbar>
+        <ion-title>我的</ion-title>
+        <ion-buttons slot="end">
+            <blinker-lang-selector></blinker-lang-selector>
+        </ion-buttons>
+    </ion-toolbar>
+</ion-header>
+<ion-content fullscreen=true>
+    <div class="profile-content">
+        <!-- 用户信息 -->
+        <div class="user-info" *ngIf="loaded" (click)="goto('/user')">
+            <div class="avatar">
+                <img *ngIf="user?.avatar" [src]="user.avatar" alt="avatar">
+                <i *ngIf="!user?.avatar" class="fa-light fa-user-astronaut"></i>
+            </div>
+            <div class="info">
+                <div class="name">{{ user?.username || '用户' }}</div>
+                <div class="device-num">{{ deviceNum }} {{'MENU.DEVICE_NUM' | translate}}</div>
+            </div>
+            <div class="arrow">
+                <i class="fa-light fa-chevron-right"></i>
+            </div>
+        </div>
+
+        <!-- 菜单列表 -->
+        <div class="menu-list">
+            <ng-container *ngFor="let item of menuList">
+                <div class="menu-item" [ngClass]="{'disabled': item['disabled']}" (click)="goto(item.url, item['disabled'])">
+                    <div class="icon">
+                        <i class="{{item.icon}}"></i>
+                    </div>
+                    <div class="title">{{item.title2 | translate}}</div>
+                    <div class="arrow">
+                        <i class="fa-light fa-chevron-right"></i>
+                    </div>
+                </div>
+            </ng-container>
+        </div>
+
+        <!-- 版本信息 -->
+        <div class="version" (click)="checkCodePush()">
+            <span>{{'MENU.VERSION' | translate}} {{currentVersion}}</span>
+            <img *ngIf="showNewVersion" class="cue" src="img/new.png">
+        </div>
+    </div>
+</ion-content>

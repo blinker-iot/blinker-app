@@ -11,7 +11,7 @@
     <b-item *ngFor="let deviceName of deviceDataList" [routerLink]="['/device-manager',deviceName]" showArrow="true">
       <div class="img-box">
         <b-device-img [filename]="deviceDataDict[deviceName].config.image"></b-device-img>
-        <img *ngIf="deviceDataDict[deviceName].config.mode=='ble'" class="mode" src="assets/img/icon/ble.png" />
+        <img *ngIf="deviceDataDict[deviceName].config.mode=='ble'" class="mode" src="img/icon/ble.png" />
       </div>
       <div class="text-box">
         <div class="name">{{deviceDataDict[deviceName].config.customName}}</div>

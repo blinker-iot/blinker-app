@@ -95,7 +95,7 @@ export class WidgetMapComponent implements Layouter2Widget {
     let marker = this.addMarker({
       position: [this.longitude, this.latitude],
       title: this.device.config.customName,
-      icon: 'assets/img/map/device.png'
+      icon: 'img/map/device.png'
     })
     marker.on('click', () => {
       let infoWindow = new this.AMap.InfoWindow({
@@ -110,7 +110,7 @@ export class WidgetMapComponent implements Layouter2Widget {
     let marker = this.addMarker({
       position: await this.geolocationService.getUserPosition(),
       title: '我的位置',
-      icon: 'assets/img/map/user.png'
+      icon: 'img/map/user.png'
     })
     marker.on('click', () => {
       let infoWindow = new this.AMap.InfoWindow({
@@ -121,7 +121,7 @@ export class WidgetMapComponent implements Layouter2Widget {
     });
   }
 
-  addMarker({ position: [longitude, latitude], title, icon = 'assets/img/map/marker.png' }) {
+  addMarker({ position: [longitude, latitude], title, icon = 'img/map/marker.png' }) {
     let marker = new this.AMap.Marker({
       position: [longitude, latitude],
       title,

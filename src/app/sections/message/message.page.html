@@ -24,7 +24,7 @@
     <ng-container *ngFor="let item of messageList;trackBy:trackByFn">
       <b-item (delete)="delMess(item)" (enter)="enter(item)" (enter)="openMess(item)">
         <div class="img-box">
-          <img src="{{getimgUrl(item)}}" onError="this.src='assets/img/blinker-icon.png'">
+          <img src="{{getimgUrl(item)}}" onError="this.src='img/blinker-icon.png'">
         </div>
         <div class="text-box">
           <div class="name">{{item.title}}</div>
