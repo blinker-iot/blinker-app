@@ -21,7 +21,11 @@ export const locale = {
 			SMSCODE: 'Smscode',
 			SEND_SMSCODE: 'send smscode',
 			RESEND_SMSCODE: 'resend smscode',
-			RESET_PASSWORD: 'Reset Password'
+			RESET_PASSWORD: 'Reset Password',
+			EMAIL: 'Email',
+			VERIFY_CODE: 'Verification Code',
+			SEND_CODE: 'Send Code',
+			LOGIN_TIP: 'Unregistered email will automatically create an account',
 		},
 		MENU: {
 			DEVICE_NUM: "devices have been connected",

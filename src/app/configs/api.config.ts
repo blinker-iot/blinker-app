@@ -15,6 +15,8 @@ export const API = {
         RETRIEVE: SERVER_URL + '/user/password/reset',
         SMSCODE: SERVER_URL + '/user/smscode',
         CHECK: SERVER_URL + '/user/token/check',
+        EMAIL_CODE: SERVER_URL + '/user/email/code',
+        EMAIL_LOGIN: SERVER_URL + '/user/email/login',
     },
     USER: {
         ALL: SERVER_URL + '/user/overview',

@@ -10,23 +10,25 @@
   <form class="form-box" (ngSubmit)="login()" #formBox="ngForm">
     <div class="input-box">
       <div class="item-img">
-        <i class="fal fa-user"></i>
+        <i class="fal fa-envelope"></i>
       </div>
-      <input [(ngModel)]="username" name="username" placeholder="{{'ACCOUNT.USERNAME' | translate}}" (focus)="onFocus()" (blur)="onBlur()">
+      <input type="email" [(ngModel)]="email" name="email" placeholder="{{'ACCOUNT.EMAIL' | translate}}" (focus)="onFocus()" (blur)="onBlur()">
     </div>
     <div class="input-box">
       <div class="item-img">
-        <i class="fal fa-lock-alt"></i>
+        <i class="fal fa-shield-check"></i>
       </div>
-      <input type="{{pwshow?'text':'password'}}" [(ngModel)]="password" name="password" placeholder="{{'ACCOUNT.PASSWORD' | translate}}"
+      <input type="text" [(ngModel)]="code" name="code" placeholder="{{'ACCOUNT.VERIFY_CODE' | translate}}" maxlength="6"
         (focus)="onFocus()" (blur)="onBlur()">
-      <i class="iconfont" [ngClass]="{'icon-eye-open': pwshow,'icon-eye-close':!pwshow}" (click)="showPassword()"></i>
+      <button type="button" class="send-code-btn" [disabled]="countdown > 0" (click)="sendCode($event)">
+        <span *ngIf="countdown === 0">{{'ACCOUNT.SEND_CODE' | translate}}</span>
+        <span *ngIf="countdown > 0">{{countdown}}s</span>
+      </button>
     </div>
     <button type="submit" fullbtn>{{'ACCOUNT.LOGIN' | translate}}</button>
   </form>
-  <div class="other-btn">
-    <div [routerLink]="['/retrieve']">{{'ACCOUNT.RETRIEVE' | translate}}</div>
-    <div [routerLink]="['/register']">{{'ACCOUNT.REGISTER' | translate}}</div>
+  <div class="login-tip">
+    {{'ACCOUNT.LOGIN_TIP' | translate}}
   </div>
   <div class="other animated fadeInUp" *ngIf="showPoweredBy">
     <div>
@@ -39,8 +41,4 @@
       </span>
     </div>
   </div>
-  <!-- <div class="footer-box animate__animated animate__fadeIn animate__faster" *ngIf="showPoweredBy">
-    <div>Powered by</div>
-    <img src="img/diandeng-logo.png">
-  </div> -->
 </ion-content>

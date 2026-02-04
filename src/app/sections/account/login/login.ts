@@ -17,10 +17,10 @@ import { FirstModalComponent } from '../first-modal/first-modal.component';
 export class LoginPage {
   LOGO = CONFIG.LOGIN_LOGO;
 
-  username: string = "";
-  password: string = "";
-
-  pwshow = false;
+  email: string = "";
+  code: string = "";
+  countdown: number = 0;
+  private countdownTimer: any;
 
   showPoweredBy = true;
 
@@ -42,26 +42,71 @@ export class LoginPage {
     this.viewService.setDarkStatusBar();
   }
 
-  async login() {
-    await this.noticeService.showLoading('login')
-    if (this.username.length <= 0) {
-      this.noticeService.showToast('needPhoneNumberOrUserName')
-      return;
+  ngOnDestroy(): void {
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
     }
-    if (this.password.length < 8) {
-      this.noticeService.showToast('needPassword')
-      return;
-    }
-    if (await this.authService.login(this.username, this.password)) {
-      await this.userService.getAllInfo();
-      await this.noticeService.hideLoading()
-      this.navCtrl.navigateRoot('/');
-    }
-
   }
 
-  showPassword() {
-    this.pwshow = !this.pwshow
+  // 验证邮箱格式
+  isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  // 发送验证码
+  async sendCode(event: Event) {
+    event.preventDefault();
+    
+    if (!this.email || !this.isValidEmail(this.email)) {
+      this.noticeService.showToast('needValidEmail');
+      return;
+    }
+
+    await this.noticeService.showLoading('sendingCode');
+    
+    const success = await this.authService.sendEmailCode(this.email);
+    await this.noticeService.hideLoading();
+    
+    if (success) {
+      this.noticeService.showToast('codeSent');
+      this.startCountdown();
+    } else {
+      this.noticeService.showToast('sendCodeFailed');
+    }
+  }
+
+  // 开始倒计时
+  startCountdown() {
+    this.countdown = 60;
+    this.countdownTimer = setInterval(() => {
+      this.countdown--;
+      if (this.countdown <= 0) {
+        clearInterval(this.countdownTimer);
+      }
+    }, 1000);
+  }
+
+  async login() {
+    if (!this.email || !this.isValidEmail(this.email)) {
+      this.noticeService.showToast('needValidEmail');
+      return;
+    }
+    if (!this.code || this.code.length < 4) {
+      this.noticeService.showToast('needVerifyCode');
+      return;
+    }
+
+    await this.noticeService.showLoading('login');
+    
+    // 使用邮箱+验证码登录，如果账号不存在会自动创建
+    if (await this.authService.loginWithEmailCode(this.email, this.code)) {
+      await this.userService.getAllInfo();
+      await this.noticeService.hideLoading();
+      this.navCtrl.navigateRoot('/');
+    } else {
+      await this.noticeService.hideLoading();
+    }
   }
 
   onFocus() {
@@ -73,7 +118,6 @@ export class LoginPage {
   }
 
   async openUrl(url, title) {
-    // let browser = this.iab.create(url, '_system', 'location=no,hidden=no');
     const modal = await this.modalCtrl.create({
       component: DocPage,
       backdropDismiss: false,

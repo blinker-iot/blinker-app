@@ -23,7 +23,8 @@ export class NoticeService {
     1400, 1401, 1402, 1403, 1404, 1405, 1406, 1407, 1408, 1409, 1410,
     9999, 1412,
     'doubleClickExit', 'newPasswordNotMatch', 'userNameLengthToLong', 'needUserNameLength',
-    'needPasswordLength', 'needPassword', 'needPhoneNumberOrUserName', 'copySuccess', 'importSuccess',
+    'needPasswordLength', 'needPassword', 'needPhoneNumberOrUserName', 'needValidEmail', 'needVerifyCode',
+    'codeSent', 'sendCodeFailed', 'sendingCode', 'copySuccess', 'importSuccess',
     'timeoutConnect', 'tooManyComponents', 'notPlaced', 'tooMuchAction', 'canNotBeUsed', 'canNotBeUsed2',
     'noNetwork', 'bleNeedLocation',
     'tooLongRoomName', 'sameRoomName', 'tooManyRooms',
@@ -363,6 +364,26 @@ export class NoticeService {
     'needPhoneNumberOrUserName': {
       message: '手机号码或用户名错误，请重新输入',
       type: 'warn'
+    },
+    'needValidEmail': {
+      message: '请输入有效的邮箱地址',
+      type: 'warn'
+    },
+    'needVerifyCode': {
+      message: '请输入验证码',
+      type: 'warn'
+    },
+    'codeSent': {
+      message: '验证码已发送，请查收邮件',
+      type: 'success'
+    },
+    'sendCodeFailed': {
+      message: '验证码发送失败，请稍后重试',
+      type: 'warn'
+    },
+    'sendingCode': {
+      message: '正在发送验证码...',
+      spinner: 'crescent'
     },
     'needPassword': {
       message: '密码格式不正确，请输入8位以上的密码',

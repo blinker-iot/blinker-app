@@ -72,6 +72,42 @@ export class AuthService {
             .catch(this.handleError);
     }
 
+    // 发送邮箱验证码
+    async sendEmailCode(email: string): Promise<boolean> {
+        return this.http.get<BlinkerResponse>(API.AUTH.EMAIL_CODE, {
+            params: {
+                email: email
+            }
+        })
+            .toPromise()
+            .then(resp => {
+                console.log(resp);
+                return resp.message == 1000;
+            })
+            .catch(this.handleError);
+    }
+
+    // 使用邮箱+验证码登录（如果账号不存在会自动创建）
+    async loginWithEmailCode(email: string, code: string): Promise<boolean> {
+        return this.http.get<BlinkerResponse>(API.AUTH.EMAIL_LOGIN, {
+            params: {
+                email: email,
+                code: code
+            }
+        })
+            .toPromise()
+            .then(resp => {
+                console.log(resp);
+                if (resp.message == 1000) {
+                    this.dataService.auth = resp.detail;
+                    return true;
+                } else {
+                    return false;
+                }
+            })
+            .catch(this.handleError);
+    }
+
     logout() {
         this.dataService.removeAuthData();
         this.dataService.authDataExpire.next(true);

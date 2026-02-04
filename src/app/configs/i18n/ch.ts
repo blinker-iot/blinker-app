@@ -22,6 +22,10 @@ export const locale = {
       SEND_SMSCODE: "发送验证码",
       RESEND_SMSCODE: "重新发送",
       RESET_PASSWORD: "重设密码",
+      EMAIL: "邮箱",
+      VERIFY_CODE: "验证码",
+      SEND_CODE: "发送验证码",
+      LOGIN_TIP: "未注册的邮箱将自动创建账号",
     },
     MENU: {
       DEVICE_NUM: "个设备已接入",
