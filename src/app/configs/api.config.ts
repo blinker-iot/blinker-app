@@ -17,6 +17,8 @@ export const API = {
         CHECK: SERVER_URL + '/user/token/check',
         EMAIL_CODE: SERVER_URL + '/user/email/code',
         EMAIL_LOGIN: SERVER_URL + '/user/email/login',
+        GITHUB_LOGIN: SERVER_URL + '/user/oauth/github',
+        WECHAT_LOGIN: SERVER_URL + '/user/oauth/wechat',
     },
     USER: {
         ALL: SERVER_URL + '/user/overview',

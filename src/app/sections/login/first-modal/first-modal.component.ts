@@ -8,7 +8,7 @@ import { PusherService } from 'src/app/core/services/pusher.service';
     selector: 'blinker-first-modal',
     templateUrl: './first-modal.component.html',
     styleUrls: ['./first-modal.component.scss'],
-    standalone: false
+    standalone: true
 })
 export class FirstModalComponent implements OnInit {
 

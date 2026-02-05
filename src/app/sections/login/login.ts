@@ -1,18 +1,31 @@
 import { Component } from '@angular/core';
-import { NavController, ModalController } from '@ionic/angular';
+import { NavController, ModalController, IonicModule } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
 import { ViewService } from 'src/app/core/services/view.service';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CONFIG } from 'src/app/configs/app.config';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
 import { NoticeService } from 'src/app/core/services/notice.service';
-import { FirstModalComponent } from '../first-modal/first-modal.component';
+import { FirstModalComponent } from './first-modal/first-modal.component';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
+import { DirectivesModule } from 'src/app/core/directives/directives.module';
+import { LangSelectorModule } from 'src/app/core/components/lang-selector/lang-selector.module';
 
 @Component({
     selector: 'page-login',
     templateUrl: 'login.html',
     styleUrls: ['login.scss'],
-    standalone: false
+    standalone: true,
+    imports: [
+        CommonModule,
+        FormsModule,
+        IonicModule,
+        TranslateModule,
+        DirectivesModule,
+        LangSelectorModule
+    ]
 })
 export class LoginPage {
   LOGO = CONFIG.LOGIN_LOGO;
@@ -135,6 +148,38 @@ export class LoginPage {
       backdropDismiss: false,
     });
     modal.present();
+  }
+
+  async loginWithGithub() {
+    await this.noticeService.showLoading('login');
+    try {
+      if (await this.authService.loginWithGithub()) {
+        await this.userService.getAllInfo();
+        await this.noticeService.hideLoading();
+        this.navCtrl.navigateRoot('/');
+      } else {
+        await this.noticeService.hideLoading();
+      }
+    } catch (error) {
+      await this.noticeService.hideLoading();
+      this.noticeService.showToast('loginFailed');
+    }
+  }
+
+  async loginWithWechat() {
+    await this.noticeService.showLoading('login');
+    try {
+      if (await this.authService.loginWithWechat()) {
+        await this.userService.getAllInfo();
+        await this.noticeService.hideLoading();
+        this.navCtrl.navigateRoot('/');
+      } else {
+        await this.noticeService.hideLoading();
+      }
+    } catch (error) {
+      await this.noticeService.hideLoading();
+      this.noticeService.showToast('loginFailed');
+    }
   }
 
 }

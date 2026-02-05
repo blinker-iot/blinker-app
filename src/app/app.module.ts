@@ -13,7 +13,6 @@ import { ServerInterceptor } from './core/injectable/server.interceptor';
 import { GridsterModule } from 'angular-gridster2';
 import { ViewService } from './core/services/view.service';
 import { BlinkerAddDeviceModule } from './sections/adddevice/adddevice.module';
-import { BlinkerAccountModule } from './sections/account/account-routing.module';
 import { BlinkerDeviceManagerModule } from './sections/device/device-manager-routing.module';
 import { BlinkerRoomManagerModule } from './sections/room/room-manager-routing.module';
 import { BlinkerUserModule } from './sections/user/user.module';
@@ -64,7 +63,6 @@ export class MyHammerConfig extends HammerGestureConfig {
     ComponentsModule,
     HammerModule,
     // --blinker module--
-    BlinkerAccountModule,
     BlinkerUserModule,
     BlinkerDeviceModule,
     BlinkerAddDeviceModule,

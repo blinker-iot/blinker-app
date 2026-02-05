@@ -184,4 +184,36 @@ export class AuthService {
         return false;
     }
 
+    // GitHub 登录
+    async loginWithGithub(): Promise<boolean> {
+        return this.http.get<BlinkerResponse>(API.AUTH.GITHUB_LOGIN)
+            .toPromise()
+            .then(resp => {
+                console.log(resp);
+                if (resp.message == 1000) {
+                    this.dataService.auth = resp.detail;
+                    return true;
+                } else {
+                    return false;
+                }
+            })
+            .catch(this.handleError);
+    }
+
+    // 微信登录
+    async loginWithWechat(): Promise<boolean> {
+        return this.http.get<BlinkerResponse>(API.AUTH.WECHAT_LOGIN)
+            .toPromise()
+            .then(resp => {
+                console.log(resp);
+                if (resp.message == 1000) {
+                    this.dataService.auth = resp.detail;
+                    return true;
+                } else {
+                    return false;
+                }
+            })
+            .catch(this.handleError);
+    }
+
 }

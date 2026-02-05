@@ -1,4 +1,34 @@
-@use "../account.scss";
+// Styles from account.scss
+ion-content {
+    --background: #fff;
+}
+
+ion-back-button {
+    --color: #000 !important;
+    padding-right: 20px;
+}
+
+input {
+    color: #333;
+}
+
+i {
+    color: #666;
+}
+
+.other {
+    width: 100%;
+    text-align: center;
+    z-index: 1;
+    position: absolute;
+    bottom: 15px;
+    font-size: 13px;
+    color: #333;
+}
+
+[disabled] {
+    opacity: 0.5;
+}
 
 .logo-box {
   text-align: center;
@@ -75,4 +105,54 @@
   text-align: center;
   font-size: 13px;
   color: #999;
+}
+
+.social-login {
+  margin-top: 2rem;
+  padding: 0 1.5rem;
+
+  .social-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 1.5rem;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #c8c7cc;
+    }
+
+    span {
+      padding: 0 1rem;
+      font-size: 13px;
+      color: #999;
+    }
+  }
+
+  .social-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+
+    .social-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: 1px solid #666;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+
+      &:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+      }
+    }
+  }
 }

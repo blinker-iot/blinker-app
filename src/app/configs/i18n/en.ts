@@ -26,6 +26,7 @@ export const locale = {
 			VERIFY_CODE: 'Verification Code',
 			SEND_CODE: 'Send Code',
 			LOGIN_TIP: 'Unregistered email will automatically create an account',
+			OR_LOGIN_WITH: 'Or login with',
 		},
 		MENU: {
 			DEVICE_NUM: "devices have been connected",
