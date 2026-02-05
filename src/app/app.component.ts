@@ -16,6 +16,7 @@ import { TranslationService } from './core/services/translation.service';
 import { AudioService } from './core/services/audio.service';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -129,6 +130,11 @@ export class AppComponent implements OnInit {
     if (this.authService.isLogin()) {
       this.userService.getAllInfo();
     } else {
+      // 开发模式下不强制跳转登录页
+      if (!environment.production) {
+        console.log('[DEV MODE] 跳过登录检查');
+        return;
+      }
       this.navCtrl.navigateRoot('/login');
     }
   }

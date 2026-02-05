@@ -6,6 +6,7 @@ import { NavController } from '@ionic/angular';
 import { AuthService } from "../services/auth.service";
 import { NoticeService } from "../services/notice.service";
 import { DataService } from "../services/data.service";
+import { environment } from "../../../environments/environment";
 
 @Injectable()
 export class ServerInterceptor implements HttpInterceptor {
@@ -64,6 +65,11 @@ export class ServerInterceptor implements HttpInterceptor {
     // console.log(code);
     // 跳转到登录页
     if (code == 1408) {
+      // 开发模式下不强制跳转登录页
+      if (!environment.production) {
+        console.log('[DEV MODE] 跳过登录跳转，错误码:', code);
+        return;
+      }
       this.authService.logout();
       this.navCtrl.navigateRoot('/login');
     } else {
