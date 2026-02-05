@@ -1,12 +1,19 @@
 // Styles from account.scss
 ion-content {
     --background: #fff;
+
+    &::part(scroll) {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 100%;
+    }
 }
 
-ion-back-button {
-    --color: #000 !important;
-    padding-right: 20px;
-}
+// ion-back-button {
+//     --color: #000 !important;
+//     padding-right: 20px;
+// }
 
 input {
     color: #333;
@@ -20,8 +27,8 @@ i {
     width: 100%;
     text-align: center;
     z-index: 1;
-    position: absolute;
-    bottom: 15px;
+    margin-top: 2rem;
+    padding-bottom: 15px;
     font-size: 13px;
     color: #333;
 }
@@ -54,7 +61,9 @@ i {
     flex-direction: row;
     justify-content: flex-start;
     padding: 5px 12px;
-    border-bottom: 1px solid #c8c7cc;
+    background: #eee;
+    border-radius: 8px;
+    margin-bottom: 12px;
     .item-img {
       display: flex;
       align-items: center;
@@ -68,6 +77,9 @@ i {
       flex-grow: 1;
       height: 50px;
       line-height: 22px;
+      background: transparent;
+      border: none;
+      outline: none;
     }
 
     .send-code-btn {

@@ -25,7 +25,7 @@ export const locale = {
       EMAIL: "邮箱",
       VERIFY_CODE: "验证码",
       SEND_CODE: "发送验证码",
-      LOGIN_TIP: "未注册的邮箱将自动创建账号",
+      LOGIN_TIP: "使用未注册的邮箱将自动创建账号",
       OR_LOGIN_WITH: "或使用以下方式登录",
     },
     MENU: {

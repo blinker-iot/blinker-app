@@ -26,11 +26,11 @@
         <span *ngIf="countdown > 0">{{countdown}}s</span>
       </button>
     </div>
+    <div class="login-tip">
+      {{'ACCOUNT.LOGIN_TIP' | translate}}
+    </div>
     <button type="submit" fullbtn>{{'ACCOUNT.LOGIN' | translate}}</button>
   </form>
-  <div class="login-tip">
-    {{'ACCOUNT.LOGIN_TIP' | translate}}
-  </div>
   <div class="social-login">
     <div class="social-divider">
       <span>{{'ACCOUNT.OR_LOGIN_WITH' | translate}}</span>
@@ -44,7 +44,7 @@
       </button>
     </div>
   </div>
-  <div class="other animated fadeInUp" *ngIf="showPoweredBy">
+  <div class="other">
     <div>
       <span link-text (click)="openUrl(USER_AGREEMENT,'用户协议')">
         {{'ACCOUNT.USER_AGREEMENT' | translate}}
