@@ -27,8 +27,8 @@ const routes: Routes = [
     ComponentsModule,
     DirectivesModule,
     MarkdownModule.forChild(),
-    RouterModule.forChild(routes)
-  ],
-  declarations: [GuidePage]
+    RouterModule.forChild(routes),
+    GuidePage
+  ]
 })
 export class GuidePageModule {}

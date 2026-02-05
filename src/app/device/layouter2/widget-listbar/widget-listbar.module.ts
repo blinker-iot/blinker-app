@@ -6,13 +6,11 @@ import { TranslateModule } from '@ngx-translate/core';
 
 
 @NgModule({
-  declarations: [
-    WidgetListbarComponent
-  ],
   imports: [
     CommonModule,
     IonicModule,
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    WidgetListbarComponent
   ],
   exports: [
     WidgetListbarComponent

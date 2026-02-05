@@ -1,4 +1,5 @@
 import { Component, ElementRef, Input, ViewChild } from "@angular/core";
+import { CommonModule } from "@angular/common";
 import { Layouter2Widget } from "../config";
 import { Layouter2Service } from "../../layouter2.service";
 
@@ -6,7 +7,8 @@ import { Layouter2Service } from "../../layouter2.service";
     selector: "widget-text",
     templateUrl: "widget-text.html",
     styleUrls: ["widget-text.scss"],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule]
 })
 export class WidgetTextComponent implements Layouter2Widget {
   @Input()

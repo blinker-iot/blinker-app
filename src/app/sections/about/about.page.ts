@@ -6,8 +6,7 @@ import { DocPage } from 'src/app/core/pages/doc/doc.page';
 @Component({
     selector: 'blinker-about',
     templateUrl: './about.page.html',
-    styleUrls: ['./about.page.scss'],
-    standalone: false
+    styleUrls: ['./about.page.scss']
 })
 export class AboutPage implements OnInit {
 

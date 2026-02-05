@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
-import { NavController, ModalController, IonicModule } from '@ionic/angular';
+import { NavController, ModalController } from '@ionic/angular/standalone';
+import { IonicModule } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
 import { ViewService } from 'src/app/core/services/view.service';
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -10,8 +11,7 @@ import { FirstModalComponent } from './first-modal/first-modal.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { DirectivesModule } from 'src/app/core/directives/directives.module';
-import { LangSelectorModule } from 'src/app/core/components/lang-selector/lang-selector.module';
+import { LangSelectorComponent } from 'src/app/core/components/lang-selector/lang-selector.component';
 
 @Component({
     selector: 'page-login',
@@ -23,8 +23,7 @@ import { LangSelectorModule } from 'src/app/core/components/lang-selector/lang-s
         FormsModule,
         IonicModule,
         TranslateModule,
-        DirectivesModule,
-        LangSelectorModule
+        LangSelectorComponent
     ]
 })
 export class LoginPage {

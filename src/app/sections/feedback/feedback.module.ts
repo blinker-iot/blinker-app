@@ -21,8 +21,8 @@ const routes: Routes = [
     IonicModule,
     DirectivesModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild()
-  ],
-  declarations: [FeedbackPage]
+    TranslateModule.forChild(),
+    FeedbackPage
+  ]
 })
 export class BlinkerFeedbackModule { }

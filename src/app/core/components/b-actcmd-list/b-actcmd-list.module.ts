@@ -6,14 +6,12 @@ import { PipesModule } from '../../pipes/pipes.module';
 import { widgetButtonListModule } from 'src/app/device/layouter2/widget-buttonlist/widget-buttonlist.module';
 
 @NgModule({
-  declarations: [
-    BActcmdListComponent
-  ],
   imports: [
     IonicModule, 
     CommonModule,
     PipesModule,
-    widgetButtonListModule
+    widgetButtonListModule,
+    BActcmdListComponent
   ],
   exports: [
     BActcmdListComponent

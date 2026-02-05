@@ -25,10 +25,8 @@ const routes: Routes = [
     ComponentsModule,
     DirectivesModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild()
-  ],
-  declarations: [
-    DeviceManagerPage,
+    TranslateModule.forChild(),
+    DeviceManagerPage
   ]
 })
 export class DeviceManagerPageModule { }

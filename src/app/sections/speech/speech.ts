@@ -14,8 +14,7 @@ import { AudioService } from 'src/app/core/services/audio.service';
 @Component({
     selector: 'page-speech',
     templateUrl: 'speech.html',
-    styleUrls: ['speech.scss'],
-    standalone: false
+    styleUrls: ['speech.scss']
 })
 export class SpeechPage {
 

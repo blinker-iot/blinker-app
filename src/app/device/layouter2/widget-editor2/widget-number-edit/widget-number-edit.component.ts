@@ -4,8 +4,7 @@ import { Layouter2Service } from '../../layouter2.service';
 @Component({
     selector: 'widget-number-edit',
     templateUrl: './widget-number-edit.component.html',
-    styleUrls: ['./widget-number-edit.component.scss'],
-    standalone: false
+    styleUrls: ['./widget-number-edit.component.scss']
 })
 export class WidgetNumberEditComponent implements OnInit {
 

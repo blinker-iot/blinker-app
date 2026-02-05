@@ -4,8 +4,7 @@ import { ModalController } from '@ionic/angular';
 @Component({
     selector: 'blinker-repeat-selector-modal',
     templateUrl: './repeat-selector-modal.component.html',
-    styleUrls: ['./repeat-selector-modal.component.scss'],
-    standalone: false
+    styleUrls: ['./repeat-selector-modal.component.scss']
 })
 export class RepeatSelectorModalComponent implements OnInit {
 

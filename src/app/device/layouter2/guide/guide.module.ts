@@ -18,9 +18,7 @@ import { NewuiModule } from '../newui/newui.module';
     DirectivesModule,
     NewuiModule,
     TranslateModule.forChild(),
-    RouterModule
-  ],
-  declarations: [
+    RouterModule,
     Layouter2GuidePage,
     EsptouchComponent,
     ExamplesComponent

@@ -23,8 +23,8 @@ const routes: Routes = [
     ComponentsModule,
     DirectivesModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild()
-  ],
-  declarations: [RoomManagerPage]
+    TranslateModule.forChild(),
+    RoomManagerPage
+  ]
 })
 export class RoomManagerPageModule { }

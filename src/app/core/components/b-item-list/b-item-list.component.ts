@@ -1,12 +1,14 @@
 import { Component, OnInit, Input, ViewChildren, QueryList, ElementRef, Output, EventEmitter, ContentChildren } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import Sortable from 'sortablejs';
 import { BItemComponent } from './b-item/b-item';
 
 @Component({
+    standalone: true,
+    imports: [CommonModule, BItemComponent],
     selector: 'b-item-list',
     templateUrl: './b-item-list.component.html',
-    styleUrls: ['./b-item-list.component.scss'],
-    standalone: false
+    styleUrls: ['./b-item-list.component.scss']
 })
 export class BItemListComponent implements OnInit {
 

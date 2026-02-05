@@ -5,8 +5,7 @@ import { Layouter2Widget } from '../config';
 @Component({
     selector: 'widget-image',
     templateUrl: 'widget-image.html',
-    styleUrls: ['widget-image.scss'],
-    standalone: false
+    styleUrls: ['widget-image.scss']
 })
 export class WidgetImageComponent implements Layouter2Widget {
 

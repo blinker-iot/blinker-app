@@ -21,8 +21,8 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     DirectivesModule,
-    RouterModule.forChild(routes)
-  ],
-  declarations: [QrscannerPage]
+    RouterModule.forChild(routes),
+    QrscannerPage
+  ]
 })
 export class QrscannerPageModule {}

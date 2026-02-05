@@ -1,10 +1,12 @@
 import { Component, OnInit, Input, Output, EventEmitter, HostListener } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 @Component({
+    standalone: true,
+    imports: [CommonModule],
     selector: 'b-toggle',
     templateUrl: './b-toggle.component.html',
-    styleUrls: ['./b-toggle.component.scss'],
-    standalone: false
+    styleUrls: ['./b-toggle.component.scss']
 })
 export class BToggleComponent implements OnInit {
 

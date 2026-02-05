@@ -4,8 +4,7 @@ import { Layouter2Service } from "../../layouter2.service";
 @Component({
     selector: "widget-text-edit",
     templateUrl: "./widget-text-edit.component.html",
-    styleUrls: ["./widget-text-edit.component.scss"],
-    standalone: false
+    styleUrls: ["./widget-text-edit.component.scss"]
 })
 export class WidgetTextEditComponent implements OnInit {
   @Input()

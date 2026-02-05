@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Platform } from '@ionic/angular';
+import { Platform } from '@ionic/angular/standalone';
 // import { Diagnostic } from '@awesome-cordova-plugins/diagnostic/ngx';
 // import { AndroidPermissions } from '@awesome-cordova-plugins/android-permissions/ngx'
 import { NoticeService } from './notice.service';

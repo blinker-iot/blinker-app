@@ -1,4 +1,5 @@
 import { Component, Input, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Layouter2Widget } from '../config';
 import { Router } from '@angular/router';
 import { deviceName12 } from 'src/app/core/functions/func';
@@ -7,7 +8,8 @@ import { deviceName12 } from 'src/app/core/functions/func';
     selector: 'widget-timer',
     templateUrl: 'widget-timer.html',
     styleUrls: ['widget-timer.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule]
 })
 export class WidgetTimerComponent implements Layouter2Widget {
 

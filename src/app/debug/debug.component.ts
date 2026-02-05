@@ -1,14 +1,18 @@
 import { Component, Input, ViewChild, ElementRef, ChangeDetectorRef, Renderer2 } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ModalController } from '@ionic/angular';
 import { DebugService } from './debug.service';
 import { DeviceService } from '../core/services/device.service';
 import { NativeService } from '../core/services/native.service';
+import { HtmlPipe } from '../core/pipes/html.pipe';
 
 @Component({
     selector: 'app-debug',
     templateUrl: './debug.component.html',
     styleUrls: ['./debug.component.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule, FormsModule, HtmlPipe]
 })
 export class DebugComponent {
 

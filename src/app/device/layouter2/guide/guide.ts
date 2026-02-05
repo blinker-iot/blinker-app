@@ -7,8 +7,7 @@ import { Layouter2Service } from '../layouter2.service';
 @Component({
     selector: 'layouter2-guide',
     templateUrl: 'guide.html',
-    styleUrls: ['guide.scss'],
-    standalone: false
+    styleUrls: ['guide.scss']
 })
 export class Layouter2GuidePage {
 

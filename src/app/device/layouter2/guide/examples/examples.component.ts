@@ -9,8 +9,7 @@ import { NewuiService } from '../../newui/newui.service';
 @Component({
     selector: 'blinker-guide-examples',
     templateUrl: './examples.component.html',
-    styleUrls: ['./examples.component.scss'],
-    standalone: false
+    styleUrls: ['./examples.component.scss']
 })
 export class ExamplesComponent implements OnInit {
 

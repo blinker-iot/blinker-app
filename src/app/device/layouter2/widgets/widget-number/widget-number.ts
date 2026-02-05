@@ -6,6 +6,7 @@ import {
   SimpleChanges,
   ViewChild,
 } from "@angular/core";
+import { CommonModule } from "@angular/common";
 import { Layouter2Widget } from "../config";
 import { convertToRgba } from "src/app/core/functions/func";
 import { Layouter2Service } from "../../layouter2.service";
@@ -14,7 +15,8 @@ import { Layouter2Service } from "../../layouter2.service";
     selector: "widget-number",
     templateUrl: "widget-number.html",
     styleUrls: ["widget-number.scss"],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule]
 })
 export class WidgetNumberComponent implements Layouter2Widget {
   @Input()

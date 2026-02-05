@@ -33,9 +33,9 @@ const routes: Routes = [
     ComponentsModule,
     DirectivesModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    AddDevicePage
   ],
-  providers: [AdddeviceService],
-  declarations: [AddDevicePage]
+  providers: [AdddeviceService]
 })
 export class BlinkerAddDeviceModule { }

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 // import { CodePush, InstallMode } from '@awesome-cordova-plugins/code-push/ngx';
-import { AlertController, Platform } from '@ionic/angular';
+import { AlertController, Platform } from '@ionic/angular/standalone';
 // import { AppVersion } from '@awesome-cordova-plugins/app-version/ngx';
 // import { FileOpener } from '@awesome-cordova-plugins/file-opener/ngx';
 import { HttpClient } from '@angular/common/http';

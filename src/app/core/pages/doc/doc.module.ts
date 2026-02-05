@@ -23,7 +23,7 @@ import { DirectivesModule } from '../../directives/directives.module';
     IonicModule,
     DirectivesModule,
     MarkdownModule.forChild(),
-  ],
-  declarations: [DocPage]
+    DocPage
+  ]
 })
 export class DocModule { }

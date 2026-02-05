@@ -3,8 +3,7 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 @Component({
     selector: 'check-list',
     templateUrl: './check-list.component.html',
-    styleUrls: ['./check-list.component.scss'],
-    standalone: false
+    styleUrls: ['./check-list.component.scss']
 })
 export class CheckListComponent implements OnInit {
 

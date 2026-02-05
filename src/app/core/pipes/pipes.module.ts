@@ -11,7 +11,8 @@ import { Device2NamePipe } from './device2name';
 import { Days2TextPipe } from './days2text';
 
 @NgModule({
-    declarations: [
+    imports: [
+        CommonModule,
         MinuteToTimePipe,
         ObjToStrPipe,
         OwnplugAct2strPipe,
@@ -22,7 +23,6 @@ import { Days2TextPipe } from './days2text';
         Device2NamePipe,
         Days2TextPipe
     ],
-    imports: [CommonModule],
     exports: [
         MinuteToTimePipe,
         ObjToStrPipe,

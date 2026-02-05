@@ -1,12 +1,15 @@
 import { Component, Input, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Layouter2Widget } from '../config';
 import { Layouter2Service } from '../../layouter2.service';
+import { BColorpickerDiscComponent } from 'src/app/core/components/b-colorpicker-disc/b-colorpicker-disc.component';
 
 @Component({
     selector: 'widget-color',
     templateUrl: 'widget-color.html',
     styleUrls: ['widget-color.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule, BColorpickerDiscComponent]
 })
 
 export class WidgetColorComponent implements Layouter2Widget {

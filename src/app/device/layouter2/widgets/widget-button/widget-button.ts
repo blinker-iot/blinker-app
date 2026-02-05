@@ -1,4 +1,5 @@
 import { Component, Input, ElementRef, ViewChild, Renderer2, Injectable } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Layouter2Widget } from '../config';
 import { NativeService } from 'src/app/core/services/native.service';
 import { Layouter2Service } from '../../layouter2.service';
@@ -10,7 +11,8 @@ import { convertToRgba } from 'src/app/core/functions/func';
     selector: 'widget-button',
     templateUrl: 'widget-button.html',
     styleUrls: ['widget-button.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule]
 })
 export class WidgetButtonComponent implements Layouter2Widget {
 

@@ -9,8 +9,7 @@ import { SpeechService } from '../speech.service';
 @Component({
     selector: 'speech-button',
     templateUrl: 'speech-button.html',
-    styleUrls: ['speech-button.scss'],
-    standalone: false
+    styleUrls: ['speech-button.scss']
 })
 export class SpeechButtonComponent {
 

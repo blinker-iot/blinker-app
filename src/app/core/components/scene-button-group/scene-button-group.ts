@@ -1,14 +1,17 @@
 import { Component, ViewChild, ElementRef, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { NavController } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
 import Sortable from 'sortablejs';
 import { DataService } from '../../services/data.service';
+import { SceneButtonComponent } from './scene-button/scene-button';
 
 @Component({
+    standalone: true,
+    imports: [CommonModule, SceneButtonComponent],
     selector: 'scene-button-group',
     templateUrl: 'scene-button-group.html',
-    styleUrls: ['scene-button-group.scss'],
-    standalone: false
+    styleUrls: ['scene-button-group.scss']
 })
 export class SceneButtonGroupComponent {
 

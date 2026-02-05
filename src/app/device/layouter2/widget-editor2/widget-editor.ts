@@ -8,8 +8,7 @@ import * as JSONEditor from 'jsoneditor';
 @Component({
     selector: 'widget-editor',
     templateUrl: 'widget-editor.html',
-    styleUrls: ['widget-editor.scss'],
-    standalone: false
+    styleUrls: ['widget-editor.scss']
 })
 export class WidgetEditor {
 

@@ -25,7 +25,11 @@ import { BItemComponent } from './b-item-list/b-item/b-item';
 import { SceneButtonComponent } from './scene-button-group/scene-button/scene-button';
 
 @NgModule({
-  declarations: [
+  imports: [
+    CommonModule,
+    IonicModule,
+    PipesModule,
+    FormsModule,
     SceneButtonGroupComponent,
     BItemListComponent,
     BItemComponent,
@@ -45,12 +49,6 @@ import { SceneButtonComponent } from './scene-button-group/scene-button/scene-bu
     BToastComponent,
     BTipComponent,
     SceneButtonComponent
-  ],
-  imports: [
-    CommonModule,
-    IonicModule,
-    PipesModule,
-    FormsModule
   ],
   exports: [
     PipesModule,

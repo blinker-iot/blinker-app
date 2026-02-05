@@ -10,8 +10,7 @@ import { Clipboard } from '@capacitor/clipboard';
 @Component({
     selector: 'page-mqttkey',
     templateUrl: 'mqttkey.html',
-    styleUrls: ['mqttkey.scss'],
-    standalone: false
+    styleUrls: ['mqttkey.scss']
 })
 export class MqttkeyPage {
   showKey = false;

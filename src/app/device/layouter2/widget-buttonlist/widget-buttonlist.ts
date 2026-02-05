@@ -1,11 +1,14 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectorRef, ViewChildren, QueryList, ElementRef, Renderer2 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { AlertController } from '@ionic/angular';
+import { ParentDynamicComponent } from '../widgets/parentDynamic.component';
 
 @Component({
     selector: 'widget-buttonlist',
+    standalone: true,
+    imports: [CommonModule, ParentDynamicComponent],
     templateUrl: 'widget-buttonlist.html',
-    styleUrls: ['widget-buttonlist.scss'],
-    standalone: false
+    styleUrls: ['widget-buttonlist.scss']
 })
 export class widgetButtonListComponent {
 

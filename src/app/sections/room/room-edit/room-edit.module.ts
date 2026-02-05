@@ -18,8 +18,8 @@ const routes: Routes = [
     IonicModule,
     ComponentsModule,
     DirectivesModule,
-    RouterModule.forChild(routes)
-  ],
-  declarations: [RoomEditPage]
+    RouterModule.forChild(routes),
+    RoomEditPage
+  ]
 })
 export class RoomEditPageModule { }

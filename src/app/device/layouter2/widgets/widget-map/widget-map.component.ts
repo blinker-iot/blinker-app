@@ -7,8 +7,7 @@ import { GeolocationService } from 'src/app/core/services/geolocation.service';
 @Component({
     selector: 'widget-map',
     templateUrl: './widget-map.component.html',
-    styleUrls: ['./widget-map.component.scss'],
-    standalone: false
+    styleUrls: ['./widget-map.component.scss']
 })
 export class WidgetMapComponent implements Layouter2Widget {
 

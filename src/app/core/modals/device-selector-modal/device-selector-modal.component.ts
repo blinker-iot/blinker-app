@@ -5,8 +5,7 @@ import { DataService } from 'src/app/core/services/data.service';
 @Component({
     selector: 'blinker-device-selector-modal',
     templateUrl: './device-selector-modal.component.html',
-    styleUrls: ['./device-selector-modal.component.scss'],
-    standalone: false
+    styleUrls: ['./device-selector-modal.component.scss']
 })
 export class DeviceSelectorModalComponent implements OnInit {
 

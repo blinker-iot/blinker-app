@@ -4,8 +4,7 @@ import { Component, Input, OnInit } from '@angular/core';
 @Component({
     selector: 'widget-background-edit',
     templateUrl: './background-edit.component.html',
-    styleUrls: ['./background-edit.component.scss'],
-    standalone: false
+    styleUrls: ['./background-edit.component.scss']
 })
 export class BackgroundEditComponent implements OnInit {
 

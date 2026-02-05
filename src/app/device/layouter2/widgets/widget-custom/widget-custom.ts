@@ -1,4 +1,5 @@
 import { Component, ElementRef, Input, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Layouter2Widget } from '../config';
 import { DomSanitizer } from '@angular/platform-browser';
 
@@ -6,7 +7,7 @@ import { DomSanitizer } from '@angular/platform-browser';
     selector: 'widget-custom',
     templateUrl: 'widget-custom.html',
     styleUrls: ['widget-custom.scss'],
-    standalone: false
+    imports: [CommonModule]
 })
 export class WidgetCustomComponent implements Layouter2Widget {
 

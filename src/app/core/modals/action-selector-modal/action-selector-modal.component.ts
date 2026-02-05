@@ -5,8 +5,7 @@ import { DeviceConfigService } from 'src/app/core/services/device-config.service
 @Component({
     selector: 'blinker-action-selector-modal',
     templateUrl: './action-selector-modal.component.html',
-    styleUrls: ['./action-selector-modal.component.scss'],
-    standalone: false
+    styleUrls: ['./action-selector-modal.component.scss']
 })
 export class ActionSelectorModalComponent implements OnInit {
 

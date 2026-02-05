@@ -7,13 +7,11 @@ import { ItemListComponent } from './item-list/item-list.component';
 
 
 @NgModule({
-  declarations: [
+  imports: [
+    CommonModule,
     BottomBtnComponent,
     ItemComponent,
     ItemListComponent
-  ],
-  imports: [
-    CommonModule
   ],
   exports: [
     BottomBtnComponent,

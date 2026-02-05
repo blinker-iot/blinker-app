@@ -1,4 +1,5 @@
 import { Component, ElementRef, Input, Renderer2, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Layouter2Widget } from '../config';
 import { Layouter2Service } from '../../layouter2.service';
 import { convertToRgba } from 'src/app/core/functions/func';
@@ -7,7 +8,8 @@ import { convertToRgba } from 'src/app/core/functions/func';
     selector: 'widget-range',
     templateUrl: 'widget-range.html',
     styleUrls: ['widget-range.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule]
 })
 export class WidgetRangeComponent implements Layouter2Widget {
 

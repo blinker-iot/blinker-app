@@ -1,4 +1,5 @@
 import { Component, Input, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Layouter2Widget } from '../config';
 import Hls from 'hls.js';
 
@@ -6,7 +7,8 @@ import Hls from 'hls.js';
     selector: 'widget-video',
     templateUrl: 'widget-video.html',
     styleUrls: ['widget-video.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule]
 })
 export class WidgetVideoComponent implements Layouter2Widget {
 

@@ -2,7 +2,7 @@
 
 import { Injectable } from '@angular/core';
 // import { Network } from '@awesome-cordova-plugins/network/ngx';
-import { Platform } from '@ionic/angular';
+import { Platform } from '@ionic/angular/standalone';
 import { DeviceService } from './device.service';
 import { BehaviorSubject } from 'rxjs';
 import { DataService } from './data.service';

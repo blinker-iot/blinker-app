@@ -1,6 +1,6 @@
 import { Injectable } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { Platform } from "@ionic/angular";
+import { Platform } from "@ionic/angular/standalone";
 
 @Injectable({
   providedIn: "root",

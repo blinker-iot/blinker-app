@@ -10,9 +10,9 @@ import { WidgetsModule } from '../widgets/widgets.module';
   imports: [
     CommonModule,
     IonicModule,
-    WidgetsModule
+    WidgetsModule,
+    widgetButtonListComponent
   ],
-  declarations: [widgetButtonListComponent],
   exports: [widgetButtonListComponent]
 })
 export class widgetButtonListModule { }

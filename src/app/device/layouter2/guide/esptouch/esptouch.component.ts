@@ -17,8 +17,7 @@ declare var wifi;
 @Component({
     selector: 'blinker-guide-esptouch',
     templateUrl: './esptouch.component.html',
-    styleUrls: ['./esptouch.component.scss'],
-    standalone: false
+    styleUrls: ['./esptouch.component.scss']
 })
 export class EsptouchComponent implements OnInit {
 

@@ -5,7 +5,6 @@ import { ActivatedRoute } from "@angular/router";
 import { IonicModule, NavController } from "@ionic/angular";
 import { DataService } from "src/app/core/services/data.service";
 import { NoticeService } from "src/app/core/services/notice.service";
-import { DirectivesModule } from "src/app/core/directives/directives.module";
 import { FormsModule } from "@angular/forms";
 import { CommonModule } from "@angular/common";
 // import * as maptalks from "maptalks";
@@ -18,8 +17,7 @@ import { toBD09, toWsg84 } from "src/app/core/functions/func";
     imports: [
         CommonModule,
         FormsModule,
-        IonicModule,
-        DirectivesModule,
+        IonicModule
     ]
 })
 export class DeviceLocationPage implements OnInit {

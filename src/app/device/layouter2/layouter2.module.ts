@@ -27,9 +27,7 @@ import { TranslateModule } from '@ngx-translate/core';
     IconListPageModule,
     WidgetToolbarComponent,
     WidgetEditorModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [
+    TranslateModule.forChild(),
     Layouter2Component
   ],
   exports: [

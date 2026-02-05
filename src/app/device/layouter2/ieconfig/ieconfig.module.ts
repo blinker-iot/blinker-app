@@ -10,9 +10,9 @@ import { DirectivesModule } from 'src/app/core/directives/directives.module';
     CommonModule,
     FormsModule,
     IonicModule,
-    DirectivesModule
+    DirectivesModule,
+    IeconfigComponent
   ],
-  declarations: [IeconfigComponent],
   exports: [
     IeconfigComponent
   ]

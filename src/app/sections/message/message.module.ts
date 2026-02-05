@@ -25,8 +25,8 @@ const routes: Routes = [
     ComponentsModule,
     DirectivesModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild()
-  ],
-  declarations: [MessagePage]
+    TranslateModule.forChild(),
+    MessagePage
+  ]
 })
 export class BlinkerMessageModule { }

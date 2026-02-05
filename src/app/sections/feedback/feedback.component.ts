@@ -12,8 +12,7 @@ enum FeedbackType {
 @Component({
     selector: 'blinker-feedback',
     templateUrl: './feedback.component.html',
-    styleUrls: ['./feedback.component.scss'],
-    standalone: false
+    styleUrls: ['./feedback.component.scss']
 })
 export class FeedbackPage implements OnInit {
 

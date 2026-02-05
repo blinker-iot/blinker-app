@@ -6,8 +6,7 @@ import { AdddeviceService } from '../adddevice.service';
 @Component({
     selector: 'adddevice-guide',
     templateUrl: 'guide.html',
-    styleUrls: ['guide.scss'],
-    standalone: false
+    styleUrls: ['guide.scss']
 })
 export class GuidePage {
   deviceType = 'CustomDevice';

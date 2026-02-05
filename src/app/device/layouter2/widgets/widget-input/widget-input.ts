@@ -1,4 +1,6 @@
 import { Component, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Layouter2Widget } from '../config';
 import { DeviceService } from 'src/app/core/services/device.service';
 
@@ -6,7 +8,8 @@ import { DeviceService } from 'src/app/core/services/device.service';
     selector: 'widget-input',
     templateUrl: 'widget-input.html',
     styleUrls: ['widget-input.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule, FormsModule]
 })
 export class WidgetInputComponent implements Layouter2Widget {
 

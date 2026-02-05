@@ -1,12 +1,13 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { DocService } from '../../services/doc.service';
-import { ModalController } from '@ionic/angular';
+import { ModalController, IonicModule } from '@ionic/angular';
+import { MarkdownPipe } from 'ngx-markdown';
 
 @Component({
     selector: 'app-doc',
     templateUrl: './doc.page.html',
     styleUrls: ['./doc.page.scss'],
-    standalone: false
+    imports: [IonicModule, MarkdownPipe]
 })
 export class DocPage implements OnInit {
 

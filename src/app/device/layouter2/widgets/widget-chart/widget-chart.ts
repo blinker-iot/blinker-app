@@ -1,16 +1,20 @@
 import { Component, Input, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Layouter2Widget } from '../config';
 import { CloudStorageService } from 'src/app/core/services/cloudStorage.service';
 import { Layouter2Service } from '../../layouter2.service';
 import { DataService } from 'src/app/core/services/data.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
+import { LineChartAreaComponent } from 'src/app/core/charts/line-chart-area/line-chart-area.component';
 
 @Component({
     selector: 'widget-chart',
     templateUrl: 'widget-chart.html',
     styleUrls: ['widget-chart.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule, FormsModule, LineChartAreaComponent]
 })
 export class WidgetChartComponent implements Layouter2Widget {
 

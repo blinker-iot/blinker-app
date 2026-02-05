@@ -1,4 +1,6 @@
 import { Component, Input, ElementRef, ViewChild, Renderer2, Injectable } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Layouter2Widget } from '../config';
 import { NativeService } from 'src/app/core/services/native.service';
 import { Layouter2Service } from '../../layouter2.service';
@@ -10,7 +12,8 @@ import { color2Rgba, convertToRgba } from 'src/app/core/functions/func';
     selector: 'widget-select',
     templateUrl: 'widget-select.html',
     styleUrls: ['widget-select.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule, FormsModule]
 })
 export class WidgetSelectComponent implements Layouter2Widget {
 

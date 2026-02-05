@@ -3,9 +3,9 @@ import { CommonModule } from '@angular/common';
 import { LangSelectorComponent } from './lang-selector.component';
 
 @NgModule({
-  declarations: [LangSelectorComponent],
   imports: [
-    CommonModule
+    CommonModule,
+    LangSelectorComponent
   ],
   exports: [LangSelectorComponent]
 })

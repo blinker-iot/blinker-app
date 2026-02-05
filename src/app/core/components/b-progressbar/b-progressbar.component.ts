@@ -1,14 +1,17 @@
 import { Component, ViewChild, ElementRef, Input, SimpleChanges, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { IonicModule } from '@ionic/angular';
 // import ProgressBar from 'progressbar.js';
 // import { Brightness } from '@awesome-cordova-plugins/brightness/ngx';
 
 // var brightness = cordova.plugins.brightness;
 
 @Component({
+    standalone: true,
+    imports: [CommonModule, IonicModule],
     selector: 'b-progressbar',
     templateUrl: './b-progressbar.component.html',
-    styleUrls: ['./b-progressbar.component.scss'],
-    standalone: false
+    styleUrls: ['./b-progressbar.component.scss']
 })
 export class BProgressbarComponent {
   bar;

@@ -14,8 +14,7 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 @Component({
     selector: 'room-manager',
     templateUrl: 'room-manager.html',
-    styleUrls: ['room-manager.scss'],
-    standalone: false
+    styleUrls: ['room-manager.scss']
 })
 export class RoomManagerPage {
 

@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { BlinkerResponse } from '../model/response.model';
 import { API } from 'src/app/configs/api.config';
 import { sha256 } from '../functions/func';
-import { NavController } from '@ionic/angular';
+import { NavController } from '@ionic/angular/standalone';
 
 
 @Injectable({

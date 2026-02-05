@@ -1,7 +1,7 @@
 // 需修复 12.27
 
 import { Injectable } from '@angular/core';
-import { Platform } from '@ionic/angular';
+import { Platform } from '@ionic/angular/standalone';
 // import { Zeroconf } from '@awesome-cordova-plugins/zeroconf/ngx';
 // import { BLE } from '@awesome-cordova-plugins/ble/ngx';
 import {

@@ -1,11 +1,14 @@
 import { Component, Output, EventEmitter, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { DataService } from '../../services/data.service';
+import { BDeviceImgComponent } from '../b-device-img/b-device-img.component';
 
 @Component({
+    standalone: true,
+    imports: [CommonModule, BDeviceImgComponent],
     selector: 'deviceblock-list2',
     templateUrl: 'deviceblock-list2.html',
-    styleUrls: ['deviceblock-list2.scss'],
-    standalone: false
+    styleUrls: ['deviceblock-list2.scss']
 })
 export class DeviceblockList2Component {
   selectedDeviceIndex;

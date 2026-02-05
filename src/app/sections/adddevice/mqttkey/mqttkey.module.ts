@@ -21,8 +21,8 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     DirectivesModule,
-    RouterModule.forChild(routes)
-  ],
-  declarations: [MqttkeyPage]
+    RouterModule.forChild(routes),
+    MqttkeyPage
+  ]
 })
 export class MqttkeyPageModule {}

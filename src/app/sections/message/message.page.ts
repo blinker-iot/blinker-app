@@ -10,8 +10,7 @@ import { IonInfiniteScroll } from '@ionic/angular';
 @Component({
     selector: 'app-message',
     templateUrl: './message.page.html',
-    styleUrls: ['./message.page.scss'],
-    standalone: false
+    styleUrls: ['./message.page.scss']
 })
 export class MessagePage implements OnInit {
 

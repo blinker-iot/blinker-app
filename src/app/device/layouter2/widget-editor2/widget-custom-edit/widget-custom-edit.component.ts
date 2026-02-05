@@ -3,8 +3,7 @@ import { Component, Input, OnInit } from '@angular/core';
 @Component({
     selector: 'widget-custom-edit',
     templateUrl: './widget-custom-edit.component.html',
-    styleUrls: ['./widget-custom-edit.component.scss'],
-    standalone: false
+    styleUrls: ['./widget-custom-edit.component.scss']
 })
 export class WidgetCustomEditComponent implements OnInit {
 

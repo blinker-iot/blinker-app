@@ -6,8 +6,7 @@ import { color2Rgba } from '../../functions/func';
 @Component({
     selector: 'line-chart-area',
     templateUrl: './line-chart-area.component.html',
-    styleUrls: ['./line-chart-area.component.scss'],
-    standalone: false
+    styleUrls: ['./line-chart-area.component.scss']
 })
 export class LineChartAreaComponent implements OnInit {
 

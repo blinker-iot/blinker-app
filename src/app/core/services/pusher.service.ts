@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Platform } from '@ionic/angular';
+import { Platform } from '@ionic/angular/standalone';
 import { DataService } from './data.service';
 import { Router } from '@angular/router';
 import { PushNotifications } from '@capacitor/push-notifications';

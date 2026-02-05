@@ -23,10 +23,11 @@ const routes: Routes = [
     IonicModule,
     RouterModule.forChild(routes),
     DirectivesModule,
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    SpeechPage,
+    SpeechButtonComponent
   ],
   providers: [SpeechService],
-  declarations: [SpeechPage, SpeechButtonComponent],
   exports: [SpeechPage, SpeechButtonComponent]
 })
 export class BlinkerSpeechModule { }

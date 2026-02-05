@@ -1,12 +1,17 @@
 import { Component, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { DataService } from '../../services/data.service';
 import { DeviceConfigService } from '../../services/device-config.service';
+import { BDeviceImgComponent } from '../b-device-img/b-device-img.component';
+import { BItemComponent } from '../b-item-list/b-item/b-item';
+import { BItemListComponent } from '../b-item-list/b-item-list.component';
 
 @Component({
     selector: 'b-device-list',
+    standalone: true,
+    imports: [CommonModule, BDeviceImgComponent, BItemComponent, BItemListComponent],
     templateUrl: './b-device-list.component.html',
-    styleUrls: ['./b-device-list.component.scss'],
-    standalone: false
+    styleUrls: ['./b-device-list.component.scss']
 })
 export class BDeviceListComponent {
 

@@ -1,12 +1,15 @@
 import { Component, ViewChild, ElementRef, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { IonicModule } from '@ionic/angular';
 import { timeToMinute, minuteToTime } from 'src/app/core/functions/func';
 import Picker from 'pickerjs';
 
 @Component({
+    standalone: true,
+    imports: [CommonModule, IonicModule],
     selector: 'b-timepicker',
     templateUrl: './b-timepicker.component.html',
-    styleUrls: ['./b-timepicker.component.scss'],
-    standalone: false
+    styleUrls: ['./b-timepicker.component.scss']
 })
 export class BTimepickerComponent {
 

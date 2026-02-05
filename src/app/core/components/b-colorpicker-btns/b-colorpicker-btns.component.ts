@@ -1,10 +1,12 @@
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 @Component({
     selector: 'b-colorpicker-btns',
+    standalone: true,
+    imports: [CommonModule],
     templateUrl: './b-colorpicker-btns.component.html',
-    styleUrls: ['./b-colorpicker-btns.component.scss'],
-    standalone: false
+    styleUrls: ['./b-colorpicker-btns.component.scss']
 })
 export class BColorpickerBtnsComponent implements OnInit {
 

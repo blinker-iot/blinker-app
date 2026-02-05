@@ -1,5 +1,7 @@
 import { Component, ViewChild, ElementRef, HostListener, OnInit, ChangeDetectorRef } from '@angular/core';
-import { Platform, NavController } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
+import { Platform, NavController } from '@ionic/angular/standalone';
+import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
 import { UserService } from 'src/app/core/services/user.service';
 import { ViewService } from './core/services/view.service';
 import { NoticeService } from './core/services/notice.service';
@@ -17,12 +19,15 @@ import { AudioService } from './core/services/audio.service';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { environment } from '../environments/environment';
+import { BTipComponent } from './core/components/b-tip/b-tip.component';
+import { BToastComponent } from './core/components/b-toast/b-toast.component';
 
 @Component({
   selector: 'app-root',
+  standalone: true,
+  imports: [CommonModule, IonApp, IonRouterOutlet, BTipComponent, BToastComponent],
   templateUrl: 'app.component.html',
-  styleUrls: ['./app.component.scss'],
-  standalone: false
+  styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
   isPWA = false;

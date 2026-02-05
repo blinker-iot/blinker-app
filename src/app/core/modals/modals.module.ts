@@ -12,18 +12,16 @@ import { SelectorModalComponent } from './selector-modal/selector-modal.componen
 
 
 @NgModule({
-  declarations: [
+  imports: [
+    CommonModule,
+    PipesModule,
+    ComponentsModule,
+    TranslateModule.forChild(),
     RepeatSelectorModalComponent,
     ActionSelectorModalComponent,
     TimeSelectorModalComponent,
     DeviceSelectorModalComponent,
     SelectorModalComponent
-  ],
-  imports: [
-    CommonModule,
-    PipesModule,
-    ComponentsModule,
-    TranslateModule.forChild()
   ],
   exports: [
     RepeatSelectorModalComponent,

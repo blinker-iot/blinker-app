@@ -1,12 +1,15 @@
 import { Component, Input, ViewChild, ElementRef, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 // import * as F2 from '@antv/f2/dist/f2-all.min';
 import { CloudStorageService } from 'src/app/core/services/cloudStorage.service';
 
 @Component({
     selector: 'b-chart',
+    standalone: true,
+    imports: [CommonModule, FormsModule],
     templateUrl: './b-chart.component.html',
-    styleUrls: ['./b-chart.component.scss'],
-    standalone: false
+    styleUrls: ['./b-chart.component.scss']
 })
 export class BChartComponent implements OnInit {
 

@@ -32,9 +32,7 @@ import { WidgetSelectEditComponent } from './widget-select-edit/widget-select-ed
     IconListPageModule,
     ComponentsModule,
     NewuiModule,
-    EditComponentsModule
-  ],
-  declarations: [
+    EditComponentsModule,
     WidgetEditor,
     BackgroundEditComponent,
     WidgetBaseEditComponent,

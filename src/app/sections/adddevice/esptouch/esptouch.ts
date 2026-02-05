@@ -16,8 +16,7 @@ declare var wifi;
 @Component({
     selector: 'esptouch',
     templateUrl: 'esptouch.html',
-    styleUrls: ['../config.scss'],
-    standalone: false
+    styleUrls: ['../config.scss']
 })
 export class EsptouchPage {
 

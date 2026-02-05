@@ -23,8 +23,8 @@ const routes: Routes = [
     IonicModule,
     ConfigStatePageModule,
     DirectivesModule,
-    RouterModule.forChild(routes)
-  ],
-  declarations: [EsptouchPage]
+    RouterModule.forChild(routes),
+    EsptouchPage
+  ]
 })
 export class EsptouchPageModule {}

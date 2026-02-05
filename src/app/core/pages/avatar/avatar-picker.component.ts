@@ -9,8 +9,7 @@ import { UserService } from '../../services/user.service';
 @Component({
     selector: 'app-avatar-picker',
     templateUrl: './avatar-picker.component.html',
-    styleUrls: ['./avatar-picker.component.scss'],
-    standalone: false
+    styleUrls: ['./avatar-picker.component.scss']
 })
 export class AvatarPickerComponent implements OnInit {
   showCommitment = true;

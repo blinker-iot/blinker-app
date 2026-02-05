@@ -1,10 +1,12 @@
 import { Component, Input, Output, EventEmitter, HostBinding } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 @Component({
+    standalone: true,
+    imports: [CommonModule],
     selector: 'b-item',
     templateUrl: 'b-item.html',
-    styleUrls: ['b-item.scss'],
-    standalone: false
+    styleUrls: ['b-item.scss']
 })
 export class BItemComponent {
 

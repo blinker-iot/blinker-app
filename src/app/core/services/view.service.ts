@@ -5,7 +5,7 @@ import {
   ModalController,
   NavController,
   Platform,
-} from "@ionic/angular";
+} from "@ionic/angular/standalone";
 import { PlatformLocation } from "@angular/common";
 import { NavigationEnd, Router } from "@angular/router";
 import { Subject } from "rxjs";

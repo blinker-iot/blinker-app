@@ -14,8 +14,7 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 @Component({
     selector: 'scene-manager',
     templateUrl: 'scene-manager.html',
-    styleUrls: ['scene-manager.scss'],
-    standalone: false
+    styleUrls: ['scene-manager.scss']
 })
 export class SceneManager {
 

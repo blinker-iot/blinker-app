@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { TranslationService } from '../../services/translation.service';
 import { CONFIG } from 'src/app/configs/app.config';
 
 @Component({
+    standalone: true,
+    imports: [CommonModule],
     selector: 'blinker-lang-selector',
     templateUrl: './lang-selector.component.html',
-    styleUrls: ['./lang-selector.component.scss'],
-    standalone: false
+    styleUrls: ['./lang-selector.component.scss']
 })
 export class LangSelectorComponent implements OnInit {
   supportI18n;

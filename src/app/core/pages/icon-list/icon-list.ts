@@ -8,8 +8,7 @@ import { IconList } from 'src/app/configs/app.config';
 @Component({
     selector: 'icon-list',
     templateUrl: 'icon-list.html',
-    styleUrls: ['icon-list.scss'],
-    standalone: false
+    styleUrls: ['icon-list.scss']
 })
 export class IconListPage {
   @Input() item;

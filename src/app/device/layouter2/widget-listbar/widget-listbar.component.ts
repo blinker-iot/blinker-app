@@ -7,8 +7,7 @@ import { Layouter2Service } from '../layouter2.service';
 @Component({
     selector: 'widget-listbar',
     templateUrl: './widget-listbar.component.html',
-    styleUrls: ['./widget-listbar.component.scss'],
-    standalone: false
+    styleUrls: ['./widget-listbar.component.scss']
 })
 export class WidgetListbarComponent implements OnInit {
 

@@ -8,13 +8,15 @@ import {
   Output,
   EventEmitter
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 
 @Component({
+    standalone: true,
+    imports: [CommonModule],
     selector: 'b-colorpicker-disc',
     templateUrl: './b-colorpicker-disc.component.html',
-    styleUrls: ['./b-colorpicker-disc.component.scss'],
-    standalone: false
+    styleUrls: ['./b-colorpicker-disc.component.scss']
 })
 export class BColorpickerDiscComponent {
 

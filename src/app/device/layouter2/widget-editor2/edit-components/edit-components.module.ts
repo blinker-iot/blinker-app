@@ -10,18 +10,16 @@ import { DoubleNumberInputComponent } from './double-number-input/double-number-
 import { AlignSelectorComponent } from './align-selector/align-selector.component';
 
 @NgModule({
-  declarations: [
+  imports: [
+    CommonModule,
+    FormsModule,
+    NgxColorsModule,
     ColorPickerComponent,
     CheckListComponent,
     NumberInputComponent,
     IconPickerComponent,
     DoubleNumberInputComponent,
     AlignSelectorComponent
-  ],
-  imports: [
-    CommonModule,
-    FormsModule,
-    NgxColorsModule
   ],
   exports: [
     ColorPickerComponent,

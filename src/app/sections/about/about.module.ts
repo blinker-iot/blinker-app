@@ -23,8 +23,8 @@ const routes: Routes = [
     IonicModule,
     DirectivesModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild()
-  ],
-  declarations: [AboutPage]
+    TranslateModule.forChild(),
+    AboutPage
+  ]
 })
 export class AboutModule {}

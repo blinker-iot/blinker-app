@@ -26,7 +26,13 @@ import { BlinkerWidgetDirective } from './widget.directive';
 import { WidgetSelectComponent } from './widget-select/widget-select';
 
 @NgModule({
-  declarations: [
+  imports: [
+    CommonModule,
+    IonicModule,
+    PipesModule,
+    ComponentsModule,
+    FormsModule,
+    ChartsModule,
     ParentDynamicComponent,
     WidgetTextComponent,
     WidgetNumberComponent,
@@ -44,14 +50,6 @@ import { WidgetSelectComponent } from './widget-select/widget-select';
     WidgetCustomComponent,
     BlinkerWidgetDirective,
     WidgetSelectComponent
-  ],
-  imports: [
-    CommonModule,
-    IonicModule,
-    PipesModule,
-    ComponentsModule,
-    FormsModule,
-    ChartsModule,
     // NgxEchartsModule.forRoot({
     //   echarts: () => import('echarts'),
     // }),

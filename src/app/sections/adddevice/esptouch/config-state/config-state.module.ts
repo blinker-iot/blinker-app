@@ -8,9 +8,9 @@ import { ConfigStatePage } from './config-state';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule
+    IonicModule,
+    ConfigStatePage
   ],
-  declarations: [ConfigStatePage],
   exports: [ConfigStatePage]
 })
 export class ConfigStatePageModule { }

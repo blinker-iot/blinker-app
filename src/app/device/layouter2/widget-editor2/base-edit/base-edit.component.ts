@@ -4,8 +4,7 @@ import { Layouter2Service } from '../../layouter2.service';
 @Component({
     selector: 'widget-base-edit',
     templateUrl: './base-edit.component.html',
-    styleUrls: ['./base-edit.component.scss'],
-    standalone: false
+    styleUrls: ['./base-edit.component.scss']
 })
 export class WidgetBaseEditComponent implements OnInit {
 

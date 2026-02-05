@@ -7,7 +7,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { DataService } from '../../../core/services/data.service';
 import { UpdateService } from '../../../core/services/update.service';
 import { MENU_LIST } from '../../../configs/menu.config';
-import { LangSelectorModule } from '../../../core/components/lang-selector/lang-selector.module';
+import { LangSelectorComponent } from '../../../core/components/lang-selector/lang-selector.component';
 
 @Component({
   selector: 'tab-profile',
@@ -20,7 +20,7 @@ import { LangSelectorModule } from '../../../core/components/lang-selector/lang-
     IonicModule,
     RouterModule,
     TranslateModule,
-    LangSelectorModule
+    LangSelectorComponent
   ]
 })
 export class TabProfileComponent {

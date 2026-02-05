@@ -1,7 +1,7 @@
 import { Injectable } from "@angular/core";
 import { DeviceService } from "./device.service";
 import { NoticeService } from "./notice.service";
-import { Platform } from "@ionic/angular";
+import { Platform } from "@ionic/angular/standalone";
 import { Haptics } from "@capacitor/haptics";
 
 @Injectable({

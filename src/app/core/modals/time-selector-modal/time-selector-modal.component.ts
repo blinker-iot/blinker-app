@@ -5,8 +5,7 @@ import Picker from 'pickerjs';
 @Component({
     selector: 'blinker-time-selector-modal',
     templateUrl: './time-selector-modal.component.html',
-    styleUrls: ['./time-selector-modal.component.scss'],
-    standalone: false
+    styleUrls: ['./time-selector-modal.component.scss']
 })
 export class TimeSelectorModalComponent implements OnInit {
   timePicker;

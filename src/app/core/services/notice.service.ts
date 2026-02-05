@@ -3,7 +3,7 @@ import {
   ToastController,
   LoadingController,
   AlertController
-} from '@ionic/angular';
+} from '@ionic/angular/standalone';
 // import { OpenNativeSettings } from '@awesome-cordova-plugins/open-native-settings/ngx';
 import { TipService } from './tip.service';
 

@@ -3,8 +3,7 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 @Component({
     selector: 'align-selector',
     templateUrl: './align-selector.component.html',
-    styleUrls: ['./align-selector.component.scss'],
-    standalone: false
+    styleUrls: ['./align-selector.component.scss']
 })
 export class AlignSelectorComponent implements OnInit {
 

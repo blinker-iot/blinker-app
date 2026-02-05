@@ -1,15 +1,18 @@
 import { Component, Input, ViewChild, ElementRef, ChangeDetectorRef, Renderer2 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Layouter2Widget } from '../config';
 import { ModalController } from '@ionic/angular';
 import { DebugComponent } from 'src/app/debug/debug.component';
 import { DebugService } from 'src/app/debug/debug.service';
 import { DeviceService } from 'src/app/core/services/device.service';
+import { HtmlPipe } from 'src/app/core/pipes/html.pipe';
 
 @Component({
     selector: 'widget-debug',
     templateUrl: 'widget-debug.html',
     styleUrls: ['widget-debug.scss'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule, HtmlPipe]
 })
 export class WidgetDebugComponent implements Layouter2Widget {
   debugServiceSubject;

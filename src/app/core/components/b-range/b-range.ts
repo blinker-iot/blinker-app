@@ -7,12 +7,14 @@ import {
   Output,
   EventEmitter
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 @Component({
+    standalone: true,
+    imports: [CommonModule],
     selector: 'b-range',
     templateUrl: 'b-range.html',
-    styleUrls: ['b-range.scss'],
-    standalone: false
+    styleUrls: ['b-range.scss']
 })
 export class BRangeComponent {
 

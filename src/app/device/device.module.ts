@@ -17,7 +17,6 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  declarations: [DevicePage],
   imports: [
     CommonModule,
     FormsModule,
@@ -26,7 +25,8 @@ const routes: Routes = [
     Layouter2Module,
     Layouter2GuideModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    DevicePage
   ],
 })
 export class BlinkerDeviceModule { }

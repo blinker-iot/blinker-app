@@ -8,9 +8,9 @@ import { LineChartAreaComponent } from './line-chart-area/line-chart-area.compon
 // echarts.use([SVGRenderer]);
 
 @NgModule({
-  declarations: [LineChartAreaComponent],
   imports: [
     CommonModule,
+    LineChartAreaComponent
     // NgxEchartsModule.forRoot({
     //   echarts: () => import('echarts'),
     // })

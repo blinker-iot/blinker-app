@@ -5,11 +5,11 @@ import { IonicModule } from '@ionic/angular';
 import { DirectivesModule } from '../../directives/directives.module';
 
 @NgModule({
-  declarations: [AvatarPickerComponent],
   imports: [
     CommonModule,
     IonicModule,
-    DirectivesModule
+    DirectivesModule,
+    AvatarPickerComponent
   ],
   exports: [
     AvatarPickerComponent

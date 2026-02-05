@@ -17,8 +17,7 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 @Component({
     selector: 'scene-edit',
     templateUrl: 'scene-edit.html',
-    styleUrls: ['scene-edit.scss'],
-    standalone: false
+    styleUrls: ['scene-edit.scss']
 })
 export class SceneEditor {
 

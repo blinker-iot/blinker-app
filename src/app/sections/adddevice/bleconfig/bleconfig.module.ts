@@ -20,8 +20,8 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     DirectivesModule,
-    RouterModule.forChild(routes)
-  ],
-  declarations: [BleconfigComponent]
+    RouterModule.forChild(routes),
+    BleconfigComponent
+  ]
 })
 export class BleconfigModule {}

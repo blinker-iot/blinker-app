@@ -14,10 +14,8 @@ import { DirectivesModule } from '../../directives/directives.module';
     IonicModule,
     PipesModule,
     ComponentsModule,
-    DirectivesModule
-  ],
-  declarations: [
-    DeviceIconPage,
+    DirectivesModule,
+    DeviceIconPage
   ]
 })
 export class DeviceIconPageModule { }

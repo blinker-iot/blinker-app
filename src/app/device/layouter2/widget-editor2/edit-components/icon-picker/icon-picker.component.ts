@@ -5,8 +5,7 @@ import { IconListPage } from 'src/app/core/pages/icon-list/icon-list';
 @Component({
     selector: 'icon-picker',
     templateUrl: './icon-picker.component.html',
-    styleUrls: ['./icon-picker.component.scss'],
-    standalone: false
+    styleUrls: ['./icon-picker.component.scss']
 })
 export class IconPickerComponent implements OnInit {
 

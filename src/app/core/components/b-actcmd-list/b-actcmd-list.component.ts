@@ -1,11 +1,15 @@
 import { Component, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { DeviceConfigService } from 'src/app/core/services/device-config.service';
+import { Act2TextPipe } from '../../pipes/actcmd2text';
+import { widgetButtonListComponent } from 'src/app/device/layouter2/widget-buttonlist/widget-buttonlist';
 
 @Component({
     selector: 'b-actcmd-list',
+    standalone: true,
+    imports: [CommonModule, Act2TextPipe, widgetButtonListComponent],
     templateUrl: './b-actcmd-list.component.html',
-    styleUrls: ['./b-actcmd-list.component.scss'],
-    standalone: false
+    styleUrls: ['./b-actcmd-list.component.scss']
 })
 export class BActcmdListComponent {
 

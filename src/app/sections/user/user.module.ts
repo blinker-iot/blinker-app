@@ -25,8 +25,8 @@ const routes: Routes = [
     AvatarPickerModule,
     DirectivesModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild()
-  ],
-  declarations: [UserPage]
+    TranslateModule.forChild(),
+    UserPage
+  ]
 })
 export class BlinkerUserModule { }

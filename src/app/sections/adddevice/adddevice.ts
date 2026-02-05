@@ -7,8 +7,7 @@ import { DataService } from 'src/app/core/services/data.service';
 @Component({
     selector: 'page-adddevice',
     templateUrl: 'adddevice.html',
-    styleUrls: ['adddevice.scss'],
-    standalone: false
+    styleUrls: ['adddevice.scss']
 })
 export class AddDevicePage {
   searchQuery: string = '';

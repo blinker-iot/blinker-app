@@ -20,8 +20,7 @@ import { DeviceConfig } from './device.interface';
 @Component({
   selector: 'app-device',
   templateUrl: './device.page.html',
-  styleUrls: ['./device.page.scss'],
-  standalone: false
+  styleUrls: ['./device.page.scss']
 })
 export class DevicePage implements OnInit {
 

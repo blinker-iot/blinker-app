@@ -1,13 +1,15 @@
 import { Component, Input, SimpleChanges } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { ImageService } from '../../services/image.service';
 import { ImageList } from 'src/app/configs/app.config';
 import { DataService } from '../../services/data.service';
 
 @Component({
+    standalone: true,
+    imports: [CommonModule],
     selector: 'b-device-img',
     templateUrl: './b-device-img.component.html',
-    styleUrls: ['./b-device-img.component.scss'],
-    standalone: false
+    styleUrls: ['./b-device-img.component.scss']
 })
 export class BDeviceImgComponent {
 

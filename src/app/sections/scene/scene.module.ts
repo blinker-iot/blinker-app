@@ -31,9 +31,7 @@ const routes: Routes = [
     BActcmdListModule,
     DirectivesModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild()
-  ],
-  declarations: [
+    TranslateModule.forChild(),
     SceneManager,
     SceneEditor,
     SceneEditorAddact

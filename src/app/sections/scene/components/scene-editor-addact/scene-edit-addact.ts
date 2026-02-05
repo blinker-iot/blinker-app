@@ -12,8 +12,7 @@ import { SelectorModalComponent } from 'src/app/core/modals/selector-modal/selec
 @Component({
     selector: 'scene-edit-addact',
     templateUrl: 'scene-edit-addact.html',
-    styleUrls: ['scene-edit-addact.scss'],
-    standalone: false
+    styleUrls: ['scene-edit-addact.scss']
 })
 export class SceneEditorAddact {
 

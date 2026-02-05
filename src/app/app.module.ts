@@ -47,7 +47,6 @@ export class MyHammerConfig extends HammerGestureConfig {
 }
 
 @NgModule({
-  declarations: [AppComponent],
   bootstrap: [AppComponent], imports: [
     BrowserModule,
     IonicModule.forRoot({
@@ -62,6 +61,7 @@ export class MyHammerConfig extends HammerGestureConfig {
     GridsterModule,
     ComponentsModule,
     HammerModule,
+    AppComponent,
     // --blinker module--
     BlinkerUserModule,
     BlinkerDeviceModule,

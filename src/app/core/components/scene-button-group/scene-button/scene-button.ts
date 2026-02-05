@@ -1,12 +1,15 @@
 import { Component, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { IonicModule } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { DataService } from '../../../services/data.service';
 
 @Component({
+    standalone: true,
+    imports: [CommonModule, IonicModule],
     selector: 'scene-button',
     templateUrl: 'scene-button.html',
-    styleUrls: ['scene-button.scss'],
-    standalone: false
+    styleUrls: ['scene-button.scss']
 })
 export class SceneButtonComponent {
 

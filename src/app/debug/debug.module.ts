@@ -5,13 +5,11 @@ import { DebugComponent } from './debug.component';
 import { PipesModule } from '../core/pipes/pipes.module';
 
 @NgModule({
-  declarations: [
-    DebugComponent
-  ],
   imports: [
     PipesModule,
     CommonModule,
     FormsModule,
+    DebugComponent
   ],
   exports: [
     DebugComponent

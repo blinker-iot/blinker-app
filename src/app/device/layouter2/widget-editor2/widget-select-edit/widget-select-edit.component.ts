@@ -3,8 +3,7 @@ import { Component, Input, OnInit } from '@angular/core';
 @Component({
     selector: 'widget-select-edit',
     templateUrl: './widget-select-edit.component.html',
-    styleUrls: ['./widget-select-edit.component.scss'],
-    standalone: false
+    styleUrls: ['./widget-select-edit.component.scss']
 })
 export class WidgetSelectEditComponent implements OnInit {
 

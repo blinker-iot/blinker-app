@@ -11,9 +11,9 @@ import { DirectivesModule } from '../../directives/directives.module';
   imports: [
     CommonModule,
     IonicModule,
-    DirectivesModule
+    DirectivesModule,
+    IconListPage
   ],
-  declarations: [IconListPage],
   exports: [IconListPage]
 })
 export class IconListPageModule { }

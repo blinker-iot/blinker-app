@@ -9,14 +9,14 @@ import * as JSONEditor from 'jsoneditor';
 import { Layouter2Service } from '../layouter2.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NewuiModule } from '../newui/newui.module';
-import { EditComponentsModule } from '../widget-editor2/edit-components/edit-components.module';
+import { BottomBtnComponent } from '../newui/bottom-btn/bottom-btn.component';
+import { ColorPickerComponent } from '../widget-editor2/edit-components/color-picker/color-picker.component';
 
 @Component({
     selector: 'config-editor',
     templateUrl: './config-editor.component.html',
     styleUrls: ['./config-editor.component.scss'],
-    imports: [CommonModule, FormsModule, NewuiModule, EditComponentsModule]
+    imports: [CommonModule, FormsModule, BottomBtnComponent, ColorPickerComponent]
 })
 export class ConfigEditorComponent {
 

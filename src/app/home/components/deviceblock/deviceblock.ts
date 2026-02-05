@@ -9,14 +9,13 @@ import { UserService } from 'src/app/core/services/user.service';
 import { Router } from '@angular/router';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { AudioService } from 'src/app/core/services/audio.service';
-import { ComponentsModule } from 'src/app/core/components/components.module';
+import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 
 @Component({
     selector: 'deviceblock',
     templateUrl: 'deviceblock.html',
     styleUrls: ['deviceblock.scss'],
-    standalone: true,
-    imports: [CommonModule, IonicModule, ComponentsModule]
+    imports: [CommonModule, IonicModule, BDeviceImgComponent]
 })
 export class Deviceblock {
 
