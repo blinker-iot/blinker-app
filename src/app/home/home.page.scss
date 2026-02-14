@@ -3,9 +3,19 @@ ion-toolbar {
     --ion-color-base: transparent !important;
 }
 
-ion-menu-button {
-    position: absolute;
-    height: 48px;
+ion-tab-bar {
+    height: 60px;
+
+    ion-tab-button{
+        i{
+            font-size: 24px;
+        }
+    }
+
+    ion-label{
+        margin: 5px 0 0 0;
+        font-size: 12px;
+    }
 }
 
 .nodevice {
