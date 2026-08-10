@@ -51,7 +51,7 @@ export class LoginPage {
 
   ngOnInit(): void {
     if (localStorage.getItem('showFirstModal') == null) this.openFirstModal()
-    this.viewService.setDarkStatusBar();
+    this.viewService.setLightStatusBar();
   }
 
   ngOnDestroy(): void {

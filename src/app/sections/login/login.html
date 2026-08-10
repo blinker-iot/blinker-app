@@ -1,58 +1,67 @@
-<ion-header whitebg>
+<ion-header>
   <ion-toolbar>
     <blinker-lang-selector></blinker-lang-selector>
   </ion-toolbar>
 </ion-header>
 <ion-content>
-  <div class="logo-box">
-    <img class="logo" src="{{LOGO}}">
-  </div>
-  <form class="form-box" (ngSubmit)="login()" #formBox="ngForm">
-    <div class="input-box">
-      <div class="item-img">
-        <i class="fal fa-envelope"></i>
+  <div class="login-container">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <div class="logo-box">
+      <img class="logo" src="{{LOGO}}">
+      <h2 class="welcome-title">{{'ACCOUNT.LOGIN' | translate}}</h2>
+    </div>
+
+    <form class="form-box" (ngSubmit)="login()" #formBox="ngForm">
+      <div class="input-box">
+        <div class="item-img">
+          <i class="fal fa-envelope"></i>
+        </div>
+        <input type="email" [(ngModel)]="email" name="email" placeholder="{{'ACCOUNT.EMAIL' | translate}}"
+          (focus)="onFocus()" (blur)="onBlur()">
       </div>
-      <input type="email" [(ngModel)]="email" name="email" placeholder="{{'ACCOUNT.EMAIL' | translate}}"
-        (focus)="onFocus()" (blur)="onBlur()">
-    </div>
-    <div class="input-box">
-      <div class="item-img">
-        <i class="fal fa-shield-check"></i>
+      <div class="input-box">
+        <div class="item-img">
+          <i class="fal fa-shield-check"></i>
+        </div>
+        <input type="text" [(ngModel)]="code" name="code" placeholder="{{'ACCOUNT.VERIFY_CODE' | translate}}"
+          maxlength="6" (focus)="onFocus()" (blur)="onBlur()">
+        <button type="button" class="send-code-btn" [disabled]="countdown > 0" (click)="sendCode($event)">
+          <span *ngIf="countdown === 0">{{'ACCOUNT.SEND_CODE' | translate}}</span>
+          <span *ngIf="countdown > 0">{{countdown}}s</span>
+        </button>
       </div>
-      <input type="text" [(ngModel)]="code" name="code" placeholder="{{'ACCOUNT.VERIFY_CODE' | translate}}"
-        maxlength="6" (focus)="onFocus()" (blur)="onBlur()">
-      <button type="button" class="send-code-btn" [disabled]="countdown > 0" (click)="sendCode($event)">
-        <span *ngIf="countdown === 0">{{'ACCOUNT.SEND_CODE' | translate}}</span>
-        <span *ngIf="countdown > 0">{{countdown}}s</span>
-      </button>
+      <div class="login-tip">
+        {{'ACCOUNT.LOGIN_TIP' | translate}}
+      </div>
+      <button type="submit" class="login-btn">{{'ACCOUNT.LOGIN' | translate}}</button>
+    </form>
+
+    <div class="social-login">
+      <div class="social-divider">
+        <span>{{'ACCOUNT.OR_LOGIN_WITH' | translate}}</span>
+      </div>
+      <div class="social-buttons">
+        <button type="button" class="social-btn github-btn" (click)="loginWithGithub()">
+          <i class="fa-brands fa-github"></i>
+        </button>
+        <button type="button" class="social-btn wechat-btn" (click)="loginWithWechat()">
+          <i class="fa-brands fa-weixin"></i>
+        </button>
+      </div>
     </div>
-    <div class="login-tip">
-      {{'ACCOUNT.LOGIN_TIP' | translate}}
-    </div>
-    <button type="submit" fullbtn>{{'ACCOUNT.LOGIN' | translate}}</button>
-  </form>
-  <div class="social-login">
-    <div class="social-divider">
-      <span>{{'ACCOUNT.OR_LOGIN_WITH' | translate}}</span>
-    </div>
-    <div class="social-buttons">
-      <button type="button" class="social-btn github-btn" (click)="loginWithGithub()">
-        <i class="fa-brands fa-github"></i>
-      </button>
-      <button type="button" class="social-btn wechat-btn" (click)="loginWithWechat()">
-        <i class="fa-brands fa-weixin"></i>
-      </button>
-    </div>
-  </div>
-  <div class="other">
-    <div>
-      <span link-text (click)="openUrl(USER_AGREEMENT,'用户协议')">
-        {{'ACCOUNT.USER_AGREEMENT' | translate}}
-      </span>
-      {{'ACCOUNT.AND' | translate}}
-      <span link-text (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
-        {{'ACCOUNT.PRIVACY_POLICY' | translate}}
-      </span>
+
+    <div class="other">
+      <div>
+        <span class="link-text" (click)="openUrl(USER_AGREEMENT,'用户协议')">
+          {{'ACCOUNT.USER_AGREEMENT' | translate}}
+        </span>
+        {{'ACCOUNT.AND' | translate}}
+        <span class="link-text" (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
+          {{'ACCOUNT.PRIVACY_POLICY' | translate}}
+        </span>
+      </div>
     </div>
   </div>
 </ion-content>

@@ -1,51 +1,122 @@
-// Styles from account.scss
-ion-content {
-    --background: #fff;
+// ============================================
+// Dark Theme Login Page
+// Inspired by modern smart home app design
+// ============================================
+
+$bg-primary: #0b0b1e;
+$bg-secondary: #12122b;
+$bg-card: rgba(255, 255, 255, 0.04);
+$bg-input: rgba(255, 255, 255, 0.06);
+$border-color: rgba(255, 255, 255, 0.08);
+$accent: #7c5bf5;
+$accent-light: #a78bfa;
+$accent-glow: rgba(124, 91, 245, 0.35);
+$text-primary: #f0f0f5;
+$text-secondary: rgba(255, 255, 255, 0.55);
+$text-muted: rgba(255, 255, 255, 0.35);
+
+// Host - unified background for entire page (header + content)
+:host {
+
+  ion-header {
+    background: #{$bg-primary};
+
+    &::after {
+      display: none; // remove bottom border shadow
+    }
+
+    ion-toolbar {
+      --background: transparent;
+      --border-width: 0;
+      --color: #{$text-primary};
+    }
+  }
+
+  ion-content {
+    --background: #{$bg-primary};
 
     &::part(scroll) {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 100%;
     }
-}
-
-// ion-back-button {
-//     --color: #000 !important;
-//     padding-right: 20px;
-// }
-
-input {
-    color: #333;
-}
-
-i {
-    color: #666;
-}
-
-.other {
-    width: 100%;
-    text-align: center;
-    z-index: 1;
-    margin-top: 2rem;
-    padding-bottom: 15px;
-    font-size: 13px;
-    color: #333;
-}
-
-[disabled] {
-    opacity: 0.5;
-}
-
-.logo-box {
-  text-align: center;
-  .logo {
-    margin-top: 15px;
-    margin-bottom: 30px;
-    max-width: 200px;
   }
 }
 
+// Background glow orbs
+.login-container {
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 20px;
+}
+
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+
+  &.orb-1 {
+    width: 260px;
+    height: 260px;
+    background: rgba(124, 91, 245, 0.15);
+    top: -60px;
+    right: -80px;
+  }
+
+  &.orb-2 {
+    width: 200px;
+    height: 200px;
+    background: rgba(59, 130, 246, 0.1);
+    bottom: 40px;
+    left: -60px;
+  }
+}
+
+// Inputs global
+input {
+  color: $text-primary;
+  caret-color: $accent;
+
+  &::placeholder {
+    color: $text-muted;
+  }
+}
+
+i {
+  color: $text-secondary;
+}
+
+[disabled] {
+  opacity: 0.4;
+}
+
+// Logo section
+.logo-box {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+
+  .logo {
+    margin-top: 10px;
+    margin-bottom: 12px;
+    max-width: 160px;
+    filter: drop-shadow(0 0 20px rgba(124, 91, 245, 0.3));
+  }
+
+  .welcome-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: $text-primary;
+    margin: 0 0 28px;
+    letter-spacing: 0.5px;
+  }
+}
+
+// Form
 .form-box {
   display: flex;
   align-items: center;
@@ -53,6 +124,8 @@ i {
   justify-content: center;
   width: 100%;
   padding: 0 1.5rem;
+  position: relative;
+  z-index: 1;
 
   .input-box {
     width: 100%;
@@ -60,68 +133,104 @@ i {
     align-items: center;
     flex-direction: row;
     justify-content: flex-start;
-    padding: 5px 12px;
-    background: #eee;
-    border-radius: 8px;
-    margin-bottom: 12px;
+    padding: 5px 14px;
+    background: $bg-input;
+    border: 1px solid $border-color;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+
+    &:focus-within {
+      border-color: rgba(124, 91, 245, 0.5);
+      box-shadow: 0 0 0 3px rgba(124, 91, 245, 0.1);
+    }
+
     .item-img {
       display: flex;
       align-items: center;
       justify-content: center;
       width: 22px;
-      font-size: 22px;
-      margin-right: 10px;
+      font-size: 20px;
+      margin-right: 12px;
+      color: $accent-light;
     }
 
     input {
       flex-grow: 1;
       height: 50px;
       line-height: 22px;
+      font-size: 15px;
       background: transparent;
       border: none;
       outline: none;
     }
 
     .send-code-btn {
-      padding: 8px 16px;
-      font-size: 14px;
-      color: var(--ion-color-primary);
-      background: transparent;
-      border: 1px solid var(--ion-color-primary);
-      border-radius: 4px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: $accent-light;
+      background: rgba(124, 91, 245, 0.12);
+      border: 1px solid rgba(124, 91, 245, 0.3);
+      border-radius: 8px;
       white-space: nowrap;
-      min-width: 90px;
+      min-width: 88px;
+      transition: all 0.25s;
+
+      &:active {
+        background: rgba(124, 91, 245, 0.2);
+      }
 
       &:disabled {
-        color: #999;
-        border-color: #ccc;
+        color: $text-muted;
+        border-color: $border-color;
+        background: transparent;
       }
     }
-
-    .iconfont {
-      position: absolute;
-      right: 20px;
-      font-size: 20px;
-      padding: 0 10px;
-    }
-  }
-
-  [fullbtn] {
-    margin-top: 40px;
   }
 }
 
+// Login button
+.login-btn {
+  outline: medium;
+  width: 100%;
+  height: 48px;
+  margin-top: 32px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, $accent, #6941e0);
+  border-radius: 14px;
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px $accent-glow;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 12px $accent-glow;
+  }
+}
+
+// Tip text
 .login-tip {
-  padding: 0 30px;
-  margin-top: 2rem;
+  padding: 0 20px;
+  margin-top: 1.5rem;
   text-align: center;
-  font-size: 13px;
-  color: #999;
+  font-size: 12px;
+  color: $text-muted;
+  line-height: 1.6;
 }
 
+// Social login
 .social-login {
-  margin-top: 2rem;
+  margin-top: 2.5rem;
   padding: 0 1.5rem;
+  position: relative;
+  z-index: 1;
 
   .social-divider {
     display: flex;
@@ -133,38 +242,79 @@ i {
     &::after {
       content: '';
       flex: 1;
-      border-bottom: 1px solid #c8c7cc;
+      border-bottom: 1px solid $border-color;
     }
 
     span {
       padding: 0 1rem;
-      font-size: 13px;
-      color: #999;
+      font-size: 12px;
+      color: $text-muted;
+      white-space: nowrap;
     }
   }
 
   .social-buttons {
     display: flex;
     justify-content: center;
-    gap: 2rem;
+    gap: 1.5rem;
 
     .social-btn {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      border: 1px solid #666;
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      border: 1px solid $border-color;
+      background: $bg-card;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
-      color: #fff;
+      font-size: 22px;
+      color: $text-primary;
       cursor: pointer;
-      transition: transform 0.2s, opacity 0.2s;
+      transition: all 0.25s;
+      backdrop-filter: blur(10px);
 
       &:active {
-        transform: scale(0.95);
-        opacity: 0.8;
+        transform: scale(0.94);
+        border-color: rgba(124, 91, 245, 0.4);
+        background: rgba(124, 91, 245, 0.1);
       }
+
+      &.github-btn {
+        &:active {
+          color: #fff;
+        }
+      }
+
+      &.wechat-btn {
+        &:active {
+          color: #07c160;
+          border-color: rgba(7, 193, 96, 0.3);
+          background: rgba(7, 193, 96, 0.1);
+        }
+      }
+    }
+  }
+}
+
+// Footer links
+.other {
+  width: 100%;
+  text-align: center;
+  z-index: 1;
+  position: relative;
+  margin-top: 2rem;
+  padding-bottom: 20px;
+  font-size: 12px;
+  color: $text-muted;
+
+  .link-text {
+    color: $text-secondary;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+
+    &:active {
+      color: $accent-light;
     }
   }
 }
