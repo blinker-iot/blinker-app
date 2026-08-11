@@ -7,10 +7,12 @@ import {
   ViewChild,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
+  DestroyRef,
   AfterViewInit,
   NgZone,
   OnDestroy,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { UserService } from 'src/app/core/services/user.service';
 import { DataService } from 'src/app/core/services/data.service';
@@ -18,21 +20,29 @@ import PullToRefresh from 'pulltorefreshjs';
 import { DeviceblockListComponent } from '../deviceblock-list/deviceblock-list';
 import { DeviceService } from 'src/app/core/services/device.service';
 
+interface RoomSlide {
+  roomId: number;
+  role: 'current' | 'incoming';
+  direction: -1 | 0 | 1;
+}
+
 @Component({
   selector: 'deviceblock-zone',
   templateUrl: 'deviceblock-zone.html',
   styleUrls: ['deviceblock-zone.scss'],
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DeviceblockListComponent],
 })
 export class DeviceblockZone implements AfterViewInit, OnDestroy {
   refresherEnabled = true;
   swipeEnabled = true;
-  incomingRoomId: number | null = null;
-  incomingDirection: -1 | 1 = 1;
+  slides: RoomSlide[] = [this.createCurrentSlide(-1)];
 
   private scrollElement?: HTMLElement;
+  private currentSlideElement?: HTMLElement;
+  private incomingSlideElement?: HTMLElement;
+  private incomingDirection: -1 | 1 = 1;
   private pointerStart?: {
     id: number;
     x: number;
@@ -56,6 +66,7 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   set roomid(roomid: number) {
     if (!this.viewInitialized || roomid === this._roomid) {
       this._roomid = roomid;
+      this.slides = [this.createCurrentSlide(roomid)];
       return;
     }
     if (this.isAnimating && roomid === this.transitionRoomId) return;
@@ -72,36 +83,29 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
     return this.dataService.room?.list || [];
   }
 
-  get selectedRoomName() {
-    return this.getRoomName(this.roomid);
-  }
-
-  get incomingRoomName() {
-    if (this.incomingRoomId === null) return undefined;
-    return this.getRoomName(this.incomingRoomId);
-  }
-
   @Output() roomidChange: EventEmitter<number> = new EventEmitter();
 
   @ViewChild('refreshZone', { read: ElementRef, static: false })
   refreshZone: ElementRef;
   @ViewChild('deviceZone', { read: ElementRef, static: false })
   deviceZone: ElementRef<HTMLElement>;
-  @ViewChild('currentSlide', { read: ElementRef, static: false })
-  currentSlide: ElementRef<HTMLElement>;
-  @ViewChild('incomingSlide', { read: ElementRef, static: false })
-  incomingSlide?: ElementRef<HTMLElement>;
 
   constructor(
     private deviceService: DeviceService,
     public userService: UserService,
     private dataService: DataService,
     private cd: ChangeDetectorRef,
-    private ngZone: NgZone
-  ) {}
+    private ngZone: NgZone,
+    destroyRef: DestroyRef
+  ) {
+    this.dataService.userDataLoader
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe(() => this.cd.markForCheck());
+  }
 
   async ngAfterViewInit() {
     this.viewInitialized = true;
+    this.syncSlideElements();
     this.listenForRoomSwipe();
 
     const ionContent = this.deviceZone.nativeElement.closest('ion-content') as
@@ -247,7 +251,7 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
     event.stopPropagation();
   };
 
-  private getRoomName(roomId: number) {
+  getRoomName(roomId: number) {
     if (roomId < 0) return undefined;
     return this.roomDataList[roomId];
   }
@@ -261,34 +265,40 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   }
 
   private prepareIncomingRoom(roomId: number, direction: -1 | 1) {
+    const incomingSlide = this.getIncomingSlide();
     if (
-      this.incomingRoomId === roomId &&
-      this.incomingDirection === direction
+      incomingSlide?.roomId === roomId &&
+      incomingSlide.direction === direction
     ) {
       return;
     }
 
     this.ngZone.run(() => {
-      this.incomingRoomId = roomId;
       this.incomingDirection = direction;
+      this.slides = [
+        this.createCurrentSlide(this._roomid),
+        { roomId, role: 'incoming', direction },
+      ];
       this.cd.detectChanges();
+      this.syncSlideElements();
     });
   }
 
   private clearIncomingRoom() {
-    if (this.incomingRoomId === null) return;
+    if (!this.getIncomingSlide()) return;
     this.ngZone.run(() => {
-      this.incomingRoomId = null;
+      this.slides = [this.createCurrentSlide(this._roomid)];
       this.cd.detectChanges();
+      this.syncSlideElements();
     });
   }
 
   private positionSlides(deltaX: number, direction: -1 | 1) {
-    const current = this.currentSlide?.nativeElement;
+    const current = this.currentSlideElement;
     if (!current) return;
 
     current.style.transform = `translate3d(${deltaX}px, 0, 0)`;
-    const incoming = this.incomingSlide?.nativeElement;
+    const incoming = this.incomingSlideElement;
     if (!incoming) return;
 
     const incomingX =
@@ -297,7 +307,7 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   }
 
   private animateSlides(direction: -1 | 1, targetRoomId: number | null) {
-    const current = this.currentSlide?.nativeElement;
+    const current = this.currentSlideElement;
     if (!current) return;
 
     this.isAnimating = true;
@@ -305,8 +315,8 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
     const duration = this.prefersReducedMotion() ? 1 : 260;
     const transition = `transform ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)`;
     current.style.transition = transition;
-    if (this.incomingSlide) {
-      this.incomingSlide.nativeElement.style.transition = transition;
+    if (this.incomingSlideElement) {
+      this.incomingSlideElement.style.transition = transition;
     }
     void current.offsetWidth;
 
@@ -320,7 +330,8 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
 
   private waitForSlideTransition(duration: number) {
     this.clearTransitionWait();
-    const current = this.currentSlide.nativeElement;
+    const current = this.currentSlideElement;
+    if (!current) return;
     const finish = () => this.finishSlideTransition();
     this.transitionEndHandler = (event: TransitionEvent) => {
       if (event.target === current && event.propertyName === 'transform') {
@@ -335,36 +346,41 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
     if (!this.isAnimating) return;
     const targetRoomId = this.transitionRoomId;
     this.clearTransitionWait();
-    this.clearSlideStyles();
     this.isAnimating = false;
     this.transitionRoomId = null;
 
     this.ngZone.run(() => {
       if (targetRoomId !== null) this._roomid = targetRoomId;
-      this.incomingRoomId = null;
+      this.slides = [this.createCurrentSlide(this._roomid)];
       this.cd.detectChanges();
+      this.syncSlideElements();
+      this.clearSlideStyles();
       if (targetRoomId !== null) this.roomidChange.emit(targetRoomId);
     });
   }
 
   private startProgrammaticRoomChange(roomId: number) {
     const direction: -1 | 1 = roomId > this._roomid ? 1 : -1;
-    this.incomingRoomId = roomId;
     this.incomingDirection = direction;
+    this.slides = [
+      this.createCurrentSlide(this._roomid),
+      { roomId, role: 'incoming', direction },
+    ];
     this.isAnimating = true;
     this.transitionRoomId = roomId;
 
     this.animationFrame = window.requestAnimationFrame(() => {
       this.animationFrame = undefined;
       if (this.destroyed || this.transitionRoomId !== roomId) return;
-      if (!this.incomingSlide) {
+      this.syncSlideElements();
+      if (!this.incomingSlideElement) {
         this.finishSlideTransition();
         return;
       }
 
       this.clearSlideStyles();
       this.positionSlides(0, direction);
-      void this.currentSlide.nativeElement.offsetWidth;
+      void this.currentSlideElement?.offsetWidth;
       this.animationFrame = window.requestAnimationFrame(() => {
         this.animationFrame = undefined;
         if (this.destroyed || this.transitionRoomId !== roomId) return;
@@ -382,16 +398,13 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
     this.pointerStart = undefined;
     this.isAnimating = false;
     this.transitionRoomId = null;
-    this.incomingRoomId = null;
+    this.slides = [this.createCurrentSlide(this._roomid)];
     this.refresherEnabled = true;
     this.clearSlideStyles();
   }
 
   private clearSlideStyles() {
-    const slides = [
-      this.currentSlide?.nativeElement,
-      this.incomingSlide?.nativeElement,
-    ];
+    const slides = [this.currentSlideElement, this.incomingSlideElement];
     for (const slide of slides) {
       if (!slide) continue;
       slide.style.transition = '';
@@ -404,8 +417,8 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
       window.clearTimeout(this.transitionTimer);
       this.transitionTimer = undefined;
     }
-    if (this.transitionEndHandler && this.currentSlide?.nativeElement) {
-      this.currentSlide.nativeElement.removeEventListener(
+    if (this.transitionEndHandler && this.currentSlideElement) {
+      this.currentSlideElement.removeEventListener(
         'transitionend',
         this.transitionEndHandler
       );
@@ -415,6 +428,24 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
 
   private prefersReducedMotion() {
     return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  private createCurrentSlide(roomId: number): RoomSlide {
+    return { roomId, role: 'current', direction: 0 };
+  }
+
+  private getIncomingSlide() {
+    return this.slides.find((slide) => slide.role === 'incoming');
+  }
+
+  private syncSlideElements() {
+    const zone = this.deviceZone?.nativeElement;
+    this.currentSlideElement = zone?.querySelector<HTMLElement>(
+      '.room-slide-current'
+    );
+    this.incomingSlideElement = zone?.querySelector<HTMLElement>(
+      '.room-slide-incoming'
+    );
   }
 
   initRefresh() {

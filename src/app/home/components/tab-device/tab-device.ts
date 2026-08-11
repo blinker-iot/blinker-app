@@ -2,11 +2,13 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   EventEmitter,
   Input,
   OnInit,
   Output,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
@@ -20,7 +22,7 @@ import { DeviceService } from '../../../core/services/device.service';
   templateUrl: 'tab-device.html',
   styleUrls: ['tab-device.scss'],
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     IonicModule,
@@ -35,7 +37,6 @@ export class TabDeviceComponent implements OnInit {
   @Input()
   set roomid(roomid: number) {
     this._roomid = roomid;
-    this.cd.detectChanges();
   }
 
   get roomid() {
@@ -52,18 +53,22 @@ export class TabDeviceComponent implements OnInit {
     private dataService: DataService,
     private deviceService: DeviceService,
     private cd: ChangeDetectorRef,
+    private destroyRef: DestroyRef,
   ) {}
 
   ngOnInit() {
-    this.dataService.userDataLoader.subscribe((state) => {
-      if (state) this.deviceService.queryDevices();
-    });
+    this.dataService.userDataLoader
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((state) => {
+        if (state) this.deviceService.queryDevices();
+        this.cd.markForCheck();
+      });
   }
 
   onRoomidChange(value: number) {
     this._roomid = value;
     this.roomidChange.emit(value);
-    this.cd.detectChanges();
+    this.cd.markForCheck();
   }
 
 }

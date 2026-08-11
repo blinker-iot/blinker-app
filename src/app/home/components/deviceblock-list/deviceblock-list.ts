@@ -1,7 +1,9 @@
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
+  DestroyRef,
   ElementRef,
   EventEmitter,
   Input,
@@ -9,6 +11,7 @@ import {
   Output,
   ViewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import Sortable from 'sortablejs';
 
@@ -22,7 +25,7 @@ import { getDeviceRoute } from './device-navigation';
   templateUrl: 'deviceblock-list.html',
   styleUrls: ['deviceblock-list.scss'],
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [Deviceblock],
 })
 export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
@@ -90,8 +93,14 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
   constructor(
     private userService: UserService,
     private router: Router,
-    private dataService: DataService
-  ) {}
+    private dataService: DataService,
+    private cd: ChangeDetectorRef,
+    destroyRef: DestroyRef
+  ) {
+    this.dataService.userDataLoader
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe(() => this.cd.markForCheck());
+  }
 
   ngAfterViewInit() {
     this.sortable = new Sortable(

@@ -6,9 +6,12 @@ import {
   ViewChild,
   ElementRef,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  DestroyRef,
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { DataService } from 'src/app/core/services/data.service';
 
@@ -17,7 +20,7 @@ import { DataService } from 'src/app/core/services/data.service';
   templateUrl: 'room-list.html',
   styleUrls: ['room-list.scss'],
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
 })
 export class RoomListComponent implements AfterViewInit, OnDestroy {
@@ -42,7 +45,18 @@ export class RoomListComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('roombox', { read: ElementRef, static: true }) roombox: ElementRef;
 
-  constructor(private dataService: DataService) {}
+  constructor(
+    private dataService: DataService,
+    private cd: ChangeDetectorRef,
+    destroyRef: DestroyRef
+  ) {
+    this.dataService.userDataLoader
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe(() => {
+        this.cd.markForCheck();
+        this.scheduleSelectedRoomScroll();
+      });
+  }
 
   ngAfterViewInit() {
     this.scheduleSelectedRoomScroll();

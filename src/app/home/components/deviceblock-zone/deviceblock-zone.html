@@ -1,22 +1,20 @@
 <div #refreshZone></div>
 <div class="device-list-container" #deviceZone>
-  <div class="room-slide room-slide-current" #currentSlide>
+  @for (slide of slides; track slide.roomId) {
+  <div
+    class="room-slide"
+    [class.room-slide-current]="slide.role === 'current'"
+    [class.room-slide-incoming]="slide.role === 'incoming'"
+    [class.room-slide-from-left]="slide.direction === -1"
+    [attr.data-room-id]="slide.roomId"
+    [attr.aria-hidden]="slide.role === 'incoming' ? 'true' : null"
+  >
     <deviceblock-list
-      [roomName]="selectedRoomName"
+      [roomName]="getRoomName(slide.roomId)"
       (swipeEnabled)="swipeEnabledChanged($event)"
       (refresherEnabled)="refresherEnabledChanged($event)"
     >
     </deviceblock-list>
-  </div>
-
-  @if (incomingRoomId !== null) {
-  <div
-    class="room-slide room-slide-incoming"
-    [class.room-slide-from-left]="incomingDirection === -1"
-    #incomingSlide
-    aria-hidden="true"
-  >
-    <deviceblock-list [roomName]="incomingRoomName"></deviceblock-list>
   </div>
   }
 </div>
