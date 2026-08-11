@@ -33,8 +33,7 @@ export class DataService {
     }
 
     get isAdvancedDeveloper() {
-        if (this.user.level > 0) return true
-        return false
+        return (this.user?.level ?? 0) > 0
     }
 
     user: UserData;

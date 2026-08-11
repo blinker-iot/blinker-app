@@ -5,8 +5,12 @@
     </ion-buttons>
     <ion-title>{{ device?.config?.customName || '设备详情' }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button aria-label="刷新设备数据" (click)="refresh()" [disabled]="!device">
-        <i class="fa-light fa-arrows-rotate"></i>
+      <ion-button
+        aria-label="设备设置"
+        [routerLink]="['/device-manager', id]"
+        [disabled]="!device"
+      >
+        <i class="fa-light fa-circle-ellipsis"></i>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>

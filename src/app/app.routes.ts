@@ -12,6 +12,10 @@ export const routes: Routes = [
     loadComponent: () => import('./device/device.page').then(m => m.DevicePage),
   },
   {
+    path: 'device-manager/:id',
+    loadComponent: () => import('./sections/device/device-settings/device-settings').then(m => m.DeviceSettingsPage),
+  },
+  {
     path: 'tools/esp32-provision',
     loadComponent: () => import('./tools/esp32-provision/esp32-provision.page').then(m => m.Esp32ProvisionPage),
   },

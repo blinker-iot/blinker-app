@@ -1,17 +1,21 @@
 import { Component } from '@angular/core';
-import { UserService } from 'src/app/core/services/user.service';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { ActivatedRoute } from '@angular/router';
-import { NavController, ModalController } from '@ionic/angular';
+import { IonicModule, NavController, ModalController } from '@ionic/angular';
 import { DataService } from '../../services/data.service';
 import { ImageList } from 'src/app/configs/app.config';
 import { ImageService } from '../../services/image.service';
+import { BDeviceImgComponent } from '../../components/b-device-img/b-device-img.component';
 
 
 @Component({
+    standalone: true,
     selector: 'page-device-icon',
     templateUrl: 'device-icon.html',
-    styleUrls: ['device-icon.scss']
+    styleUrls: ['device-icon.scss'],
+    imports: [CommonModule, FormsModule, IonicModule, BDeviceImgComponent]
 })
 export class DeviceIconPage {
   id;
