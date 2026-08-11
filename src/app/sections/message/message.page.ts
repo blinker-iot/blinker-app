@@ -1,99 +1,99 @@
-// 需修复 12.27
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { MessageService } from './message.service';
-import { Router } from '@angular/router';
-import { DataService } from 'src/app/core/services/data.service';
-// import { InAppBrowser } from '@awesome-cordova-plugins/in-app-browser/ngx';
-import { API } from 'src/app/configs/api.config';
-import { IonInfiniteScroll } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
+import { RouterModule } from '@angular/router';
+import { IonicModule } from '@ionic/angular';
+
+type MessageCategory = 'system' | 'device' | 'share' | 'interaction';
+
+interface DemoMessage {
+  id: number;
+  title: string;
+  content: string;
+  time: string;
+  category: MessageCategory;
+  icon: string;
+  unread: boolean;
+}
 
 @Component({
-    selector: 'app-message',
-    templateUrl: './message.page.html',
-    styleUrls: ['./message.page.scss']
+  selector: 'app-message',
+  templateUrl: './message.page.html',
+  styleUrls: ['./message.page.scss'],
+  standalone: true,
+  imports: [CommonModule, IonicModule, RouterModule],
 })
-export class MessagePage implements OnInit {
+export class MessagePage {
+  readonly filters: Array<{ label: string; value: 'all' | MessageCategory }> = [
+    { label: '全部', value: 'all' },
+    { label: '系统', value: 'system' },
+    { label: '设备', value: 'device' },
+    { label: '分享', value: 'share' },
+  ];
 
-  totle = 0;
-  editMode = false;
-  page = 1;
+  activeFilter: 'all' | MessageCategory = 'all';
+  messages: DemoMessage[] = [
+    {
+      id: 1,
+      title: '系统通知',
+      content: '点灯 2.4.1 版本已发布，点击查看更新内容。',
+      time: '10:30',
+      category: 'system',
+      icon: 'fa-light fa-bell',
+      unread: true,
+    },
+    {
+      id: 2,
+      title: '设备通知',
+      content: '客厅的扫地机器人已完成清洁。',
+      time: '09:15',
+      category: 'device',
+      icon: 'fa-light fa-robot',
+      unread: true,
+    },
+    {
+      id: 3,
+      title: '设备分享',
+      content: '李想邀请你共享「客厅的空气净化器」。',
+      time: '昨天',
+      category: 'share',
+      icon: 'fa-light fa-share-nodes',
+      unread: true,
+    },
+    {
+      id: 4,
+      title: '互动消息',
+      content: '小北回复了你的评论。',
+      time: '星期二',
+      category: 'interaction',
+      icon: 'fa-light fa-message-dots',
+      unread: true,
+    },
+  ];
 
-  @ViewChild(IonInfiniteScroll) infiniteScroll: IonInfiniteScroll;
-
-  get messageList() {
-    return this.messageService.list
+  get visibleMessages() {
+    return this.activeFilter === 'all'
+      ? this.messages
+      : this.messages.filter((message) => message.category === this.activeFilter);
   }
 
-  constructor(
-    private messageService: MessageService,
-    private dataService: DataService,
-    // private iab: InAppBrowser,
-    private router: Router
-  ) { }
-
-  subscription;
-  ngOnInit() {
-    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
-      if (loaded) {
-        this.messageService.getMessage(this.page)
-      }
-    })
+  get unreadCount() {
+    return this.messages.filter((message) => message.unread).length;
   }
 
-  ngOnDestroy() {
-    this.subscription.unsubscribe();
+  selectFilter(filter: 'all' | MessageCategory) {
+    this.activeFilter = filter;
   }
 
-  switchMode() {
-    this.editMode = !this.editMode;
+  openMessage(message: DemoMessage) {
+    message.unread = false;
   }
 
-  openMess(item) {
-
+  markAllRead() {
+    this.messages.forEach((message) => (message.unread = false));
   }
 
-  delMess(messItem) {
-    this.messageService.delMessage(messItem)
+  deleteMessage(message: DemoMessage, event: Event) {
+    event.stopPropagation();
+    this.messages = this.messages.filter((item) => item.id !== message.id);
   }
-
-  enter(messItem) {
-    if (this.editMode) return;
-    if (messItem.url.indexOf('http') > -1) {
-      // this.iab.create(messItem.url, '_system', 'location=no,hidden=no');
-    } else if (messItem.url.indexOf('/device') > -1) {
-      this.router.navigateByUrl(messItem.url)
-    } else if (messItem.url.indexOf('/share-manager') > -1) {
-      this.router.navigateByUrl(messItem.url)
-    }
-  }
-
-  getimgUrl(messItem) {
-    if (messItem.type == 'user')
-      return API.USER.AVATAR + '/' + messItem.icon
-    return ''
-  }
-
-  trackByFn(index, item) {
-    return item.id
-  }
-
-  loadData(event) {
-    setTimeout(() => {
-      console.log('Done');
-      this.page++;
-      this.messageService.getMessage(this.page)
-      event.target.complete();
-
-      // App logic to determine if all data is loaded
-      // and disable the infinite scroll
-      // if (data.length == 1000) {
-      //   event.target.disabled = true;
-      // }
-    }, 500);
-  }
-
-  toggleInfiniteScroll() {
-    this.infiniteScroll.disabled = !this.infiniteScroll.disabled;
-  }
-
 }

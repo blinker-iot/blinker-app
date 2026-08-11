@@ -1,43 +1,72 @@
-<ion-header>
+<ion-header whitebg class="message-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-back-button text="" defaultHref="/home"></ion-back-button>
     </ion-buttons>
-    <ion-title>消息盒子</ion-title>
-    <ion-buttons slot="end" (click)="switchMode()">
-      <ion-button *ngIf="!editMode">
-        编辑
-      </ion-button>
-      <ion-button *ngIf="editMode">
-        完成
+    <ion-title>消息中心</ion-title>
+    <ion-buttons slot="end">
+      <ion-button aria-label="全部标为已读" (click)="markAllRead()">
+        <i class="fa-light fa-check-double"></i>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  <div class="nomess animated fadeIn" *ngIf="messageList.length==0" textcenter>
-    <img src="assets\img\icon\message.svg">
-    <div textcenter>暂无消息</div>
+<ion-content fullscreen="true">
+  <div class="message-content">
+    <div class="message-filters" role="tablist" aria-label="消息分类">
+      @for (filter of filters; track filter.value) {
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeFilter === filter.value"
+        [class.active]="activeFilter === filter.value"
+        (click)="selectFilter(filter.value)"
+      >
+        {{ filter.label }}
+      </button>
+      }
+    </div>
+
+    @if (visibleMessages.length > 0) {
+    <section class="message-list">
+      @for (message of visibleMessages; track message.id) {
+      <button type="button" class="message-item" (click)="openMessage(message)">
+        <span class="message-icon" [attr.data-category]="message.category">
+          <i [class]="message.icon"></i>
+        </span>
+        <span class="message-copy">
+          <span class="message-title">{{ message.title }}</span>
+          <span class="message-preview">{{ message.content }}</span>
+        </span>
+        <span class="message-meta">
+          <time>{{ message.time }}</time>
+          @if (message.unread) {
+          <span class="unread-dot"></span>
+          }
+          <span class="delete-action" role="button" tabindex="0" (click)="deleteMessage(message, $event)">
+            <i class="fa-light fa-trash-can"></i>
+          </span>
+        </span>
+      </button>
+      }
+    </section>
+
+    <div class="inbox-hint">
+      <div class="bubble-illustration">
+        <span></span><span></span><span></span>
+      </div>
+      <strong>以上是全部消息</strong>
+      <p>轻松生活，从此刻开始</p>
+    </div>
+    } @else {
+    <div class="empty-message">
+      <div class="bubble-illustration">
+        <span></span><span></span><span></span>
+      </div>
+      <strong>暂无此类消息</strong>
+      <p>新的动态会第一时间出现在这里</p>
+    </div>
+    }
   </div>
-  <b-item-list [editMode]="editMode" [enableSort]="false" *ngIf="messageList.length>0">
-    <ng-container *ngFor="let item of messageList;trackBy:trackByFn">
-      <b-item (delete)="delMess(item)" (enter)="enter(item)" (enter)="openMess(item)">
-        <div class="img-box">
-          <img src="{{getimgUrl(item)}}" onError="this.src='img/blinker-icon.png'">
-        </div>
-        <div class="text-box">
-          <div class="name">{{item.title}}</div>
-          <div class="other">{{item.content}}</div>
-        </div>
-        <div class="date">
-          {{item.date | date:'MM/dd HH:mm'}}
-        </div>
-      </b-item>
-    </ng-container>
-  </b-item-list>
-  <ion-infinite-scroll threshold="100px" (ionInfinite)="loadData($event)">
-    <ion-infinite-scroll-content loadingSpinner="bubbles" loadingText="">
-    </ion-infinite-scroll-content>
-  </ion-infinite-scroll>
 </ion-content>
