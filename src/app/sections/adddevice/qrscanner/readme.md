@@ -5,7 +5,7 @@
 ``` js
 {
     deviceType: "MpaaUXDXgUOG",
-    configurator: ["esptouch", "KeyConfig"],
+    configurator: ["wifiProvision", "KeyConfig"],
     vender: "",
     name: "设备1"
 }
