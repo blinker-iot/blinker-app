@@ -91,7 +91,7 @@
         </span>
         <span>
           <strong>{{ isScanning ? '停止发现' : '开始发现' }}</strong>
-          <small>{{ isScanning ? scanElapsed + ' 秒 · ' + services.length + ' 项在线' : typeLabel(serviceType) + ' · ' + domain }}</small>
+          <small>{{ isScanning ? scanElapsed + ' 秒 · 已发现 ' + services.length + ' 项' : typeLabel(serviceType) + ' · ' + domain }}</small>
         </span>
         @if (isScanning) { <i class="scan-ripple" aria-hidden="true"></i> }
       </button>
@@ -131,7 +131,7 @@
                 <small>{{ primaryAddress(service) }}{{ service.port ? ':' + service.port : '' }}</small>
               </span>
               <span class="service-state" [class.resolving]="!service.resolved">
-                <i class="fa-solid fa-circle"></i>{{ service.resolved ? '在线' : '解析中' }}
+                <i class="fa-solid fa-circle"></i>{{ service.resolved ? '已解析' : '解析中' }}
               </span>
               <i class="fa-light fa-chevron-down expand-icon"></i>
             </button>
@@ -157,17 +157,13 @@
                   </div>
                 }
 
-                <div class="detail-actions">
-                  @if (catalogType(service)) {
-                    <button type="button" class="primary-detail" (click)="discoverCatalogType(service)">
-                      <i class="fa-light fa-radar"></i>发现此类型
-                    </button>
-                  } @else if (endpoint(service)) {
+                @if (endpoint(service)) {
+                  <div class="detail-actions">
                     <button type="button" class="primary-detail" (click)="copyEndpoint(service)">
                       <i class="fa-light fa-copy"></i>复制{{ serviceUrl(service) ? '访问地址' : '服务地址' }}
                     </button>
-                  }
-                </div>
+                  </div>
+                }
               </div>
             }
           </article>

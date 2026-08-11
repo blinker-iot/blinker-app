@@ -9,9 +9,9 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Capacitor, CapacitorHttp, HttpResponse } from '@capacitor/core';
+import { Capacitor, CapacitorHttp, type HttpResponse, type PluginListenerHandle } from '@capacitor/core';
 import { IonicModule, ToastController } from '@ionic/angular';
-import { ZeroConf, ZeroConfService, ZeroConfWatchResult } from 'capacitor-zeroconf';
+import { Mdns, type MdnsErrorEvent, type MdnsService, type MdnsWatchEvent } from 'capacitor-mdns';
 import { formatBytes } from '../ota/ota-protocol';
 
 type WifiOtaState = 'idle' | 'preparing' | 'uploading' | 'verifying' | 'success' | 'error' | 'cancelled';
@@ -32,7 +32,7 @@ interface UploadResponse {
   body: string;
 }
 
-const ZEROCONF_REQUEST = { type: '_arduino._tcp.', domain: 'local.' };
+const MDNS_REQUEST = { type: '_arduino._tcp.', domain: 'local.', addressFamily: 'any' as const };
 const MAX_FIRMWARE_SIZE = 64 * 1024 * 1024;
 const TARGET_STORAGE_KEY = 'wifiOtaTarget';
 
@@ -69,6 +69,9 @@ export class WifiOtaPage implements OnInit, OnDestroy {
 
   private scanTimer?: ReturnType<typeof setTimeout>;
   private watchStarted = false;
+  private discoverListener?: PluginListenerHandle;
+  private errorListener?: PluginListenerHandle;
+  private scanSession = 0;
   private activeRequest?: XMLHttpRequest;
   private destroyed = false;
 
@@ -152,44 +155,64 @@ export class WifiOtaPage implements OnInit, OnDestroy {
 
   async startDiscovery(): Promise<void> {
     if (this.isBusy) return;
+    if (!this.isNative) {
+      this.state = 'error';
+      this.statusMessage = '自动发现不可用';
+      this.statusDetail = '浏览器不支持 mDNS 扫描，请手动填写设备地址';
+      return;
+    }
+
+    await this.stopDiscovery(false);
+    const session = ++this.scanSession;
     this.targets = [];
     this.isScanning = true;
     this.statusMessage = '正在搜索局域网 OTA 设备…';
     this.statusDetail = '通过 _arduino._tcp mDNS 服务发现';
 
     try {
-      await ZeroConf.watch(ZEROCONF_REQUEST, result => {
-        this.zone.run(() => this.handleDiscovery(result));
+      this.discoverListener = await Mdns.addListener('discover', event => {
+        if (session !== this.scanSession || !this.isScanning || !this.isArduinoService(event.service)) return;
+        this.zone.run(() => this.handleDiscovery(event));
       });
-      if (this.destroyed || !this.isScanning) {
-        await ZeroConf.unwatch(ZEROCONF_REQUEST).catch(() => undefined);
+
+      this.errorListener = await Mdns.addListener('error', event => {
+        if (session !== this.scanSession || !this.isScanning || !this.isArduinoError(event)) return;
+        this.zone.run(() => this.handleDiscoveryError(event));
+      });
+
+      await Mdns.watch(MDNS_REQUEST);
+      if (this.destroyed || session !== this.scanSession || !this.isScanning) {
+        await Mdns.unwatch(MDNS_REQUEST).catch(() => undefined);
+        await this.removeDiscoveryListeners();
         return;
       }
       this.watchStarted = true;
       this.clearScanTimer();
       this.scanTimer = setTimeout(() => void this.stopDiscovery(), 8000);
     } catch (error) {
+      if (session !== this.scanSession) return;
+      await this.removeDiscoveryListeners();
       this.isScanning = false;
       this.state = 'error';
       this.statusMessage = '自动发现不可用';
-      this.statusDetail = this.isNative
-        ? this.errorMessage(error)
-        : '浏览器不支持 mDNS 扫描，请手动填写设备地址';
-      if (this.isNative) await this.showToast(this.statusDetail);
+      this.statusDetail = this.errorMessage(error);
+      await this.showToast(this.statusDetail);
     }
   }
 
-  async stopDiscovery(): Promise<void> {
+  async stopDiscovery(updateStatus = true): Promise<void> {
     this.clearScanTimer();
     const wasScanning = this.isScanning;
+    this.scanSession += 1;
     this.isScanning = false;
 
     if (this.watchStarted) {
       this.watchStarted = false;
-      await ZeroConf.unwatch(ZEROCONF_REQUEST).catch(() => undefined);
+      await Mdns.unwatch(MDNS_REQUEST).catch(() => undefined);
     }
+    await this.removeDiscoveryListeners();
 
-    if (wasScanning) {
+    if (wasScanning && updateStatus) {
       this.statusMessage = this.targets.length ? `发现 ${this.targets.length} 台 OTA 设备` : '未发现 OTA 设备';
       this.statusDetail = this.targets.length ? '选择设备可自动填入连接参数' : '可在下方手动填写 IP 地址';
     }
@@ -260,8 +283,8 @@ export class WifiOtaPage implements OnInit, OnDestroy {
     this.activeRequest?.abort();
   }
 
-  private handleDiscovery(result: ZeroConfWatchResult): void {
-    if (this.destroyed) return;
+  private handleDiscovery(result: MdnsWatchEvent): void {
+    if (this.destroyed || !this.isScanning) return;
     const target = this.serviceToTarget(result.service);
     if (!target) return;
 
@@ -275,7 +298,20 @@ export class WifiOtaPage implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  private serviceToTarget(service: ZeroConfService): WifiOtaTarget | undefined {
+  private handleDiscoveryError(event: MdnsErrorEvent): void {
+    if (event.code !== 'MDNS_WATCH_FAILED') {
+      this.statusDetail = this.errorMessage(event);
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.state = 'error';
+    this.statusMessage = '自动发现不可用';
+    this.statusDetail = this.errorMessage(event);
+    void this.stopDiscovery(false);
+  }
+
+  private serviceToTarget(service: MdnsService): WifiOtaTarget | undefined {
     const host = service.ipv4Addresses?.[0]
       || service.ipv6Addresses?.[0]
       || (service.hostname || '').replace(/\.$/, '');
@@ -448,8 +484,35 @@ export class WifiOtaPage implements OnInit, OnDestroy {
     this.scanTimer = undefined;
   }
 
+  private isArduinoService(service: MdnsService): boolean {
+    return service.type.toLowerCase() === MDNS_REQUEST.type
+      && (service.domain || 'local.').toLowerCase() === MDNS_REQUEST.domain;
+  }
+
+  private isArduinoError(event: MdnsErrorEvent): boolean {
+    if (event.type && event.type.toLowerCase() !== MDNS_REQUEST.type) return false;
+    if (event.domain && event.domain.toLowerCase() !== MDNS_REQUEST.domain) return false;
+    return true;
+  }
+
+  private async removeDiscoveryListeners(): Promise<void> {
+    const discoverListener = this.discoverListener;
+    const errorListener = this.errorListener;
+    this.discoverListener = undefined;
+    this.errorListener = undefined;
+    await Promise.all([
+      discoverListener?.remove().catch(() => undefined),
+      errorListener?.remove().catch(() => undefined),
+    ]);
+  }
+
   private errorMessage(error: unknown): string {
-    const message = error instanceof Error ? error.message : String(error || '未知错误');
+    const message = error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error && 'message' in error
+        ? String(error.message || '未知错误')
+        : String(error || '未知错误');
+    if (/permission|denied|ACCESS_LOCAL_NETWORK/i.test(message)) return '缺少局域网访问权限，请在系统设置中授权后重试';
     if (/cleartext.*not permitted/i.test(message)) return '系统阻止了 HTTP 明文连接，请改用 HTTPS 或检查网络权限';
     if (/failed to connect|connection refused|network is unreachable/i.test(message)) return '无法连接 OTA 设备，请确认手机与设备在同一网络';
     if (/timeout|timed out/i.test(message)) return `上传超时（${this.timeoutSeconds} 秒）`;
