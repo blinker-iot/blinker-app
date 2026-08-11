@@ -1,3 +1,7 @@
+@use '../tab-scroll-mask' as tab-scroll-mask;
+
+@include tab-scroll-mask.top-scroll-mask(calc(var(--ion-safe-area-top, 0px) + 64px));
+
 :host {
   display: block;
   height: 100%;

@@ -1,0 +1,18 @@
+@mixin top-scroll-mask($height) {
+  .top-scroll-mask {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 3;
+    height: $height;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--blinker-bg) 96%, transparent) 0%,
+      color-mix(in srgb, var(--blinker-bg) 90%, transparent) 55%,
+      color-mix(in srgb, var(--blinker-bg) 72%, transparent) 78%,
+      transparent 100%
+    );
+  }
+}

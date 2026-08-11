@@ -13,6 +13,8 @@
 .room-scroll {
   min-width: 0;
   flex: 1;
+  padding: 8px 12px 18px;
+  margin: -8px -12px -18px;
   overflow-x: auto;
   display: flex;
   align-items: center;
@@ -45,6 +47,8 @@
 }
 
 .room-manage {
+  position: relative;
+  z-index: 1;
   width: 32px;
   height: 32px;
   flex: 0 0 auto;

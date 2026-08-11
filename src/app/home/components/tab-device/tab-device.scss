@@ -1,3 +1,7 @@
+@use '../tab-scroll-mask' as tab-scroll-mask;
+
+@include tab-scroll-mask.top-scroll-mask(calc(var(--ion-safe-area-top, 0px) + 113px));
+
 :host {
   display: block;
   height: 100%;
@@ -8,18 +12,29 @@ ion-content {
   --overflow: auto;
 }
 
+.room-list-fixed {
+  position: absolute;
+  top: calc(var(--ion-safe-area-top, 0px) + 64px);
+  right: 0;
+  left: 0;
+  z-index: 4;
+  box-sizing: border-box;
+  padding: 0 17px 13px;
+  background: transparent;
+}
+
 .device-page {
   box-sizing: border-box;
   width: 100%;
   min-height: 100%;
-  padding: calc(var(--ion-safe-area-top, 0px) + 64px) 17px 18px;
+  padding: calc(var(--ion-safe-area-top, 0px) + 113px) 17px 18px;
   background:
     radial-gradient(circle at 95% 3%, rgba(var(--ion-color-primary-rgb), 0.08), transparent 25%),
     var(--blinker-bg);
 }
 
 .device-zone {
-  margin: 13px -7px 0;
+  margin: 0 -7px;
 }
 
 .empty-devices {

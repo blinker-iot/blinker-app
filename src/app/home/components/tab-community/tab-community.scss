@@ -1,3 +1,7 @@
+@use '../tab-scroll-mask' as tab-scroll-mask;
+
+@include tab-scroll-mask.top-scroll-mask(calc(var(--ion-safe-area-top, 0px) + 127px));
+
 :host {
   --page-gutter: 18px;
   display: block;
@@ -79,6 +83,10 @@ ion-content {
 
 .discover-header.search-visible + ion-content .discover-content {
   padding-top: calc(var(--ion-safe-area-top, 0px) + 175px);
+}
+
+.discover-header.search-visible + ion-content .top-scroll-mask {
+  height: calc(var(--ion-safe-area-top, 0px) + 175px);
 }
 
 .hero-card {

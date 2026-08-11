@@ -22,12 +22,6 @@
       <div class="device-summary-row">
         <div class="device-name">
           {{ device.config.customName || device.deviceType || '智能设备' }}
-          @if (device.config.isDev) {
-          <i class="fa-light fa-code dev-mark" title="开发设备"></i>
-          }
-          @if (device.config.mode === 'ble') {
-          <i class="fa-brands fa-bluetooth-b dev-mark" title="蓝牙设备"></i>
-          }
         </div>
 
         @if (showSwitch) {

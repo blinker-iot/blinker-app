@@ -13,9 +13,13 @@
 </ion-header>
 
 <ion-content fullscreen="true">
-  <div class="device-page">
-    <room-list [(roomid)]="roomid" (roomidChange)="onRoomidChange($event)"></room-list>
+  <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
 
+  <div slot="fixed" class="room-list-fixed">
+    <room-list [(roomid)]="roomid" (roomidChange)="onRoomidChange($event)"></room-list>
+  </div>
+
+  <div class="device-page">
     @if (deviceNum > 0) {
     <div class="device-zone">
       <deviceblock-zone
