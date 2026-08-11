@@ -20,7 +20,6 @@ export class Layouter2GuidePage {
     return this.layouterService.layouterData.dashboard
   }
 
-  showEsptouch = false;
   showExamples = false;
 
   constructor(
@@ -64,6 +63,10 @@ export class Layouter2GuidePage {
   indexChange(e) {
     // console.log(e);
     this.index = e
+  }
+
+  openProvisionTool() {
+    void this.router.navigateByUrl('/tools/esp32-provision')
   }
 
 }

@@ -6,6 +6,14 @@ export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./sections/login/login').then(m => m.LoginPage) },
   { path: 'settings', loadComponent: () => import('./sections/settings/settings.page').then(m => m.SettingsPage) },
   {
+    path: 'tools/esp32-provision',
+    loadComponent: () => import('./tools/esp32-provision/esp32-provision.page').then(m => m.Esp32ProvisionPage),
+  },
+  {
+    path: 'tools/ble-debug',
+    loadComponent: () => import('./tools/ble-debug/ble-debug.page').then(m => m.BleDebugPage),
+  },
+  {
     path: 'tools/lan-discovery',
     loadComponent: () => import('./tools/lan-discovery/lan-discovery.page').then(m => m.LanDiscoveryPage),
   },

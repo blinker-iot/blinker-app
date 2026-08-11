@@ -1,0 +1,237 @@
+<ion-header class="page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button class="nav-back" aria-label="返回" (click)="goBack()">
+        <i class="fa-light fa-chevron-left"></i>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>ESP32 配网</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <main class="provision-page">
+    <section class="hero-card">
+      <div class="hero-icon"><i class="fa-light fa-wifi"></i></div>
+      <div>
+        <span class="eyebrow">ESPRESSIF WIFI PROVISIONING</span>
+        <h1>安全配置 ESP32 网络</h1>
+        <p>通过 Espressif 官方协议连接设备、扫描附近 Wi-Fi 并下发网络凭据。</p>
+      </div>
+    </section>
+
+    @if (!nativeSupported) {
+      <div class="notice warning">
+        <i class="fa-light fa-mobile-screen-button"></i>
+        <div>
+          <strong>请在手机 App 中使用</strong>
+          <span>浏览器可预览页面，BLE 与 SoftAP 配网需要 Android 或 iOS 原生能力。</span>
+        </div>
+      </div>
+    }
+
+    @if (!sessionReady && phase !== 'success') {
+      <section class="form-card">
+        <div class="section-title">
+          <div><span>步骤 1</span><h2>连接配网设备</h2></div>
+          <span class="protocol-chip">Security {{ security }}</span>
+        </div>
+
+        <div class="transport-switch" role="group" aria-label="配网传输方式">
+          <button type="button" [class.active]="transport === 'ble'" (click)="setTransport('ble')">
+            <i class="fa-brands fa-bluetooth-b"></i>BLE
+          </button>
+          <button type="button" [class.active]="transport === 'softap'" (click)="setTransport('softap')">
+            <i class="fa-light fa-router"></i>SoftAP
+          </button>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group security-field">
+            <label for="security">安全模式</label>
+            <div class="input-shell select-shell">
+              <i class="fa-light fa-shield-check"></i>
+              <select id="security" [(ngModel)]="security" [disabled]="isConnecting || isScanning">
+                <option [ngValue]="0">Security 0</option>
+                <option [ngValue]="1">Security 1</option>
+                <option [ngValue]="2">Security 2</option>
+              </select>
+              <i class="fa-light fa-chevron-down"></i>
+            </div>
+          </div>
+
+          @if (security === 2) {
+            <div class="field-group">
+              <label for="security-username">用户名</label>
+              <div class="input-shell">
+                <i class="fa-light fa-user-shield"></i>
+                <input id="security-username" type="text" placeholder="Security 2 用户名" [(ngModel)]="username" [disabled]="isConnecting || isScanning" />
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (security !== 0) {
+          <div class="field-group">
+            <label for="pop">Proof of Possession（PoP）</label>
+            <div class="input-shell">
+              <i class="fa-light fa-key"></i>
+              <input id="pop" type="text" autocomplete="off" placeholder="与 ESP32 固件中的 PoP 保持一致" [(ngModel)]="proofOfPossession" [disabled]="isConnecting || isScanning" />
+            </div>
+          </div>
+        }
+
+        @if (transport === 'ble') {
+          <div class="scan-options">
+            <div class="field-group">
+              <label for="device-prefix">设备名称前缀</label>
+              <div class="input-shell">
+                <i class="fa-light fa-filter"></i>
+                <input id="device-prefix" type="text" placeholder="默认 PROV_" [(ngModel)]="devicePrefix" [disabled]="isConnecting || isScanning" />
+              </div>
+            </div>
+            <button type="button" class="primary-button compact" [disabled]="isConnecting || !nativeSupported" (click)="toggleBleScan()">
+              <i [class]="isScanning ? 'fa-light fa-stop' : 'fa-light fa-radar'"></i>
+              {{ isScanning ? '停止扫描' : '扫描 ESP32' }}
+            </button>
+          </div>
+
+          <div class="device-list">
+            @for (device of devices; track device.id) {
+              <button type="button" class="device-row" [disabled]="isConnecting" (click)="selectBleDevice(device)">
+                <span class="device-icon"><i [class]="signalBars(device.rssi)"></i></span>
+                <span class="device-copy">
+                  <strong>{{ device.name || '未命名 ESP32' }}</strong>
+                  <span>{{ device.serviceUuid || device.id }}</span>
+                </span>
+                @if (device.rssi !== undefined) { <span class="rssi">{{ device.rssi }} dBm</span> }
+                <i class="fa-light fa-chevron-right"></i>
+              </button>
+            } @empty {
+              <div class="device-empty">
+                <i [class]="isScanning ? 'fa-light fa-radar fa-spin' : 'fa-light fa-microchip'"></i>
+                <strong>{{ isScanning ? '正在发现设备…' : '等待扫描' }}</strong>
+                <span>确认 ESP32 已启动 BLE Provisioning</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="field-group">
+            <label for="device-name">ESP32 临时热点名称</label>
+            <div class="input-shell">
+              <i class="fa-light fa-router"></i>
+              <input id="device-name" type="text" placeholder="例如 PROV_123" [(ngModel)]="deviceName" [disabled]="isConnecting" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label for="softap-password">热点密码 <span>无密码可留空</span></label>
+            <div class="input-shell">
+              <i class="fa-light fa-lock-keyhole"></i>
+              <input id="softap-password" type="password" placeholder="ESP32 SoftAP 密码" [(ngModel)]="softApPassword" [disabled]="isConnecting" />
+            </div>
+          </div>
+          <button type="button" class="primary-button" [disabled]="isConnecting || !nativeSupported" (click)="connectSoftAp()">
+            <i [class]="isConnecting ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-link'"></i>
+            {{ isConnecting ? '正在连接…' : '连接 ESP32 热点' }}
+          </button>
+        }
+      </section>
+    }
+
+    @if (sessionReady) {
+      <section class="connected-card">
+        <span class="connected-icon"><i class="fa-solid fa-check"></i></span>
+        <div>
+          <strong>{{ selectedDevice?.name }}</strong>
+          <span>{{ selectedDevice?.transport === 'ble' ? 'BLE' : 'SoftAP' }} · Security {{ selectedDevice?.security }} · 安全会话已连接</span>
+        </div>
+        <button type="button" (click)="startOver()">更换</button>
+      </section>
+
+      <section class="form-card wifi-card">
+        <div class="section-title">
+          <div><span>步骤 2</span><h2>选择目标 Wi-Fi</h2></div>
+          <button type="button" class="refresh-button" [disabled]="scanningNetworks" (click)="scanWifiNetworks()">
+            <i class="fa-light fa-rotate" [class.fa-spin]="scanningNetworks"></i>刷新
+          </button>
+        </div>
+
+        @if (networks.length) {
+          <div class="network-list">
+            @for (network of networks; track network.ssid + network.bssid) {
+              <button type="button" class="network-row" [class.selected]="ssid === network.ssid" (click)="selectNetwork(network)">
+                <i class="fa-light fa-wifi"></i>
+                <span><strong>{{ network.ssid || '隐藏网络' }}</strong><small>信道 {{ network.channel || '—' }} · {{ wifiSecurityLabel(network.security) }}</small></span>
+                <b>{{ network.rssi }} dBm</b>
+                @if (ssid === network.ssid) { <i class="fa-solid fa-circle-check"></i> }
+              </button>
+            }
+          </div>
+        }
+
+        <div class="field-group">
+          <label for="wifi-ssid">Wi-Fi 名称</label>
+          <div class="input-shell">
+            <i class="fa-light fa-signal-stream"></i>
+            <input id="wifi-ssid" type="text" autocomplete="off" placeholder="选择网络或手动输入 SSID" [(ngModel)]="ssid" [disabled]="isProvisioning" />
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="wifi-password">Wi-Fi 密码</label>
+          <div class="input-shell">
+            <i class="fa-light fa-lock-keyhole"></i>
+            <input id="wifi-password" [type]="passwordVisible ? 'text' : 'password'" autocomplete="off" placeholder="开放网络可留空" [(ngModel)]="password" [disabled]="isProvisioning" />
+            <button type="button" class="inline-action" aria-label="显示或隐藏密码" (click)="passwordVisible = !passwordVisible">
+              <i [class]="passwordVisible ? 'fa-light fa-eye-slash' : 'fa-light fa-eye'"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="button" class="remember-row" [class.selected]="rememberNetwork" (click)="toggleRemember()">
+          <span class="checkbox"><i class="fa-solid fa-check"></i></span>
+          <span>记住此 Wi-Fi</span>
+        </button>
+
+        <button type="button" class="primary-button provision-button" [disabled]="!canProvision" (click)="provision()">
+          <i [class]="isProvisioning ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-paper-plane-top'"></i>
+          {{ isProvisioning ? '正在配置网络…' : '发送 Wi-Fi 配置' }}
+        </button>
+      </section>
+    }
+
+    @if (phase !== 'idle' && phase !== 'ready') {
+      <section class="status-card" [class.success]="phase === 'success'" [class.error]="phase === 'error'">
+        <div class="status-head">
+          <span class="status-icon">
+            @if (phase === 'success') {
+              <i class="fa-solid fa-check"></i>
+            } @else if (phase === 'error') {
+              <i class="fa-solid fa-exclamation"></i>
+            } @else {
+              <i class="fa-light fa-arrows-rotate fa-spin"></i>
+            }
+          </span>
+          <div>
+            <strong>{{ statusMessage }}</strong>
+            @if (result?.ipAddress) { <span>设备 IP：{{ result?.ipAddress }}</span> }
+          </div>
+        </div>
+        @if (isProvisioning || phase === 'success') {
+          <div class="progress-track"><span [style.width.%]="progress"></span></div>
+        }
+        @if (phase === 'success' || phase === 'error') {
+          <button type="button" class="retry-button" (click)="startOver()">
+            <i class="fa-light fa-rotate-right"></i>{{ phase === 'success' ? '配置另一台设备' : '重新开始' }}
+          </button>
+        }
+      </section>
+    }
+
+    <ol class="tips">
+      <li>ESP32 固件需使用 Espressif network_provisioning 或 Arduino WiFiProv。</li>
+      <li>设备名、安全模式、用户名和 PoP 必须与固件配置一致。</li>
+      <li>大多数 ESP32 仅支持连接 2.4 GHz Wi-Fi。</li>
+    </ol>
+  </main>
+</ion-content>

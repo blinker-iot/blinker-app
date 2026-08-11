@@ -4,7 +4,7 @@
     </div>
     <nui-item-list (indexChange)="indexChange($event)" (willEnter)="willEnter($event)" (willExit)="willExit($event)">
         <nui-item [icon]="'fa-light fa-wifi'" [title]="'进行网络配置'"
-            [text]="device.data.enable?'设备已在线':'使用 EspTouch v2 进行网络配置'" [state]="device.data.enable?'done':''"
+            [text]="device.data.enable?'设备已在线':'使用 BLE 或 SoftAP 安全配置设备网络'" [state]="device.data.enable?'done':''"
             class="dark">
         </nui-item>
         <nui-item [icon]="'fa-light fa-mobile-button'" [title]="'载入示例界面'"
@@ -13,7 +13,12 @@
     </nui-item-list>
     <div *ngIf="index!=-1" class="guide-content animate__animated animate__fadeIn"
         [ngClass]="{'animate__fadeOut':willExitState}">
-        <blinker-guide-esptouch *ngIf="index==0"></blinker-guide-esptouch>
+        <div class="provision-redirect" *ngIf="index==0">
+            <i class="fa-light fa-wifi"></i>
+            <h3>ESP32 网络配置</h3>
+            <p>扫描配网设备，建立安全会话后选择目标 Wi-Fi。</p>
+            <button type="button" (click)="openProvisionTool()">打开配网工具</button>
+        </div>
         <blinker-guide-examples *ngIf="index==1"></blinker-guide-examples>
     </div>
 </div>

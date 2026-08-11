@@ -41,11 +41,11 @@ project(':capacitor-status-bar').projectDir = new File('../node_modules/@capacit
 include ':capacitor-android-shortcuts'
 project(':capacitor-android-shortcuts').projectDir = new File('../node_modules/capacitor-android-shortcuts/android')
 
-include ':capacitor-esptouch'
-project(':capacitor-esptouch').projectDir = new File('../../capacitor-esptouch/android')
-
 include ':capacitor-native-settings'
 project(':capacitor-native-settings').projectDir = new File('../node_modules/capacitor-native-settings/android')
+
+include ':capacitor-wifiprov'
+project(':capacitor-wifiprov').projectDir = new File('../node_modules/capacitor-wifiprov/android')
 
 include ':capacitor-zeroconf'
 project(':capacitor-zeroconf').projectDir = new File('../node_modules/capacitor-zeroconf/android')

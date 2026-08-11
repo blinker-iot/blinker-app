@@ -1,0 +1,376 @@
+<ion-header class="ble-nav">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button class="nav-icon" aria-label="返回" (click)="goBack()"><i class="fa-light fa-chevron-left"></i></ion-button>
+    </ion-buttons>
+    <ion-title>{{ headerTitle }}</ion-title>
+    <ion-buttons slot="end">
+      @if (screen === 'scanner') {
+        <ion-button class="nav-icon framed" aria-label="扫描设置" [class.active]="showScanFilters" (click)="showScanFilters = !showScanFilters">
+          <i class="fa-light fa-gear"></i>
+        </ion-button>
+      } @else {
+        <ion-button class="nav-icon" aria-label="更多操作" [class.active]="showMoreMenu" (click)="toggleMoreMenu()">
+          <i class="fa-solid fa-ellipsis"></i>
+        </ion-button>
+      }
+    </ion-buttons>
+  </ion-toolbar>
+
+  @if (showMoreMenu) {
+    <div class="more-menu">
+      <button type="button" (click)="copyCurrentDeviceId()"><i class="fa-light fa-copy"></i>复制设备标识</button>
+      @if (connectedDevice) {
+        <button type="button" (click)="refreshGatt(); showMoreMenu = false"><i class="fa-light fa-rotate"></i>刷新服务</button>
+        <button type="button" class="danger" (click)="disconnect(); showMoreMenu = false"><i class="fa-light fa-link-slash"></i>断开连接</button>
+      }
+    </div>
+  }
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <main class="ble-shell" [class.has-bottom-nav]="connectedDevice && screen !== 'scanner' && screen !== 'advertisement' && screen !== 'characteristic'">
+    @if (screen === 'scanner') {
+      <section class="scan-status-card" [class.scanning]="isScanning">
+        <div class="radar-visual">
+          <i></i><i></i><i></i>
+          <span><b></b></span>
+        </div>
+        <div class="scan-status-copy">
+          <h1>{{ isScanning ? '正在扫描…' : '发现附近 BLE 设备' }}</h1>
+          <p><i></i>{{ isScanning ? '发现 ' + devices.length + ' 个设备' : '点击下方按钮开始扫描' }}</p>
+          <span>扫描时长：{{ scanDuration }}</span>
+        </div>
+      </section>
+
+      @if (permissionProblem) {
+        <section class="ble-permission-card" [class.location]="permissionProblem === 'location'">
+          <span><i [class]="permissionProblem === 'location' ? 'fa-light fa-location-crosshairs' : 'fa-light fa-shield-exclamation'"></i></span>
+          <div>
+            <strong>{{ permissionProblem === 'location' ? '需要开启系统定位' : '蓝牙权限未授权' }}</strong>
+            <p>{{ permissionMessage }}</p>
+          </div>
+          <div class="permission-actions">
+            <button type="button" (click)="openBleSettings()">打开系统设置</button>
+            <button type="button" class="primary" (click)="retryBlePermission()">重新检查</button>
+          </div>
+        </section>
+      }
+
+      <div class="scan-search-row">
+        <label class="design-search">
+          <i class="fa-light fa-magnifying-glass"></i>
+          <input type="search" autocomplete="off" placeholder="搜索设备、地址或 UUID" [(ngModel)]="searchKeyword" />
+          @if (searchKeyword) { <button type="button" (click)="searchKeyword = ''"><i class="fa-solid fa-circle-xmark"></i></button> }
+        </label>
+        <button type="button" class="design-filter" [class.active]="showScanFilters" (click)="showScanFilters = !showScanFilters">
+          <i class="fa-light fa-filter"></i><span>筛选</span>
+        </button>
+      </div>
+
+      @if (showScanFilters) {
+        <section class="filter-drawer">
+          <div class="filter-line">
+            <span>设备排序</span>
+            <div class="segmented">
+              <button type="button" [class.active]="deviceSort === 'signal'" (click)="deviceSort = 'signal'">RSSI</button>
+              <button type="button" [class.active]="deviceSort === 'name'" (click)="deviceSort = 'name'">名称</button>
+              <button type="button" [class.active]="deviceSort === 'recent'" (click)="deviceSort = 'recent'">最近</button>
+            </div>
+          </div>
+          <label class="signal-range">
+            <span>最低 RSSI <b>{{ minimumRssi }} dBm</b></span>
+            <input type="range" min="-100" max="-30" step="5" [(ngModel)]="minimumRssi" />
+          </label>
+          <div class="filter-switches">
+            <button type="button" [class.active]="showUnnamed" (click)="showUnnamed = !showUnnamed"><i class="fa-solid fa-check"></i>未命名设备</button>
+            <button type="button" [class.active]="showFavoritesOnly" (click)="showFavoritesOnly = !showFavoritesOnly"><i class="fa-solid fa-check"></i>仅收藏</button>
+          </div>
+        </section>
+      }
+
+      <div class="result-heading">
+        <span>{{ visibleDevices.length }} 个设备</span>
+        <button type="button" (click)="deviceSort = 'signal'"><b>RSSI</b><i class="fa-light fa-arrow-up-arrow-down"></i></button>
+      </div>
+
+      <section class="design-device-list">
+        @for (device of visibleDevices; track device.deviceId) {
+          <article class="design-device-card" [class.connected]="connectedDevice?.deviceId === device.deviceId">
+            <button type="button" class="device-detail-link" (click)="openAdvertisement(device)">
+              <span class="radio-device-icon"><i class="fa-light fa-tower-broadcast"></i></span>
+              <span class="device-primary-copy">
+                <strong>{{ deviceName(device) || '未命名设备' }}</strong>
+                <small>{{ device.deviceId }}</small>
+              </span>
+              <span class="device-rssi" [class]="'device-rssi ' + deviceSignal(device)">
+                <b>{{ device.rssi ?? '—' }} <small>dBm</small></b>
+                <span class="mini-bars"><i></i><i></i><i></i><i></i></span>
+              </span>
+            </button>
+            <div class="device-card-meta">
+              <button type="button" class="star-action" [class.active]="isFavorite(device)" aria-label="收藏" (click)="toggleFavorite($event, device)">
+                <i [class]="isFavorite(device) ? 'fa-solid fa-star' : 'fa-light fa-star'"></i>
+              </button>
+              <div><span>服务: {{ device.uuids?.length || 0 }}</span><small>最后见于：{{ lastSeenLabel(device) }}</small></div>
+              <button type="button" class="card-connect" [class.done]="connectedDevice?.deviceId === device.deviceId" [disabled]="!!connectingId" (click)="connect(device)">
+                @if (connectingId === device.deviceId) { <i class="fa-light fa-spinner-third fa-spin"></i> }
+                @else { {{ connectedDevice?.deviceId === device.deviceId ? '已连接' : '连接' }} }
+              </button>
+            </div>
+          </article>
+        } @empty {
+          <div class="design-empty">
+            <span><i class="fa-light fa-radar"></i></span>
+            <strong>{{ isScanning ? '正在发现设备…' : devices.length ? '没有符合筛选条件的设备' : '还没有扫描结果' }}</strong>
+            <p>请确认外设已开启广播并靠近手机</p>
+          </div>
+        }
+      </section>
+
+      <div class="scan-bottom-action">
+        <button type="button" [class.stop]="isScanning" (click)="toggleScan()">
+          <i [class]="isScanning ? 'fa-solid fa-stop' : 'fa-light fa-radar'"></i>{{ isScanning ? '停止扫描' : isWeb ? '选择 BLE 设备' : '开始扫描' }}
+        </button>
+      </div>
+    }
+
+    @if (screen === 'advertisement' && selectedDevice; as device) {
+      <section class="device-identity-card advertisement-identity">
+        <span class="radio-device-icon large"><i class="fa-light fa-tower-broadcast"></i></span>
+        <div>
+          <strong>{{ deviceName(device) || '未命名设备' }}</strong>
+          <small>{{ device.deviceId }}</small>
+        </div>
+        <button type="button" class="identity-star" [class.active]="isFavorite(device)" (click)="toggleFavorite($event, device)">
+          <i [class]="isFavorite(device) ? 'fa-solid fa-star' : 'fa-light fa-star'"></i>
+        </button>
+        <div class="advertisement-status"><span>已发现：{{ lastSeenLabel(device) }}</span><span>连接状态：{{ connectedDevice?.deviceId === device.deviceId ? '已连接' : '未连接' }}</span></div>
+        <div class="identity-rssi"><b>{{ device.rssi ?? '—' }}</b><span>dBm</span><span class="mini-bars"><i></i><i></i><i></i><i></i></span></div>
+      </section>
+
+      <section class="rssi-card">
+        <div class="card-section-title"><strong>RSSI 趋势 <span>（最近 30 秒）</span></strong><small>平均 {{ averageRssi(device.rssiHistory) ?? device.rssi ?? '—' }} dBm</small></div>
+        <div class="rssi-chart">
+          <div class="axis-labels"><span>-20</span><span>-60</span><span>-100</span></div>
+          <svg viewBox="0 0 300 88" preserveAspectRatio="none" aria-label="RSSI 趋势图">
+            <line x1="0" y1="0" x2="300" y2="0"></line><line x1="0" y1="44" x2="300" y2="44"></line><line x1="0" y1="88" x2="300" y2="88"></line>
+            <polyline [attr.points]="rssiPolyline(device.rssiHistory)"></polyline>
+          </svg>
+          <div class="chart-times"><span>30s</span><span>20s</span><span>10s</span><span>0s</span></div>
+        </div>
+      </section>
+
+      <section class="advertisement-data-card">
+        <div class="data-row"><strong>Tx Power</strong><span>{{ device.txPower !== undefined && device.txPower !== 127 ? device.txPower + ' dBm' : '—' }}</span></div>
+        <div class="data-row"><strong>服务 UUID</strong><span>{{ device.uuids?.length ? shortUuid(device.uuids![0]) : '—' }} <i class="fa-light fa-chevron-right"></i></span></div>
+        @for (entry of manufacturerEntries(device); track entry.key) {
+          <div class="data-row data-block"><div><strong>制造商数据 <small>({{ entry.key }})</small></strong><code>{{ entry.value }}</code></div><button type="button" (click)="copyText(entry.value)"><i class="fa-light fa-copy"></i></button></div>
+        }
+        @for (entry of serviceDataEntries(device); track entry.key) {
+          <div class="data-row data-block"><div><strong>服务数据 <small>({{ entry.key }})</small></strong><code>{{ entry.value }}</code></div><button type="button" (click)="copyText(entry.value)"><i class="fa-light fa-copy"></i></button></div>
+        }
+        @if (device.rawAdvertisement) {
+          <div class="data-row data-block"><div><strong>原始数据 <small>(HEX)</small></strong><code>{{ rawAdvertisement(device) }}</code></div><button type="button" (click)="copyText(rawAdvertisement(device))"><i class="fa-light fa-copy"></i></button></div>
+        }
+        @if (!advertisedFieldCount(device) && !device.rawAdvertisement) {
+          <div class="data-row data-block muted"><div><strong>广播数据</strong><code>此外设未提供可解析字段</code></div></div>
+        }
+      </section>
+
+      <div class="advertisement-actions">
+        <button type="button" [class.active]="isFavorite(device)" (click)="toggleFavorite($event, device)"><i class="fa-light fa-star"></i>收藏</button>
+        <button type="button" (click)="copyText(device.deviceId, '设备标识已复制')"><i class="fa-light fa-copy"></i>复制</button>
+        <button type="button" class="primary" [disabled]="!!connectingId" (click)="connect(device)">
+          @if (connectingId === device.deviceId) { <i class="fa-light fa-spinner-third fa-spin"></i> } @else { {{ connectedDevice?.deviceId === device.deviceId ? '打开' : '连接' }} }
+        </button>
+      </div>
+    }
+
+    @if (screen === 'overview' && connectedDevice; as device) {
+      <section class="overview-card">
+        <div class="overview-device-head">
+          <span class="radio-device-icon large"><i class="fa-light fa-tower-broadcast"></i></span>
+          <div><strong>{{ deviceName(device) || '未命名设备' }}</strong><small>{{ device.deviceId }}</small><span><i></i>已连接</span></div>
+          <div class="overview-signal"><b>{{ connectionRssi ?? device.rssi ?? '—' }}<small>dBm</small></b><span class="mini-bars"><i></i><i></i><i></i><i></i></span></div>
+        </div>
+        <div class="overview-metrics">
+          <button type="button" (click)="refreshConnectionRssi()"><span>RSSI</span><strong>{{ connectionRssi ?? device.rssi ?? '—' }}<small>dBm</small></strong><i class="fa-light fa-signal-bars"></i></button>
+          <div><span>MTU</span><strong>{{ connectionMtu ?? '—' }}</strong></div>
+          <button type="button" [disabled]="!isAndroid" (click)="setHighPriority()"><span>连接优先级</span><strong>{{ connectionPriorityLabel }}</strong></button>
+          <button type="button" [disabled]="!isAndroid || bonded" (click)="createBond()"><span>安全</span><strong>{{ bonded ? '已配对' : '未配对' }}</strong><i class="fa-light fa-lock"></i></button>
+        </div>
+      </section>
+
+      <section class="overview-shortcuts">
+        <button type="button" (click)="openConnectedScreen('gatt')"><i class="fa-light fa-layer-group"></i><strong>GATT 服务</strong><span>浏览服务与特征</span></button>
+        <button type="button" (click)="openConnectedScreen('chart')"><i class="fa-light fa-chart-line"></i><strong>RSSI 图表</strong><span>实时信号趋势</span></button>
+        <button type="button" (click)="selectedDevice = device; screen = 'advertisement'"><i class="fa-light fa-circle-info"></i><strong>设备信息</strong><span>硬件与属性详情</span></button>
+      </section>
+
+      <section class="service-preview-section">
+        <div class="section-header"><strong>服务预览</strong><button type="button" (click)="openConnectedScreen('gatt')">查看全部 ({{ services.length }}) <i class="fa-light fa-chevron-right"></i></button></div>
+        <div class="service-preview-list">
+          @for (service of services.slice(0, 2); track service.uuid) {
+            <button type="button" (click)="openConnectedScreen('gatt')">
+              <i [class]="shortUuid(service.uuid) === '0x180F' ? 'fa-light fa-battery-half' : 'fa-light fa-cube'"></i>
+              <span><strong>{{ serviceLabel(service) }}</strong><small>UUID: {{ shortUuid(service.uuid) }}　　特征: {{ service.characteristics.length }}</small></span>
+              <i class="fa-light fa-chevron-right"></i>
+            </button>
+          } @empty { <div class="compact-empty">没有可访问的 GATT 服务</div> }
+        </div>
+      </section>
+    }
+
+    @if (screen === 'gatt' && connectedDevice; as device) {
+      <section class="connected-strip">
+        <span class="radio-device-icon"><i class="fa-light fa-tower-broadcast"></i></span>
+        <div><strong>{{ deviceName(device) || '未命名设备' }} <b>· 已连接</b></strong><small>{{ device.deviceId }}</small><span>RSSI　{{ connectionRssi ?? device.rssi ?? '—' }} dBm　<i class="mini-bars"><i></i><i></i><i></i><i></i></i></span></div>
+      </section>
+
+      <section class="gatt-design-list">
+        @for (service of services; track service.uuid) {
+          <article class="gatt-service" [class.expanded]="isServiceExpanded(service)">
+            <button type="button" class="gatt-service-head" (click)="toggleService(service)">
+              <i [class]="shortUuid(service.uuid) === '0x180F' ? 'fa-light fa-battery-half' : 'fa-light fa-cube'"></i>
+              <span><strong>{{ serviceLabel(service) }}</strong><small>UUID: {{ shortUuid(service.uuid) }}</small></span>
+              <i class="fa-light fa-chevron-down"></i>
+            </button>
+            @if (isServiceExpanded(service)) {
+              <div class="gatt-characteristics">
+                @for (characteristic of service.characteristics; track characteristic.uuid) {
+                  <button type="button" class="gatt-characteristic" (click)="openCharacteristic(service, characteristic)">
+                    <div class="gatt-char-copy">
+                      <strong>{{ characteristicLabel(characteristic) }}</strong>
+                      <small>UUID: {{ characteristic.uuid }}</small>
+                      <span>@for (property of characteristicProperties(characteristic); track property) { <b>{{ property }}</b> }</span>
+                    </div>
+                    <i class="fa-light fa-chevron-right"></i>
+                  </button>
+                  @if (characteristicValue(service, characteristic); as value) {
+                    <button type="button" class="gatt-latest-value" (click)="openCharacteristic(service, characteristic)">
+                      <span>最新值 ({{ valueMode.toUpperCase() }})</span><small>{{ value.time }}</small>
+                      <code>{{ displayCharacteristicValue(service, characteristic) }}</code><i class="fa-light fa-copy"></i>
+                    </button>
+                  }
+                }
+              </div>
+            }
+          </article>
+        } @empty { <div class="design-empty short"><strong>没有可访问的 GATT 服务</strong><p>尝试刷新服务或重新连接</p></div> }
+      </section>
+    }
+
+    @if (screen === 'characteristic' && selectedService && selectedCharacteristic; as characteristic) {
+      <section class="characteristic-card">
+        <div class="characteristic-heading">
+          <strong>{{ characteristicLabel(characteristic) }}</strong>
+          <small>UUID: {{ characteristic.uuid }}</small>
+          <span>@for (property of characteristicProperties(characteristic); track property) { <b>{{ property }}</b> }</span>
+        </div>
+
+        <div class="characteristic-actions-row">
+          @if (characteristic.properties.read) {
+            <button type="button" [disabled]="operationBusy('read', selectedService, characteristic)" (click)="read(selectedService, characteristic)"><i class="fa-light fa-arrow-down-to-bracket"></i>读取</button>
+          }
+          @if (canWrite(characteristic)) {
+            <button type="button" class="active"><i class="fa-light fa-pen-to-square"></i>写入</button>
+          }
+          @if (characteristic.properties.notify || characteristic.properties.indicate) {
+            <button type="button" [class.active]="isNotifying(selectedService, characteristic)" (click)="toggleNotify(selectedService, characteristic)"><i class="fa-light fa-bell"></i>{{ isNotifying(selectedService, characteristic) ? '停止订阅' : '订阅' }}</button>
+          }
+        </div>
+
+        <div class="current-value-block">
+          <strong>当前值</strong>
+          <div class="value-tabs">
+            <button type="button" [class.active]="valueMode === 'hex'" (click)="valueMode = 'hex'">HEX</button>
+            <button type="button" [class.active]="valueMode === 'text'" (click)="valueMode = 'text'">TEXT</button>
+            <button type="button" [class.active]="valueMode === 'decimal'" (click)="valueMode = 'decimal'">DEC</button>
+          </div>
+          <span>最新值</span>
+          <div class="current-value-line">
+            <code>{{ currentCharacteristicValue ? displaySnapshot(currentCharacteristicValue) : '尚未读取' }}</code>
+            @if (currentCharacteristicValue) { <small>{{ currentCharacteristicValue.byteLength }} B<br>{{ currentCharacteristicValue.time }}</small> }
+          </div>
+        </div>
+
+        @if (currentCharacteristicHistory.length) {
+          <div class="value-history-block">
+            <strong>历史记录 <span>（最近 5 条）</span></strong>
+            @for (value of currentCharacteristicHistory; track value.time) {
+              <div><time>{{ value.time }}</time><code>{{ displaySnapshot(value) }}</code><small>{{ value.byteLength }} B</small></div>
+            }
+          </div>
+        }
+      </section>
+
+      @if (canWrite(characteristic)) {
+        <section class="characteristic-write-sheet">
+          <span class="sheet-handle"></span>
+          <h2>写入特征值</h2>
+          <div class="write-mode-tabs"><button type="button" [class.active]="writeMode === 'hex'" (click)="writeMode = 'hex'">HEX</button><button type="button" [class.active]="writeMode === 'text'" (click)="writeMode = 'text'">TEXT</button></div>
+          <label class="design-write-input"><span>数据 ({{ writeMode.toUpperCase() }})</span><div><input [placeholder]="writeMode === 'hex' ? '48 65 6C 6C 6F' : '输入 UTF-8 文本'" [(ngModel)]="writeValue" /><small [class.error]="maximumWriteLength && writeByteLength > maximumWriteLength">{{ writeByteLength }} B</small></div></label>
+          <span class="write-option-label">选项</span>
+          <div class="design-write-options">
+            @if (characteristic.properties.write && characteristic.properties.writeWithoutResponse) {
+              <button type="button" [class.active]="!writeWithoutResponse" (click)="writeWithoutResponse = false">响应写入<i class="fa-light fa-circle-check"></i></button>
+              <button type="button" [class.active]="writeWithoutResponse" (click)="writeWithoutResponse = true">无响应<i class="fa-light fa-circle-check"></i></button>
+            }
+            @if (writeMode === 'text') { <button type="button" [class.active]="appendNewline" (click)="appendNewline = !appendNewline">追加 LF<i class="fa-light fa-circle-check"></i></button> }
+          </div>
+          @if (writeHistory.length) {
+            <div class="recent-write"><span>最近发送</span><button type="button" (click)="applyWriteHistory(writeHistory[0])"><code>{{ writeHistory[0].value }}</code><small>{{ writeHistory[0].mode.toUpperCase() }}</small></button></div>
+          }
+          <button type="button" class="design-send" [disabled]="!writeValue || operationBusy('write', selectedService, characteristic)" (click)="send()">
+            <i [class]="operationBusy('write', selectedService, characteristic) ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-paper-plane-top'"></i>{{ writeWithoutResponse ? '发送（无响应）' : '发送并等待响应' }}
+          </button>
+        </section>
+      }
+    }
+
+    @if (screen === 'chart' && connectedDevice; as device) {
+      <section class="connected-strip">
+        <span class="radio-device-icon"><i class="fa-light fa-tower-broadcast"></i></span><div><strong>{{ deviceName(device) }}</strong><small>{{ device.deviceId }}</small><span><i class="online-dot"></i>已连接</span></div>
+      </section>
+      <section class="large-rssi-card">
+        <div class="card-section-title"><strong>实时 RSSI</strong><button type="button" (click)="refreshConnectionRssi()"><i class="fa-light fa-rotate"></i>刷新</button></div>
+        <div class="large-rssi-number"><b>{{ connectionRssi ?? device.rssi ?? '—' }}</b><span>dBm</span><small>平均 {{ connectedAverageRssi ?? '—' }} dBm</small></div>
+        <div class="rssi-chart large">
+          <div class="axis-labels"><span>-20</span><span>-60</span><span>-100</span></div>
+          <svg viewBox="0 0 300 88" preserveAspectRatio="none"><line x1="0" y1="0" x2="300" y2="0"></line><line x1="0" y1="44" x2="300" y2="44"></line><line x1="0" y1="88" x2="300" y2="88"></line><polyline [attr.points]="rssiPolyline(connectedRssiHistory)"></polyline></svg>
+          <div class="chart-times"><span>30s</span><span>20s</span><span>10s</span><span>0s</span></div>
+        </div>
+        <div class="rssi-summary"><div><span>样本</span><strong>{{ connectedRssiHistory.length }}</strong></div><div><span>最强</span><strong>{{ strongestConnectedRssi }}</strong></div><div><span>最弱</span><strong>{{ weakestConnectedRssi }}</strong></div></div>
+      </section>
+    }
+
+    @if (screen === 'log') {
+      <div class="diagnostic-tabs"><button type="button" [class.active]="diagnosticMode === 'event'" (click)="diagnosticMode = 'event'">事件</button><button type="button" [class.active]="diagnosticMode === 'rssi'" (click)="diagnosticMode = 'rssi'">RSSI</button></div>
+      @if (diagnosticMode === 'rssi') {
+        <section class="rssi-card diagnostic-chart">
+          <div class="card-section-title"><strong>最近 30 秒 RSSI</strong><small>平均 {{ connectedAverageRssi ?? '—' }} dBm</small></div>
+          <div class="rssi-chart"><div class="axis-labels"><span>-20</span><span>-60</span><span>-100</span></div><svg viewBox="0 0 300 88" preserveAspectRatio="none"><line x1="0" y1="0" x2="300" y2="0"></line><line x1="0" y1="44" x2="300" y2="44"></line><line x1="0" y1="88" x2="300" y2="88"></line><polyline [attr.points]="rssiPolyline(connectedRssiHistory)"></polyline></svg><div class="chart-times"><span>30s</span><span>20s</span><span>10s</span><span>0s</span></div></div>
+        </section>
+      }
+      <div class="diagnostic-filters"><button type="button" [class.active]="logFilter === 'all'" (click)="logFilter = 'all'">全部</button><button type="button" [class.active]="logFilter === 'data'" (click)="logFilter = 'data'">数据</button><button type="button" [class.active]="logFilter === 'system'" (click)="logFilter = 'system'">系统</button><button type="button" [class.active]="logFilter === 'error'" (click)="logFilter = 'error'">错误</button></div>
+      <section class="diagnostic-timeline">
+        @for (log of timelineLogs; track log.id) {
+          <article [class]="'timeline-event ' + log.type">
+            <time>{{ log.time }}</time><span class="timeline-dot"></span>
+            <div><b>{{ log.type === 'rx' ? 'RX' : log.type === 'tx' ? 'TX' : log.type === 'error' ? 'ERR' : 'SYS' }}</b><strong>{{ log.title }}</strong>@if (log.value) { <pre>{{ log.value }}</pre> }</div>
+          </article>
+        } @empty { <div class="compact-empty">当前筛选条件下没有记录</div> }
+      </section>
+      <div class="diagnostic-actions"><button type="button" (click)="copyLogs()"><i class="fa-light fa-copy"></i>复制</button><button type="button" (click)="exportLogs()"><i class="fa-light fa-arrow-up-from-bracket"></i>导出</button></div>
+    }
+  </main>
+</ion-content>
+
+@if (connectedDevice && screen !== 'scanner' && screen !== 'advertisement' && screen !== 'characteristic') {
+  <nav class="ble-bottom-nav">
+    <button type="button" [class.active]="screen === 'overview' || screen === 'gatt'" (click)="openConnectedScreen('gatt')"><i class="fa-light fa-layer-group"></i><span>GATT</span></button>
+    <button type="button" [class.active]="screen === 'chart'" (click)="openConnectedScreen('chart')"><i class="fa-light fa-chart-line"></i><span>图表</span></button>
+    <button type="button" [class.active]="screen === 'log'" (click)="openConnectedScreen('log')"><i class="fa-light fa-file-lines"></i><span>日志</span></button>
+  </nav>
+}

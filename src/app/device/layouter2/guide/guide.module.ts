@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { Layouter2GuidePage } from './guide';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
-import { EsptouchComponent } from './esptouch/esptouch.component';
 import { ExamplesComponent } from './examples/examples.component';
 import { TranslatePipe } from '@ngx-translate/core';
 import { RouterModule } from '@angular/router';
@@ -20,7 +19,6 @@ import { NewuiModule } from '../newui/newui.module';
     TranslatePipe,
     RouterModule,
     Layouter2GuidePage,
-    EsptouchComponent,
     ExamplesComponent
   ],
   exports: [Layouter2GuidePage]

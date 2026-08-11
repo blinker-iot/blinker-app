@@ -43,7 +43,7 @@
     "angular-gridster2": "^22.0.0",
     "animate.css": "^4.1.1",
     "capacitor-android-shortcuts": "^7.0.0",
-    "capacitor-esptouch": "file:../capacitor-esptouch",
+    "capacitor-wifiprov": "github:coloz/capacitor-wifiprov",
     "capacitor-native-settings": "^7.0.1",
     "capacitor-zeroconf": "^4.0.0",
     "coordtransform": "^2.1.2",

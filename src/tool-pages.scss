@@ -1,3 +1,152 @@
+// Complex GATT rows are global but scoped to the BLE tool host so the
+// component stylesheet stays within Angular's per-component bundle budget.
+app-ble-debug {
+  .service-count { color: var(--ion-color-success); font-size: 10px; }
+  .service-list { display: flex; flex-direction: column; gap: 9px; }
+  .service-card { overflow: hidden; border: 1px solid var(--blinker-divider); border-radius: 12px; background: var(--blinker-bg-elevated); }
+
+  .service-head {
+    width: 100%; min-height: 59px; padding: 9px 11px; display: flex; align-items: center; gap: 9px;
+    color: var(--blinker-text-primary); text-align: left;
+    > span:nth-child(2) { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    strong { font-size: 11px; }
+    small { overflow: hidden; color: var(--blinker-text-tertiary); font: 8px monospace; text-overflow: ellipsis; white-space: nowrap; }
+  }
+
+  .service-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--blinker-surface-active); color: var(--ble-accent); }
+  .characteristic-count { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: var(--blinker-surface-muted); color: var(--blinker-text-secondary); font-size: 9px; }
+  .expand-icon { color: var(--blinker-text-tertiary); font-size: 10px; transition: transform 180ms ease; }
+  .service-card.expanded .expand-icon { transform: rotate(180deg); }
+  .characteristics { border-top: 1px solid var(--blinker-divider); }
+  .characteristic-row { padding: 11px; display: flex; align-items: flex-start; gap: 8px; border-bottom: 1px solid var(--blinker-divider); }
+  .characteristic-info { min-width: 0; flex: 1; }
+  .characteristic-title { display: flex; align-items: center; gap: 6px; color: var(--ble-accent); font-size: 10px; }
+  .characteristic-title strong { color: var(--blinker-text-primary); font-size: 10px; }
+  .full-uuid { overflow: hidden; margin-top: 3px; display: block; color: var(--blinker-text-tertiary); font: 8px monospace; text-overflow: ellipsis; white-space: nowrap; }
+  .property-list { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .property-list span { padding: 2px 4px; border-radius: 4px; background: var(--blinker-surface-muted); color: var(--blinker-text-secondary); font-size: 7px; }
+
+  .characteristic-actions {
+    flex: 0 0 auto; display: flex; gap: 4px;
+    button { height: 29px; padding: 0 7px; display: flex; align-items: center; gap: 4px; border: 1px solid var(--blinker-border); border-radius: 7px; color: var(--blinker-text-secondary); font-size: 9px; }
+    button.active { border-color: var(--ble-accent); background: var(--blinker-surface-active); color: var(--ble-accent); }
+  }
+
+  .write-panel { padding: 10px; border-bottom: 1px solid var(--blinker-divider); background: var(--blinker-surface-muted); }
+  .write-toolbar { margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
+  .mode-switch { padding: 2px; display: flex; border-radius: 6px; background: var(--blinker-surface); }
+  .mode-switch button { padding: 4px 7px; border-radius: 5px; color: var(--blinker-text-tertiary); font-size: 8px; }
+  .mode-switch button.active { background: var(--ble-accent); color: #fff; }
+  .response-toggle { color: var(--blinker-text-secondary); font-size: 8px; }
+  .response-toggle.selected { color: var(--ble-accent); }
+  .close-writer { margin-left: auto; padding: 5px; color: var(--blinker-text-tertiary); }
+  .write-panel textarea { box-sizing: border-box; width: 100%; padding: 9px; resize: vertical; border: 1px solid var(--blinker-border); border-radius: 8px; outline: none; background: var(--blinker-surface); color: var(--blinker-text-primary); font: 10px/1.5 monospace; }
+  .write-panel textarea:focus { border-color: var(--ble-accent); }
+  .send-button { width: 100%; height: 33px; margin-top: 7px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; background: var(--ble-accent); color: #fff; font-size: 10px; font-weight: 600; }
+  .send-button:disabled { opacity: .45; }
+  .service-empty { padding: 24px; color: var(--blinker-text-tertiary); font-size: 10px; text-align: center; }
+  .clear-button { color: var(--ble-accent); font-size: 10px; }
+  .log-list { overflow: hidden; border: 1px solid var(--blinker-divider); border-radius: 10px; }
+
+  .log-row {
+    position: relative; padding: 9px 9px 9px 43px; display: flex; gap: 8px; border-bottom: 1px solid var(--blinker-divider);
+    &:last-child { border-bottom: 0; }
+    > div { min-width: 0; flex: 1; }
+    strong { display: block; color: var(--blinker-text-primary); font-size: 9px; }
+    pre { margin: 3px 0 0; overflow-wrap: anywhere; color: var(--blinker-text-secondary); font: 8px/1.5 monospace; white-space: pre-wrap; }
+    time { color: var(--blinker-text-tertiary); font: 7px monospace; }
+  }
+
+  .log-tag { position: absolute; top: 9px; left: 9px; width: 26px; padding: 2px 0; border-radius: 4px; background: var(--blinker-surface-muted); color: var(--blinker-text-tertiary); font: 7px monospace; text-align: center; }
+  .log-row.rx .log-tag { background: color-mix(in srgb, var(--ion-color-success) 13%, transparent); color: var(--ion-color-success); }
+  .log-row.tx .log-tag { background: color-mix(in srgb, var(--ble-accent) 13%, transparent); color: var(--ble-accent); }
+  .log-row.error .log-tag { background: color-mix(in srgb, var(--ion-color-danger) 12%, transparent); color: var(--ion-color-danger); }
+
+  @media (max-width: 390px) {
+    .intro-card { padding: 15px; }
+    .connection-state { display: none; }
+    .characteristic-row { flex-direction: column; }
+    .characteristic-actions { width: 100%; }
+    .characteristic-actions button { flex: 1; justify-content: center; }
+  }
+}
+
+// Device and network result rows for the native ESP32 provisioning tool.
+app-esp32-provision {
+  .device-list,
+  .network-list { margin: 0 0 14px; overflow: hidden; border: 1px solid var(--blinker-border); border-radius: 12px; }
+
+  .device-row,
+  .network-row {
+    width: 100%; min-height: 56px; padding: 9px 12px; display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--blinker-divider); background: var(--blinker-bg-elevated); text-align: left;
+    &:last-child { border-bottom: 0; }
+  }
+
+  .device-icon { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--tool-accent) 12%, transparent); color: var(--tool-accent); }
+  .device-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .device-copy strong { overflow: hidden; color: var(--blinker-text-primary); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+  .device-copy span,
+  .rssi { color: var(--blinker-text-tertiary); font-size: 9px; }
+  .device-row > i:last-child { color: var(--blinker-text-tertiary); font-size: 11px; }
+
+  .device-empty { min-height: 112px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 5px; color: var(--blinker-text-tertiary); }
+  .device-empty > i { color: var(--tool-accent); font-size: 23px; }
+  .device-empty strong { color: var(--blinker-text-secondary); font-size: 12px; }
+  .device-empty span { font-size: 10px; }
+
+  .connected-card {
+    border: 1px solid color-mix(in srgb, var(--ion-color-success) 30%, var(--blinker-border));
+    background: color-mix(in srgb, var(--ion-color-success) 8%, var(--blinker-surface));
+    .connected-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--ion-color-success); color: #fff; font-size: 11px; }
+    div { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    strong { color: var(--blinker-text-primary); font-size: 12px; }
+    span { color: var(--blinker-text-secondary); font-size: 10px; }
+    button { color: var(--tool-accent); font-size: 11px; font-weight: 600; }
+  }
+
+  .refresh-button,
+  .retry-button { display: flex; align-items: center; gap: 5px; color: var(--tool-accent); font-size: 11px; font-weight: 600; }
+
+  .network-row {
+    > i:first-child { width: 20px; color: var(--tool-accent); font-size: 15px; }
+    > span { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    strong { overflow: hidden; color: var(--blinker-text-primary); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    small,
+    b { color: var(--blinker-text-tertiary); font-size: 9px; font-weight: 400; }
+    > i:last-child { color: var(--tool-accent); font-size: 13px; }
+    &.selected { background: color-mix(in srgb, var(--tool-accent) 7%, var(--blinker-bg-elevated)); }
+  }
+
+  .remember-row { width: 100%; display: flex; align-items: center; gap: 8px; color: var(--blinker-text-secondary); font-size: 12px; text-align: left; }
+  .remember-row .checkbox { width: 18px; height: 18px; display: grid; place-items: center; border: 1px solid var(--blinker-border); border-radius: 5px; background: var(--blinker-bg-elevated); color: transparent; font-size: 9px; }
+  .remember-row.selected .checkbox { border-color: var(--tool-accent); background: var(--tool-accent); color: #fff; }
+  .provision-button { margin-top: 16px; }
+
+  .status-card {
+    .status-head { display: flex; align-items: center; gap: 11px; }
+    .status-icon { width: 36px; height: 36px; flex: 0 0 36px; display: grid; place-items: center; border-radius: 50%; background: var(--blinker-surface-active); color: var(--tool-accent); }
+    .status-head div { display: flex; flex-direction: column; gap: 2px; }
+    .status-head strong { color: var(--blinker-text-primary); font-size: 12px; line-height: 1.4; }
+    .status-head span { color: var(--blinker-text-tertiary); font-size: 10px; }
+    &.success .status-icon { background: color-mix(in srgb, var(--ion-color-success) 14%, transparent); color: var(--ion-color-success); }
+    &.error .status-icon { background: color-mix(in srgb, var(--ion-color-danger) 13%, transparent); color: var(--ion-color-danger); }
+    .retry-button { margin: 14px auto 0; }
+  }
+
+  .progress-track { height: 4px; margin-top: 13px; overflow: hidden; border-radius: 4px; background: var(--blinker-surface-muted); }
+  .progress-track span { display: block; height: 100%; border-radius: inherit; background: var(--tool-accent); transition: width 300ms ease; }
+  .tips { margin: 18px 4px 0; padding-left: 17px; color: var(--blinker-text-tertiary); font-size: 10px; line-height: 1.6; }
+  .tips li { padding-left: 2px; }
+
+  @media (max-width: 430px) {
+    .field-row,
+    .scan-options { grid-template-columns: 1fr; }
+    .primary-button.compact { width: 100%; }
+    .rssi { display: none; }
+  }
+}
+
 // Shared shell for the two standalone OTA tools.
 app-ble-ota,
 app-wifi-ota {
