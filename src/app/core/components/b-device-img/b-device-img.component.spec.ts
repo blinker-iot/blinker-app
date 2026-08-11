@@ -8,24 +8,26 @@ import { BDeviceImgComponent } from './b-device-img.component';
 describe('BDeviceImgComponent', () => {
   let fixture: ComponentFixture<BDeviceImgComponent>;
   let loader: BehaviorSubject<boolean>;
-  let imageService: {
-    loader: BehaviorSubject<boolean>;
-    deviceIconDict: Record<string, string>;
-    deviceIconList: Set<string>;
-  };
+  let resolveDeviceImage: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     loader = new BehaviorSubject(false);
-    imageService = {
-      loader,
-      deviceIconDict: {},
-      deviceIconList: new Set<string>(),
-    };
+    resolveDeviceImage = vi.fn((reference?: string) => ({
+      dark: reference
+        ? `devices/${reference.replace('-light.webp', '-dark.webp')}`
+        : 'devices/home-living/unknown-device-dark.webp',
+      light: reference
+        ? `devices/${reference}`
+        : 'devices/home-living/unknown-device-light.webp',
+    }));
 
     await TestBed.configureTestingModule({
       imports: [BDeviceImgComponent],
       providers: [
-        { provide: ImageService, useValue: imageService },
+        {
+          provide: ImageService,
+          useValue: { loader, resolveDeviceImage },
+        },
         { provide: DataService, useValue: { device: { dict: {} } } },
       ],
     }).compileComponents();
@@ -33,26 +35,33 @@ describe('BDeviceImgComponent', () => {
     fixture = TestBed.createComponent(BDeviceImgComponent);
   });
 
-  it('keeps one loader subscription and releases it on destroy', () => {
-    fixture.componentRef.setInput('filename', 'remote-icon.png');
+  it('resolves both theme images and releases its loader subscription', () => {
+    fixture.componentRef.setInput(
+      'filename',
+      'home-living/smart-bulb-light.webp',
+    );
     fixture.detectChanges();
 
     expect(loader.observers).toHaveLength(1);
+    expect(fixture.componentInstance.lightUrl).toBe(
+      'devices/home-living/smart-bulb-light.webp',
+    );
+    expect(fixture.componentInstance.darkUrl).toBe(
+      'devices/home-living/smart-bulb-dark.webp',
+    );
 
-    fixture.componentRef.setInput('filename', 'another-icon.png');
+    fixture.componentRef.setInput(
+      'filename',
+      'home-living/smart-plug-light.webp',
+    );
     fixture.detectChanges();
 
     expect(loader.observers).toHaveLength(1);
-
-    const component = fixture.componentInstance;
-    expect(component.url).toBe(component.unknownUrl);
+    const callsBeforeDestroy = resolveDeviceImage.mock.calls.length;
     fixture.destroy();
-
-    imageService.deviceIconList.add('another-icon');
-    imageService.deviceIconDict['another-icon'] = 'https://example.com/icon.png';
     loader.next(true);
 
     expect(loader.observers).toHaveLength(0);
-    expect(component.url).toBe(component.unknownUrl);
+    expect(resolveDeviceImage).toHaveBeenCalledTimes(callsBeforeDestroy);
   });
 });

@@ -1,74 +1,102 @@
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DeviceService } from 'src/app/core/services/device.service';
-import { ActivatedRoute } from '@angular/router';
-import { IonicModule, NavController, ModalController } from '@ionic/angular';
-import { DataService } from '../../services/data.service';
-import { ImageList } from 'src/app/configs/app.config';
-import { ImageService } from '../../services/image.service';
-import { BDeviceImgComponent } from '../../components/b-device-img/b-device-img.component';
+import { IonicModule, ModalController } from '@ionic/angular';
 
+import { BDeviceImgComponent } from '../../components/b-device-img/b-device-img.component';
+import {
+  DeviceImageAsset,
+  DeviceImageVariant,
+  ImageService,
+} from '../../services/image.service';
+import { ViewService } from '../../services/view.service';
+
+interface DeviceImageCategory {
+  id: string;
+  label: string;
+}
+
+const DEVICE_IMAGE_CATEGORIES: DeviceImageCategory[] = [
+  { id: 'all', label: '全部' },
+  { id: 'home-living', label: '家居生活' },
+  { id: 'development-boards', label: '开发板' },
+  { id: 'health-wearables', label: '健康穿戴' },
+  { id: 'agriculture-forestry', label: '农林环境' },
+  { id: 'municipal-buildings', label: '市政楼宇' },
+  { id: 'retail-logistics', label: '零售物流' },
+];
 
 @Component({
-    standalone: true,
-    selector: 'page-device-icon',
-    templateUrl: 'device-icon.html',
-    styleUrls: ['device-icon.scss'],
-    imports: [CommonModule, FormsModule, IonicModule, BDeviceImgComponent]
+  standalone: true,
+  selector: 'page-device-icon',
+  templateUrl: 'device-icon.html',
+  styleUrls: ['device-icon.scss'],
+  imports: [CommonModule, FormsModule, IonicModule, BDeviceImgComponent],
 })
-export class DeviceIconPage {
-  id;
-  device;
+export class DeviceIconPage implements OnInit {
+  @Input() currentImage?: string;
 
-  imageList;
+  readonly categories = DEVICE_IMAGE_CATEGORIES;
+  searchText = '';
+  selectedCategory = 'all';
+  previewVariant: DeviceImageVariant;
 
-  customUrl = "";
+  get images(): readonly DeviceImageAsset[] {
+    const query = this.searchText.trim().toLocaleLowerCase();
+    return this.imageService.deviceImages.filter((image) => {
+      const inCategory =
+        this.selectedCategory === 'all' ||
+        this.getCategory(image) === this.selectedCategory;
+      if (!inCategory) return false;
+      if (!query) return true;
 
-  get deviceIconDict() {
-    return this.imageService.deviceIconDict
+      return [image.name, ...image.keywords]
+        .join(' ')
+        .toLocaleLowerCase()
+        .includes(query);
+    });
+  }
+
+  get isLoading(): boolean {
+    return !this.imageService.loader.value;
+  }
+
+  get loadError(): boolean {
+    return this.imageService.loadError;
   }
 
   constructor(
-    private activatedRoute: ActivatedRoute,
-    private deviceService: DeviceService,
-    public dataService: DataService,
-    private navCtrl: NavController,
-    private modalCtrl: ModalController,
-    private imageService: ImageService
+    private readonly modalCtrl: ModalController,
+    public readonly imageService: ImageService,
+    viewService: ViewService,
   ) {
+    this.previewVariant = viewService.theme;
   }
 
-  ngOnInit() {
-    this.id = this.activatedRoute.snapshot.params['id'];
-    this.device = this.dataService.device.dict[this.id];
-    this.imageList = ImageList.concat([...this.imageService.deviceIconList]);
-    // this.imageService.imageDict
+  ngOnInit(): void {
+    this.imageService.init();
   }
 
-  async select(filename) {
-    if (typeof this.id != 'undefined') {
-      let newConfig = {
-        "image": filename + '.png'
-      }
-      if (await this.deviceService.saveDeviceConfig(this.device, newConfig)) {
-        this.deviceService.loadDeviceConfig(this.device);
-      }
-      this.navCtrl.pop();
-    } else {
-      (await this.modalCtrl.getTop()).dismiss(filename + '.png')
-      // this.modalCtrl.dismiss();
-    }
+  getCategory(image: DeviceImageAsset): string {
+    return image.light.split('/')[0] || 'all';
   }
 
-  async close() {
-    (await this.modalCtrl.getTop()).dismiss()
-    // this.modalCtrl.dismiss()
+  categoryCount(category: string): number {
+    if (category === 'all') return this.imageService.deviceImages.length;
+    return this.imageService.deviceImages.filter(
+      (image) => this.getCategory(image) === category,
+    ).length;
   }
 
-  async selectCustomUrl() {
-    if ((this.customUrl.indexOf('https://') > -1 || this.customUrl.indexOf('http://') > -1) && (this.customUrl.indexOf('.png')))
-      (await this.modalCtrl.getTop()).dismiss(this.customUrl)
+  isSelected(image: DeviceImageAsset): boolean {
+    return this.imageService.findDeviceImage(this.currentImage)?.light === image.light;
   }
 
+  select(image: DeviceImageAsset): void {
+    void this.modalCtrl.dismiss(image.light);
+  }
+
+  close(): void {
+    void this.modalCtrl.dismiss();
+  }
 }

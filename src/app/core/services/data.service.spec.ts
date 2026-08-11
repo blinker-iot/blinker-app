@@ -22,6 +22,15 @@ describe('DataService guest device preview', () => {
     expect(service.device.dict['preview-energy-monitor'].config.card?.metrics).toHaveLength(6);
     expect(service.device.dict['preview-nearby-ble'].config.mode).toBe('ble');
     expect(service.device.dict['preview-nearby-ble'].config.previewNearby).toBe(true);
+    expect(
+      Object.values(
+        service.device.dict as Record<string, { config: { image: string } }>,
+      ).every((device) =>
+          /^(home-living|development-boards|health-wearables|agriculture-forestry|municipal-buildings|retail-logistics)\/.+\.webp$/.test(
+            device.config.image,
+          ),
+        ),
+    ).toBe(true);
   });
 
   it('does not replace signed-in data unless preview mode is forced', () => {

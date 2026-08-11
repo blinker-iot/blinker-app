@@ -1,29 +1,102 @@
-<ion-header>
+<ion-header whitebg no-border>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="close()">
-        <i class="fal fa-times"></i>
+      <ion-button aria-label="关闭" (click)="close()">
+        <i class="fa-light fa-xmark"></i>
       </ion-button>
     </ion-buttons>
-    <ion-title>图标设置</ion-title>
+    <ion-title>选择设备图片</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
-  <div class="custom-box" *ngIf="dataService.isAdvancedDeveloper">
-    <div class="text">自定义图标<span>填入图标Url,200x200px,png格式</span></div>
-    <div class="input-box">
-      <input type="text" [(ngModel)]="customUrl">
-      <button (click)="selectCustomUrl()">确认</button>
+  <div class="catalog-shell">
+    <section class="catalog-controls" aria-label="图片筛选">
+      <div class="search-theme-row">
+        <ion-searchbar
+          [(ngModel)]="searchText"
+          placeholder="搜索设备或关键词"
+          inputmode="search"
+          [debounce]="100"
+          show-clear-button="focus"
+        ></ion-searchbar>
+
+        <ion-segment
+          [(ngModel)]="previewVariant"
+          aria-label="预览图片主题"
+        >
+          <ion-segment-button value="light">
+            <i class="fa-light fa-sun-bright"></i>
+            <ion-label>Light</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="dark">
+            <i class="fa-light fa-moon"></i>
+            <ion-label>Dark</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+
+      <div class="category-list" role="tablist" aria-label="图片分类">
+        @for (category of categories; track category.id) {
+        <button
+          type="button"
+          role="tab"
+          [class.active]="selectedCategory === category.id"
+          [attr.aria-selected]="selectedCategory === category.id"
+          (click)="selectedCategory = category.id"
+        >
+          {{ category.label }}
+          <small>{{ categoryCount(category.id) }}</small>
+        </button>
+        }
+      </div>
+
+      @if (!isLoading && !loadError) {
+      <div class="result-summary">共 {{ images.length }} 张图片</div>
+      }
+    </section>
+
+    @if (isLoading) {
+    <div class="catalog-state">
+      <ion-spinner name="crescent"></ion-spinner>
+      <span>正在加载设备图片…</span>
     </div>
-  </div>
-  <div class="img-box">
-    <div class="img-item" *ngFor="let filename of imageList">
-      <!-- <img src="assets/img/devices/icon/{{filename}}.png" (click)="select(filename)"> -->
-      <b-device-img [filename]="filename" (click)="select(filename)"></b-device-img>
+    } @else if (loadError) {
+    <div class="catalog-state error-state">
+      <i class="fa-light fa-triangle-exclamation"></i>
+      <strong>图片索引加载失败</strong>
+      <span>请检查 public/devices/index.json 后重试。</span>
     </div>
-    <div class="null" *ngIf="(5-(imageList.length%4))>0"></div>
-    <div class="null" *ngIf="(5-(imageList.length%4))>1"></div>
-    <div class="null" *ngIf="(5-(imageList.length%4))>2"></div>
+    } @else if (images.length === 0) {
+    <div class="catalog-state">
+      <i class="fa-light fa-magnifying-glass"></i>
+      <strong>没有找到匹配的图片</strong>
+      <span>试试其他关键词或分类。</span>
+    </div>
+    } @else {
+    <section class="image-grid" aria-label="设备图片列表">
+      @for (image of images; track image.light) {
+      <button
+        type="button"
+        class="image-card"
+        [class.selected]="isSelected(image)"
+        [attr.aria-label]="'选择 ' + image.name"
+        (click)="select(image)"
+      >
+        <span class="image-preview">
+          <b-device-img
+            [filename]="image.light"
+            [variant]="previewVariant"
+            [alt]="image.name"
+          ></b-device-img>
+        </span>
+        <span class="image-name">{{ image.name }}</span>
+        @if (isSelected(image)) {
+        <i class="selected-mark fa-solid fa-circle-check"></i>
+        }
+      </button>
+      }
+    </section>
+    }
   </div>
 </ion-content>

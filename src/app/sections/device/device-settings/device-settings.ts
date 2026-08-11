@@ -12,7 +12,6 @@ import { ActivatedRoute, RouterModule } from "@angular/router";
 import { DeviceIconPage } from "../../../core/pages/device-icon/device-icon";
 import { DataService } from "src/app/core/services/data.service";
 import { BlinkerDevice } from "src/app/core/model/device.model";
-import { ImageList } from "src/app/configs/app.config";
 import { ImageService } from "src/app/core/services/image.service";
 import { AndroidShortcuts } from "capacitor-android-shortcuts";
 import { TranslatePipe } from "@ngx-translate/core";
@@ -165,12 +164,20 @@ export class DeviceSettingsPage {
   async selectIcon() {
     let modal = await this.modalCtrl.create({
       component: DeviceIconPage,
+      componentProps: {
+        currentImage: this.device.config.image,
+      },
     });
     modal.onDidDismiss().then(async (image) => {
       if (typeof image.data == "undefined") return;
       let newConfig = {
         "image": image.data,
       };
+      if (this.device.config.isPreview) {
+        this.device.config.image = image.data;
+        this.device.subject.next({ key: "image", value: image.data });
+        return;
+      }
       if (await this.deviceService.saveDeviceConfig(this.device, newConfig)) {
         this.device.config.image = image.data;
       }
@@ -265,29 +272,15 @@ export class DeviceSettingsPage {
         let ctx = canvas.getContext("2d");
         ctx.drawImage(image, 0, 0, image.width, image.height);
         // console.log(image.src);
-        let ext = image.src.substring(image.src.lastIndexOf(".") + 1)
-          .toLowerCase();
-        // console.log(ext);
-        let base64 = canvas.toDataURL("image/" + ext);
-        base64 = base64.replace("data:image/png;base64,", "");
+        let base64 = canvas.toDataURL("image/png");
+        base64 = base64.replace(/^data:image\/png;base64,/, "");
         return resolve(base64);
       };
     });
   }
 
   getImagePath(filename) {
-    let url;
-    if (filename.indexOf(".png") > -1) {
-      filename = filename.substring(0, filename.indexOf(".png"));
-    }
-    if (ImageList.indexOf(filename) > -1) {
-      url = `img/devices/icon/${filename}.png`;
-    } else if (this.imageService.deviceIconList.has(filename)) {
-      url = this.imageService.deviceIconDict[filename];
-    } else {
-      url = `img/devices/icon/unknown.png`;
-    }
-    return url;
+    return this.imageService.resolveDeviceImage(filename).light;
   }
 
   async checkSupportShort() {
