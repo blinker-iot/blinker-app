@@ -47,5 +47,5 @@ project(':capacitor-native-settings').projectDir = new File('../node_modules/cap
 include ':capacitor-wifiprov'
 project(':capacitor-wifiprov').projectDir = new File('../node_modules/capacitor-wifiprov/android')
 
-include ':capacitor-zeroconf'
-project(':capacitor-zeroconf').projectDir = new File('../node_modules/capacitor-zeroconf/android')
+include ':capacitor-mdns'
+project(':capacitor-mdns').projectDir = new File('../node_modules/capacitor-mdns/android')

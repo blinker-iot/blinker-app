@@ -24,7 +24,7 @@ dependencies {
     implementation project(':capacitor-android-shortcuts')
     implementation project(':capacitor-native-settings')
     implementation project(':capacitor-wifiprov')
-    implementation project(':capacitor-zeroconf')
+    implementation project(':capacitor-mdns')
 
 }
 
