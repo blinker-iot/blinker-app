@@ -23,6 +23,7 @@
 
   > .deviceblock {
     touch-action: pan-y;
+    cursor: grab;
   }
 }
 
@@ -43,8 +44,14 @@
   border-radius: 15px;
 }
 
+.schosen {
+  transform: scale(0.98);
+  cursor: grabbing !important;
+}
+
 .sdrag {
   opacity: 1 !important;
   border-radius: 15px;
   box-shadow: 0 0 0 2px rgba(var(--ion-color-primary-rgb), 0.42);
+  cursor: grabbing !important;
 }

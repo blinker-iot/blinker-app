@@ -28,13 +28,22 @@ ion-content {
   width: 100%;
   min-height: 100%;
   padding: calc(var(--ion-safe-area-top, 0px) + 113px) 17px 18px;
+  display: flex;
+  flex-direction: column;
   background:
     radial-gradient(circle at 95% 3%, rgba(var(--ion-color-primary-rgb), 0.08), transparent 25%),
     var(--blinker-bg);
 }
 
 .device-zone {
+  min-height: 0;
+  flex: 1;
   margin: 0 -7px;
+  display: flex;
+
+  deviceblock-zone {
+    flex: 1;
+  }
 }
 
 .empty-devices {

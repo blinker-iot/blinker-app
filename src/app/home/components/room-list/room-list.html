@@ -3,6 +3,7 @@
     <button
       type="button"
       class="room-chip"
+      [attr.data-room-id]="-1"
       [class.selected]="roomid === -1"
       (click)="selectRoom(-1)"
     >
@@ -12,6 +13,7 @@
     <button
       type="button"
       class="room-chip"
+      [attr.data-room-id]="i"
       [class.selected]="roomid === i"
       (click)="selectRoom(i)"
     >

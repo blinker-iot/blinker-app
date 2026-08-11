@@ -183,7 +183,17 @@
   .device-primary {
     min-width: 0;
     min-height: 0;
-    border-right: 1px solid var(--blinker-divider);
+
+    &::after {
+      position: absolute;
+      top: 12px;
+      right: 0;
+      bottom: 12px;
+      width: 1px;
+      background: var(--blinker-divider);
+      opacity: 0.8;
+      content: '';
+    }
   }
 }
 

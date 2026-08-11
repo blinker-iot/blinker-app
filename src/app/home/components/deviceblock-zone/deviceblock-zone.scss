@@ -1,11 +1,14 @@
 :host {
   display: block;
   width: 100%;
+  min-height: 100%;
 }
 
 .device-list-container {
   position: relative;
   width: 100%;
+  min-height: 100%;
+  touch-action: pan-y;
 }
 
 deviceblock-list {
