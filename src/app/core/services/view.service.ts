@@ -10,7 +10,11 @@ import { PlatformLocation } from "@angular/common";
 import { NavigationEnd, Router } from "@angular/router";
 import { Subject } from "rxjs";
 import { App } from "@capacitor/app";
-import { StatusBar, Style } from "@capacitor/status-bar";
+import {
+  SystemBars,
+  SystemBarsStyle,
+  SystemBarType,
+} from "@capacitor/core";
 // import { ScreenOrientation,OrientationType } from '@capacitor/screen-orientation';
 import { AndroidShortcuts } from "capacitor-android-shortcuts";
 import {
@@ -60,7 +64,6 @@ export class ViewService {
     this.checkShortcut();
     this.listenRouter();
     // ScreenOrientation.lock({ type: OrientationType.Portrait });
-    StatusBar.setOverlaysWebView({ overlay: true });
     this.getStatusBarHeight();
   }
 
@@ -95,7 +98,10 @@ export class ViewService {
     applyThemeToDocument(theme);
 
     if (this.platform.is("hybrid")) {
-      void StatusBar.setStyle({ style: isDark ? Style.Light : Style.Dark });
+      void SystemBars.setStyle({
+        bar: SystemBarType.StatusBar,
+        style: isDark ? SystemBarsStyle.Dark : SystemBarsStyle.Light,
+      });
     }
   }
 
@@ -282,11 +288,11 @@ export class ViewService {
   async getStatusBarHeight() {
     const tempElement = document.createElement('div');
     tempElement.style.position = 'fixed';
-    tempElement.style.top = 'env(safe-area-inset-top)';
+    tempElement.style.paddingTop = 'var(--ion-safe-area-top, 0px)';
     tempElement.style.visibility = 'hidden';
     document.body.appendChild(tempElement);
 
-    const statusBarHeight = parseInt(getComputedStyle(tempElement).top) || 0;
+    const statusBarHeight = parseFloat(getComputedStyle(tempElement).paddingTop) || 0;
     document.body.removeChild(tempElement);
     this.statusBarHeight = statusBarHeight;
     console.log("Status Bar Height:", this.statusBarHeight);

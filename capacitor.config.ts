@@ -8,6 +8,14 @@ const config: CapacitorConfig = {
     androidScheme: 'https'
   },
   plugins: {
+    SystemBars: {
+      insetsHandling: "css",
+      style: "LIGHT",
+      hidden: false,
+    },
+    StatusBar: {
+      overlaysWebView: false,
+    },
     "SplashScreen": {
       "launchShowDuration": 500,
       "launchAutoHide": true,
