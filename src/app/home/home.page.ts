@@ -2,15 +2,23 @@ import {
   Component,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
+  AfterViewInit,
+  ViewChild,
 } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
-import { IonicModule } from '@ionic/angular';
-import { RouterModule } from '@angular/router';
-import { Router } from '@angular/router';
+import {
+  IonLabel,
+  IonTab,
+  IonTabBar,
+  IonTabButton,
+  IonTabs,
+} from '@ionic/angular/standalone';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ViewService } from '../core/services/view.service';
 import { TabDeviceComponent } from './components/tab-device/tab-device';
 import { TabCommunityComponent } from './components/tab-community/tab-community';
+import { TabToolsComponent } from './components/tab-tools/tab-tools';
 import { TabProfileComponent } from './components/tab-profile/tab-profile';
 
 @Component({
@@ -21,28 +29,39 @@ import { TabProfileComponent } from './components/tab-profile/tab-profile';
   changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
-    IonicModule,
+    IonTabs,
+    IonTab,
+    IonTabBar,
+    IonTabButton,
+    IonLabel,
     RouterModule,
     TabDeviceComponent,
     TabCommunityComponent,
+    TabToolsComponent,
     TabProfileComponent,
   ],
 })
-export class HomePage {
+export class HomePage implements AfterViewInit {
+  @ViewChild(IonTabs) private tabs?: IonTabs;
+
   isIos = false;
   isIphonex = false;
   isCordova = false;
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private viewService: ViewService,
     private cd: ChangeDetectorRef
   ) {}
 
-  ngOnInit() {}
+  ionViewWillEnter() {
+    this.selectRequestedTab();
+  }
 
   ngAfterViewInit() {
     this.viewService.disableMenuSwipe();
+    this.selectRequestedTab();
     if ('webkitSpeechRecognition' in window) {
       // this.speech()
     } else {
@@ -57,5 +76,12 @@ export class HomePage {
   // 弹出视图模式菜单
   changeView() {
     this.viewService.changeView();
+  }
+
+  private selectRequestedTab() {
+    const requestedTab = this.route.snapshot.queryParamMap.get('tab');
+    if (requestedTab) {
+      void this.tabs?.select(requestedTab);
+    }
   }
 }

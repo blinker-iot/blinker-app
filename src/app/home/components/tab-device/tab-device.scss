@@ -1,57 +1,75 @@
-@use "../../../../blinker.scss" as *;
-
-.bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: -1;
+:host {
+  display: block;
+  height: 100%;
 }
 
-.contentbox {
-    padding: 16px;
-    padding-bottom: 100px;
-
-    &.show-scene-button-group {
-        padding-top: 0;
-    }
+ion-content {
+  --background: var(--blinker-bg);
+  --overflow: auto;
 }
 
-.deviceZone {
-    margin-top: 16px;
+.device-page {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  padding: calc(var(--ion-safe-area-top, 0px) + 64px) 17px 18px;
+  background:
+    radial-gradient(circle at 95% 3%, rgba(var(--ion-color-primary-rgb), 0.08), transparent 25%),
+    var(--blinker-bg);
 }
 
-.nodevice {
+.device-zone {
+  margin: 13px -7px 0;
+}
+
+.empty-devices {
+  flex: 1;
+  padding-bottom: 78px;
+  color: var(--blinker-text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  .empty-icon {
+    width: 84px;
+    height: 84px;
+    border-radius: 26px;
+    background: var(--blinker-surface);
+    box-shadow: var(--blinker-shadow-soft);
+    color: var(--ion-color-primary);
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 60vh;
+    font-size: 34px;
+  }
 
-    img {
-        width: 120px;
-        opacity: 0.6;
+  h2 {
+    margin: 22px 0 0;
+    color: var(--blinker-text-primary);
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 9px 0 21px;
+    font-size: 11px;
+  }
+
+  > button {
+    min-width: 126px;
+    height: 42px;
+    border: 0;
+    border-radius: 21px;
+    background: var(--ion-color-primary);
+    box-shadow: 0 9px 20px rgba(var(--ion-color-primary-rgb), 0.25);
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+
+    i {
+      margin-right: 6px;
     }
-
-    .text {
-        margin-top: 24px;
-        color: var(--ion-color-medium);
-        font-size: 14px;
-    }
-
-    button {
-        margin-top: 24px;
-        padding: 12px 24px;
-        border: none;
-        border-radius: 24px;
-        background: var(--ion-color-primary);
-        color: white;
-        font-size: 14px;
-        cursor: pointer;
-
-        i {
-            margin-right: 8px;
-        }
-    }
+  }
 }

@@ -1,43 +1,37 @@
-<ion-header whitebg>
+<ion-header whitebg class="main-tab-header device-header">
   <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-button (click)="openMenu()">
-        <i class="fa-regular fa-bars"></i>
-      </ion-button>
-    </ion-buttons>
     <ion-title>设备</ion-title>
     <ion-buttons slot="end">
-      <ion-button [routerLink]="['/adddevice/DiyArduino']">
-        <i class="fa-regular fa-plus"></i>
+      <ion-button class="header-action notice-button" aria-label="消息中心" [routerLink]="['/message']">
+        <i class="fa-light fa-bell"></i>
+      </ion-button>
+      <ion-button class="header-action add-button" aria-label="添加设备" [routerLink]="['/adddevice/DiyArduino']">
+        <i class="fa-light fa-plus"></i>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
-<ion-content fullscreen="true" scrollY="false">
-  <div class="bg"></div>
-  @if (loaded) {
-  <div
-    class="contentbox"
-    [ngClass]="{'show-scene-button-group': sceneDataList.length>0}"
-  >
-    @if (sceneDataList.length>0) {
-    <scene-button-group></scene-button-group>
-    } @if (deviceNum>0) {
-    <room-list [(roomid)]="roomid" (roomidChange)="onRoomidChange($event)">
-    </room-list>
-    <div class="deviceZone animated fadeIn">
-      <deviceblock-zone [(roomid)]="roomid"> </deviceblock-zone>
+
+<ion-content fullscreen="true">
+  <div class="device-page">
+    <room-list [(roomid)]="roomid" (roomidChange)="onRoomidChange($event)"></room-list>
+
+    @if (deviceNum > 0) {
+    <div class="device-zone">
+      <deviceblock-zone
+        [(roomid)]="roomid"
+      ></deviceblock-zone>
     </div>
     } @else {
-    <div class="nodevice">
-      <img src="img/nodevice.svg" />
-      <div class="text">{{'HOME.WELCOME' | translate}}</div>
-      <button [routerLink]="['/adddevice/DiyArduino']">
-        <i class="fal fa-plus"></i
-        ><span>{{'HOME.ADD_DEVICE' | translate}}</span>
+    <div class="empty-devices">
+      <div class="empty-icon"><i class="fa-light fa-house-signal"></i></div>
+      <h2>还没有设备</h2>
+      <p>添加你的第一台智能设备，开始轻松生活</p>
+      <button type="button" [routerLink]="['/adddevice/DiyArduino']">
+        <i class="fa-light fa-plus"></i>
+        添加设备
       </button>
     </div>
     }
   </div>
-  }
 </ion-content>

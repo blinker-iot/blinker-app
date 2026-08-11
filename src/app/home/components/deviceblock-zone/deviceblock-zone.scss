@@ -1,24 +1,14 @@
-@use '@splidejs/splide/css';
-
-.slidesbox {
-    width: 100%;
-    height: 100%;
-    position: relative;
+:host {
+  display: block;
+  width: 100%;
 }
 
-.splide {
-    height: 100%;
+.device-list-container {
+  position: relative;
+  width: 100%;
+}
 
-    .splide__track {
-        height: 100%;
-
-        .splide__list {
-            height: 100%;
-
-            .splide__slide {
-                height: 100%;
-            }
-        }
-    }
-
+deviceblock-list {
+  display: block;
+  width: 100%;
 }

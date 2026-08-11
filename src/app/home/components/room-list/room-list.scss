@@ -1,60 +1,56 @@
-.room-bar {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    flex-direction: row;
-    height: 30px;
-    width: 100vw;
-    padding-right: 15px;
-    color: #B1B1B1;
-    // margin-top: 0px;
+:host {
+  display: block;
+  min-width: 0;
+}
 
-    .room-btn {
-        padding: 0 10px 0 15px;
-        height: 100%;
-        display: flex;
-        align-items: center;
+.room-filter {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-        img {
-            width: 28px;
-        }
-    }
+.room-scroll {
+  min-width: 0;
+  flex: 1;
+  overflow-x: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  scrollbar-width: none;
 
-    .room-box {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        height: 30px;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
 
-        .room {
-            // display: inline-block;
-            padding: 0 10px;
-            font-size: 14px;
-            line-height: 19px;
-            height: 100%;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.1s;
-        }
+.room-chip {
+  height: 32px;
+  flex: 0 0 auto;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: var(--blinker-surface-muted);
+  color: var(--blinker-text-secondary);
+  font-size: 11px;
+  transition: 160ms ease;
 
-        .add-room {
-            font-size: 21px;
-            padding-left: 10px;
-        }
-    }
+  &.selected {
+    border-color: rgba(var(--ion-color-primary-rgb), 0.25);
+    background: var(--ion-color-primary);
+    box-shadow: 0 6px 14px rgba(var(--ion-color-primary-rgb), 0.22);
+    color: white;
+    font-weight: 600;
+  }
+}
 
-    .selected {
-        color: #389BEE;
-        transform: scale(1.1, 1.1);
-    }
-
-    .scrollbox {
-        height: 100%;
-        width: 200%;
-        overflow: hidden;
-        overflow-x: scroll;
-        overflow-y: hidden;
-    }
+.room-manage {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border: 1px solid var(--blinker-border);
+  border-radius: 50%;
+  background: var(--blinker-surface);
+  color: var(--blinker-text-secondary);
+  font-size: 14px;
 }

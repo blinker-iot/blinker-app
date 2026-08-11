@@ -1,60 +1,104 @@
-<ion-header whitebg>
+<ion-header whitebg class="main-tab-header profile-header">
   <ion-toolbar>
-    <ion-title>我的</ion-title>
+    <ion-title>用户中心</ion-title>
     <ion-buttons slot="end">
-      <blinker-lang-selector></blinker-lang-selector>
+      <ion-button class="header-action" aria-label="设置" (click)="goto('/settings')">
+        <i class="fa-light fa-gear"></i>
+      </ion-button>
+      <ion-button class="header-action" aria-label="消息中心" (click)="goto('/message')">
+        <i class="fa-light fa-message-dots"></i>
+        <span class="notice-dot"></span>
+      </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
+
 <ion-content fullscreen="true">
   <div class="profile-content">
-    <!-- 用户信息 -->
-    @if (loaded) {
-    <div class="user-info" (click)="goto('/user')">
+    <button type="button" class="user-info" (click)="goto('/user')">
       <div class="avatar">
-        @if (user?.avatar) {
-        <img [src]="user.avatar" alt="avatar" />
-        } @if (!user?.avatar) {
-        <i class="fa-light fa-user-astronaut"></i>
+        @if (avatar) {
+        <img [src]="avatar" alt="用户头像" />
+        } @else {
+        <span>{{ userName.slice(0, 1) }}</span>
         }
       </div>
       <div class="info">
-        <div class="name">{{ user?.username || '用户' }}</div>
-        <div class="device-num">
-          {{ deviceNum }} {{'MENU.DEVICE_NUM' | translate}}
-        </div>
+        <div class="name">{{ userName }}</div>
+        <div class="membership">点灯用户</div>
       </div>
-      <div class="arrow">
+      <i class="fa-light fa-chevron-right profile-arrow"></i>
+    </button>
+
+    <section class="summary-grid" aria-label="账户概览">
+      <button type="button" (click)="goto('/room-manager')">
+        <i class="fa-light fa-house"></i>
+        <span class="summary-label">家庭</span>
+        <strong>{{ roomNum }} <small>个</small></strong>
+      </button>
+      <button type="button">
+        <i class="fa-light fa-server"></i>
+        <span class="summary-label">设备</span>
+        <strong>{{ deviceNum }} <small>台</small></strong>
+      </button>
+      <button type="button" (click)="goto('/message')">
+        <i class="fa-light fa-message-lines"></i>
+        <span class="summary-label">消息</span>
+        <strong>4 <small>条</small></strong>
+        <span class="summary-dot"></span>
+      </button>
+    </section>
+
+    <section class="menu-card">
+      <button type="button" class="menu-item" (click)="goto('/room-manager')">
+        <span class="menu-icon"><i class="fa-light fa-house"></i></span>
+        <span class="menu-label">家庭管理</span>
+        <span class="menu-value">{{ roomNum }} 个家庭</span>
         <i class="fa-light fa-chevron-right"></i>
-      </div>
-    </div>
-    }
+      </button>
+      <button type="button" class="menu-item" (click)="goto('/scene-manager')">
+        <span class="menu-icon"><i class="fa-light fa-bullseye-pointer"></i></span>
+        <span class="menu-label">自动化</span>
+        <span class="menu-value">{{ sceneNum }} 个场景</span>
+        <i class="fa-light fa-chevron-right"></i>
+      </button>
+      <button type="button" class="menu-item">
+        <span class="menu-icon"><i class="fa-light fa-user-group"></i></span>
+        <span class="menu-label">设备共享</span>
+        <span class="menu-value">已共享 {{ sharedDeviceNum }} 台设备</span>
+        <i class="fa-light fa-chevron-right"></i>
+      </button>
+      <button type="button" class="menu-item">
+        <span class="menu-icon"><i class="fa-light fa-microphone"></i></span>
+        <span class="menu-label">语音助手</span>
+        <span class="menu-value">小度、天猫精灵</span>
+        <i class="fa-light fa-chevron-right"></i>
+      </button>
+    </section>
 
-    <!-- 菜单列表 -->
-    <div class="menu-list">
-      @for (item of menuList; track item) {
-      <div
-        class="menu-item"
-        [ngClass]="{'disabled': item['disabled']}"
-        (click)="goto(item.url, item['disabled'])"
-      >
-        <div class="icon">
-          <i class="{{item.icon}}"></i>
-        </div>
-        <div class="title">{{item.title2 | translate}}</div>
-        <div class="arrow">
-          <i class="fa-light fa-chevron-right"></i>
-        </div>
-      </div>
-      }
-    </div>
+    <section class="menu-card compact-card">
+      <button type="button" class="menu-item" (click)="goto('/settings')">
+        <span class="menu-icon"><i class="fa-light fa-gear"></i></span>
+        <span class="menu-label">设置</span>
+        <i class="fa-light fa-chevron-right"></i>
+      </button>
+      <button type="button" class="menu-item">
+        <span class="menu-icon"><i class="fa-light fa-circle-question"></i></span>
+        <span class="menu-label">帮助与反馈</span>
+        <i class="fa-light fa-chevron-right"></i>
+      </button>
+      <button type="button" class="menu-item logout-item" (click)="logout()">
+        <span class="menu-icon"><i class="fa-light fa-arrow-right-from-bracket"></i></span>
+        <span class="menu-label">退出登录</span>
+      </button>
+    </section>
 
-    <!-- 版本信息 -->
-    <div class="version" (click)="checkCodePush()">
-      <span>{{'MENU.VERSION' | translate}} {{currentVersion}}</span>
+    <div class="profile-version">
+      <span>版本 {{ currentVersion || '2.4.1' }}</span>
       @if (showNewVersion) {
-      <img class="cue" src="img/new.png" />
+      <span class="version-dot"></span>
       }
     </div>
+
   </div>
 </ion-content>

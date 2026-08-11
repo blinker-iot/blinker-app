@@ -29,10 +29,8 @@ export class RoomListComponent {
   }
 
   get roomDataList() {
-    return this.dataService.room.list;
+    return this.dataService.room?.list || [];
   }
-
-  loaded = false;
 
   @Output() roomidChange: EventEmitter<number> = new EventEmitter<number>();
   // @Output() refresherEnabled: EventEmitter<boolean> = new EventEmitter<boolean>();
@@ -40,14 +38,6 @@ export class RoomListComponent {
   @ViewChild('roombox', { read: ElementRef, static: true }) roombox: ElementRef;
 
   constructor(private dataService: DataService) {}
-
-  ngOnInit(): void {
-    this.dataService.initCompleted.subscribe((loaded) => {
-      if (loaded) {
-        this.loaded = loaded;
-      }
-    });
-  }
 
   selectRoom(index) {
     this.roomid = index;

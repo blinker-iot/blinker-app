@@ -1,82 +1,50 @@
-.sortablemenu {
-    position: fixed;
-    top: 0;
+:host {
+  display: block;
+  width: 100%;
 }
 
 .device-list {
-    padding: 0 10px;
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow-y: scroll;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    padding-bottom: 200px;
+  position: relative;
+  width: 100%;
+  touch-action: pan-y;
+  container-type: inline-size;
+  padding: 0 7px 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 10px;
 
-    .schosen {
-        opacity: 0.4;
-        border-radius: 8px;
-    }
+  > .deviceblock.wide-device {
+    grid-column: 1 / -1;
+    height: calc((100cqi - 10px) / 2);
+    min-height: 0;
+    max-height: calc((100cqi - 10px) / 2);
+  }
 
-    .sdrag {
-        opacity: 1 !important;
-        border-radius: 8px;
-        box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8);
-    }
-
-    .sghost {
-        opacity: 0.4;
-        border-radius: 8px;
-    }
+  > .deviceblock {
+    touch-action: pan-y;
+  }
 }
 
-
-.grid-demo-section {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 30px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+.device-count {
+  grid-column: 1 / -1;
 }
 
-.grid-title {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 15px;
-    color: #2c3e50;
-    border-bottom: 2px solid #27ae60;
-    padding-bottom: 5px;
+.device-count {
+  padding: 9px 0 4px;
+  color: var(--blinker-text-tertiary);
+  font-size: 11px;
+  text-align: center;
 }
 
-.sortable-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 15px;
-    margin-top: 10px;
+.schosen,
+.sghost {
+  opacity: 0.45;
+  border-radius: 15px;
 }
 
-.grid-item {
-    background: linear-gradient(135deg, #27ae60 0%, #2980b9 100%);
-    color: white;
-    font-size: 20px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 80px;
-    border-radius: 8px;
-    cursor: move;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transition: transform 0.2s;
-}
-
-.grid-item.ghost {
-    opacity: 0.4;
-    background: #bdc3c7 !important;
-}
-
-.grid-item.chosen {
-    background: #27ae60 !important;
+.sdrag {
+  opacity: 1 !important;
+  border-radius: 15px;
+  box-shadow: 0 0 0 2px rgba(var(--ion-color-primary-rgb), 0.42);
 }

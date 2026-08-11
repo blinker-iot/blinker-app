@@ -1,8 +1,17 @@
-<ion-header whitebg class="discover-header">
+<ion-header
+  whitebg
+  class="main-tab-header discover-header"
+  [class.search-visible]="searchVisible"
+>
   <ion-toolbar>
-    @if (!searchVisible) {
     <ion-title>发现</ion-title>
-    } @else {
+    <ion-buttons slot="end">
+      <ion-button class="header-action" aria-label="搜索" [class.active]="searchVisible" (click)="toggleSearch()">
+        <i [class]="searchVisible ? 'fa-light fa-xmark' : 'fa-light fa-magnifying-glass'"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  @if (searchVisible) {
     <div class="search-field">
       <i class="fa-light fa-magnifying-glass"></i>
       <input
@@ -13,13 +22,7 @@
         autofocus
       />
     </div>
-    }
-    <ion-buttons slot="end">
-      <ion-button aria-label="搜索" (click)="toggleSearch()">
-        <i [class]="searchVisible ? 'fa-light fa-xmark' : 'fa-light fa-magnifying-glass'"></i>
-      </ion-button>
-    </ion-buttons>
-  </ion-toolbar>
+  }
   <div class="category-tabs" role="tablist" aria-label="发现内容分类">
     @for (category of categories; track category) {
     <button

@@ -1,5 +1,24 @@
 import { Subject } from "rxjs";
 
+export interface DeviceCardMetricConfig {
+    key: string;
+    label?: string;
+    unit?: string;
+}
+
+export interface DeviceCardActionConfig {
+    key: string;
+    label: string;
+    icon?: string;
+    command?: Record<string, unknown>;
+}
+
+export interface DeviceCardConfig {
+    layout?: 'standard' | 'wide';
+    metrics?: DeviceCardMetricConfig[];
+    actions?: DeviceCardActionConfig[];
+}
+
 export interface BlinkerDevice {
     deviceName: string,
     id?: string,
@@ -16,9 +35,12 @@ export interface BlinkerDevice {
         isDev?: boolean,
         isDiy?: boolean,
         isShared?: boolean,
+        isPreview?: boolean,
+        previewNearby?: boolean,
         position?: any,
         public?: any,
         showSwitch?: boolean
+        card?: DeviceCardConfig,
         authKey?: string
     },
     data: any,
@@ -50,6 +72,8 @@ export class Device {
         }
         public?: number;
         showSwitch?: null;
+        previewNearby?: boolean;
+        card?: DeviceCardConfig;
     };
     data?: any;
 

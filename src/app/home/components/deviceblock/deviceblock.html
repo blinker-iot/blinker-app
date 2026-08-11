@@ -1,42 +1,92 @@
-<div
-  class="deviceblock"
-  [ngStyle]="{'opacity': enable?1:0.5}"
-  [ngClass]="{'on': switch}"
+<article
+  class="device-card"
+  [class.wide]="wide"
+  [class.online]="enable"
+  [class.offline]="!enable"
+  [class.nearby-ble]="isNearbyBle"
+  [class.on]="switch"
 >
-  <div class="lt imgbox">
-    <b-device-img [filename]="device.config.image"></b-device-img>
+  <div class="device-primary">
+    <span
+      class="device-state-dot"
+      role="img"
+      [attr.aria-label]="statusText"
+      [attr.title]="statusText"
+    ></span>
+
+    <div class="device-visual">
+      <b-device-img [filename]="device.config.image"></b-device-img>
+    </div>
+
+    <div class="device-copy">
+      <div class="device-summary-row">
+        <div class="device-name">
+          {{ device.config.customName || device.deviceType || '智能设备' }}
+          @if (device.config.isDev) {
+          <i class="fa-light fa-code dev-mark" title="开发设备"></i>
+          }
+          @if (device.config.mode === 'ble') {
+          <i class="fa-brands fa-bluetooth-b dev-mark" title="蓝牙设备"></i>
+          }
+        </div>
+
+        @if (showSwitch) {
+        <button
+          type="button"
+          class="device-switch"
+          [class.checked]="switch"
+          [class.waiting]="device.data?.switch === 'waiting'"
+          [disabled]="!enable"
+          [attr.aria-label]="switch ? '关闭设备' : '开启设备'"
+          [attr.aria-pressed]="switch"
+          (click)="tapSwitch($event)"
+        >
+          <span></span>
+        </button>
+        } @else if (!wide) {
+        <div class="device-metrics" aria-label="设备数据">
+          @for (metric of metrics; track metric.key) {
+          <span class="device-metric">
+            <strong>{{ metric.value }}{{ metric.unit }}</strong>
+            <small>{{ metric.label }}</small>
+          </span>
+          } @empty {
+          <span class="metric-empty">--</span>
+          }
+        </div>
+        }
+      </div>
+    </div>
   </div>
-  <div class="lb">
-    <div>
-      {{device.config.customName}} @if (device.config.isDev) {
-      <span class="dev">
-        <i class="fal fa-code"></i>
-      </span>
-      } @if (device.config.mode=='ble') {
-      <span class="dev">
-        <i class="fab fa-bluetooth-b"></i>
-      </span>
+
+  @if (wide) {
+  <aside class="device-extension">
+    @if (extensionMetrics.length > 0) {
+    <div class="extension-grid" aria-label="设备详细数据">
+      @for (metric of extensionMetrics; track metric.key) {
+      <div class="extension-cell extension-metric">
+        <small>{{ metric.label }}</small>
+        <strong>{{ metric.value }}<em>{{ metric.unit }}</em></strong>
+      </div>
       }
+      <!-- 宽卡快捷按钮暂时停用，保留以下模板以便后续恢复。
+      @for (action of quickActions; track action.key) {
+      <button
+        type="button"
+        class="extension-cell extension-action"
+        [class.active]="activeActionKey === action.key"
+        [disabled]="!enable"
+        (click)="triggerAction($event, action)"
+      >
+        @if (action.icon) {
+        <i [class]="action.icon"></i>
+        }
+        <span>{{ action.label }}</span>
+      </button>
+      }
+      -->
     </div>
-    <div
-      class="more-info"
-      [ngStyle]="{'color': device.data.enable?'#5aaff5':'#666'}"
-    >
-      @if (device.config.mode=='ble') { @if
-      (deviceService.islocalDevice(device)) {
-      <span class="blue animated fadeIn">可连接</span>
-      } @if (!deviceService.islocalDevice(device)) {
-      <span class="gray animated fadeIn">蓝牙设备</span>
-      } } @if (device.config.mode=='mqtt') { @if (device.data.enable) {
-      <span class="blue animated fadeIn">在线</span>
-      } @if (!device.data.enable) {
-      <span class="gray animated fadeIn">离线</span>
-      } } @if (device.data.summary) { | {{device.data.summary}} }
-    </div>
-  </div>
-  <!-- <div class="btns" (click)="tapSwitch($event)">
-  <div class="btn">
-    <i class="fa-light fa-power-off"></i>
-  </div>
-</div> -->
-</div>
+    }
+  </aside>
+  }
+</article>

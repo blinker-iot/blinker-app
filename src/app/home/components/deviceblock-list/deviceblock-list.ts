@@ -9,6 +9,8 @@ import {
   ViewChild,
   Renderer2,
   ChangeDetectionStrategy,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
 
 import { UserService } from 'src/app/core/services/user.service';
@@ -25,7 +27,7 @@ import { Deviceblock } from '../deviceblock/deviceblock';
   changeDetection: ChangeDetectionStrategy.Eager,
   imports: [Deviceblock],
 })
-export class DeviceblockListComponent {
+export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
   @Output() swipeEnabled: EventEmitter<boolean> = new EventEmitter();
   @Output() refresherEnabled: EventEmitter<boolean> = new EventEmitter();
 
@@ -33,8 +35,8 @@ export class DeviceblockListComponent {
 
   get deviceDataList() {
     if (typeof this.roomName == 'undefined')
-      return this.dataService.device.list;
-    return this.dataService.room.dict[this.roomName];
+      return this.dataService.device?.list || [];
+    return this.dataService.room?.dict?.[this.roomName] || [];
   }
 
   set deviceDataList(list) {
@@ -44,7 +46,24 @@ export class DeviceblockListComponent {
   }
 
   get deviceDataDict() {
-    return this.dataService.device.dict;
+    return this.dataService.device?.dict || {};
+  }
+
+  isWideDevice(deviceId: string) {
+    const device = this.deviceDataDict[deviceId];
+    if (!device) return false;
+
+    const card = device.config?.card;
+    if (card?.layout === 'standard') return false;
+    if (card?.layout === 'wide') return true;
+    // 宽卡快捷按钮暂时停用，不再因按钮配置自动切换为整行布局。
+    // if ((card?.actions?.length || 0) > 0) return true;
+    if ((card?.metrics?.length || 0) > 2) return true;
+
+    const numericDataCount = Object.values(device.data || {}).filter(
+      (value) => typeof value === 'number' && Number.isFinite(value)
+    ).length;
+    return numericDataCount > 2;
   }
 
   @ViewChild('sortbox') sortbox: ElementRef;
@@ -91,10 +110,18 @@ export class DeviceblockListComponent {
 
   ngOnDestroy() {
     window.clearTimeout(this.saveDeviceListTimer);
+    this.destroySortable();
   }
 
   sortable;
   initSortable() {
+    if (!this.sortbox?.nativeElement) return;
+    if (
+      navigator.maxTouchPoints > 0 ||
+      !window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    ) {
+      return;
+    }
     this.sortable = new Sortable(this.sortbox.nativeElement, this.options);
     // console.log("sortable", this.sortbox.nativeElement, this.sortable);
   }
@@ -135,6 +162,7 @@ export class DeviceblockListComponent {
   }
 
   gotoDashboard(deviceId) {
+    if (this.deviceDataDict[deviceId]?.config?.isPreview) return;
     this.router.navigate(['device/' + deviceId]);
   }
 

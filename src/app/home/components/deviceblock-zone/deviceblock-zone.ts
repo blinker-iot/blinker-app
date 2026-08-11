@@ -6,12 +6,13 @@ import {
   ElementRef,
   ViewChild,
   ChangeDetectionStrategy,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
 
 import { UserService } from 'src/app/core/services/user.service';
 import { DataService } from 'src/app/core/services/data.service';
 import PullToRefresh from 'pulltorefreshjs';
-import Splide from '@splidejs/splide';
 import { DeviceblockListComponent } from '../deviceblock-list/deviceblock-list';
 import { DeviceService } from 'src/app/core/services/device.service';
 
@@ -23,17 +24,14 @@ import { DeviceService } from 'src/app/core/services/device.service';
   changeDetection: ChangeDetectionStrategy.Eager,
   imports: [DeviceblockListComponent],
 })
-export class DeviceblockZone {
+export class DeviceblockZone implements AfterViewInit, OnDestroy {
   refresherEnabled = true;
-
-  loaded;
+  private scrollElement?: HTMLElement;
 
   _roomid = -1;
-  currentIndex = -1;
 
   @Input()
   set roomid(roomid) {
-    this.goToSlide(roomid + 1);
     this._roomid = roomid;
   }
 
@@ -42,7 +40,12 @@ export class DeviceblockZone {
   }
 
   get roomDataList() {
-    return this.dataService.room.list;
+    return this.dataService.room?.list || [];
+  }
+
+  get selectedRoomName() {
+    if (this.roomid < 0) return undefined;
+    return this.roomDataList[this.roomid];
   }
 
   @Output() roomidChange: EventEmitter<number> = new EventEmitter();
@@ -58,33 +61,12 @@ export class DeviceblockZone {
     private dataService: DataService
   ) {}
 
-  ngOnInit() {
-    this.dataService.initCompleted.subscribe((loaded) => {
-      if (loaded) {
-        this.loaded = loaded;
-      }
-    });
-  }
-
-  ngAfterViewInit() {
+  async ngAfterViewInit() {
+    const ionContent = this.deviceZone.nativeElement.closest('ion-content') as
+      | (HTMLElement & { getScrollElement?: () => Promise<HTMLElement> })
+      | null;
+    this.scrollElement = await ionContent?.getScrollElement?.();
     this.initRefresh();
-    this.initSplide();
-  }
-
-  splide;
-  initSplide() {
-    this.splide = new Splide('.splide', {
-      arrows: false,
-      pagination: false,
-    }).mount();
-    this.splide.on('active', (e) => {
-      this.currentIndex = this.splide.index;
-      this.roomidChange.emit(this.currentIndex - 1);
-    });
-  }
-
-  goToSlide(index) {
-    if (this.splide) this.splide.go(index);
   }
 
   initRefresh() {
@@ -100,13 +82,18 @@ export class DeviceblockZone {
         this.refresh();
       },
       shouldPullToRefresh: () => {
-        return this.refresherEnabled;
+        return (
+          this.refresherEnabled &&
+          !!this.scrollElement &&
+          this.scrollElement.scrollTop <= 0
+        );
       },
     });
     this.refresherEnabled = true;
   }
 
   async refresh() {
+    if (!this.dataService.auth) return;
     await this.userService.getAllInfo();
     this.deviceService.searchLocalDevice();
   }
@@ -115,12 +102,11 @@ export class DeviceblockZone {
     PullToRefresh.destroyAll();
   }
 
+  ngOnDestroy() {
+    this.destroyRefresh();
+  }
+
   swipeEnabledChanged(e) {
-    if (e) {
-      this.initSplide();
-    } else {
-      this.splide.destroy();
-    }
     this.refresherEnabled = e;
   }
 

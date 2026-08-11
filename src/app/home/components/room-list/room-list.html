@@ -1,27 +1,25 @@
-@if (loaded) {
-<div class="room-bar">
-  <div class="room-btn">
-    <i class="fa-regular fa-layer-group"></i>
+<div class="room-filter">
+  <div class="room-scroll" #roombox>
+    <button
+      type="button"
+      class="room-chip"
+      [class.selected]="roomid === -1"
+      (click)="selectRoom(-1)"
+    >
+      全部
+    </button>
+    @for (room of roomDataList; track room; let i = $index) {
+    <button
+      type="button"
+      class="room-chip"
+      [class.selected]="roomid === i"
+      (click)="selectRoom(i)"
+    >
+      {{ room }}
+    </button>
+    }
   </div>
-  <div class="scrollbox">
-    <div class="room-box" #roombox>
-      <div
-        class="room"
-        (click)="selectRoom(-1)"
-        [ngClass]="{'selected':roomid==-1}"
-      >
-        所有设备
-      </div>
-      @for (room of roomDataList; track room; let i = $index) {
-      <div
-        class="room"
-        [ngClass]="{'selected':roomid==i}"
-        (click)="selectRoom(i)"
-      >
-        {{room}}
-      </div>
-      }
-    </div>
-  </div>
+  <button type="button" class="room-manage" aria-label="管理房间">
+    <i class="fa-light fa-ellipsis"></i>
+  </button>
 </div>
-}

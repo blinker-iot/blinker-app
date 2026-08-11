@@ -7,8 +7,12 @@
         <app-tab-community></app-tab-community>
     </ion-tab>
 
+    <ion-tab tab="tools">
+        <app-tab-tools></app-tab-tools>
+    </ion-tab>
+
     <ion-tab tab="profile">
-        <tab-profile></tab-profile>
+        <app-tab-profile></app-tab-profile>
     </ion-tab>
 
     <ion-tab-bar slot="bottom">
@@ -20,6 +24,11 @@
         <ion-tab-button tab="community">
             <i class="fa-light fa-compass"></i>
             <ion-label>发现</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="tools">
+            <i class="fa-light fa-toolbox"></i>
+            <ion-label>工具</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="profile">

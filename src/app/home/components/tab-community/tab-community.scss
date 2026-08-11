@@ -1,39 +1,12 @@
 :host {
   --page-gutter: 18px;
-}
-
-.discover-header {
-  background: var(--blinker-bg);
-
-  ion-toolbar {
-    --background: transparent;
-    --border-width: 0;
-    padding: 4px 8px 0;
-  }
-
-  ion-title {
-    padding-inline: 10px;
-    text-align: left;
-    font-size: 25px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-  }
-
-  ion-button {
-    --color: var(--blinker-text-primary);
-    --border-radius: 50%;
-    width: 42px;
-    height: 42px;
-
-    i {
-      font-size: 20px;
-    }
-  }
+  display: block;
+  height: 100%;
 }
 
 .search-field {
   height: 40px;
-  margin-left: 10px;
+  margin: 0 var(--page-gutter) 8px;
   padding: 0 14px;
   border: 1px solid var(--blinker-border);
   border-radius: 20px;
@@ -97,10 +70,15 @@
 
 ion-content {
   --background: var(--blinker-bg);
+  --overflow: auto;
 }
 
 .discover-content {
-  padding: 16px var(--page-gutter) 34px;
+  padding: calc(var(--ion-safe-area-top, 0px) + 127px) var(--page-gutter) 18px;
+}
+
+.discover-header.search-visible + ion-content .discover-content {
+  padding-top: calc(var(--ion-safe-area-top, 0px) + 175px);
 }
 
 .hero-card {
@@ -265,7 +243,7 @@ ion-content {
 }
 
 .product-section {
-  padding-bottom: 8px;
+  padding-bottom: 0;
 }
 
 .product-list {

@@ -4,17 +4,32 @@ ion-toolbar {
 }
 
 ion-tab-bar {
-    height: 60px;
+    height: 66px;
+    --background: var(--ion-tab-bar-background);
+    --color: var(--ion-tab-bar-color);
+    --color-selected: var(--ion-tab-bar-color-selected);
+    border-color: var(--blinker-divider);
+    padding: 2px 12px max(3px, env(safe-area-inset-bottom));
 
-    ion-tab-button{
-        i{
-            font-size: 24px;
+    ion-tab-button {
+        --padding-start: 0;
+        --padding-end: 0;
+        position: relative;
+
+        i {
+            font-size: 21px;
+            transition: transform 180ms ease, color 180ms ease;
+        }
+
+        &.tab-selected i {
+            transform: translateY(-1px);
         }
     }
 
-    ion-label{
-        margin: 5px 0 0 0;
-        font-size: 12px;
+    ion-label {
+        margin: 5px 0 0;
+        font-size: 10px;
+        font-weight: 500;
     }
 }
 

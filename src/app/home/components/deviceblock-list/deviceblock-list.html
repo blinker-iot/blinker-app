@@ -1,6 +1,17 @@
-<div class="device-list" #sortbox (scroll)="isScrollTop($event)">
+<div
+  class="device-list"
+  #sortbox
+>
   @for (deviceId of deviceDataList; track deviceId) {
-  <deviceblock class="deviceblock" [device]="deviceDataDict[deviceId]" [attr.data-id]="deviceId"
-    (tap)="gotoDashboard(deviceId)"></deviceblock>
+  <deviceblock
+    class="deviceblock"
+    [class.wide-device]="isWideDevice(deviceId)"
+    [device]="deviceDataDict[deviceId]"
+    [wide]="isWideDevice(deviceId)"
+    [attr.data-id]="deviceId"
+    (click)="gotoDashboard(deviceId)"
+  ></deviceblock>
   }
+
+  <div class="device-count">共 {{ deviceDataList.length }} 个设备</div>
 </div>

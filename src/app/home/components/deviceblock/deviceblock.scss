@@ -1,81 +1,290 @@
-.deviceblock {
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.device-card {
   position: relative;
   width: 100%;
-  height: 120px;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  background: #fff;
-  font-size: 12px;
-  color: #666666;
-
-  .lt {
-    position: absolute;
-    top: 7%;
-    left: 7%;
-
-    b-device-img {
-      ::ng-deep {
-        img {
-          max-width: 65px;
-          max-height: 65px;
-        }
-      }
-    }
-
-  }
-
-  .lb {
-    position: absolute;
-    bottom: 7%;
-    left: 7%;
-
-    .gray {
-      color: #bbb;
-    }
-
-    .more-info {
-      color: #5aaff5;
-      font-size: 10px;
-    }
-  }
-
-  .btns {
-    position: absolute;
-    right: 0;
-    top: 0;
-    padding: 5% 5% 5% 5%;
-
-    .btn {
-      height: 8vw;
-      width: 8vw;
-      border-radius: 50%;
-      background-color: #f4f4f4;
-      font-size: 1rem;
-      color: #389bee;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      // margin-bottom: 4vw;
-
-      // &:last-child {
-      //   margin-bottom: 0;
-      // }
-    }
-  }
-
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--blinker-border);
+  border-radius: 15px;
+  background:
+    linear-gradient(145deg, rgba(var(--ion-color-primary-rgb), 0.025), transparent 56%),
+    var(--blinker-surface);
+  box-shadow: var(--blinker-shadow-soft);
+  color: var(--blinker-text-primary);
 }
 
-.block.on {
-  background: linear-gradient(312deg, rgba(55, 118, 246, 1) 0%, rgba(88, 160, 250, 1) 100%);
-  color: #fff;
+.device-primary {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
 
-  .switch {
-    background-color: #fff;
-    padding-top: 1px;
+.device-state-dot {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--blinker-surface);
+  border-radius: 50%;
+  background: #a8b2bf;
+  box-shadow: 0 1px 4px rgba(14, 30, 48, 0.18);
+}
+
+.device-card.online .device-state-dot {
+  background: #22c55e;
+}
+
+.device-card.nearby-ble .device-state-dot {
+  background: #1689ff;
+}
+
+.device-visual {
+  min-height: 0;
+  flex: 1;
+  padding: 12px 12px 3px;
+  background: linear-gradient(145deg, var(--blinker-surface-muted), transparent 78%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  b-device-img {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ::ng-deep img {
+      width: auto;
+      height: auto;
+      max-width: 96px;
+      max-height: 96px;
+      object-fit: contain;
+      filter: drop-shadow(0 9px 10px rgba(18, 35, 56, 0.12));
+    }
   }
 }
 
-.dev {
-  color: #cccccc;
+.device-copy {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+}
+
+.device-summary-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--blinker-text-primary);
   font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dev-mark {
+  margin-left: 3px;
+  color: var(--blinker-text-tertiary);
+  font-size: 9px;
+}
+
+.device-switch {
+  flex: 0 0 auto;
+  width: 37px;
+  height: 21px;
+  padding: 2px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--blinker-border);
+  transition: background 160ms ease;
+
+  span {
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 2px 5px rgba(14, 30, 48, 0.2);
+    display: block;
+    transition: transform 160ms ease;
+  }
+
+  &.checked {
+    background: var(--ion-color-primary);
+
+    span {
+      transform: translateX(16px);
+    }
+  }
+
+  &.waiting span {
+    opacity: 0.65;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.device-metrics {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: right;
+}
+
+.device-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+
+  strong {
+    color: var(--ion-color-primary);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  small {
+    margin-top: 3px;
+    color: var(--blinker-text-tertiary);
+    font-size: 8px;
+  }
+}
+
+.metric-empty {
+  color: var(--blinker-text-tertiary);
+  font-size: 13px;
+}
+
+.device-card.wide {
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  aspect-ratio: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  .device-primary {
+    min-width: 0;
+    min-height: 0;
+    border-right: 1px solid var(--blinker-divider);
+  }
+}
+
+.device-extension {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px;
+  background:
+    linear-gradient(145deg, rgba(var(--ion-color-primary-rgb), 0.025), transparent 72%),
+    var(--blinker-surface);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.extension-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.extension-cell {
+  min-width: 0;
+  min-height: 43px;
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 10px;
+}
+
+.extension-metric {
+  background: var(--blinker-surface-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  small {
+    overflow: hidden;
+    color: var(--blinker-text-tertiary);
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    overflow: hidden;
+    color: var(--blinker-text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    em {
+      margin-left: 2px;
+      color: var(--blinker-text-secondary);
+      font-size: 8px;
+      font-style: normal;
+      font-weight: 500;
+    }
+  }
+}
+
+.extension-action {
+  background: #25384d;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10px;
+  transition: 150ms ease;
+
+  i {
+    color: #8bc5ff;
+    font-size: 12px;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &.active {
+    background: var(--ion-color-primary);
+    transform: scale(0.97);
+  }
+
+  &:disabled {
+    background: var(--blinker-surface-muted);
+    color: var(--blinker-text-tertiary);
+
+    i {
+      color: var(--blinker-text-tertiary);
+    }
+  }
+}
+
+.device-card.offline .device-visual {
+  filter: saturate(0.45);
+  opacity: 0.78;
 }
