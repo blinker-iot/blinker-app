@@ -75,7 +75,7 @@ button {
     width: 100%;
     height: 44px;
     font-size: 19px;
-    background-color: #009ee8;
+    background: linear-gradient(135deg, var(--ion-color-primary), #2a6bf4);
     border-radius: 22px;
     color: #fff;
     display: flex;
@@ -115,7 +115,7 @@ ion-modal {
 }
 
 .h-line10 {
-    border-bottom: 1px solid #d8d8d8;
+    border-bottom: 1px solid var(--blinker-divider);
     margin: 10px 0 10px 0;
 }
 
@@ -349,9 +349,11 @@ i.r315 {
 
 .blinker-box {
     padding: 10px 15px;
-    box-shadow: 0 0 10px #ccc;
-    border-radius: 8px;
-    background-color: #fff;
+    box-shadow: var(--blinker-shadow-soft);
+    border: 1px solid var(--blinker-border);
+    border-radius: var(--blinker-radius-control);
+    background-color: var(--blinker-surface);
+    color: var(--blinker-text-primary);
 }
 
 .bottom-box {

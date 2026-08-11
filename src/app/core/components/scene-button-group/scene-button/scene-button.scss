@@ -2,14 +2,15 @@
     position: relative;
     width: 100px;
     height: 60px;
-    border-radius: 5px;
+    border: 1px solid var(--blinker-border);
+    border-radius: var(--blinker-radius-control);
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-direction: column;
-    background-color: #fff;
-    color: #4AA5EF;
-    box-shadow: 0 0 10px #CCC;
+    background-color: var(--blinker-surface);
+    color: var(--ion-color-primary);
+    box-shadow: var(--blinker-shadow-soft);
     padding: 5px 0;
 
     .icon {
@@ -45,7 +46,7 @@
             border-radius: 50%;
             width: 5.5vw;
             height: 5.5vw;
-            background-color: #389BEE;
+            background-color: var(--ion-color-primary);
 
             ion-icon {
                 color: #fff;
