@@ -53,12 +53,12 @@ export var MENU_LIST = [
         // icon: 'tool',
         icon: "fal fa-comments-alt"
     },
-    // {
-    //     title: '应用设置',
-    //     url: '/settings',
-    //     // icon: 'setting'
-    //     icon:"fal fa-cog"
-    // },
+    {
+        title: '应用设置',
+        title2: 'MENU.SETTINGS',
+        url: '/settings',
+        icon: "fal fa-cog"
+    },
     {
         title: '关于我们',
         title2: 'MENU.ABOUT_US',

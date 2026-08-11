@@ -1,26 +1,18 @@
 <div class="lang-selector">
   @if (supportI18n) {
   <div class="lang-item" (click)="showMore = !showMore">
-    @if (selectedLanguage=='简体中文') {
-    <img src="img/language/chinese.jpg" alt="" />
-    } @if (selectedLanguage=='English') {
-    <img src="img/language/english.jpg" alt="" />
-    }
-    <span class="lang-text">{{ selectedLanguage }}</span>
+    <img [src]="getLanguageImage(selectedLanguage)" alt="" />
+    <span class="lang-text">{{ getLanguageName(selectedLanguage) }}</span>
   </div>
   } @if (showMore) {
   <div
     style="margin-left: 15px"
     class="animate__animated animate__faster animate__fadeInDown"
   >
-    @for (item of languageList; track item) { @if (item!=selectedLanguage) {
-    <div class="lang-item" (click)="showMore = !showMore; changeLanguage(item)">
-      @if (item=='简体中文') {
-      <img src="img/language/chinese.jpg" alt="" />
-      } @if (item=='English') {
-      <img src="img/language/english.jpg" alt="" />
-      }
-      <span class="lang-text">{{ item }}</span>
+    @for (item of languageList; track item.code) { @if (item.code != selectedLanguage) {
+    <div class="lang-item" (click)="showMore = !showMore; changeLanguage(item.code)">
+      <img [src]="getLanguageImage(item.code)" alt="" />
+      <span class="lang-text">{{ item.name }}</span>
     </div>
     } }
   </div>

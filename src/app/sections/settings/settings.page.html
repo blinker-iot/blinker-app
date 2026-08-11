@@ -1,0 +1,40 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="defaultBackHref" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ 'SETTINGS.TITLE' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true">
+  <main class="settings-content">
+    @if (languageList.length) {
+    <div class="section-label">
+      {{ 'SETTINGS.LANGUAGE_SECTION' | translate }}
+    </div>
+
+    <section class="settings-card" aria-labelledby="language-heading">
+      <div class="card-heading">
+        <div>
+          <h2 id="language-heading">{{ 'SETTINGS.LANGUAGE' | translate }}</h2>
+          <p>{{ 'SETTINGS.LANGUAGE_HINT' | translate }}</p>
+        </div>
+        <i class="fa-light fa-language" aria-hidden="true"></i>
+      </div>
+
+      <div class="language-options" role="radiogroup" [attr.aria-label]="'SETTINGS.LANGUAGE' | translate">
+        @for (language of languageList; track language.code) {
+        <button type="button" class="language-option" [class.selected]="currentLanguage === language.code" role="radio"
+          [attr.aria-checked]="currentLanguage === language.code" (click)="selectLanguage(language.code)">
+          <img [src]="getLanguageImage(language.code)" alt="" aria-hidden="true" />
+          <span>{{ language.name }}</span>
+          <i class="selection-icon fa-solid" [class.fa-circle-check]="currentLanguage === language.code"
+            [class.fa-circle]="currentLanguage !== language.code" aria-hidden="true"></i>
+        </button>
+        }
+      </div>
+    </section>
+    }
+  </main>
+</ion-content>

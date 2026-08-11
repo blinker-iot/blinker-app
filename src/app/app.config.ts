@@ -34,7 +34,11 @@ import { CONFIG } from './configs/app.config';
 
 import { routes } from './app.routes';
 import { provideMarkdown } from 'ngx-markdown';
-import { provideTranslateService } from '@ngx-translate/core';
+import {
+  provideTranslateLoader,
+  provideTranslateService,
+} from '@ngx-translate/core';
+import { StaticTranslationLoader } from './core/services/translation.loader';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -46,7 +50,10 @@ export const appConfig: ApplicationConfig = {
     }),
     provideHttpClient(withXhr(), withInterceptorsFromDi()),
     provideMarkdown(),
-    provideTranslateService({ fallbackLang: CONFIG.I18N.DEFAULT }),
+    provideTranslateService({
+      fallbackLang: CONFIG.I18N.DEFAULT,
+      loader: provideTranslateLoader(StaticTranslationLoader),
+    }),
     {
       provide: EVENT_MANAGER_PLUGINS,
       useClass: HammerGesturesPlugin,

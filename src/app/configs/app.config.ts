@@ -14,7 +14,7 @@ export const CONFIG = {
     },
     I18N: {
         ENABLE: true,
-        DEFAULT: '简体中文'
+        DEFAULT: 'zh_cn' as const
     }
 }
 
