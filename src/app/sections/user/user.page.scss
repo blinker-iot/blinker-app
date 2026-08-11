@@ -1,58 +1,185 @@
-.scroll-content {
-    background-color: #F5F5F5;
-}
+.profile-editor-header {
+  ion-toolbar {
+    --background: rgba(var(--ion-background-color-rgb), 0.9);
+    --border-width: 0;
+  }
 
-.textbox {
-    color: #959595;
-    margin: 20px 0 10px 15px;
-}
+  ion-title {
+    font-size: 17px;
+    font-weight: 600;
+  }
 
-.userbox {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    flex-direction: row;
-    background-color: #389BEE;
-    padding: 5px 15px 15px 15px;
-}
-
-.item {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
-    background-color: #FFF;
-    height: 10vh;
-    margin-top: 3px;
+  .top-save {
+    --color: var(--ion-color-primary);
     font-size: 14px;
-    .avatar {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        overflow: hidden;
-    }
-    .text1 {
-        font-size: 12px;
-        color: #389BEE;
-    }
-    .text2 {
-        font-size: 12px;
-        color: #959595;
-    }
+    font-weight: 600;
+  }
 }
 
+ion-content {
+  --background: var(--blinker-bg);
+}
 
-.btnbox {
+.editor-content {
+  min-height: 100%;
+  padding: 20px 18px calc(28px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 50% 5%, rgba(var(--ion-color-primary-rgb), 0.12), transparent 23%),
+    var(--blinker-bg);
+}
+
+.avatar-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.avatar-editor {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  margin: 2px auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  display: block;
+}
+
+.avatar-preview {
+  width: 116px;
+  height: 116px;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #a5d4ff, #4f85ea);
+  box-shadow: 0 13px 32px rgba(var(--ion-color-primary-rgb), 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
     width: 100%;
-    padding: 15px;
-    position: absolute;
-    bottom: 15px;
-    button {
-        background-color: transparent;
-        border: 1px solid rgba(255, 0, 0, 1);
-        color: red;
-        font-size: 12px;
-        height: 40px;
-    }
+    height: 100%;
+    object-fit: cover;
+  }
+
+  span {
+    color: white;
+    font-size: 42px;
+    font-weight: 600;
+  }
+}
+
+.camera-button {
+  position: absolute;
+  right: 1px;
+  bottom: 8px;
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--blinker-bg);
+  border-radius: 50%;
+  background: var(--blinker-surface);
+  color: var(--blinker-text-secondary);
+  box-shadow: var(--blinker-shadow-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.form-card {
+  overflow: hidden;
+  border: 1px solid var(--blinker-border);
+  border-radius: 16px;
+  background: var(--blinker-surface);
+  box-shadow: var(--blinker-shadow-soft);
+}
+
+.profile-card {
+  margin-top: 24px;
+}
+
+.form-row {
+  width: 100%;
+  min-height: 66px;
+  padding: 0 17px;
+  border: 0;
+  border-bottom: 1px solid var(--blinker-divider);
+  background: transparent;
+  color: var(--blinker-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  > span:first-child {
+    min-width: 78px;
+    color: var(--blinker-text-secondary);
+    font-size: 12px;
+  }
+
+  input,
+  strong {
+    min-width: 0;
+    flex: 1;
+    color: var(--blinker-text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: right;
+  }
+
+  input {
+    height: 42px;
+  }
+
+  > i {
+    color: var(--blinker-text-tertiary);
+    font-size: 10px;
+  }
+
+  &:active:not(label) {
+    background: var(--blinker-surface-active);
+  }
+}
+
+.readonly-row {
+  strong {
+    color: var(--blinker-text-secondary);
+  }
+}
+
+.section-label {
+  margin: 21px 4px 9px;
+  color: var(--blinker-text-secondary);
+  font-size: 11px;
+}
+
+.form-row .link-value {
+  color: var(--ion-color-primary);
+}
+
+.primary-save {
+  width: 100%;
+  height: 52px;
+  margin-top: 28px;
+  border: 0;
+  border-radius: 26px;
+  background: linear-gradient(135deg, var(--ion-color-primary), #2c68f3);
+  box-shadow: 0 12px 25px rgba(var(--ion-color-primary-rgb), 0.24);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+
+  &:disabled {
+    opacity: 0.65;
+  }
 }
