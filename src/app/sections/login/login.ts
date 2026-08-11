@@ -4,8 +4,15 @@ import {
   OnDestroy,
   OnInit,
 } from '@angular/core';
-import { NavController, ModalController } from '@ionic/angular/standalone';
-import { IonicModule } from '@ionic/angular';
+import {
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonToolbar,
+  ModalController,
+  NavController,
+} from '@ionic/angular/standalone';
 import { UserService } from 'src/app/core/services/user.service';
 import { ViewService } from 'src/app/core/services/view.service';
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -21,7 +28,15 @@ import { TranslatePipe } from '@ngx-translate/core';
   styleUrls: ['login.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule, IonicModule, TranslatePipe],
+  imports: [
+    FormsModule,
+    TranslatePipe,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonButton,
+    IonContent,
+  ],
 })
 export class LoginPage implements OnInit, OnDestroy {
   LOGO = CONFIG.LOGIN_LOGO;

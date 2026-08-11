@@ -61,7 +61,12 @@ export class DataService {
     async loadAuthData() {
         let auth = localStorage.getItem('auth')
         if (auth != null && auth != '') {
-            this.auth = JSON.parse(auth)
+            const savedAuth = JSON.parse(auth)
+            if (savedAuth?.uuid && savedAuth?.token) {
+                this.auth = savedAuth
+            } else {
+                localStorage.removeItem('auth')
+            }
         }
     }
 
@@ -70,8 +75,8 @@ export class DataService {
     }
 
     removeAuthData() {
-        localStorage.setItem('auth', '')
-        this.auth = null;
+        localStorage.removeItem('auth')
+        this._auth = null;
         this.initCompleted.next(false);
         this.firstBoot = true;
     }

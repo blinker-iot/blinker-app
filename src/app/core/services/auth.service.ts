@@ -34,9 +34,7 @@ export class AuthService {
     }
 
     isLogin() {
-        if (typeof this.dataService.auth != 'undefined')
-            return true
-        return false
+        return !!(this.dataService.auth?.uuid && this.dataService.auth?.token)
     }
 
     // 检查是否有其他设备登录

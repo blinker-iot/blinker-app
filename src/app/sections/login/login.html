@@ -1,9 +1,9 @@
-<ion-header class="ion-no-border">
+<ion-header class="ion-no-border main-tab-header login-header">
   <ion-toolbar>
     <ion-buttons slot="end" class="login-actions">
       <ion-button
         fill="clear"
-        class="settings-button"
+        class="header-action settings-button"
         aria-label="打开设置"
         (click)="openSettings()"
       >
@@ -63,6 +63,16 @@
         </button>
       </div>
       <div class="login-tip">{{'ACCOUNT.LOGIN_TIP' | translate}}</div>
+      <div class="login-consent">
+        {{'ACCOUNT.LOGIN_AGREEMENT_PREFIX' | translate}}
+        <span class="link-text" (click)="openUrl(USER_AGREEMENT,'用户协议')">
+          {{'ACCOUNT.USER_AGREEMENT' | translate}}
+        </span>
+        {{'ACCOUNT.AND' | translate}}
+        <span class="link-text" (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
+          {{'ACCOUNT.PRIVACY_POLICY' | translate}}
+        </span>
+      </div>
       <button type="submit" class="login-btn">
         {{'ACCOUNT.LOGIN' | translate}}
       </button>
@@ -90,16 +100,5 @@
       </div>
     </div>
 
-    <div class="other">
-      <div>
-        <span class="link-text" (click)="openUrl(USER_AGREEMENT,'用户协议')">
-          {{'ACCOUNT.USER_AGREEMENT' | translate}}
-        </span>
-        {{'ACCOUNT.AND' | translate}}
-        <span class="link-text" (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
-          {{'ACCOUNT.PRIVACY_POLICY' | translate}}
-        </span>
-      </div>
-    </div>
   </div>
 </ion-content>
