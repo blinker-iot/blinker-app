@@ -9,4 +9,12 @@ export const routes: Routes = [
     path: 'tools/lan-discovery',
     loadComponent: () => import('./tools/lan-discovery/lan-discovery.page').then(m => m.LanDiscoveryPage),
   },
+  {
+    path: 'tools/ble-ota',
+    loadComponent: () => import('./tools/ble-ota/ble-ota.page').then(m => m.BleOtaPage),
+  },
+  {
+    path: 'tools/wifi-ota',
+    loadComponent: () => import('./tools/wifi-ota/wifi-ota.page').then(m => m.WifiOtaPage),
+  },
 ];

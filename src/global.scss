@@ -26,6 +26,7 @@
 @use "@ionic/angular/css/flex-utils.css";
 @use "./blinker.scss";
 @use "./lan-discovery-tool.scss";
+@use "./tool-pages.scss";
 
 // Capacitor 8 injects --safe-area-inset-* on Android when SystemBars uses
 // CSS inset handling. Keep Ionic's variables tied to those values, with the

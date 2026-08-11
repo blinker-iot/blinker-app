@@ -1,0 +1,145 @@
+<ion-header class="page-header ota-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button class="nav-back" aria-label="返回" [disabled]="isBusy" (click)="goBack()">
+        <i class="fa-light fa-chevron-left"></i>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>WiFi OTA</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <main class="ota-page">
+    <section class="ota-hero wifi-hero">
+      <span class="hero-icon"><i class="fa-light fa-wifi"></i></span>
+      <div>
+        <span class="eyebrow">LOCAL NETWORK UPDATE</span>
+        <h1>WiFi 固件升级</h1>
+        <p>自动发现局域网设备，或手动指定地址，通过 HTTP 上传固件。</p>
+      </div>
+    </section>
+
+    <section class="ota-card">
+      <div class="section-heading">
+        <div><span>步骤 1</span><h2>选择固件</h2></div>
+        <span class="meta-chip">.BIN</span>
+      </div>
+
+      <input #firmwareInput class="file-input" type="file" accept=".bin,application/octet-stream" (change)="chooseFirmware($event)" />
+      @if (firmwareFile) {
+        <div class="file-result">
+          <span class="result-icon"><i class="fa-light fa-file-binary"></i></span>
+          <span class="result-copy"><strong>{{ firmwareFile.name }}</strong><small>{{ formatBytes(firmwareFile.size) }}</small></span>
+          <button type="button" aria-label="移除固件" [disabled]="isBusy" (click)="clearFirmware()"><i class="fa-light fa-xmark"></i></button>
+        </div>
+      } @else {
+        <button type="button" class="file-picker" [disabled]="isBusy" (click)="firmwareInput.click()">
+          <i class="fa-light fa-arrow-up-from-bracket"></i>
+          <span><strong>选择 .bin 固件</strong><small>最大 64 MB</small></span>
+        </button>
+      }
+    </section>
+
+    <section class="ota-card">
+      <div class="section-heading">
+        <div><span>步骤 2</span><h2>查找 OTA 设备</h2></div>
+        <span class="meta-chip">mDNS</span>
+      </div>
+
+      <button type="button" class="secondary-button" [disabled]="isBusy" (click)="toggleDiscovery()">
+        <i [class]="isScanning ? 'fa-light fa-stop' : 'fa-light fa-radar'"></i>
+        {{ isScanning ? '停止搜索' : '搜索局域网设备' }}
+      </button>
+
+      <div class="result-list target-results">
+        @for (target of targets; track target.id) {
+          <button type="button" class="result-row" [class.selected]="selectedTargetId === target.id" [disabled]="isBusy" (click)="selectTarget(target)">
+            <span class="result-icon"><i class="fa-light fa-microchip"></i></span>
+            <span class="result-copy"><strong>{{ target.name }}</strong><small>{{ target.host }}:{{ target.port }}{{ target.uploadPath }}</small></span>
+            <i [class]="selectedTargetId === target.id ? 'fa-solid fa-circle-check' : 'fa-light fa-chevron-right'"></i>
+          </button>
+        } @empty {
+          <div class="result-empty compact">
+            <i [class]="isScanning ? 'fa-light fa-radar fa-spin' : 'fa-light fa-router'"></i>
+            <span>{{ isScanning ? '正在搜索 _arduino._tcp 服务…' : '也可在下方手动填写地址' }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="ota-card">
+      <div class="section-heading">
+        <div><span>步骤 3</span><h2>连接参数</h2></div>
+        <button type="button" class="toggle-chip" [class.active]="useHttps" [disabled]="isBusy" (click)="toggleHttps()">
+          <i [class]="useHttps ? 'fa-solid fa-lock' : 'fa-light fa-lock-open'"></i>{{ useHttps ? 'HTTPS' : 'HTTP' }}
+        </button>
+      </div>
+
+      <div class="field-row">
+        <label class="field-group host-field">
+          <span>设备地址</span>
+          <span class="input-shell"><i class="fa-light fa-router"></i><input type="text" inputmode="url" placeholder="192.168.1.100" [(ngModel)]="host" [disabled]="isBusy" /></span>
+        </label>
+        <label class="field-group port-field">
+          <span>端口</span>
+          <span class="input-shell"><i class="fa-light fa-plug"></i><input type="number" inputmode="numeric" min="1" max="65535" [(ngModel)]="port" [disabled]="isBusy" /></span>
+        </label>
+      </div>
+
+      <label class="field-group">
+        <span>上传路径</span>
+        <span class="input-shell"><i class="fa-light fa-route"></i><input type="text" placeholder="/sketch" [(ngModel)]="uploadPath" [disabled]="isBusy" /></span>
+      </label>
+
+      <div class="field-row auth-row">
+        <label class="field-group">
+          <span>用户名</span>
+          <span class="input-shell"><i class="fa-light fa-user"></i><input type="text" autocomplete="username" [(ngModel)]="username" [disabled]="isBusy" /></span>
+        </label>
+        <label class="field-group">
+          <span>密码</span>
+          <span class="input-shell">
+            <i class="fa-light fa-key"></i>
+            <input [type]="passwordVisible ? 'text' : 'password'" autocomplete="current-password" [(ngModel)]="password" [disabled]="isBusy" />
+            <button type="button" class="inline-button" aria-label="显示或隐藏密码" (click)="passwordVisible = !passwordVisible"><i [class]="passwordVisible ? 'fa-light fa-eye-slash' : 'fa-light fa-eye'"></i></button>
+          </span>
+        </label>
+      </div>
+
+      <label class="field-group timeout-field">
+        <span>超时时间 <small>秒</small></span>
+        <span class="input-shell"><i class="fa-light fa-clock"></i><input type="number" inputmode="numeric" min="10" max="600" [(ngModel)]="timeoutSeconds" [disabled]="isBusy" /></span>
+      </label>
+
+      <div class="target-preview"><i class="fa-light fa-link"></i><span>{{ targetPreview }}</span></div>
+    </section>
+
+    <button type="button" class="primary-button" [disabled]="!canUpload" (click)="upload()">
+      <i [class]="isBusy ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-cloud-arrow-up'"></i>
+      {{ isBusy ? '正在升级…' : '开始 WiFi OTA' }}
+    </button>
+
+    @if (state !== 'idle' || firmwareFile || host) {
+      <section class="ota-status" [class.success]="state === 'success'" [class.error]="state === 'error'" [class.cancelled]="state === 'cancelled'">
+        <div class="status-heading">
+          <span class="status-icon">
+            @if (state === 'success') { <i class="fa-solid fa-check"></i> }
+            @else if (state === 'error') { <i class="fa-solid fa-exclamation"></i> }
+            @else if (state === 'cancelled') { <i class="fa-light fa-ban"></i> }
+            @else { <i [class]="isBusy ? 'fa-light fa-arrows-rotate fa-spin' : 'fa-light fa-circle-info'"></i> }
+          </span>
+          <span class="status-copy"><strong>{{ statusMessage }}</strong><small>{{ statusDetail }}</small></span>
+          <b>{{ progress }}%</b>
+        </div>
+        <div class="progress-track"><span [style.width.%]="progress"></span></div>
+        @if (canCancelUpload) { <button type="button" class="cancel-button" (click)="cancelUpload()">取消上传</button> }
+      </section>
+    }
+
+    <div class="ota-notice">
+      <i class="fa-light fa-triangle-exclamation"></i>
+      <span>手机与设备必须连接同一局域网；升级期间请勿切断设备电源。</span>
+    </div>
+  </main>
+</ion-content>

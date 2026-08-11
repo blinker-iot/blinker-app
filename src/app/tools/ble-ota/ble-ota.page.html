@@ -1,0 +1,114 @@
+<ion-header class="page-header ota-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button class="nav-back" aria-label="返回" [disabled]="isBusy" (click)="goBack()">
+        <i class="fa-light fa-chevron-left"></i>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>BLE OTA</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <main class="ota-page">
+    <section class="ota-hero ble-hero">
+      <span class="hero-icon"><i class="fa-brands fa-bluetooth-b"></i></span>
+      <div>
+        <span class="eyebrow">BLUETOOTH LOW ENERGY</span>
+        <h1>BLE 固件升级</h1>
+        <p>通过近距离蓝牙连接发送固件，支持应用固件与文件系统分区。</p>
+      </div>
+    </section>
+
+    <section class="ota-card">
+      <div class="section-heading">
+        <div><span>步骤 1</span><h2>选择固件</h2></div>
+        <span class="meta-chip">.BIN</span>
+      </div>
+
+      <input #firmwareInput class="file-input" type="file" accept=".bin,application/octet-stream" (change)="chooseFirmware($event)" />
+      @if (firmwareFile) {
+        <div class="file-result">
+          <span class="result-icon"><i class="fa-light fa-file-binary"></i></span>
+          <span class="result-copy"><strong>{{ firmwareFile.name }}</strong><small>{{ formatBytes(firmwareFile.size) }}</small></span>
+          <button type="button" aria-label="移除固件" [disabled]="isBusy" (click)="clearFirmware()"><i class="fa-light fa-xmark"></i></button>
+        </div>
+      } @else {
+        <button type="button" class="file-picker" [disabled]="isBusy" (click)="firmwareInput.click()">
+          <i class="fa-light fa-arrow-up-from-bracket"></i>
+          <span><strong>选择 .bin 固件</strong><small>最大 32 MB</small></span>
+        </button>
+      }
+
+      <div class="mode-selector" role="group" aria-label="升级分区">
+        <button type="button" [class.active]="updateType === 'flash'" [disabled]="isBusy" (click)="updateType = 'flash'">
+          <i class="fa-light fa-microchip"></i><span><strong>应用固件</strong><small>Flash</small></span>
+        </button>
+        <button type="button" [class.active]="updateType === 'filesystem'" [disabled]="isBusy" (click)="updateType = 'filesystem'">
+          <i class="fa-light fa-folder-tree"></i><span><strong>文件系统</strong><small>LittleFS / SPIFFS</small></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="ota-card">
+      <div class="section-heading">
+        <div><span>步骤 2</span><h2>选择 OTA 设备</h2></div>
+        @if (selectedDevice) { <span class="meta-chip selected">已选择</span> }
+      </div>
+
+      <button type="button" class="secondary-button" [disabled]="isBusy" (click)="toggleScan()">
+        <i [class]="isScanning ? 'fa-light fa-stop' : 'fa-light fa-radar'"></i>{{ scanButtonLabel }}
+      </button>
+
+      <div class="result-list device-results">
+        @for (device of devices; track device.deviceId) {
+          <button type="button" class="result-row" [class.selected]="selectedDevice?.deviceId === device.deviceId" [disabled]="isBusy" (click)="selectDevice(device)">
+            <span class="result-icon"><i [class]="signalIcon(device.rssi)"></i></span>
+            <span class="result-copy"><strong>{{ deviceName(device) }}</strong><small>{{ device.deviceId }}</small></span>
+            @if (device.rssi !== undefined) { <span class="result-meta">{{ device.rssi }} dBm</span> }
+            <i [class]="selectedDevice?.deviceId === device.deviceId ? 'fa-solid fa-circle-check' : 'fa-light fa-chevron-right'"></i>
+          </button>
+        } @empty {
+          <div class="result-empty">
+            <i [class]="isScanning ? 'fa-light fa-radar fa-spin' : 'fa-light fa-bluetooth'"></i>
+            <strong>{{ isScanning ? '正在发现设备…' : '等待扫描' }}</strong>
+            <span>设备需运行兼容的 BLE OTA 固件</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <button type="button" class="primary-button" [disabled]="!canUpload" (click)="upload()">
+      <i [class]="isBusy ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-cloud-arrow-up'"></i>
+      {{ isBusy ? '正在升级…' : '开始 BLE OTA' }}
+    </button>
+
+    @if (state !== 'idle' || firmwareFile || selectedDevice) {
+      <section class="ota-status" [class.success]="state === 'success'" [class.error]="state === 'error'" [class.cancelled]="state === 'cancelled'">
+        <div class="status-heading">
+          <span class="status-icon">
+            @if (state === 'success') { <i class="fa-solid fa-check"></i> }
+            @else if (state === 'error') { <i class="fa-solid fa-exclamation"></i> }
+            @else if (state === 'cancelled') { <i class="fa-light fa-ban"></i> }
+            @else { <i [class]="isBusy ? 'fa-light fa-arrows-rotate fa-spin' : 'fa-light fa-circle-info'"></i> }
+          </span>
+          <span class="status-copy"><strong>{{ statusMessage }}</strong><small>{{ statusDetail }}</small></span>
+          <b>{{ progress }}%</b>
+        </div>
+        <div class="progress-track"><span [style.width.%]="progress"></span></div>
+        @if (isBusy) {
+          <div class="progress-meta">
+            <span>{{ formatBytes(bytesSent) }} / {{ firmwareFile ? formatBytes(firmwareFile.size) : '—' }}</span>
+            <span>{{ speedText }}</span>
+          </div>
+          <button type="button" class="cancel-button" (click)="cancelUpload()">取消升级</button>
+        }
+      </section>
+    }
+
+    <div class="ota-notice">
+      <i class="fa-light fa-triangle-exclamation"></i>
+      <span>升级期间请勿关闭 App、断开蓝牙或切断设备电源。</span>
+    </div>
+  </main>
+</ion-content>

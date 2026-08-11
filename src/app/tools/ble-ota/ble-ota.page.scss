@@ -1,0 +1,11 @@
+:host {
+  --ota-accent: #7165e8;
+  display: block;
+  height: 100%;
+}
+
+.ble-hero {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ota-accent) 17%, var(--blinker-surface)), var(--blinker-surface));
+}
+
+.device-results { margin-top: 11px; }
