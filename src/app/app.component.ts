@@ -4,6 +4,7 @@ import {
   ElementRef,
   HostListener,
   OnInit,
+  AfterViewInit,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
 } from '@angular/core';
@@ -25,7 +26,6 @@ import { TipService } from './core/services/tip.service';
 import { TranslationService } from './core/services/translation.service';
 import { AudioService } from './core/services/audio.service';
 import { Capacitor } from '@capacitor/core';
-import { StatusBar, Style } from '@capacitor/status-bar';
 import { environment } from '../environments/environment';
 import { BTipComponent } from './core/components/b-tip/b-tip.component';
 import { BToastComponent } from './core/components/b-toast/b-toast.component';
@@ -45,7 +45,7 @@ import { headerIconTransitionAnimation } from './core/animations/header-icon-tra
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./app.component.scss'],
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, AfterViewInit {
   isPWA = false;
   isPcBrowser = false;
   readonly routerAnimation = headerIconTransitionAnimation;
@@ -90,17 +90,19 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     // 在 ngOnInit 中初始化 isPcBrowser 以避免 ExpressionChangedAfterItHasBeenCheckedError
     this.isPcBrowser = this.checkIsPcBrowser();
+    // Development builds use deterministic preview data. Load it before the
+    // routed home view is created so its first render already has devices.
+    if (!environment.production) {
+      this.dataService.loadGuestDevicePreview(true);
+    }
   }
 
   ngAfterViewInit() {
     this.initApp();
   }
 
-  async initApp() {
+  initApp() {
     this.initService();
-    if (Capacitor.isNativePlatform()) {
-      await StatusBar.setOverlaysWebView({ overlay: true });
-    }
     if (this.isPcBrowser) {
       console.log('当前是PC端浏览器访问');
     }
@@ -126,7 +128,11 @@ export class AppComponent implements OnInit {
   }
   async initService() {
     console.log('init service');
-    await this.dataService.init();
+    // Do not restore stale production credentials while running the local
+    // preview; they would make the app skip the test-device data.
+    if (environment.production) {
+      await this.dataService.init();
+    }
     this.checkLoginStatus();
     this.authService.init();
     // this.deviceConfigService.init();
@@ -148,14 +154,14 @@ export class AppComponent implements OnInit {
   }
 
   checkLoginStatus() {
+    if (!environment.production) {
+      console.log('[DEV MODE] 使用设备预览数据');
+      return;
+    }
+
     if (this.authService.isLogin()) {
       this.userService.getAllInfo();
     } else {
-      // 开发模式下不强制跳转登录页
-      if (!environment.production) {
-        console.log('[DEV MODE] 跳过登录检查');
-        return;
-      }
       this.navCtrl.navigateRoot('/login');
     }
   }

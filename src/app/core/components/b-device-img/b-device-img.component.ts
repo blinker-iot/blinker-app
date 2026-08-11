@@ -31,6 +31,8 @@ export class BDeviceImgComponent {
   ) {}
 
   ngOnChanges(changes: SimpleChanges) {
+    // 内置图标无需等待远程图标列表，保证未登录预览也能立即显示。
+    this.process();
     this.imageService.loader.subscribe((loaded) => {
       if (loaded) this.process();
     });

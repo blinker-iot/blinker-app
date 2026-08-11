@@ -5,6 +5,7 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { getDeviceId } from '../functions/func';
 import { API, BROKER_HOST } from 'src/app/configs/api.config';
 import { AuthData, UserData, OrderData, ShareDate } from '../model/data.model';
+import { createGuestDevicePreview } from '../data/guest-device-preview.data';
 
 @Injectable({
     providedIn: 'root'
@@ -53,6 +54,14 @@ export class DataService {
     constructor(
         // private storage: Storage,
     ) { }
+
+    loadGuestDevicePreview(force = false) {
+        if (!force && this.auth?.uuid && this.auth?.token) return;
+
+        const preview = createGuestDevicePreview();
+        this.device = preview.device;
+        this.room = preview.room;
+    }
 
     async init() {
         await this.loadAuthData()

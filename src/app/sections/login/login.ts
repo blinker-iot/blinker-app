@@ -21,6 +21,7 @@ import { DocPage } from 'src/app/core/pages/doc/doc.page';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
+import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
   selector: 'app-login',
@@ -57,7 +58,8 @@ export class LoginPage implements OnInit, OnDestroy {
     private noticeService: NoticeService,
     private navCtrl: NavController,
     private viewService: ViewService,
-    private modalCtrl: ModalController
+    private modalCtrl: ModalController,
+    private dataService: DataService
   ) { }
 
   ngOnInit(): void {
@@ -117,6 +119,15 @@ export class LoginPage implements OnInit, OnDestroy {
   }
 
   async login() {
+    // 临时测试入口：邮箱留空时加载预览设备并直接进入设备首页。
+    if (!this.email.trim()) {
+      this.dataService.loadGuestDevicePreview(true);
+      await this.navCtrl.navigateRoot('/home', {
+        queryParams: { tab: 'device' },
+      });
+      return;
+    }
+
     if (!this.email || !this.isValidEmail(this.email)) {
       this.noticeService.showToast('needValidEmail');
       return;

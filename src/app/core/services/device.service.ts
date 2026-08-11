@@ -231,6 +231,9 @@ export class DeviceService {
 
   // 判断设备是否在本地
   islocalDevice(device) {
+    if (device?.config?.isPreview && device.config.previewNearby) {
+      return true
+    }
     if (typeof this.lanDeviceList[device.deviceName] != 'undefined') {
       return true
     }
