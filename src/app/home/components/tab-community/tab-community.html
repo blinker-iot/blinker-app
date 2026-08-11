@@ -1,13 +1,104 @@
-<ion-header whitebg>
-    <ion-toolbar>
-        <ion-title>社区</ion-title>
-    </ion-toolbar>
-</ion-header>
-<ion-content fullscreen=true>
-    <div class="community-content">
-        <div class="empty-state">
-            <i class="fa-regular fa-users"></i>
-            <p>社区功能即将上线</p>
-        </div>
+<ion-header whitebg class="discover-header">
+  <ion-toolbar>
+    @if (!searchVisible) {
+    <ion-title>发现</ion-title>
+    } @else {
+    <div class="search-field">
+      <i class="fa-light fa-magnifying-glass"></i>
+      <input
+        type="search"
+        [(ngModel)]="searchKeyword"
+        placeholder="搜索灵感、产品与技巧"
+        aria-label="搜索发现内容"
+        autofocus
+      />
     </div>
+    }
+    <ion-buttons slot="end">
+      <ion-button aria-label="搜索" (click)="toggleSearch()">
+        <i [class]="searchVisible ? 'fa-light fa-xmark' : 'fa-light fa-magnifying-glass'"></i>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <div class="category-tabs" role="tablist" aria-label="发现内容分类">
+    @for (category of categories; track category) {
+    <button
+      type="button"
+      role="tab"
+      [attr.aria-selected]="activeCategory === category"
+      [class.active]="activeCategory === category"
+      (click)="selectCategory(category)"
+    >
+      {{ category }}
+    </button>
+    }
+  </div>
+</ion-header>
+
+<ion-content fullscreen="true">
+  <div class="discover-content">
+    <article class="hero-card">
+      <div class="hero-copy">
+        <h1>让家更聪明，<br />生活更从容</h1>
+        <p>一体化智能清洁方案，释放你的时间</p>
+        <button type="button">查看完整故事 <i class="fa-light fa-arrow-right"></i></button>
+      </div>
+    </article>
+
+    <section class="content-section">
+      <div class="section-heading">
+        <div>
+          <h2>智能灵感</h2>
+        </div>
+        <button type="button" (click)="selectCategory('推荐')">
+          查看全部 <i class="fa-light fa-chevron-right"></i>
+        </button>
+      </div>
+
+      @if (filteredCards.length > 0) {
+      <div class="inspiration-grid">
+        @for (card of filteredCards; track card.title) {
+        <article class="story-card">
+          <div class="story-image" [style.background-image]="'url(' + card.image + ')'">
+            <span>{{ card.category }}</span>
+          </div>
+          <div class="story-copy">
+            <h3>{{ card.title }}</h3>
+            <p>{{ card.description }}</p>
+            <small>{{ card.meta }}</small>
+          </div>
+        </article>
+        }
+      </div>
+      } @else {
+      <div class="no-result">
+        <i class="fa-light fa-sparkles"></i>
+        <span>暂时没有匹配内容，换个关键词试试</span>
+      </div>
+      }
+    </section>
+
+    <section class="content-section product-section">
+      <div class="section-heading">
+        <div>
+          <h2>即将上线</h2>
+        </div>
+      </div>
+      <div class="product-list">
+        @for (product of products; track product.name) {
+        <article class="product-card">
+          <div class="product-image"><img [src]="product.image" [alt]="product.name" /></div>
+          <div class="product-copy">
+            <h3>{{ product.name }}</h3>
+            <p>{{ product.description }}</p>
+            <small>{{ product.launch }}</small>
+          </div>
+          <button type="button" [attr.aria-label]="'查看' + product.name">
+            <i class="fa-light fa-arrow-right"></i>
+          </button>
+        </article>
+        }
+      </div>
+    </section>
+  </div>
 </ion-content>
