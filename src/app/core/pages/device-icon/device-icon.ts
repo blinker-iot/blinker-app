@@ -38,7 +38,7 @@ export class DeviceIconPage {
   ngOnInit() {
     this.id = this.activatedRoute.snapshot.params['id'];
     this.device = this.dataService.device.dict[this.id];
-    this.imageList = ImageList.concat(this.imageService.deviceIconList);
+    this.imageList = ImageList.concat([...this.imageService.deviceIconList]);
     // this.imageService.imageDict
   }
 

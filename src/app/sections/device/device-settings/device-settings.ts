@@ -335,7 +335,7 @@ export class DeviceSettingsPage {
     }
     if (ImageList.indexOf(filename) > -1) {
       url = `img/devices/icon/${filename}.png`;
-    } else if (this.imageService.deviceIconList.indexOf(filename) > -1) {
+    } else if (this.imageService.deviceIconList.has(filename)) {
       url = this.imageService.deviceIconDict[filename];
     } else {
       url = `img/devices/icon/unknown.png`;

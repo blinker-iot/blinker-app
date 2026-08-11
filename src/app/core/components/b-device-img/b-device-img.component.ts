@@ -1,9 +1,13 @@
 import {
+  ChangeDetectorRef,
   Component,
+  DestroyRef,
   Input,
-  SimpleChanges,
   ChangeDetectionStrategy,
+  OnChanges,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter, take } from 'rxjs';
 
 import { ImageService } from '../../services/image.service';
 import { ImageList } from 'src/app/configs/app.config';
@@ -14,10 +18,10 @@ import { DataService } from '../../services/data.service';
   imports: [],
   selector: 'b-device-img',
   templateUrl: './b-device-img.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./b-device-img.component.scss'],
 })
-export class BDeviceImgComponent {
+export class BDeviceImgComponent implements OnChanges {
   @Input() filename;
   @Input() deviceId;
 
@@ -27,15 +31,21 @@ export class BDeviceImgComponent {
 
   constructor(
     private imageService: ImageService,
-    private dataService: DataService
-  ) {}
+    private dataService: DataService,
+    private cd: ChangeDetectorRef,
+    destroyRef: DestroyRef
+  ) {
+    this.imageService.loader
+      .pipe(filter(Boolean), take(1), takeUntilDestroyed(destroyRef))
+      .subscribe(() => {
+        this.process();
+        this.cd.markForCheck();
+      });
+  }
 
-  ngOnChanges(changes: SimpleChanges) {
+  ngOnChanges() {
     // 内置图标无需等待远程图标列表，保证未登录预览也能立即显示。
     this.process();
-    this.imageService.loader.subscribe((loaded) => {
-      if (loaded) this.process();
-    });
   }
 
   process() {
@@ -63,7 +73,7 @@ export class BDeviceImgComponent {
       filename = filename.substring(0, filename.indexOf('.png'));
     if (ImageList.indexOf(filename) > -1) {
       this.url = `img/devices/icon/${filename}.png`;
-    } else if (this.imageService.deviceIconList.indexOf(filename) > -1) {
+    } else if (this.imageService.deviceIconList.has(filename)) {
       this.url = this.imageService.deviceIconDict[filename];
     } else {
       this.url = this.unknownUrl;

@@ -8,8 +8,8 @@ import { BehaviorSubject } from 'rxjs';
 })
 export class ImageService {
 
-    deviceIconDict = {}
-    deviceIconList = []
+    deviceIconDict: Record<string, string> = {}
+    deviceIconList = new Set<string>()
 
     loader = new BehaviorSubject(false)
 
@@ -20,11 +20,8 @@ export class ImageService {
     init() {
         this.http.get(CONFIG.ICON_FILE + `?date=${new Date().getTime()}`)
             .subscribe(async resp => {
-                this.deviceIconDict = resp;
-
-                for (const key in this.deviceIconDict) {
-                    this.deviceIconList.push(key);
-                }
+                this.deviceIconDict = resp as Record<string, string>;
+                this.deviceIconList = new Set(Object.keys(this.deviceIconDict));
                 this.loader.next(true)
             })
     }
