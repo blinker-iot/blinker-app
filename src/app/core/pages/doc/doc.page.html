@@ -1,15 +1,52 @@
-<ion-header>
+<ion-header class="ion-no-border doc-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="close()">
-        <i class="fal fa-times"></i>
+      <ion-button
+        class="close-button"
+        fill="clear"
+        aria-label="关闭文档"
+        (click)="close()"
+      >
+        <span aria-hidden="true">&times;</span>
       </ion-button>
     </ion-buttons>
-    <ion-title>{{docTitle}}</ion-title>
+    <ion-title>{{ docTitle }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  <!-- <div [innerHTML]="docContent | wrap"></div> -->
-  <div markdown [innerHTML]="docContent | markdown"></div>
+<ion-content
+  class="doc-page-content"
+  [attr.aria-busy]="loadState() === 'loading'"
+>
+  @switch (loadState()) {
+    @case ('loading') {
+      <div class="doc-state" role="status" aria-live="polite">
+        <ion-spinner name="crescent"></ion-spinner>
+        <p>正在加载文档…</p>
+      </div>
+    }
+    @case ('error') {
+      <div class="doc-state" role="alert">
+        <h2>文档加载失败</h2>
+        <p>请检查网络连接后重新加载。</p>
+        <ion-button fill="outline" size="small" (click)="loadDocument()">
+          重新加载
+        </ion-button>
+      </div>
+    }
+    @case ('empty') {
+      <div class="doc-state" role="status">
+        <h2>暂无内容</h2>
+        <p>该文档当前没有可显示的内容。</p>
+        <ion-button fill="outline" size="small" (click)="loadDocument()">
+          重新加载
+        </ion-button>
+      </div>
+    }
+    @case ('ready') {
+      <article class="markdown-document" [attr.aria-label]="docTitle">
+        <markdown [data]="docContent()"></markdown>
+      </article>
+    }
+  }
 </ion-content>
