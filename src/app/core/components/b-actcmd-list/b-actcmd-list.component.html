@@ -1,15 +1,21 @@
-<ng-container *ngIf="isDiy">
-  <widget-buttonlist [device]="device" (update)="updateSelectedAction($event)"></widget-buttonlist>
-</ng-container>
-<ng-container *ngIf="!isDiy">
-  <div class="scrollHeight">
-    <div class="cmd-box" demo-box>
-      <ng-container *ngFor="let item of cmdList;index as i">
-        <div class="cmd-item" demo-item (click)="updateSelectedAction([item.cmd])"
-          [ngClass]="{'selected':selectedItem == item.cmd}">
-          {{item.cmd | actcmd2text:device.id}}
-        </div>
-      </ng-container>
+@if (isDiy) {
+<widget-buttonlist
+  [device]="device"
+  (update)="updateSelectedAction($event)"
+></widget-buttonlist>
+} @if (!isDiy) {
+<div class="scrollHeight">
+  <div class="cmd-box" demo-box>
+    @for (item of cmdList; track item; let i = $index) {
+    <div
+      class="cmd-item"
+      demo-item
+      (click)="updateSelectedAction([item.cmd])"
+      [ngClass]="{ selected: selectedItem == item.cmd }"
+    >
+      {{ item.cmd | actcmd2text : device.id }}
     </div>
+    }
   </div>
-</ng-container>
+</div>
+}

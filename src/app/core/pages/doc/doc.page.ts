@@ -1,38 +1,42 @@
-import { Component, OnInit, Input } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  Input,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { DocService } from '../../services/doc.service';
 import { ModalController, IonicModule } from '@ionic/angular';
 import { MarkdownPipe } from 'ngx-markdown';
 
 @Component({
-    selector: 'app-doc',
-    templateUrl: './doc.page.html',
-    styleUrls: ['./doc.page.scss'],
-    imports: [IonicModule, MarkdownPipe]
+  selector: 'app-doc',
+  templateUrl: './doc.page.html',
+  styleUrls: ['./doc.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [IonicModule, MarkdownPipe],
 })
 export class DocPage implements OnInit {
+  @Input()
+  docTitle = '';
 
   @Input()
-  docTitle = "";
+  docUrl = '';
 
-  @Input()
-  docUrl = "";
-
-  docContent = "";
+  docContent = '';
 
   constructor(
     private docService: DocService,
-    private modalCtrl: ModalController,
-  ) { }
+    private modalCtrl: ModalController
+  ) {}
 
   ngOnInit() {
-    this.docService.getMarkdownDoc(this.docUrl).then(content => {
-      this.docContent = content
-    })
+    this.docService.getMarkdownDoc(this.docUrl).then((content) => {
+      this.docContent = content;
+    });
   }
 
   async close() {
-    (await this.modalCtrl.getTop()).dismiss()
+    (await this.modalCtrl.getTop()).dismiss();
     // this.modalCtrl.dismiss()
   }
-
 }

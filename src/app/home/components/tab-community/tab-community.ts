@@ -1,26 +1,19 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'tab-community',
   templateUrl: 'tab-community.html',
   styleUrls: ['tab-community.scss'],
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonicModule,
-    RouterModule,
-    TranslateModule
-  ]
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [FormsModule, IonicModule, RouterModule],
 })
 export class TabCommunityComponent {
+  constructor() {}
 
-  constructor() { }
-
-  ngOnInit() { }
+  ngOnInit() {}
 }

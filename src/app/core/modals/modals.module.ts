@@ -5,7 +5,7 @@ import { TimeSelectorModalComponent } from './time-selector-modal/time-selector-
 import { ActionSelectorModalComponent } from './action-selector-modal/action-selector-modal.component';
 import { DeviceSelectorModalComponent } from './device-selector-modal/device-selector-modal.component';
 import { PipesModule } from '../pipes/pipes.module';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ComponentsModule } from '../components/components.module';
 import { SelectorModalComponent } from './selector-modal/selector-modal.component';
 
@@ -16,7 +16,7 @@ import { SelectorModalComponent } from './selector-modal/selector-modal.componen
     CommonModule,
     PipesModule,
     ComponentsModule,
-    TranslateModule.forChild(),
+    TranslatePipe,
     RepeatSelectorModalComponent,
     ActionSelectorModalComponent,
     TimeSelectorModalComponent,

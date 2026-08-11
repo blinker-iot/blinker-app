@@ -1,9 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { Router, RouterModule } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { DataService } from '../../../core/services/data.service';
 import { UpdateService } from '../../../core/services/update.service';
 import { MENU_LIST } from '../../../configs/menu.config';
@@ -14,17 +14,17 @@ import { LangSelectorComponent } from '../../../core/components/lang-selector/la
   templateUrl: 'tab-profile.html',
   styleUrls: ['tab-profile.scss'],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     CommonModule,
     FormsModule,
     IonicModule,
     RouterModule,
-    TranslateModule,
-    LangSelectorComponent
-  ]
+    TranslatePipe,
+    LangSelectorComponent,
+  ],
 })
 export class TabProfileComponent {
-
   loaded = false;
   menuList = MENU_LIST;
 
@@ -51,11 +51,11 @@ export class TabProfileComponent {
     private dataService: DataService,
     private updateService: UpdateService,
     private router: Router
-  ) { }
+  ) {}
 
   subscription;
   ngOnInit() {
-    this.subscription = this.dataService.userDataLoader.subscribe(state => {
+    this.subscription = this.dataService.userDataLoader.subscribe((state) => {
       if (state) {
         this.loaded = true;
       }

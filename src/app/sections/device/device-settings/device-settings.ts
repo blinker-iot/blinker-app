@@ -16,7 +16,7 @@ import { NoticeService } from "src/app/core/services/notice.service";
 import { ImageList } from "src/app/configs/app.config";
 import { ImageService } from "src/app/core/services/image.service";
 import { AndroidShortcuts } from "capacitor-android-shortcuts";
-import { TranslateModule } from "@ngx-translate/core";
+import { TranslatePipe } from "@ngx-translate/core";
 import { BActcmdListComponent } from "src/app/core/components/b-actcmd-list/b-actcmd-list.component";
 import { BBottomBtnComponent } from "src/app/core/components/b-bottom-btn/b-bottom-btn.component";
 import { BChartComponent } from "src/app/core/components/b-chart/b-chart.component";
@@ -91,7 +91,7 @@ import { Layouter2Service } from "src/app/device/layouter2/layouter2.service";
         LangSelectorComponent,
         SceneButtonGroupComponent,
         SceneButtonComponent,
-        TranslateModule,
+        TranslatePipe,
         RouterModule
     ]
 })

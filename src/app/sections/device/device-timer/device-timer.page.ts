@@ -3,7 +3,7 @@ import { Component, OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterModule } from "@angular/router";
 import { IonicModule, ModalController } from "@ionic/angular";
-import { TranslateModule } from "@ngx-translate/core";
+import { TranslatePipe } from "@ngx-translate/core";
 import { MinuteToTimePipe } from "src/app/core/pipes/minute-to-time";
 import { ObjToStrPipe } from "src/app/core/pipes/obj-to-str";
 import { OwnplugAct2strPipe } from "src/app/core/pipes/ownplug-act2str";
@@ -62,7 +62,7 @@ import { SelectorModalComponent } from "src/app/core/modals/selector-modal/selec
         Device2NamePipe,
         Days2TextPipe,
         RouterModule,
-        TranslateModule,
+        TranslatePipe,
         BActcmdListComponent,
         BBottomBtnComponent,
         BChartComponent,

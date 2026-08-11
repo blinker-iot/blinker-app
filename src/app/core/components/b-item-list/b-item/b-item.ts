@@ -1,15 +1,22 @@
-import { Component, Input, Output, EventEmitter, HostBinding } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  HostBinding,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
-    standalone: true,
-    imports: [CommonModule],
-    selector: 'b-item',
-    templateUrl: 'b-item.html',
-    styleUrls: ['b-item.scss']
+  standalone: true,
+  imports: [CommonModule],
+  selector: 'b-item',
+  templateUrl: 'b-item.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['b-item.scss'],
 })
 export class BItemComponent {
-
   @Input() icon;
   @Input() text;
   @Input() content;
@@ -18,29 +25,29 @@ export class BItemComponent {
 
   @Input() editMode = false;
 
-  @Input() showArrow:any = false;
-  @Input() showAdd:any = false;
+  @Input() showArrow: any = false;
+  @Input() showAdd: any = false;
   @Input() disabled = false;
 
-  @Output() delete = new EventEmitter;
-  @Output() enter = new EventEmitter;
+  @Output() delete = new EventEmitter();
+  @Output() enter = new EventEmitter();
 
-  @HostBinding('attr.sort-id') get sortId() { return this.id };
+  @HostBinding('attr.sort-id') get sortId() {
+    return this.id;
+  }
 
   get itemHeight() {
-    if (this.height == 0) return 'auto'
-    return `${this.height}px`
+    if (this.height == 0) return 'auto';
+    return `${this.height}px`;
   }
 
-  constructor() {
-  }
+  constructor() {}
 
   clickDelBtn() {
     this.delete.emit(this.id);
   }
 
   clickItem() {
-    if (!this.editMode) this.enter.emit()
+    if (!this.editMode) this.enter.emit();
   }
-
 }

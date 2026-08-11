@@ -8,7 +8,7 @@ import { SpeechPage } from './speech';
 import { SpeechService } from './speech.service';
 import { SpeechButtonComponent } from './speech-button/speech-button';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 const routes: Routes = [
   {
@@ -23,7 +23,7 @@ const routes: Routes = [
     IonicModule,
     RouterModule.forChild(routes),
     DirectivesModule,
-    TranslateModule.forChild(),
+    TranslatePipe,
     SpeechPage,
     SpeechButtonComponent
   ],

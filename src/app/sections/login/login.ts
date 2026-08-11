@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { NavController, ModalController } from '@ionic/angular/standalone';
 import { IonicModule } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
@@ -8,29 +8,24 @@ import { CONFIG } from 'src/app/configs/app.config';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { FirstModalComponent } from './first-modal/first-modal.component';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { LangSelectorComponent } from 'src/app/core/components/lang-selector/lang-selector.component';
 
 @Component({
-    selector: 'page-login',
-    templateUrl: 'login.html',
-    styleUrls: ['login.scss'],
-    standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        IonicModule,
-        TranslateModule,
-        LangSelectorComponent
-    ]
+  selector: 'page-login',
+  templateUrl: 'login.html',
+  styleUrls: ['login.scss'],
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [FormsModule, IonicModule, TranslatePipe, LangSelectorComponent],
 })
 export class LoginPage {
   LOGO = CONFIG.LOGIN_LOGO;
 
-  email: string = "";
-  code: string = "";
+  email: string = '';
+  code: string = '';
   countdown: number = 0;
   private countdownTimer: any;
 
@@ -46,11 +41,10 @@ export class LoginPage {
     private navCtrl: NavController,
     private viewService: ViewService,
     private modalCtrl: ModalController
-  ) {
-  }
+  ) {}
 
   ngOnInit(): void {
-    if (localStorage.getItem('showFirstModal') == null) this.openFirstModal()
+    if (localStorage.getItem('showFirstModal') == null) this.openFirstModal();
     this.viewService.setLightStatusBar();
   }
 
@@ -69,17 +63,17 @@ export class LoginPage {
   // 发送验证码
   async sendCode(event: Event) {
     event.preventDefault();
-    
+
     if (!this.email || !this.isValidEmail(this.email)) {
       this.noticeService.showToast('needValidEmail');
       return;
     }
 
     await this.noticeService.showLoading('sendingCode');
-    
+
     const success = await this.authService.sendEmailCode(this.email);
     await this.noticeService.hideLoading();
-    
+
     if (success) {
       this.noticeService.showToast('codeSent');
       this.startCountdown();
@@ -110,7 +104,7 @@ export class LoginPage {
     }
 
     await this.noticeService.showLoading('login');
-    
+
     // 使用邮箱+验证码登录，如果账号不存在会自动创建
     if (await this.authService.loginWithEmailCode(this.email, this.code)) {
       await this.userService.getAllInfo();
@@ -134,9 +128,9 @@ export class LoginPage {
       component: DocPage,
       backdropDismiss: false,
       componentProps: {
-        'docTitle': title,
-        'docUrl': url,
-      }
+        docTitle: title,
+        docUrl: url,
+      },
     });
     modal.present();
   }
@@ -180,5 +174,4 @@ export class LoginPage {
       this.noticeService.showToast('loginFailed');
     }
   }
-
 }

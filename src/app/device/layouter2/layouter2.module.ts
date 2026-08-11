@@ -12,7 +12,7 @@ import { DirectivesModule } from 'src/app/core/directives/directives.module';
 import { WidgetToolbarComponent } from './widget-toolbar/widget-toolbar.component';
 import { Layouter2Service } from './layouter2.service';
 import { WidgetEditorModule } from './widget-editor2/widget-editor.module';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 @NgModule({
   imports: [
@@ -27,7 +27,7 @@ import { TranslateModule } from '@ngx-translate/core';
     IconListPageModule,
     WidgetToolbarComponent,
     WidgetEditorModule,
-    TranslateModule.forChild(),
+    TranslatePipe,
     Layouter2Component
   ],
   exports: [

@@ -1,19 +1,37 @@
-<widget-text *ngIf="widget.type=='tex'" [widget]="widget" [device]="device"></widget-text>
-<widget-number *ngIf="widget.type=='num'" [widget]="widget" [device]="device"></widget-number>
-<widget-button *ngIf="widget.type=='btn'" [widget]="widget" [device]="device"></widget-button>
-<widget-range *ngIf="widget.type=='ran'" [widget]="widget" [device]="device"></widget-range>
-<widget-timer *ngIf="widget.type=='tim'" [widget]="widget" [device]="device"></widget-timer>
-<widget-color *ngIf="widget.type=='col'" [widget]="widget" [device]="device"></widget-color>
-<widget-debug *ngIf="widget.type=='deb'" [widget]="widget" [device]="device"></widget-debug>
-<widget-joystick *ngIf="widget.type=='joy'" [widget]="widget" [device]="device"></widget-joystick>
-<widget-chart *ngIf="widget.type=='cha'" [widget]="widget" [device]="device"></widget-chart>
-<widget-map *ngIf="widget.type=='map'" [widget]="widget" [device]="device"></widget-map>
-<widget-input *ngIf="widget.type=='inp'" [widget]="widget" [device]="device"></widget-input>
-<widget-video *ngIf="widget.type=='vid'" [widget]="widget" [device]="device"></widget-video>
-<widget-select *ngIf="widget.type=='sel'" [widget]="widget" [device]="device"></widget-select>
+@if (widget.type=='tex') {
+<widget-text [widget]="widget" [device]="device"></widget-text>
+} @if (widget.type=='num') {
+<widget-number [widget]="widget" [device]="device"></widget-number>
+} @if (widget.type=='btn') {
+<widget-button [widget]="widget" [device]="device"></widget-button>
+} @if (widget.type=='ran') {
+<widget-range [widget]="widget" [device]="device"></widget-range>
+} @if (widget.type=='tim') {
+<widget-timer [widget]="widget" [device]="device"></widget-timer>
+} @if (widget.type=='col') {
+<widget-color [widget]="widget" [device]="device"></widget-color>
+} @if (widget.type=='deb') {
+<widget-debug [widget]="widget" [device]="device"></widget-debug>
+} @if (widget.type=='joy') {
+<widget-joystick [widget]="widget" [device]="device"></widget-joystick>
+} @if (widget.type=='cha') {
+<widget-chart [widget]="widget" [device]="device"></widget-chart>
+} @if (widget.type=='map') {
+<widget-map [widget]="widget" [device]="device"></widget-map>
+} @if (widget.type=='inp') {
+<widget-input [widget]="widget" [device]="device"></widget-input>
+} @if (widget.type=='vid') {
+<widget-video [widget]="widget" [device]="device"></widget-video>
+} @if (widget.type=='sel') {
+<widget-select [widget]="widget" [device]="device"></widget-select>
+}
 <!-- <widget-image *ngIf="widget.type=='img'" [widget]="widget" [device]="device"></widget-image> -->
-<widget-custom *ngIf="widget.type=='cus'" [widget]="widget" [device]="device"></widget-custom>
-
-<div class="editMode" *ngIf="mode==1" (tap)="select()">
-    <div class="key" [ngClass]="{'centerkey': widget.bg==3}">{{widget.key}}</div>
+@if (widget.type=='cus') {
+<widget-custom [widget]="widget" [device]="device"></widget-custom>
+} @if (mode==1) {
+<div class="editMode" (tap)="select()">
+  <div class="key" [ngClass]="{ centerkey: widget.bg == 3 }">
+    {{ widget.key }}
+  </div>
 </div>
+}

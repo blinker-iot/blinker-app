@@ -1,5 +1,13 @@
-import { Component, ViewChild, ElementRef, Input, SimpleChanges, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  Input,
+  SimpleChanges,
+  ChangeDetectorRef,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+
 import { IonicModule } from '@ionic/angular';
 // import ProgressBar from 'progressbar.js';
 // import { Brightness } from '@awesome-cordova-plugins/brightness/ngx';
@@ -7,11 +15,12 @@ import { IonicModule } from '@ionic/angular';
 // var brightness = cordova.plugins.brightness;
 
 @Component({
-    standalone: true,
-    imports: [CommonModule, IonicModule],
-    selector: 'b-progressbar',
-    templateUrl: './b-progressbar.component.html',
-    styleUrls: ['./b-progressbar.component.scss']
+  standalone: true,
+  imports: [IonicModule],
+  selector: 'b-progressbar',
+  templateUrl: './b-progressbar.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./b-progressbar.component.scss'],
 })
 export class BProgressbarComponent {
   bar;
@@ -20,14 +29,13 @@ export class BProgressbarComponent {
   showDone = false;
 
   get value100() {
-    return parseInt((this.value * 100).toString())
+    return parseInt((this.value * 100).toString());
   }
 
-  @ViewChild('ProgressBar',{ read: ElementRef, static: true }) progressBar: ElementRef;
-  constructor(
-    // private changeDetectorRef: ChangeDetectorRef,
-    // private brightness: Brightness
-  ) { }
+  @ViewChild('ProgressBar', { read: ElementRef, static: true })
+  progressBar: ElementRef;
+  constructor() // private brightness: Brightness // private changeDetectorRef: ChangeDetectorRef,
+  {}
 
   ngOnInit(): void {
     // cordova.plugins.brightness.setKeepScreenOn(true);
@@ -72,5 +80,4 @@ export class BProgressbarComponent {
   update() {
     // this.bar.animate(this.value);
   }
-
 }

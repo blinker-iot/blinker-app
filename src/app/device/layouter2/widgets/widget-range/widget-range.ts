@@ -1,18 +1,25 @@
-import { Component, ElementRef, Input, Renderer2, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Input,
+  Renderer2,
+  ViewChild,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Layouter2Widget } from '../config';
 import { Layouter2Service } from '../../layouter2.service';
 import { convertToRgba } from 'src/app/core/functions/func';
 
 @Component({
-    selector: 'widget-range',
-    templateUrl: 'widget-range.html',
-    styleUrls: ['widget-range.scss'],
-    standalone: true,
-    imports: [CommonModule]
+  selector: 'widget-range',
+  templateUrl: 'widget-range.html',
+  styleUrls: ['widget-range.scss'],
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [CommonModule],
 })
 export class WidgetRangeComponent implements Layouter2Widget {
-
   @Input() device;
   @Input() widget;
 
@@ -21,7 +28,7 @@ export class WidgetRangeComponent implements Layouter2Widget {
   }
 
   get tex() {
-    return this.getValue('tex')
+    return this.getValue('tex');
   }
 
   // @ViewChild('rangebox', { read: ElementRef, static: true }) rangebox: ElementRef;
@@ -34,76 +41,72 @@ export class WidgetRangeComponent implements Layouter2Widget {
   }
 
   get value() {
-    return this.getValue('val')
+    return this.getValue('val');
   }
 
   get max() {
-    return this.getValue('max')
+    return this.getValue('max');
   }
 
   get min() {
-    return this.getValue('min')
+    return this.getValue('min');
   }
 
   get ico() {
-    return this.getValue('ico')
+    return this.getValue('ico');
   }
 
   get color() {
-    return this.getValue('clr')
+    return this.getValue('clr');
   }
 
   get color2() {
-    return convertToRgba(this.color, 0.2)
+    return convertToRgba(this.color, 0.2);
   }
 
   get state() {
-    return this.getValue('swi')
+    return this.getValue('swi');
   }
 
   get mode() {
-    return this.getValue('mode')
+    return this.getValue('mode');
   }
 
   get custom() {
-    return this.getValue('cus')
+    return this.getValue('cus');
   }
 
-  textBoxWidth = '300px'
+  textBoxWidth = '300px';
   // boxPadding = '0 15px'
 
   get gridSize() {
-    return this.layouterService.gridSize
+    return this.layouterService.gridSize;
   }
 
   getValue(valueKey) {
     if (typeof this.device.data[this.key] != 'undefined')
       if (typeof this.device.data[this.key][valueKey] != 'undefined')
-        return this.device.data[this.key][valueKey]
+        return this.device.data[this.key][valueKey];
     if (typeof this.widget[valueKey] != 'undefined')
-      return this.widget[valueKey]
-    return
+      return this.widget[valueKey];
+    return;
   }
 
-  _lstyle
+  _lstyle;
   @Input()
   set lstyle(lstyle) {
-    this._lstyle = lstyle
+    this._lstyle = lstyle;
   }
   get lstyle() {
-    if (typeof this._lstyle != 'undefined')
-      return this._lstyle
-    if (typeof this.widget.lstyle != 'undefined')
-      return this.widget.lstyle
+    if (typeof this._lstyle != 'undefined') return this._lstyle;
+    if (typeof this.widget.lstyle != 'undefined') return this.widget.lstyle;
     return 0;
   }
 
   constructor(
     private layouterService: Layouter2Service,
     private renderer: Renderer2
-  ) {
-  }
-
+  ) {}
 
   timer;
   ngAfterViewInit() {
@@ -111,12 +114,12 @@ export class WidgetRangeComponent implements Layouter2Widget {
       if (!this.isMoving) {
         this.processValue();
       }
-    }, 1000)
-    this.refresh()
+    }, 1000);
+    this.refresh();
   }
 
   ngOnDestroy() {
-    clearInterval(this.timer)
+    clearInterval(this.timer);
   }
 
   canSend = true;
@@ -126,24 +129,25 @@ export class WidgetRangeComponent implements Layouter2Widget {
 
   refresh() {
     setTimeout(() => {
-      this.textBoxWidth = `${this.bar.nativeElement.clientWidth}px`
-    }, 100)
+      this.textBoxWidth = `${this.bar.nativeElement.clientWidth}px`;
+    }, 100);
   }
 
   jia() {
-    if (typeof this.value == 'undefined') this.value = 0
-    if (this.value < this.max) this.value++
-    this.sendData(this.value)
+    if (typeof this.value == 'undefined') this.value = 0;
+    if (this.value < this.max) this.value++;
+    this.sendData(this.value);
   }
 
   jian() {
-    if (typeof this.value == 'undefined') this.value = 0
-    if (this.value > this.min) this.value--
-    this.sendData(this.value)
+    if (typeof this.value == 'undefined') this.value = 0;
+    if (this.value > this.min) this.value--;
+    this.sendData(this.value);
   }
 
-  @ViewChild("bar", { read: ElementRef, static: true }) bar: ElementRef;
-  @ViewChild("barActive", { read: ElementRef, static: true }) activeBar: ElementRef;
+  @ViewChild('bar', { read: ElementRef, static: true }) bar: ElementRef;
+  @ViewChild('barActive', { read: ElementRef, static: true })
+  activeBar: ElementRef;
 
   @Input() direction = 'x';
 
@@ -154,7 +158,7 @@ export class WidgetRangeComponent implements Layouter2Widget {
     }
   }
 
-  isMoving = false
+  isMoving = false;
 
   oldInputValue;
   // _value;
@@ -180,10 +184,11 @@ export class WidgetRangeComponent implements Layouter2Widget {
     return this._disabled;
   }
 
-  _barColor = '#389BEE'
+  _barColor = '#389BEE';
   @Input()
   set barcolor(color) {
-    if (color[0] != '#' && color[0] != 'r' && color[0] != 'l') color = '#' + color;
+    if (color[0] != '#' && color[0] != 'r' && color[0] != 'l')
+      color = '#' + color;
     this.renderer.setStyle(this.bar.nativeElement, 'background', color);
     this._barColor = color;
   }
@@ -191,7 +196,7 @@ export class WidgetRangeComponent implements Layouter2Widget {
     return this._barColor;
   }
 
-  _activebarColor = '#389BEE'
+  _activebarColor = '#389BEE';
   @Input()
   set activecolor(color) {
     if (color[0] != '#' && color[0] != 'r') color = '#' + color;
@@ -204,8 +209,12 @@ export class WidgetRangeComponent implements Layouter2Widget {
 
   processValue() {
     if (this.oldInputValue != this.value) {
-      let x = (this.value - this.min) / (this.max - this.min) * this.length;
-      this.renderer.setStyle(this.activeBar.nativeElement, 'transition', `width 0.5s`);
+      let x = ((this.value - this.min) / (this.max - this.min)) * this.length;
+      this.renderer.setStyle(
+        this.activeBar.nativeElement,
+        'transition',
+        `width 0.5s`
+      );
       this.moveSlider(x);
       setTimeout(() => {
         this.renderer.removeStyle(this.activeBar.nativeElement, 'transition');
@@ -215,11 +224,17 @@ export class WidgetRangeComponent implements Layouter2Widget {
   }
 
   moveSlider(move) {
-    let barActiveScale = (move / this.length * 100);
+    let barActiveScale = (move / this.length) * 100;
     if (this.direction == 'x') {
-      this.renderer.setStyle(this.activeBar.nativeElement, 'width', `${barActiveScale.toString()}%`);
+      this.renderer.setStyle(
+        this.activeBar.nativeElement,
+        'width',
+        `${barActiveScale.toString()}%`
+      );
     }
-    this.value = Math.round(move / this.length * (this.max - this.min) + this.min);
+    this.value = Math.round(
+      (move / this.length) * (this.max - this.min) + this.min
+    );
   }
 
   tapEvent(e) {
@@ -242,7 +257,7 @@ export class WidgetRangeComponent implements Layouter2Widget {
       let p = e.target.getBoundingClientRect().left;
       move = e.center.x - p - 10;
     }
-    move = this.checkLimit(move)
+    move = this.checkLimit(move);
     this.moveSlider(move);
   }
 
@@ -253,7 +268,7 @@ export class WidgetRangeComponent implements Layouter2Widget {
       let p = e.target.getBoundingClientRect().left;
       move = e.center.x - p - 10;
     }
-    move = this.checkLimit(move)
+    move = this.checkLimit(move);
     this.moveSlider(move);
     this.pick();
   }
@@ -270,7 +285,7 @@ export class WidgetRangeComponent implements Layouter2Widget {
       // this.valueChange.emit(this.value);
     }
     if (state == 'end' || state == 'tap') {
-      this.sendData(this.value)
+      this.sendData(this.value);
     }
   }
 

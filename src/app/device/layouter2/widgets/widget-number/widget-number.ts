@@ -5,18 +5,20 @@ import {
   Input,
   SimpleChanges,
   ViewChild,
-} from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { Layouter2Widget } from "../config";
-import { convertToRgba } from "src/app/core/functions/func";
-import { Layouter2Service } from "../../layouter2.service";
+  ChangeDetectionStrategy,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Layouter2Widget } from '../config';
+import { convertToRgba } from 'src/app/core/functions/func';
+import { Layouter2Service } from '../../layouter2.service';
 
 @Component({
-    selector: "widget-number",
-    templateUrl: "widget-number.html",
-    styleUrls: ["widget-number.scss"],
-    standalone: true,
-    imports: [CommonModule]
+  selector: 'widget-number',
+  templateUrl: 'widget-number.html',
+  styleUrls: ['widget-number.scss'],
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [CommonModule],
 })
 export class WidgetNumberComponent implements Layouter2Widget {
   @Input()
@@ -31,45 +33,44 @@ export class WidgetNumberComponent implements Layouter2Widget {
   }
 
   get tex() {
-    return this.getValue(["tex", "t0"]);
+    return this.getValue(['tex', 't0']);
   }
 
   get ico() {
-    return this.getValue(["ico", "icon"]);
+    return this.getValue(['ico', 'icon']);
   }
 
   get color() {
-    return this.getValue(["clr", "col", "color"]);
+    return this.getValue(['clr', 'col', 'color']);
   }
 
   get value() {
-    let val = this.getValue(["val", "value"]);
-    if (typeof val == "undefined") {
+    let val = this.getValue(['val', 'value']);
+    if (typeof val == 'undefined') {
       return 0;
     }
     try {
-      if ((val.toString()).indexOf(".") > -1) {
+      if (val.toString().indexOf('.') > -1) {
         return Math.floor(val * 100) / 100;
       }
-    } catch (error) {
-    }
+    } catch (error) {}
     return val;
   }
 
   get unit() {
-    return this.getValue(["uni", "unit"]);
+    return this.getValue(['uni', 'unit']);
   }
 
   get min() {
-    return this.getValue(["min"]);
+    return this.getValue(['min']);
   }
 
   get max() {
-    return this.getValue(["max"]);
+    return this.getValue(['max']);
   }
 
   setValue(valueKey, value) {
-    if (typeof this.device.data[this.key] == "undefined") {
+    if (typeof this.device.data[this.key] == 'undefined') {
       this.device.data[this.key] = {};
     }
     this.device.data[this.key][valueKey] = value;
@@ -77,12 +78,12 @@ export class WidgetNumberComponent implements Layouter2Widget {
 
   getValue(valueKeys: string[]): any {
     for (let valueKey of valueKeys) {
-      if (typeof this.device.data[this.key] != "undefined") {
-        if (typeof this.device.data[this.key][valueKey] != "undefined") {
+      if (typeof this.device.data[this.key] != 'undefined') {
+        if (typeof this.device.data[this.key][valueKey] != 'undefined') {
           return this.device.data[this.key][valueKey];
         }
       }
-      if (typeof this.widget[valueKey] != "undefined") {
+      if (typeof this.widget[valueKey] != 'undefined') {
         return this.widget[valueKey];
       }
     }
@@ -95,10 +96,10 @@ export class WidgetNumberComponent implements Layouter2Widget {
     this._lstyle = lstyle;
   }
   get lstyle() {
-    if (typeof this._lstyle != "undefined") {
+    if (typeof this._lstyle != 'undefined') {
       return this._lstyle;
     }
-    if (typeof this.widget.lstyle != "undefined") {
+    if (typeof this.widget.lstyle != 'undefined') {
       return this.widget.lstyle;
     }
     return 0;
@@ -121,7 +122,7 @@ export class WidgetNumberComponent implements Layouter2Widget {
     private cd: ChangeDetectorRef,
     private el: ElementRef,
     private LayouterService: Layouter2Service
-  ) { }
+  ) {}
 
   ngAfterViewInit() {
     if (this.myCanvas) {
@@ -136,7 +137,7 @@ export class WidgetNumberComponent implements Layouter2Widget {
     setTimeout(() => {
       this.elWidth = this.el.nativeElement.getBoundingClientRect().width;
       if (this.widget.sty == 2) {
-        this.elWidth = this.elWidth /2;
+        this.elWidth = this.elWidth / 2;
       }
       this.initStyle();
     }, 500);
@@ -144,7 +145,7 @@ export class WidgetNumberComponent implements Layouter2Widget {
     // 监听组件配置改变
     this.LayouterService.changeWidgetSubject.subscribe((widget: any) => {
       if (widget.key == this.widget.key) {
-        this.initStyle()
+        this.initStyle();
       }
     });
   }
@@ -153,12 +154,11 @@ export class WidgetNumberComponent implements Layouter2Widget {
     clearInterval(this.intervalTimer);
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-  }
+  ngOnChanges(changes: SimpleChanges): void {}
 
   currentPercent = 0;
   intervalTimer;
-  @ViewChild("myCanvas")
+  @ViewChild('myCanvas')
   myCanvas: ElementRef;
   initProgressBar() {
     this.drawProgressBar(0, this.valuePer);
@@ -167,11 +167,11 @@ export class WidgetNumberComponent implements Layouter2Widget {
   drawProgressBar(
     startPercent: number,
     targetPercent: number,
-    opts: { lineWidth?} = { lineWidth: 5 },
+    opts: { lineWidth? } = { lineWidth: 5 }
   ) {
     this.currentPercent = startPercent;
     var canvas: any = this.myCanvas.nativeElement;
-    var ctx = canvas.getContext("2d");
+    var ctx = canvas.getContext('2d');
     // 清除canvas内容
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -196,7 +196,7 @@ export class WidgetNumberComponent implements Layouter2Widget {
     var endAngle = startAngle + 2 * Math.PI * startPercent; // 根据百分比计算结束角度
 
     ctx.beginPath();
-    ctx.lineCap = "round"; // 线两端呈现圆形
+    ctx.lineCap = 'round'; // 线两端呈现圆形
     ctx.arc(centerX, centerY, radius, startAngle, endAngle);
     ctx.lineWidth = opts.lineWidth;
     ctx.strokeStyle = this.color;
@@ -220,13 +220,12 @@ export class WidgetNumberComponent implements Layouter2Widget {
 
   // 检测.s2的宽度，如果宽度超过组件宽度，就使用transform: scale()缩小元素
   listenWidth() {
-    let s2 = this.el.nativeElement.querySelector(".s2");
+    let s2 = this.el.nativeElement.querySelector('.s2');
     if (s2) {
       let s2Width = s2.getBoundingClientRect().width;
       // console.log('s2Width:', s2Width,'this.elWidth:', this.elWidth);
       // console.log(s2Width > this.elWidth);
       // console.log(this.scale);
-
 
       if (s2Width > this.elWidth) {
         this.scale = this.elWidth / s2Width;
@@ -249,7 +248,6 @@ export class WidgetNumberComponent implements Layouter2Widget {
       this.translateX = `translateX(-${this.elWidth}px)`;
     }
   }
-
 
   // lock = false;
   switchStyle() {

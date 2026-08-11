@@ -1,5 +1,10 @@
-import { Component, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  Output,
+  EventEmitter,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+
 import { DataService } from '../../services/data.service';
 import { DeviceConfigService } from '../../services/device-config.service';
 import { BDeviceImgComponent } from '../b-device-img/b-device-img.component';
@@ -7,14 +12,14 @@ import { BItemComponent } from '../b-item-list/b-item/b-item';
 import { BItemListComponent } from '../b-item-list/b-item-list.component';
 
 @Component({
-    selector: 'b-device-list',
-    standalone: true,
-    imports: [CommonModule, BDeviceImgComponent, BItemComponent, BItemListComponent],
-    templateUrl: './b-device-list.component.html',
-    styleUrls: ['./b-device-list.component.scss']
+  selector: 'b-device-list',
+  standalone: true,
+  imports: [BDeviceImgComponent, BItemComponent, BItemListComponent],
+  templateUrl: './b-device-list.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./b-device-list.component.scss'],
 })
 export class BDeviceListComponent {
-
   selectedDevice;
 
   itemList = [];
@@ -22,54 +27,54 @@ export class BDeviceListComponent {
   @Output() updateDeviceId = new EventEmitter();
 
   get deviceDataDict() {
-    return this.dataService.device.dict
+    return this.dataService.device.dict;
   }
 
   get deviceDataList() {
-    return this.dataService.device.list
+    return this.dataService.device.list;
   }
 
   constructor(
     private dataService: DataService,
     private deviceConfigService: DeviceConfigService
-  ) { }
+  ) {}
 
   ngOnInit() {
-    this.getAvailableDevices()
+    this.getAvailableDevices();
   }
 
   getAvailableDevices() {
-    this.deviceDataList.forEach(deviceId => {
+    this.deviceDataList.forEach((deviceId) => {
       if (this.deviceDataDict[deviceId].deviceType.indexOf('Diy') > -1) {
-        this.processDiyDevice(deviceId)
+        this.processDiyDevice(deviceId);
       } else {
-        this.processProDevice(deviceId)
+        this.processProDevice(deviceId);
       }
     });
   }
 
   processDiyDevice(deviceId) {
-    let layouterData = JSON.parse(this.deviceDataDict[deviceId].config.layouter)
+    let layouterData = JSON.parse(
+      this.deviceDataDict[deviceId].config.layouter
+    );
     // console.log(layouterData);
     if (layouterData != null)
       if (typeof layouterData.triggers != 'undefined') {
-        if (layouterData.triggers.length > 0)
-          this.itemList.push(deviceId);
+        if (layouterData.triggers.length > 0) this.itemList.push(deviceId);
       }
   }
 
   processProDevice(deviceId) {
-    let deviceConfig = this.deviceConfigService.getDeviceConfig(this.deviceDataDict[deviceId]);
+    let deviceConfig = this.deviceConfigService.getDeviceConfig(
+      this.deviceDataDict[deviceId]
+    );
     if (typeof deviceConfig != 'undefined')
       if (typeof deviceConfig.triggers != 'undefined') {
-        if (deviceConfig.triggers.length > 10)
-          this.itemList.push(deviceId);
+        if (deviceConfig.triggers.length > 10) this.itemList.push(deviceId);
       }
   }
 
   selectDeviceId(deviceId) {
     this.updateDeviceId.emit(deviceId);
   }
-
 }
-

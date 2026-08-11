@@ -1,9 +1,11 @@
 <div class="bg animate__animated animate__fadeIn animate__faster">
   <div class="progressBarBox">
     <div class="progressBar" #ProgressBar></div>
-    <div class="iconbox animate__animated animate__fadeIn animate__faster" *ngIf="showDone">
+    @if (showDone) {
+    <div class="iconbox animate__animated animate__fadeIn animate__faster">
       <ion-icon name="checkmark"></ion-icon>
     </div>
-    <div class="text">{{text}}</div>
+    }
+    <div class="text">{{ text }}</div>
   </div>
 </div>

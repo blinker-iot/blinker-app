@@ -1,4 +1,12 @@
-import { Component, Input, ElementRef, ViewChild, Renderer2, Injectable } from '@angular/core';
+import {
+  Component,
+  Input,
+  ElementRef,
+  ViewChild,
+  Renderer2,
+  Injectable,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Layouter2Widget } from '../config';
@@ -6,17 +14,15 @@ import { NativeService } from 'src/app/core/services/native.service';
 import { Layouter2Service } from '../../layouter2.service';
 import { color2Rgba, convertToRgba } from 'src/app/core/functions/func';
 
-
-
 @Component({
-    selector: 'widget-select',
-    templateUrl: 'widget-select.html',
-    styleUrls: ['widget-select.scss'],
-    standalone: true,
-    imports: [CommonModule, FormsModule]
+  selector: 'widget-select',
+  templateUrl: 'widget-select.html',
+  styleUrls: ['widget-select.scss'],
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [CommonModule, FormsModule],
 })
 export class WidgetSelectComponent implements Layouter2Widget {
-
   @Input() device;
   @Input() widget;
 
@@ -25,38 +31,37 @@ export class WidgetSelectComponent implements Layouter2Widget {
   }
 
   get t0() {
-    return this.getValue(['tex', 't0', 'text'])
+    return this.getValue(['tex', 't0', 'text']);
   }
 
   get t1() {
-    return this.getValue(['tex1', 't1'])
+    return this.getValue(['tex1', 't1']);
   }
 
   get ico() {
-    return this.getValue(['ico', 'icon'])
+    return this.getValue(['ico', 'icon']);
   }
-
 
   get color() {
     if (this.state == 'on') return '#FFF';
-    return this.getValue(['clr', 'col', 'color'])
+    return this.getValue(['clr', 'col', 'color']);
   }
 
   get color2() {
     if (this.state == 'on') return this.getValue(['clr', 'col', 'color']);
-    return convertToRgba(this.color, 0.1)
+    return convertToRgba(this.color, 0.1);
   }
 
   get state() {
-    this.device.data[this.key]
+    this.device.data[this.key];
     if (typeof this.device.data[this.key] == 'string') {
-      return this.device.data[this.key]
+      return this.device.data[this.key];
     }
-    return this.getValue(['swi', 'switch'])
+    return this.getValue(['swi', 'switch']);
   }
 
   get mode() {
-    return this.getValue(['mode'])
+    return this.getValue(['mode']);
   }
 
   set mode(value) {
@@ -64,18 +69,18 @@ export class WidgetSelectComponent implements Layouter2Widget {
   }
 
   get custom() {
-    return this.getValue(['cus', 'custom'])
+    return this.getValue(['cus', 'custom']);
   }
 
   getValue(valueKeys: string[]): any {
     for (let valueKey of valueKeys) {
       if (typeof this.device.data[this.key] != 'undefined')
         if (typeof this.device.data[this.key][valueKey] != 'undefined')
-          return this.device.data[this.key][valueKey]
+          return this.device.data[this.key][valueKey];
       if (typeof this.widget[valueKey] != 'undefined')
-        return this.widget[valueKey]
-    };
-    return
+        return this.widget[valueKey];
+    }
+    return;
   }
 
   pressed = false;
@@ -84,9 +89,7 @@ export class WidgetSelectComponent implements Layouter2Widget {
 
   value;
 
-  constructor(
-    private LayouterService: Layouter2Service
-  ) { }
+  constructor(private LayouterService: Layouter2Service) {}
 
   ngOnInit() {
     this.current = this.widget.opts[0];
@@ -98,12 +101,12 @@ export class WidgetSelectComponent implements Layouter2Widget {
     for (let index = 0; index < this.widget.opts.length; index++) {
       const opt = this.widget.opts[index];
       if (opt.value == e) {
-        this.current = opt
+        this.current = opt;
         break;
       }
     }
 
     let data = `{"${this.key}":"${this.current.value}"}`;
-    this.LayouterService.send(data + '\n')
+    this.LayouterService.send(data + '\n');
   }
 }

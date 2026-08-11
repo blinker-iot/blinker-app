@@ -1,7 +1,4 @@
-import {
-  Component,
-  Input
-} from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
@@ -12,29 +9,28 @@ import { AudioService } from 'src/app/core/services/audio.service';
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 
 @Component({
-    selector: 'deviceblock',
-    templateUrl: 'deviceblock.html',
-    styleUrls: ['deviceblock.scss'],
-    imports: [CommonModule, IonicModule, BDeviceImgComponent]
+  selector: 'deviceblock',
+  templateUrl: 'deviceblock.html',
+  styleUrls: ['deviceblock.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [CommonModule, IonicModule, BDeviceImgComponent],
 })
 export class Deviceblock {
-
   @Input() public device: BlinkerDevice;
 
   get switch() {
-    if (typeof this.device == 'undefined')
-      return null
-    if (this.device.data.switch == 'on')
-      return true
-    else
-      return false
+    if (typeof this.device == 'undefined') return null;
+    if (this.device.data.switch == 'on') return true;
+    else return false;
   }
 
   get enable() {
-    if (this.device.config.mode == 'mqtt')
-      return this.device.data.enable
-    if (this.device.config.mode == 'ble' && this.deviceService.islocalDevice(this.device))
-      return true
+    if (this.device.config.mode == 'mqtt') return this.device.data.enable;
+    if (
+      this.device.config.mode == 'ble' &&
+      this.deviceService.islocalDevice(this.device)
+    )
+      return true;
   }
 
   constructor(
@@ -42,15 +38,15 @@ export class Deviceblock {
     public deviceService: DeviceService,
     public userService: UserService,
     private audio: AudioService
-  ) { }
+  ) {}
 
   tapSwitch(e) {
     e.stopPropagation();
-    if (this.device.config.mode != "mqtt") return;
+    if (this.device.config.mode != 'mqtt') return;
     let message;
-    if (this.device.data.switch == "off") {
+    if (this.device.data.switch == 'off') {
       message = `{"switch":"on"}`;
-    } else if (this.device.data.switch == "on") {
+    } else if (this.device.data.switch == 'on') {
       message = `{"switch":"off"}`;
     } else {
       return;
@@ -61,15 +57,15 @@ export class Deviceblock {
 
   waiting() {
     //显示等待反馈动画
-    let oldSwitch = this.device.data.switch
-    this.device.data.switch = "waiting";
+    let oldSwitch = this.device.data.switch;
+    this.device.data.switch = 'waiting';
     let timer;
     let timer2;
     timer = window.setInterval(() => {
-      if (this.device.data.switch != "waiting") {
+      if (this.device.data.switch != 'waiting') {
         window.clearInterval(timer);
         window.clearTimeout(timer2);
-        this.audio.switch(this.device.data.switch)
+        this.audio.switch(this.device.data.switch);
       }
     }, 20);
     timer2 = window.setTimeout(() => {
@@ -78,4 +74,3 @@ export class Deviceblock {
     }, 3000);
   }
 }
-

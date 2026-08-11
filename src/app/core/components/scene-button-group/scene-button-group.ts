@@ -1,5 +1,11 @@
-import { Component, ViewChild, ElementRef, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  Input,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+
 import { NavController } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
 import Sortable from 'sortablejs';
@@ -7,27 +13,27 @@ import { DataService } from '../../services/data.service';
 import { SceneButtonComponent } from './scene-button/scene-button';
 
 @Component({
-    standalone: true,
-    imports: [CommonModule, SceneButtonComponent],
-    selector: 'scene-button-group',
-    templateUrl: 'scene-button-group.html',
-    styleUrls: ['scene-button-group.scss']
+  standalone: true,
+  imports: [SceneButtonComponent],
+  selector: 'scene-button-group',
+  templateUrl: 'scene-button-group.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['scene-button-group.scss'],
 })
 export class SceneButtonGroupComponent {
-
   get sceneDataList() {
     if (typeof this.dataService.scene != 'undefined')
-      return this.dataService.scene.list
-    return
+      return this.dataService.scene.list;
+    return;
   }
 
-  @ViewChild("buttonGroup", { read: ElementRef, static: true }) buttonGroup: ElementRef;
+  @ViewChild('buttonGroup', { read: ElementRef, static: true })
+  buttonGroup: ElementRef;
 
   constructor(
     // public userService: UserService
     private dataService: DataService
-  ) {
-  }
+  ) {}
 
   // ngAfterViewInit() {
   //   this.initSortable();
@@ -64,6 +70,4 @@ export class SceneButtonGroupComponent {
   //     },
   //   });
   // }
-
-
 }

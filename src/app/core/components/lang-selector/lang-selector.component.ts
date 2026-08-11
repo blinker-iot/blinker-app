@@ -1,14 +1,15 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+
 import { TranslationService } from '../../services/translation.service';
 import { CONFIG } from 'src/app/configs/app.config';
 
 @Component({
-    standalone: true,
-    imports: [CommonModule],
-    selector: 'blinker-lang-selector',
-    templateUrl: './lang-selector.component.html',
-    styleUrls: ['./lang-selector.component.scss']
+  standalone: true,
+  imports: [],
+  selector: 'blinker-lang-selector',
+  templateUrl: './lang-selector.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./lang-selector.component.scss'],
 })
 export class LangSelectorComponent implements OnInit {
   supportI18n;
@@ -17,9 +18,7 @@ export class LangSelectorComponent implements OnInit {
 
   showMore = false;
 
-  constructor(
-    private translationService: TranslationService
-  ) { }
+  constructor(private translationService: TranslationService) {}
 
   ngOnInit() {
     this.getLanguageSetting();
@@ -35,5 +34,4 @@ export class LangSelectorComponent implements OnInit {
     this.languageList = this.translationService.getLanguageList();
     this.selectedLanguage = this.translationService.getSelectedLanguage();
   }
-
 }

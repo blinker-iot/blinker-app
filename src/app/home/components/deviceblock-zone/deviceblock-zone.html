@@ -1,19 +1,28 @@
 <div #refreshZone></div>
 <div class="slidesbox" #deviceZone>
-  <section class="splide" *ngIf="loaded">
+  @if (loaded) {
+  <section class="splide">
     <div class="splide__track">
       <ul class="splide__list">
         <li class="splide__slide">
-          <deviceblock-list (swipeEnabled)="swipeEnabledChanged($event)"
-            (refresherEnabled)="refresherEnabledChanged($event)">
+          <deviceblock-list
+            (swipeEnabled)="swipeEnabledChanged($event)"
+            (refresherEnabled)="refresherEnabledChanged($event)"
+          >
           </deviceblock-list>
         </li>
-        <li class="splide__slide" *ngFor="let roomName of roomDataList">
-          <deviceblock-list [roomName]="roomName" (swipeEnabled)="swipeEnabledChanged($event)"
-            (refresherEnabled)="refresherEnabledChanged($event)">
+        @for (roomName of roomDataList; track roomName) {
+        <li class="splide__slide">
+          <deviceblock-list
+            [roomName]="roomName"
+            (swipeEnabled)="swipeEnabledChanged($event)"
+            (refresherEnabled)="refresherEnabledChanged($event)"
+          >
           </deviceblock-list>
         </li>
+        }
       </ul>
     </div>
   </section>
+  }
 </div>

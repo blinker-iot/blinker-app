@@ -1,14 +1,14 @@
 import { Component, Input, OnInit } from "@angular/core";
 import { BlinkerDevice } from "src/app/core/model/device.model";
 import { Layouter2Service } from "../layouter2.service";
-import { TranslateModule } from "@ngx-translate/core";
+import { TranslatePipe } from "@ngx-translate/core";
 
 @Component({
     selector: "widget-toolbar",
     templateUrl: "./widget-toolbar.component.html",
     styleUrls: ["./widget-toolbar.component.scss"],
     imports: [
-        TranslateModule,
+        TranslatePipe,
     ]
 })
 export class WidgetToolbarComponent implements OnInit {

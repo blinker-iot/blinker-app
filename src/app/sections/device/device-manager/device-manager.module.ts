@@ -7,7 +7,7 @@ import { DeviceManagerPage } from './device-manager';
 import { PipesModule } from 'src/app/core/pipes/pipes.module';
 import { ComponentsModule } from 'src/app/core/components/components.module';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 const routes: Routes = [
   {
@@ -25,7 +25,7 @@ const routes: Routes = [
     ComponentsModule,
     DirectivesModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild(),
+    TranslatePipe,
     DeviceManagerPage
   ]
 })

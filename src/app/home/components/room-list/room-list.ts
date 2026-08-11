@@ -1,28 +1,35 @@
-import { Component, EventEmitter, Output, Input, ViewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Output,
+  Input,
+  ViewChild,
+  ElementRef,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DataService } from 'src/app/core/services/data.service';
 
-
 @Component({
-    selector: 'room-list',
-    templateUrl: 'room-list.html',
-    styleUrls: ['room-list.scss'],
-    standalone: true,
-    imports: [CommonModule]
+  selector: 'room-list',
+  templateUrl: 'room-list.html',
+  styleUrls: ['room-list.scss'],
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [CommonModule],
 })
 export class RoomListComponent {
-
   _roomid = -1;
   @Input()
   set roomid(roomid) {
-    this._roomid = roomid
-  };
+    this._roomid = roomid;
+  }
   get roomid() {
     return this._roomid;
   }
 
   get roomDataList() {
-    return this.dataService.room.list
+    return this.dataService.room.list;
   }
 
   loaded = false;
@@ -30,24 +37,20 @@ export class RoomListComponent {
   @Output() roomidChange: EventEmitter<number> = new EventEmitter<number>();
   // @Output() refresherEnabled: EventEmitter<boolean> = new EventEmitter<boolean>();
 
-  @ViewChild('roombox',{ read: ElementRef, static: true }) roombox: ElementRef;
+  @ViewChild('roombox', { read: ElementRef, static: true }) roombox: ElementRef;
 
-  constructor(
-    private dataService: DataService
-  ) {
-  }
+  constructor(private dataService: DataService) {}
 
   ngOnInit(): void {
-    this.dataService.initCompleted.subscribe(loaded => {
+    this.dataService.initCompleted.subscribe((loaded) => {
       if (loaded) {
-        this.loaded = loaded
+        this.loaded = loaded;
       }
-    })
+    });
   }
 
   selectRoom(index) {
     this.roomid = index;
     this.roomidChange.emit(index);
   }
-
 }

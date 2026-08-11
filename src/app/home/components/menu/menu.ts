@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { Platform, MenuController } from '@ionic/angular/standalone';
 import { Router } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { UpdateService } from 'src/app/core/services/update.service';
 import { MENU_LIST } from 'src/app/configs/menu.config';
 import { DataService } from 'src/app/core/services/data.service';
@@ -20,7 +20,7 @@ import { LangSelectorComponent } from 'src/app/core/components/lang-selector/lan
         FormsModule,
         IonicModule,
         LangSelectorComponent,
-        TranslateModule
+        TranslatePipe
     ]
 })
 export class Menu implements OnInit {

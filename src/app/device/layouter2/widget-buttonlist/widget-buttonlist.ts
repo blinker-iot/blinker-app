@@ -1,17 +1,28 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectorRef, ViewChildren, QueryList, ElementRef, Renderer2 } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  ChangeDetectorRef,
+  ViewChildren,
+  QueryList,
+  ElementRef,
+  Renderer2,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AlertController } from '@ionic/angular';
 import { ParentDynamicComponent } from '../widgets/parentDynamic.component';
 
 @Component({
-    selector: 'widget-buttonlist',
-    standalone: true,
-    imports: [CommonModule, ParentDynamicComponent],
-    templateUrl: 'widget-buttonlist.html',
-    styleUrls: ['widget-buttonlist.scss']
+  selector: 'widget-buttonlist',
+  standalone: true,
+  imports: [CommonModule, ParentDynamicComponent],
+  templateUrl: 'widget-buttonlist.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['widget-buttonlist.scss'],
 })
 export class widgetButtonListComponent {
-
   _device;
   @Input()
   set device(device) {
@@ -34,7 +45,7 @@ export class widgetButtonListComponent {
     public alertCtrl: AlertController,
     public changeDetectorRef: ChangeDetectorRef,
     public renderer: Renderer2
-  ) { }
+  ) {}
 
   ngAfterViewInit() {
     this.getButtonList();
@@ -43,12 +54,12 @@ export class widgetButtonListComponent {
   getButtonList() {
     this.buttonList = [];
     this.actList = [];
-    if (this.device.config.layouter == null) return;    
+    if (this.device.config.layouter == null) return;
     let dashboard = JSON.parse(this.device.config.layouter).dashboard;
     console.log(dashboard);
 
     for (let widget of dashboard) {
-      if (widget.type == "btn") {
+      if (widget.type == 'btn') {
         this.buttonList.push(widget);
       }
     }
@@ -76,8 +87,7 @@ export class widgetButtonListComponent {
   isSelected(btn) {
     if (this.actList.length == 0) return false;
     for (let btnAct of this.actList) {
-      if (typeof JSON.parse(btnAct)[btn.key] != 'undefined')
-        return true
+      if (typeof JSON.parse(btnAct)[btn.key] != 'undefined') return true;
       // let index = btnAct.indexOf(btn.key);
       // if (index > -1) {
       //   return true
@@ -85,27 +95,26 @@ export class widgetButtonListComponent {
     }
   }
 
-
   changeAction(i) {
     if (this.maxAct == 1) {
-      this.changeAction1(i)
+      this.changeAction1(i);
     } else if (this.maxAct == 2) {
-      this.changeAction2(i)
+      this.changeAction2(i);
     }
   }
 
   changeAction1(i) {
     let act;
-    if (typeof this.buttonList[i].mode == "undefined") {
-      this.buttonList[i]['mode'] = 0
+    if (typeof this.buttonList[i].mode == 'undefined') {
+      this.buttonList[i]['mode'] = 0;
     }
     if (this.buttonList[i].mode == 0) {
-      act = `{"${this.buttonList[i].key}":"tap"}`
+      act = `{"${this.buttonList[i].key}":"tap"}`;
     } else if (this.buttonList[i].mode == 1) {
       this.showBtnAction(i);
       return;
     } else {
-      act = `{"${this.buttonList[i].key}":"${this.buttonList[i].cus}"}`
+      act = `{"${this.buttonList[i].key}":"${this.buttonList[i].cus}"}`;
     }
     this.actList[0] = act;
     this.update.emit(this.actList);
@@ -115,11 +124,11 @@ export class widgetButtonListComponent {
     // 删除动作
     let n = 0;
     for (let btnAct of this.actList) {
-      console.log(this.buttonList[i].key)
-      console.log(btnAct)
-      let index = btnAct.indexOf(this.buttonList[i].key)
+      console.log(this.buttonList[i].key);
+      console.log(btnAct);
+      let index = btnAct.indexOf(this.buttonList[i].key);
       if (index > -1) {
-        console.log(index)
+        console.log(index);
         this.actList.splice(n, 1);
         // console.log('删除动作')
         // console.log(this.actList)
@@ -135,16 +144,16 @@ export class widgetButtonListComponent {
     }
     let act;
     // console.log(this.buttonList[i].mode)
-    if (typeof this.buttonList[i].mode == "undefined") {
-      this.buttonList[i]['mode'] = 0
+    if (typeof this.buttonList[i].mode == 'undefined') {
+      this.buttonList[i]['mode'] = 0;
     }
     if (this.buttonList[i].mode == 0) {
-      act = `{"${this.buttonList[i].key}":"tap"}`
+      act = `{"${this.buttonList[i].key}":"tap"}`;
     } else if (this.buttonList[i].mode == 1) {
       this.showBtnAction(i);
       return;
     } else {
-      act = `{"${this.buttonList[i].key}":"${this.buttonList[i].custom}"}`
+      act = `{"${this.buttonList[i].key}":"${this.buttonList[i].custom}"}`;
       // act = this.buttonList[i].custom
     }
     // actJson[this.buttonList[i].key] = act;
@@ -160,21 +169,21 @@ export class widgetButtonListComponent {
         {
           text: '打开',
           handler: () => {
-            act = `{"${this.buttonList[i].key}":"on"}`
-          }
-        }, {
+            act = `{"${this.buttonList[i].key}":"on"}`;
+          },
+        },
+        {
           text: '关闭',
           handler: () => {
-            act = `{"${this.buttonList[i].key}":"off"}`
-          }
-        }
-      ]
-    })
+            act = `{"${this.buttonList[i].key}":"off"}`;
+          },
+        },
+      ],
+    });
     alert.present();
     alert.onDidDismiss().then(() => {
       this.actList[0] = act;
       this.update.emit(this.actList);
     });
   }
-
 }

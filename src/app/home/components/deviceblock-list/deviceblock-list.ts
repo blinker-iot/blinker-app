@@ -8,8 +8,9 @@ import {
   ElementRef,
   ViewChild,
   Renderer2,
+  ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { UserService } from 'src/app/core/services/user.service';
 import { Router } from '@angular/router';
 import Sortable from 'sortablejs';
@@ -21,10 +22,10 @@ import { Deviceblock } from '../deviceblock/deviceblock';
   templateUrl: 'deviceblock-list.html',
   styleUrls: ['deviceblock-list.scss'],
   standalone: true,
-  imports: [CommonModule, Deviceblock]
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [Deviceblock],
 })
 export class DeviceblockListComponent {
-
   @Output() swipeEnabled: EventEmitter<boolean> = new EventEmitter();
   @Output() refresherEnabled: EventEmitter<boolean> = new EventEmitter();
 
@@ -33,57 +34,54 @@ export class DeviceblockListComponent {
   get deviceDataList() {
     if (typeof this.roomName == 'undefined')
       return this.dataService.device.list;
-    return this.dataService.room.dict[this.roomName]
+    return this.dataService.room.dict[this.roomName];
   }
 
   set deviceDataList(list) {
     if (typeof this.roomName == 'undefined')
       this.dataService.device.list = list;
-    else
-      this.dataService.room.dict[this.roomName] = list;
+    else this.dataService.room.dict[this.roomName] = list;
   }
 
   get deviceDataDict() {
-    return this.dataService.device.dict
+    return this.dataService.device.dict;
   }
 
-  @ViewChild("sortbox") sortbox: ElementRef;
+  @ViewChild('sortbox') sortbox: ElementRef;
 
   // @ViewChild("deviceblock", { read: ElementRef, static: true }) deviceblock: ElementRef;
 
   options = {
     delay: 200,
     touchStartThreshold: 0,
-    ghostClass: "sghost",
-    chosenClass: "schosen",
-    dragClass: "sdrag",
-    draggable: ".deviceblock",
+    ghostClass: 'sghost',
+    chosenClass: 'schosen',
+    dragClass: 'sdrag',
+    draggable: '.deviceblock',
     dataIdAttr: 'id',
     onChoose: (event: any) => {
-      console.log("onChoose", event);
+      console.log('onChoose', event);
       // this.swipeEnabled.emit(false);
       this.waitSaveDeviceList();
     },
     onStart: (event: any) => {
-      console.log("onStart", event);
+      console.log('onStart', event);
       // this.swipeEnabled.emit(false);
       // this.waitSaveDeviceList();
     },
     onEnd: (event: any) => {
       console.log('onEnd');
-      console.log("onEnd", event);
+      console.log('onEnd', event);
       this.swipeEnabled.emit(true);
       this.saveDeviceList();
     },
-  }
+  };
 
   constructor(
     private userService: UserService,
     private router: Router,
-    private dataService: DataService,
-    // public render: Renderer2
-  ) {
-  }
+    private dataService: DataService // public render: Renderer2
+  ) {}
 
   ngAfterViewInit() {
     setTimeout(() => {
@@ -102,7 +100,7 @@ export class DeviceblockListComponent {
   }
 
   destroySortable() {
-    if (typeof this.sortable == 'undefined') return
+    if (typeof this.sortable == 'undefined') return;
     this.sortable.destroy();
   }
 
@@ -116,33 +114,32 @@ export class DeviceblockListComponent {
     let userConfig;
     if (typeof this.roomName == 'undefined') {
       userConfig = {
-        "deviceList": this.deviceDataList
-      }
+        deviceList: this.deviceDataList,
+      };
     } else {
       userConfig = {
-        "roomList": this.dataService.room
-      }
+        roomList: this.dataService.room,
+      };
     }
     this.saveDeviceListTimer = window.setTimeout(() => {
       this.userService.saveUserConfig(userConfig);
-    }, 3000)
+    }, 3000);
   }
 
   isScrollTop(event) {
     if (event.srcElement.scrollTop == 0) {
-      this.refresherEnabled.emit(true)
+      this.refresherEnabled.emit(true);
     } else {
-      this.refresherEnabled.emit(false)
+      this.refresherEnabled.emit(false);
     }
   }
 
   gotoDashboard(deviceId) {
-    this.router.navigate(['device/' + deviceId])
+    this.router.navigate(['device/' + deviceId]);
   }
 
-  press(){
+  press() {
     console.log('press');
-    
   }
 
   // isSorting = false;
@@ -161,7 +158,7 @@ export class DeviceblockListComponent {
 
   // pressup(event) {
   //   console.log('pressup');
-    
+
   //   clearTimeout(this.longPressTimer);
   //   this.exitSortingMode();
   // }

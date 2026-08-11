@@ -6,31 +6,30 @@ import {
   ChangeDetectorRef,
   Input,
   Output,
-  EventEmitter
+  EventEmitter,
+  ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 @Component({
-    standalone: true,
-    imports: [CommonModule],
-    selector: 'b-colorpicker',
-    templateUrl: 'b-colorpicker.html',
-    styleUrls: ['b-colorpicker.scss']
+  standalone: true,
+  imports: [],
+  selector: 'b-colorpicker',
+  templateUrl: 'b-colorpicker.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['b-colorpicker.scss'],
 })
 export class BColorpickerComponent {
-
   @Output() colorChange = new EventEmitter();
 
   // @Input() lstyle = 0;
   _lstyle = 0;
   @Input()
   set lstyle(lstyle) {
-    if (this.loaded)
-      this.loadColorImg();
+    if (this.loaded) this.loadColorImg();
     this._lstyle = lstyle;
   }
   get lstyle() {
-    return this._lstyle
+    return this._lstyle;
   }
 
   @Input() enableWhite = false;
@@ -38,7 +37,11 @@ export class BColorpickerComponent {
   _color;
   @Input()
   set color(color) {
-    this.renderer.setStyle(this.picker.nativeElement, 'background-color', color);
+    this.renderer.setStyle(
+      this.picker.nativeElement,
+      'background-color',
+      color
+    );
     this.rgbStr = color;
     this._color = color;
   }
@@ -51,7 +54,8 @@ export class BColorpickerComponent {
   loaded = false;
 
   @ViewChild('picker', { read: ElementRef, static: true }) picker: ElementRef;
-  @ViewChild('pickerbox', { read: ElementRef, static: true }) pickerbox: ElementRef;
+  @ViewChild('pickerbox', { read: ElementRef, static: true })
+  pickerbox: ElementRef;
   @ViewChild('knob', { read: ElementRef, static: true }) knob: ElementRef;
 
   value = 0;
@@ -59,8 +63,7 @@ export class BColorpickerComponent {
   constructor(
     private renderer: Renderer2,
     public changeDetectorRef: ChangeDetectorRef
-  ) {
-  }
+  ) {}
 
   ngAfterViewInit() {
     this.loadColorImg();
@@ -68,21 +71,21 @@ export class BColorpickerComponent {
   }
 
   processData(data) {
-    if (typeof data != "undefined") {
+    if (typeof data != 'undefined') {
       if (data instanceof Array) {
         if (data.length < 3) return;
         let col = data.length == 3 ? 'rgb(' : 'rgba(';
         for (var i = 0; i < 3; i++) {
-          col = col + `${data[i].toString()},`
+          col = col + `${data[i].toString()},`;
         }
         if (data.length == 3) {
-          col = col.substr(0, col.length) + ")";
+          col = col.substr(0, col.length) + ')';
         } else {
           col = col + `${(data[3] / 255).toString()})`;
           this.brightness = data[3];
           this.value = data[3];
         }
-        console.log("获得颜色：" + col);
+        console.log('获得颜色：' + col);
         this.color = col;
       }
     }
@@ -96,12 +99,22 @@ export class BColorpickerComponent {
 
     let x = e.center.x;
     let y = e.center.y;
-    let z = r * 0.91 / Math.sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY));
+    let z =
+      (r * 0.91) /
+      Math.sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY));
     let x1 = (x - centerX) * z + centerX - rect.left;
     let y1 = (y - centerY) * z + centerY - rect.top;
     // this.moveKnob(x1, y1);
-    this.renderer.setStyle(this.knob.nativeElement, 'left', `${(x1 - 20).toString()}px`);
-    this.renderer.setStyle(this.knob.nativeElement, 'top', `${(y1 - 20).toString()}px`);
+    this.renderer.setStyle(
+      this.knob.nativeElement,
+      'left',
+      `${(x1 - 20).toString()}px`
+    );
+    this.renderer.setStyle(
+      this.knob.nativeElement,
+      'top',
+      `${(y1 - 20).toString()}px`
+    );
     // return { x: x1, y: y1 };
     this.pick(x1, y1);
   }
@@ -113,7 +126,7 @@ export class BColorpickerComponent {
   }
 
   panstartEvent(e) {
-    this.renderer.setStyle(this.knob.nativeElement, 'opacity', '1')
+    this.renderer.setStyle(this.knob.nativeElement, 'opacity', '1');
     this.getKnob(e);
   }
 
@@ -123,7 +136,7 @@ export class BColorpickerComponent {
 
   panendEvent(e) {
     // this.renderer.setStyle(this.knob.nativeElement, 'transition', '0')
-    this.renderer.setStyle(this.knob.nativeElement, 'opacity', '0')
+    this.renderer.setStyle(this.knob.nativeElement, 'opacity', '0');
     this.getKnob(e);
     this.sendDataAtEnd();
   }
@@ -137,10 +150,10 @@ export class BColorpickerComponent {
 
   context;
   image;
-  @ViewChild("myCanvas",{ read: ElementRef, static: true }) myCanvas;
+  @ViewChild('myCanvas', { read: ElementRef, static: true }) myCanvas;
   length;
   loadColorImg() {
-    this.context = this.myCanvas.nativeElement.getContext("2d");
+    this.context = this.myCanvas.nativeElement.getContext('2d');
     this.image = new Image();
     if (this.enableWhite) this.image.src = `img/layouter/colorpicker.png`;
     else this.image.src = `img/devices/ownlight/colorpicker.png`;
@@ -148,14 +161,36 @@ export class BColorpickerComponent {
       window.setTimeout(() => {
         this.length = this.pickerbox.nativeElement.clientHeight;
         // console.log(this.length);
-        this.renderer.setAttribute(this.myCanvas.nativeElement, 'width', `${this.length * 4}`);
-        this.renderer.setAttribute(this.myCanvas.nativeElement, 'height', `${this.length * 4}`);
-        this.renderer.setStyle(this.knob.nativeElement, 'top', `${this.length / 2 - 20}px`)
-        this.renderer.setStyle(this.knob.nativeElement, 'left', `${this.length / 2 - 20}px`)
-        this.context.drawImage(this.image, 0, 0, this.length * 4, this.length * 4);
+        this.renderer.setAttribute(
+          this.myCanvas.nativeElement,
+          'width',
+          `${this.length * 4}`
+        );
+        this.renderer.setAttribute(
+          this.myCanvas.nativeElement,
+          'height',
+          `${this.length * 4}`
+        );
+        this.renderer.setStyle(
+          this.knob.nativeElement,
+          'top',
+          `${this.length / 2 - 20}px`
+        );
+        this.renderer.setStyle(
+          this.knob.nativeElement,
+          'left',
+          `${this.length / 2 - 20}px`
+        );
+        this.context.drawImage(
+          this.image,
+          0,
+          0,
+          this.length * 4,
+          this.length * 4
+        );
       }, 50);
       // this.context.drawImage(this.image, 0, 0, length, length);
-    }
+    };
   }
 
   lastSendColor = '';
@@ -168,8 +203,12 @@ export class BColorpickerComponent {
     if (rgbString != this.lastSendColor) {
       this.lastSendColor = rgbString;
       // this.rgbStr = `rgba(${this.rgb[0]},${this.rgb[1]},${this.rgb[2]},${this.value / 255})`
-      this.rgbStr = `rgb(${this.rgb[0]},${this.rgb[1]},${this.rgb[2]})`
-      this.renderer.setStyle(this.picker.nativeElement, 'background-color', this.rgbStr);
+      this.rgbStr = `rgb(${this.rgb[0]},${this.rgb[1]},${this.rgb[2]})`;
+      this.renderer.setStyle(
+        this.picker.nativeElement,
+        'background-color',
+        this.rgbStr
+      );
       this.changeDetectorRef.detectChanges();
       this.sendData();
     }
@@ -190,5 +229,4 @@ export class BColorpickerComponent {
     // console.log(this.rgb);
     this.colorChange.emit(this.rgb);
   }
-
 }

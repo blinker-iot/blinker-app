@@ -9,7 +9,7 @@
     <div class="glow-orb orb-2"></div>
 
     <div class="logo-box">
-      <img class="logo" src="{{LOGO}}">
+      <img class="logo" src="{{LOGO}}" />
       <h2 class="welcome-title">{{'ACCOUNT.LOGIN' | translate}}</h2>
     </div>
 
@@ -18,24 +18,45 @@
         <div class="item-img">
           <i class="fal fa-envelope"></i>
         </div>
-        <input type="email" [(ngModel)]="email" name="email" placeholder="{{'ACCOUNT.EMAIL' | translate}}"
-          (focus)="onFocus()" (blur)="onBlur()">
+        <input
+          type="email"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="{{'ACCOUNT.EMAIL' | translate}}"
+          (focus)="onFocus()"
+          (blur)="onBlur()"
+        />
       </div>
       <div class="input-box">
         <div class="item-img">
           <i class="fal fa-shield-check"></i>
         </div>
-        <input type="text" [(ngModel)]="code" name="code" placeholder="{{'ACCOUNT.VERIFY_CODE' | translate}}"
-          maxlength="6" (focus)="onFocus()" (blur)="onBlur()">
-        <button type="button" class="send-code-btn" [disabled]="countdown > 0" (click)="sendCode($event)">
-          <span *ngIf="countdown === 0">{{'ACCOUNT.SEND_CODE' | translate}}</span>
-          <span *ngIf="countdown > 0">{{countdown}}s</span>
+        <input
+          type="text"
+          [(ngModel)]="code"
+          name="code"
+          placeholder="{{'ACCOUNT.VERIFY_CODE' | translate}}"
+          maxlength="6"
+          (focus)="onFocus()"
+          (blur)="onBlur()"
+        />
+        <button
+          type="button"
+          class="send-code-btn"
+          [disabled]="countdown > 0"
+          (click)="sendCode($event)"
+        >
+          @if (countdown === 0) {
+          <span>{{'ACCOUNT.SEND_CODE' | translate}}</span>
+          } @if (countdown > 0) {
+          <span>{{countdown}}s</span>
+          }
         </button>
       </div>
-      <div class="login-tip">
-        {{'ACCOUNT.LOGIN_TIP' | translate}}
-      </div>
-      <button type="submit" class="login-btn">{{'ACCOUNT.LOGIN' | translate}}</button>
+      <div class="login-tip">{{'ACCOUNT.LOGIN_TIP' | translate}}</div>
+      <button type="submit" class="login-btn">
+        {{'ACCOUNT.LOGIN' | translate}}
+      </button>
     </form>
 
     <div class="social-login">
@@ -43,10 +64,18 @@
         <span>{{'ACCOUNT.OR_LOGIN_WITH' | translate}}</span>
       </div>
       <div class="social-buttons">
-        <button type="button" class="social-btn github-btn" (click)="loginWithGithub()">
+        <button
+          type="button"
+          class="social-btn github-btn"
+          (click)="loginWithGithub()"
+        >
           <i class="fa-brands fa-github"></i>
         </button>
-        <button type="button" class="social-btn wechat-btn" (click)="loginWithWechat()">
+        <button
+          type="button"
+          class="social-btn wechat-btn"
+          (click)="loginWithWechat()"
+        >
           <i class="fa-brands fa-weixin"></i>
         </button>
       </div>

@@ -1,31 +1,30 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { CONFIG } from 'src/app/configs/app.config';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
 import { PusherService } from 'src/app/core/services/pusher.service';
 
 @Component({
-    selector: 'blinker-first-modal',
-    templateUrl: './first-modal.component.html',
-    styleUrls: ['./first-modal.component.scss'],
-    standalone: true
+  selector: 'blinker-first-modal',
+  templateUrl: './first-modal.component.html',
+  styleUrls: ['./first-modal.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
+  standalone: true,
 })
 export class FirstModalComponent implements OnInit {
-
-  APP_NAME = CONFIG.NAME
+  APP_NAME = CONFIG.NAME;
   USER_AGREEMENT = CONFIG.USER_AGREEMENT;
   PRIVACY_POLICY = CONFIG.PRIVACY_POLICY;
 
   constructor(
     private modalCtrl: ModalController,
     private pusherService: PusherService
-  ) { }
+  ) {}
 
-  ngOnInit() { }
-
+  ngOnInit() {}
 
   exit() {
-    navigator['app'].exitApp()
+    navigator['app'].exitApp();
   }
 
   enter() {
@@ -40,11 +39,10 @@ export class FirstModalComponent implements OnInit {
       component: DocPage,
       backdropDismiss: false,
       componentProps: {
-        'docTitle': title,
-        'docUrl': url,
-      }
+        docTitle: title,
+        docUrl: url,
+      },
     });
     modal.present();
   }
-
 }

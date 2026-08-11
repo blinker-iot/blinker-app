@@ -6,7 +6,7 @@ import { IonicModule } from '@ionic/angular';
 import { DevicePage } from './device.page';
 import { Layouter2Module } from './layouter2/layouter2.module';
 // import { Customizer } from './customizer/customizer.component';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { LayouterGuard } from './layouter2/layouter.guard';
 import { DirectivesModule } from '../core/directives/directives.module';
 // import { DeviceTemplateModule } from './template/template.module';
@@ -25,7 +25,7 @@ const routes: Routes = [
     Layouter2Module,
     Layouter2GuideModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild(),
+    TranslatePipe,
     DevicePage
   ],
 })

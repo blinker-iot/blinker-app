@@ -1,4 +1,12 @@
-import { Component, Input, ViewChild, ElementRef, ChangeDetectorRef, Renderer2 } from '@angular/core';
+import {
+  Component,
+  Input,
+  ViewChild,
+  ElementRef,
+  ChangeDetectorRef,
+  Renderer2,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalController } from '@ionic/angular';
@@ -8,14 +16,14 @@ import { NativeService } from '../core/services/native.service';
 import { HtmlPipe } from '../core/pipes/html.pipe';
 
 @Component({
-    selector: 'app-debug',
-    templateUrl: './debug.component.html',
-    styleUrls: ['./debug.component.scss'],
-    standalone: true,
-    imports: [CommonModule, FormsModule, HtmlPipe]
+  selector: 'app-debug',
+  templateUrl: './debug.component.html',
+  styleUrls: ['./debug.component.scss'],
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [CommonModule, FormsModule, HtmlPipe],
 })
 export class DebugComponent {
-
   @Input() device;
   @Input() mode;
 
@@ -27,19 +35,17 @@ export class DebugComponent {
   oldDataLength = 0;
   debugServiceSubject;
   get data() {
-    return this.debugService.dataList[this.device.deviceName]
+    return this.debugService.dataList[this.device.deviceName];
   }
 
   get switch() {
-    if (typeof this.device == 'undefined')
-      return
-    if (this.device.data.switch == 'on')
-      return true
-    else
-      return false
+    if (typeof this.device == 'undefined') return;
+    if (this.device.data.switch == 'on') return true;
+    else return false;
   }
 
-  @ViewChild("scrollContainer", { read: ElementRef, static: true }) scrollContainer: ElementRef;
+  @ViewChild('scrollContainer', { read: ElementRef, static: true })
+  scrollContainer: ElementRef;
   @ViewChild('box', { read: ElementRef, static: true }) box: ElementRef;
   @ViewChild('myInput', { read: ElementRef, static: true }) myInput: ElementRef;
 
@@ -49,8 +55,8 @@ export class DebugComponent {
     public modalCtrl: ModalController,
     private debugService: DebugService,
     private deviceService: DeviceService,
-    private nativeService:NativeService
-  ) { }
+    private nativeService: NativeService
+  ) {}
 
   ngAfterViewInit() {
     this.listenKeyboard();
@@ -58,7 +64,7 @@ export class DebugComponent {
       setTimeout(() => {
         this.scrollToBottom();
       }, 10);
-    })
+    });
     setTimeout(() => {
       this.myInput.nativeElement.focus();
     }, 300);
@@ -70,11 +76,12 @@ export class DebugComponent {
   }
 
   scrollToBottom() {
-    this.scrollContainer.nativeElement.scrollTop = this.scrollContainer.nativeElement.scrollHeight;
+    this.scrollContainer.nativeElement.scrollTop =
+      this.scrollContainer.nativeElement.scrollHeight;
   }
 
   clear() {
-    this.debugService.clean(this.device)
+    this.debugService.clean(this.device);
   }
 
   close() {
@@ -88,9 +95,9 @@ export class DebugComponent {
   }
 
   tapSwitch() {
-    if (this.device.config.mode != "mqtt") return;
+    if (this.device.config.mode != 'mqtt') return;
     let message;
-    if (this.device.data.switch == "on") {
+    if (this.device.data.switch == 'on') {
       message = `{"switch":"off"}`;
     } else {
       message = `{"switch":"on"}`;
@@ -100,21 +107,28 @@ export class DebugComponent {
 
   sync() {
     this.sendmess = `{"get":"state"}`;
-    this.send()
+    this.send();
   }
 
   listenKeyboard() {
-    this.listenKeyboardShow = this.renderer.listen('window', 'native.keyboardshow', e => {
-      this.boxHeight = `calc( 100vh - ${e.keyboardHeight + 70}px )`;
-    });
-    this.listenKeyboardHide = this.renderer.listen('window', 'native.keyboardhide', e => {
-    });
+    this.listenKeyboardShow = this.renderer.listen(
+      'window',
+      'native.keyboardshow',
+      (e) => {
+        this.boxHeight = `calc( 100vh - ${e.keyboardHeight + 70}px )`;
+      }
+    );
+    this.listenKeyboardHide = this.renderer.listen(
+      'window',
+      'native.keyboardhide',
+      (e) => {}
+    );
   }
 
   unlistenKeyboard() {
-    if (typeof (this.listenKeyboardShow) === 'function') this.listenKeyboardShow();
-    if (typeof (this.listenKeyboardHide) === 'function') this.listenKeyboardHide();
+    if (typeof this.listenKeyboardShow === 'function')
+      this.listenKeyboardShow();
+    if (typeof this.listenKeyboardHide === 'function')
+      this.listenKeyboardHide();
   }
-
-
 }

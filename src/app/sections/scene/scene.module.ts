@@ -10,7 +10,7 @@ import { SceneEditor } from './scene-editor/scene-edit';
 import { BActcmdListModule } from 'src/app/core/components/b-actcmd-list/b-actcmd-list.module';
 import { SceneEditorAddact } from './components/scene-editor-addact/scene-edit-addact';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 const routes: Routes = [
   {
@@ -31,7 +31,7 @@ const routes: Routes = [
     BActcmdListModule,
     DirectivesModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild(),
+    TranslatePipe,
     SceneManager,
     SceneEditor,
     SceneEditorAddact

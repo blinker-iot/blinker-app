@@ -4,12 +4,13 @@ import {
   Output,
   EventEmitter,
   ChangeDetectorRef,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule, MenuController } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { RoomListComponent } from '../room-list/room-list';
 import { DeviceblockZone } from '../deviceblock-zone/deviceblock-zone';
 import { BActcmdListComponent } from '../../../core/components/b-actcmd-list/b-actcmd-list.component';
@@ -41,12 +42,13 @@ import { DeviceService } from '../../../core/services/device.service';
   templateUrl: 'tab-device.html',
   styleUrls: ['tab-device.scss'],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     CommonModule,
     FormsModule,
     IonicModule,
     RouterModule,
-    TranslateModule,
+    TranslatePipe,
     BActcmdListComponent,
     BBottomBtnComponent,
     BChartComponent,
@@ -69,11 +71,10 @@ import { DeviceService } from '../../../core/services/device.service';
     SceneButtonGroupComponent,
     SceneButtonComponent,
     RoomListComponent,
-    DeviceblockZone
-  ]
+    DeviceblockZone,
+  ],
 })
 export class TabDeviceComponent {
-
   _roomid = -1;
   @Input()
   set roomid(roomid) {
@@ -87,10 +88,8 @@ export class TabDeviceComponent {
   @Output() roomidChange = new EventEmitter<number>();
 
   get deviceNum() {
-    if (typeof this.dataService.device == 'undefined')
-      return 0;
-    else
-      return this.dataService.device.list.length;
+    if (typeof this.dataService.device == 'undefined') return 0;
+    else return this.dataService.device.list.length;
   }
 
   get loaded() {
@@ -108,10 +107,10 @@ export class TabDeviceComponent {
     private deviceService: DeviceService,
     private cd: ChangeDetectorRef,
     private menuCtrl: MenuController
-  ) { }
+  ) {}
 
   ngOnInit() {
-    this.dataService.userDataLoader.subscribe(state => {
+    this.dataService.userDataLoader.subscribe((state) => {
       if (state) {
         this.deviceService.queryDevices();
       }

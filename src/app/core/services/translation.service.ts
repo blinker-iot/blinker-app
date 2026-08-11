@@ -18,7 +18,7 @@ export class TranslationService {
   }
 
   init() {
-    this.translate.setDefaultLang(CONFIG.I18N.DEFAULT);
+    this.translate.setFallbackLang(CONFIG.I18N.DEFAULT);
     this.translate.setTranslation(enLang.lang, enLang.data, true);
     this.translate.setTranslation(chLang.lang, chLang.data, true);
     if (CONFIG.I18N.ENABLE)
@@ -27,7 +27,7 @@ export class TranslationService {
 
   setLanguage(lang) {
     if (lang) {
-      this.translate.use(this.translate.getDefaultLang());
+      this.translate.use(this.translate.getFallbackLang() ?? CONFIG.I18N.DEFAULT);
       this.translate.use(lang);
       localStorage.setItem('language', lang);
     }
@@ -38,6 +38,6 @@ export class TranslationService {
   }
 
   getSelectedLanguage() {
-    return localStorage.getItem('language') || this.translate.getDefaultLang();
+    return localStorage.getItem('language') || this.translate.getFallbackLang() || CONFIG.I18N.DEFAULT;
   }
 }

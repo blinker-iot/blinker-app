@@ -1,4 +1,12 @@
-import { Component, ViewChild, ElementRef, HostListener, OnInit, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  HostListener,
+  OnInit,
+  ChangeDetectorRef,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Platform, NavController } from '@ionic/angular/standalone';
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
@@ -25,27 +33,34 @@ import { BToastComponent } from './core/components/b-toast/b-toast.component';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, IonApp, IonRouterOutlet, BTipComponent, BToastComponent],
+  imports: [
+    CommonModule,
+    IonApp,
+    IonRouterOutlet,
+    BTipComponent,
+    BToastComponent,
+  ],
   templateUrl: 'app.component.html',
-  styleUrls: ['./app.component.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./app.component.scss'],
 })
 export class AppComponent implements OnInit {
   isPWA = false;
   isPcBrowser = false;
 
   get swipeEnable() {
-    return this.viewService.swipeEnable
+    return this.viewService.swipeEnable;
   }
 
   get toastList() {
-    return this.toastService.list
+    return this.toastService.list;
   }
 
   get tipList() {
-    return this.tipService.list
+    return this.tipService.list;
   }
 
-  @ViewChild("audio", { read: ElementRef, static: true }) audio: ElementRef;
+  @ViewChild('audio', { read: ElementRef, static: true }) audio: ElementRef;
 
   constructor(
     private platform: Platform,
@@ -68,7 +83,7 @@ export class AppComponent implements OnInit {
     private translationService: TranslationService,
     private audioService: AudioService,
     private cdr: ChangeDetectorRef
-  ) { }
+  ) {}
 
   ngOnInit() {
     // 在 ngOnInit 中初始化 isPcBrowser 以避免 ExpressionChangedAfterItHasBeenCheckedError
@@ -86,7 +101,6 @@ export class AppComponent implements OnInit {
     }
     if (this.isPcBrowser) {
       console.log('当前是PC端浏览器访问');
-      
     }
 
     // if (!isDevMode() && this.platform.is("android")) this.checkApkUpdate();
@@ -99,7 +113,7 @@ export class AppComponent implements OnInit {
     // }
   }
 
-  @HostListener('window:resize', ['$event'])
+  @HostListener('window:resize')
   onWindowResize() {
     const newIsPcBrowser = this.checkIsPcBrowser();
     if (this.isPcBrowser !== newIsPcBrowser) {
@@ -107,7 +121,8 @@ export class AppComponent implements OnInit {
       // 手动触发变更检测
       this.cdr.detectChanges();
     }
-  }  async initService() {
+  }
+  async initService() {
     console.log('init service');
     await this.dataService.init();
     this.checkLoginStatus();
@@ -116,8 +131,8 @@ export class AppComponent implements OnInit {
     this.deviceService.init();
     this.noticeService.init();
     this.imageService.init();
-    this.translationService.init()
-    this.audioService.init(this.audio.nativeElement)
+    this.translationService.init();
+    this.audioService.init(this.audio.nativeElement);
 
     // 原生内容加载
     if (Capacitor.isNativePlatform()) {
@@ -128,7 +143,6 @@ export class AppComponent implements OnInit {
       // 国内无法使用推送服务
       // this.pusherService.init();
     }
-
   }
 
   checkLoginStatus() {
@@ -149,6 +163,3 @@ export class AppComponent implements OnInit {
     return window.innerWidth >= 600 && !Capacitor.isNativePlatform();
   }
 }
-
-
-

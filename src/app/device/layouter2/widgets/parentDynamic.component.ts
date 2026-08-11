@@ -1,4 +1,9 @@
-import { Component, ElementRef, Input } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Input,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Layouter2Service } from '../layouter2.service';
 import { WidgetTextComponent } from './widget-text/widget-text';
@@ -17,26 +22,27 @@ import { WidgetSelectComponent } from './widget-select/widget-select';
 import { WidgetCustomComponent } from './widget-custom/widget-custom';
 
 @Component({
-    selector: 'widget-dynamic',
-    templateUrl: './parentDynamic.component.html',
-    styleUrls: ['parentDynamic.component.scss'],
-    imports: [
-        CommonModule,
-        WidgetTextComponent,
-        WidgetNumberComponent,
-        WidgetButtonComponent,
-        WidgetRangeComponent,
-        WidgetTimerComponent,
-        WidgetColorComponent,
-        WidgetDebugComponent,
-        WidgetJoystickComponent,
-        WidgetChartComponent,
-        WidgetMapComponent,
-        WidgetInputComponent,
-        WidgetVideoComponent,
-        WidgetSelectComponent,
-        WidgetCustomComponent
-    ]
+  selector: 'widget-dynamic',
+  templateUrl: './parentDynamic.component.html',
+  styleUrls: ['parentDynamic.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [
+    CommonModule,
+    WidgetTextComponent,
+    WidgetNumberComponent,
+    WidgetButtonComponent,
+    WidgetRangeComponent,
+    WidgetTimerComponent,
+    WidgetColorComponent,
+    WidgetDebugComponent,
+    WidgetJoystickComponent,
+    WidgetChartComponent,
+    WidgetMapComponent,
+    WidgetInputComponent,
+    WidgetVideoComponent,
+    WidgetSelectComponent,
+    WidgetCustomComponent,
+  ],
 })
 export class ParentDynamicComponent {
   @Input()
@@ -45,20 +51,19 @@ export class ParentDynamicComponent {
   device;
 
   public get mode() {
-    return this.layouterService.mode
+    return this.layouterService.mode;
   }
 
   get color() {
-    return this.widget.clr
+    return this.widget.clr;
   }
 
   constructor(
     private layouterService: Layouter2Service,
     private el: ElementRef
-  ) { }
+  ) {}
 
   select() {
-    this.layouterService.selectWidget(this.widget, this.el.nativeElement)
+    this.layouterService.selectWidget(this.widget, this.el.nativeElement);
   }
-
 }

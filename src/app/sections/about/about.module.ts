@@ -7,7 +7,7 @@ import { IonicModule } from '@ionic/angular';
 
 import { AboutPage } from './about.page';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 const routes: Routes = [
   {
@@ -23,7 +23,7 @@ const routes: Routes = [
     IonicModule,
     DirectivesModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild(),
+    TranslatePipe,
     AboutPage
   ]
 })

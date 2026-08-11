@@ -1,4 +1,4 @@
-import { NgModule, Injectable } from '@angular/core';
+import { NgModule } from '@angular/core';
 import { RouteReuseStrategy } from '@angular/router';
 import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
 import { AppRoutingModule } from './app-routing.module';
@@ -32,19 +32,9 @@ import { NetworkService } from './core/services/network.service';
 import { AboutModule } from './sections/about/about.module';
 import { ImageService } from './core/services/image.service';
 import { BlinkerSceneManagerModule } from './sections/scene/scene.module';
-import { BrowserModule, HAMMER_GESTURE_CONFIG, HammerGestureConfig, HammerModule } from '@angular/platform-browser';
-import { TranslateModule } from '@ngx-translate/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { TranslatePipe } from '@ngx-translate/core';
 import { BlinkerDeviceModule } from './device/device.module';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-
-declare var Hammer: any;
-@Injectable()
-export class MyHammerConfig extends HammerGestureConfig {
-  override overrides = <any>{
-    'pan': { direction: Hammer.DIRECTION_ALL, threshold: 5 },
-    'press': { time: 500, threshold: 99 }
-  }
-}
 
 @NgModule({
   bootstrap: [AppComponent], imports: [
@@ -54,13 +44,11 @@ export class MyHammerConfig extends HammerGestureConfig {
       scrollAssist: true,
       scrollPadding: false
     }),
-    BrowserAnimationsModule,
-    TranslateModule.forRoot(),
+    TranslatePipe,
     MarkdownModule.forRoot(),
     AppRoutingModule,
     GridsterModule,
     ComponentsModule,
-    HammerModule,
     AppComponent,
     // --blinker module--
     BlinkerUserModule,
@@ -80,10 +68,8 @@ export class MyHammerConfig extends HammerGestureConfig {
     // StatusBar,
     // SplashScreen,
     // ScreenOrientation,
-    { provide: HAMMER_GESTURE_CONFIG, useClass: HammerGestureConfig },
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     { provide: HTTP_INTERCEPTORS, useClass: ServerInterceptor, multi: true },
-    { provide: HAMMER_GESTURE_CONFIG, useClass: MyHammerConfig },
     AuthService,
     DataService,
     UserService,

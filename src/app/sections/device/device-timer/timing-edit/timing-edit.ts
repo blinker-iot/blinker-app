@@ -38,7 +38,7 @@ import { LangSelectorComponent } from "src/app/core/components/lang-selector/lan
 import { SceneButtonGroupComponent } from "src/app/core/components/scene-button-group/scene-button-group";
 import { SceneButtonComponent } from "src/app/core/components/scene-button-group/scene-button/scene-button";
 import { CommonModule } from "@angular/common";
-import { TranslateModule } from "@ngx-translate/core";
+import { TranslatePipe } from "@ngx-translate/core";
 import { DataService } from "src/app/core/services/data.service";
 import { ActivatedRoute, Router } from "@angular/router";
 
@@ -70,7 +70,7 @@ import { ActivatedRoute, Router } from "@angular/router";
         SceneButtonGroupComponent,
         SceneButtonComponent,
         CommonModule,
-        TranslateModule,
+        TranslatePipe,
     ]
 })
 export class TimingEditPage {

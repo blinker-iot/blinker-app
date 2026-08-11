@@ -6,7 +6,7 @@ import { Layouter2GuidePage } from './guide';
 import { DirectivesModule } from 'src/app/core/directives/directives.module';
 import { EsptouchComponent } from './esptouch/esptouch.component';
 import { ExamplesComponent } from './examples/examples.component';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { RouterModule } from '@angular/router';
 import { NewuiModule } from '../newui/newui.module';
 
@@ -17,7 +17,7 @@ import { NewuiModule } from '../newui/newui.module';
     IonicModule,
     DirectivesModule,
     NewuiModule,
-    TranslateModule.forChild(),
+    TranslatePipe,
     RouterModule,
     Layouter2GuidePage,
     EsptouchComponent,

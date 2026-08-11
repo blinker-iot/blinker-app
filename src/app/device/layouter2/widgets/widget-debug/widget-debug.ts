@@ -1,5 +1,13 @@
-import { Component, Input, ViewChild, ElementRef, ChangeDetectorRef, Renderer2 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  Input,
+  ViewChild,
+  ElementRef,
+  ChangeDetectorRef,
+  Renderer2,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+
 import { Layouter2Widget } from '../config';
 import { ModalController } from '@ionic/angular';
 import { DebugComponent } from 'src/app/debug/debug.component';
@@ -8,11 +16,12 @@ import { DeviceService } from 'src/app/core/services/device.service';
 import { HtmlPipe } from 'src/app/core/pipes/html.pipe';
 
 @Component({
-    selector: 'widget-debug',
-    templateUrl: 'widget-debug.html',
-    styleUrls: ['widget-debug.scss'],
-    standalone: true,
-    imports: [CommonModule, HtmlPipe]
+  selector: 'widget-debug',
+  templateUrl: 'widget-debug.html',
+  styleUrls: ['widget-debug.scss'],
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [HtmlPipe],
 })
 export class WidgetDebugComponent implements Layouter2Widget {
   debugServiceSubject;
@@ -24,10 +33,11 @@ export class WidgetDebugComponent implements Layouter2Widget {
   oldDataLength = 0;
 
   get data() {
-    return this.debugService.dataList[this.device.deviceName]
+    return this.debugService.dataList[this.device.deviceName];
   }
 
-  @ViewChild("scrollContainer", { read: ElementRef, static: true }) scrollContainer: ElementRef;
+  @ViewChild('scrollContainer', { read: ElementRef, static: true })
+  scrollContainer: ElementRef;
 
   constructor(
     public changeDetectorRef: ChangeDetectorRef,
@@ -35,14 +45,14 @@ export class WidgetDebugComponent implements Layouter2Widget {
     private debugService: DebugService,
     private modalCtrl: ModalController,
     private deviceService: DeviceService
-  ) { }
+  ) {}
 
   ngAfterViewInit() {
     this.debugServiceSubject = this.debugService.state.subscribe(() => {
       setTimeout(() => {
         this.scrollToBottom();
       }, 50);
-    })
+    });
   }
 
   ngOnDestroy() {
@@ -50,7 +60,8 @@ export class WidgetDebugComponent implements Layouter2Widget {
   }
 
   scrollToBottom() {
-    this.scrollContainer.nativeElement.scrollTop = this.scrollContainer.nativeElement.scrollHeight;
+    this.scrollContainer.nativeElement.scrollTop =
+      this.scrollContainer.nativeElement.scrollHeight;
   }
 
   sync() {
@@ -66,11 +77,10 @@ export class WidgetDebugComponent implements Layouter2Widget {
     const modal = await this.modalCtrl.create({
       component: DebugComponent,
       componentProps: {
-        'device': this.device,
-        'mode': this.mode
-      }
+        device: this.device,
+        mode: this.mode,
+      },
     });
     modal.present();
   }
-
 }

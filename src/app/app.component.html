@@ -1,12 +1,16 @@
-<div class="app-container" [ngClass]="{'pc-mobile-view': isPcBrowser}">
-  <ion-app [ngClass]="{'pwa': isPWA}">
+<div class="app-container" [ngClass]="{ 'pc-mobile-view': isPcBrowser }">
+  <ion-app [ngClass]="{ pwa: isPWA }">
     <ion-router-outlet [swipeGesture]="swipeEnable"></ion-router-outlet>
   </ion-app>
   <div tip-box>
-    <b-tip [tip]="tip" *ngFor="let tip of tipList"></b-tip>
+    @for (tip of tipList; track tip) {
+    <b-tip [tip]="tip"></b-tip>
+    }
   </div>
   <div toast-box>
-    <b-toast [toast]="toast" *ngFor="let toast of toastList"></b-toast>
+    @for (toast of toastList; track toast) {
+    <b-toast [toast]="toast"></b-toast>
+    }
   </div>
   <audio autoplay="autoplay" #audio></audio>
 </div>

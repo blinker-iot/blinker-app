@@ -1,3 +1,5 @@
-<div widget >
-  <iframe *ngIf="url" [src]="url" frameborder="0" #iframeBox></iframe>
+<div widget>
+  @if (url) {
+  <iframe [src]="url" frameborder="0" #iframeBox></iframe>
+  }
 </div>

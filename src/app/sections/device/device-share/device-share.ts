@@ -30,7 +30,7 @@ import { DeviceblockList2Component } from "src/app/core/components/deviceblock-l
 import { LangSelectorComponent } from "src/app/core/components/lang-selector/lang-selector.component";
 import { SceneButtonGroupComponent } from "src/app/core/components/scene-button-group/scene-button-group";
 import { SceneButtonComponent } from "src/app/core/components/scene-button-group/scene-button/scene-button";
-import { TranslateModule } from "@ngx-translate/core";
+import { TranslatePipe } from "@ngx-translate/core";
 
 @Component({
     selector: "device-share",
@@ -60,7 +60,7 @@ import { TranslateModule } from "@ngx-translate/core";
         LangSelectorComponent,
         SceneButtonGroupComponent,
         SceneButtonComponent,
-        TranslateModule
+        TranslatePipe
     ]
 })
 export class DeviceSharePage {

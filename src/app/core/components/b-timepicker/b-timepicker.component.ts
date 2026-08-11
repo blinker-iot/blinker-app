@@ -1,38 +1,47 @@
-import { Component, ViewChild, ElementRef, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  Input,
+  Output,
+  EventEmitter,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+
 import { IonicModule } from '@ionic/angular';
 import { timeToMinute, minuteToTime } from 'src/app/core/functions/func';
 import Picker from 'pickerjs';
 
 @Component({
-    standalone: true,
-    imports: [CommonModule, IonicModule],
-    selector: 'b-timepicker',
-    templateUrl: './b-timepicker.component.html',
-    styleUrls: ['./b-timepicker.component.scss']
+  standalone: true,
+  imports: [IonicModule],
+  selector: 'b-timepicker',
+  templateUrl: './b-timepicker.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./b-timepicker.component.scss'],
 })
 export class BTimepickerComponent {
-
   timePicker;
 
-  @Input() time: string = "00:00";
+  @Input() time: string = '00:00';
   @Output() timeChange = new EventEmitter();
   @Input() value: number;
   @Output() valueChange = new EventEmitter();
-  @ViewChild('timepickerinput', { read: ElementRef, static: true }) timePickerInput: ElementRef;
-  @ViewChild('timepickerbox', { read: ElementRef, static: true }) timePickerBox: ElementRef;
+  @ViewChild('timepickerinput', { read: ElementRef, static: true })
+  timePickerInput: ElementRef;
+  @ViewChild('timepickerbox', { read: ElementRef, static: true })
+  timePickerBox: ElementRef;
 
-  constructor() { }
-
+  constructor() {}
 
   ngOnInit() {
     if (typeof this.value != 'undefined') {
-      this.time = minuteToTime(this.value)
+      this.time = minuteToTime(this.value);
     }
   }
 
   ngOnDestroy() {
-    this.timePicker.destroy()
+    this.timePicker.destroy();
   }
 
   ngAfterViewInit() {
@@ -47,18 +56,17 @@ export class BTimepickerComponent {
         hour: '时',
         minute: '分',
       },
-      pick: () => { this.valueChanged() }
+      pick: () => {
+        this.valueChanged();
+      },
     });
   }
 
   valueChanged() {
     console.log('valueChanged');
-    
-    let newtime = this.timePicker.getDate('HH:mm')
+
+    let newtime = this.timePicker.getDate('HH:mm');
     this.timeChange.emit(newtime);
-    this.valueChange.emit(timeToMinute(newtime))
+    this.valueChange.emit(timeToMinute(newtime));
   }
-
-
-
 }

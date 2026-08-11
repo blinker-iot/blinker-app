@@ -1,20 +1,27 @@
-import { Component, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  SimpleChanges,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 import { Act2TextPipe } from '../../pipes/actcmd2text';
 import { widgetButtonListComponent } from 'src/app/device/layouter2/widget-buttonlist/widget-buttonlist';
 
 @Component({
-    selector: 'b-actcmd-list',
-    standalone: true,
-    imports: [CommonModule, Act2TextPipe, widgetButtonListComponent],
-    templateUrl: './b-actcmd-list.component.html',
-    styleUrls: ['./b-actcmd-list.component.scss']
+  selector: 'b-actcmd-list',
+  standalone: true,
+  imports: [CommonModule, Act2TextPipe, widgetButtonListComponent],
+  templateUrl: './b-actcmd-list.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./b-actcmd-list.component.scss'],
 })
 export class BActcmdListComponent {
-
   @Input() device;
-  @Output() updateAct = new EventEmitter;
+  @Output() updateAct = new EventEmitter();
 
   selectedItem;
 
@@ -25,31 +32,25 @@ export class BActcmdListComponent {
   }
 
   get isDiy() {
-    if (this.device.deviceType.indexOf('Diy') > -1)
-      return true
-    else
-      return false
+    if (this.device.deviceType.indexOf('Diy') > -1) return true;
+    else return false;
   }
 
-  constructor(
-    private deviceConfigService: DeviceConfigService,
-  ) { }
+  constructor(private deviceConfigService: DeviceConfigService) {}
 
   ngOnChanges(changes: SimpleChanges) {
-    if (this.isDiy) return
+    if (this.isDiy) return;
     // console.log(changes);
-    let deviceConfig = this.deviceConfigService.getDeviceConfig(this.device)
-    if (typeof deviceConfig.actions == 'undefined') deviceConfig['actions'] = '[]';
+    let deviceConfig = this.deviceConfigService.getDeviceConfig(this.device);
+    if (typeof deviceConfig.actions == 'undefined')
+      deviceConfig['actions'] = '[]';
     console.log(deviceConfig.actions);
-    this.cmdList = JSON.parse(deviceConfig.actions)
+    this.cmdList = JSON.parse(deviceConfig.actions);
   }
 
   updateSelectedAction(event) {
-    this.selectedItem = event[0]
-    if (typeof event[0] == 'string')
-      this.updateAct.emit([event[0]]);
-    else
-      this.updateAct.emit([JSON.stringify(event[0])]);
+    this.selectedItem = event[0];
+    if (typeof event[0] == 'string') this.updateAct.emit([event[0]]);
+    else this.updateAct.emit([JSON.stringify(event[0])]);
   }
-
 }

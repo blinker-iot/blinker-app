@@ -1,16 +1,22 @@
-import { Component, ElementRef, Input, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  ElementRef,
+  Input,
+  ViewChild,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+
 import { Layouter2Widget } from '../config';
 import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
-    selector: 'widget-custom',
-    templateUrl: 'widget-custom.html',
-    styleUrls: ['widget-custom.scss'],
-    imports: [CommonModule]
+  selector: 'widget-custom',
+  templateUrl: 'widget-custom.html',
+  styleUrls: ['widget-custom.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [],
 })
 export class WidgetCustomComponent implements Layouter2Widget {
-
   @Input() widget;
   @Input() device;
 
@@ -19,32 +25,31 @@ export class WidgetCustomComponent implements Layouter2Widget {
   }
 
   url;
-  @ViewChild('iframeBox', { read: ElementRef, static: false }) iframeBox: ElementRef;
+  @ViewChild('iframeBox', { read: ElementRef, static: false })
+  iframeBox: ElementRef;
   deviceSubject;
   getValue(valueKeys: string[]): any {
     for (let valueKey of valueKeys) {
       if (typeof this.device.data[this.key] != 'undefined')
         if (typeof this.device.data[this.key][valueKey] != 'undefined')
-          return this.device.data[this.key][valueKey]
+          return this.device.data[this.key][valueKey];
       if (typeof this.widget[valueKey] != 'undefined')
-        return this.widget[valueKey]
-    };
-    return
+        return this.widget[valueKey];
+    }
+    return;
   }
 
-  constructor(
-    private sanitizer: DomSanitizer,
-  ) { }
+  constructor(private sanitizer: DomSanitizer) {}
 
   ngOnInit() {
-    this.initUrl()
+    this.initUrl();
     this.deviceSubject = this.device.subject.subscribe(() => {
-      this.syncDeviceData()
-    })
+      this.syncDeviceData();
+    });
   }
 
   ngOnDestroy() {
-    this.deviceSubject.unsubscribe()
+    this.deviceSubject.unsubscribe();
   }
 
   initUrl() {
@@ -54,11 +59,10 @@ export class WidgetCustomComponent implements Layouter2Widget {
   }
 
   send2iframe(data) {
-    this.iframeBox.nativeElement.contentWindow.postMessage(data, '*')
+    this.iframeBox.nativeElement.contentWindow.postMessage(data, '*');
   }
 
   syncDeviceData() {
-    this.send2iframe({ deviceData: this.device.data, widgetData: this.widget })
+    this.send2iframe({ deviceData: this.device.data, widgetData: this.widget });
   }
-
 }

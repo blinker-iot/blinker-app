@@ -1,16 +1,22 @@
-import { Component, Input, ViewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  Input,
+  ViewChild,
+  ElementRef,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { Layouter2Widget } from '../config';
 import { ActionSheetController } from '@ionic/angular';
 import coordtransform from 'coordtransform';
 import { GeolocationService } from 'src/app/core/services/geolocation.service';
 
 @Component({
-    selector: 'widget-map',
-    templateUrl: './widget-map.component.html',
-    styleUrls: ['./widget-map.component.scss']
+  selector: 'widget-map',
+  templateUrl: './widget-map.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./widget-map.component.scss'],
 })
 export class WidgetMapComponent implements Layouter2Widget {
-
   AMap;
   map;
 
@@ -22,21 +28,18 @@ export class WidgetMapComponent implements Layouter2Widget {
   }
 
   get longitude() {
-    if (!this.device.config.position.location[0])
-      return 104.07
-    return this.device.config.position.location[0]
+    if (!this.device.config.position.location[0]) return 104.07;
+    return this.device.config.position.location[0];
   }
 
   get latitude() {
-    if (!this.device.config.position.location[1])
-      return 30.67
-    return this.device.config.position.location[1]
+    if (!this.device.config.position.location[1]) return 30.67;
+    return this.device.config.position.location[1];
   }
 
   get address() {
-    if (typeof this.device.config.position == 'undefined')
-      return ''
-    return this.device.config.position.address
+    if (typeof this.device.config.position == 'undefined') return '';
+    return this.device.config.position.address;
   }
 
   userPosition;
@@ -44,10 +47,10 @@ export class WidgetMapComponent implements Layouter2Widget {
   getValue(valueKey) {
     if (typeof this.device.data[this.key] != 'undefined')
       if (typeof this.device.data[this.key][valueKey] != 'undefined')
-        return this.device.data[this.key][valueKey]
+        return this.device.data[this.key][valueKey];
     if (typeof this.widget[valueKey] != 'undefined')
-      return this.widget[valueKey]
-    return ''
+      return this.widget[valueKey];
+    return '';
   }
 
   @ViewChild('widgetMap', { read: ElementRef, static: true }) mapEl: ElementRef;
@@ -55,10 +58,9 @@ export class WidgetMapComponent implements Layouter2Widget {
   constructor(
     private actionSheetController: ActionSheetController,
     private geolocationService: GeolocationService
-  ) { }
+  ) {}
 
-  ngOnInit() {
-  }
+  ngOnInit() {}
 
   ngAfterViewInit() {
     this.initMap();
@@ -67,9 +69,9 @@ export class WidgetMapComponent implements Layouter2Widget {
   async initMap() {
     let position;
     if (this.device.config.position.location.length == 2) {
-      position = this.device.config.position.location
+      position = this.device.config.position.location;
     } else {
-      position = await this.geolocationService.getUserPosition()
+      position = await this.geolocationService.getUserPosition();
     }
     // AMapLoader.load({
     //   "key": "6f02b1056c81d1638ecf21c8469f7b61",
@@ -89,17 +91,17 @@ export class WidgetMapComponent implements Layouter2Widget {
 
   addDeviceMarker() {
     if (this.device.config.position.location.length == 0) {
-      return
+      return;
     }
     let marker = this.addMarker({
       position: [this.longitude, this.latitude],
       title: this.device.config.customName,
-      icon: 'img/map/device.png'
-    })
+      icon: 'img/map/device.png',
+    });
     marker.on('click', () => {
       let infoWindow = new this.AMap.InfoWindow({
         content: this.device.config.customName,
-        offset: new this.AMap.Pixel(0, -30)
+        offset: new this.AMap.Pixel(0, -30),
       });
       infoWindow.open(this.map, marker.getPosition());
     });
@@ -109,43 +111,53 @@ export class WidgetMapComponent implements Layouter2Widget {
     let marker = this.addMarker({
       position: await this.geolocationService.getUserPosition(),
       title: '我的位置',
-      icon: 'img/map/user.png'
-    })
+      icon: 'img/map/user.png',
+    });
     marker.on('click', () => {
       let infoWindow = new this.AMap.InfoWindow({
         content: marker.getTitle(),
-        offset: new this.AMap.Pixel(0, -30)
+        offset: new this.AMap.Pixel(0, -30),
       });
       infoWindow.open(this.map, marker.getPosition());
     });
   }
 
-  addMarker({ position: [longitude, latitude], title, icon = 'img/map/marker.png' }) {
+  addMarker({
+    position: [longitude, latitude],
+    title,
+    icon = 'img/map/marker.png',
+  }) {
     let marker = new this.AMap.Marker({
       position: [longitude, latitude],
       title,
       icon,
-      anchor: 'center'
+      anchor: 'center',
     });
-    this.map.add(marker)
-    return marker
+    this.map.add(marker);
+    return marker;
   }
 
   async gotoNav() {
     const actionSheet = await this.actionSheetController.create({
-      buttons: [{
-        text: '高德地图',
-        handler: () => {
-          window.open(`androidamap://viewMap?sourceApplication=iot.diandeng.tech&lat=${this.latitude}&lon=${this.longitude}&poiname=${this.device.config.customName}&dev=0`)
-        }
-      }, {
-        text: '百度地图',
-        handler: () => {
-          window.open(`bdapp://map/marker?location=${this.latitude},${this.longitude}&title=${this.device.config.customName}&coord_type=wgs84&src=iot.diandeng.tech`)
-        }
-      }]
+      buttons: [
+        {
+          text: '高德地图',
+          handler: () => {
+            window.open(
+              `androidamap://viewMap?sourceApplication=iot.diandeng.tech&lat=${this.latitude}&lon=${this.longitude}&poiname=${this.device.config.customName}&dev=0`
+            );
+          },
+        },
+        {
+          text: '百度地图',
+          handler: () => {
+            window.open(
+              `bdapp://map/marker?location=${this.latitude},${this.longitude}&title=${this.device.config.customName}&coord_type=wgs84&src=iot.diandeng.tech`
+            );
+          },
+        },
+      ],
     });
     await actionSheet.present();
   }
-
 }

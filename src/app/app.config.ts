@@ -1,9 +1,21 @@
-import { ApplicationConfig, Injectable, importProvidersFrom } from '@angular/core';
-import { RouteReuseStrategy, provideRouter, withPreloading, PreloadAllModules } from '@angular/router';
-import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular/standalone';
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
-import { provideAnimations } from '@angular/platform-browser/animations';
-import { HAMMER_GESTURE_CONFIG, HammerGestureConfig } from '@angular/platform-browser';
+import { ApplicationConfig } from '@angular/core';
+import {
+  RouteReuseStrategy,
+  provideRouter,
+  withPreloading,
+  PreloadAllModules,
+} from '@angular/router';
+import {
+  IonicRouteStrategy,
+  provideIonicAngular,
+} from '@ionic/angular/standalone';
+import {
+  HTTP_INTERCEPTORS,
+  provideHttpClient,
+  withInterceptorsFromDi,
+  withXhr,
+} from '@angular/common/http';
+import { EVENT_MANAGER_PLUGINS } from '@angular/platform-browser';
 
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
@@ -17,19 +29,12 @@ import { AuthService } from './core/services/auth.service';
 import { AdddeviceService } from './sections/adddevice/adddevice.service';
 import { NetworkService } from './core/services/network.service';
 import { ImageService } from './core/services/image.service';
+import { HammerGesturesPlugin } from './core/injectable/hammer-gestures.plugin';
+import { CONFIG } from './configs/app.config';
 
 import { routes } from './app.routes';
 import { provideMarkdown } from 'ngx-markdown';
-import { TranslateModule } from '@ngx-translate/core';
-
-declare var Hammer: any;
-@Injectable()
-export class MyHammerConfig extends HammerGestureConfig {
-  override overrides = <any>{
-    'pan': { direction: Hammer.DIRECTION_ALL, threshold: 5 },
-    'press': { time: 500, threshold: 99 }
-  }
-}
+import { provideTranslateService } from '@ngx-translate/core';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -37,16 +42,18 @@ export const appConfig: ApplicationConfig = {
     provideIonicAngular({
       mode: 'ios',
       scrollAssist: true,
-      scrollPadding: false
+      scrollPadding: false,
     }),
-    provideAnimations(),
-    provideHttpClient(withInterceptorsFromDi()),
+    provideHttpClient(withXhr(), withInterceptorsFromDi()),
     provideMarkdown(),
-    importProvidersFrom(TranslateModule.forRoot()),
-    { provide: HAMMER_GESTURE_CONFIG, useClass: HammerGestureConfig },
+    provideTranslateService({ fallbackLang: CONFIG.I18N.DEFAULT }),
+    {
+      provide: EVENT_MANAGER_PLUGINS,
+      useClass: HammerGesturesPlugin,
+      multi: true,
+    },
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     { provide: HTTP_INTERCEPTORS, useClass: ServerInterceptor, multi: true },
-    { provide: HAMMER_GESTURE_CONFIG, useClass: MyHammerConfig },
     AuthService,
     DataService,
     UserService,
@@ -58,5 +65,5 @@ export const appConfig: ApplicationConfig = {
     PermissionService,
     PusherService,
     ImageService,
-  ]
+  ],
 };

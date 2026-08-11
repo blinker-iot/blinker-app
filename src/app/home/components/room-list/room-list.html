@@ -1,11 +1,27 @@
-<div class="room-bar" *ngIf="loaded">
+@if (loaded) {
+<div class="room-bar">
   <div class="room-btn">
     <i class="fa-regular fa-layer-group"></i>
   </div>
   <div class="scrollbox">
     <div class="room-box" #roombox>
-      <div class="room" (click)="selectRoom(-1)" [ngClass]="{'selected':roomid==-1}">所有设备</div>
-      <div class="room" *ngFor="let room of roomDataList;index as i" [ngClass]="{'selected':roomid==i}" (click)="selectRoom(i)">{{room}}</div>
+      <div
+        class="room"
+        (click)="selectRoom(-1)"
+        [ngClass]="{'selected':roomid==-1}"
+      >
+        所有设备
+      </div>
+      @for (room of roomDataList; track room; let i = $index) {
+      <div
+        class="room"
+        [ngClass]="{'selected':roomid==i}"
+        (click)="selectRoom(i)"
+      >
+        {{room}}
+      </div>
+      }
     </div>
   </div>
 </div>
+}

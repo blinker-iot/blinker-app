@@ -5,23 +5,26 @@ import {
   Renderer2,
   Input,
   Output,
-  EventEmitter
+  EventEmitter,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
-    standalone: true,
-    imports: [CommonModule],
-    selector: 'b-range',
-    templateUrl: 'b-range.html',
-    styleUrls: ['b-range.scss']
+  standalone: true,
+  imports: [CommonModule],
+  selector: 'b-range',
+  templateUrl: 'b-range.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['b-range.scss'],
 })
 export class BRangeComponent {
-
-  @ViewChild("bar", { read: ElementRef, static: true }) bar: ElementRef;
-  @ViewChild("barActive", { read: ElementRef, static: true }) activeBar: ElementRef;
-  @ViewChild("barActive2", { read: ElementRef, static: true }) activeBar2: ElementRef;
-  @ViewChild("knob", { read: ElementRef, static: true }) knob: ElementRef;
+  @ViewChild('bar', { read: ElementRef, static: true }) bar: ElementRef;
+  @ViewChild('barActive', { read: ElementRef, static: true })
+  activeBar: ElementRef;
+  @ViewChild('barActive2', { read: ElementRef, static: true })
+  activeBar2: ElementRef;
+  @ViewChild('knob', { read: ElementRef, static: true }) knob: ElementRef;
 
   @Input() min = 0;
   @Input() max = 255;
@@ -38,7 +41,7 @@ export class BRangeComponent {
     }
   }
 
-  isMoving = false
+  isMoving = false;
 
   oldInputValue;
   _value;
@@ -47,7 +50,7 @@ export class BRangeComponent {
     if (value > this.max) value = this.max;
     if (value < this.min) value = this.min;
     this._value = value;
-  };
+  }
 
   get value() {
     return this._value;
@@ -64,10 +67,11 @@ export class BRangeComponent {
     return this._disabled;
   }
 
-  _barColor = '#389BEE'
+  _barColor = '#389BEE';
   @Input()
   set barcolor(color) {
-    if (color[0] != '#' && color[0] != 'r' && color[0] != 'l') color = '#' + color;
+    if (color[0] != '#' && color[0] != 'r' && color[0] != 'l')
+      color = '#' + color;
     this.renderer.setStyle(this.bar.nativeElement, 'background', color);
     this._barColor = color;
   }
@@ -75,14 +79,18 @@ export class BRangeComponent {
     return this._barColor;
   }
 
-  _activebarColor = '#389BEE'
+  _activebarColor = '#389BEE';
   @Input()
   set activecolor(color) {
     if (color[0] != '#' && color[0] != 'r') color = '#' + color;
     if (this.activebar)
       this.renderer.setStyle(this.activeBar.nativeElement, 'background', color);
     if (this.activebar2)
-      this.renderer.setStyle(this.activeBar2.nativeElement, 'background', color);
+      this.renderer.setStyle(
+        this.activeBar2.nativeElement,
+        'background',
+        color
+      );
     this._activebarColor = color;
   }
   get activecolor() {
@@ -91,9 +99,7 @@ export class BRangeComponent {
 
   @Output() sendData = new EventEmitter();
 
-  constructor(
-    private renderer: Renderer2,
-  ) { }
+  constructor(private renderer: Renderer2) {}
 
   timer;
   ngAfterViewInit() {
@@ -101,44 +107,73 @@ export class BRangeComponent {
       if (!this.isMoving) {
         this.processValue();
       }
-    }, 1000)
+    }, 1000);
   }
 
   ngOnDestroy() {
-    clearInterval(this.timer)
+    clearInterval(this.timer);
   }
 
   processValue() {
     if (this.oldInputValue != this.value) {
-      let x = (this.value - this.min) / (this.max - this.min) * this.length;
-      this.renderer.setStyle(this.knob.nativeElement, 'transition', `left 0.5s`);
+      let x = ((this.value - this.min) / (this.max - this.min)) * this.length;
+      this.renderer.setStyle(
+        this.knob.nativeElement,
+        'transition',
+        `left 0.5s`
+      );
       if (this.activebar)
-        this.renderer.setStyle(this.activeBar.nativeElement, 'transition', `width 0.5s`);
+        this.renderer.setStyle(
+          this.activeBar.nativeElement,
+          'transition',
+          `width 0.5s`
+        );
       if (this.activebar2)
-        this.renderer.setStyle(this.activeBar2.nativeElement, 'transition', `width 0.5s`);
+        this.renderer.setStyle(
+          this.activeBar2.nativeElement,
+          'transition',
+          `width 0.5s`
+        );
       this.moveSlider(x);
       setTimeout(() => {
         this.renderer.removeStyle(this.knob.nativeElement, 'transition');
         if (this.activebar)
           this.renderer.removeStyle(this.activeBar.nativeElement, 'transition');
         if (this.activebar2)
-          this.renderer.removeStyle(this.activeBar2.nativeElement, 'transition');
+          this.renderer.removeStyle(
+            this.activeBar2.nativeElement,
+            'transition'
+          );
       }, 500);
       this.oldInputValue = this.value;
     }
   }
 
   moveSlider(move) {
-    let barActiveScale = (move / this.length * 100);
-    let knobScale = (move / (this.length + 20) * 100);
+    let barActiveScale = (move / this.length) * 100;
+    let knobScale = (move / (this.length + 20)) * 100;
     if (this.direction == 'x') {
-      this.renderer.setStyle(this.knob.nativeElement, 'left', `${knobScale.toString()}%`);
+      this.renderer.setStyle(
+        this.knob.nativeElement,
+        'left',
+        `${knobScale.toString()}%`
+      );
       if (this.activebar)
-        this.renderer.setStyle(this.activeBar.nativeElement, 'width', `${barActiveScale.toString()}%`);
+        this.renderer.setStyle(
+          this.activeBar.nativeElement,
+          'width',
+          `${barActiveScale.toString()}%`
+        );
       if (this.activebar2)
-        this.renderer.setStyle(this.activeBar2.nativeElement, 'width', `${(100 - barActiveScale).toString()}%`);
+        this.renderer.setStyle(
+          this.activeBar2.nativeElement,
+          'width',
+          `${(100 - barActiveScale).toString()}%`
+        );
     }
-    this.value = Math.round(move / this.length * (this.max - this.min) + this.min);
+    this.value = Math.round(
+      (move / this.length) * (this.max - this.min) + this.min
+    );
   }
 
   tapEvent(e) {
@@ -169,7 +204,7 @@ export class BRangeComponent {
       let p = e.target.getBoundingClientRect().left;
       move = e.center.x - p - 10;
     }
-    move = this.checkLimit(move)
+    move = this.checkLimit(move);
     this.moveSlider(move);
   }
 
@@ -180,7 +215,7 @@ export class BRangeComponent {
       let p = e.target.getBoundingClientRect().left;
       move = e.center.x - p - 10;
     }
-    move = this.checkLimit(move)
+    move = this.checkLimit(move);
     this.moveSlider(move);
     this.pick();
   }
@@ -209,6 +244,4 @@ export class BRangeComponent {
     }
     return move;
   }
-
-
 }

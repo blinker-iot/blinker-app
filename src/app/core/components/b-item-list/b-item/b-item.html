@@ -1,26 +1,42 @@
 <div class="item-box">
-  <div class="del-btn animated fadeIn" [ngStyle]="{'height':itemHeight}" *ngIf="editMode" (click)="clickDelBtn()">
+  @if (editMode) {
+  <div
+    class="del-btn animated fadeIn"
+    [ngStyle]="{'height':itemHeight}"
+    (click)="clickDelBtn()"
+  >
     <i class="fa-solid fa-circle-minus"></i>
   </div>
-  <div class="handle animated fadeIn" *ngIf="editMode" [ngStyle]="{'height':itemHeight}">
+  } @if (editMode) {
+  <div class="handle animated fadeIn" [ngStyle]="{'height':itemHeight}">
     <i class="fal fa-grip-lines"></i>
   </div>
-  <div class="item" [ngClass]="{'disabled': disabled}" [ngStyle]="{'height':itemHeight}" (click)="clickItem()">
+  }
+  <div
+    class="item"
+    [ngClass]="{'disabled': disabled}"
+    [ngStyle]="{'height':itemHeight}"
+    (click)="clickItem()"
+  >
     <div class="content">
-      <div class="icon-box" *ngIf="icon">
+      @if (icon) {
+      <div class="icon-box">
         <i class="{{icon}}"></i>
       </div>
-      <div class="text-box" *ngIf="text">
-        {{text}}
-      </div>
+      } @if (text) {
+      <div class="text-box">{{text}}</div>
+      }
       <ng-content></ng-content>
     </div>
-    <div class="arrow" *ngIf="showArrow && !editMode">
+    @if (showArrow && !editMode) {
+    <div class="arrow">
       <i class="fa-light fa-chevron-right"></i>
     </div>
-    <div class="arrow" *ngIf="showAdd && !editMode">
+    } @if (showAdd && !editMode) {
+    <div class="arrow">
       <i class="fa-light fa-plus"></i>
     </div>
+    }
   </div>
   <div class="toggle-box">
     <ng-content select=".toggle"></ng-content>
