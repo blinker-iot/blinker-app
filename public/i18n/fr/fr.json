@@ -22,6 +22,7 @@
     "VERIFY_CODE": "Code de vérification",
     "SEND_CODE": "Envoyer le code",
     "LOGIN_TIP": "Un compte sera créé automatiquement pour une adresse e-mail non inscrite",
+    "LOGIN_AGREEMENT_PREFIX": "En vous connectant, vous acceptez :",
     "OR_LOGIN_WITH": "Ou se connecter avec"
   },
   "MENU": {

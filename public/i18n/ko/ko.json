@@ -22,6 +22,7 @@
     "VERIFY_CODE": "인증 코드",
     "SEND_CODE": "코드 보내기",
     "LOGIN_TIP": "등록되지 않은 이메일은 계정이 자동으로 생성됩니다",
+    "LOGIN_AGREEMENT_PREFIX": "로그인하면 다음에 동의하는 것으로 간주됩니다:",
     "OR_LOGIN_WITH": "또는 다음으로 로그인"
   },
   "MENU": {

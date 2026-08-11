@@ -22,6 +22,7 @@
     "VERIFY_CODE": "確認コード",
     "SEND_CODE": "コードを送信",
     "LOGIN_TIP": "未登録のメールアドレスではアカウントが自動的に作成されます",
+    "LOGIN_AGREEMENT_PREFIX": "ログインすると、以下に同意したものとみなされます：",
     "OR_LOGIN_WITH": "または以下でログイン"
   },
   "MENU": {

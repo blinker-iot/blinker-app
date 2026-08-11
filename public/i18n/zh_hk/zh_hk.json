@@ -22,6 +22,7 @@
     "VERIFY_CODE": "驗證碼",
     "SEND_CODE": "發送驗證碼",
     "LOGIN_TIP": "使用未註冊的電子郵箱將自動建立帳號",
+    "LOGIN_AGREEMENT_PREFIX": "登入即表示同意",
     "OR_LOGIN_WITH": "或使用以下方式登入"
   },
   "MENU": {

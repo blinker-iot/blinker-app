@@ -22,6 +22,7 @@
     "VERIFY_CODE": "Verification Code",
     "SEND_CODE": "Send Code",
     "LOGIN_TIP": "Unregistered email will automatically create an account",
+    "LOGIN_AGREEMENT_PREFIX": "By logging in, you agree to the",
     "OR_LOGIN_WITH": "Or login with"
   },
   "MENU": {

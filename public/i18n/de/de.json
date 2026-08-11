@@ -22,6 +22,7 @@
     "VERIFY_CODE": "Bestätigungscode",
     "SEND_CODE": "Code senden",
     "LOGIN_TIP": "Für eine nicht registrierte E-Mail-Adresse wird automatisch ein Konto erstellt",
+    "LOGIN_AGREEMENT_PREFIX": "Mit der Anmeldung akzeptieren Sie:",
     "OR_LOGIN_WITH": "Oder anmelden mit"
   },
   "MENU": {

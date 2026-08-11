@@ -22,6 +22,7 @@
     "VERIFY_CODE": "Código de verificación",
     "SEND_CODE": "Enviar código",
     "LOGIN_TIP": "Se creará automáticamente una cuenta para un correo no registrado",
+    "LOGIN_AGREEMENT_PREFIX": "Al iniciar sesión, aceptas:",
     "OR_LOGIN_WITH": "O inicia sesión con"
   },
   "MENU": {
