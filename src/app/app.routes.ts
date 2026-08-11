@@ -5,6 +5,8 @@ export const routes: Routes = [
   { path: 'home', loadComponent: () => import('./home/home.page').then(m => m.HomePage) },
   { path: 'login', loadComponent: () => import('./sections/login/login').then(m => m.LoginPage) },
   { path: 'settings', loadComponent: () => import('./sections/settings/settings.page').then(m => m.SettingsPage) },
+  { path: 'user', loadComponent: () => import('./sections/user/user.page').then(m => m.UserPage) },
+  { path: 'message', loadComponent: () => import('./sections/message/message.page').then(m => m.MessagePage) },
   {
     path: 'tools/esp32-provision',
     loadComponent: () => import('./tools/esp32-provision/esp32-provision.page').then(m => m.Esp32ProvisionPage),
