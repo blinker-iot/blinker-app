@@ -217,7 +217,11 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
     const direction: -1 | 1 = deltaX < 0 ? 1 : -1;
     const targetRoomId = this.getAdjacentRoomId(direction);
 
-    this.suppressClickUntil = Date.now() + 350;
+    // A normal tap can drift a few pixels on touch screens. Only suppress the
+    // synthetic click once the gesture has travelled far enough to be a swipe.
+    if (horizontalDistance >= 18) {
+      this.suppressClickUntil = Date.now() + 350;
+    }
     if (shouldChangeRoom && targetRoomId !== null) {
       this.prepareIncomingRoom(targetRoomId, direction);
       this.animateSlides(direction, targetRoomId);

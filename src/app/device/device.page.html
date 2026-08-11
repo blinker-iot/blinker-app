@@ -1,59 +1,103 @@
-<ion-header *ngIf="loaded && device" no-border>
-  <ion-toolbar color="transparent">
+<ion-header whitebg no-border>
+  <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
-      <!-- 清空布局器 -->
-      <ion-button (click)="cleanWidgets()" *ngIf="mode==1">
-        <i class="fa-light fa-trash"></i>
-      </ion-button>
+      <ion-back-button text="" defaultHref="/home"></ion-back-button>
     </ion-buttons>
-    <ion-title (click)="enterDebug()">
-      <div class="name">{{device.config.customName}}</div>
-      <div class="state" [ngClass]="{'showState': showState}">
-        <ng-container *ngIf="device.config.mode=='ble'">
-          <ng-container
-            *ngIf="(device.data.state=='connected') || (device.data.oldState=='connected' && device.data.state=='waiting')">
-            ({{'DEVICE.CONNECTED' | translate}})
-          </ng-container>
-          <ng-container *ngIf="device.data.state=='disconnected'">({{'DEVICE.NOT_CONNECTED' | translate}})
-          </ng-container>
-        </ng-container>
-        <ng-container *ngIf="device.config.mode=='mqtt'">
-          <ng-container *ngIf="device.data.enable;else offline">
-            ({{'DEVICE.ONLINE' | translate}})
-            <i *ngIf="deviceService.islocalDevice(device)" class="fal fa-exchange"></i>
-            <i *ngIf="!deviceService.islocalDevice(device)" class="fal fa-cloud"></i>
-          </ng-container>
-          <ng-template #offline>
-            ({{'DEVICE.OFFLINE' | translate}})
-          </ng-template>
-        </ng-container>
-      </div>
-    </ion-title>
-    <ion-buttons slot="end" [ngStyle]="{'color':headerCss?headerCss.color:''}">
-      <!-- 连接 -->
-      <ion-button (click)="connectDevice()" *ngIf="mode==0 && device.data.state=='disconnected'">
-        <i class="fa-light fa-link-horizontal"></i>
-      </ion-button>
-      <!-- 编辑/保存 -->
-      <ion-button (click)="unlock()" *ngIf="mode==0 && !isSharedDevice && !showGuide">
-        <i class="fa-light fa-pen-to-square"></i>
-      </ion-button>
-      <ion-button (click)="lock()" *ngIf="mode==1">
-        <i class="fa-light fa-lock-keyhole"></i>
-      </ion-button>
-      <!-- 设置 -->
-      <ion-button [routerLink]="['/device-manager',id]" *ngIf="mode==0">
-        <i class="fa-light fa-circle-ellipsis"></i>
-        <div redpoint *ngIf="device.data.hasNewVersion"></div>
+    <ion-title>{{ device?.config?.customName || '设备详情' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button aria-label="刷新设备数据" (click)="refresh()" [disabled]="!device">
+        <i class="fa-light fa-arrows-rotate"></i>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
-<ion-content *ngIf="loaded"
-  [ngClass]="{'offline': !device.data.enable,'blur':showGuide,'exitBlur':willCloseGuide&&showGuide}" fullscreen=true
-  scrollY=false>
-  <ng-template #deviceView></ng-template>
+
+<ion-content fullscreen="true">
+  @if (loaded && device) {
+  <main class="device-detail-page">
+    <section class="device-hero" [class.offline]="!isOnline">
+      <div class="device-image">
+        <b-device-img [filename]="device.config.image"></b-device-img>
+      </div>
+
+      <div class="device-heading">
+        <div class="device-status" [class.online]="isOnline">
+          <span></span>{{ statusText }}
+        </div>
+        <h1>{{ device.config.customName || device.deviceType || '智能设备' }}</h1>
+        <p>{{ device.deviceType || '未知设备类型' }}</p>
+      </div>
+
+      @if (hasSwitch) {
+      <button
+        type="button"
+        class="power-button"
+        [class.on]="switchOn"
+        [class.waiting]="switchWaiting"
+        [disabled]="!isOnline || switchWaiting"
+        [attr.aria-label]="switchOn ? '关闭设备' : '开启设备'"
+        [attr.aria-pressed]="switchOn"
+        (click)="toggleSwitch()"
+      >
+        <i class="fa-light fa-power-off"></i>
+        <small>{{ switchWaiting ? '等待中' : (switchOn ? '已开启' : '已关闭') }}</small>
+      </button>
+      }
+    </section>
+
+    @if (metrics.length > 0) {
+    <section class="detail-section">
+      <div class="section-title">
+        <div>
+          <span>实时数据</span>
+          <small>更新于 {{ refreshedAt | date:'HH:mm:ss' }}</small>
+        </div>
+      </div>
+      <div class="metric-grid">
+        @for (metric of metrics; track metric.key) {
+        <article class="metric-card">
+          <small>{{ metric.label }}</small>
+          <strong>{{ metric.value }}<em>{{ metric.unit }}</em></strong>
+        </article>
+        }
+      </div>
+    </section>
+    }
+
+    <section class="detail-section">
+      <div class="section-title"><span>设备信息</span></div>
+      <div class="info-card">
+        <div>
+          <span>连接方式</span>
+          <strong>{{ device.config.mode === 'ble' ? 'Bluetooth LE' : 'MQTT' }}</strong>
+        </div>
+        <div>
+          <span>设备类型</span>
+          <strong>{{ device.deviceType || '--' }}</strong>
+        </div>
+        <div>
+          <span>设备 ID</span>
+          <strong>{{ device.id || device.deviceName }}</strong>
+        </div>
+      </div>
+    </section>
+
+    @if (isPreview) {
+    <aside class="preview-note">
+      <i class="fa-light fa-flask"></i>
+      <div>
+        <strong>访客测试设备</strong>
+        <span>当前数据仅保存在本地，可直接测试开关和设备详情页面。</span>
+      </div>
+    </aside>
+    }
+  </main>
+  } @else if (loaded) {
+  <div class="device-not-found">
+    <i class="fa-light fa-circle-exclamation"></i>
+    <h1>未找到设备</h1>
+    <p>设备可能已被删除，或登录数据尚未加载完成。</p>
+    <a routerLink="/home">返回设备列表</a>
+  </div>
+  }
 </ion-content>
-<layouter2-guide *ngIf="showGuide" class="animate__animated animate__fadeIn"
-  [ngClass]="{'animate__fadeOut': willCloseGuide}" (closeGuide)="closeGuide()"></layouter2-guide>

@@ -8,6 +8,10 @@ export const routes: Routes = [
   { path: 'user', loadComponent: () => import('./sections/user/user.page').then(m => m.UserPage) },
   { path: 'message', loadComponent: () => import('./sections/message/message.page').then(m => m.MessagePage) },
   {
+    path: 'device/:id',
+    loadComponent: () => import('./device/device.page').then(m => m.DevicePage),
+  },
+  {
     path: 'tools/esp32-provision',
     loadComponent: () => import('./tools/esp32-provision/esp32-provision.page').then(m => m.Esp32ProvisionPage),
   },

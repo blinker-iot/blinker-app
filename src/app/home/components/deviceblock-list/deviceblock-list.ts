@@ -15,6 +15,7 @@ import Sortable from 'sortablejs';
 import { DataService } from 'src/app/core/services/data.service';
 import { UserService } from 'src/app/core/services/user.service';
 import { Deviceblock } from '../deviceblock/deviceblock';
+import { getDeviceRoute } from './device-navigation';
 
 @Component({
   selector: 'deviceblock-list',
@@ -48,6 +49,7 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     chosenClass: 'schosen',
     dragClass: 'sdrag',
     draggable: '.deviceblock',
+    handle: '.device-drag-handle',
     dataIdAttr: 'data-id',
     onChoose: () => {
       this.suppressNavigationUntil = Number.POSITIVE_INFINITY;
@@ -122,8 +124,8 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
 
   gotoDashboard(deviceId: string) {
     if (Date.now() < this.suppressNavigationUntil) return;
-    if (this.deviceDataDict[deviceId]?.config?.isPreview) return;
-    void this.router.navigate(['device/' + deviceId]);
+    if (!this.deviceDataDict[deviceId]) return;
+    void this.router.navigate(getDeviceRoute(deviceId));
   }
 
   private saveDeviceList() {
