@@ -10534,6 +10534,29 @@
     ]
   },
   {
+    "name": "Unknown Device",
+    "dark": "home-living/unknown-device-dark.webp",
+    "light": "home-living/unknown-device-light.webp",
+    "keywords": [
+      "Unknown Device",
+      "unknown-device",
+      "未知设备",
+      "home-living",
+      "unknown",
+      "device",
+      "unidentified device",
+      "generic device",
+      "device placeholder",
+      "未知",
+      "未识别设备",
+      "设备占位图",
+      "IoT device",
+      "connected device",
+      "物联网设备",
+      "智能设备"
+    ]
+  },
+  {
     "name": "UV Exposure Badge",
     "dark": "health-wearables/uv-exposure-badge-dark.webp",
     "light": "health-wearables/uv-exposure-badge-light.webp",
