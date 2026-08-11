@@ -51,12 +51,14 @@ export class HammerGesturesPlugin extends EventManagerPlugin {
     eventName: string,
     handler: (...args: unknown[]) => unknown,
   ): () => void {
+    const normalizedEventName = eventName.toLowerCase();
+    const recognizers = normalizedEventName.startsWith('pan')
+      ? [[Hammer.Pan, { direction: Hammer.DIRECTION_ALL, threshold: 5 }]]
+      : normalizedEventName.startsWith('press')
+        ? [[Hammer.Press, { time: 500, threshold: 99 }]]
+        : [[Hammer.Tap]];
     const manager = new Hammer.Manager(element, {
-      recognizers: [
-        [Hammer.Tap],
-        [Hammer.Pan, { direction: Hammer.DIRECTION_ALL, threshold: 5 }],
-        [Hammer.Press, { time: 500, threshold: 99 }],
-      ],
+      recognizers,
     });
     const zone = this.manager.getZone();
     const callback = (event: unknown): void => {
@@ -64,9 +66,9 @@ export class HammerGesturesPlugin extends EventManagerPlugin {
     };
 
     return zone.runOutsideAngular(() => {
-      manager.on(eventName.toLowerCase(), callback);
+      manager.on(normalizedEventName, callback);
       return () => {
-        manager.off(eventName.toLowerCase(), callback);
+        manager.off(normalizedEventName, callback);
         manager.destroy();
       };
     });
