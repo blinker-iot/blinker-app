@@ -1,4 +1,9 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
 import { NavController, ModalController } from '@ionic/angular/standalone';
 import { IonicModule } from '@ionic/angular';
 import { UserService } from 'src/app/core/services/user.service';
@@ -7,21 +12,18 @@ import { AuthService } from 'src/app/core/services/auth.service';
 import { CONFIG } from 'src/app/configs/app.config';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
 import { NoticeService } from 'src/app/core/services/notice.service';
-import { FirstModalComponent } from './first-modal/first-modal.component';
-
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { LangSelectorComponent } from 'src/app/core/components/lang-selector/lang-selector.component';
 
 @Component({
-  selector: 'page-login',
+  selector: 'app-login',
   templateUrl: 'login.html',
   styleUrls: ['login.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule, IonicModule, TranslatePipe, LangSelectorComponent],
+  imports: [FormsModule, IonicModule, TranslatePipe],
 })
-export class LoginPage {
+export class LoginPage implements OnInit, OnDestroy {
   LOGO = CONFIG.LOGIN_LOGO;
 
   email: string = '';
@@ -41,10 +43,10 @@ export class LoginPage {
     private navCtrl: NavController,
     private viewService: ViewService,
     private modalCtrl: ModalController
-  ) {}
+  ) { }
 
   ngOnInit(): void {
-    if (localStorage.getItem('showFirstModal') == null) this.openFirstModal();
+    // if (localStorage.getItem('showFirstModal') == null) this.openFirstModal();
     this.viewService.setLightStatusBar();
   }
 
@@ -52,6 +54,12 @@ export class LoginPage {
     if (this.countdownTimer) {
       clearInterval(this.countdownTimer);
     }
+  }
+
+  openSettings(): void {
+    this.navCtrl.navigateForward('/settings', {
+      queryParams: { from: 'login' },
+    });
   }
 
   // 验证邮箱格式
@@ -131,14 +139,6 @@ export class LoginPage {
         docTitle: title,
         docUrl: url,
       },
-    });
-    modal.present();
-  }
-
-  async openFirstModal() {
-    const modal = await this.modalCtrl.create({
-      component: FirstModalComponent,
-      backdropDismiss: false,
     });
     modal.present();
   }

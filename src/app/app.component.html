@@ -1,6 +1,9 @@
 <div class="app-container" [ngClass]="{ 'pc-mobile-view': isPcBrowser }">
   <ion-app [ngClass]="{ pwa: isPWA }">
-    <ion-router-outlet [swipeGesture]="swipeEnable"></ion-router-outlet>
+    <ion-router-outlet
+      [swipeGesture]="swipeEnable"
+      [animation]="routerAnimation"
+    ></ion-router-outlet>
   </ion-app>
   <div tip-box>
     @for (tip of tipList; track tip) {

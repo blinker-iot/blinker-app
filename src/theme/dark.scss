@@ -1,0 +1,74 @@
+// Blinker dark theme. ViewService applies `.dark` after user selection.
+html.dark,
+body.dark {
+  color-scheme: dark;
+
+  --ion-color-primary: #0a84ff;
+  --ion-color-primary-rgb: 10, 132, 255;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #0974e0;
+  --ion-color-primary-tint: #2390ff;
+
+  --ion-color-secondary: #53b8ff;
+  --ion-color-secondary-rgb: 83, 184, 255;
+  --ion-color-secondary-contrast: #071b2e;
+  --ion-color-secondary-contrast-rgb: 7, 27, 46;
+  --ion-color-secondary-shade: #49a2e0;
+  --ion-color-secondary-tint: #64bfff;
+
+  --ion-color-tertiary: #168bff;
+  --ion-color-tertiary-rgb: 22, 139, 255;
+  --ion-color-tertiary-contrast: #071b2e;
+  --ion-color-tertiary-contrast-rgb: 7, 27, 46;
+  --ion-color-tertiary-shade: #137ae0;
+  --ion-color-tertiary-tint: #2d97ff;
+
+  --ion-color-dark: #e9eef7;
+  --ion-color-dark-rgb: 233, 238, 247;
+  --ion-color-dark-contrast: #071b2e;
+  --ion-color-dark-contrast-rgb: 7, 27, 46;
+  --ion-color-dark-shade: #cdd1d9;
+  --ion-color-dark-tint: #ebf0f8;
+
+  --ion-color-medium: #aab9cc;
+  --ion-color-medium-rgb: 170, 185, 204;
+  --ion-color-medium-contrast: #071b2e;
+  --ion-color-medium-contrast-rgb: 7, 27, 46;
+  --ion-color-medium-shade: #96a3b4;
+  --ion-color-medium-tint: #b3c0d1;
+
+  --ion-color-light: #1a344d;
+  --ion-color-light-rgb: 26, 52, 77;
+  --ion-color-light-contrast: #e9eef7;
+  --ion-color-light-contrast-rgb: 233, 238, 247;
+  --ion-color-light-shade: #172e44;
+  --ion-color-light-tint: #31485f;
+
+  --ion-background-color: #071b2e;
+  --ion-background-color-rgb: 7, 27, 46;
+  --ion-text-color: #f3f7fc;
+  --ion-text-color-rgb: 243, 247, 252;
+  --ion-card-background: #102b43;
+  --ion-card-color: #f3f7fc;
+  --ion-item-background: #102b43;
+  --ion-toolbar-background: rgba(7, 27, 46, 0.9);
+  --ion-toolbar-color: #ffffff;
+  --ion-tab-bar-background: rgba(7, 27, 46, 0.94);
+  --ion-tab-bar-color: #8ea1b8;
+  --ion-tab-bar-color-selected: #0a84ff;
+  --ion-border-color: #2c465f;
+
+  --blinker-bg: #071b2e;
+  --blinker-bg-elevated: #0b2238;
+  --blinker-surface: #102b43;
+  --blinker-surface-muted: #17334c;
+  --blinker-surface-active: #0f395f;
+  --blinker-text-primary: #f3f7fc;
+  --blinker-text-secondary: #b4c0cf;
+  --blinker-text-tertiary: #8193a9;
+  --blinker-border: #2c465f;
+  --blinker-divider: rgba(160, 184, 208, 0.16);
+  --blinker-shadow: 0 12px 36px rgba(0, 0, 0, 0.26);
+  --blinker-shadow-soft: 0 5px 20px rgba(0, 0, 0, 0.18);
+}

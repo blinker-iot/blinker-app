@@ -13,11 +13,19 @@ import { App } from "@capacitor/app";
 import { StatusBar, Style } from "@capacitor/status-bar";
 // import { ScreenOrientation,OrientationType } from '@capacitor/screen-orientation';
 import { AndroidShortcuts } from "capacitor-android-shortcuts";
+import {
+  AppTheme,
+  applyThemeToDocument,
+  readStoredTheme,
+  saveTheme,
+} from "../theme/theme";
 
 @Injectable({
   providedIn: "root",
 })
 export class ViewService {
+  private activeTheme: AppTheme = "light";
+
   viewMode = "home";
   swipeEnable = true;
   menuSwipeEnable = false;
@@ -43,7 +51,9 @@ export class ViewService {
     private router: Router,
     private modalCtrl: ModalController,
     private ngzone: NgZone,
-  ) { }
+  ) {
+    this.initializeTheme();
+  }
 
   async init() {
     this.listenBackButton();
@@ -54,14 +64,39 @@ export class ViewService {
     this.getStatusBarHeight();
   }
 
-  themeToggle = false;
-  initializeDarkTheme(isDark) {
-    this.themeToggle = isDark;
-    this.toggleDarkTheme(isDark);
+  get theme(): AppTheme {
+    return this.activeTheme;
   }
 
-  toggleDarkTheme(shouldAdd) {
-    document.body.classList.toggle("dark", shouldAdd);
+  get themeToggle(): boolean {
+    return this.activeTheme === "dark";
+  }
+
+  initializeTheme(): void {
+    this.applyTheme(readStoredTheme());
+  }
+
+  setTheme(theme: AppTheme): void {
+    this.applyTheme(theme);
+    saveTheme(theme);
+  }
+
+  initializeDarkTheme(isDark: boolean): void {
+    this.setTheme(isDark ? "dark" : "light");
+  }
+
+  toggleDarkTheme(shouldAdd: boolean): void {
+    this.setTheme(shouldAdd ? "dark" : "light");
+  }
+
+  private applyTheme(theme: AppTheme): void {
+    this.activeTheme = theme;
+    const isDark = theme === "dark";
+    applyThemeToDocument(theme);
+
+    if (this.platform.is("hybrid")) {
+      void StatusBar.setStyle({ style: isDark ? Style.Light : Style.Dark });
+    }
   }
 
   listenBackButton() {

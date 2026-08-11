@@ -36,5 +36,64 @@
       </div>
     </section>
     }
+
+    <div class="section-label appearance-section-label">
+      {{ 'SETTINGS.APPEARANCE' | translate }}
+    </div>
+
+    <section class="settings-card" aria-labelledby="theme-heading">
+      <div class="card-heading">
+        <div>
+          <h2 id="theme-heading">{{ 'SETTINGS.THEME' | translate }}</h2>
+          <p>{{ 'SETTINGS.THEME_HINT' | translate }}</p>
+        </div>
+        <i class="fa-light fa-moon-over-sun" aria-hidden="true"></i>
+      </div>
+
+      <div class="theme-options" role="radiogroup" [attr.aria-label]="'SETTINGS.THEME' | translate">
+        <button type="button" class="theme-option" [class.selected]="currentTheme === 'light'" role="radio"
+          [attr.aria-checked]="currentTheme === 'light'" (click)="selectTheme('light')">
+          <div class="theme-preview preview-light" aria-hidden="true">
+            <span class="preview-header"></span>
+            <span class="preview-card preview-card-main"></span>
+            <span class="preview-card preview-card-small"></span>
+            <span class="preview-nav"><b></b><b></b><b></b></span>
+          </div>
+          <span class="option-copy">
+            <span class="option-title">
+              <i class="fa-light fa-sun" aria-hidden="true"></i>
+              {{ 'SETTINGS.LIGHT' | translate }}
+            </span>
+            <span class="option-description">{{ 'SETTINGS.LIGHT_DESC' | translate }}</span>
+          </span>
+          <i class="selection-icon fa-solid" [class.fa-circle-check]="currentTheme === 'light'"
+            [class.fa-circle]="currentTheme !== 'light'" aria-hidden="true"></i>
+        </button>
+
+        <button type="button" class="theme-option" [class.selected]="currentTheme === 'dark'" role="radio"
+          [attr.aria-checked]="currentTheme === 'dark'" (click)="selectTheme('dark')">
+          <div class="theme-preview preview-dark" aria-hidden="true">
+            <span class="preview-header"></span>
+            <span class="preview-card preview-card-main"></span>
+            <span class="preview-card preview-card-small"></span>
+            <span class="preview-nav"><b></b><b></b><b></b></span>
+          </div>
+          <span class="option-copy">
+            <span class="option-title">
+              <i class="fa-light fa-moon" aria-hidden="true"></i>
+              {{ 'SETTINGS.DARK' | translate }}
+            </span>
+            <span class="option-description">{{ 'SETTINGS.DARK_DESC' | translate }}</span>
+          </span>
+          <i class="selection-icon fa-solid" [class.fa-circle-check]="currentTheme === 'dark'"
+            [class.fa-circle]="currentTheme !== 'dark'" aria-hidden="true"></i>
+        </button>
+      </div>
+    </section>
+
+    <p class="saved-hint">
+      <i class="fa-light fa-circle-info" aria-hidden="true"></i>
+      {{ 'SETTINGS.SAVED_HINT' | translate }}
+    </p>
   </main>
 </ion-content>

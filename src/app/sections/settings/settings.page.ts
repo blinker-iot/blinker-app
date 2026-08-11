@@ -2,11 +2,13 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 import { TranslatePipe } from '@ngx-translate/core';
+import { ViewService } from '../../core/services/view.service';
 import {
   LanguageOption,
   TranslationService,
 } from '../../core/services/translation.service';
 import { LanguageCode } from '../../core/services/translation.loader';
+import { AppTheme } from '../../core/theme/theme';
 
 @Component({
   selector: 'app-settings',
@@ -20,17 +22,26 @@ export class SettingsPage {
   readonly languageList: readonly LanguageOption[];
   readonly defaultBackHref: string;
 
+  get currentTheme(): AppTheme {
+    return this.viewService.theme;
+  }
+
   get currentLanguage(): LanguageCode {
     return this.translationService.getSelectedLanguage();
   }
 
   constructor(
+    private viewService: ViewService,
     private translationService: TranslationService,
     route: ActivatedRoute
   ) {
     this.languageList = this.translationService.getLanguageList();
     this.defaultBackHref =
       route.snapshot.queryParamMap.get('from') === 'login' ? '/login' : '/home';
+  }
+
+  selectTheme(theme: AppTheme): void {
+    this.viewService.setTheme(theme);
   }
 
   selectLanguage(language: LanguageCode): void {

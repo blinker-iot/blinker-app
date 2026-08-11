@@ -31,6 +31,49 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  background: var(--blinker-bg);
+  color: var(--blinker-text-primary);
+}
+
+ion-app,
+ion-content,
+ion-toolbar,
+ion-tab-bar,
+ion-item,
+ion-card,
+ion-modal,
+ion-alert,
+ion-action-sheet {
+  transition:
+    color 180ms cubic-bezier(.2, 0, 0, 1),
+    background-color 360ms cubic-bezier(.2, 0, 0, 1),
+    border-color 360ms cubic-bezier(.2, 0, 0, 1);
+}
+
+ion-header ion-toolbar {
+  --border-color: var(--blinker-divider);
+  backdrop-filter: var(--blinker-nav-blur);
+  -webkit-backdrop-filter: var(--blinker-nav-blur);
+}
+
+ion-tab-bar {
+  --border: 1px solid var(--blinker-divider);
+  backdrop-filter: var(--blinker-nav-blur);
+  -webkit-backdrop-filter: var(--blinker-nav-blur);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ion-app,
+  ion-content,
+  ion-toolbar,
+  ion-tab-bar,
+  ion-item,
+  ion-card,
+  ion-modal,
+  ion-alert,
+  ion-action-sheet {
+    transition: none;
+  }
 }
 
 // 确保在PC移动端视图中，页面内容不会出现滚动条

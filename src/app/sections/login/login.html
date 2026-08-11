@@ -1,9 +1,18 @@
-<ion-header>
+<ion-header class="ion-no-border">
   <ion-toolbar>
-    <blinker-lang-selector></blinker-lang-selector>
+    <ion-buttons slot="end" class="login-actions">
+      <ion-button
+        fill="clear"
+        class="settings-button"
+        aria-label="打开设置"
+        (click)="openSettings()"
+      >
+        <i class="fa-light fa-gear" aria-hidden="true"></i>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
-<ion-content>
+<ion-content [fullscreen]="true">
   <div class="login-container">
     <div class="glow-orb orb-1"></div>
     <div class="glow-orb orb-2"></div>

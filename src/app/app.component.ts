@@ -29,6 +29,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { environment } from '../environments/environment';
 import { BTipComponent } from './core/components/b-tip/b-tip.component';
 import { BToastComponent } from './core/components/b-toast/b-toast.component';
+import { headerIconTransitionAnimation } from './core/animations/header-icon-transition.animation';
 
 @Component({
   selector: 'app-root',
@@ -47,6 +48,7 @@ import { BToastComponent } from './core/components/b-toast/b-toast.component';
 export class AppComponent implements OnInit {
   isPWA = false;
   isPcBrowser = false;
+  readonly routerAnimation = headerIconTransitionAnimation;
 
   get swipeEnable() {
     return this.viewService.swipeEnable;

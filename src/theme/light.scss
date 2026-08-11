@@ -1,0 +1,103 @@
+// Blinker light theme. This is the default application theme.
+:root,
+html.light,
+body.light {
+  color-scheme: light;
+
+  /** Brand **/
+  --ion-color-primary: #087eff;
+  --ion-color-primary-rgb: 8, 126, 255;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #076fe0;
+  --ion-color-primary-tint: #218bff;
+
+  --ion-color-secondary: #35b9f2;
+  --ion-color-secondary-rgb: 53, 185, 242;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #2fa3d5;
+  --ion-color-secondary-tint: #49c0f3;
+
+  --ion-color-tertiary: #0876ef;
+  --ion-color-tertiary-rgb: 8, 118, 239;
+  --ion-color-tertiary-contrast: #ffffff;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #0768d2;
+  --ion-color-tertiary-tint: #2184f1;
+
+  /** Feedback **/
+  --ion-color-success: #22c55e;
+  --ion-color-success-rgb: 34, 197, 94;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #1ead53;
+  --ion-color-success-tint: #38cb6e;
+
+  --ion-color-warning: #f59e0b;
+  --ion-color-warning-rgb: 245, 158, 11;
+  --ion-color-warning-contrast: #111827;
+  --ion-color-warning-contrast-rgb: 17, 24, 39;
+  --ion-color-warning-shade: #d88b0a;
+  --ion-color-warning-tint: #f6a824;
+
+  --ion-color-danger: #ef4444;
+  --ion-color-danger-rgb: 239, 68, 68;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #d23c3c;
+  --ion-color-danger-tint: #f15757;
+
+  /** Neutral Ionic colors **/
+  --ion-color-dark: #10213a;
+  --ion-color-dark-rgb: 16, 33, 58;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #0e1d33;
+  --ion-color-dark-tint: #28374e;
+
+  --ion-color-medium: #6b7280;
+  --ion-color-medium-rgb: 107, 114, 128;
+  --ion-color-medium-contrast: #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #5e6471;
+  --ion-color-medium-tint: #7a808d;
+
+  --ion-color-light: #eef2f7;
+  --ion-color-light-rgb: 238, 242, 247;
+  --ion-color-light-contrast: #111827;
+  --ion-color-light-contrast-rgb: 17, 24, 39;
+  --ion-color-light-shade: #d1d5d9;
+  --ion-color-light-tint: #f0f4f8;
+
+  /** App surfaces **/
+  --ion-background-color: #f7f9fc;
+  --ion-background-color-rgb: 247, 249, 252;
+  --ion-text-color: #10213a;
+  --ion-text-color-rgb: 16, 33, 58;
+  --ion-card-background: #ffffff;
+  --ion-card-color: #10213a;
+  --ion-item-background: #ffffff;
+  --ion-toolbar-background: rgba(247, 249, 252, 0.92);
+  --ion-toolbar-color: #10213a;
+  --ion-tab-bar-background: rgba(255, 255, 255, 0.94);
+  --ion-tab-bar-color: #6b7280;
+  --ion-tab-bar-color-selected: #087eff;
+  --ion-border-color: #d9e1ec;
+
+  --blinker-bg: #f7f9fc;
+  --blinker-bg-elevated: #fbfcfe;
+  --blinker-surface: #ffffff;
+  --blinker-surface-muted: #f0f4f9;
+  --blinker-surface-active: #e8f2ff;
+  --blinker-text-primary: #10213a;
+  --blinker-text-secondary: #6f7b91;
+  --blinker-text-tertiary: #98a4b7;
+  --blinker-border: #d9e1ec;
+  --blinker-divider: #e8edf4;
+  --blinker-shadow: 0 10px 32px rgba(17, 24, 39, 0.07);
+  --blinker-shadow-soft: 0 4px 18px rgba(17, 24, 39, 0.05);
+  --blinker-nav-blur: blur(18px) saturate(1.35);
+  --blinker-radius-card: 16px;
+  --blinker-radius-control: 12px;
+}
