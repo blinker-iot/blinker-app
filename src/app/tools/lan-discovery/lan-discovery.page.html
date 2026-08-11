@@ -1,0 +1,189 @@
+<ion-header class="page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button class="nav-back" aria-label="返回" (click)="goBack()">
+        <i class="fa-light fa-chevron-left"></i>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>局域网发现</ion-title>
+    @if (services.length) {
+      <ion-buttons slot="end">
+        <ion-button class="clear-action" fill="clear" (click)="clearResults()">清空</ion-button>
+      </ion-buttons>
+    }
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <main class="discovery-page">
+    <section class="hero-card">
+      <div class="hero-icon"><i class="fa-light fa-radar"></i></div>
+      <div>
+        <span class="eyebrow">MDNS · BONJOUR · ZEROCONF</span>
+        <h1>发现同一网络中的服务</h1>
+        <p>查找设备主动广播的地址、端口和 TXT 元数据，无需知道设备 IP。</p>
+      </div>
+    </section>
+
+    @if (!nativeSupported) {
+      <div class="notice warning">
+        <i class="fa-light fa-mobile-screen-button"></i>
+        <div>
+          <strong>请在手机 App 中使用</strong>
+          <span>浏览器可预览页面，但无法直接访问局域网 mDNS 多播。</span>
+        </div>
+      </div>
+    } @else if (!networkStatus.connected || networkStatus.connectionType === 'cellular') {
+      <div class="notice warning">
+        <i class="fa-light fa-wifi-exclamation"></i>
+        <div>
+          <strong>{{ networkLabel }}</strong>
+          <span>请连接到目标设备所在的 Wi-Fi 后再开始发现。</span>
+        </div>
+      </div>
+    }
+
+    <section class="control-card">
+      <div class="section-title">
+        <div>
+          <span>发现范围</span>
+          <h2>选择服务类型</h2>
+        </div>
+        <span class="network-chip" [class.offline]="!canStartScan">
+          <i [class]="networkStatus.connected ? 'fa-solid fa-circle' : 'fa-regular fa-circle'"></i>
+          {{ networkLabel }}
+        </span>
+      </div>
+
+      <div class="type-presets" aria-label="常用服务类型">
+        @for (preset of serviceTypes; track preset.type) {
+          <button
+            type="button"
+            [class.active]="serviceType === preset.type"
+            [disabled]="isScanning"
+            (click)="selectType(preset.type)"
+          >
+            <i [class]="'fa-light ' + preset.icon"></i>
+            {{ preset.label }}
+          </button>
+        }
+      </div>
+
+      <label class="type-input" for="service-type">
+        <span>mDNS 服务类型</span>
+        <div class="input-shell">
+          <i class="fa-light fa-code"></i>
+          <input
+            id="service-type"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="例如 _http._tcp."
+            [(ngModel)]="serviceType"
+            [disabled]="isScanning"
+          />
+        </div>
+      </label>
+
+      <button type="button" class="scan-button" [class.scanning]="isScanning" [disabled]="!isScanning && !canStartScan" (click)="toggleScan()">
+        <span class="scan-button-icon">
+          <i [class]="isScanning ? 'fa-light fa-stop' : 'fa-light fa-radar'"></i>
+        </span>
+        <span>
+          <strong>{{ isScanning ? '停止发现' : '开始发现' }}</strong>
+          <small>{{ isScanning ? scanElapsed + ' 秒 · ' + services.length + ' 项在线' : typeLabel(serviceType) + ' · ' + domain }}</small>
+        </span>
+        @if (isScanning) { <i class="scan-ripple" aria-hidden="true"></i> }
+      </button>
+
+      <div class="scan-status" [class.active]="isScanning" [class.error]="!!errorMessage">
+        <i [class]="errorMessage ? 'fa-solid fa-circle-exclamation' : isScanning ? 'fa-solid fa-circle' : 'fa-light fa-circle-info'"></i>
+        <span>{{ errorMessage || statusMessage }}</span>
+      </div>
+    </section>
+
+    <section class="results-section">
+      <div class="results-heading">
+        <div>
+          <span>发现结果</span>
+          <h2>{{ services.length }} 项服务</h2>
+        </div>
+        @if (services.length > 1) {
+          <label class="result-search">
+            <i class="fa-light fa-magnifying-glass"></i>
+            <input type="search" inputmode="search" autocomplete="off" placeholder="筛选" [(ngModel)]="searchKeyword" />
+            @if (searchKeyword) {
+              <button type="button" aria-label="清除筛选" (click)="searchKeyword = ''">
+                <i class="fa-solid fa-circle-xmark"></i>
+              </button>
+            }
+          </label>
+        }
+      </div>
+
+      <div class="service-list">
+        @for (service of visibleServices; track service.id) {
+          <article class="service-card" [class.expanded]="isExpanded(service)">
+            <button type="button" class="service-main" (click)="toggleDetails(service)">
+              <span class="service-icon"><i [class]="serviceIcon(service)"></i></span>
+              <span class="service-copy">
+                <strong>{{ service.name }}</strong>
+                <small>{{ primaryAddress(service) }}{{ service.port ? ':' + service.port : '' }}</small>
+              </span>
+              <span class="service-state" [class.resolving]="!service.resolved">
+                <i class="fa-solid fa-circle"></i>{{ service.resolved ? '在线' : '解析中' }}
+              </span>
+              <i class="fa-light fa-chevron-down expand-icon"></i>
+            </button>
+
+            @if (isExpanded(service)) {
+              <div class="service-details">
+                <dl>
+                  <div><dt>类型</dt><dd>{{ service.type }}{{ service.domain }}</dd></div>
+                  <div><dt>主机名</dt><dd>{{ service.hostname || '—' }}</dd></div>
+                  <div><dt>IPv4</dt><dd>{{ service.ipv4Addresses.join(', ') || '—' }}</dd></div>
+                  <div><dt>IPv6</dt><dd>{{ service.ipv6Addresses.join(', ') || '—' }}</dd></div>
+                  <div><dt>端口</dt><dd>{{ service.port || '—' }}</dd></div>
+                </dl>
+
+                @if (txtEntries(service).length) {
+                  <div class="txt-records">
+                    <span>TXT 记录</span>
+                    <div>
+                      @for (entry of txtEntries(service); track entry.key) {
+                        <code><b>{{ entry.key }}</b>=<span>{{ entry.value }}</span></code>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <div class="detail-actions">
+                  @if (catalogType(service)) {
+                    <button type="button" class="primary-detail" (click)="discoverCatalogType(service)">
+                      <i class="fa-light fa-radar"></i>发现此类型
+                    </button>
+                  } @else if (endpoint(service)) {
+                    <button type="button" class="primary-detail" (click)="copyEndpoint(service)">
+                      <i class="fa-light fa-copy"></i>复制{{ serviceUrl(service) ? '访问地址' : '服务地址' }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </article>
+        } @empty {
+          <div class="empty-state">
+            <span class="empty-radar" [class.scanning]="isScanning"><i class="fa-light fa-radar"></i></span>
+            <strong>{{ searchKeyword ? '没有匹配的服务' : isScanning ? '正在监听设备广播…' : '还没有发现结果' }}</strong>
+            <p>{{ searchKeyword ? '换个名称、IP 或 TXT 关键字试试' : isScanning ? '保持手机与设备处于同一局域网' : '选择服务类型并点击“开始发现”' }}</p>
+          </div>
+        }
+      </div>
+    </section>
+
+    <div class="protocol-note">
+      <i class="fa-light fa-circle-info"></i>
+      <p><strong>关于发现范围</strong><span>本工具发现主动广播 mDNS / Bonjour 的服务；未广播服务的普通设备不会出现在结果中。</span></p>
+    </div>
+  </main>
+</ion-content>
