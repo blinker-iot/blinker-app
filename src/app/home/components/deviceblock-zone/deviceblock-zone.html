@@ -1,9 +1,22 @@
 <div #refreshZone></div>
 <div class="device-list-container" #deviceZone>
-  <deviceblock-list
-    [roomName]="selectedRoomName"
-    (swipeEnabled)="swipeEnabledChanged($event)"
-    (refresherEnabled)="refresherEnabledChanged($event)"
+  <div class="room-slide room-slide-current" #currentSlide>
+    <deviceblock-list
+      [roomName]="selectedRoomName"
+      (swipeEnabled)="swipeEnabledChanged($event)"
+      (refresherEnabled)="refresherEnabledChanged($event)"
+    >
+    </deviceblock-list>
+  </div>
+
+  @if (incomingRoomId !== null) {
+  <div
+    class="room-slide room-slide-incoming"
+    [class.room-slide-from-left]="incomingDirection === -1"
+    #incomingSlide
+    aria-hidden="true"
   >
-  </deviceblock-list>
+    <deviceblock-list [roomName]="incomingRoomName"></deviceblock-list>
+  </div>
+  }
 </div>
