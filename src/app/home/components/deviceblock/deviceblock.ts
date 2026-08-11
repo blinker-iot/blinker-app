@@ -1,4 +1,12 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  Input,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
@@ -16,11 +24,31 @@ import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-devi
   selector: 'deviceblock',
   templateUrl: 'deviceblock.html',
   styleUrls: ['deviceblock.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, IonicModule, BDeviceImgComponent],
 })
 export class Deviceblock {
-  @Input() public device: BlinkerDevice;
+  private _device: BlinkerDevice;
+  private deviceSubscription?: Subscription;
+  private activeActionTimer?: number;
+  private waitingForSwitchFeedback = false;
+
+  @Input()
+  set device(device: BlinkerDevice) {
+    this.deviceSubscription?.unsubscribe();
+    this._device = device;
+    this.waitingForSwitchFeedback = false;
+
+    if (!device?.subject) return;
+    this.deviceSubscription = device.subject
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => this.handleDeviceUpdate(event));
+  }
+
+  get device() {
+    return this._device;
+  }
+
   @Input() wide = false;
 
   activeActionKey?: string;
@@ -120,14 +148,29 @@ export class Deviceblock {
     public router: Router,
     public deviceService: DeviceService,
     public userService: UserService,
-    private audio: AudioService
-  ) {}
+    private audio: AudioService,
+    private cd: ChangeDetectorRef,
+    private destroyRef: DestroyRef
+  ) {
+    this.destroyRef.onDestroy(() => {
+      this.deviceSubscription?.unsubscribe();
+      if (typeof this.activeActionTimer !== 'undefined') {
+        window.clearTimeout(this.activeActionTimer);
+      }
+    });
+  }
 
   tapSwitch(e: Event) {
     e.stopPropagation();
     if (!this.showSwitch) return;
     if (this.device.config.isPreview) {
       this.device.data.switch = this.switch ? 'off' : 'on';
+      this.deviceService.notifyDeviceUpdate(
+        this.device,
+        'switch',
+        this.device.data.switch,
+        'local'
+      );
       return;
     }
     if (this.device.config.mode != 'mqtt') return;
@@ -139,8 +182,10 @@ export class Deviceblock {
     } else {
       return;
     }
+    const previousState = this.device.data.switch;
+    this.waitingForSwitchFeedback = true;
+    this.deviceService.beginSwitchWaiting(this.device, previousState);
     this.deviceService.pubMessage(this.device, message);
-    this.waiting();
   }
 
   triggerAction(event: Event, action: DeviceCardActionConfig) {
@@ -148,30 +193,29 @@ export class Deviceblock {
     if (!this.enable) return;
 
     this.activeActionKey = action.key;
-    window.setTimeout(() => {
+    if (typeof this.activeActionTimer !== 'undefined') {
+      window.clearTimeout(this.activeActionTimer);
+    }
+    this.activeActionTimer = window.setTimeout(() => {
+      this.activeActionTimer = undefined;
       if (this.activeActionKey === action.key) this.activeActionKey = undefined;
+      this.cd.markForCheck();
     }, 500);
 
     if (this.device.config.isPreview || !action.command) return;
     this.deviceService.pubMessage(this.device, JSON.stringify(action.command));
   }
 
-  waiting() {
-    //显示等待反馈动画
-    let oldSwitch = this.device.data.switch;
-    this.device.data.switch = 'waiting';
-    let timer;
-    let timer2;
-    timer = window.setInterval(() => {
-      if (this.device.data.switch != 'waiting') {
-        window.clearInterval(timer);
-        window.clearTimeout(timer2);
+  private handleDeviceUpdate(event: { source?: string } | undefined) {
+    if (
+      this.waitingForSwitchFeedback &&
+      this.device?.data?.switch !== 'waiting'
+    ) {
+      this.waitingForSwitchFeedback = false;
+      if (event?.source !== 'switch-timeout') {
         this.audio.switch(this.device.data.switch);
       }
-    }, 20);
-    timer2 = window.setTimeout(() => {
-      window.clearInterval(timer);
-      this.device.data.switch = oldSwitch;
-    }, 3000);
+    }
+    this.cd.markForCheck();
   }
 }

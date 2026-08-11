@@ -25,6 +25,7 @@ import { BlinkerDevice } from '../model/device.model';
 import { NativeService } from './native.service';
 import { NoticeService } from './notice.service';
 import { ToastService } from './toast.service';
+import { DeviceSwitchWaiting } from './device-switch-waiting';
 import mqtt from "mqtt"; 
 
 const DEBUG_MODE = false
@@ -33,6 +34,8 @@ const DEBUG_MODE = false
   providedIn: 'root'
 })
 export class DeviceService {
+
+  private readonly switchWaiting = new DeviceSwitchWaiting();
 
   get uuid() {
     return this.dataService.auth.uuid
@@ -291,7 +294,27 @@ export class DeviceService {
 
   removeLocalDevice(device) {
     delete this.lanDeviceList[device.deviceName];
+    this.notifyDeviceUpdate(device, 'local', false, 'local');
     this.queryDevice(device);
+  }
+
+  notifyDeviceUpdate(
+    device: BlinkerDevice,
+    key: string,
+    value?: unknown,
+    source = 'service'
+  ) {
+    device?.subject?.next({ key, value, source });
+  }
+
+  beginSwitchWaiting(device: BlinkerDevice, previousState: unknown) {
+    this.switchWaiting.begin(device, previousState, (value, source) => {
+      this.notifyDeviceUpdate(device, 'switch', value, source);
+    });
+  }
+
+  private clearSwitchWaitingTimer(device: BlinkerDevice) {
+    this.switchWaiting.complete(device);
   }
 
   // 将消息分发到设备对应的本地存储上
@@ -322,6 +345,7 @@ export class DeviceService {
     // 处理未知数据，将其显示到debug组件中
     if (typeof (data) == 'string' || typeof (data) == "number") {
       this.send2debug(device, 'unknown', data.toString())
+      this.notifyDeviceUpdate(device, 'loaded', undefined, 'device');
       return
     }
     // 处理收到的json数据
@@ -337,6 +361,7 @@ export class DeviceService {
         });
       }
       //缓存数据
+      if (key == "switch") this.clearSwitchWaitingTimer(device);
       device.data[key] = data[key];
       if (key == "vibrate")
         this.nativeService.vibrate(data[key])
@@ -344,7 +369,7 @@ export class DeviceService {
 
     // 显示到degbug窗口
     this.send2debug(device, 'receive', JSON.stringify(data))
-    device.subject.next({ key: 'loaded' });
+    this.notifyDeviceUpdate(device, 'loaded', undefined, 'device');
   }
 
   //搜索本地设备（局域网mdns）
@@ -437,6 +462,7 @@ export class DeviceService {
       let connected: Subscription = this.brokerDataDict[device.config.broker].connected.subscribe(state => {
         if (state) {
           device.data['state'] = 'waiting';
+          this.notifyDeviceUpdate(device, 'state', 'waiting', 'query');
           this.pubMessage(device, `{"get":"state"}`);
           // 如果之前在线，但3秒后，设备没有反馈，那么再发一次心跳，确保设备状态正确查询
           setTimeout(() => {
@@ -447,6 +473,7 @@ export class DeviceService {
             if (device.data.state != "online") {
               device.data.state = "offline";
               device.data['enable'] = false
+              this.notifyDeviceUpdate(device, 'state', 'offline', 'timeout');
             }
           }, 6000);
           setTimeout(() => {
@@ -489,7 +516,15 @@ export class DeviceService {
         this.disconnectDevice(device);
         return resolve(false);
       }, 6000);
-      if (device.data.state != "disconnected") device.data.state = "disconnected";
+      if (device.data.state != "disconnected") {
+        device.data.state = "disconnected";
+        this.notifyDeviceUpdate(
+          device,
+          'state',
+          'disconnected',
+          'local'
+        );
+      }
       if (device.config.mode == "ble") {
         // if (! await this.permissionService.CheckBleAvailability()) return resolve(false);
         if (mode == "show")
