@@ -52,6 +52,12 @@
     "LANGUAGE_HINT": "アプリのインターフェース言語を選択してください",
     "SAVED_HINT": "選択は保存され、次回起動時に復元されます。"
   },
+  "NAVIGATION": {
+    "DEVICE": "デバイス",
+    "COMMUNITY": "見つける",
+    "TOOLS": "ツール",
+    "PROFILE": "マイページ"
+  },
   "HOME": {
     "WELCOME": "blinker の旅を始めましょう",
     "ADD_DEVICE": "デバイスを追加"

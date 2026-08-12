@@ -52,6 +52,12 @@
     "LANGUAGE_HINT": "앱 인터페이스에 사용할 언어를 선택하세요",
     "SAVED_HINT": "선택 내용은 저장되어 다음 실행 시 복원됩니다."
   },
+  "NAVIGATION": {
+    "DEVICE": "기기",
+    "COMMUNITY": "둘러보기",
+    "TOOLS": "도구",
+    "PROFILE": "내 정보"
+  },
   "HOME": {
     "WELCOME": "blinker 여정을 시작하세요",
     "ADD_DEVICE": "기기 추가"

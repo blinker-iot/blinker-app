@@ -52,6 +52,12 @@
     "LANGUAGE_HINT": "Wählen Sie die Sprache der App-Oberfläche",
     "SAVED_HINT": "Ihre Auswahl wird gespeichert und beim nächsten Start wiederhergestellt."
   },
+  "NAVIGATION": {
+    "DEVICE": "Geräte",
+    "COMMUNITY": "Entdecken",
+    "TOOLS": "Werkzeuge",
+    "PROFILE": "Profil"
+  },
   "HOME": {
     "WELCOME": "Starten Sie Ihre Blinker-Reise",
     "ADD_DEVICE": "Gerät hinzufügen"

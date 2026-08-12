@@ -52,6 +52,12 @@
     "LANGUAGE_HINT": "اختر لغة واجهة التطبيق",
     "SAVED_HINT": "يتم حفظ اختيارك واستعادته عند التشغيل التالي."
   },
+  "NAVIGATION": {
+    "DEVICE": "الأجهزة",
+    "COMMUNITY": "استكشاف",
+    "TOOLS": "الأدوات",
+    "PROFILE": "حسابي"
+  },
   "HOME": {
     "WELCOME": "ابدأ رحلتك مع blinker",
     "ADD_DEVICE": "إضافة جهاز"

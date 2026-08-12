@@ -52,6 +52,12 @@
     "LANGUAGE_HINT": "Choose the language used by the app interface",
     "SAVED_HINT": "Your choice is saved and restored on the next launch."
   },
+  "NAVIGATION": {
+    "DEVICE": "Devices",
+    "COMMUNITY": "Discover",
+    "TOOLS": "Tools",
+    "PROFILE": "Me"
+  },
   "HOME": {
     "WELCOME": "Start your blinker journey",
     "ADD_DEVICE": "Add Device"

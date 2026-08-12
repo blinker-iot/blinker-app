@@ -52,6 +52,12 @@
     "LANGUAGE_HINT": "Choisissez la langue de l'interface de l'application",
     "SAVED_HINT": "Votre choix est enregistré et restauré au prochain lancement."
   },
+  "NAVIGATION": {
+    "DEVICE": "Appareils",
+    "COMMUNITY": "Découvrir",
+    "TOOLS": "Outils",
+    "PROFILE": "Profil"
+  },
   "HOME": {
     "WELCOME": "Commencez votre aventure blinker",
     "ADD_DEVICE": "Ajouter un appareil"

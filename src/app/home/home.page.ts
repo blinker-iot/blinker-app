@@ -15,6 +15,7 @@ import {
   IonTabs,
 } from '@ionic/angular/standalone';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ViewService } from '../core/services/view.service';
 import { TabDeviceComponent } from './components/tab-device/tab-device';
 import { TabCommunityComponent } from './components/tab-community/tab-community';
@@ -35,6 +36,7 @@ import { TabProfileComponent } from './components/tab-profile/tab-profile';
     IonTabButton,
     IonLabel,
     RouterModule,
+    TranslatePipe,
     TabDeviceComponent,
     TabCommunityComponent,
     TabToolsComponent,

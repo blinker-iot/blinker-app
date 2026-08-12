@@ -52,6 +52,12 @@
     "LANGUAGE_HINT": "選擇應用程式介面使用的語言",
     "SAVED_HINT": "選擇會自動儲存，並在下次啟動時繼續使用。"
   },
+  "NAVIGATION": {
+    "DEVICE": "設備",
+    "COMMUNITY": "發現",
+    "TOOLS": "工具",
+    "PROFILE": "我的"
+  },
   "HOME": {
     "WELCOME": "開始你的點燈之旅",
     "ADD_DEVICE": "新增設備"
