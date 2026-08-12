@@ -2,9 +2,6 @@
   <ion-toolbar>
     <ion-title>用户中心</ion-title>
     <ion-buttons slot="end">
-      <ion-button class="header-action" aria-label="设置" (click)="goto('/settings')">
-        <i class="fa-light fa-gear"></i>
-      </ion-button>
       <ion-button class="header-action" aria-label="消息中心" (click)="goto('/message')">
         <i class="fa-light fa-message-dots"></i>
         <span class="notice-dot"></span>
@@ -27,41 +24,15 @@
       </div>
       <div class="info">
         <div class="name">{{ userName }}</div>
-        <div class="membership">点灯用户</div>
+        <div class="membership">Pro Plan ( 2026/12/1 过期 )</div>
       </div>
       <i class="fa-light fa-chevron-right profile-arrow"></i>
     </button>
 
-    <section class="summary-grid" aria-label="账户概览">
-      <button type="button" (click)="goto('/room-manager')">
-        <i class="fa-light fa-house"></i>
-        <span class="summary-label">家庭</span>
-        <strong>{{ roomNum }} <small>个</small></strong>
-      </button>
-      <button type="button">
-        <i class="fa-light fa-server"></i>
-        <span class="summary-label">设备</span>
-        <strong>{{ deviceNum }} <small>台</small></strong>
-      </button>
-      <button type="button" (click)="goto('/message')">
-        <i class="fa-light fa-message-lines"></i>
-        <span class="summary-label">消息</span>
-        <strong>4 <small>条</small></strong>
-        <span class="summary-dot"></span>
-      </button>
-    </section>
-
-    <app-menu-list
-      ariaLabel="账户功能"
-      [items]="primaryMenuItems"
-      (itemSelected)="selectMenuItem($event)"
-    ></app-menu-list>
-
-    <app-menu-list
-      ariaLabel="设置与账户"
-      [items]="secondaryMenuItems"
-      (itemSelected)="selectMenuItem($event)"
-    ></app-menu-list>
+    @for (menuGroup of menuGroups; track menuGroup.id) {
+    <app-menu-list [ariaLabel]="menuGroup.ariaLabel" [items]="menuGroup.items"
+      (itemSelected)="selectMenuItem($event)"></app-menu-list>
+    }
 
     <div class="profile-version">
       <span>版本 {{ currentVersion || '2.4.1' }}</span>

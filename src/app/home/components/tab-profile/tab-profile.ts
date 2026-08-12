@@ -10,6 +10,7 @@ import {
   MenuListComponent,
   MenuListItem,
 } from '../menu-list/menu-list';
+import { createProfileMenuGroups } from './profile-menu.config';
 
 @Component({
   selector: 'app-tab-profile',
@@ -26,57 +27,13 @@ import {
   ],
 })
 export class TabProfileComponent {
-  get primaryMenuItems(): MenuListItem[] {
-    return [
-      {
-        id: 'family',
-        title: '家庭管理',
-        icon: 'fa-house',
-        value: `${this.roomNum} 个家庭`,
-        route: '/room-manager',
-      },
-      {
-        id: 'automation',
-        title: '自动化',
-        icon: 'fa-bullseye-pointer',
-        value: `${this.sceneNum} 个场景`,
-        route: '/scene-manager',
-      },
-      {
-        id: 'sharing',
-        title: '设备共享',
-        icon: 'fa-user-group',
-        value: `已共享 ${this.sharedDeviceNum} 台设备`,
-      },
-      {
-        id: 'voice-assistant',
-        title: '语音助手',
-        icon: 'fa-microphone',
-        value: '小度、天猫精灵',
-      },
-    ];
+  get menuGroups() {
+    return createProfileMenuGroups({
+      roomNum: this.roomNum,
+      sceneNum: this.sceneNum,
+      sharedDeviceNum: this.sharedDeviceNum,
+    });
   }
-
-  readonly secondaryMenuItems: MenuListItem[] = [
-    {
-      id: 'settings',
-      title: '设置',
-      icon: 'fa-gear',
-      route: '/settings',
-    },
-    {
-      id: 'help',
-      title: '帮助与反馈',
-      icon: 'fa-circle-question',
-    },
-    {
-      id: 'logout',
-      title: '退出登录',
-      icon: 'fa-arrow-right-from-bracket',
-      danger: true,
-      showChevron: false,
-    },
-  ];
 
   get user() {
     return this.dataService.user;
@@ -88,13 +45,6 @@ export class TabProfileComponent {
 
   get avatar() {
     return this.user?.avatar || '';
-  }
-
-  get deviceNum() {
-    if (this.dataService.device?.list) {
-      return this.dataService.device.list.length;
-    }
-    return 0;
   }
 
   get roomNum() {
