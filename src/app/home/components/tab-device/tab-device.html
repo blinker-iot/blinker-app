@@ -5,14 +5,20 @@
       <ion-button class="header-action notice-button" aria-label="消息中心" [routerLink]="['/message']">
         <i class="fa-light fa-bell"></i>
       </ion-button>
-      <ion-button class="header-action add-button" aria-label="添加设备" [routerLink]="['/adddevice/DiyArduino']">
+      <ion-button
+        #deviceAddMenuTrigger
+        id="device-add-menu-trigger"
+        class="header-action add-button"
+        aria-label="打开添加菜单"
+        aria-haspopup="menu"
+      >
         <i class="fa-light fa-plus"></i>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content fullscreen="true">
+<ion-content #deviceContent fullscreen="true">
   <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
 
   <div slot="fixed" class="room-list-fixed">
@@ -39,3 +45,48 @@
     }
   </div>
 </ion-content>
+
+<ion-popover
+  #deviceAddMenu
+  class="device-add-popover"
+  trigger="device-add-menu-trigger"
+  triggerAction="click"
+  reference="trigger"
+  side="bottom"
+  alignment="end"
+  [dismissOnSelect]="true"
+  [showBackdrop]="true"
+  (willPresent)="scheduleAddMenuPosition()"
+  (didPresent)="scheduleAddMenuPosition()"
+>
+  <ng-template>
+    <nav class="device-add-menu" role="menu" aria-label="添加">
+      <button type="button" role="menuitem" [routerLink]="['/adddevice/DiyArduino']">
+        <span class="menu-icon"><i class="fa-light fa-router"></i></span>
+        <span class="menu-copy">
+          <strong>添加新设备</strong>
+          <small>连接并配置智能设备</small>
+        </span>
+        <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
+      </button>
+
+      <button type="button" role="menuitem" [routerLink]="['/room-manager']">
+        <span class="menu-icon"><i class="fa-light fa-layer-group"></i></span>
+        <span class="menu-copy">
+          <strong>添加区域</strong>
+          <small>添加设备所在区域</small>
+        </span>
+        <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
+      </button>
+
+      <button type="button" role="menuitem">
+        <span class="menu-icon"><i class="fa-light fa-puzzle-piece"></i></span>
+        <span class="menu-copy">
+          <strong>添加组件</strong>
+          <small>自定义设备控制面板</small>
+        </span>
+        <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
+      </button>
+    </nav>
+  </ng-template>
+</ion-popover>

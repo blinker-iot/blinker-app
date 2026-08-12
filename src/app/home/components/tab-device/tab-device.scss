@@ -12,6 +12,96 @@ ion-content {
   --overflow: auto;
 }
 
+ion-popover.device-add-popover {
+  --width: 218px;
+  --max-width: calc(100vw - 28px);
+  --offset-y: 2px;
+  --background: var(--blinker-surface);
+  --backdrop-opacity: 0.08;
+
+  &::part(content) {
+    overflow: hidden;
+    border: 1px solid var(--blinker-border);
+    border-radius: 18px;
+    background: var(--blinker-surface);
+    box-shadow: var(--blinker-shadow);
+  }
+}
+
+.device-add-menu {
+  padding: 6px;
+  background: var(--blinker-surface);
+
+  button {
+    width: 100%;
+    min-height: 58px;
+    padding: 8px 8px;
+    border: 0;
+    border-radius: 13px;
+    background: transparent;
+    color: var(--blinker-text-primary);
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    transition: background-color 160ms cubic-bezier(.2, 0, 0, 1);
+
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--blinker-divider);
+      border-bottom-right-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+
+    &:active,
+    &:focus-visible {
+      outline: none;
+      background: var(--blinker-surface-active);
+    }
+  }
+
+  .menu-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(var(--ion-color-primary-rgb), 0.09);
+    color: var(--ion-color-primary);
+    display: grid;
+    place-items: center;
+
+    i {
+      font-size: 16px;
+    }
+  }
+
+  .menu-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    strong {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    small {
+      overflow: hidden;
+      color: var(--blinker-text-tertiary);
+      font-size: 10px;
+      line-height: 1.2;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .menu-arrow {
+    color: var(--blinker-text-tertiary);
+    font-size: 10px;
+  }
+}
+
 .room-list-fixed {
   position: absolute;
   top: calc(var(--ion-safe-area-top, 0px) + 64px);
