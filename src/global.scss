@@ -56,6 +56,12 @@ body {
   color: var(--blinker-text-primary);
 }
 
+// Routed pages are animated as complete surfaces. Keep every route host opaque
+// so transitions between different page structures never expose the outlet.
+ion-router-outlet > .ion-page {
+  background: var(--blinker-bg, var(--ion-background-color));
+}
+
 // Hide ion-content's Shadow DOM scrollbar without disabling scrolling.
 ion-content::part(scroll) {
   -ms-overflow-style: none;

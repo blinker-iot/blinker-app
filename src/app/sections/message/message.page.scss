@@ -1,7 +1,27 @@
+:host {
+  display: block;
+  height: 100%;
+  background: var(--blinker-bg);
+}
+
 .message-header {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 10;
+  background: transparent;
+
+  &::after {
+    display: none;
+  }
+
   ion-toolbar {
-    --background: rgba(var(--ion-background-color-rgb), 0.9);
+    --background: transparent;
     --border-width: 0;
+    min-height: 56px;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   ion-title {
@@ -24,7 +44,7 @@ ion-content {
 
 .message-content {
   min-height: 100%;
-  padding: 12px 18px calc(30px + env(safe-area-inset-bottom));
+  padding: calc(var(--ion-safe-area-top, 0px) + 68px) 18px calc(30px + env(safe-area-inset-bottom));
   background:
     radial-gradient(circle at 90% 4%, rgba(var(--ion-color-primary-rgb), 0.12), transparent 25%),
     var(--blinker-bg);

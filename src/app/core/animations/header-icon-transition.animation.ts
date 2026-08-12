@@ -1,87 +1,78 @@
 import {
   createAnimation,
-  iosTransitionAnimation,
+  type Animation,
   type AnimationBuilder,
   type TransitionOptions,
 } from '@ionic/core';
 
-const HEADER_ACTION_SELECTOR =
-  ':scope > ion-header ion-buttons > :not(ion-back-button)';
-const PAGE_TRANSITION_DURATION = 540;
-const ACTION_FADE_DURATION = 180;
+const PAGE_TRANSITION_DURATION = 360;
+const PAGE_PARALLAX_OFFSET = '18%';
 const TRANSITION_EASING = 'cubic-bezier(0.32,0.72,0,1)';
 
-const getHeaderActions = (page: HTMLElement | undefined) =>
-  page
-    ? Array.from(
-        page.querySelectorAll<HTMLElement>(HEADER_ACTION_SELECTOR)
-      ).filter((action) => action.getBoundingClientRect().width > 0)
-    : [];
+const createPageAnimation = (
+  element: HTMLElement,
+  duration: number,
+  fromTransform: string,
+  toTransform: string,
+  entering = false
+): Animation => {
+  const animation = createAnimation()
+    .addElement(element)
+    .duration(duration)
+    .easing(TRANSITION_EASING)
+    .fill('both')
+    .beforeStyles({ 'will-change': 'transform' })
+    .fromTo('transform', fromTransform, toTransform)
+    .afterClearStyles(['transform', 'will-change']);
+
+  if (entering) animation.beforeRemoveClass('ion-page-invisible');
+
+  return animation;
+};
 
 /**
- * Keep Ionic's native iOS page and ion-back-button transition intact, while
- * sequencing custom header actions around it:
+ * Animate routed page hosts as opaque, self-contained surfaces.
  *
- * leaving actions fade out -> Ionic page transition -> entering actions fade in.
- *
- * Keeping these phases separate also prevents an incoming toolbar from covering
- * the outgoing action before its fade is visible.
+ * Ionic's stock iOS transition animates different descendants depending on
+ * whether a route contains a regular ion-content, an absolute header, or an
+ * ion-tabs shell. Mixing those structures can briefly expose an empty router
+ * outlet. Keeping the animation at the route-host boundary makes every page
+ * pair use the same uninterrupted timeline and also works with swipe-back
+ * progress animations because it contains no delays.
  */
 export const headerIconTransitionAnimation: AnimationBuilder = (
-  baseElement,
+  _baseElement,
   transitionOptions
 ) => {
   const options = transitionOptions as TransitionOptions;
-  const pageAnimation = iosTransitionAnimation(baseElement, options);
+  const backDirection = options.direction === 'back';
+  const duration = options.duration || PAGE_TRANSITION_DURATION;
+  const enteringStart = backDirection
+    ? `translate3d(-${PAGE_PARALLAX_OFFSET}, 0, 0)`
+    : 'translate3d(100%, 0, 0)';
+  const leavingEnd = backDirection
+    ? 'translate3d(100%, 0, 0)'
+    : `translate3d(-${PAGE_PARALLAX_OFFSET}, 0, 0)`;
 
-  // Delays cannot be represented faithfully by Ionic's interactive progress
-  // controller. Preserve the stock transition for swipe-back gestures.
-  if (options.progressCallback) return pageAnimation;
-
-  const enteringActions = getHeaderActions(options.enteringEl);
-  const leavingActions = getHeaderActions(options.leavingEl);
-  const pageDuration = options.duration || PAGE_TRANSITION_DURATION;
-  const pageDelay = leavingActions.length ? ACTION_FADE_DURATION : 0;
-  const enteringDelay = pageDelay + pageDuration;
-  const rootAnimation = createAnimation();
-
-  if (pageDelay) {
-    // iosTransitionAnimation removes ion-page-invisible as soon as it starts.
-    // Keep the incoming page hidden until the outgoing action fade is done.
-    rootAnimation.addAnimation(
-      createAnimation()
-        .addElement(options.enteringEl)
-        .duration(pageDelay)
-        .fill('both')
-        .fromTo('visibility', 'hidden', 'hidden')
-        .afterClearStyles(['visibility'])
-    );
-
-    rootAnimation.addAnimation(
-      createAnimation()
-        .addElement(leavingActions)
-        .duration(ACTION_FADE_DURATION)
-        .easing(TRANSITION_EASING)
-        .fill('both')
-        .fromTo('opacity', 0.99, 0)
-    );
-  }
-
-  rootAnimation.addAnimation(
-    pageAnimation.duration(pageDuration).delay(pageDelay)
+  const enteringAnimation = createPageAnimation(
+    options.enteringEl,
+    duration,
+    enteringStart,
+    'translate3d(0, 0, 0)',
+    true
   );
 
-  if (enteringActions.length) {
-    rootAnimation.addAnimation(
-      createAnimation()
-        .addElement(enteringActions)
-        .duration(ACTION_FADE_DURATION)
-        .delay(enteringDelay)
-        .easing(TRANSITION_EASING)
-        .fill('both')
-        .fromTo('opacity', 0.01, 1)
+  const animations: Animation[] = [enteringAnimation];
+  if (options.leavingEl) {
+    animations.push(
+      createPageAnimation(
+        options.leavingEl,
+        duration,
+        'translate3d(0, 0, 0)',
+        leavingEnd
+      )
     );
   }
 
-  return rootAnimation;
+  return createAnimation().addAnimation(animations);
 };
