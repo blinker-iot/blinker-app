@@ -2,17 +2,28 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { API } from 'src/app/configs/api.config';
 import { DataService } from 'src/app/core/services/data.service';
+import { firstValueFrom } from 'rxjs';
+
+export interface FeedbackRequest {
+  recordType: number;
+  deviceType: string;
+  content: string;
+}
+
+interface FeedbackResponse {
+  message?: number | string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class FeedbackService {
   get uuid() {
-    return this.dataService.auth.uuid
+    return this.dataService.auth?.uuid || '';
   }
 
   get token() {
-    return this.dataService.auth.token
+    return this.dataService.auth?.token || '';
   }
 
   constructor(
@@ -20,28 +31,17 @@ export class FeedbackService {
     private dataService: DataService
   ) { }
 
-  newFeedback(feedback): Promise<boolean> {
-    console.log(feedback);
-    
-    return this.http
-      .post(API.FEEDBACK,
-        {
-          "uuid": this.uuid,
-          'token': this.token,
-          "recordType": feedback.recordType,
-          "deviceType": feedback.deviceType,
-          "content": feedback.content,
-        })
-      .toPromise()
-      .then(response => {
-        console.log(response);
-        let data = JSON.parse(JSON.stringify(response));
-        if (data.message == 1000) {
-          return true;
-        } else {
-          return false;
-        }
+  async newFeedback(feedback: FeedbackRequest): Promise<boolean> {
+    const response = await firstValueFrom(
+      this.http.post<FeedbackResponse>(API.FEEDBACK, {
+        'uuid': this.uuid,
+        'token': this.token,
+        'recordType': feedback.recordType,
+        'deviceType': feedback.deviceType,
+        'content': feedback.content,
       })
-  }
+    );
 
+    return String(response?.message) === '1000';
+  }
 }
