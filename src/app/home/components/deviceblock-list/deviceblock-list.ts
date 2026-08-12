@@ -37,6 +37,7 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
   @ViewChild('sortbox') sortbox: ElementRef<HTMLElement>;
 
   private sortable: any;
+  private isSorting = false;
   private suppressNavigationUntil = 0;
 
   private readonly sortableOptions = {
@@ -52,13 +53,11 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     chosenClass: 'schosen',
     dragClass: 'sdrag',
     draggable: '.deviceblock',
-    handle: '.device-drag-handle',
+    filter: 'button, a, input, select, textarea',
+    preventOnFilter: false,
     dataIdAttr: 'data-id',
-    onChoose: () => {
-      this.suppressNavigationUntil = Number.POSITIVE_INFINITY;
-      this.setParentGesturesEnabled(false);
-    },
     onStart: () => {
+      this.isSorting = true;
       this.suppressNavigationUntil = Number.POSITIVE_INFINITY;
       this.setParentGesturesEnabled(false);
     },
@@ -152,6 +151,9 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
   }
 
   private finishSorting() {
+    if (!this.isSorting) return;
+
+    this.isSorting = false;
     this.suppressNavigationUntil = Date.now() + 300;
     this.setParentGesturesEnabled(true);
   }

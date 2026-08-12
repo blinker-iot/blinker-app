@@ -17,30 +17,6 @@
   color: var(--blinker-text-primary);
 }
 
-.device-drag-handle {
-  position: absolute;
-  top: 7px;
-  right: 7px;
-  z-index: 3;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--blinker-text-tertiary);
-  cursor: grab;
-  display: grid;
-  place-items: center;
-  opacity: 0.55;
-  touch-action: none;
-
-  &:active {
-    cursor: grabbing;
-    opacity: 1;
-  }
-}
-
 .device-primary {
   position: relative;
   min-width: 0;
@@ -89,8 +65,8 @@
     ::ng-deep img {
       width: auto;
       height: auto;
-      max-width: 96px;
-      max-height: 96px;
+      max-width: 120px;
+      max-height: 120px;
       object-fit: contain;
       filter: drop-shadow(0 9px 10px rgba(18, 35, 56, 0.12));
     }
