@@ -41,12 +41,12 @@ export function createProfileMenuGroups(
           value: `已共享 ${stats.sharedDeviceNum} 台设备`,
           route: '/share-manager',
         },
-        {
-          id: 'voice-assistant',
-          title: '语音助手',
-          icon: 'fa-microphone',
-          value: '小智',
-        },
+        // {
+        //   id: 'voice-assistant',
+        //   title: '语音助手',
+        //   icon: 'fa-microphone',
+        //   value: '小智',
+        // },
         {
           id: 'selfhost',
           title: '自建服务器',
