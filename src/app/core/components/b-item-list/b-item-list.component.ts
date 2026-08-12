@@ -16,7 +16,7 @@ import { BItemComponent } from './b-item/b-item';
 
 @Component({
   standalone: true,
-  imports: [CommonModule, BItemComponent],
+  imports: [CommonModule],
   selector: 'b-item-list',
   templateUrl: './b-item-list.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
