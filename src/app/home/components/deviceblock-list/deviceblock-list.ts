@@ -56,10 +56,19 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     filter: 'button, a, input, select, textarea',
     preventOnFilter: false,
     dataIdAttr: 'data-id',
-    onStart: () => {
+    onChoose: () => {
       this.isSorting = true;
       this.suppressNavigationUntil = Number.POSITIVE_INFINITY;
       this.setParentGesturesEnabled(false);
+    },
+    onStart: () => {
+      // `onChoose` reserves the gesture as soon as the long-press delay ends.
+      // Keep this as a fallback in case Sortable changes that event ordering.
+      if (!this.isSorting) {
+        this.isSorting = true;
+        this.suppressNavigationUntil = Number.POSITIVE_INFINITY;
+        this.setParentGesturesEnabled(false);
+      }
     },
     onEnd: (event: any) => {
       if (event.oldIndex !== event.newIndex) this.saveDeviceList();

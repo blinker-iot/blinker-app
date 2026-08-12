@@ -39,14 +39,6 @@ html {
   --ion-safe-area-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
 }
 
-// Android 15+ is always edge-to-edge. Ionic already applies the top safe area
-// to standard header toolbars; only the custom absolute main-tab header needs
-// its own inset here because its toolbar padding intentionally overrides it.
-html.plt-android ion-header.main-tab-header {
-  box-sizing: border-box;
-  padding-top: var(--ion-safe-area-top, 0px);
-}
-
 // PC浏览器移动端适配样式
 body {
   margin: 0;
