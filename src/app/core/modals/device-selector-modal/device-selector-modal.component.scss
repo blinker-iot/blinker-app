@@ -1,22 +1,25 @@
 @use "../repeat-selector-modal/repeat-selector-modal.component.scss";
+@use "../modern-selector";
 
 .item-list {
-    overflow-y: scroll;
-    justify-content: flex-start;
-    height: 100%;
+    height: auto;
 
     .item {
-        height: 72px !important;
+        min-height: 72px;
         justify-content: flex-start;
     }
 }
 
 b-device-img {
-    margin-right: 15px;
+    width: 48px;
+    height: 48px;
+    margin-right: 12px;
 
     ::ng-deep {
         img {
-            height: 50px;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
     }
 }

@@ -1,50 +1,78 @@
-<ion-header>
+<ion-header class="editor-header ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-back-button text="" defaultHref="/room-manager"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{tempRoomName}} 设置</ion-title>
+    <ion-title>房间设置</ion-title>
   </ion-toolbar>
 </ion-header>
 
+<ion-content fullscreen="true" *ngIf="loaded">
+  <main class="editor-content">
+    <section class="editor-hero">
+      <span class="hero-icon" aria-hidden="true">
+        <i class="fa-light fa-house-chimney-window"></i>
+      </span>
+      <div class="hero-copy">
+        <span class="eyebrow">房间</span>
+        <h1>{{ tempRoomName }}</h1>
+        <p>已整理 {{ currentRoomData.length }} 台设备</p>
+      </div>
+      <button type="button" class="icon-action" (click)="changeRoomName()" aria-label="修改房间名称">
+        <i class="fa-light fa-pen"></i>
+      </button>
+    </section>
 
-<ion-content>
-  <app-hero-card>
-    <div class="roomname" (click)="changeRoomName()">
-      {{tempRoomName}}
+    <div class="section-heading">
+      <h2>房间中的设备</h2>
+      <span class="section-count">{{ currentRoomData.length }}</span>
     </div>
-  </app-hero-card>
+    <section class="editor-card" *ngIf="currentRoomData.length">
+      <button
+        type="button"
+        class="device-row"
+        *ngFor="let deviceId of currentRoomData"
+        (click)="delDevice(deviceId)"
+        [attr.aria-label]="'从房间移除 ' + deviceDataDict[deviceId].config.customName"
+      >
+        <span class="device-image"><b-device-img [deviceId]="deviceId"></b-device-img></span>
+        <span class="row-copy">
+          <strong>{{ deviceDataDict[deviceId].config.customName }}</strong>
+          <small>{{ deviceId }}</small>
+        </span>
+        <span class="row-action remove" aria-hidden="true"><i class="fa-light fa-minus"></i></span>
+      </button>
+    </section>
+    <section class="inline-empty" *ngIf="!currentRoomData.length">
+      <i class="fa-light fa-box-open" aria-hidden="true"></i>
+      <strong>房间中还没有设备</strong>
+      <p>从下方列表选择设备添加到这个房间。</p>
+    </section>
 
-  <div class="title" *ngIf="currentRoomData.length != 0">房间中的设备</div>
-  <app-menu-list>
-    <app-menu-item *ngFor="let deviceId of currentRoomData" (click)="delDevice(deviceId)">
-      <div class="img-box">
-        <b-device-img [deviceId]="deviceId"></b-device-img>
-      </div>
-      <div class="text-box">
-        <div class="name">{{deviceDataDict[deviceId].config.customName}}</div>
-        <div class="other">{{deviceId}}</div>
-      </div>
-      <div class="btn-box">
-        <ion-icon name="close-outline"></ion-icon>
-      </div>
-    </app-menu-item>
-  </app-menu-list>
-  <div class="title">可添加的设备</div>
-  <app-menu-list>
-    <ng-container *ngFor="let deviceId of deviceDataList">
-      <app-menu-item (click)="addDevice(deviceId)" *ngIf="!isExist(deviceId)">
-        <div class="img-box">
-          <b-device-img [deviceId]="deviceId"></b-device-img>
-        </div>
-        <div class="text-box">
-          <div class="name">{{deviceDataDict[deviceId].config.customName}}</div>
-          <div class="other">{{deviceId}}</div>
-        </div>
-        <div class="btn-box">
-          <ion-icon name="add-outline"></ion-icon>
-        </div>
-      </app-menu-item>
-    </ng-container>
-  </app-menu-list>
+    <div class="section-heading">
+      <h2>可添加的设备</h2>
+      <span class="section-count">{{ availableDeviceDataList.length }}</span>
+    </div>
+    <section class="editor-card" *ngIf="availableDeviceDataList.length">
+      <button
+        type="button"
+        class="device-row"
+        (click)="addDevice(deviceId)"
+        *ngFor="let deviceId of availableDeviceDataList"
+        [attr.aria-label]="'添加 ' + deviceDataDict[deviceId].config.customName + ' 到房间'"
+      >
+        <span class="device-image"><b-device-img [deviceId]="deviceId"></b-device-img></span>
+        <span class="row-copy">
+          <strong>{{ deviceDataDict[deviceId].config.customName }}</strong>
+          <small>{{ deviceId }}</small>
+        </span>
+        <span class="row-action add" aria-hidden="true"><i class="fa-light fa-plus"></i></span>
+      </button>
+    </section>
+    <section class="inline-empty" *ngIf="!availableDeviceDataList.length">
+      <i class="fa-light fa-circle-check" aria-hidden="true"></i>
+      <strong>所有设备都已加入</strong>
+      <p>当前没有其他可添加的设备。</p>
+    </section>
+  </main>
 </ion-content>

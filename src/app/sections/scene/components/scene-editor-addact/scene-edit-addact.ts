@@ -1,18 +1,26 @@
-import { Component, ChangeDetectorRef, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, Input } from '@angular/core';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
-import { ModalController, PickerController } from '@ionic/angular';
+import { IonicModule, ModalController } from '@ionic/angular';
 import { DataService } from 'src/app/core/services/data.service';
 import { DeviceSelectorModalComponent } from 'src/app/core/modals/device-selector-modal/device-selector-modal.component';
 import { ActionSelectorModalComponent } from 'src/app/core/modals/action-selector-modal/action-selector-modal.component';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
+import { Act2TextPipe } from 'src/app/core/pipes/actcmd2text';
 import { SelectorModalComponent } from 'src/app/core/modals/selector-modal/selector-modal.component';
 
 
 @Component({
-    selector: 'scene-edit-addact',
-    templateUrl: 'scene-edit-addact.html',
-    styleUrls: ['scene-edit-addact.scss']
+  selector: 'scene-edit-addact',
+  standalone: true,
+  templateUrl: 'scene-edit-addact.html',
+  styleUrls: ['scene-edit-addact.scss'],
+  imports: [
+    CommonModule,
+    IonicModule,
+    Act2TextPipe,
+  ],
 })
 export class SceneEditorAddact {
 

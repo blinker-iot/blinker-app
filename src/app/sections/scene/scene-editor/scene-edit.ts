@@ -1,140 +1,160 @@
-import {
-  Component
-} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import {
   AlertController,
-  Platform,
+  IonicModule,
   ModalController
 } from '@ionic/angular';
-import { UserService } from 'src/app/core/services/user.service';
-import { DeviceService } from 'src/app/core/services/device.service';
 import { ActivatedRoute } from '@angular/router';
+import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { IconListPage } from 'src/app/core/pages/icon-list/icon-list';
+import { Act2TextPipe } from 'src/app/core/pipes/actcmd2text';
 import { DataService } from 'src/app/core/services/data.service';
 import { SceneEditorAddact } from '../components/scene-editor-addact/scene-edit-addact';
 import { NoticeService } from 'src/app/core/services/notice.service';
+import { SceneService } from '../scene.service';
 
 @Component({
-    selector: 'scene-edit',
-    templateUrl: 'scene-edit.html',
-    styleUrls: ['scene-edit.scss']
+  selector: 'scene-edit',
+  standalone: true,
+  templateUrl: 'scene-edit.html',
+  styleUrls: ['scene-edit.scss'],
+  imports: [
+    CommonModule,
+    IonicModule,
+    Act2TextPipe,
+    BDeviceImgComponent,
+  ],
 })
-export class SceneEditor {
+export class SceneEditor implements OnInit, OnDestroy {
 
-  sceneName;
+  sceneName = '';
   currentSceneData;
 
   tempSceneName = "unknown";
   alert;
 
   loaded = false;
+  private originalSceneData = '';
+  private subscription;
 
   get sceneDataDict() {
-    return this.dataService.scene.dict
+    return this.dataService.scene?.dict ?? {};
   }
 
   get sceneDataList() {
-    return this.dataService.scene.list
+    return this.dataService.scene?.list ?? [];
   }
 
   get deviceDataDict() {
-    return this.dataService.device.dict
+    return this.dataService.device?.dict ?? {};
   }
 
   get deviceDataList() {
-    return this.dataService.device.list
+    return this.dataService.device?.list ?? [];
   }
 
   set acts(newActs) {
-    this.currentSceneData.acts = newActs
+    if (this.currentSceneData) {
+      this.currentSceneData.acts = newActs;
+    }
   }
 
   get acts() {
-    return this.currentSceneData.acts
-  }
-
-  actionName(act) {
-    return act.text
+    return this.currentSceneData?.acts ?? [];
   }
 
   constructor(
     public modalCtrl: ModalController,
     public alertCtrl: AlertController,
-    public deviceService: DeviceService,
     private dataService: DataService,
-    public userService: UserService,
     public notice: NoticeService,
-    public platform: Platform,
+    private sceneService: SceneService,
     private activatedRoute: ActivatedRoute
   ) {
   }
 
   ngOnInit(): void {
-    this.dataService.userDataLoader.subscribe(loaded => {
-      if (loaded) {
-        this.sceneName = this.activatedRoute.snapshot.params['scene'];
-        this.currentSceneData = this.sceneDataDict[this.sceneName]
-        // console.log(this.currentSceneData);
-        this.tempSceneName = this.sceneName;
-        // 移除已解绑设备
-        let newActs = []
-        for (let action of this.acts) {
-          if (typeof this.deviceDataDict[action.deviceId] != 'undefined' || typeof action.delay != 'undefined') {
-            newActs.push(action);
-          }
-        }
-        this.acts = newActs;
-        this.loaded = loaded
-      }
-    })
+    this.subscription = this.dataService.userDataLoader.subscribe(() => {
+      this.bindScene();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
+    this.alert?.dismiss();
+
+    if (!this.loaded || this.originalSceneData === JSON.stringify(this.dataService.scene)) {
+      return;
+    }
+    void this.sceneService.saveData(this.dataService.scene);
+  }
+
+  private bindScene(): void {
+    const sceneName = this.activatedRoute.snapshot.params['scene'];
+    const scene = this.dataService.scene;
+    if (!scene?.dict?.[sceneName] || !this.dataService.device) {
+      return;
+    }
+
+    this.sceneName = sceneName;
+    this.currentSceneData = scene.dict[sceneName];
+    this.tempSceneName = sceneName;
+    this.originalSceneData = JSON.stringify(scene);
+
+    // 移除已解绑设备的动作，但保留延时动作。
+    this.acts = this.acts.filter(action =>
+      typeof action.delay !== 'undefined' ||
+      typeof this.deviceDataDict[action.deviceId] !== 'undefined'
+    );
+    this.loaded = true;
   }
 
   async changeSceneName() {
     this.alert = await this.alertCtrl.create({
-      header: '修改房间名',
+      header: '修改场景名称',
       inputs: [{ name: 'newSceneName', value: this.tempSceneName, placeholder: this.tempSceneName }],
       buttons: [
         {
-          text: '取消', handler: data => {
-            console.log('Cancel clicked')
-          }
+          text: '取消',
+          role: 'cancel',
         },
         {
           text: '确认修改', handler: data => {
-            // console.log(data.newSceneName.length);
-            if (data.newSceneName.length == 0) return;
-            if (data.newSceneName.length > 10) {
-              this.notice.showToast('tooLongSceneName')
+            const newSceneName = data.newSceneName?.trim();
+            if (!newSceneName || newSceneName === this.sceneName) return;
+            if (newSceneName.length > 10) {
+              this.notice.showToast('tooLongSceneName');
               return;
             }
-            if (this.sceneIsExist(data.newSceneName)) {
-              this.notice.showToast('sameSceneName')
+            if (this.sceneIsExist(newSceneName)) {
+              this.notice.showToast('sameSceneName');
               return;
             }
-            this.tempSceneName = data.newSceneName;
-            this.renameScene(this.tempSceneName)
+            this.renameScene(newSceneName);
           }
         }
       ]
     });
-    this.alert.present();
+    await this.alert.present();
   }
 
-  renameScene(newSceneName) {
-    let oldSceneName = this.sceneName;
+  renameScene(newSceneName: string): void {
+    const oldSceneName = this.sceneName;
     // 使用新名字新建scene
-    let index = this.sceneDataList.indexOf(oldSceneName);
-    this.sceneDataList.splice(index + 1, 0, newSceneName);
+    const index = this.sceneDataList.indexOf(oldSceneName);
+    if (index < 0) return;
+
+    this.sceneDataList.splice(index, 1, newSceneName);
     this.sceneDataDict[newSceneName] = this.sceneDataDict[oldSceneName];
     this.sceneName = newSceneName;
+    this.tempSceneName = newSceneName;
     // 删除原本的scene
-    this.sceneDataList.splice(index, 1);
     delete this.sceneDataDict[oldSceneName];
   }
 
-  sceneIsExist(sceneName) {
-    if (this.sceneDataList.indexOf(sceneName) > -1) return true;
-    return false
+  sceneIsExist(sceneName: string): boolean {
+    return this.sceneDataList.includes(sceneName);
   }
 
   async changeSceneIcon() {
@@ -144,7 +164,7 @@ export class SceneEditor {
         'item': this.currentSceneData
       }
     });
-    modal.present();
+    await modal.present();
   }
 
   async addAct() {
@@ -154,10 +174,10 @@ export class SceneEditor {
         'sceneName': this.sceneName
       }
     });
-    modal.present();
+    await modal.present();
   }
 
-  delAct(index) {
+  delAct(index: number): void {
     this.acts.splice(index, 1);
   }
 

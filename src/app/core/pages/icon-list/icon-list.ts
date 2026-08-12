@@ -1,14 +1,17 @@
 // 需修复 12.27
 
+import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { ModalController } from '@ionic/angular';
+import { IonicModule, ModalController } from '@ionic/angular';
 import { IconList } from 'src/app/configs/app.config';
 // import { InAppBrowser } from '@awesome-cordova-plugins/in-app-browser/ngx';
 
 @Component({
-    selector: 'icon-list',
-    templateUrl: 'icon-list.html',
-    styleUrls: ['icon-list.scss']
+  selector: 'icon-list',
+  standalone: true,
+  templateUrl: 'icon-list.html',
+  styleUrls: ['icon-list.scss'],
+  imports: [CommonModule, IonicModule],
 })
 export class IconListPage {
   @Input() item;

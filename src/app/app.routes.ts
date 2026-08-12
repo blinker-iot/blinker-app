@@ -22,8 +22,16 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/room/room-manager/room-manager').then(m => m.RoomManagerPage),
   },
   {
+    path: 'room-manager/:room',
+    loadComponent: () => import('./sections/room/room-edit/room-edit').then(m => m.RoomEditPage),
+  },
+  {
     path: 'scene-manager',
     loadComponent: () => import('./sections/scene/scene-manager/scene-manager').then(m => m.SceneManager),
+  },
+  {
+    path: 'scene-manager/:scene',
+    loadComponent: () => import('./sections/scene/scene-editor/scene-edit').then(m => m.SceneEditor),
   },
   {
     path: 'share-manager',

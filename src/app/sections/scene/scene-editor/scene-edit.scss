@@ -1,50 +1,11 @@
-app-hero-card {
-    ::ng-deep {
-        .full-box {
-            width: 100%;
-            display: flex;
+@use '../../editor-page';
 
-            .box {
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                align-items: center;
-                width: 50%;
-            }
-
-            .right {
-                padding-bottom: 1px;
-            }
-
-        }
-
-        .icon-box {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #389BEE;
-            height: 40px;
-
-            i {
-                font-size: 30px !important;
-            }
-        }
-
-        .text-box {
-            height: 40px;
-            display: flex;
-            align-items: center;
-        }
-
-        .btn {
-            margin-top: 5px;
-            color: #389BEE;
-            font-size: 13px;
-        }
-    }
+.scene-icon {
+  background: linear-gradient(145deg, #8e9dff, #5967df);
+  box-shadow: 0 9px 20px rgba(89, 103, 223, 0.25);
 }
 
-.title {
-    padding-left: 15px;
-    color: #959595;
+.delay-icon {
+  color: #6875e8;
+  background: rgba(104, 117, 232, 0.1);
 }

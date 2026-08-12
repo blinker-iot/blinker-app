@@ -1,40 +1,42 @@
-<ion-header>
+<ion-header class="icon-header ion-no-border">
   <ion-toolbar>
-    <ion-title>请选择图标</ion-title>
+    <ion-title>选择场景图标</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="close()">
+      <ion-button class="close-button" (click)="close()" aria-label="关闭图标选择">
         <i class="fa-light fa-times"></i>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  <!-- <div class="text-box" (click)="open('https://diandeng.tech/doc/')">
-    <div>内置Font Awesome Pro，9000余个图标供您选择</div>
-    <div>使用方法见：https://diandeng.tech/doc/</div>
-  </div> -->
-  <div class="tab-box">
-    <div class="text">图标风格<span>更多图标见 https://diandeng.tech/doc/icon</span></div>
-    <div class="tab" (click)="selectStyle('fad')" [ngClass]="{'selected': style=='fad'}">双色</div>
-    <div class="tab" (click)="selectStyle('fas')" [ngClass]="{'selected': style=='fas'}">实体</div>
-    <div class="tab" (click)="selectStyle('far')" [ngClass]="{'selected': style=='far'}">常规</div>
-    <div class="tab" (click)="selectStyle('fal')" [ngClass]="{'selected': style=='fal'}">纤细</div>
-  </div>
-  <div class="icon-box">
-    <div class="class-box" *ngFor="let iconClass of iconList">
-      <div class="title">{{iconClass.title}}</div>
-      <div class="item-box">
-        <div class="item" *ngFor="let icon of iconClass.icon" (click)="select(icon.replace('fad',style))">
-          <i class="{{icon.replace('fad',style)}}"></i>
-        </div>
-        <!-- <div class="null" *ngFor="let i of (5-(iconClass.icon.length%5))"></div> -->
-        <div class="null" *ngIf="(5-(iconClass.icon.length%5))>0"></div>
-        <div class="null" *ngIf="(5-(iconClass.icon.length%5))>1"></div>
-        <div class="null" *ngIf="(5-(iconClass.icon.length%5))>2"></div>
-        <div class="null" *ngIf="(5-(iconClass.icon.length%5))>3"></div>
+<ion-content fullscreen="true">
+  <main class="icon-content">
+    <section class="style-panel">
+      <div class="style-copy">
+        <strong>图标风格</strong>
+        <small>选择适合当前场景的显示样式</small>
       </div>
+      <div class="style-tabs" role="group" aria-label="图标风格">
+        <button type="button" (click)="selectStyle('fad')" [class.selected]="style === 'fad'">双色</button>
+        <button type="button" (click)="selectStyle('fas')" [class.selected]="style === 'fas'">实体</button>
+        <button type="button" (click)="selectStyle('far')" [class.selected]="style === 'far'">常规</button>
+        <button type="button" (click)="selectStyle('fal')" [class.selected]="style === 'fal'">纤细</button>
+      </div>
+    </section>
 
-    </div>
-  </div>
+    <section class="icon-category" *ngFor="let iconClass of iconList">
+      <div class="category-title">{{ iconClass.title }}</div>
+      <div class="icon-grid">
+        <button
+          type="button"
+          class="icon-item"
+          *ngFor="let icon of iconClass.icon"
+          (click)="select(icon.replace('fad', style))"
+          aria-label="选择此图标"
+        >
+          <i class="{{icon.replace('fad',style)}}"></i>
+        </button>
+      </div>
+    </section>
+  </main>
 </ion-content>

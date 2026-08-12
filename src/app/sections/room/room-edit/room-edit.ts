@@ -1,65 +1,106 @@
-import { Component } from '@angular/core';
-import { AlertController } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { AlertController, IonicModule } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
+import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { DataService } from 'src/app/core/services/data.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
+import { RoomService } from '../room.service';
 
 
 @Component({
-    selector: 'page-room-edit',
-    templateUrl: 'room-edit.html',
-    styleUrls: ['room-edit.scss']
+  selector: 'page-room-edit',
+  standalone: true,
+  templateUrl: 'room-edit.html',
+  styleUrls: ['room-edit.scss'],
+  imports: [
+    CommonModule,
+    IonicModule,
+    BDeviceImgComponent,
+  ],
 })
-export class RoomEditPage {
-  roomName;
-  tempRoomName = "unknown";
+export class RoomEditPage implements OnInit, OnDestroy {
+  roomName = '';
+  tempRoomName = 'unknown';
   alert;
-  // currentRoomData;
+  loaded = false;
+  private originalRoomData = '';
+  private subscription;
 
   get roomDataDict() {
-    return this.dataService.room.dict
+    return this.dataService.room?.dict ?? {};
   }
 
   get roomDataList() {
-    return this.dataService.room.list
+    return this.dataService.room?.list ?? [];
   }
 
   get deviceDataDict() {
-    return this.dataService.device.dict
+    return this.dataService.device?.dict ?? {};
   }
 
   get deviceDataList() {
-    return this.dataService.device.list
+    return this.dataService.device?.list ?? [];
+  }
+
+  get availableDeviceDataList(): string[] {
+    return this.deviceDataList.filter(deviceId => !this.isExist(deviceId));
   }
 
   get currentRoomData() {
-    return this.dataService.room.dict[this.roomName]
+    return this.roomDataDict[this.roomName] ?? [];
   }
 
-  set currentRoomData(data) {
-    this.dataService.room.dict[this.roomName] = data
+  set currentRoomData(data: string[]) {
+    if (this.dataService.room?.dict) {
+      this.dataService.room.dict[this.roomName] = data;
+    }
   }
 
   constructor(
     private dataService: DataService,
+    private roomService: RoomService,
     private alertCtrl: AlertController,
     private noticeService: NoticeService,
     private activatedRoute: ActivatedRoute
   ) {
   }
 
-  ngOnInit() {
-    this.roomName = this.activatedRoute.snapshot.params['room'];
-    // this.currentRoomData = this.dataService.room.dict[this.roomName];
-    this.tempRoomName = this.roomName;
+  ngOnInit(): void {
+    this.subscription = this.dataService.userDataLoader.subscribe(() => {
+      this.bindRoom();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
+    this.alert?.dismiss();
+
+    if (!this.loaded || this.originalRoomData === JSON.stringify(this.dataService.room)) {
+      return;
+    }
+    void this.roomService.saveData(this.dataService.room);
+  }
+
+  private bindRoom(): void {
+    const roomName = this.activatedRoute.snapshot.params['room'];
+    const room = this.dataService.room;
+    if (!room?.dict || !Array.isArray(room.dict[roomName]) || !this.dataService.device) {
+      return;
+    }
+
+    this.roomName = roomName;
+    this.tempRoomName = roomName;
+    this.originalRoomData = JSON.stringify(room);
     this.removeInvalidDevice();
+    this.loaded = true;
   }
 
   // 移除已解绑设备
   removeInvalidDevice() {
-    let newRoomData = []
-    for (let deviceId of this.currentRoomData) {
-      if (typeof this.deviceDataDict[deviceId] != 'undefined') {
+    const newRoomData: string[] = [];
+    for (const deviceId of this.currentRoomData) {
+      if (typeof this.deviceDataDict[deviceId] !== 'undefined') {
         newRoomData.push(deviceId);
       }
     }
@@ -68,67 +109,66 @@ export class RoomEditPage {
 
   async changeRoomName() {
     this.alert = await this.alertCtrl.create({
-      header: '修改房间名',
+      header: '修改房间名称',
       inputs: [{ name: 'newRoomName', value: this.tempRoomName, placeholder: this.tempRoomName }],
       buttons: [
         {
-          text: '取消', handler: data => {
-            console.log('Cancel clicked')
-          }
+          text: '取消',
+          role: 'cancel',
         },
         {
           text: '确认修改', handler: data => {
-            // console.log(data.newRoomName.length);
-            if (data.newRoomName.length == 0) return;
-            if (data.newRoomName.length > 10) {
-              this.noticeService.showToast('tooLongroomName')
+            const newRoomName = data.newRoomName?.trim();
+            if (!newRoomName || newRoomName === this.roomName) return;
+            if (newRoomName.length > 10) {
+              this.noticeService.showToast('tooLongRoomName');
               return;
             }
-            if (this.roomIsExist(data.newRoomName)) {
-              this.noticeService.showToast('sameroomName')
+            if (this.roomIsExist(newRoomName)) {
+              this.noticeService.showToast('sameRoomName');
               return;
             }
-            this.tempRoomName = data.newRoomName;
-            this.renameRoom(this.tempRoomName)
+            this.renameRoom(newRoomName);
           }
         }
       ]
     });
-    this.alert.present();
+    await this.alert.present();
   }
 
-  renameRoom(newRoomName) {
-    let oldRoomnam = this.roomName;
+  renameRoom(newRoomName: string): void {
+    const oldRoomName = this.roomName;
     // 使用新名字新建room
-    let index = this.roomDataList.indexOf(oldRoomnam);
-    this.roomDataList.splice(index + 1, 0, newRoomName);
-    this.roomDataDict[newRoomName] = this.roomDataDict[oldRoomnam];
+    const index = this.roomDataList.indexOf(oldRoomName);
+    if (index < 0) return;
+
+    this.roomDataList.splice(index, 1, newRoomName);
+    this.roomDataDict[newRoomName] = this.roomDataDict[oldRoomName];
     this.roomName = newRoomName;
+    this.tempRoomName = newRoomName;
     // 删除原本的room
-    this.roomDataList.splice(index, 1);
-    delete this.roomDataDict[oldRoomnam];
+    delete this.roomDataDict[oldRoomName];
   }
 
-  isExist(deviceName) {
-    if (this.currentRoomData.indexOf(deviceName) > -1)
-      return true;
-    return false;
+  isExist(deviceName: string): boolean {
+    return this.currentRoomData.includes(deviceName);
   }
 
-  roomIsExist(roomName) {
-    if (this.roomDataList.indexOf(roomName) > -1) return true;
-    return false
+  roomIsExist(roomName: string): boolean {
+    return this.roomDataList.includes(roomName);
   }
 
-  delDevice(deviceName) {
-    let index = this.currentRoomData.indexOf(deviceName);
+  delDevice(deviceName: string): void {
+    const index = this.currentRoomData.indexOf(deviceName);
     if (index > -1) {
       this.currentRoomData.splice(index, 1);
     }
   }
 
-  addDevice(deviceName) {
-    this.currentRoomData.push(deviceName);
+  addDevice(deviceName: string): void {
+    if (!this.isExist(deviceName)) {
+      this.currentRoomData.push(deviceName);
+    }
   }
 
 }

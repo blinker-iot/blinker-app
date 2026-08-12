@@ -1,63 +1,73 @@
-<ion-header>
-  <ion-toolbar #navbar>
+<ion-header class="editor-header ion-no-border">
+  <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-back-button text="" defaultHref="/scene-manager"></ion-back-button>
     </ion-buttons>
     <ion-title>编辑场景</ion-title>
   </ion-toolbar>
 </ion-header>
 <ion-content>
-  <ng-container *ngIf="loaded">
-    <app-hero-card>
-      <div class="full-box">
-        <div class="box" (click)="changeSceneIcon()">
-          <div class="icon-box" *ngIf="sceneDataDict[sceneName]">
-            <i class="{{sceneDataDict[sceneName].ico}}"></i>
-          </div>
-          <div class="btn">修改图标</div>
-        </div>
-        <div class="box right" (click)="changeSceneName()">
-          <div class="text-box">{{sceneName}}</div>
-          <div class="btn">修改名称</div>
-        </div>
+  <main class="editor-content" *ngIf="loaded">
+    <section class="editor-hero scene-hero">
+      <span class="hero-icon scene-icon" aria-hidden="true">
+        <i [class]="sceneDataDict[sceneName]?.ico || 'fa-light fa-bolt'"></i>
+      </span>
+      <div class="hero-copy">
+        <span class="eyebrow">场景</span>
+        <h1>{{ sceneName }}</h1>
+        <p>包含 {{ acts.length }} 个执行步骤</p>
       </div>
-    </app-hero-card>
-    <div class="title">当按下按键时，将执行以下动作</div>
-    <div class="scrollbox">
-      <app-menu-list>
-        <ng-container *ngFor="let action of acts;index as i">
-          <app-menu-item>
-            <ng-container *ngIf="action.delay">
-              <div class="img-box">
-                <i class="fal fa-history"></i>
-              </div>
-              <div class="text-box">
-                <div class="name">延时{{action.delay}}秒</div>
-              </div>
-              <div class="btn-box" (click)="delAct(i)">
-                <ion-icon name="close-outline"></ion-icon>
-              </div>
-            </ng-container>
-            <ng-container *ngIf="!action.delay">
-              <div class="img-box">
-                <b-device-img [deviceId]="action.deviceId"></b-device-img>
-              </div>
-              <div class="text-box">
-                <div class="name">{{deviceDataDict[action.deviceId].config.customName}}</div>
-                <div class="other">{{action.text | actcmd2text:action.deviceId}}</div>
-              </div>
-              <div class="btn-box" (click)="delAct(i)">
-                <ion-icon name="close-outline"></ion-icon>
-              </div>
-            </ng-container>
-          </app-menu-item>
-        </ng-container>
-      </app-menu-list>
+      <div class="hero-actions">
+        <button type="button" class="icon-action" (click)="changeSceneIcon()" aria-label="修改场景图标">
+          <i class="fa-light fa-icons"></i>
+        </button>
+        <button type="button" class="icon-action" (click)="changeSceneName()" aria-label="修改场景名称">
+          <i class="fa-light fa-pen"></i>
+        </button>
+      </div>
+    </section>
+
+    <div class="section-heading">
+      <h2>执行步骤</h2>
+      <span class="section-count">{{ acts.length }}</span>
     </div>
-  </ng-container>
+    <section class="editor-card" *ngIf="acts.length">
+      <button
+        type="button"
+        class="action-row"
+        *ngFor="let action of acts; index as i"
+        (click)="delAct(i)"
+        aria-label="删除此执行步骤"
+      >
+        <ng-container *ngIf="action.delay !== undefined; else deviceAction">
+          <span class="action-icon delay-icon" aria-hidden="true"><i class="fa-light fa-clock"></i></span>
+          <span class="row-copy">
+            <strong>等待 {{ action.delay }} 秒</strong>
+            <small>延时完成后继续执行下一步</small>
+          </span>
+        </ng-container>
+        <ng-template #deviceAction>
+          <span class="device-image"><b-device-img [deviceId]="action.deviceId"></b-device-img></span>
+          <span class="row-copy">
+            <strong>{{ deviceDataDict[action.deviceId].config.customName }}</strong>
+            <small>{{ (action.text | actcmd2text:action.deviceId) || action.text }}</small>
+          </span>
+        </ng-template>
+        <span class="row-action remove" aria-hidden="true"><i class="fa-light fa-trash-can"></i></span>
+      </button>
+    </section>
+    <section class="inline-empty" *ngIf="!acts.length">
+      <i class="fa-light fa-wand-magic-sparkles" aria-hidden="true"></i>
+      <strong>还没有执行步骤</strong>
+      <p>添加设备动作或延时，组合出你的自动化场景。</p>
+    </section>
+  </main>
 </ion-content>
-<ion-footer class="ion-no-border">
+<ion-footer class="editor-footer ion-no-border" *ngIf="loaded">
   <ion-toolbar>
-    <b-bottom-btn (click)="addAct()">+ 添加动作</b-bottom-btn>
+    <button type="button" class="primary-action" (click)="addAct()">
+      <i class="fa-light fa-plus" aria-hidden="true"></i>
+      <span>添加执行步骤</span>
+    </button>
   </ion-toolbar>
 </ion-footer>

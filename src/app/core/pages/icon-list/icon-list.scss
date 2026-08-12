@@ -1,91 +1,139 @@
-.fa-times {
-    color: #FFF;
+:host {
+  display: block;
+  height: 100%;
+  color: var(--blinker-text-primary);
+  background: var(--blinker-bg);
 }
 
-.text-box {
-    font-size: 14px;
-    padding: 15px;
-    line-height: 25px;
+.icon-header {
+  background: color-mix(in srgb, var(--blinker-bg) 88%, transparent);
+  backdrop-filter: var(--blinker-nav-blur);
+  -webkit-backdrop-filter: var(--blinker-nav-blur);
+
+  ion-toolbar {
+    --background: transparent;
+    --border-width: 0;
+    --color: var(--blinker-text-primary);
+  }
+
+  ion-title {
+    font-size: 17px;
+    font-weight: 600;
+  }
 }
 
-.tab-box {
-    padding: 15px;
-    display: flex;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    background-color: #fff;
-    box-shadow: 0 0 10px #ccc;
-    padding-top: 45px;
-    font-size: 14px;
-    z-index: 99;
-
-    .text {
-        position: absolute;
-        top: 15px;
-        left: 15px;
-
-        span {
-            margin-left: 15px;
-            color: #BBB;
-            font-size: 12px;
-        }
-    }
-
-    .tab {
-        border: 1px solid #ccc;
-        padding: 8px 15px;
-        border-radius: 5px;
-    }
-
-    .tab.selected {
-        background-color: #389bee;
-        color: #fff;
-    }
+.close-button {
+  --color: var(--blinker-text-primary);
 }
 
-.icon-box {
-    display: flex;
-    flex-direction: column;
-    padding: 0 15px 15px 15px;
+ion-content {
+  --background: var(--blinker-bg);
 }
 
-.class-box {
-    display: flex;
-    flex-direction: column;
-    border-bottom: 1px solid #ddd;
-
-    .title {
-        font-size: 14px;
-        margin-top: 15px;
-    }
+.icon-content {
+  width: 100%;
+  max-width: 720px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
 }
 
-.item-box {
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    padding-bottom: 30px;
+.style-panel {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 15px;
+  border: 1px solid var(--blinker-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--blinker-surface) 94%, transparent);
+  box-shadow: var(--blinker-shadow-soft);
+  backdrop-filter: var(--blinker-nav-blur);
+  -webkit-backdrop-filter: var(--blinker-nav-blur);
 }
 
-.item {
-    width: 16vw;
-    height: 16vw;
-    margin-top: 15px;
-    // margin: 0.6vw;
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
-    border-radius: 5px;
-    font-size: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #389bee;
+.style-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 
-    i {
-        font-size: 32px;
-    }
+  strong {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  small {
+    color: var(--blinker-text-tertiary);
+    font-size: 10px;
+  }
 }
 
-.null {
-    width: 16vw;
+.style-tabs {
+  margin-top: 12px;
+  padding: 3px;
+  border-radius: 11px;
+  background: var(--blinker-surface-muted);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+
+  button {
+    min-height: 34px;
+    border: 0;
+    border-radius: 9px;
+    color: var(--blinker-text-secondary);
+    background: transparent;
+    font-size: 11px;
+    font-weight: 550;
+  }
+
+  button.selected {
+    color: var(--ion-color-primary);
+    background: var(--blinker-surface);
+    box-shadow: 0 2px 8px rgba(24, 43, 74, 0.08);
+  }
+}
+
+.icon-category {
+  margin-top: 21px;
+}
+
+.category-title {
+  margin: 0 4px 9px;
+  color: var(--blinker-text-secondary);
+  font-size: 12px;
+}
+
+.icon-grid {
+  padding: 10px;
+  border: 1px solid var(--blinker-border);
+  border-radius: 16px;
+  background: var(--blinker-surface);
+  box-shadow: var(--blinker-shadow-soft);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.icon-item {
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 1px solid var(--blinker-divider);
+  border-radius: 12px;
+  color: var(--ion-color-primary);
+  background: var(--blinker-surface-muted);
+  display: grid;
+  place-items: center;
+  font-size: clamp(19px, 6vw, 28px);
+
+  &:active {
+    transform: scale(0.95);
+    border-color: rgba(var(--ion-color-primary-rgb), 0.35);
+    background: var(--blinker-surface-active);
+  }
+}
+
+@media (min-width: 600px) {
+  .icon-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
 }

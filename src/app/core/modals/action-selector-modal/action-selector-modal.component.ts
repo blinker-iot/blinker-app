@@ -1,11 +1,16 @@
-import { Component, EventEmitter, Input, OnInit, Output, SimpleChanges } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ModalController } from '@ionic/angular';
+import { Act2TextPipe } from 'src/app/core/pipes/actcmd2text';
 import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 
 @Component({
-    selector: 'blinker-action-selector-modal',
-    templateUrl: './action-selector-modal.component.html',
-    styleUrls: ['./action-selector-modal.component.scss']
+  selector: 'blinker-action-selector-modal',
+  standalone: true,
+  templateUrl: './action-selector-modal.component.html',
+  styleUrls: ['./action-selector-modal.component.scss'],
+  imports: [CommonModule, Act2TextPipe, TranslatePipe],
 })
 export class ActionSelectorModalComponent implements OnInit {
 

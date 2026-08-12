@@ -1,11 +1,15 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { ModalController } from '@ionic/angular';
+import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
-    selector: 'blinker-device-selector-modal',
-    templateUrl: './device-selector-modal.component.html',
-    styleUrls: ['./device-selector-modal.component.scss']
+  selector: 'blinker-device-selector-modal',
+  standalone: true,
+  templateUrl: './device-selector-modal.component.html',
+  styleUrls: ['./device-selector-modal.component.scss'],
+  imports: [CommonModule, BDeviceImgComponent],
 })
 export class DeviceSelectorModalComponent implements OnInit {
 

@@ -1,17 +1,14 @@
 @use "../repeat-selector-modal/repeat-selector-modal.component.scss";
+@use "../modern-selector";
 
 .select-modal {
-    padding: 0 15px;
+    padding-inline: 12px;
 }
 
 .item-list {
-    overflow-y: scroll;
-    justify-content: flex-start;
-    height: 100%;
+    height: auto;
 
     .item {
-        flex-grow: 0;
-        flex-shrink: 0;
-        height: 52px;
+        min-height: 54px;
     }
 }

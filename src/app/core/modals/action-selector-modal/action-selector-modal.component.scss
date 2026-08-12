@@ -1,24 +1,26 @@
 @use "../repeat-selector-modal/repeat-selector-modal.component.scss";
+@use "../modern-selector";
 
 .select-modal {
-    padding: 0 15px;
+    padding-inline: 12px;
 }
 
 .item-list {
-    overflow-y: scroll;
-    justify-content: flex-start;
-    height: 100%;
+    height: auto;
     font-size: 14px;
 
     .item {
-        flex-grow: 0;
-        flex-shrink: 0;
+        min-height: 56px;
     }
 }
 
-.btn{
-    padding: 15px;
+.btn {
+    padding: 13px 15px;
+    border-radius: 11px;
     text-align: center;
-    color:#389BEE;
+    color: var(--ion-color-primary);
+    background: rgba(var(--ion-color-primary-rgb), 0.08);
+    font-size: 12px;
+    font-weight: 600;
 }
 
