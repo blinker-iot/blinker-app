@@ -44,7 +44,12 @@ export function createProfileMenuGroups(
           id: 'voice-assistant',
           title: '语音助手',
           icon: 'fa-microphone',
-          value: '小智小智',
+          value: '小智',
+        },
+        {
+          id: 'selfhost',
+          title: '自建服务器',
+          icon: 'fa-server'
         },
       ],
     },
@@ -56,12 +61,15 @@ export function createProfileMenuGroups(
           id: 'settings',
           title: '设置',
           icon: 'fa-gear',
+          value: '语言和主题设置',
           route: '/settings',
         },
         {
-          id: 'help',
-          title: '帮助与反馈',
+          id: 'feedback',
+          title: '反馈',
           icon: 'fa-circle-question',
+          value: '提出建议和反馈问题',
+          route: '/feedback',
         },
         {
           id: 'logout',
