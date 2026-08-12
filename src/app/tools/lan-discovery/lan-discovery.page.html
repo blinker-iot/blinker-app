@@ -1,9 +1,7 @@
 <ion-header class="page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button class="nav-back" aria-label="返回" (click)="goBack()">
-        <i class="fa-light fa-chevron-left"></i>
-      </ion-button>
+      <ion-back-button defaultHref="/home?tab=tools" text=""></ion-back-button>
     </ion-buttons>
     <ion-title>局域网发现</ion-title>
     @if (services.length) {

@@ -26,7 +26,7 @@
     text-align: left;
   }
 
-  ion-buttons { margin-inline: 10px; }
+  ion-buttons[slot="end"] { margin-inline-end: 10px; }
 
   .nav-icon {
     width: 34px;

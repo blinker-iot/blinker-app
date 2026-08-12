@@ -2,26 +2,6 @@
   <ion-toolbar>
     <ion-title>工具</ion-title>
 
-    <ion-buttons slot="end">
-      <ion-button
-        class="header-action"
-        fill="clear"
-        aria-label="最近使用"
-        [class.active]="recentOnly"
-        (click)="toggleRecent()"
-      >
-        <i class="fa-light fa-clock-rotate-left"></i>
-      </ion-button>
-      <ion-button
-        class="header-action"
-        fill="clear"
-        aria-label="搜索工具"
-        [class.active]="searchVisible"
-        (click)="toggleSearch()"
-      >
-        <i class="fa-light fa-magnifying-glass"></i>
-      </ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -29,25 +9,7 @@
   <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
 
   <div class="tools-page">
-    @if (searchVisible) {
-      <label class="search-box">
-        <i class="fa-light fa-magnifying-glass"></i>
-        <input
-          type="search"
-          inputmode="search"
-          autocomplete="off"
-          placeholder="搜索工具"
-          [(ngModel)]="searchKeyword"
-        />
-        @if (searchKeyword) {
-          <button type="button" aria-label="清除搜索" (click)="searchKeyword = ''">
-            <i class="fa-solid fa-circle-xmark"></i>
-          </button>
-        }
-      </label>
-    }
-
-    @for (group of visibleGroups; track group.title) {
+    @for (group of groups; track group.title) {
       <section class="tool-section">
         <h2>{{ group.title }}</h2>
         <app-menu-list
@@ -57,12 +19,6 @@
           (itemSelected)="openTool($event)"
         ></app-menu-list>
       </section>
-    } @empty {
-      <div class="empty-state">
-        <span><i class="fa-light fa-magnifying-glass"></i></span>
-        <h2>{{ recentOnly ? '还没有最近使用的工具' : '没有找到相关工具' }}</h2>
-        <p>{{ recentOnly ? '打开工具后会自动记录在这里' : '换个关键词试试看' }}</p>
-      </div>
     }
   </div>
 </ion-content>

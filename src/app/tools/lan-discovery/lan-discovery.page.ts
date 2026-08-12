@@ -5,7 +5,7 @@ import { App } from '@capacitor/app';
 import { Clipboard } from '@capacitor/clipboard';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { Network } from '@capacitor/network';
-import { IonicModule, NavController, ToastController } from '@ionic/angular';
+import { IonicModule, ToastController } from '@ionic/angular';
 import {
   Mdns,
   type MdnsErrorEvent,
@@ -72,7 +72,6 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
   private destroyed = false;
 
   constructor(
-    private navController: NavController,
     private zone: NgZone,
     private cdr: ChangeDetectorRef,
     private toastController: ToastController
@@ -126,10 +125,6 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
     this.destroyed = true;
     this.clearElapsedTimer();
     void this.releaseResources();
-  }
-
-  goBack(): void {
-    void this.navController.navigateBack('/home', { queryParams: { tab: 'tools' } });
   }
 
   selectType(type: string): void {

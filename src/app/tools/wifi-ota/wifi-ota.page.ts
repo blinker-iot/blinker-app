@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Capacitor, CapacitorHttp, type HttpResponse, type PluginListenerHandle } from '@capacitor/core';
-import { IonicModule, NavController, ToastController } from '@ionic/angular';
+import { IonicModule, ToastController } from '@ionic/angular';
 import { Mdns, type MdnsErrorEvent, type MdnsService, type MdnsWatchEvent } from 'capacitor-mdns';
 import { formatBytes } from '../ota/ota-protocol';
 
@@ -75,7 +75,6 @@ export class WifiOtaPage implements OnInit, OnDestroy {
   private destroyed = false;
 
   constructor(
-    private navController: NavController,
     private zone: NgZone,
     private cdr: ChangeDetectorRef,
     private toastController: ToastController,
@@ -107,15 +106,6 @@ export class WifiOtaPage implements OnInit, OnDestroy {
     } catch {
       return '目标地址待完善';
     }
-  }
-
-  async goBack(): Promise<void> {
-    if (this.isBusy) {
-      await this.showToast('固件正在上传，请等待完成后返回');
-      return;
-    }
-    await this.stopDiscovery();
-    await this.navController.navigateBack('/home', { queryParams: { tab: 'tools' } });
   }
 
   async chooseFirmware(event: Event): Promise<void> {

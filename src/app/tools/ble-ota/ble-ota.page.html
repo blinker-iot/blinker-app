@@ -1,9 +1,7 @@
 <ion-header class="page-header ota-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button class="nav-back" aria-label="返回" [disabled]="isBusy" (click)="goBack()">
-        <i class="fa-light fa-chevron-left"></i>
-      </ion-button>
+      <ion-back-button defaultHref="/home?tab=tools" text="" [disabled]="isBusy"></ion-back-button>
     </ion-buttons>
     <ion-title>BLE OTA</ion-title>
   </ion-toolbar>

@@ -4,15 +4,6 @@
   background: color-mix(in srgb, var(--blinker-bg) 90%, transparent);
   ion-toolbar { --background: transparent; --border-width: 0 0 1px; --border-color: var(--blinker-divider); }
   ion-title { color: var(--blinker-text-primary); font-size: 17px; font-weight: 600; }
-  .nav-back {
-    width: 34px;
-    height: 34px;
-    margin: 0;
-    --padding-start: 0;
-    --padding-end: 0;
-    --border-radius: 50%;
-    --color: var(--blinker-text-primary);
-  }
 }
 
 ion-content { --background: var(--blinker-bg); --overflow: auto; }

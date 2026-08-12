@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, NgZone, OnDestro
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@capacitor/clipboard';
 import { Capacitor } from '@capacitor/core';
-import { IonicModule, NavController, ToastController } from '@ionic/angular';
+import { IonicModule, ToastController } from '@ionic/angular';
 import {
   BleCharacteristic,
   BleDescriptor,
@@ -157,8 +157,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
   constructor(
     private zone: NgZone,
     private cdr: ChangeDetectorRef,
-    private toastController: ToastController,
-    private navController: NavController
+    private toastController: ToastController
   ) {}
 
   ngOnInit(): void {
@@ -451,17 +450,6 @@ export class BleDebugPage implements OnInit, OnDestroy {
     this.showMoreMenu = false;
     if (this.canWrite(characteristic)) this.openWriter(service, characteristic);
     else this.writeTarget = undefined;
-  }
-
-  goBack(): void {
-    this.showMoreMenu = false;
-    if (this.screen === 'scanner') {
-      void this.navController.navigateBack('/home', { queryParams: { tab: 'tools' } });
-    }
-    else if (this.screen === 'advertisement') this.screen = 'scanner';
-    else if (this.screen === 'characteristic') this.screen = 'gatt';
-    else if (this.screen === 'overview') this.screen = 'scanner';
-    else this.screen = this.connectedDevice ? 'overview' : 'scanner';
   }
 
   toggleMoreMenu(): void {
