@@ -50,7 +50,9 @@ export function createProfileMenuGroups(
         {
           id: 'selfhost',
           title: '自建服务器',
-          icon: 'fa-server'
+          icon: 'fa-server',
+          value: '配置地址与密钥',
+          route: '/self-hosted-server',
         },
       ],
     },

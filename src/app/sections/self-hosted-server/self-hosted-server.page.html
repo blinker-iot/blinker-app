@@ -1,0 +1,129 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>自建服务器</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true">
+  <main class="server-content">
+    <section class="server-intro">
+      <span class="server-icon" aria-hidden="true">
+        <i class="fa-light fa-server"></i>
+      </span>
+      <div>
+        <h1>连接你的服务器</h1>
+        <p>保存独立的服务器地址和访问密钥，供自建服务功能使用。</p>
+      </div>
+    </section>
+
+    <div class="section-label">连接配置</div>
+    <form class="server-form" (ngSubmit)="save()" novalidate>
+      <div class="field" [class.field-invalid]="addressError">
+        <label class="field-label" for="self-hosted-server-address">
+          <span>服务器地址</span>
+          <small>必填</small>
+        </label>
+        <span class="input-shell">
+          <i class="fa-light fa-globe" aria-hidden="true"></i>
+          <input
+            id="self-hosted-server-address"
+            name="serverAddress"
+            type="url"
+            inputmode="url"
+            autocomplete="url"
+            required
+            placeholder="https://server.example.com"
+            [(ngModel)]="serverAddress"
+            (ngModelChange)="clearValidation('address')"
+            [attr.aria-invalid]="addressError ? 'true' : 'false'"
+            aria-describedby="address-help address-error"
+          />
+        </span>
+        <small id="address-help" class="field-help">
+          支持 HTTP、HTTPS、WS 和 WSS，请填写完整协议。
+        </small>
+        @if (addressError) {
+        <small id="address-error" class="field-error">
+          <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+          {{ addressError }}
+        </small>
+        }
+      </div>
+
+      <div class="field" [class.field-invalid]="keyError">
+        <label class="field-label" for="self-hosted-server-key">
+          <span>服务器密钥</span>
+          <small>必填</small>
+        </label>
+        <span class="input-shell">
+          <i class="fa-light fa-key" aria-hidden="true"></i>
+          <input
+            id="self-hosted-server-key"
+            name="serverKey"
+            [type]="showKey ? 'text' : 'password'"
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+            required
+            placeholder="请输入服务器密钥"
+            [(ngModel)]="serverKey"
+            (ngModelChange)="clearValidation('key')"
+            [attr.aria-invalid]="keyError ? 'true' : 'false'"
+            aria-describedby="key-help key-error"
+          />
+          <button
+            type="button"
+            class="key-toggle"
+            (click)="toggleKeyVisibility()"
+            [attr.aria-label]="showKey ? '隐藏服务器密钥' : '显示服务器密钥'"
+          >
+            <i
+              class="fa-light"
+              [class.fa-eye]="!showKey"
+              [class.fa-eye-slash]="showKey"
+              aria-hidden="true"
+            ></i>
+          </button>
+        </span>
+        <small id="key-help" class="field-help">
+          密钥仅保存在当前设备，请勿分享给他人。
+        </small>
+        @if (keyError) {
+        <small id="key-error" class="field-error">
+          <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+          {{ keyError }}
+        </small>
+        }
+      </div>
+
+      @if (saved) {
+      <div class="save-success" role="status">
+        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+        配置已保存
+      </div>
+      }
+
+      <button type="submit" class="save-button">
+        <i class="fa-light fa-floppy-disk" aria-hidden="true"></i>
+        保存配置
+      </button>
+
+      @if (hasSavedConfig) {
+      <button type="button" class="clear-button" (click)="confirmClear()">
+        清除配置
+      </button>
+      }
+    </form>
+
+    <aside class="privacy-tip">
+      <i class="fa-light fa-shield-check" aria-hidden="true"></i>
+      <div>
+        <strong>独立配置</strong>
+        <p>这里的设置不会修改应用内置的 API 地址或现有账户连接。</p>
+      </div>
+    </aside>
+  </main>
+</ion-content>

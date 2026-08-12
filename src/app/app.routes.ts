@@ -5,6 +5,10 @@ export const routes: Routes = [
   { path: 'home', loadComponent: () => import('./home/home.page').then(m => m.HomePage) },
   { path: 'login', loadComponent: () => import('./sections/login/login').then(m => m.LoginPage) },
   { path: 'settings', loadComponent: () => import('./sections/settings/settings.page').then(m => m.SettingsPage) },
+  {
+    path: 'self-hosted-server',
+    loadComponent: () => import('./sections/self-hosted-server/self-hosted-server.page').then(m => m.SelfHostedServerPage),
+  },
   { path: 'feedback', loadComponent: () => import('./sections/feedback/feedback.component').then(m => m.FeedbackPage) },
   { path: 'about', loadComponent: () => import('./sections/about/about.page').then(m => m.AboutPage) },
   { path: 'user', loadComponent: () => import('./sections/user/user.page').then(m => m.UserPage) },
