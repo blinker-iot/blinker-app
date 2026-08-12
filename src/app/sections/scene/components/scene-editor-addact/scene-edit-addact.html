@@ -15,37 +15,37 @@
 </ion-header>
 <ion-content>
 
-  <b-item-list>
-    <b-item showArrow="true" (click)="openTypeSelectModal()">
+  <app-menu-list>
+    <app-menu-item showArrow="true" (click)="openTypeSelectModal()">
       <div>任务类型</div>
       <div class="selected">
         {{selectedType.text}}
       </div>
-    </b-item>
+    </app-menu-item>
     <ng-container *ngIf="selectedType.value=='delay'">
-      <b-item showArrow="true" (click)="openDelaySelectModal()">
+      <app-menu-item showArrow="true" (click)="openDelaySelectModal()">
         <div>延迟时长</div>
         <div class="selected">
           {{selectedDelay.text}}
         </div>
-      </b-item>
+      </app-menu-item>
     </ng-container>
     <ng-container *ngIf="selectedType.value=='action'">
-      <b-item showArrow="true" (click)="openDeviceSelectModal()">
+      <app-menu-item showArrow="true" (click)="openDeviceSelectModal()">
         <div>任务设备</div>
         <div class="selected" *ngIf="selectedDevice">
           {{selectedDevice.config.customName}}
         </div>
-      </b-item>
-      <b-item showArrow="true" [disabled]="disableActionSelector" (click)="openActionSelectorModal()">
+      </app-menu-item>
+      <app-menu-item showArrow="true" [disabled]="disableActionSelector" (click)="openActionSelectorModal()">
         <div>执行动作</div>
         <div class="selected" *ngIf="selectedDevice && selectedAction">
           {{ selectedAction | actcmd2text:selectedDevice.id}}
         </div>
-      </b-item>
+      </app-menu-item>
     </ng-container>
 
-  </b-item-list>
+  </app-menu-list>
 
   <!-- <div class="tab-box">
     <div class="tab" (click)="selectTab(1)">

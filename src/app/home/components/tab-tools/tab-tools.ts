@@ -4,7 +4,7 @@ import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import {
   MenuListComponent,
   MenuListItem,
-} from '../menu-list/menu-list';
+} from '../../../core/components/menu-list/menu-list';
 import { TOOL_MENU_GROUPS } from '../../../tools/tool-menu.config';
 import { navigateToTool } from './tool-navigation';
 

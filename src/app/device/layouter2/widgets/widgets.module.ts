@@ -21,7 +21,6 @@ import { WidgetImageComponent } from './widget-image/widget-image';
 import { ChartsModule } from 'src/app/core/charts/charts.module';
 import { WidgetCustomComponent } from './widget-custom/widget-custom';
 // import { NgxEchartsModule } from 'ngx-echarts';
-import { BToggleComponent } from 'src/app/core/components/b-toggle/b-toggle.component';
 import { BlinkerWidgetDirective } from './widget.directive';
 import { WidgetSelectComponent } from './widget-select/widget-select';
 

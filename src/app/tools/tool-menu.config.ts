@@ -1,4 +1,4 @@
-import { MenuListItem } from '../home/components/menu-list/menu-list';
+import { MenuListItem } from '../core/components/menu-list/menu-list';
 
 export interface ToolMenuGroup {
   title: string;

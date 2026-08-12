@@ -7,8 +7,8 @@
   </ion-toolbar>
 </ion-header>
 <ion-content>
-  <b-item-list *ngIf="loaded">
-    <b-item *ngFor="let deviceName of deviceDataList" [routerLink]="['/device-manager',deviceName]" showArrow="true">
+  <app-menu-list *ngIf="loaded">
+    <app-menu-item *ngFor="let deviceName of deviceDataList" [routerLink]="['/device-manager',deviceName]" showArrow="true">
       <div class="img-box">
         <b-device-img [filename]="deviceDataDict[deviceName].config.image"></b-device-img>
         <img *ngIf="deviceDataDict[deviceName].config.mode=='ble'" class="mode" src="img/icon/ble.png" />
@@ -17,6 +17,6 @@
         <div class="name">{{deviceDataDict[deviceName].config.customName}}</div>
         <div class="other">{{deviceName}}</div>
       </div>
-    </b-item>
-  </b-item-list>
+    </app-menu-item>
+  </app-menu-list>
 </ion-content>

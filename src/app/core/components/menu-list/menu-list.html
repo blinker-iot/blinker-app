@@ -1,0 +1,43 @@
+<div
+  #sortbox
+  [class.menu-list]="items !== undefined"
+  [class.menu-list--detailed]="items !== undefined && detailed"
+  [class.item-list-box]="items === undefined"
+  [class.edit]="items === undefined && editMode"
+  [class.sort]="items === undefined && enableSort"
+  [attr.role]="items !== undefined ? 'group' : null"
+  [attr.aria-label]="items !== undefined ? ariaLabel : null"
+>
+  @for (item of items ?? []; track item.id) {
+    <button
+      type="button"
+      class="menu-row"
+      [class.menu-row--muted]="item.muted"
+      [class.menu-row--danger]="item.danger"
+      (click)="select(item)"
+    >
+      <span class="menu-icon" aria-hidden="true">
+        <i [class]="'fa-light ' + item.icon"></i>
+      </span>
+
+      <span class="menu-copy">
+        <span class="menu-title">{{ item.title }}</span>
+        @if (item.description) {
+          <span class="menu-description">{{ item.description }}</span>
+        }
+      </span>
+
+      @if (item.value) {
+        <span class="menu-value">{{ item.value }}</span>
+      }
+      @if (item.badge) {
+        <span class="menu-badge">{{ item.badge }}</span>
+      }
+      @if (item.showChevron !== false) {
+        <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
+      }
+    </button>
+  }
+
+  <ng-content></ng-content>
+</div>

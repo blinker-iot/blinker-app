@@ -6,8 +6,8 @@ import { AlertController, IonicModule } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DataService } from 'src/app/core/services/data.service';
-import { BItemListComponent } from 'src/app/core/components/b-item-list/b-item-list.component';
-import { BItemComponent } from 'src/app/core/components/b-item-list/b-item/b-item';
+import { MenuListComponent } from 'src/app/core/components/menu-list/menu-list';
+import { MenuItemComponent } from 'src/app/core/components/menu-list/menu-item/menu-item';
 import { SceneService } from '../scene.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
@@ -20,8 +20,8 @@ import { NoticeService } from 'src/app/core/services/notice.service';
       CommonModule,
       IonicModule,
       TranslatePipe,
-      BItemListComponent,
-      BItemComponent,
+      MenuListComponent,
+      MenuItemComponent,
     ],
 })
 export class SceneManager {

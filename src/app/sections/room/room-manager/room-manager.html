@@ -27,8 +27,8 @@
     <div class="section-label">我的区域</div>
 
     <section class="manager-card" *ngIf="loaded && roomDataList.length">
-      <b-item-list class="manager-list" [editMode]="editMode" (sortChange)="sortChange($event)">
-        <b-item
+      <app-menu-list class="manager-list" [editMode]="editMode" (sortChange)="sortChange($event)">
+        <app-menu-item
           [id]="roomName"
           showArrow="true"
           *ngFor="let roomName of roomDataList"
@@ -42,8 +42,8 @@
             <strong>{{ roomName }}</strong>
             <small>{{ roomDataDict[roomName]?.length || 0 }} 台设备</small>
           </span>
-        </b-item>
-      </b-item-list>
+        </app-menu-item>
+      </app-menu-list>
     </section>
 
     <section class="empty-state" *ngIf="loaded && !roomDataList.length">

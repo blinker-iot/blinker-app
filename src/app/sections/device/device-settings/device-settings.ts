@@ -22,7 +22,7 @@ import { Layouter2Service } from "src/app/device/layouter2/layouter2.service";
 import {
   MenuListComponent,
   MenuListItem,
-} from "src/app/home/components/menu-list/menu-list";
+} from "src/app/core/components/menu-list/menu-list";
 
 @Component({
     selector: "app-device-settings",

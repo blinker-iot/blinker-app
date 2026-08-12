@@ -8,7 +8,7 @@
 </ion-header>
 <ion-content>
   <ng-container *ngIf="loaded">
-    <b-top-box>
+    <app-hero-card>
       <div class="full-box">
         <div class="box" (click)="changeSceneIcon()">
           <div class="icon-box" *ngIf="sceneDataDict[sceneName]">
@@ -21,12 +21,12 @@
           <div class="btn">修改名称</div>
         </div>
       </div>
-    </b-top-box>
+    </app-hero-card>
     <div class="title">当按下按键时，将执行以下动作</div>
     <div class="scrollbox">
-      <b-item-list>
+      <app-menu-list>
         <ng-container *ngFor="let action of acts;index as i">
-          <b-item>
+          <app-menu-item>
             <ng-container *ngIf="action.delay">
               <div class="img-box">
                 <i class="fal fa-history"></i>
@@ -50,9 +50,9 @@
                 <ion-icon name="close-outline"></ion-icon>
               </div>
             </ng-container>
-          </b-item>
+          </app-menu-item>
         </ng-container>
-      </b-item-list>
+      </app-menu-list>
     </div>
   </ng-container>
 </ion-content>

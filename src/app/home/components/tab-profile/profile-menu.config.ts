@@ -1,4 +1,4 @@
-import { MenuListItem } from '../menu-list/menu-list';
+import { MenuListItem } from '../../../core/components/menu-list/menu-list';
 
 export interface ProfileMenuStats {
   roomNum: number;

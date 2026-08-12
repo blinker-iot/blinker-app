@@ -9,12 +9,12 @@
 
 <ion-content [fullscreen]="true">
   <ng-container *ngIf="loaded">
-    <b-item-list [editMode]="editMode" [enableSort]="false">
-      <!-- <b-item icon="fa-light fa-plus" (click)="addTimingTask()">
+    <app-menu-list [editMode]="editMode" [enableSort]="false">
+      <!-- <app-menu-item icon="fa-light fa-plus" (click)="addTimingTask()">
         新建任务
-      </b-item> -->
+      </app-menu-item> -->
       @for (task of timingTasks; track $index) {
-        <b-item (enter)="editTimingTask(task)">
+        <app-menu-item (enter)="editTimingTask(task)">
           <div class="text-box">
             <div class="name">{{task.tim | minuteToTime }}</div>
             <div class="other">{{task.act[0] | actcmd2text:device.id}} <span style="margin-left: 10px;">{{ task.day |
@@ -23,19 +23,19 @@
           <div class="toggle">
             <ion-toggle [checked]="task.ena == '1' ? true : false" (click)="changeEna(task)"></ion-toggle>
           </div>
-        </b-item>
+        </app-menu-item>
       }
       <!-- <ng-container *ngFor="let task of timingTasks;trackBy: trackByFn">
         
       </ng-container> -->
-    </b-item-list>
+    </app-menu-list>
   </ng-container>
 
   <div class="bottom-box">
-    <b-item-list *ngIf="device">
-      <b-item icon="fa-light fa-plus" (click)="addTimingTask()">
+    <app-menu-list *ngIf="device">
+      <app-menu-item icon="fa-light fa-plus" (click)="addTimingTask()">
         新建任务
-      </b-item>
-    </b-item-list>
+      </app-menu-item>
+    </app-menu-list>
   </div>
 </ion-content>

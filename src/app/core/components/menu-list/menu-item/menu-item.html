@@ -1,0 +1,46 @@
+<div class="item-box">
+  @if (editMode) {
+  <div
+    class="del-btn"
+    animate.enter="menu-item-fade-in"
+    animate.leave="menu-item-fade-out"
+    [ngStyle]="{'height':itemHeight}"
+    (click)="clickDelBtn()"
+  >
+    <i class="fa-solid fa-circle-minus"></i>
+  </div>
+  } @if (editMode) {
+  <div class="handle animated fadeIn" [ngStyle]="{'height':itemHeight}">
+    <i class="fal fa-grip-lines"></i>
+  </div>
+  }
+  <div
+    class="item"
+    [ngClass]="{'disabled': disabled}"
+    [ngStyle]="{'height':itemHeight}"
+    (click)="clickItem()"
+  >
+    <div class="content">
+      @if (icon) {
+      <div class="icon-box">
+        <i class="{{icon}}"></i>
+      </div>
+      } @if (text) {
+      <div class="text-box">{{text}}</div>
+      }
+      <ng-content></ng-content>
+    </div>
+    @if (showArrow && !editMode) {
+    <div class="arrow">
+      <i class="fa-light fa-chevron-right"></i>
+    </div>
+    } @if (showAdd && !editMode) {
+    <div class="arrow">
+      <i class="fa-light fa-plus"></i>
+    </div>
+    }
+  </div>
+  <div class="toggle-box">
+    <ng-content select=".toggle"></ng-content>
+  </div>
+</div>

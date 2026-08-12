@@ -9,7 +9,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import {
   MenuListComponent,
   MenuListItem,
-} from '../menu-list/menu-list';
+} from '../../../core/components/menu-list/menu-list';
 import { createProfileMenuGroups } from './profile-menu.config';
 
 @Component({

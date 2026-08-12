@@ -8,8 +8,8 @@ import { CommonModule } from '@angular/common';
 import { AlertController, IonicModule } from '@ionic/angular';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Router } from '@angular/router';
-import { BItemListComponent } from 'src/app/core/components/b-item-list/b-item-list.component';
-import { BItemComponent } from 'src/app/core/components/b-item-list/b-item/b-item';
+import { MenuListComponent } from 'src/app/core/components/menu-list/menu-list';
+import { MenuItemComponent } from 'src/app/core/components/menu-list/menu-item/menu-item';
 import { DataService } from 'src/app/core/services/data.service';
 import { RoomService } from '../room.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
@@ -19,7 +19,7 @@ import { NoticeService } from 'src/app/core/services/notice.service';
     selector: 'room-manager',
     templateUrl: 'room-manager.html',
     styleUrls: ['room-manager.scss'],
-    imports: [CommonModule, IonicModule, TranslatePipe, BItemListComponent, BItemComponent]
+    imports: [CommonModule, IonicModule, TranslatePipe, MenuListComponent, MenuItemComponent]
 })
 export class RoomManagerPage {
 

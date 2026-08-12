@@ -1,0 +1,53 @@
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  HostBinding,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  standalone: true,
+  imports: [CommonModule],
+  selector: 'app-menu-item',
+  templateUrl: 'menu-item.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['menu-item.scss'],
+})
+export class MenuItemComponent {
+  @Input() icon;
+  @Input() text;
+  @Input() content;
+  @Input() height = 60;
+  @Input() id;
+
+  @Input() editMode = false;
+
+  @Input() showArrow: any = false;
+  @Input() showAdd: any = false;
+  @Input() disabled = false;
+
+  @Output() delete = new EventEmitter();
+  @Output() enter = new EventEmitter();
+
+  @HostBinding('attr.sort-id') get sortId() {
+    return this.id;
+  }
+
+  get itemHeight() {
+    if (this.height == 0) return 'auto';
+    return `${this.height}px`;
+  }
+
+  constructor() {}
+
+  clickDelBtn() {
+    this.delete.emit(this.id);
+  }
+
+  clickItem() {
+    if (!this.editMode) this.enter.emit();
+  }
+}
