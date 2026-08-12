@@ -7,9 +7,8 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
-import { IonicModule, ToastController } from '@ionic/angular';
+import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import {
   BleClient,
   BleDevice,
@@ -109,7 +108,7 @@ export class BleOtaPage implements OnDestroy {
   private pendingSector?: PendingAck<SectorAck> & { sectorIndex: number };
 
   constructor(
-    private router: Router,
+    private navController: NavController,
     private zone: NgZone,
     private cdr: ChangeDetectorRef,
     private toastController: ToastController,
@@ -135,7 +134,7 @@ export class BleOtaPage implements OnDestroy {
   async goBack(): Promise<void> {
     await this.stopScan();
     if (!this.isBusy) await this.disconnect();
-    await this.router.navigateByUrl('/home');
+    await this.navController.navigateBack('/home', { queryParams: { tab: 'tools' } });
   }
 
   async chooseFirmware(event: Event): Promise<void> {

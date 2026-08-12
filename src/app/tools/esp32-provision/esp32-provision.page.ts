@@ -1,9 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { Capacitor, PluginListenerHandle } from '@capacitor/core';
-import { IonicModule, ToastController } from '@ionic/angular';
+import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import {
   BleDevice,
   PlatformCapabilities,
@@ -73,11 +72,11 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     private zone: NgZone,
     private cdr: ChangeDetectorRef,
     private toastController: ToastController,
-    private router: Router
+    private navController: NavController
   ) {}
 
   goBack(): void {
-    void this.router.navigate(['/home'], { queryParams: { tab: 'tools' } });
+    void this.navController.navigateBack('/home', { queryParams: { tab: 'tools' } });
   }
 
   get isScanning(): boolean {

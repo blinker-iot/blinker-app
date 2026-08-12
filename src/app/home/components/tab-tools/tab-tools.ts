@@ -1,8 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { IonicModule, ToastController } from '@ionic/angular';
+import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import {
   MenuListComponent,
   MenuListItem,
@@ -142,7 +141,7 @@ export class TabToolsComponent implements OnInit {
   private recentRoutes: string[] = [];
 
   constructor(
-    private router: Router,
+    private navController: NavController,
     private toastController: ToastController
   ) {}
 
@@ -196,6 +195,6 @@ export class TabToolsComponent implements OnInit {
       ...this.recentRoutes.filter(route => route !== tool.route),
     ].slice(0, 6);
     localStorage.setItem('toolRecentRoutes', JSON.stringify(this.recentRoutes));
-    await this.router.navigateByUrl(tool.route);
+    await this.navController.navigateForward(tool.route);
   }
 }

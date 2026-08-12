@@ -1,12 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { App } from '@capacitor/app';
 import { Clipboard } from '@capacitor/clipboard';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { Network } from '@capacitor/network';
-import { IonicModule, ToastController } from '@ionic/angular';
+import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import {
   Mdns,
   type MdnsErrorEvent,
@@ -73,7 +72,7 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
   private destroyed = false;
 
   constructor(
-    private router: Router,
+    private navController: NavController,
     private zone: NgZone,
     private cdr: ChangeDetectorRef,
     private toastController: ToastController
@@ -130,7 +129,7 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    void this.router.navigate(['/home'], { queryParams: { tab: 'tools' } });
+    void this.navController.navigateBack('/home', { queryParams: { tab: 'tools' } });
   }
 
   selectType(type: string): void {

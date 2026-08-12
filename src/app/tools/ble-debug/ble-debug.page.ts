@@ -1,10 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { Clipboard } from '@capacitor/clipboard';
 import { Capacitor } from '@capacitor/core';
-import { IonicModule, ToastController } from '@ionic/angular';
+import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import {
   BleCharacteristic,
   BleDescriptor,
@@ -159,7 +158,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
     private zone: NgZone,
     private cdr: ChangeDetectorRef,
     private toastController: ToastController,
-    private router: Router
+    private navController: NavController
   ) {}
 
   ngOnInit(): void {
@@ -456,7 +455,9 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   goBack(): void {
     this.showMoreMenu = false;
-    if (this.screen === 'scanner') void this.router.navigate(['/home'], { queryParams: { tab: 'tools' } });
+    if (this.screen === 'scanner') {
+      void this.navController.navigateBack('/home', { queryParams: { tab: 'tools' } });
+    }
     else if (this.screen === 'advertisement') this.screen = 'scanner';
     else if (this.screen === 'characteristic') this.screen = 'gatt';
     else if (this.screen === 'overview') this.screen = 'scanner';

@@ -8,9 +8,8 @@ import {
   OnInit,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { Capacitor, CapacitorHttp, type HttpResponse, type PluginListenerHandle } from '@capacitor/core';
-import { IonicModule, ToastController } from '@ionic/angular';
+import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { Mdns, type MdnsErrorEvent, type MdnsService, type MdnsWatchEvent } from 'capacitor-mdns';
 import { formatBytes } from '../ota/ota-protocol';
 
@@ -76,7 +75,7 @@ export class WifiOtaPage implements OnInit, OnDestroy {
   private destroyed = false;
 
   constructor(
-    private router: Router,
+    private navController: NavController,
     private zone: NgZone,
     private cdr: ChangeDetectorRef,
     private toastController: ToastController,
@@ -116,7 +115,7 @@ export class WifiOtaPage implements OnInit, OnDestroy {
       return;
     }
     await this.stopDiscovery();
-    await this.router.navigateByUrl('/home');
+    await this.navController.navigateBack('/home', { queryParams: { tab: 'tools' } });
   }
 
   async chooseFirmware(event: Event): Promise<void> {
