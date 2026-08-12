@@ -159,81 +159,9 @@ ion-content {
   right: 12px;
 }
 
-.menu-card {
+app-menu-list {
+  display: block;
   margin-top: 12px;
-  overflow: hidden;
-  border: 1px solid var(--blinker-border);
-  border-radius: 16px;
-  background: var(--blinker-surface);
-  box-shadow: var(--blinker-shadow-soft);
-}
-
-.menu-item {
-  width: 100%;
-  min-height: 55px;
-  padding: 0 13px;
-  border: 0;
-  border-bottom: 1px solid var(--blinker-divider);
-  background: transparent;
-  color: var(--blinker-text-primary);
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  text-align: left;
-
-  &:last-child {
-    border-bottom: 0;
-  }
-
-  &:active {
-    background: var(--blinker-surface-active);
-  }
-
-  > i {
-    flex: 0 0 auto;
-    margin-left: auto;
-    color: var(--blinker-text-tertiary);
-    font-size: 11px;
-  }
-}
-
-.menu-icon {
-  width: 26px;
-  color: var(--blinker-text-primary);
-  display: flex;
-  justify-content: center;
-  font-size: 17px;
-}
-
-.menu-label {
-  min-width: 84px;
-  color: var(--blinker-text-primary);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.menu-value {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  color: var(--blinker-text-secondary);
-  font-size: 10px;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.compact-card .menu-item {
-  min-height: 53px;
-}
-
-.logout-item {
-  color: var(--ion-color-danger);
-
-  .menu-icon,
-  .menu-label {
-    color: inherit;
-  }
 }
 
 .profile-version {

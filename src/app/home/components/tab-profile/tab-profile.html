@@ -51,49 +51,17 @@
       </button>
     </section>
 
-    <section class="menu-card">
-      <button type="button" class="menu-item" (click)="goto('/room-manager')">
-        <span class="menu-icon"><i class="fa-light fa-house"></i></span>
-        <span class="menu-label">家庭管理</span>
-        <span class="menu-value">{{ roomNum }} 个家庭</span>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-      <button type="button" class="menu-item" (click)="goto('/scene-manager')">
-        <span class="menu-icon"><i class="fa-light fa-bullseye-pointer"></i></span>
-        <span class="menu-label">自动化</span>
-        <span class="menu-value">{{ sceneNum }} 个场景</span>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-      <button type="button" class="menu-item">
-        <span class="menu-icon"><i class="fa-light fa-user-group"></i></span>
-        <span class="menu-label">设备共享</span>
-        <span class="menu-value">已共享 {{ sharedDeviceNum }} 台设备</span>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-      <button type="button" class="menu-item">
-        <span class="menu-icon"><i class="fa-light fa-microphone"></i></span>
-        <span class="menu-label">语音助手</span>
-        <span class="menu-value">小度、天猫精灵</span>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-    </section>
+    <app-menu-list
+      ariaLabel="账户功能"
+      [items]="primaryMenuItems"
+      (itemSelected)="selectMenuItem($event)"
+    ></app-menu-list>
 
-    <section class="menu-card compact-card">
-      <button type="button" class="menu-item" (click)="goto('/settings')">
-        <span class="menu-icon"><i class="fa-light fa-gear"></i></span>
-        <span class="menu-label">设置</span>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-      <button type="button" class="menu-item">
-        <span class="menu-icon"><i class="fa-light fa-circle-question"></i></span>
-        <span class="menu-label">帮助与反馈</span>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-      <button type="button" class="menu-item logout-item" (click)="logout()">
-        <span class="menu-icon"><i class="fa-light fa-arrow-right-from-bracket"></i></span>
-        <span class="menu-label">退出登录</span>
-      </button>
-    </section>
+    <app-menu-list
+      ariaLabel="设置与账户"
+      [items]="secondaryMenuItems"
+      (itemSelected)="selectMenuItem($event)"
+    ></app-menu-list>
 
     <div class="profile-version">
       <span>版本 {{ currentVersion || '2.4.1' }}</span>

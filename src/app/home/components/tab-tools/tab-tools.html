@@ -50,28 +50,12 @@
     @for (group of visibleGroups; track group.title) {
       <section class="tool-section">
         <h2>{{ group.title }}</h2>
-        <div class="tool-list">
-          @for (tool of group.tools; track tool.title) {
-            <button
-              class="tool-row"
-              type="button"
-              [class.planned]="!tool.route"
-              (click)="openTool(tool)"
-            >
-              <span class="tool-icon" aria-hidden="true">
-                <i [class]="'fa-light ' + tool.icon"></i>
-              </span>
-              <span class="tool-copy">
-                <span class="tool-title">{{ tool.title }}</span>
-                <span class="tool-description">{{ tool.description }}</span>
-              </span>
-              @if (tool.badge) {
-                <span class="tool-badge">{{ tool.badge }}</span>
-              }
-              <i class="fa-light fa-chevron-right tool-arrow" aria-hidden="true"></i>
-            </button>
-          }
-        </div>
+        <app-menu-list
+          [ariaLabel]="group.title"
+          [items]="group.tools"
+          [detailed]="true"
+          (itemSelected)="openTool($event)"
+        ></app-menu-list>
       </section>
     } @empty {
       <div class="empty-state">
