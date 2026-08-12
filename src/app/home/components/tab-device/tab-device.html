@@ -37,7 +37,7 @@
       <div class="empty-icon"><i class="fa-light fa-house-signal"></i></div>
       <h2>还没有设备</h2>
       <p>添加你的第一台智能设备，开始轻松生活</p>
-      <button type="button" [routerLink]="['/adddevice/DiyArduino']">
+      <button type="button" [routerLink]="['/adddevice']">
         <i class="fa-light fa-plus"></i>
         添加设备
       </button>
@@ -54,14 +54,14 @@
   reference="trigger"
   side="bottom"
   alignment="end"
-  [dismissOnSelect]="true"
+  [dismissOnSelect]="false"
   [showBackdrop]="true"
   (willPresent)="scheduleAddMenuPosition()"
   (didPresent)="scheduleAddMenuPosition()"
 >
   <ng-template>
     <nav class="device-add-menu" role="menu" aria-label="添加">
-      <button type="button" role="menuitem" [routerLink]="['/adddevice/DiyArduino']">
+      <button type="button" role="menuitem" (click)="openAddPage('/adddevice')">
         <span class="menu-icon"><i class="fa-light fa-router"></i></span>
         <span class="menu-copy">
           <strong>添加新设备</strong>
@@ -70,7 +70,7 @@
         <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
       </button>
 
-      <button type="button" role="menuitem" [routerLink]="['/room-manager']">
+      <button type="button" role="menuitem" (click)="openAddPage('/room-manager')">
         <span class="menu-icon"><i class="fa-light fa-layer-group"></i></span>
         <span class="menu-copy">
           <strong>添加区域</strong>
@@ -79,7 +79,7 @@
         <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
       </button>
 
-      <button type="button" role="menuitem">
+      <button type="button" role="menuitem" (click)="showComponentPending()">
         <span class="menu-icon"><i class="fa-light fa-puzzle-piece"></i></span>
         <span class="menu-copy">
           <strong>添加组件</strong>

@@ -8,6 +8,14 @@ export const routes: Routes = [
   { path: 'user', loadComponent: () => import('./sections/user/user.page').then(m => m.UserPage) },
   { path: 'message', loadComponent: () => import('./sections/message/message.page').then(m => m.MessagePage) },
   {
+    path: 'adddevice',
+    loadComponent: () => import('./sections/adddevice/adddevice').then(m => m.AddDevicePage),
+  },
+  {
+    path: 'room-manager',
+    loadComponent: () => import('./sections/room/room-manager/room-manager').then(m => m.RoomManagerPage),
+  },
+  {
     path: 'device/:id',
     loadComponent: () => import('./device/device.page').then(m => m.DevicePage),
   },

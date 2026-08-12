@@ -17,6 +17,8 @@ declare var window;
 })
 export class DeviceConfigService {
 
+  private readonly builtInAddDeviceList = this.pushAddDeviceList(DeviceTypes);
+
   get uuid() {
     return this.dataService.auth.uuid
   }
@@ -26,8 +28,7 @@ export class DeviceConfigService {
   }
 
   get addDeviceList() {
-    // return (this.addDevDeviceList.concat(this.addLocalDeviceList)).concat(this.addPublicDeviceList)
-    return {}
+    return this.builtInAddDeviceList
   }
 
   // _addPublicDeviceList = [];

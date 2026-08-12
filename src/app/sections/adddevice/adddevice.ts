@@ -1,5 +1,9 @@
 ﻿import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { IonicModule } from '@ionic/angular';
+import { TranslatePipe } from '@ngx-translate/core';
 import { DeviceConfigService } from 'src/app/core/services/device-config.service';
+import { ComponentsModule } from 'src/app/core/components/components.module';
 import { Router } from '@angular/router';
 import { AdddeviceService } from './adddevice.service';
 import { DataService } from 'src/app/core/services/data.service';
@@ -7,7 +11,8 @@ import { DataService } from 'src/app/core/services/data.service';
 @Component({
     selector: 'page-adddevice',
     templateUrl: 'adddevice.html',
-    styleUrls: ['adddevice.scss']
+    styleUrls: ['adddevice.scss'],
+    imports: [CommonModule, IonicModule, TranslatePipe, ComponentsModule]
 })
 export class AddDevicePage {
   searchQuery: string = '';
@@ -77,6 +82,13 @@ export class AddDevicePage {
 
   scanQrcode() {
     this.router.navigate(['/adddevice/qrscanner'])
+  }
+
+  goBack(): void {
+    void this.router.navigate(['/home'], {
+      queryParams: { tab: 'device' },
+      replaceUrl: true,
+    });
   }
 
   gotoGuide(device) {

@@ -4,8 +4,11 @@ import {
   QueryList,
   ElementRef,
 } from '@angular/core';
-import { AlertController } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
+import { AlertController, IonicModule } from '@ionic/angular';
+import { TranslatePipe } from '@ngx-translate/core';
 import { Router } from '@angular/router';
+import { ComponentsModule } from 'src/app/core/components/components.module';
 import { DataService } from 'src/app/core/services/data.service';
 import { RoomService } from '../room.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
@@ -14,7 +17,8 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 @Component({
     selector: 'room-manager',
     templateUrl: 'room-manager.html',
-    styleUrls: ['room-manager.scss']
+    styleUrls: ['room-manager.scss'],
+    imports: [CommonModule, IonicModule, TranslatePipe, ComponentsModule]
 })
 export class RoomManagerPage {
 
@@ -78,6 +82,13 @@ export class RoomManagerPage {
 
   switchMode() {
     this.editMode = !this.editMode;
+  }
+
+  goBack(): void {
+    void this.router.navigate(['/home'], {
+      queryParams: { tab: 'device' },
+      replaceUrl: true,
+    });
   }
 
   async addRoom() {

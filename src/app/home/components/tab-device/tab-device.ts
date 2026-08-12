@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
 import { RoomListComponent } from '../room-list/room-list';
 import { DeviceblockZone } from '../deviceblock-zone/deviceblock-zone';
@@ -44,7 +44,7 @@ export class TabDeviceComponent implements OnInit {
   private deviceContent?: ElementRef<HTMLElement>;
 
   @ViewChild('deviceAddMenu', { read: ElementRef })
-  private deviceAddMenu?: ElementRef<HTMLElement>;
+  private deviceAddMenu?: ElementRef<HTMLIonPopoverElement>;
 
   @Input()
   set roomid(roomid: number) {
@@ -64,6 +64,8 @@ export class TabDeviceComponent implements OnInit {
   constructor(
     private dataService: DataService,
     private deviceService: DeviceService,
+    private navController: NavController,
+    private toastController: ToastController,
     private cd: ChangeDetectorRef,
     private destroyRef: DestroyRef,
   ) {
@@ -87,6 +89,25 @@ export class TabDeviceComponent implements OnInit {
     this._roomid = value;
     this.roomidChange.emit(value);
     this.cd.markForCheck();
+  }
+
+  async openAddPage(url: '/adddevice' | '/room-manager'): Promise<void> {
+    await this.dismissAddMenu();
+    await this.navController.navigateForward(url);
+  }
+
+  async showComponentPending(): Promise<void> {
+    await this.dismissAddMenu();
+    const toast = await this.toastController.create({
+      message: '功能待发布',
+      duration: 1600,
+      position: 'bottom',
+    });
+    await toast.present();
+  }
+
+  private async dismissAddMenu(): Promise<void> {
+    await this.deviceAddMenu?.nativeElement.dismiss();
   }
 
   scheduleAddMenuPosition() {

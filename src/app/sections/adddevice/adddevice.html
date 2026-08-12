@@ -1,7 +1,9 @@
 ﻿<ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-button aria-label="返回" (click)="goBack()">
+        <i class="fa-light fa-chevron-left"></i>
+      </ion-button>
     </ion-buttons>
     <ion-title>{{'HOME.ADD_DEVICE' | translate}}</ion-title>
     <ion-buttons slot="end">
