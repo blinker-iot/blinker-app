@@ -25,13 +25,11 @@
           [(ngModel)]="previewVariant"
           aria-label="预览图片主题"
         >
-          <ion-segment-button value="light">
-            <i class="fa-light fa-sun-bright"></i>
-            <ion-label>Light</ion-label>
+          <ion-segment-button value="light" aria-label="浅色图片">
+            <i class="fa-light fa-sun-bright" aria-hidden="true"></i>
           </ion-segment-button>
-          <ion-segment-button value="dark">
-            <i class="fa-light fa-moon"></i>
-            <ion-label>Dark</ion-label>
+          <ion-segment-button value="dark" aria-label="深色图片">
+            <i class="fa-light fa-moon" aria-hidden="true"></i>
           </ion-segment-button>
         </ion-segment>
       </div>

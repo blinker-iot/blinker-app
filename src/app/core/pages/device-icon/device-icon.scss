@@ -20,7 +20,7 @@
 
 .search-theme-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 168px;
+  grid-template-columns: minmax(0, 1fr) 88px;
   align-items: center;
   gap: 10px;
 
@@ -37,7 +37,7 @@
 
   ion-segment {
     --background: var(--blinker-surface-muted);
-    min-height: 38px;
+    height: 36px;
   }
 
   ion-segment-button {
@@ -45,18 +45,16 @@
     --color-checked: var(--ion-color-primary);
     --indicator-color: var(--blinker-surface);
     min-width: 0;
-    min-height: 34px;
+    min-height: 32px;
 
     i {
-      margin-right: 5px;
-      font-size: 12px;
-    }
-
-    ion-label {
-      font-size: 11px;
-      text-transform: none;
+      font-size: 14px;
     }
   }
+}
+
+:host ::ng-deep .search-theme-row ion-searchbar .searchbar-input {
+  font-size: 13px;
 }
 
 .category-list {
@@ -106,7 +104,7 @@
 .image-grid {
   padding: 12px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--catalog-gap);
 }
 
@@ -135,13 +133,12 @@
   width: 100%;
   aspect-ratio: 1;
   border-radius: 10px;
-  background: #f3f6fa;
   display: grid;
   place-items: center;
 
   b-device-img {
-    width: 84%;
-    height: 84%;
+    width: 100%;
+    height: 100%;
   }
 }
 
@@ -193,18 +190,12 @@
   color: var(--ion-color-warning);
 }
 
-@media (min-width: 640px) {
-  .image-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 440px) {
   .search-theme-row {
     grid-template-columns: 1fr;
 
     ion-segment {
-      width: 168px;
+      width: 88px;
       justify-self: end;
     }
   }
