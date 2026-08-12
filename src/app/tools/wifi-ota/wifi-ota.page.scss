@@ -4,8 +4,14 @@
   height: 100%;
 }
 
-.wifi-hero {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--ota-accent) 16%, var(--blinker-surface)), var(--blinker-surface));
+app-tool-hero-card {
+  --tool-hero-background-strength: 16%;
+  --tool-hero-border-strength: 24%;
+  --tool-hero-icon-font-size: 23px;
+  --tool-hero-eyebrow-font-size: 9px;
+  --tool-hero-eyebrow-font-weight: 700;
+  --tool-hero-eyebrow-letter-spacing: .11em;
+  --tool-hero-mobile-padding: 16px;
 }
 
 .target-results { margin-top: 11px; }

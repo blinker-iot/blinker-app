@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, NgZone, OnDestro
 import { FormsModule } from '@angular/forms';
 import { Capacitor, PluginListenerHandle } from '@capacitor/core';
 import { IonicModule, ToastController } from '@ionic/angular';
+import { ToolHeroCardComponent } from '../components/tool-hero-card/tool-hero-card.component';
 import {
   BleDevice,
   PlatformCapabilities,
@@ -37,7 +38,7 @@ interface SavedNetwork {
   styleUrls: ['./esp32-provision.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule, FormsModule, IonicModule],
+  imports: [CommonModule, FormsModule, IonicModule, ToolHeroCardComponent],
 })
 export class Esp32ProvisionPage implements OnInit, OnDestroy {
   transport: WiFiProvTransport = 'ble';

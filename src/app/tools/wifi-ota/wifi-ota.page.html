@@ -9,14 +9,12 @@
 
 <ion-content [fullscreen]="true">
   <main class="ota-page">
-    <section class="ota-hero wifi-hero">
-      <span class="hero-icon"><i class="fa-light fa-wifi"></i></span>
-      <div>
-        <span class="eyebrow">LOCAL NETWORK UPDATE</span>
-        <h1>WiFi 固件升级</h1>
-        <p>自动发现局域网设备，或手动指定地址，通过 HTTP 上传固件。</p>
-      </div>
-    </section>
+    <app-tool-hero-card
+      iconClass="fa-light fa-wifi"
+      eyebrow="LOCAL NETWORK UPDATE"
+      heading="WiFi 固件升级"
+      description="自动发现局域网设备，或手动指定地址，通过 HTTP 上传固件。"
+    />
 
     <section class="ota-card">
       <div class="section-heading">

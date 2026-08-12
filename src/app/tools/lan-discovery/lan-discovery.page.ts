@@ -6,6 +6,7 @@ import { Clipboard } from '@capacitor/clipboard';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { Network } from '@capacitor/network';
 import { IonicModule, ToastController } from '@ionic/angular';
+import { ToolHeroCardComponent } from '../components/tool-hero-card/tool-hero-card.component';
 import {
   Mdns,
   type MdnsErrorEvent,
@@ -36,7 +37,7 @@ interface ConnectionStatus {
   styleUrls: ['./lan-discovery.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule, FormsModule, IonicModule],
+  imports: [CommonModule, FormsModule, IonicModule, ToolHeroCardComponent],
 })
 export class LanDiscoveryPage implements OnInit, OnDestroy {
   readonly nativeSupported = Capacitor.isNativePlatform();

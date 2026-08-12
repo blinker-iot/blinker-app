@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { Capacitor, CapacitorHttp, type HttpResponse, type PluginListenerHandle } from '@capacitor/core';
 import { IonicModule, ToastController } from '@ionic/angular';
 import { Mdns, type MdnsErrorEvent, type MdnsService, type MdnsWatchEvent } from 'capacitor-mdns';
+import { ToolHeroCardComponent } from '../components/tool-hero-card/tool-hero-card.component';
 import { formatBytes } from '../ota/ota-protocol';
 
 type WifiOtaState = 'idle' | 'preparing' | 'uploading' | 'verifying' | 'success' | 'error' | 'cancelled';
@@ -41,7 +42,7 @@ const TARGET_STORAGE_KEY = 'wifiOtaTarget';
   styleUrls: ['./wifi-ota.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule, FormsModule, IonicModule],
+  imports: [CommonModule, FormsModule, IonicModule, ToolHeroCardComponent],
 })
 export class WifiOtaPage implements OnInit, OnDestroy {
   firmwareFile?: File;

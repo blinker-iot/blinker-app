@@ -9,14 +9,12 @@
 
 <ion-content [fullscreen]="true">
   <main class="provision-page">
-    <section class="hero-card">
-      <div class="hero-icon"><i class="fa-light fa-wifi"></i></div>
-      <div>
-        <span class="eyebrow">ESPRESSIF WIFI PROVISIONING</span>
-        <h1>安全配置 ESP32 网络</h1>
-        <p>通过 Espressif 官方协议连接设备、扫描附近 Wi-Fi 并下发网络凭据。</p>
-      </div>
-    </section>
+    <app-tool-hero-card
+      iconClass="fa-light fa-wifi"
+      eyebrow="ESPRESSIF WIFI PROVISIONING"
+      heading="安全配置 ESP32 网络"
+      description="通过 Espressif 官方协议连接设备、扫描附近 Wi-Fi 并下发网络凭据。"
+    />
 
     @if (!nativeSupported) {
       <div class="notice warning">

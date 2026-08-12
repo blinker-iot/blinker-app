@@ -9,6 +9,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Capacitor } from '@capacitor/core';
 import { IonicModule, ToastController } from '@ionic/angular';
+import { ToolHeroCardComponent } from '../components/tool-hero-card/tool-hero-card.component';
 import {
   BleClient,
   BleDevice,
@@ -76,7 +77,7 @@ const SECTOR_ACK_TIMEOUT = 15000;
   styleUrls: ['./ble-ota.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule, FormsModule, IonicModule],
+  imports: [CommonModule, FormsModule, IonicModule, ToolHeroCardComponent],
 })
 export class BleOtaPage implements OnDestroy {
   devices: OtaDevice[] = [];

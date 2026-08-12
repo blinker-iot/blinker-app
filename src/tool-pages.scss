@@ -162,18 +162,6 @@ app-wifi-ota {
     padding: 18px 16px calc(104px + env(safe-area-inset-bottom));
   }
 
-  .ota-hero {
-    padding: 19px; display: flex; align-items: flex-start; gap: 15px;
-    border: 1px solid color-mix(in srgb, var(--ota-accent) 24%, var(--blinker-border)); border-radius: 18px;
-    .hero-icon {
-      width: 52px; height: 52px; flex: 0 0 52px; display: grid; place-items: center; border-radius: 15px;
-      background: var(--ota-accent); color: #fff; box-shadow: 0 8px 20px color-mix(in srgb, var(--ota-accent) 28%, transparent); font-size: 23px;
-    }
-    .eyebrow { color: var(--ota-accent); font-size: 9px; font-weight: 700; letter-spacing: .11em; }
-    h1 { margin: 3px 0 5px; color: var(--blinker-text-primary); font-size: 19px; font-weight: 600; }
-    p { margin: 0; color: var(--blinker-text-secondary); font-size: 12px; line-height: 1.55; }
-  }
-
   .ota-card,
   .ota-status {
     margin-top: 14px; padding: 16px; border: 1px solid var(--blinker-border); border-radius: 16px;
@@ -312,7 +300,6 @@ app-wifi-ota {
   }
 
   @media (max-width: 390px) {
-    .ota-hero { padding: 16px; }
     .field-row { gap: 7px; }
     .result-meta { display: none; }
   }

@@ -9,14 +9,12 @@
 
 <ion-content [fullscreen]="true">
   <main class="ota-page">
-    <section class="ota-hero ble-hero">
-      <span class="hero-icon"><i class="fa-brands fa-bluetooth-b"></i></span>
-      <div>
-        <span class="eyebrow">BLUETOOTH LOW ENERGY</span>
-        <h1>BLE 固件升级</h1>
-        <p>通过近距离蓝牙连接发送固件，支持应用固件与文件系统分区。</p>
-      </div>
-    </section>
+    <app-tool-hero-card
+      iconClass="fa-brands fa-bluetooth-b"
+      eyebrow="BLUETOOTH LOW ENERGY"
+      heading="BLE 固件升级"
+      description="通过近距离蓝牙连接发送固件，支持应用固件与文件系统分区。"
+    />
 
     <section class="ota-card">
       <div class="section-heading">

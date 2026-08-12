@@ -16,33 +16,6 @@ ion-content { --background: var(--blinker-bg); --overflow: auto; }
   padding: 18px 16px calc(104px + env(safe-area-inset-bottom));
 }
 
-.hero-card {
-  padding: 19px;
-  display: flex;
-  align-items: flex-start;
-  gap: 15px;
-  border: 1px solid color-mix(in srgb, var(--tool-accent) 22%, var(--blinker-border));
-  border-radius: 18px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--tool-accent) 13%, var(--blinker-surface)), var(--blinker-surface));
-
-  .hero-icon {
-    width: 52px;
-    height: 52px;
-    flex: 0 0 52px;
-    display: grid;
-    place-items: center;
-    border-radius: 15px;
-    background: var(--tool-accent);
-    color: #fff;
-    box-shadow: 0 8px 20px color-mix(in srgb, var(--tool-accent) 28%, transparent);
-    font-size: 24px;
-  }
-
-  .eyebrow { color: var(--tool-accent); font-size: 10px; font-weight: 600; letter-spacing: .12em; }
-  h1 { margin: 3px 0 5px; color: var(--blinker-text-primary); font-size: 19px; font-weight: 600; }
-  p { margin: 0; color: var(--blinker-text-secondary); font-size: 12px; line-height: 1.55; }
-}
-
 .notice,
 .connected-card {
   margin-top: 12px;
