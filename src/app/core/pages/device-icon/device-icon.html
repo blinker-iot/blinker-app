@@ -9,7 +9,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content [scrollY]="true">
   <div class="catalog-shell">
     <section class="catalog-controls" aria-label="图片筛选">
       <div class="search-theme-row">
@@ -49,9 +49,6 @@
         }
       </div>
 
-      @if (!isLoading && !loadError) {
-      <div class="result-summary">共 {{ images.length }} 张图片</div>
-      }
     </section>
 
     @if (isLoading) {
