@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import { Component, OnDestroy, OnInit } from "@angular/core";
 import {
   AlertController,
   IonicModule,
@@ -8,7 +8,7 @@ import {
 } from "@ionic/angular";
 import { DeviceService } from "src/app/core/services/device.service";
 import { UserService } from "src/app/core/services/user.service";
-import { ActivatedRoute, RouterModule } from "@angular/router";
+import { ActivatedRoute } from "@angular/router";
 import { DeviceIconPage } from "../../../core/pages/device-icon/device-icon";
 import { DataService } from "src/app/core/services/data.service";
 import { BlinkerDevice } from "src/app/core/model/device.model";
@@ -16,27 +16,28 @@ import { ImageService } from "src/app/core/services/image.service";
 import { AndroidShortcuts } from "capacitor-android-shortcuts";
 import { TranslatePipe } from "@ngx-translate/core";
 import { BDeviceImgComponent } from "src/app/core/components/b-device-img/b-device-img.component";
-import { BItemListComponent } from "src/app/core/components/b-item-list/b-item-list.component";
-import { BItemComponent } from "src/app/core/components/b-item-list/b-item/b-item";
 import { CommonModule } from "@angular/common";
 import { ShareService } from "../device-share/share.service";
 import { Layouter2Service } from "src/app/device/layouter2/layouter2.service";
+import {
+  MenuListComponent,
+  MenuListItem,
+} from "src/app/home/components/menu-list/menu-list";
 
 @Component({
-    selector: "device-settings",
+    selector: "app-device-settings",
+    standalone: true,
     templateUrl: "device-settings.html",
     styleUrls: ["device-settings.scss"],
     imports: [
         CommonModule,
         IonicModule,
         BDeviceImgComponent,
-        BItemListComponent,
-        BItemComponent,
+        MenuListComponent,
         TranslatePipe,
-        RouterModule
     ]
 })
-export class DeviceSettingsPage {
+export class DeviceSettingsPage implements OnInit, OnDestroy {
   id;
   device: BlinkerDevice;
 
@@ -47,7 +48,7 @@ export class DeviceSettingsPage {
   loaded;
 
   get isSharedDevice() {
-    return this.device.config.isShared;
+    return Boolean(this.device?.config?.isShared);
   }
 
   get isAdvancedDeveloper() {
@@ -55,11 +56,11 @@ export class DeviceSettingsPage {
   }
 
   get isDevDevice() {
-    return this.device.config.isDev;
+    return Boolean(this.device?.config?.isDev);
   }
 
   get hasTimerTask() {
-    if (typeof this.device.data.timer != "undefined") {
+    if (typeof this.device?.data?.timer != "undefined") {
       if (this.device.data.timer != "000") {
         return true;
       }
@@ -68,7 +69,47 @@ export class DeviceSettingsPage {
   }
 
   get hasNewVersion() {
-    return this.device.data.hasNewVersion;
+    return this.device?.data?.hasNewVersion;
+  }
+
+  get deviceMenuItems(): readonly MenuListItem[] {
+    return [
+      {
+        id: "timer",
+        title: "定时任务",
+        description: "设置设备按计划自动执行",
+        icon: "fa-timer",
+        badge: this.hasTimerTask ? "已启用" : undefined,
+        route: `/device-manager/${this.id}/timer`,
+      },
+      {
+        id: "shortcut",
+        title: "添加到桌面",
+        description: "创建快速访问设备的桌面入口",
+        icon: "fa-grid-2-plus",
+      },
+      {
+        id: "guide",
+        title: "配置向导",
+        description: "重新查看设备面板的配置说明",
+        icon: "fa-message-bot",
+      },
+    ];
+  }
+
+  get dangerMenuItems(): readonly MenuListItem[] {
+    return [
+      {
+        id: "unbind",
+        title: this.isSharedDevice ? "退出设备共享" : "解除设备绑定",
+        description: this.isSharedDevice
+          ? "移除这台由其他用户共享的设备"
+          : "从账户中移除设备及其关联自动化",
+        icon: "fa-link-slash",
+        danger: true,
+        showChevron: false,
+      },
+    ];
   }
 
   settingList = [
@@ -111,7 +152,7 @@ export class DeviceSettingsPage {
   }
 
   ngOnDestroy() {
-    this.subscription.unsubscribe();
+    this.subscription?.unsubscribe();
     if (this.confirm) {
       this.confirm.dismiss();
     }
@@ -295,5 +336,26 @@ export class DeviceSettingsPage {
         data: this.device.id
       })
     }, 100);
+  }
+
+  selectMenuItem(item: MenuListItem): void {
+    if (item.route) {
+      void this.navCtrl.navigateForward(item.route);
+      return;
+    }
+
+    if (item.id === "shortcut") {
+      void this.addShortcut();
+      return;
+    }
+
+    if (item.id === "guide") {
+      this.showGuide();
+      return;
+    }
+
+    if (item.id === "unbind") {
+      this.unbind();
+    }
   }
 }

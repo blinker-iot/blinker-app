@@ -1,12 +1,13 @@
 import {
   Component,
-  ViewChildren,
-  QueryList,
-  ElementRef,
 } from '@angular/core';
-import { AlertController } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
+import { AlertController, IonicModule } from '@ionic/angular';
 import { Router } from '@angular/router';
+import { TranslatePipe } from '@ngx-translate/core';
 import { DataService } from 'src/app/core/services/data.service';
+import { BItemListComponent } from 'src/app/core/components/b-item-list/b-item-list.component';
+import { BItemComponent } from 'src/app/core/components/b-item-list/b-item/b-item';
 import { SceneService } from '../scene.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
@@ -14,7 +15,14 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 @Component({
     selector: 'scene-manager',
     templateUrl: 'scene-manager.html',
-    styleUrls: ['scene-manager.scss']
+    styleUrls: ['scene-manager.scss'],
+    imports: [
+      CommonModule,
+      IonicModule,
+      TranslatePipe,
+      BItemListComponent,
+      BItemComponent,
+    ],
 })
 export class SceneManager {
 
@@ -52,8 +60,12 @@ export class SceneManager {
 
   subscription;
   ngOnInit() {
+    this.ensureSceneData();
+    this.loaded = true;
+    this.oldSceneListData = JSON.stringify(this.sceneData);
     this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
       if (loaded) {
+        this.ensureSceneData();
         this.loaded = loaded
         this.oldSceneListData = JSON.stringify(this.sceneData)
       }
@@ -62,7 +74,7 @@ export class SceneManager {
 
   // 退出页面时保存数据
   ngOnDestroy() {
-    this.subscription.unsubscribe();
+    this.subscription?.unsubscribe();
     if (this.oldSceneListData == JSON.stringify(this.sceneData)) return;
     this.saveConfig();
   }
@@ -158,6 +170,12 @@ export class SceneManager {
 
   sortChange(event) {
     this.sceneDataList = event
+  }
+
+  private ensureSceneData(): void {
+    if (!this.dataService.scene) {
+      this.dataService.scene = { list: [], dict: {} };
+    }
   }
 
 }

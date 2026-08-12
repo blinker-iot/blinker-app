@@ -8,7 +8,8 @@ import { CommonModule } from '@angular/common';
 import { AlertController, IonicModule } from '@ionic/angular';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Router } from '@angular/router';
-import { ComponentsModule } from 'src/app/core/components/components.module';
+import { BItemListComponent } from 'src/app/core/components/b-item-list/b-item-list.component';
+import { BItemComponent } from 'src/app/core/components/b-item-list/b-item/b-item';
 import { DataService } from 'src/app/core/services/data.service';
 import { RoomService } from '../room.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
@@ -18,7 +19,7 @@ import { NoticeService } from 'src/app/core/services/notice.service';
     selector: 'room-manager',
     templateUrl: 'room-manager.html',
     styleUrls: ['room-manager.scss'],
-    imports: [CommonModule, IonicModule, TranslatePipe, ComponentsModule]
+    imports: [CommonModule, IonicModule, TranslatePipe, BItemListComponent, BItemComponent]
 })
 export class RoomManagerPage {
 
@@ -55,8 +56,12 @@ export class RoomManagerPage {
 
   subscription;
   ngOnInit() {
+    this.ensureRoomData();
+    this.loaded = true;
+    this.oldRoomData = JSON.stringify(this.roomData);
     this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
       if (loaded) {
+        this.ensureRoomData();
         this.fixRoomData()
         this.oldRoomData = JSON.stringify(this.roomData)
         this.loaded = loaded;
@@ -67,7 +72,7 @@ export class RoomManagerPage {
 
   // 退出页面时保存数据
   ngOnDestroy() {
-    this.subscription.unsubscribe();
+    this.subscription?.unsubscribe();
     if (this.oldRoomData == JSON.stringify(this.roomData)) return;
     this.saveConfig();
   }
@@ -82,13 +87,6 @@ export class RoomManagerPage {
 
   switchMode() {
     this.editMode = !this.editMode;
-  }
-
-  goBack(): void {
-    void this.router.navigate(['/home'], {
-      queryParams: { tab: 'device' },
-      replaceUrl: true,
-    });
   }
 
   async addRoom() {
@@ -174,6 +172,12 @@ export class RoomManagerPage {
 
   sortChange(event) {
     this.roomDataList = event
+  }
+
+  private ensureRoomData(): void {
+    if (!this.dataService.room) {
+      this.dataService.room = { list: [], dict: {} };
+    }
   }
 
 }

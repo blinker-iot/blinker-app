@@ -1,32 +1,65 @@
-<ion-header>
+<ion-header class="manager-header ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button aria-label="返回" (click)="goBack()">
-        <i class="fa-light fa-chevron-left"></i>
-      </ion-button>
+      <ion-back-button text="" defaultHref="/home?tab=profile"></ion-back-button>
     </ion-buttons>
     <ion-title>{{'MENU.REGIONAL_MANAGER' | translate}}</ion-title>
-    <ion-buttons slot="end" *ngIf="loaded" (click)="switchMode()">
-      <ion-button *ngIf="!editMode">
-        编辑
-      </ion-button>
-      <ion-button *ngIf="editMode">
-        完成
+    <ion-buttons slot="end" *ngIf="loaded && roomDataList.length">
+      <ion-button class="edit-button" (click)="switchMode()">
+        {{ editMode ? '完成' : '编辑' }}
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
-<ion-content>
-  <b-item-list *ngIf="loaded" [editMode]="editMode" (sortChange)="sortChange($event)">
-    <b-item [id]="roomName" showArrow="true" *ngFor="let roomName of roomDataList" (delete)="delRoom(roomName)"
-      (enter)="editRoom(roomName)">
-      <div class="title-box">{{roomName}}</div>
-      <div class="num" edit-hide>{{roomDataDict[roomName].length}}</div>
-    </b-item>
-  </b-item-list>
+<ion-content fullscreen="true">
+  <main class="manager-content">
+    <section class="manager-intro">
+      <span class="intro-icon" aria-hidden="true">
+        <i class="fa-light fa-house-chimney-window"></i>
+      </span>
+      <div>
+        <h1>管理你的设备空间</h1>
+        <p>按房间整理设备，让查找和控制更直观。</p>
+      </div>
+      <span class="count-badge">{{ roomDataList.length }}</span>
+    </section>
+
+    <div class="section-label">我的区域</div>
+
+    <section class="manager-card" *ngIf="loaded && roomDataList.length">
+      <b-item-list class="manager-list" [editMode]="editMode" (sortChange)="sortChange($event)">
+        <b-item
+          [id]="roomName"
+          showArrow="true"
+          *ngFor="let roomName of roomDataList"
+          (delete)="delRoom(roomName)"
+          (enter)="editRoom(roomName)"
+        >
+          <span class="entry-icon" aria-hidden="true">
+            <i class="fa-light fa-couch"></i>
+          </span>
+          <span class="entry-copy">
+            <strong>{{ roomName }}</strong>
+            <small>{{ roomDataDict[roomName]?.length || 0 }} 台设备</small>
+          </span>
+        </b-item>
+      </b-item-list>
+    </section>
+
+    <section class="empty-state" *ngIf="loaded && !roomDataList.length">
+      <span class="empty-icon" aria-hidden="true"><i class="fa-light fa-house-circle-plus"></i></span>
+      <strong>还没有区域</strong>
+      <p>创建第一个区域，将设备按空间分类管理。</p>
+    </section>
+  </main>
 </ion-content>
-<ion-footer class="ion-no-border">
+<ion-footer class="manager-footer ion-no-border" *ngIf="loaded && !editMode">
   <ion-toolbar>
-    <b-bottom-btn *ngIf="!editMode" (click)="addRoom()">+ 新建房间</b-bottom-btn>
+    <div class="footer-shell">
+      <button type="button" class="primary-action" (click)="addRoom()">
+        <i class="fa-light fa-plus" aria-hidden="true"></i>
+        <span>新建区域</span>
+      </button>
+    </div>
   </ion-toolbar>
 </ion-footer>

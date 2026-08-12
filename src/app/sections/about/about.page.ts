@@ -1,27 +1,27 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CONFIG } from 'src/app/configs/app.config';
-import { ModalController } from '@ionic/angular';
+import { IonicModule, ModalController } from '@ionic/angular';
+import { TranslatePipe } from '@ngx-translate/core';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
 
 @Component({
-    selector: 'blinker-about',
+    selector: 'app-about',
+    standalone: true,
     templateUrl: './about.page.html',
-    styleUrls: ['./about.page.scss']
+    styleUrls: ['./about.page.scss'],
+    imports: [IonicModule, TranslatePipe],
 })
-export class AboutPage implements OnInit {
+export class AboutPage {
 
   LOGO = CONFIG.LOGIN_LOGO;
   TELEPHONE = CONFIG.TELEPHONE;
   ABOUT_US = CONFIG.ABOUT_US;
   USER_AGREEMENT = CONFIG.USER_AGREEMENT;
   PRIVACY_POLICY = CONFIG.PRIVACY_POLICY;
-  
+
   constructor(
     private modalCtrl: ModalController
   ) { }
-
-  ngOnInit() {
-  }
 
   async openUrl(url, title) {
     // let browser = this.iab.create(url, '_system', 'location=no,hidden=no');

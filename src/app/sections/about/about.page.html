@@ -1,36 +1,82 @@
-<ion-header>
+<ion-header class="about-header ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-back-button text="" defaultHref="/home?tab=profile"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{'MENU.ABOUT_US' | translate}}</ion-title>
+    <ion-title>{{ 'MENU.ABOUT_US' | translate }}</ion-title>
   </ion-toolbar>
 </ion-header>
-<ion-content padding>
-  <!-- logo -->
-  <div class="logo">
-    <img class="logo" src="{{LOGO}}">
-  </div>
-  <!-- 企业介绍 -->
-  <div class="text">
-    {{ABOUT_US}}
-  </div>
-  <!-- <button class="telephone" fullbtn>
-    <a href="tel:{{TELEPHONE}}">
-      <i class="fal fa-phone-office"></i>
-      <span>{{'ABOUT_US.CONTACT_US' | translate}}</span>
-    </a>
-  </button> -->
-  <!-- 联系电话 -->
-  <div class="other">
-    <div>
-      <span text (click)="openUrl(USER_AGREEMENT,'用户协议')">
-        {{'ACCOUNT.USER_AGREEMENT' | translate}}
-      </span>
-      &
-      <span text (click)="openUrl(PRIVACY_POLICY,'隐私政策')">
-        {{'ACCOUNT.PRIVACY_POLICY' | translate}}
-      </span>
-    </div>
-  </div>
+
+<ion-content fullscreen="true">
+  <main class="about-content">
+    <section class="brand-card">
+      <div class="brand-visual" aria-hidden="true">
+        <span class="orbit orbit-one"></span>
+        <span class="orbit orbit-two"></span>
+        <span class="logo-shell">
+          <img [src]="LOGO" alt="" />
+        </span>
+      </div>
+      <span class="brand-eyebrow">IoT DEVELOPMENT PLATFORM</span>
+      <h1>点灯 · Blinker</h1>
+      <p>让设备连接更简单，让每一个硬件创意更快成为现实。</p>
+      <div class="brand-tags" aria-label="平台特性">
+        <span><i class="fa-light fa-mobile-screen-button"></i> APP</span>
+        <span><i class="fa-light fa-microchip"></i> 设备</span>
+        <span><i class="fa-light fa-cloud"></i> 云服务</span>
+      </div>
+    </section>
+
+    <div class="section-label">关于我们</div>
+    <section class="about-card">
+      <div class="card-heading">
+        <span class="heading-icon" aria-hidden="true"><i class="fa-light fa-building"></i></span>
+        <div>
+          <h2>专注于开放、好用的物联网工具</h2>
+          <p>从原型到产品，为开发者提供完整的连接能力。</p>
+        </div>
+      </div>
+      <p class="about-description">{{ ABOUT_US }}</p>
+    </section>
+
+    <section class="capability-grid" aria-label="点灯能力">
+      <article>
+        <span><i class="fa-light fa-code"></i></span>
+        <strong>开放开发</strong>
+        <small>丰富的硬件和平台接入能力</small>
+      </article>
+      <article>
+        <span><i class="fa-light fa-layer-group"></i></span>
+        <strong>多端协同</strong>
+        <small>APP、设备与云服务统一协作</small>
+      </article>
+      <article>
+        <span><i class="fa-light fa-bolt"></i></span>
+        <strong>快速落地</strong>
+        <small>缩短原型验证与产品化路径</small>
+      </article>
+    </section>
+
+    <div class="section-label legal-section-label">协议与隐私</div>
+    <section class="legal-card">
+      <button type="button" (click)="openUrl(USER_AGREEMENT, '用户协议')">
+        <span class="legal-icon"><i class="fa-light fa-file-contract"></i></span>
+        <span class="legal-copy">
+          <strong>{{ 'ACCOUNT.USER_AGREEMENT' | translate }}</strong>
+          <small>查看服务条款与用户权利</small>
+        </span>
+        <i class="fa-light fa-chevron-right legal-arrow" aria-hidden="true"></i>
+      </button>
+      <button type="button" (click)="openUrl(PRIVACY_POLICY, '隐私政策')">
+        <span class="legal-icon privacy"><i class="fa-light fa-shield-check"></i></span>
+        <span class="legal-copy">
+          <strong>{{ 'ACCOUNT.PRIVACY_POLICY' | translate }}</strong>
+          <small>了解个人信息的收集与保护</small>
+        </span>
+        <i class="fa-light fa-chevron-right legal-arrow" aria-hidden="true"></i>
+      </button>
+    </section>
+
+    <p class="copyright">© 点灯科技 · 用技术点亮创意</p>
+  </main>
 </ion-content>

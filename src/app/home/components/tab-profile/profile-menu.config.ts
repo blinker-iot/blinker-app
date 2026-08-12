@@ -39,6 +39,7 @@ export function createProfileMenuGroups(
           title: '设备共享',
           icon: 'fa-user-group',
           value: `已共享 ${stats.sharedDeviceNum} 台设备`,
+          route: '/share-manager',
         },
         {
           id: 'voice-assistant',
@@ -70,6 +71,13 @@ export function createProfileMenuGroups(
           icon: 'fa-circle-question',
           value: '提出建议和反馈问题',
           route: '/feedback',
+        },
+        {
+          id: 'about',
+          title: '关于我们',
+          icon: 'fa-building',
+          value: '了解点灯科技',
+          route: '/about',
         },
         {
           id: 'logout',

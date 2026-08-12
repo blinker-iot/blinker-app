@@ -1,51 +1,86 @@
-<ion-header>
+<ion-header class="share-detail-header ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-back-button text="" defaultHref="/share-manager"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{device.config.customName}} {{'SHARING.SHARING' | translate}}</ion-title>
+    <ion-title>共享管理</ion-title>
   </ion-toolbar>
 </ion-header>
-<ion-content>
-  <div class="noshared animated fadeIn" textcenter
-    *ngIf="!shareData.share0[deviceName] && !shareData.share[deviceName]">
-    {{'SHARING.NO_SHARING' | translate}}
-  </div>
-  <b-item-list>
-    <ng-container *ngIf="shareData.share0[deviceName]">
-      <b-item *ngFor="let item of shareData.share0[deviceName];index as i">
-        <div class="img-box">
-          <img class="avatar" src="{{AVATAR_API + item.userId+'.jpg'}}" >
-        </div>
-        <div class="text-box">
-          <div class="name">{{item.username}}</div>
-          <div class="other">{{'SHARING.WAIT' | translate}}</div>
-        </div>
-        <div class="right-btn" (click)="cancel0(item.uuid,i)">
-          {{'SHARING.CANCEL' | translate}}
-        </div>
-      </b-item>
-    </ng-container>
-    <ng-container *ngIf="shareData.share[deviceName]">
-      <b-item *ngFor="let item of shareData.share[deviceName];index as i">
-        <div class="img-box">
-          <img class="avatar" src="{{AVATAR_API + item.userId+'.jpg'}}" >
-        </div>
-        <div class="text-box">
-          <div class="name">{{item.username}}</div>
-          <div class="other">{{item.date | msToDate}} 共享</div>
-        </div>
-        <div class="right-btn" (click)="cancel(item.uuid,i)">
-          {{'SHARING.CANCEL' | translate}}
-        </div>
-      </b-item>
-    </ng-container>
-  </b-item-list>
-  <div class="bottom-box">
-    <b-item-list *ngIf="device">
-      <b-item icon="fa-light fa-plus" (click)="addShare()">
-        {{'SHARING.ADD' | translate}}
-      </b-item>
-    </b-item-list>
-  </div>
+
+<ion-content fullscreen="true">
+  <main class="share-detail-content">
+    <section class="device-hero">
+      <span class="hero-icon" aria-hidden="true">
+        <i class="fa-light fa-share-nodes"></i>
+      </span>
+      <div>
+        <span class="eyebrow">当前设备</span>
+        <h1>{{ device?.config?.customName || '设备' }}</h1>
+        <p>邀请其他用户共同控制这台设备。</p>
+      </div>
+      <span class="member-count">{{ sharedUserCount }} 人</span>
+    </section>
+
+    <div class="section-label">共享成员</div>
+
+    <section class="member-card" *ngIf="sharedUserCount">
+      <article class="member-row" *ngFor="let item of pendingShares; index as i">
+        <span class="avatar-box">
+          <img class="avatar" [src]="AVATAR_API + item.userId + '.jpg'" alt="" />
+          <span class="status-dot pending" aria-hidden="true"></span>
+        </span>
+        <span class="member-copy">
+          <strong>{{ item.username }}</strong>
+          <small>等待对方接受</small>
+        </span>
+        <span class="member-status pending-status">待接受</span>
+        <button
+          type="button"
+          class="remove-action"
+          [disabled]="share0Selected === i"
+          (click)="cancel0(item.uuid, i)"
+        >撤销</button>
+      </article>
+
+      <article class="member-row" *ngFor="let item of activeShares; index as i">
+        <span class="avatar-box">
+          <img class="avatar" [src]="AVATAR_API + item.userId + '.jpg'" alt="" />
+          <span class="status-dot active" aria-hidden="true"></span>
+        </span>
+        <span class="member-copy">
+          <strong>{{ item.username }}</strong>
+          <small>{{ item.date | msToDate }} 开始共享</small>
+        </span>
+        <span class="member-status active-status">已共享</span>
+        <button
+          type="button"
+          class="remove-action"
+          [disabled]="shareSelected === i"
+          (click)="cancel(item.uuid, i)"
+        >移除</button>
+      </article>
+    </section>
+
+    <section class="empty-state" *ngIf="!sharedUserCount">
+      <span class="empty-icon" aria-hidden="true"><i class="fa-light fa-user-plus"></i></span>
+      <strong>还没有共享成员</strong>
+      <p>点击下方按钮，通过手机号邀请一位用户。</p>
+    </section>
+
+    <aside class="security-tip">
+      <i class="fa-light fa-shield-check" aria-hidden="true"></i>
+      <p><strong>共享建议</strong><span>仅向你信任的用户共享设备，你可以随时撤销权限。</span></p>
+    </aside>
+  </main>
 </ion-content>
+
+<ion-footer class="share-detail-footer ion-no-border" *ngIf="device">
+  <ion-toolbar>
+    <div class="footer-shell">
+      <button type="button" class="primary-action" (click)="addShare()">
+        <i class="fa-light fa-user-plus" aria-hidden="true"></i>
+        <span>添加共享成员</span>
+      </button>
+    </div>
+  </ion-toolbar>
+</ion-footer>
