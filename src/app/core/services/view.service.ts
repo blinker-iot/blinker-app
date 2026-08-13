@@ -18,6 +18,10 @@ import {
 // import { ScreenOrientation,OrientationType } from '@capacitor/screen-orientation';
 import { AndroidShortcuts } from "capacitor-android-shortcuts";
 import {
+  parseDeviceDeepLink,
+  parseShortcutDeviceId,
+} from "./device-deep-link";
+import {
   AppTheme,
   applyThemeToDocument,
   readStoredTheme,
@@ -234,27 +238,28 @@ export class ViewService {
   // 从shortcut进入app
   newIntentData = new Subject<any>();
   checkShortcut() {
-    AndroidShortcuts.addListener("shortcut", (response: any) => {
-      // response.data contains the content of the 'data' property of the created shortcut
-      let url = response.data;
-      if (url == null) {
-        if (this.platformLocation.pathname.indexOf("/device/") > -1) {
-          this.navCtrl.navigateRoot("/");
-        }
-      } else {
-        if (
-          this.platformLocation.pathname.indexOf("/device/") > -1 &&
-          this.devicePageIsRoot
-        ) {
-          this.navCtrl.navigateRoot(url);
-          setTimeout(() => {
-            this.devicePageIsRoot = true;
-          }, 500);
-        } else {
-          this.router.navigate([url]);
-        }
-      }
+    void AndroidShortcuts.addListener("shortcut", (response) => {
+      const deviceId = parseShortcutDeviceId(response.data, response.id);
+      if (deviceId) this.openDeviceFromLink(deviceId);
+    }).catch((error) => {
+      console.warn("Unable to listen for Android shortcuts", error);
     });
+
+    void App.addListener("appUrlOpen", ({ url }) => {
+      const deviceId = parseDeviceDeepLink(url);
+      if (deviceId) this.openDeviceFromLink(deviceId);
+    }).catch((error) => {
+      console.warn("Unable to listen for app links", error);
+    });
+
+    void App.getLaunchUrl()
+      .then((launch) => {
+        const deviceId = parseDeviceDeepLink(launch?.url);
+        if (deviceId) this.openDeviceFromLink(deviceId);
+      })
+      .catch((error) => {
+        console.warn("Unable to read the app launch URL", error);
+      });
 
 
     // window.plugins.Shortcuts.getIntent(intent => {
@@ -279,6 +284,13 @@ export class ViewService {
     //     this.navCtrl.navigateRoot('/');
     //   }
     // })
+  }
+
+  private openDeviceFromLink(deviceId: string): void {
+    this.ngzone.run(() => {
+      this.devicePageIsRoot = true;
+      void this.router.navigate(["/device", deviceId], { replaceUrl: true });
+    });
   }
 
   statusBarHeight = 0;

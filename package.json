@@ -42,7 +42,7 @@
     "@ngx-translate/core": "^18.0.0",
     "angular-gridster2": "^22.0.0",
     "animate.css": "^4.1.1",
-    "capacitor-android-shortcuts": "^7.0.0",
+    "capacitor-android-shortcuts": "file:../capacitor-android-shortcuts",
     "capacitor-mdns": "file:../capacitor-mdns",
     "capacitor-native-settings": "^8.2.0",
     "capacitor-ntfy": "file:../capacitor-ntfy",
