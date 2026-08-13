@@ -12,6 +12,10 @@ import { DataService } from './data.service';
 })
 export class UserService {
 
+  get avatarUploadConfigured(): boolean {
+    return API.USER.UPLOAD_AVATAR.trim().length > 0;
+  }
+
   get uuid() {
     if (this.dataService.auth)
       return this.dataService.auth.uuid
@@ -191,9 +195,15 @@ export class UserService {
       .catch(this.handleError);
   }
 
-  uploadAvatar(newAvatar): Promise<boolean> {
+  uploadAvatar(newAvatar: Blob): Promise<boolean> {
+    if (!this.avatarUploadConfigured) {
+      console.warn('头像上传地址尚未配置');
+      return Promise.resolve(false);
+    }
+
     const formData = new FormData();
-    formData.append('file', newAvatar);
+    const filename = newAvatar instanceof File ? newAvatar.name : 'avatar.webp';
+    formData.append('file', newAvatar, filename);
     formData.append('uuid', this.uuid);
     formData.append('token', this.token);
     return this.http.post(API.USER.UPLOAD_AVATAR, formData)

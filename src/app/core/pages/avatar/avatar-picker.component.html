@@ -1,35 +1,54 @@
-<ion-header>
+<ion-header class="avatar-cropper-header ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="close()">
-        <ion-icon name="close-outline"></ion-icon>
+      <ion-button (click)="cancel()" aria-label="取消截取">
+        <i class="fa-light fa-xmark"></i>
       </ion-button>
     </ion-buttons>
-    <ion-title>头像截取</ion-title>
-    <ion-buttons slot="end">
-      @if (tempImgFile) {
-      <ion-button (click)="confirm()">
-        <ion-icon name="checkmark-outline"></ion-icon>
-      </ion-button>
-      }
-    </ion-buttons>
+    <ion-title>截取头像</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  <div class="avatar-page animate__animated animate__fadeIn animate__faster">
-    @if (!tempImgFile) {
-    <button class="chose-btn" (click)="showActionSheet()">
-      选择图片或拍摄照片
-    </button>
-    } @if (tempImgFile) {
-    <div class="imgbox animated fadeIn">
-      <img class="source-img" src="{{ tempImgFile }}" #image />
-      <div class="btn" (click)="rotate()">
-        <ion-icon name="sync-outline"></ion-icon>
-        <div class="btn-text">旋转90°</div>
-      </div>
+<ion-content class="avatar-cropper-content" fullscreen="true" [scrollY]="false">
+  <main class="avatar-cropper-page">
+    <div class="gesture-hint">
+      <i class="fa-light fa-hand-pointer"></i>
+      拖动图片调整位置，双指缩放
     </div>
-    }
-  </div>
+
+    <div class="cropper-stage" [class.is-ready]="cropperReady">
+      <img
+        #image
+        class="source-image"
+        [src]="imageSource"
+        alt="待截取头像"
+        (load)="onImageLoad()"
+        (error)="onImageError()"
+      />
+      @if (!cropperReady && !loadFailed) {
+      <div class="cropper-status" aria-live="polite">
+        <ion-spinner name="crescent"></ion-spinner>
+        <span>正在载入图片…</span>
+      </div>
+      } @if (loadFailed) {
+      <div class="cropper-status error-status" role="alert">
+        <i class="fa-light fa-circle-exclamation"></i>
+        <span>图片处理失败，请返回后重新选择</span>
+      </div>
+      }
+    </div>
+    <button
+      type="button"
+      class="crop-confirm-button"
+      [disabled]="!cropperReady || confirming"
+      (click)="confirm()"
+      aria-label="确定截取"
+    >
+      @if (confirming) {
+      <ion-spinner name="crescent"></ion-spinner>
+      } @else {
+      <i class="fa-light fa-check"></i>
+      }
+    </button>
+  </main>
 </ion-content>

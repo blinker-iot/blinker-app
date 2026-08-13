@@ -26,7 +26,8 @@ export const API = {
         INFO: SERVER_URL + '/user/profile/get',
         SAVE_CONFIG: SERVER_URL + '/user/config/save',
         AVATAR: SERVER_URL_BASE + '/avatar',
-        UPLOAD_AVATAR: SERVER_URL + '/user/avatar/upload',
+        // TODO: 待提供新的 WebP 头像上传地址。
+        UPLOAD_AVATAR: '',
         CHANGE_PASSWORD: SERVER_URL + "/user/password/change",
         CHANGE_PROFILE: SERVER_URL + "/user/profile/modify",
         ADD_DEVICE: SERVER_URL + '/user/config/save',

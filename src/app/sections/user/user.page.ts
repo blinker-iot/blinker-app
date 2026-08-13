@@ -5,8 +5,13 @@ import {
   ActionSheetController,
   AlertController,
   IonicModule,
+  ModalController,
 } from '@ionic/angular';
 import { Subscription } from 'rxjs';
+import {
+  AvatarCropResult,
+  AvatarPickerComponent,
+} from 'src/app/core/pages/avatar/avatar-picker.component';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { DataService } from 'src/app/core/services/data.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
@@ -22,6 +27,7 @@ import { UserService } from 'src/app/core/services/user.service';
 export class UserPage implements OnInit, OnDestroy {
   private subscription?: Subscription;
   private alert?: HTMLIonAlertElement;
+  private localAvatarUrl?: string;
 
   draftName = '张小北';
   draftPhone = '138 0000 8888';
@@ -43,6 +49,7 @@ export class UserPage implements OnInit, OnDestroy {
     private userService: UserService,
     private actionSheetCtrl: ActionSheetController,
     private alertCtrl: AlertController,
+    private modalCtrl: ModalController,
     private noticeService: NoticeService,
     private dataService: DataService
   ) {}
@@ -57,6 +64,7 @@ export class UserPage implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.subscription?.unsubscribe();
     void this.alert?.dismiss();
+    this.revokeLocalAvatarUrl();
   }
 
   private syncDraft() {
@@ -75,6 +83,14 @@ export class UserPage implements OnInit, OnDestroy {
     const name = this.draftName.trim();
     if (this.getStrLength(name) < 2) {
       await this.noticeService.showToast('用户名至少需要 2 个字符');
+      return;
+    }
+    if (
+      this.user &&
+      this.selectedAvatarFile &&
+      !this.userService.avatarUploadConfigured
+    ) {
+      await this.noticeService.showToast('头像上传接口暂未配置');
       return;
     }
 
@@ -144,6 +160,7 @@ export class UserPage implements OnInit, OnDestroy {
   async onAvatarSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
+    input.value = '';
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       await this.noticeService.showToast('请选择图片文件');
@@ -154,13 +171,35 @@ export class UserPage implements OnInit, OnDestroy {
       return;
     }
 
-    const reader = new FileReader();
-    this.selectedAvatarFile = file;
-    reader.onload = () => {
-      this.localAvatar = typeof reader.result === 'string' ? reader.result : '';
-      if (this.user && this.localAvatar) this.user.avatar = this.localAvatar;
-    };
-    reader.readAsDataURL(file);
+    const sourceUrl = URL.createObjectURL(file);
+    try {
+      const modal = await this.modalCtrl.create({
+        component: AvatarPickerComponent,
+        componentProps: {
+          imageSource: sourceUrl,
+          fileName: file.name,
+        },
+        cssClass: 'avatar-crop-modal',
+        backdropDismiss: false,
+      });
+      await modal.present();
+
+      const { data, role } = await modal.onDidDismiss<AvatarCropResult>();
+      if (role !== 'confirm' || !data?.file) return;
+
+      this.selectedAvatarFile = data.file;
+      this.revokeLocalAvatarUrl();
+      this.localAvatarUrl = URL.createObjectURL(data.file);
+      this.localAvatar = this.localAvatarUrl;
+    } finally {
+      URL.revokeObjectURL(sourceUrl);
+    }
+  }
+
+  private revokeLocalAvatarUrl(): void {
+    if (!this.localAvatarUrl) return;
+    URL.revokeObjectURL(this.localAvatarUrl);
+    this.localAvatarUrl = undefined;
   }
 
   async showChangePassword() {

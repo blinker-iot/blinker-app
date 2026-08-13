@@ -1,51 +1,184 @@
-.avatar-page {
-  height: 100%;
-  width: 100vw;
+@use '../../../sections/transparent-page-header' as page-header;
+
+ion-modal.avatar-crop-modal {
+  --width: 100%;
+  --height: 100%;
+  --border-radius: 0;
 }
 
-.chose-btn {
-  margin-top: 30vh;
-  margin-left: 20vw;
-  width: 60vw;
-  height: 45px;
-  padding: 10px 30px;
-  border-radius: 5px;
-  background: #4190f7;
-  color: #fff;
-}
+.avatar-cropper-header {
+  @include page-header.transparent;
 
-.imgbox {
-  height: 100%;
-  width: 100vw;
-  // background-color: black;
-  .source-img {
-    width: 50%;
-    visibility: hidden;
+  ion-toolbar {
+    --color: #fff;
+  }
+
+  ion-title {
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  ion-button {
+    --color: rgba(255, 255, 255, 0.9);
+
+    i {
+      font-size: 20px;
+    }
+  }
+
+  ion-spinner {
+    width: 18px;
+    height: 18px;
   }
 }
 
-.btn {
+.avatar-cropper-content {
+  --background: #090a0d;
+  --color: #fff;
+}
+
+.avatar-cropper-page {
+  box-sizing: border-box;
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  padding-top: calc(var(--ion-safe-area-top, 0px) + 56px);
+  padding-bottom: max(12px, var(--ion-safe-area-bottom));
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  background: #090a0d;
+}
+
+.gesture-hint {
   position: absolute;
-  left: calc(50% - 30px);
-  bottom: 60px;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background-color: #fff;
-  margin-left: auto;
+  top: calc(var(--ion-safe-area-top, 0px) + 70px);
+  left: 50%;
+  z-index: 4;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  min-height: 32px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(8, 10, 14, 0.58);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: rgba(255, 255, 255, 0.62);
   display: flex;
-  justify-content: center;
   align-items: center;
-  flex-direction: column;
-  color: #999;
-  ion-icon {
-    font-size: 36px;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.cropper-stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: #030405;
+  touch-action: none;
+
+  .source-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0;
   }
-  .btn-text {
-    margin-top: 5px;
-    bottom: -25px;
-    color: #fff;
-    position: absolute;
-    font-size: 12px;
+
+  .cropper-container {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .cropper-modal {
+    background-color: #030405;
+    opacity: 0.7;
+  }
+
+  .cropper-view-box {
+    border-radius: 50%;
+    outline: 2px solid rgba(255, 255, 255, 0.96);
+    outline-offset: -2px;
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.18),
+      0 0 22px rgba(255, 255, 255, 0.12);
+  }
+
+  .cropper-face {
+    border-radius: 50%;
+    background-color: transparent;
+  }
+
+  .cropper-line,
+  .cropper-point,
+  .cropper-dashed {
+    display: none;
+  }
+}
+
+.crop-confirm-button {
+  position: absolute;
+  bottom: max(24px, calc(var(--ion-safe-area-bottom, 0px) + 14px));
+  left: 50%;
+  z-index: 4;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ion-color-primary);
+  box-shadow: 0 10px 26px rgba(var(--ion-color-primary-rgb), 0.38);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  transform: translateX(-50%);
+  transition: opacity 150ms ease, transform 150ms ease;
+
+  i {
+    font-size: 21px;
+  }
+
+  ion-spinner {
+    width: 22px;
+    height: 22px;
+  }
+
+  &:active:not(:disabled) {
+    transform: translateX(-50%) scale(0.94);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+  }
+}
+
+.cropper-status {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.68);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 13px;
+
+  ion-spinner {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.error-status {
+  color: rgba(255, 255, 255, 0.78);
+
+  i {
+    font-size: 28px;
   }
 }

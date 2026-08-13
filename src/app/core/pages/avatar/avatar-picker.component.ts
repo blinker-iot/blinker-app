@@ -1,144 +1,142 @@
-// 需修复 12.27
+import {
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  Input,
+  NgZone,
+  OnDestroy,
+  ViewChild,
+  ViewEncapsulation,
+} from '@angular/core';
+import { IonicModule, ModalController } from '@ionic/angular';
+import Cropper from 'cropperjs';
 
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
-import * as Cropper from 'cropperjs/dist/cropper';
-import { ModalController, ActionSheetController, Platform } from '@ionic/angular';
-// import { Camera, CameraOptions } from '@awesome-cordova-plugins/camera/ngx';
-import { UserService } from '../../services/user.service';
+const AVATAR_OUTPUT_SIZE = 200;
+const AVATAR_OUTPUT_TYPE = 'image/webp';
+const AVATAR_OUTPUT_QUALITY = 0.82;
+
+export interface AvatarCropResult {
+  file: File;
+}
 
 @Component({
-    selector: 'app-avatar-picker',
-    templateUrl: './avatar-picker.component.html',
-    styleUrls: ['./avatar-picker.component.scss']
+  selector: 'app-avatar-picker',
+  templateUrl: './avatar-picker.component.html',
+  styleUrls: ['./avatar-picker.component.scss'],
+  standalone: true,
+  imports: [IonicModule],
+  encapsulation: ViewEncapsulation.None,
 })
-export class AvatarPickerComponent implements OnInit {
-  showCommitment = true;
-  cropper: Cropper;
-  avatar64;
+export class AvatarPickerComponent implements OnDestroy {
+  @Input() imageSource = '';
+  @Input() fileName = 'avatar.jpg';
 
-  @ViewChild('image', { read: ElementRef, static: false }) image: ElementRef;
+  @ViewChild('image') private image?: ElementRef<HTMLImageElement>;
 
-  actionSheet;
+  cropperReady = false;
+  confirming = false;
+  loadFailed = false;
+
+  private cropper?: Cropper;
 
   constructor(
-    private modal: ModalController,
-    private userService: UserService,
-    private actionSheetCtrl: ActionSheetController,
-    private platform: Platform,
-    // private camera: Camera
-  ) { }
+    private readonly modalCtrl: ModalController,
+    private readonly ngZone: NgZone,
+    private readonly changeDetectorRef: ChangeDetectorRef,
+  ) {}
 
-  ngOnInit() {
-    // if (this.router.url.indexOf('visitor') > -1)
-    //   // this.isVisitor = true
+  ngOnDestroy(): void {
+    this.cropper?.destroy();
   }
 
-  ngAfterViewInit(): void {
-    // this.showActionSheet()
-  }
+  onImageLoad(): void {
+    const image = this.image?.nativeElement;
+    if (!image || this.cropper) return;
 
-  close() {
-    this.modal.dismiss()
-  }
-
-  //修改头像
-  async showActionSheet() {
-    this.actionSheet = await this.actionSheetCtrl.create({
-      header: '修改头像',
-      buttons: [
-        { text: '手机拍照', handler: () => { this.getPicture(1); } },
-        { text: '本地图片', handler: () => { this.getPicture(0); } }
-      ]
+    this.loadFailed = false;
+    this.cropper = new Cropper(image, {
+      aspectRatio: 1,
+      autoCrop: true,
+      autoCropArea: 0.78,
+      background: false,
+      center: false,
+      checkOrientation: true,
+      cropBoxMovable: false,
+      cropBoxResizable: false,
+      dragMode: 'move',
+      guides: false,
+      highlight: true,
+      modal: true,
+      movable: true,
+      responsive: true,
+      restore: false,
+      rotatable: true,
+      scalable: false,
+      toggleDragModeOnDblclick: false,
+      viewMode: 1,
+      wheelZoomRatio: 0.08,
+      zoomable: true,
+      zoomOnTouch: true,
+      zoomOnWheel: true,
+      ready: () => {
+        this.updateCropperReady(true);
+      },
     });
-    await this.actionSheet.present();
   }
 
-  tempImgFile;
-  getPicture(sourceType) {
-    if (this.platform.is('cordova')) {
-      // const options: CameraOptions = {
-      //   quality: 50,
-      //   sourceType: sourceType,
-      //   destinationType: this.camera.DestinationType.DATA_URL,
-      //   encodingType: this.camera.EncodingType.JPEG,
-      //   mediaType: this.camera.MediaType.PICTURE
-      // }
-      // this.camera.getPicture(options).then((imageData) => {
-      //   this.tempImgFile = 'data:image/jpeg;base64,' + imageData;
-      //   // this.router.navigate(['/user/avatar'])
-      //   this.cropImage()
-      // }, (err) => {
-      //   console.log("获取图片失败");
-      // });
-    }
-    else {
-      this.tempImgFile = 'img/panda.jpg';
-      this.cropImage()
-    }
+  onImageError(): void {
+    this.loadFailed = true;
+    this.cropperReady = false;
   }
 
-  confirm() {
-    let croppedImg = this.cropper.getCroppedCanvas({
-      width: 300,
-      height: 300
-    });
-    // 支持ios10
-    if (!HTMLCanvasElement.prototype.toBlob) {
-      Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
-        value: function (callback, type, quality) {
+  cancel(): void {
+    void this.modalCtrl.dismiss(undefined, 'cancel');
+  }
 
-          var binStr = atob(this.toDataURL(type, quality).split(',')[1]),
-            len = binStr.length,
-            arr = new Uint8Array(len);
-          for (var i = 0; i < len; i++) {
-            arr[i] = binStr.charCodeAt(i);
-          }
-          callback(new Blob([arr], { type: type || 'image/png' }));
-        }
+  async confirm(): Promise<void> {
+    if (!this.cropper || !this.cropperReady || this.confirming) return;
+
+    this.confirming = true;
+    try {
+      const canvas = this.cropper.getCroppedCanvas({
+        width: AVATAR_OUTPUT_SIZE,
+        height: AVATAR_OUTPUT_SIZE,
+        fillColor: '#ffffff',
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high',
       });
-    }
-    croppedImg.toBlob(blob => {
-      this.userService.uploadAvatar(blob).then(result => {
-        this.close()
-      });
-    }, 'image/jpeg', 0.6);
-  }
-
-  cropImage() {
-    setTimeout(() => {
-      if (typeof this.cropper != 'undefined') {
-        this.cropper.destroy()
+      const blob = await this.canvasToBlob(canvas);
+      if (!blob || blob.type !== AVATAR_OUTPUT_TYPE) {
+        this.loadFailed = true;
+        return;
       }
-      this.cropper = new Cropper(this.image.nativeElement, {
-        dragMode: 'move',//点击移动move画布crop生成新裁剪框
-        aspectRatio: 1,//裁剪框比例
-        viewMode: 1,//图片显示模式
-        modal: true,//是否在剪裁框上显示黑色的模态窗口
-        guides: false,//是否在剪裁框上显示虚线
-        highlight: true,//是否在剪裁框上显示白色的模态窗口
-        center: false,//是否显示裁剪框 中间的+
-        background: false,//是否在容器上显示网格背景
-        autoCrop: true,//是否自动裁剪图片
-        autoCropArea: 0.8,//自动裁剪图片比例
-        movable: true,//图片可移动
-        zoomable: true,//图片可以缩放
-        //responsive: true,//在窗口尺寸改变的时候重置cropper
-        cropBoxMovable: false,//裁剪框不可以移动
-        cropBoxResizable: false,//裁剪框不可以缩放
-        checkOrientation: true,//获取图片旋转方向
-        rotatable: true,
-        scalable: true
+
+      const baseName =
+        this.fileName
+          .replace(/\.[^/.]+$/, '')
+          .replace(/[^a-zA-Z0-9._-]+/g, '-')
+          .replace(/^-+|-+$/g, '') || 'avatar';
+      const file = new File([blob], `${baseName}-cropped.webp`, {
+        type: blob.type,
+        lastModified: Date.now(),
       });
-    }, 500);
-
+      const result: AvatarCropResult = { file };
+      await this.modalCtrl.dismiss(result, 'confirm');
+    } finally {
+      this.confirming = false;
+    }
   }
 
-  rotate() {
-    this.cropper.rotate(90);
+  private canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+    return new Promise((resolve) => {
+      canvas.toBlob(resolve, AVATAR_OUTPUT_TYPE, AVATAR_OUTPUT_QUALITY);
+    });
   }
 
-  closeCommitment() {
-    this.showCommitment = false;
+  private updateCropperReady(ready: boolean): void {
+    this.ngZone.run(() => {
+      this.cropperReady = ready;
+      this.changeDetectorRef.detectChanges();
+    });
   }
-
 }
