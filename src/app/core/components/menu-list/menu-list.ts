@@ -19,6 +19,7 @@ export interface MenuListItem {
   id: string;
   title: string;
   icon: string;
+  iconColor?: string;
   description?: string;
   value?: string;
   badge?: string;

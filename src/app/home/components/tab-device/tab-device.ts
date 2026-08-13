@@ -93,7 +93,7 @@ export class TabDeviceComponent implements OnInit {
     this.cd.markForCheck();
   }
 
-  async openAddPage(url: '/adddevice' | '/room-manager'): Promise<void> {
+  async openAddPage(url: '/guide' | '/room-manager'): Promise<void> {
     await this.dismissAddMenu();
     await this.navController.navigateForward(url);
   }

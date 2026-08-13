@@ -15,20 +15,20 @@ export const routes: Routes = [
   { path: 'user', loadComponent: () => import('./sections/user/user.page').then(m => m.UserPage) },
   { path: 'message', loadComponent: () => import('./sections/message/message.page').then(m => m.MessagePage) },
   {
-    path: 'adddevice',
+    path: 'guide',
     pathMatch: 'full',
     loadComponent: () => import('./sections/guide/guide.page').then(m => m.GuidePage),
   },
   {
-    path: 'adddevice/wifi',
+    path: 'guide/wifi',
     loadComponent: () => import('./sections/guide/wifi-device/wifi-device.page').then(m => m.WifiDeviceGuidePage),
   },
   {
-    path: 'adddevice/ble',
+    path: 'guide/ble',
     loadComponent: () => import('./sections/guide/ble-device/ble-device.page').then(m => m.BleDeviceGuidePage),
   },
   {
-    path: 'adddevice/key',
+    path: 'guide/key',
     loadComponent: () => import('./sections/guide/key-device/key-device.page').then(m => m.KeyDeviceGuidePage),
   },
   {

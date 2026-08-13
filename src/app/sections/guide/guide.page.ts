@@ -27,25 +27,28 @@ export class GuidePage {
       {
         id: 'wifi',
         icon: 'fa-wifi',
+        iconColor: 'var(--ion-color-primary)',
         title: this.translate.instant('DEVICE_GUIDE.WIFI_TITLE'),
         description: this.translate.instant('DEVICE_GUIDE.WIFI_DESCRIPTION'),
-        route: '/adddevice/wifi',
+        route: '/guide/wifi',
       },
       {
         id: 'ble',
         icon: 'fa-bluetooth',
+        iconColor: 'var(--ion-color-secondary)',
         title: this.translate.instant('DEVICE_GUIDE.BLE_TITLE'),
         description: this.translate.instant('DEVICE_GUIDE.BLE_DESCRIPTION'),
-        route: '/adddevice/ble',
+        route: '/guide/ble',
       },
       {
         id: 'key',
         icon: 'fa-key',
+        iconColor: 'var(--ion-color-warning)',
         title: this.translate.instant('DEVICE_GUIDE.KEY_METHOD_TITLE'),
         description: this.translate.instant(
           'DEVICE_GUIDE.KEY_METHOD_DESCRIPTION'
         ),
-        route: '/adddevice/key',
+        route: '/guide/key',
       },
     ];
   }

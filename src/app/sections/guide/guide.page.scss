@@ -129,19 +129,22 @@ ion-content {
   font-size: 12px;
 }
 
-.signal-wifi {
+.signal--wifi {
   top: 0;
   left: 42px;
+  color: var(--ion-color-primary);
 }
 
-.signal-ble {
+.signal--ble {
   right: 0;
   bottom: 12px;
+  color: var(--ion-color-secondary);
 }
 
-.signal-key {
+.signal--key {
   bottom: 5px;
   left: 3px;
+  color: var(--ion-color-warning);
 }
 
 .methods-section {

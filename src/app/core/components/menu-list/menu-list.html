@@ -17,7 +17,11 @@
       [disabled]="item.disabled"
       (click)="select(item)"
     >
-      <span class="menu-icon" aria-hidden="true">
+      <span
+        class="menu-icon"
+        aria-hidden="true"
+        [style.color]="item.iconColor || null"
+      >
         <i [class]="'fa-light ' + item.icon"></i>
       </span>
 
