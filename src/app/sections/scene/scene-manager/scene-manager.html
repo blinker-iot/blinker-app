@@ -1,14 +1,19 @@
 <ion-header class="manager-header ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text="" defaultHref="/home?tab=profile"></ion-back-button>
+      <ion-back-button
+        text=""
+        defaultHref="/home?tab=profile"
+      ></ion-back-button>
     </ion-buttons>
     <ion-title>{{'MENU.SCENE_MANAGER' | translate}}</ion-title>
-    <ion-buttons *ngIf="loaded && sceneDataList.length" slot="end">
+    @if (loaded && sceneDataList.length) {
+    <ion-buttons slot="end">
       <ion-button class="edit-button" (click)="switchMode()">
         {{ editMode ? '完成' : '编辑' }}
       </ion-button>
     </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
 <ion-content fullscreen="true">
@@ -26,36 +31,49 @@
 
     <div class="section-label">我的场景</div>
 
-    <section class="manager-card" *ngIf="loaded && sceneDataList.length">
-      <app-menu-list class="manager-list" [editMode]="editMode" (sortChange)="sortChange($event)">
+    @if (loaded && sceneDataList.length) {
+    <section class="manager-card">
+      <app-menu-list
+        class="manager-list"
+        [editMode]="editMode"
+        (sortChange)="sortChange($event)"
+      >
+        @for (sceneName of sceneDataList; track sceneName) {
         <app-menu-item
           [id]="sceneName"
           (delete)="delSceneAlert($event)"
           showArrow="true"
-          *ngFor="let sceneName of sceneDataList"
           (enter)="editScene(sceneName)"
         >
           <span class="entry-icon scene-entry-icon" aria-hidden="true">
-            <i [class]="sceneDataDict[sceneName]?.ico || 'fa-light fa-bolt'"></i>
+            <i
+              [class]="sceneDataDict[sceneName]?.ico || 'fa-light fa-bolt'"
+            ></i>
           </span>
           <span class="entry-copy">
             <strong>{{ sceneName }}</strong>
-            <small>{{ sceneDataDict[sceneName]?.acts?.length || 0 }} 个执行动作</small>
+            <small
+              >{{ sceneDataDict[sceneName]?.acts?.length || 0 }}
+              个执行动作</small
+            >
           </span>
         </app-menu-item>
+        }
       </app-menu-list>
     </section>
-
-    <section class="empty-state" *ngIf="loaded && !sceneDataList.length">
+    } @if (loaded && !sceneDataList.length) {
+    <section class="empty-state">
       <span class="empty-icon scene-empty-icon" aria-hidden="true">
         <i class="fa-light fa-sparkles"></i>
       </span>
       <strong>还没有自动化场景</strong>
       <p>创建一个场景，把多个设备动作组合起来。</p>
     </section>
+    }
   </main>
 </ion-content>
-<ion-footer class="manager-footer ion-no-border" *ngIf="loaded && !editMode">
+@if (loaded && !editMode) {
+<ion-footer class="manager-footer ion-no-border">
   <ion-toolbar>
     <div class="footer-shell">
       <button type="button" class="primary-action" (click)="addScene()">
@@ -65,3 +83,4 @@
     </div>
   </ion-toolbar>
 </ion-footer>
+}

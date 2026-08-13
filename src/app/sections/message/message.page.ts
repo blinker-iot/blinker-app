@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
@@ -20,7 +19,7 @@ interface DemoMessage {
   templateUrl: './message.page.html',
   styleUrls: ['./message.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, RouterModule],
+  imports: [IonicModule, RouterModule],
 })
 export class MessagePage {
   readonly filters: Array<{ label: string; value: 'all' | MessageCategory }> = [
@@ -73,7 +72,9 @@ export class MessagePage {
   get visibleMessages() {
     return this.activeFilter === 'all'
       ? this.messages
-      : this.messages.filter((message) => message.category === this.activeFilter);
+      : this.messages.filter(
+          (message) => message.category === this.activeFilter
+        );
   }
 
   get unreadCount() {

@@ -11,7 +11,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { CommonModule } from '@angular/common';
+
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
 import { RoomListComponent } from '../room-list/room-list';
@@ -25,13 +25,7 @@ import { DeviceService } from '../../../core/services/device.service';
   styleUrls: ['tab-device.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    CommonModule,
-    IonicModule,
-    RouterModule,
-    RoomListComponent,
-    DeviceblockZone,
-  ],
+  imports: [IonicModule, RouterModule, RoomListComponent, DeviceblockZone],
 })
 export class TabDeviceComponent implements OnInit {
   private _roomid = -1;
@@ -67,7 +61,7 @@ export class TabDeviceComponent implements OnInit {
     private navController: NavController,
     private toastController: ToastController,
     private cd: ChangeDetectorRef,
-    private destroyRef: DestroyRef,
+    private destroyRef: DestroyRef
   ) {
     this.destroyRef.onDestroy(() => {
       if (typeof this.addMenuLayoutFrame !== 'undefined') {
@@ -160,5 +154,4 @@ export class TabDeviceComponent implements OnInit {
       arrow.style.translate = `${triggerCenter - shiftedArrowCenter}px 0`;
     }
   }
-
 }

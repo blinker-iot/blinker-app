@@ -15,49 +15,47 @@ import { Act2TextPipe } from 'src/app/core/pipes/actcmd2text';
 import { Device2NamePipe } from 'src/app/core/pipes/device2name';
 import { Days2TextPipe } from 'src/app/core/pipes/days2text';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
 
 @Component({
-    selector: 'page-device-update',
-    templateUrl: 'device-update.html',
-    styleUrls: ['device-update.scss'],
-    imports: [
-        CommonModule,
-        FormsModule,
-        IonicModule,
-        MinuteToTimePipe,
-        ObjToStrPipe,
-        OwnplugAct2strPipe,
-        MsToDatePipe,
-        HtmlPipe,
-        WrapPipe,
-        Act2TextPipe,
-        Device2NamePipe,
-        Days2TextPipe
-    ]
+  selector: 'page-device-update',
+  templateUrl: 'device-update.html',
+  styleUrls: ['device-update.scss'],
+  imports: [
+    FormsModule,
+    IonicModule,
+    MinuteToTimePipe,
+    ObjToStrPipe,
+    OwnplugAct2strPipe,
+    MsToDatePipe,
+    HtmlPipe,
+    WrapPipe,
+    Act2TextPipe,
+    Device2NamePipe,
+    Days2TextPipe,
+  ],
 })
 export class DeviceUpdatePage {
   id;
   device;
 
   get deviceEnable() {
-    return this.device.data['enable']
+    return this.device.data['enable'];
   }
 
   get updateState() {
-    return this.device.data['upgradeData']['step']
+    return this.device.data['upgradeData']['step'];
   }
 
   set updateState(updateState) {
-    this.device.data['upgradeData']['step'] = updateState
+    this.device.data['upgradeData']['step'] = updateState;
   }
 
   get hasNewVersion() {
-    return this.device.data['hasNewVersion']
+    return this.device.data['hasNewVersion'];
   }
 
   set hasNewVersion(hasNewVersion) {
-    this.device.data['hasNewVersion'] = hasNewVersion
+    this.device.data['hasNewVersion'] = hasNewVersion;
   }
 
   constructor(
@@ -66,31 +64,34 @@ export class DeviceUpdatePage {
     private dataService: DataService,
     public userService: UserService,
     private navCtrl: NavController
-  ) { }
+  ) {}
 
   subscription: Subscription;
   loaded = false;
   ngOnInit(): void {
-    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
+    this.subscription = this.dataService.userDataLoader.subscribe((loaded) => {
       if (loaded) {
         this.id = this.activatedRoute.snapshot.params['id'];
-        this.device = this.dataService.device.dict[this.id]
-        if (typeof this.device.data.upgrade == 'undefined' || typeof this.device.data.upgradeData == 'undefined') {
+        this.device = this.dataService.device.dict[this.id];
+        if (
+          typeof this.device.data.upgrade == 'undefined' ||
+          typeof this.device.data.upgradeData == 'undefined'
+        ) {
           this.device.data['upgrade'] = false;
           this.device.data['upgradeData'] = {
-            step: 0
-          }
+            step: 0,
+          };
         }
-        this.deviceService.checkDeviceUpdate(this.device).then(result => {
+        this.deviceService.checkDeviceUpdate(this.device).then((result) => {
           console.log('OTA State', result);
-          this.updateState = result
+          this.updateState = result;
           if (this.updateState == 1 || this.updateState == 99)
-            this.getUpdateState()
+            this.getUpdateState();
         });
-        this.deviceService.queryDevice(this.device)
-        this.loaded = loaded
+        this.deviceService.queryDevice(this.device);
+        this.loaded = loaded;
       }
-    })
+    });
   }
 
   ngOnDestroy() {
@@ -101,7 +102,7 @@ export class DeviceUpdatePage {
   updateDevice() {
     this.deviceService.sendData(this.device, '{"set":{"upgrade":true}}');
     this.updateState = 1;
-    this.getUpdateState()
+    this.getUpdateState();
   }
 
   timer;
@@ -114,20 +115,20 @@ export class DeviceUpdatePage {
       if (state == 0 || state == -1 || state == -2) {
         this.tryTimes++;
         if (this.tryTimes < 3) {
-          return
+          return;
         }
       }
       if (state == 100) {
-        this.updateState = state
+        this.updateState = state;
         this.hasNewVersion = false;
         clearInterval(this.timer);
       } else if (state < 0) {
-        this.updateState = state
+        this.updateState = state;
         clearInterval(this.timer);
       } else if (state > 0) {
-        this.updateState = state
+        this.updateState = state;
       }
-    }, 9000)
+    }, 9000);
   }
 
   popDevicePage() {

@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
@@ -11,7 +10,7 @@ import { RouterModule } from '@angular/router';
   styleUrls: ['tab-community.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule, FormsModule, IonicModule, RouterModule],
+  imports: [FormsModule, IonicModule, RouterModule],
 })
 export class TabCommunityComponent {
   readonly categories = ['推荐', '智能灵感', '产品百科', '使用技巧', '活动'];
@@ -51,7 +50,8 @@ export class TabCommunityComponent {
       const categoryMatched =
         this.activeCategory === '推荐' || card.category === this.activeCategory;
       const keywordMatched =
-        !keyword || `${card.title}${card.description}`.toLowerCase().includes(keyword);
+        !keyword ||
+        `${card.title}${card.description}`.toLowerCase().includes(keyword);
       return categoryMatched && keywordMatched;
     });
   }

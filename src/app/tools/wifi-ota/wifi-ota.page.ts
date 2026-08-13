@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -8,13 +7,30 @@ import {
   OnInit,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Capacitor, CapacitorHttp, type HttpResponse, type PluginListenerHandle } from '@capacitor/core';
+import {
+  Capacitor,
+  CapacitorHttp,
+  type HttpResponse,
+  type PluginListenerHandle,
+} from '@capacitor/core';
 import { IonicModule, ToastController } from '@ionic/angular';
-import { Mdns, type MdnsErrorEvent, type MdnsService, type MdnsWatchEvent } from 'capacitor-mdns';
+import {
+  Mdns,
+  type MdnsErrorEvent,
+  type MdnsService,
+  type MdnsWatchEvent,
+} from 'capacitor-mdns';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { formatBytes } from '../ota/ota-protocol';
 
-type WifiOtaState = 'idle' | 'preparing' | 'uploading' | 'verifying' | 'success' | 'error' | 'cancelled';
+type WifiOtaState =
+  | 'idle'
+  | 'preparing'
+  | 'uploading'
+  | 'verifying'
+  | 'success'
+  | 'error'
+  | 'cancelled';
 
 interface WifiOtaTarget {
   id: string;
@@ -32,7 +48,11 @@ interface UploadResponse {
   body: string;
 }
 
-const MDNS_REQUEST = { type: '_arduino._tcp.', domain: 'local.', addressFamily: 'any' as const };
+const MDNS_REQUEST = {
+  type: '_arduino._tcp.',
+  domain: 'local.',
+  addressFamily: 'any' as const,
+};
 const MAX_FIRMWARE_SIZE = 64 * 1024 * 1024;
 const TARGET_STORAGE_KEY = 'wifiOtaTarget';
 
@@ -42,7 +62,7 @@ const TARGET_STORAGE_KEY = 'wifiOtaTarget';
   styleUrls: ['./wifi-ota.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule, FormsModule, IonicModule, HeroCardComponent],
+  imports: [FormsModule, IonicModule, HeroCardComponent],
 })
 export class WifiOtaPage implements OnInit, OnDestroy {
   firmwareFile?: File;
@@ -78,7 +98,7 @@ export class WifiOtaPage implements OnInit, OnDestroy {
   constructor(
     private zone: NgZone,
     private cdr: ChangeDetectorRef,
-    private toastController: ToastController,
+    private toastController: ToastController
   ) {}
 
   ngOnInit(): void {
@@ -90,7 +110,12 @@ export class WifiOtaPage implements OnInit, OnDestroy {
   }
 
   get canUpload(): boolean {
-    return !!this.firmwareFile && !!this.host.trim() && this.validPort && !this.isBusy;
+    return (
+      !!this.firmwareFile &&
+      !!this.host.trim() &&
+      this.validPort &&
+      !this.isBusy
+    );
   }
 
   get canCancelUpload(): boolean {
@@ -98,7 +123,11 @@ export class WifiOtaPage implements OnInit, OnDestroy {
   }
 
   get validPort(): boolean {
-    return Number.isInteger(Number(this.port)) && Number(this.port) >= 1 && Number(this.port) <= 65535;
+    return (
+      Number.isInteger(Number(this.port)) &&
+      Number(this.port) >= 1 &&
+      Number(this.port) <= 65535
+    );
   }
 
   get targetPreview(): string {
@@ -160,13 +189,23 @@ export class WifiOtaPage implements OnInit, OnDestroy {
     this.statusDetail = '通过 _arduino._tcp mDNS 服务发现';
 
     try {
-      this.discoverListener = await Mdns.addListener('discover', event => {
-        if (session !== this.scanSession || !this.isScanning || !this.isArduinoService(event.service)) return;
+      this.discoverListener = await Mdns.addListener('discover', (event) => {
+        if (
+          session !== this.scanSession ||
+          !this.isScanning ||
+          !this.isArduinoService(event.service)
+        )
+          return;
         this.zone.run(() => this.handleDiscovery(event));
       });
 
-      this.errorListener = await Mdns.addListener('error', event => {
-        if (session !== this.scanSession || !this.isScanning || !this.isArduinoError(event)) return;
+      this.errorListener = await Mdns.addListener('error', (event) => {
+        if (
+          session !== this.scanSession ||
+          !this.isScanning ||
+          !this.isArduinoError(event)
+        )
+          return;
         this.zone.run(() => this.handleDiscoveryError(event));
       });
 
@@ -203,8 +242,12 @@ export class WifiOtaPage implements OnInit, OnDestroy {
     await this.removeDiscoveryListeners();
 
     if (wasScanning && updateStatus) {
-      this.statusMessage = this.targets.length ? `发现 ${this.targets.length} 台 OTA 设备` : '未发现 OTA 设备';
-      this.statusDetail = this.targets.length ? '选择设备可自动填入连接参数' : '可在下方手动填写 IP 地址';
+      this.statusMessage = this.targets.length
+        ? `发现 ${this.targets.length} 台 OTA 设备`
+        : '未发现 OTA 设备';
+      this.statusDetail = this.targets.length
+        ? '选择设备可自动填入连接参数'
+        : '可在下方手动填写 IP 地址';
     }
   }
 
@@ -235,7 +278,12 @@ export class WifiOtaPage implements OnInit, OnDestroy {
     }
 
     this.saveTarget();
-    this.setState('preparing', 3, '正在准备固件', `${this.firmwareFile.name} · ${formatBytes(this.firmwareFile.size)}`);
+    this.setState(
+      'preparing',
+      3,
+      '正在准备固件',
+      `${this.firmwareFile.name} · ${formatBytes(this.firmwareFile.size)}`
+    );
 
     try {
       this.setState('uploading', 8, '正在连接 OTA 设备', targetUrl);
@@ -243,15 +291,32 @@ export class WifiOtaPage implements OnInit, OnDestroy {
         ? await this.uploadNative(targetUrl, this.firmwareFile)
         : await this.uploadBrowser(targetUrl, this.firmwareFile);
 
-      this.setState('verifying', 90, '设备正在写入并校验固件', response.body || `HTTP ${response.status}`);
+      this.setState(
+        'verifying',
+        90,
+        '设备正在写入并校验固件',
+        response.body || `HTTP ${response.status}`
+      );
       if (response.status !== 200) {
-        throw new Error(`HTTP ${response.status}：${response.body || '设备拒绝升级'}`);
+        throw new Error(
+          `HTTP ${response.status}：${response.body || '设备拒绝升级'}`
+        );
       }
 
-      this.setState('success', 100, 'WiFi OTA 升级完成', '设备已接收固件并将自动重启');
+      this.setState(
+        'success',
+        100,
+        'WiFi OTA 升级完成',
+        '设备已接收固件并将自动重启'
+      );
     } catch (error) {
       if (this.state === 'cancelled') return;
-      this.setState('error', this.progress, 'WiFi OTA 升级失败', this.errorMessage(error));
+      this.setState(
+        'error',
+        this.progress,
+        'WiFi OTA 升级失败',
+        this.errorMessage(error)
+      );
     } finally {
       this.activeRequest = undefined;
     }
@@ -279,12 +344,14 @@ export class WifiOtaPage implements OnInit, OnDestroy {
     if (!target) return;
 
     if (result.action === 'removed') {
-      this.targets = this.targets.filter(item => item.id !== target.id);
+      this.targets = this.targets.filter((item) => item.id !== target.id);
       return;
     }
 
-    this.targets = [target, ...this.targets.filter(item => item.id !== target.id)]
-      .sort((left, right) => left.name.localeCompare(right.name, 'zh-CN'));
+    this.targets = [
+      target,
+      ...this.targets.filter((item) => item.id !== target.id),
+    ].sort((left, right) => left.name.localeCompare(right.name, 'zh-CN'));
     this.cdr.detectChanges();
   }
 
@@ -302,14 +369,20 @@ export class WifiOtaPage implements OnInit, OnDestroy {
   }
 
   private serviceToTarget(service: MdnsService): WifiOtaTarget | undefined {
-    const host = service.ipv4Addresses?.[0]
-      || service.ipv6Addresses?.[0]
-      || (service.hostname || '').replace(/\.$/, '');
+    const host =
+      service.ipv4Addresses?.[0] ||
+      service.ipv6Addresses?.[0] ||
+      (service.hostname || '').replace(/\.$/, '');
     const port = Number(service.port || 65280);
-    if (!host || !Number.isInteger(port) || port < 1 || port > 65535) return undefined;
+    if (!host || !Number.isInteger(port) || port < 1 || port > 65535)
+      return undefined;
 
     const txt = service.txtRecord || {};
-    const uploadPath = this.txtValue(txt, ['upload_path', 'uploadPath', 'path'], '/sketch');
+    const uploadPath = this.txtValue(
+      txt,
+      ['upload_path', 'uploadPath', 'path'],
+      '/sketch'
+    );
     return {
       id: `${host}:${port}:${uploadPath}`,
       name: service.name || service.hostname || `${host}:${port}`,
@@ -324,7 +397,12 @@ export class WifiOtaPage implements OnInit, OnDestroy {
 
   private async uploadNative(url: string, file: File): Promise<UploadResponse> {
     const base64 = await this.readFileAsBase64(file);
-    this.setState('uploading', 10, '正在发送固件', '原生网络传输进行中，请保持在当前页面');
+    this.setState(
+      'uploading',
+      10,
+      '正在发送固件',
+      '原生网络传输进行中，请保持在当前页面'
+    );
 
     const response: HttpResponse = await CapacitorHttp.request({
       url,
@@ -357,19 +435,24 @@ export class WifiOtaPage implements OnInit, OnDestroy {
         request.setRequestHeader(key, value);
       }
 
-      request.upload.onprogress = event => {
+      request.upload.onprogress = (event) => {
         if (!event.lengthComputable) return;
         this.zone.run(() => {
           const sentPercent = Math.floor((event.loaded / event.total) * 100);
           this.progress = 10 + Math.floor(sentPercent * 0.75);
           this.statusMessage = `正在发送固件 ${sentPercent}%`;
-          this.statusDetail = `${formatBytes(event.loaded)} / ${formatBytes(event.total)}`;
+          this.statusDetail = `${formatBytes(event.loaded)} / ${formatBytes(
+            event.total
+          )}`;
           this.cdr.detectChanges();
         });
       };
-      request.onload = () => resolve({ status: request.status, body: request.responseText.trim() });
-      request.onerror = () => reject(new Error('无法连接 OTA 设备；浏览器模式还需设备允许跨域请求'));
-      request.ontimeout = () => reject(new Error(`上传超时（${this.timeoutSeconds} 秒）`));
+      request.onload = () =>
+        resolve({ status: request.status, body: request.responseText.trim() });
+      request.onerror = () =>
+        reject(new Error('无法连接 OTA 设备；浏览器模式还需设备允许跨域请求'));
+      request.ontimeout = () =>
+        reject(new Error(`上传超时（${this.timeoutSeconds} 秒）`));
       request.onabort = () => reject(new Error('上传已取消'));
       request.send(file);
     });
@@ -380,12 +463,17 @@ export class WifiOtaPage implements OnInit, OnDestroy {
     if (!host) throw new Error('请输入 OTA 设备地址');
     if (!this.validPort) throw new Error('端口必须在 1–65535 之间');
 
-    const urlHost = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
+    const urlHost =
+      host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
     const path = this.normalizePath(this.uploadPath)
       .split('/')
-      .map((part, index) => index === 0 ? '' : encodeURIComponent(part))
+      .map((part, index) => (index === 0 ? '' : encodeURIComponent(part)))
       .join('/');
-    const url = new URL(`${this.useHttps ? 'https' : 'http'}://${urlHost}:${Number(this.port)}${path}`);
+    const url = new URL(
+      `${this.useHttps ? 'https' : 'http'}://${urlHost}:${Number(
+        this.port
+      )}${path}`
+    );
     return url.toString();
   }
 
@@ -407,39 +495,53 @@ export class WifiOtaPage implements OnInit, OnDestroy {
       const reader = new FileReader();
       reader.onload = () => {
         const value = String(reader.result || '');
-        resolve(value.includes(',') ? value.slice(value.indexOf(',') + 1) : value);
+        resolve(
+          value.includes(',') ? value.slice(value.indexOf(',') + 1) : value
+        );
       };
       reader.onerror = () => reject(reader.error || new Error('读取固件失败'));
       reader.readAsDataURL(file);
     });
   }
 
-  private txtValue(record: Record<string, string>, keys: string[], fallback: string): string {
+  private txtValue(
+    record: Record<string, string>,
+    keys: string[],
+    fallback: string
+  ): string {
     for (const key of keys) {
       const value = record[key];
-      if (value !== undefined && value !== null && String(value).trim()) return String(value).trim();
+      if (value !== undefined && value !== null && String(value).trim())
+        return String(value).trim();
     }
     return fallback;
   }
 
   private saveTarget(): void {
-    localStorage.setItem(TARGET_STORAGE_KEY, JSON.stringify({
-      host: this.host.trim(),
-      port: Number(this.port),
-      uploadPath: this.normalizePath(this.uploadPath),
-      username: this.username,
-      useHttps: this.useHttps,
-      timeoutSeconds: Number(this.timeoutSeconds),
-    }));
+    localStorage.setItem(
+      TARGET_STORAGE_KEY,
+      JSON.stringify({
+        host: this.host.trim(),
+        port: Number(this.port),
+        uploadPath: this.normalizePath(this.uploadPath),
+        username: this.username,
+        useHttps: this.useHttps,
+        timeoutSeconds: Number(this.timeoutSeconds),
+      })
+    );
   }
 
   private restoreTarget(): void {
     try {
-      const saved = JSON.parse(localStorage.getItem(TARGET_STORAGE_KEY) || '{}');
+      const saved = JSON.parse(
+        localStorage.getItem(TARGET_STORAGE_KEY) || '{}'
+      );
       this.host = typeof saved.host === 'string' ? saved.host : '';
       this.port = Number(saved.port) || 65280;
-      this.uploadPath = typeof saved.uploadPath === 'string' ? saved.uploadPath : '/sketch';
-      this.username = typeof saved.username === 'string' ? saved.username : 'arduino';
+      this.uploadPath =
+        typeof saved.uploadPath === 'string' ? saved.uploadPath : '/sketch';
+      this.username =
+        typeof saved.username === 'string' ? saved.username : 'arduino';
       this.useHttps = !!saved.useHttps;
       this.timeoutSeconds = Number(saved.timeoutSeconds) || 60;
     } catch {
@@ -450,10 +552,19 @@ export class WifiOtaPage implements OnInit, OnDestroy {
   private responseText(value: unknown): string {
     if (typeof value === 'string') return value.trim();
     if (value === undefined || value === null) return '';
-    try { return JSON.stringify(value); } catch { return String(value); }
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
   }
 
-  private setState(state: WifiOtaState, progress: number, message: string, detail = ''): void {
+  private setState(
+    state: WifiOtaState,
+    progress: number,
+    message: string,
+    detail = ''
+  ): void {
     if (this.destroyed) return;
     this.state = state;
     this.progress = progress;
@@ -475,13 +586,17 @@ export class WifiOtaPage implements OnInit, OnDestroy {
   }
 
   private isArduinoService(service: MdnsService): boolean {
-    return service.type.toLowerCase() === MDNS_REQUEST.type
-      && (service.domain || 'local.').toLowerCase() === MDNS_REQUEST.domain;
+    return (
+      service.type.toLowerCase() === MDNS_REQUEST.type &&
+      (service.domain || 'local.').toLowerCase() === MDNS_REQUEST.domain
+    );
   }
 
   private isArduinoError(event: MdnsErrorEvent): boolean {
-    if (event.type && event.type.toLowerCase() !== MDNS_REQUEST.type) return false;
-    if (event.domain && event.domain.toLowerCase() !== MDNS_REQUEST.domain) return false;
+    if (event.type && event.type.toLowerCase() !== MDNS_REQUEST.type)
+      return false;
+    if (event.domain && event.domain.toLowerCase() !== MDNS_REQUEST.domain)
+      return false;
     return true;
   }
 
@@ -497,20 +612,33 @@ export class WifiOtaPage implements OnInit, OnDestroy {
   }
 
   private errorMessage(error: unknown): string {
-    const message = error instanceof Error
-      ? error.message
-      : typeof error === 'object' && error && 'message' in error
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error && 'message' in error
         ? String(error.message || '未知错误')
         : String(error || '未知错误');
-    if (/permission|denied|ACCESS_LOCAL_NETWORK/i.test(message)) return '缺少局域网访问权限，请在系统设置中授权后重试';
-    if (/cleartext.*not permitted/i.test(message)) return '系统阻止了 HTTP 明文连接，请改用 HTTPS 或检查网络权限';
-    if (/failed to connect|connection refused|network is unreachable/i.test(message)) return '无法连接 OTA 设备，请确认手机与设备在同一网络';
-    if (/timeout|timed out/i.test(message)) return `上传超时（${this.timeoutSeconds} 秒）`;
+    if (/permission|denied|ACCESS_LOCAL_NETWORK/i.test(message))
+      return '缺少局域网访问权限，请在系统设置中授权后重试';
+    if (/cleartext.*not permitted/i.test(message))
+      return '系统阻止了 HTTP 明文连接，请改用 HTTPS 或检查网络权限';
+    if (
+      /failed to connect|connection refused|network is unreachable/i.test(
+        message
+      )
+    )
+      return '无法连接 OTA 设备，请确认手机与设备在同一网络';
+    if (/timeout|timed out/i.test(message))
+      return `上传超时（${this.timeoutSeconds} 秒）`;
     return message;
   }
 
   private async showToast(message: string): Promise<void> {
-    const toast = await this.toastController.create({ message, duration: 2200, position: 'bottom' });
+    const toast = await this.toastController.create({
+      message,
+      duration: 2200,
+      position: 'bottom',
+    });
     await toast.present();
   }
 }

@@ -1,7 +1,5 @@
-import {
-  Component,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
+
 import { AlertController, IonicModule } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -11,21 +9,13 @@ import { MenuItemComponent } from 'src/app/core/components/menu-list/menu-item/m
 import { SceneService } from '../scene.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
-
 @Component({
-    selector: 'scene-manager',
-    templateUrl: 'scene-manager.html',
-    styleUrls: ['scene-manager.scss'],
-    imports: [
-      CommonModule,
-      IonicModule,
-      TranslatePipe,
-      MenuListComponent,
-      MenuItemComponent,
-    ],
+  selector: 'scene-manager',
+  templateUrl: 'scene-manager.html',
+  styleUrls: ['scene-manager.scss'],
+  imports: [IonicModule, TranslatePipe, MenuListComponent, MenuItemComponent],
 })
 export class SceneManager {
-
   loaded = false;
 
   alert;
@@ -33,21 +23,20 @@ export class SceneManager {
   oldSceneListData;
 
   get sceneData() {
-    return this.dataService.scene
+    return this.dataService.scene;
   }
 
   get sceneDataList() {
-    return this.dataService.scene.list
+    return this.dataService.scene.list;
   }
 
   set sceneDataList(list) {
-    this.dataService.scene.list = list
+    this.dataService.scene.list = list;
   }
 
   get sceneDataDict() {
-    return this.dataService.scene.dict
+    return this.dataService.scene.dict;
   }
-
 
   constructor(
     private sceneService: SceneService,
@@ -55,21 +44,20 @@ export class SceneManager {
     private alertCtrl: AlertController,
     private noticeService: NoticeService,
     private router: Router
-  ) {
-  }
+  ) {}
 
   subscription;
   ngOnInit() {
     this.ensureSceneData();
     this.loaded = true;
     this.oldSceneListData = JSON.stringify(this.sceneData);
-    this.subscription = this.dataService.userDataLoader.subscribe(loaded => {
+    this.subscription = this.dataService.userDataLoader.subscribe((loaded) => {
       if (loaded) {
         this.ensureSceneData();
-        this.loaded = loaded
-        this.oldSceneListData = JSON.stringify(this.sceneData)
+        this.loaded = loaded;
+        this.oldSceneListData = JSON.stringify(this.sceneData);
       }
-    })
+    });
   }
 
   // 退出页面时保存数据
@@ -86,54 +74,58 @@ export class SceneManager {
   async addScene() {
     // if (typeof this.userService.sceneList.order != 'undefined')
     if (this.sceneDataList.length > 98) {
-      this.noticeService.showToast('tooManyScenes')
+      this.noticeService.showToast('tooManyScenes');
       return;
     }
     this.alert = await this.alertCtrl.create({
       header: '新建场景',
       subHeader: '请设置新场景名称',
-      inputs: [{ name: 'newSceneName', value: '新的场景', placeholder: '新的场景' }],
+      inputs: [
+        { name: 'newSceneName', value: '新的场景', placeholder: '新的场景' },
+      ],
       buttons: [
         {
-          text: '取消', handler: data => {
-            console.log('Cancel clicked')
-          }
+          text: '取消',
+          handler: (data) => {
+            console.log('Cancel clicked');
+          },
         },
         {
-          text: '确认', handler: data => {
+          text: '确认',
+          handler: (data) => {
             if (data.newSceneName.length == 0) return;
             if (data.newSceneName.length > 10) {
-              this.noticeService.showToast('tooLongSceneName')
+              this.noticeService.showToast('tooLongSceneName');
               return;
             }
             if (this.sceneIsExist(data.newSceneName)) {
-              this.noticeService.showToast('sameSceneName')
+              this.noticeService.showToast('sameSceneName');
               return;
             }
             this.newScene(data.newSceneName);
             this.editScene(data.newSceneName);
-          }
-        }
-      ]
+          },
+        },
+      ],
     });
     this.alert.present();
   }
 
   editScene(sceneName) {
-    this.router.navigate(['/scene-manager', sceneName])
+    this.router.navigate(['/scene-manager', sceneName]);
   }
 
   sceneIsExist(sceneName) {
     if (this.sceneDataList.indexOf(sceneName) > -1) return true;
-    return false
+    return false;
   }
 
   newScene(sceneName) {
     this.sceneDataList.push(sceneName);
     this.sceneDataDict[sceneName] = {
-      ico: "fal fa-question-circle",
-      acts: []
-    }
+      ico: 'fal fa-question-circle',
+      acts: [],
+    };
   }
 
   async delSceneAlert(sceneName) {
@@ -142,16 +134,18 @@ export class SceneManager {
       subHeader: '删除后可重新添加',
       buttons: [
         {
-          text: '取消', handler: data => {
-            console.log('Cancel clicked')
-          }
+          text: '取消',
+          handler: (data) => {
+            console.log('Cancel clicked');
+          },
         },
         {
-          text: '确认', handler: data => {
-            this.delScene(sceneName)
-          }
-        }
-      ]
+          text: '确认',
+          handler: (data) => {
+            this.delScene(sceneName);
+          },
+        },
+      ],
     });
     this.alert.present();
   }
@@ -161,7 +155,7 @@ export class SceneManager {
     if (index > -1) {
       this.sceneDataList.splice(index, 1);
     }
-    delete this.sceneDataDict[sceneName]
+    delete this.sceneDataDict[sceneName];
   }
 
   saveConfig() {
@@ -169,7 +163,7 @@ export class SceneManager {
   }
 
   sortChange(event) {
-    this.sceneDataList = event
+    this.sceneDataList = event;
   }
 
   private ensureSceneData(): void {
@@ -177,5 +171,4 @@ export class SceneManager {
       this.dataService.scene = { list: [], dict: {} };
     }
   }
-
 }

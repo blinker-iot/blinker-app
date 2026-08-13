@@ -8,24 +8,28 @@
 </ion-header>
 
 <ion-content>
-  <div class="mapbox" #mapbox>
-  </div>
+  <div class="mapbox" #mapbox></div>
   <div class="blinker-box">
     <div class="line">
-      设备位置(WGS84)：
-      <div *ngIf="devicePosition">
-        {{devicePosition[0]}} , {{devicePosition[1]}}
-      </div>
+      设备位置(WGS84)： @if (devicePosition) {
+      <div>{{devicePosition[0]}} , {{devicePosition[1]}}</div>
+      }
     </div>
     <div class="line">
-      选择位置(WGS84)：
-      <div *ngIf="centerPosition">
-        {{centerPosition[0]}} , {{centerPosition[1]}}
-      </div>
+      选择位置(WGS84)： @if (centerPosition) {
+      <div>{{centerPosition[0]}} , {{centerPosition[1]}}</div>
+      }
     </div>
     <div class="btnbox">
-      <button [disabled]="btnDisabled" [ngStyle]="{'opacity': btnDisabled?'0.5':'1'}" class="savebtn" fullbtn
-        (click)="saveGeolocation()">更新设备位置</button>
+      <button
+        [disabled]="btnDisabled"
+        [ngStyle]="{'opacity': btnDisabled?'0.5':'1'}"
+        class="savebtn"
+        fullbtn
+        (click)="saveGeolocation()"
+      >
+        更新设备位置
+      </button>
     </div>
   </div>
 </ion-content>

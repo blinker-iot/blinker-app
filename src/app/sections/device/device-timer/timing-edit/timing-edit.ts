@@ -5,49 +5,48 @@ import {
   QueryList,
   ViewChild,
   ViewChildren,
-} from "@angular/core";
-import { IonicModule, ModalController } from "@ionic/angular";
-import { minuteToTime, timeToMinute } from "src/app/core/functions/func";
-import { DeviceService } from "src/app/core/services/device.service";
-import { NoticeService } from "src/app/core/services/notice.service";
-import { DeviceConfigService } from "src/app/core/services/device-config.service";
-import { TimerService } from "../timer.service";
-import { RepeatSelectorModalComponent } from "../../../../core/modals/repeat-selector-modal/repeat-selector-modal.component";
-import { BlinkerDevice } from "src/app/core/model/device.model";
-import { ActionSelectorModalComponent } from "../../../../core/modals/action-selector-modal/action-selector-modal.component";
-import { TimeSelectorModalComponent } from "../../../../core/modals/time-selector-modal/time-selector-modal.component";
-import { BActcmdListComponent } from "src/app/core/components/b-actcmd-list/b-actcmd-list.component";
-import { BBottomBtnComponent } from "src/app/core/components/b-bottom-btn/b-bottom-btn.component";
-import { BColorpickerDiscComponent } from "src/app/core/components/b-colorpicker-disc/b-colorpicker-disc.component";
-import { BDeviceImgComponent } from "src/app/core/components/b-device-img/b-device-img.component";
-import { MenuListComponent } from "src/app/core/components/menu-list/menu-list";
-import { MenuItemComponent } from "src/app/core/components/menu-list/menu-item/menu-item";
-import { BTipComponent } from "src/app/core/components/b-tip/b-tip.component";
-import { BToastComponent } from "src/app/core/components/b-toast/b-toast.component";
-import { DeviceblockList2Component } from "src/app/core/components/deviceblock-list2/deviceblock-list2";
-import { CommonModule } from "@angular/common";
-import { TranslatePipe } from "@ngx-translate/core";
-import { DataService } from "src/app/core/services/data.service";
-import { ActivatedRoute, Router } from "@angular/router";
+} from '@angular/core';
+import { IonicModule, ModalController } from '@ionic/angular';
+import { minuteToTime, timeToMinute } from 'src/app/core/functions/func';
+import { DeviceService } from 'src/app/core/services/device.service';
+import { NoticeService } from 'src/app/core/services/notice.service';
+import { DeviceConfigService } from 'src/app/core/services/device-config.service';
+import { TimerService } from '../timer.service';
+import { RepeatSelectorModalComponent } from '../../../../core/modals/repeat-selector-modal/repeat-selector-modal.component';
+import { BlinkerDevice } from 'src/app/core/model/device.model';
+import { ActionSelectorModalComponent } from '../../../../core/modals/action-selector-modal/action-selector-modal.component';
+import { TimeSelectorModalComponent } from '../../../../core/modals/time-selector-modal/time-selector-modal.component';
+import { BActcmdListComponent } from 'src/app/core/components/b-actcmd-list/b-actcmd-list.component';
+import { BBottomBtnComponent } from 'src/app/core/components/b-bottom-btn/b-bottom-btn.component';
+import { BColorpickerDiscComponent } from 'src/app/core/components/b-colorpicker-disc/b-colorpicker-disc.component';
+import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
+import { MenuListComponent } from 'src/app/core/components/menu-list/menu-list';
+import { MenuItemComponent } from 'src/app/core/components/menu-list/menu-item/menu-item';
+import { BTipComponent } from 'src/app/core/components/b-tip/b-tip.component';
+import { BToastComponent } from 'src/app/core/components/b-toast/b-toast.component';
+import { DeviceblockList2Component } from 'src/app/core/components/deviceblock-list2/deviceblock-list2';
+
+import { TranslatePipe } from '@ngx-translate/core';
+import { DataService } from 'src/app/core/services/data.service';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
-    selector: "timing-edit",
-    templateUrl: "timing-edit.html",
-    styleUrls: ["timing-edit.scss"],
-    imports: [
-        IonicModule,
-        BActcmdListComponent,
-        BBottomBtnComponent,
-        BColorpickerDiscComponent,
-        BDeviceImgComponent,
-        MenuListComponent,
-        MenuItemComponent,
-        BTipComponent,
-        BToastComponent,
-        DeviceblockList2Component,
-        CommonModule,
-        TranslatePipe,
-    ]
+  selector: 'timing-edit',
+  templateUrl: 'timing-edit.html',
+  styleUrls: ['timing-edit.scss'],
+  imports: [
+    IonicModule,
+    BActcmdListComponent,
+    BBottomBtnComponent,
+    BColorpickerDiscComponent,
+    BDeviceImgComponent,
+    MenuListComponent,
+    MenuItemComponent,
+    BTipComponent,
+    BToastComponent,
+    DeviceblockList2Component,
+    TranslatePipe,
+  ],
 })
 export class TimingEditPage {
   id;
@@ -55,20 +54,20 @@ export class TimingEditPage {
   device: BlinkerDevice;
   task = {
     // "taskid": this.device.data.timing.length,
-    "ena": 1,
-    "tim": 0,
-    "act": [],
-    "day": "0000000",
+    ena: 1,
+    tim: 0,
+    act: [],
+    day: '0000000',
   };
 
-  mode = "new";
+  mode = 'new';
 
   cmdList = [];
   cmds;
 
   public timingData;
   public time;
-  timeInfo = "00:00";
+  timeInfo = '00:00';
 
   actcmd;
 
@@ -78,9 +77,8 @@ export class TimingEditPage {
     private modalCtrl: ModalController,
     private dataService: DataService,
     private activatedRoute: ActivatedRoute,
-    private router: Router,
-  ) {
-  }
+    private router: Router
+  ) {}
 
   ngOnInit() {
     console.log(this.router.url);
@@ -88,9 +86,9 @@ export class TimingEditPage {
     this.dataService.initCompleted.subscribe((result) => {
       if (result) {
         console.log(this.router.url);
-        this.id = this.activatedRoute.snapshot.params["id"];
+        this.id = this.activatedRoute.snapshot.params['id'];
         this.device = this.dataService.device.dict[this.id];
-        this.taskid = this.activatedRoute.snapshot.params["taskid"];
+        this.taskid = this.activatedRoute.snapshot.params['taskid'];
       }
     });
 
@@ -118,16 +116,13 @@ export class TimingEditPage {
     data.set.timing.push(uploadDate);
 
     this.deviceService.sendData(this.device, JSON.stringify(data));
-    this.noticeService.showLoading("loadingTiming");
+    this.noticeService.showLoading('loadingTiming');
     window.setTimeout(() => {
       this.noticeService.hideLoading();
     }, 1000);
-
   }
 
-  close() {
-
-  }
+  close() {}
 
   delete() {
     let data = {
@@ -136,7 +131,7 @@ export class TimingEditPage {
       },
     };
     this.deviceService.sendData(this.device, JSON.stringify(data));
-    this.noticeService.showLoading("loadingTiming");
+    this.noticeService.showLoading('loadingTiming');
     window.setTimeout(() => {
       this.noticeService.hideLoading();
     }, 1000);
@@ -151,7 +146,7 @@ export class TimingEditPage {
     });
     modal.onDidDismiss().then((result) => {
       console.log(result.data);
-      if (typeof result.data != "undefined") {
+      if (typeof result.data != 'undefined') {
         this.timeInfo = result.data;
       }
     });
@@ -167,7 +162,7 @@ export class TimingEditPage {
     });
     modal.onDidDismiss().then((result) => {
       console.log(result.data);
-      if (typeof result.data != "undefined") {
+      if (typeof result.data != 'undefined') {
         this.timingData.day = result.data;
       }
     });
@@ -183,7 +178,7 @@ export class TimingEditPage {
       backdropDismiss: true,
     });
     modal.onDidDismiss().then((result) => {
-      if (typeof result.data != "undefined") {
+      if (typeof result.data != 'undefined') {
         this.actcmd = result.data;
         this.timingData.act = [JSON.stringify(this.actcmd)];
       }

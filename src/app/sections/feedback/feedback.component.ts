@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
@@ -25,15 +24,10 @@ interface FeedbackDraft {
 }
 
 @Component({
-    selector: 'app-feedback',
-    templateUrl: './feedback.component.html',
-    styleUrls: ['./feedback.component.scss'],
-    imports: [
-      CommonModule,
-      FormsModule,
-      IonicModule,
-      TranslatePipe,
-    ],
+  selector: 'app-feedback',
+  templateUrl: './feedback.component.html',
+  styleUrls: ['./feedback.component.scss'],
+  imports: [FormsModule, IonicModule, TranslatePipe],
 })
 export class FeedbackPage implements OnInit, OnDestroy {
   private readonly draftStorageKey = 'blinker_feedback_draft';
@@ -83,8 +77,8 @@ export class FeedbackPage implements OnInit, OnDestroy {
 
   get selectedTypeLabel(): string {
     return (
-      this.feedbackTypes.find(type => type.value === this.feedbackType)?.label ||
-      '反馈'
+      this.feedbackTypes.find((type) => type.value === this.feedbackType)
+        ?.label || '反馈'
     );
   }
 
@@ -92,7 +86,7 @@ export class FeedbackPage implements OnInit, OnDestroy {
     private feedbackService: FeedbackService,
     private dataService: DataService,
     private router: Router
-  ) { }
+  ) {}
 
   ngOnInit() {
     this.loadDraft();
@@ -150,7 +144,7 @@ export class FeedbackPage implements OnInit, OnDestroy {
 
     try {
       const selectedType = this.feedbackTypes.find(
-        type => type.value === this.feedbackType
+        (type) => type.value === this.feedbackType
       );
       const result = await this.feedbackService.newFeedback({
         recordType: selectedType?.recordType ?? 2,
@@ -189,7 +183,7 @@ export class FeedbackPage implements OnInit, OnDestroy {
       const draft = JSON.parse(savedDraft) as Partial<FeedbackDraft>;
       if (
         typeof draft.feedbackType === 'string' &&
-        this.feedbackTypes.some(type => type.value === draft.feedbackType)
+        this.feedbackTypes.some((type) => type.value === draft.feedbackType)
       ) {
         this.feedbackType = draft.feedbackType;
       }

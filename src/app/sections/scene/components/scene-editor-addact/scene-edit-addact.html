@@ -12,29 +12,41 @@
   <main class="action-content">
     <section class="action-intro">
       <span class="intro-icon" aria-hidden="true">
-        <i [class]="selectedType.value === 'delay' ? 'fa-light fa-clock' : 'fa-light fa-bolt'"></i>
+        <i
+          [class]="selectedType.value === 'delay' ? 'fa-light fa-clock' : 'fa-light fa-bolt'"
+        ></i>
       </span>
       <div>
         <h1>{{ selectedType.text }}</h1>
-        <p>{{ selectedType.value === 'delay' ? '在前后动作之间加入等待时间。' : '选择设备和需要执行的控制动作。' }}</p>
+        <p>
+          {{ selectedType.value === 'delay' ? '在前后动作之间加入等待时间。' :
+          '选择设备和需要执行的控制动作。' }}
+        </p>
       </div>
     </section>
 
     <div class="section-label">步骤设置</div>
     <section class="selector-card">
-      <button type="button" class="selector-row" (click)="openTypeSelectModal()">
+      <button
+        type="button"
+        class="selector-row"
+        (click)="openTypeSelectModal()"
+      >
         <span class="selector-icon"><i class="fa-light fa-list-tree"></i></span>
         <span class="selector-copy">
           <small>任务类型</small>
           <strong>{{ selectedType.text }}</strong>
         </span>
-        <i class="fa-light fa-chevron-right selector-arrow" aria-hidden="true"></i>
+        <i
+          class="fa-light fa-chevron-right selector-arrow"
+          aria-hidden="true"
+        ></i>
       </button>
 
+      @if (selectedType.value === 'delay') {
       <button
         type="button"
         class="selector-row"
-        *ngIf="selectedType.value === 'delay'"
         (click)="openDelaySelectModal()"
       >
         <span class="selector-icon"><i class="fa-light fa-stopwatch"></i></span>
@@ -42,35 +54,53 @@
           <small>延迟时长</small>
           <strong>{{ selectedDelay.text }}</strong>
         </span>
-        <i class="fa-light fa-chevron-right selector-arrow" aria-hidden="true"></i>
+        <i
+          class="fa-light fa-chevron-right selector-arrow"
+          aria-hidden="true"
+        ></i>
       </button>
-
-      <ng-container *ngIf="selectedType.value === 'action'">
-        <button type="button" class="selector-row" (click)="openDeviceSelectModal()">
-          <span class="selector-icon"><i class="fa-light fa-microchip"></i></span>
-          <span class="selector-copy">
-            <small>任务设备</small>
-            <strong>{{ selectedDevice?.config?.customName || '请选择设备' }}</strong>
-          </span>
-          <i class="fa-light fa-chevron-right selector-arrow" aria-hidden="true"></i>
-        </button>
-        <button
-          type="button"
-          class="selector-row"
-          [disabled]="disableActionSelector"
-          (click)="openActionSelectorModal()"
-        >
-          <span class="selector-icon"><i class="fa-light fa-sliders"></i></span>
-          <span class="selector-copy">
-            <small>执行动作</small>
-            <strong *ngIf="selectedDevice && selectedAction; else actionPlaceholder">
-              {{ (selectedAction | actcmd2text:selectedDevice.id) || selectedAction }}
-            </strong>
-            <ng-template #actionPlaceholder><strong>请先选择设备</strong></ng-template>
-          </span>
-          <i class="fa-light fa-chevron-right selector-arrow" aria-hidden="true"></i>
-        </button>
-      </ng-container>
+      } @if (selectedType.value === 'action') {
+      <button
+        type="button"
+        class="selector-row"
+        (click)="openDeviceSelectModal()"
+      >
+        <span class="selector-icon"><i class="fa-light fa-microchip"></i></span>
+        <span class="selector-copy">
+          <small>任务设备</small>
+          <strong
+            >{{ selectedDevice?.config?.customName || '请选择设备' }}</strong
+          >
+        </span>
+        <i
+          class="fa-light fa-chevron-right selector-arrow"
+          aria-hidden="true"
+        ></i>
+      </button>
+      <button
+        type="button"
+        class="selector-row"
+        [disabled]="disableActionSelector"
+        (click)="openActionSelectorModal()"
+      >
+        <span class="selector-icon"><i class="fa-light fa-sliders"></i></span>
+        <span class="selector-copy">
+          <small>执行动作</small>
+          @if (selectedDevice && selectedAction) {
+          <strong>
+            {{ (selectedAction | actcmd2text:selectedDevice.id) ||
+            selectedAction }}
+          </strong>
+          } @else {
+          <strong>请先选择设备</strong>
+          }
+        </span>
+        <i
+          class="fa-light fa-chevron-right selector-arrow"
+          aria-hidden="true"
+        ></i>
+      </button>
+      }
     </section>
 
     <aside class="action-tip">
@@ -81,7 +111,12 @@
 </ion-content>
 <ion-footer class="action-footer ion-no-border">
   <ion-toolbar>
-    <button type="button" class="save-action" [disabled]="disableSave" (click)="save()">
+    <button
+      type="button"
+      class="save-action"
+      [disabled]="disableSave"
+      (click)="save()"
+    >
       <i class="fa-light fa-check" aria-hidden="true"></i>
       <span>添加到场景</span>
     </button>

@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IonicModule, ModalController } from '@ionic/angular';
@@ -31,7 +30,7 @@ const DEVICE_IMAGE_CATEGORIES: DeviceImageCategory[] = [
   selector: 'page-device-icon',
   templateUrl: 'device-icon.html',
   styleUrls: ['device-icon.scss'],
-  imports: [CommonModule, FormsModule, IonicModule, BDeviceImgComponent],
+  imports: [FormsModule, IonicModule, BDeviceImgComponent],
 })
 export class DeviceIconPage implements OnInit {
   @Input() currentImage?: string;
@@ -68,7 +67,7 @@ export class DeviceIconPage implements OnInit {
   constructor(
     private readonly modalCtrl: ModalController,
     public readonly imageService: ImageService,
-    viewService: ViewService,
+    viewService: ViewService
   ) {
     this.previewVariant = viewService.theme;
   }
@@ -84,12 +83,15 @@ export class DeviceIconPage implements OnInit {
   categoryCount(category: string): number {
     if (category === 'all') return this.imageService.deviceImages.length;
     return this.imageService.deviceImages.filter(
-      (image) => this.getCategory(image) === category,
+      (image) => this.getCategory(image) === category
     ).length;
   }
 
   isSelected(image: DeviceImageAsset): boolean {
-    return this.imageService.findDeviceImage(this.currentImage)?.light === image.light;
+    return (
+      this.imageService.findDeviceImage(this.currentImage)?.light ===
+      image.light
+    );
   }
 
   select(image: DeviceImageAsset): void {

@@ -1,14 +1,17 @@
 <div class="dismiss" (click)="clickCancel()"></div>
 <div class="select-modal">
   <div class="item-list">
-    <ng-container *ngFor="let item of actions;index as i">
-      <div class="item" (click)="updateSelectedAction([item.cmd])" [ngClass]="{'selected':selectedItem == item.cmd}">
-        {{item.cmd | actcmd2text:device.id}}
-      </div>
-    </ng-container>
-    <ng-container *ngIf="actions.length==0">
-      <div class="noitem">{{'DEVICE.NO_ACTION' | translate}}</div>
-      <div class="btn" (click)="genActs()">自动生成动作</div>
-    </ng-container>
+    @for (item of actions; track item; let i = $index) {
+    <div
+      class="item"
+      (click)="updateSelectedAction([item.cmd])"
+      [ngClass]="{ selected: selectedItem == item.cmd }"
+    >
+      {{ item.cmd | actcmd2text : device.id }}
+    </div>
+    } @if (actions.length==0) {
+    <div class="noitem">{{ "DEVICE.NO_ACTION" | translate }}</div>
+    <div class="btn" (click)="genActs()">自动生成动作</div>
+    }
   </div>
 </div>

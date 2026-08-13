@@ -4,18 +4,15 @@
       <ion-back-button text=""></ion-back-button>
     </ion-buttons>
     <ion-title>
-      <ng-container *ngIf="mode=='new'">
-        {{'TIMING.NEW_TIMING_TASK' | translate}}
-      </ng-container>
-      <ng-container *ngIf="mode=='edit'">
-        {{'TIMING.EDIT_TIMING_TASK' | translate}}
-      </ng-container>
+      @if (mode=='new') { {{'TIMING.NEW_TIMING_TASK' | translate}} } @if
+      (mode=='edit') { {{'TIMING.EDIT_TIMING_TASK' | translate}} }
     </ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
-  <app-menu-list *ngIf="device">
+  @if (device) {
+  <app-menu-list>
     <app-menu-item showArrow="true" (click)="openTimeModal()">
       <div>任务时间</div>
       <div class="right-box">{{timeInfo}}</div>
@@ -26,11 +23,15 @@
     </app-menu-item>
     <app-menu-item showArrow="true" (click)="openActionModal()">
       <div>执行动作</div>
-      <div class="right-box">{{ this.timingData.act[0] | actcmd2text:device.id}}</div>
+      <div class="right-box">
+        {{ this.timingData.act[0] | actcmd2text:device.id}}
+      </div>
     </app-menu-item>
   </app-menu-list>
+  }
   <div class="bottom-box">
-    <app-menu-list *ngIf="device">
+    @if (device) {
+    <app-menu-list>
       <app-menu-item icon="fa-light fa-trash" (click)="save()">
         保存任务
       </app-menu-item>
@@ -38,5 +39,6 @@
         删除任务
       </app-menu-item>
     </app-menu-list>
+    }
   </div>
 </ion-content>

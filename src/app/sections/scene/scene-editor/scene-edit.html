@@ -7,7 +7,8 @@
   </ion-toolbar>
 </ion-header>
 <ion-content>
-  <main class="editor-content" *ngIf="loaded">
+  @if (loaded) {
+  <main class="editor-content">
     <section class="editor-hero scene-hero">
       <span class="hero-icon scene-icon" aria-hidden="true">
         <i [class]="sceneDataDict[sceneName]?.ico || 'fa-light fa-bolt'"></i>
@@ -18,52 +19,77 @@
         <p>包含 {{ acts.length }} 个执行步骤</p>
       </div>
       <div class="hero-actions">
-        <button type="button" class="icon-action" (click)="changeSceneIcon()" aria-label="修改场景图标">
+        <button
+          type="button"
+          class="icon-action"
+          (click)="changeSceneIcon()"
+          aria-label="修改场景图标"
+        >
           <i class="fa-light fa-icons"></i>
         </button>
-        <button type="button" class="icon-action" (click)="changeSceneName()" aria-label="修改场景名称">
+        <button
+          type="button"
+          class="icon-action"
+          (click)="changeSceneName()"
+          aria-label="修改场景名称"
+        >
           <i class="fa-light fa-pen"></i>
         </button>
       </div>
     </section>
-
     <div class="section-heading">
       <h2>执行步骤</h2>
       <span class="section-count">{{ acts.length }}</span>
     </div>
-    <section class="editor-card" *ngIf="acts.length">
+    @if (acts.length) {
+    <section class="editor-card">
+      @for (action of acts; track action; let i = $index) {
       <button
         type="button"
         class="action-row"
-        *ngFor="let action of acts; index as i"
         (click)="delAct(i)"
         aria-label="删除此执行步骤"
       >
-        <ng-container *ngIf="action.delay !== undefined; else deviceAction">
-          <span class="action-icon delay-icon" aria-hidden="true"><i class="fa-light fa-clock"></i></span>
-          <span class="row-copy">
-            <strong>等待 {{ action.delay }} 秒</strong>
-            <small>延时完成后继续执行下一步</small>
-          </span>
-        </ng-container>
-        <ng-template #deviceAction>
-          <span class="device-image"><b-device-img [deviceId]="action.deviceId"></b-device-img></span>
-          <span class="row-copy">
-            <strong>{{ deviceDataDict[action.deviceId].config.customName }}</strong>
-            <small>{{ (action.text | actcmd2text:action.deviceId) || action.text }}</small>
-          </span>
-        </ng-template>
-        <span class="row-action remove" aria-hidden="true"><i class="fa-light fa-trash-can"></i></span>
+        @if (action.delay !== undefined) {
+        <span class="action-icon delay-icon" aria-hidden="true"
+          ><i class="fa-light fa-clock"></i
+        ></span>
+        <span class="row-copy">
+          <strong>等待 {{ action.delay }} 秒</strong>
+          <small>延时完成后继续执行下一步</small>
+        </span>
+        } @else {
+        <span class="device-image"
+          ><b-device-img [deviceId]="action.deviceId"></b-device-img
+        ></span>
+        <span class="row-copy">
+          <strong
+            >{{ deviceDataDict[action.deviceId].config.customName }}</strong
+          >
+          <small
+            >{{ (action.text | actcmd2text:action.deviceId) || action.text
+            }}</small
+          >
+        </span>
+        }
+        <span class="row-action remove" aria-hidden="true"
+          ><i class="fa-light fa-trash-can"></i
+        ></span>
       </button>
+      }
     </section>
-    <section class="inline-empty" *ngIf="!acts.length">
+    } @if (!acts.length) {
+    <section class="inline-empty">
       <i class="fa-light fa-wand-magic-sparkles" aria-hidden="true"></i>
       <strong>还没有执行步骤</strong>
       <p>添加设备动作或延时，组合出你的自动化场景。</p>
     </section>
+    }
   </main>
+  }
 </ion-content>
-<ion-footer class="editor-footer ion-no-border" *ngIf="loaded">
+@if (loaded) {
+<ion-footer class="editor-footer ion-no-border">
   <ion-toolbar>
     <button type="button" class="primary-action" (click)="addAct()">
       <i class="fa-light fa-plus" aria-hidden="true"></i>
@@ -71,3 +97,4 @@
     </button>
   </ion-toolbar>
 </ion-footer>
+}

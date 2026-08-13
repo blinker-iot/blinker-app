@@ -7,16 +7,27 @@
   </ion-toolbar>
 </ion-header>
 <ion-content>
-  <app-menu-list *ngIf="loaded">
-    <app-menu-item *ngFor="let deviceName of deviceDataList" [routerLink]="['/device-manager',deviceName]" showArrow="true">
+  @if (loaded) {
+  <app-menu-list>
+    @for (deviceName of deviceDataList; track deviceName) {
+    <app-menu-item
+      [routerLink]="['/device-manager',deviceName]"
+      showArrow="true"
+    >
       <div class="img-box">
-        <b-device-img [filename]="deviceDataDict[deviceName].config.image"></b-device-img>
-        <img *ngIf="deviceDataDict[deviceName].config.mode=='ble'" class="mode" src="img/icon/ble.png" />
+        <b-device-img
+          [filename]="deviceDataDict[deviceName].config.image"
+        ></b-device-img>
+        @if (deviceDataDict[deviceName].config.mode=='ble') {
+        <img class="mode" src="img/icon/ble.png" />
+        }
       </div>
       <div class="text-box">
         <div class="name">{{deviceDataDict[deviceName].config.customName}}</div>
         <div class="other">{{deviceName}}</div>
       </div>
     </app-menu-item>
+    }
   </app-menu-list>
+  }
 </ion-content>

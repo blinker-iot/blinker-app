@@ -1,5 +1,11 @@
-import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  NgZone,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Capacitor, PluginListenerHandle } from '@capacitor/core';
 import { IonicModule, ToastController } from '@ionic/angular';
@@ -38,7 +44,7 @@ interface SavedNetwork {
   styleUrls: ['./esp32-provision.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule, FormsModule, IonicModule, HeroCardComponent],
+  imports: [FormsModule, IonicModule, HeroCardComponent],
 })
 export class Esp32ProvisionPage implements OnInit, OnDestroy {
   transport: WiFiProvTransport = 'ble';
@@ -80,7 +86,11 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
   }
 
   get isConnecting(): boolean {
-    return this.phase === 'selecting' || this.phase === 'connecting' || this.phase === 'permissions';
+    return (
+      this.phase === 'selecting' ||
+      this.phase === 'connecting' ||
+      this.phase === 'permissions'
+    );
   }
 
   get isProvisioning(): boolean {
@@ -118,9 +128,10 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     this.transport = transport;
     this.devices = [];
     this.phase = 'idle';
-    this.statusMessage = transport === 'ble'
-      ? '扫描并选择附近处于配网模式的 ESP32'
-      : '输入 ESP32 临时热点信息后建立连接';
+    this.statusMessage =
+      transport === 'ble'
+        ? '扫描并选择附近处于配网模式的 ESP32'
+        : '输入 ESP32 临时热点信息后建立连接';
   }
 
   async toggleBleScan(): Promise<void> {
@@ -308,7 +319,10 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     this.selectedDevice = await WiFiProv.connect({
       pop: this.proofOfPossession.trim() || undefined,
       username: this.security === 2 ? this.username.trim() : undefined,
-      softApPassword: this.transport === 'softap' ? this.softApPassword || undefined : undefined,
+      softApPassword:
+        this.transport === 'softap'
+          ? this.softApPassword || undefined
+          : undefined,
     });
     this.phase = 'ready';
     this.statusMessage = '设备已连接，可以选择目标 Wi-Fi';
@@ -319,13 +333,20 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     this.phase = 'permissions';
     this.statusMessage = '正在申请蓝牙与附近设备权限…';
     const permissions = await WiFiProv.requestPermissions();
-    const denied = Object.values(permissions).some(state => state === 'denied');
-    if (denied) throw new Error('配网权限被拒绝，请在系统设置中允许蓝牙与附近设备权限');
+    const denied = Object.values(permissions).some(
+      (state) => state === 'denied'
+    );
+    if (denied)
+      throw new Error('配网权限被拒绝，请在系统设置中允许蓝牙与附近设备权限');
   }
 
   private validateSecurity(): string | null {
-    if (this.security === 2 && !this.username.trim()) return 'Security 2 需要填写用户名';
-    if ((this.security === 1 || this.security === 2) && !this.proofOfPossession.trim()) {
+    if (this.security === 2 && !this.username.trim())
+      return 'Security 2 需要填写用户名';
+    if (
+      (this.security === 1 || this.security === 2) &&
+      !this.proofOfPossession.trim()
+    ) {
       return '当前安全模式需要填写设备 PoP';
     }
     return null;
@@ -333,54 +354,82 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
 
   private async bindPluginEvents(): Promise<void> {
     try {
-      this.listeners.push(await WiFiProv.addListener('bleScanResult', device => {
-        this.zone.run(() => this.upsertDevice(device));
-      }));
-      this.listeners.push(await WiFiProv.addListener('bleScanState', event => {
-        this.zone.run(() => {
-          if (event.state !== 'started' && this.phase === 'scanning') {
-            this.phase = 'idle';
-            this.statusMessage = this.devices.length
-              ? `已发现 ${this.devices.length} 台设备，请选择一台连接`
-              : event.message || '扫描已结束，未发现设备';
-          }
-        });
-      }));
-      this.listeners.push(await WiFiProv.addListener('connectionState', event => {
-        this.zone.run(() => {
-          if (event.device) this.selectedDevice = event.device;
-          if (event.state === 'failed') this.setError(event.message || '配网会话连接失败');
-          if (event.state === 'disconnected' && this.phase !== 'success' && this.phase !== 'error') {
-            this.selectedDevice = undefined;
-            this.phase = 'idle';
-            this.statusMessage = '设备连接已断开';
-          }
-        });
-      }));
-      this.listeners.push(await WiFiProv.addListener('provisioningProgress', event => {
-        this.zone.run(() => {
-          const states: Record<typeof event.step, { progress: number; message: string }> = {
-            session: { progress: 18, message: '安全会话已建立' },
-            'config-sent': { progress: 42, message: 'Wi-Fi 凭据已发送' },
-            'config-applied': { progress: 68, message: '设备正在应用网络配置' },
-            'checking-connection': { progress: 86, message: '正在检查 ESP32 联网状态' },
-            success: { progress: 100, message: 'ESP32 已成功连接 Wi-Fi' },
-            failed: { progress: 100, message: 'ESP32 连接 Wi-Fi 失败' },
-          };
-          this.progress = states[event.step].progress;
-          this.statusMessage = event.message || states[event.step].message;
-        });
-      }));
-      this.listeners.push(await WiFiProv.addListener('error', event => {
-        this.zone.run(() => this.setError(event.message || `${event.operation} 操作失败`));
-      }));
+      this.listeners.push(
+        await WiFiProv.addListener('bleScanResult', (device) => {
+          this.zone.run(() => this.upsertDevice(device));
+        })
+      );
+      this.listeners.push(
+        await WiFiProv.addListener('bleScanState', (event) => {
+          this.zone.run(() => {
+            if (event.state !== 'started' && this.phase === 'scanning') {
+              this.phase = 'idle';
+              this.statusMessage = this.devices.length
+                ? `已发现 ${this.devices.length} 台设备，请选择一台连接`
+                : event.message || '扫描已结束，未发现设备';
+            }
+          });
+        })
+      );
+      this.listeners.push(
+        await WiFiProv.addListener('connectionState', (event) => {
+          this.zone.run(() => {
+            if (event.device) this.selectedDevice = event.device;
+            if (event.state === 'failed')
+              this.setError(event.message || '配网会话连接失败');
+            if (
+              event.state === 'disconnected' &&
+              this.phase !== 'success' &&
+              this.phase !== 'error'
+            ) {
+              this.selectedDevice = undefined;
+              this.phase = 'idle';
+              this.statusMessage = '设备连接已断开';
+            }
+          });
+        })
+      );
+      this.listeners.push(
+        await WiFiProv.addListener('provisioningProgress', (event) => {
+          this.zone.run(() => {
+            const states: Record<
+              typeof event.step,
+              { progress: number; message: string }
+            > = {
+              session: { progress: 18, message: '安全会话已建立' },
+              'config-sent': { progress: 42, message: 'Wi-Fi 凭据已发送' },
+              'config-applied': {
+                progress: 68,
+                message: '设备正在应用网络配置',
+              },
+              'checking-connection': {
+                progress: 86,
+                message: '正在检查 ESP32 联网状态',
+              },
+              success: { progress: 100, message: 'ESP32 已成功连接 Wi-Fi' },
+              failed: { progress: 100, message: 'ESP32 连接 Wi-Fi 失败' },
+            };
+            this.progress = states[event.step].progress;
+            this.statusMessage = event.message || states[event.step].message;
+          });
+        })
+      );
+      this.listeners.push(
+        await WiFiProv.addListener('error', (event) => {
+          this.zone.run(() =>
+            this.setError(event.message || `${event.operation} 操作失败`)
+          );
+        })
+      );
     } catch (error) {
-      this.setError(this.errorMessage(error, '无法初始化 Wi-Fi Provisioning 插件'));
+      this.setError(
+        this.errorMessage(error, '无法初始化 Wi-Fi Provisioning 插件')
+      );
     }
   }
 
   private upsertDevice(device: BleDevice): void {
-    const index = this.devices.findIndex(item => item.id === device.id);
+    const index = this.devices.findIndex((item) => item.id === device.id);
     const next = [...this.devices];
     if (index >= 0) next[index] = { ...next[index], ...device };
     else next.push(device);
@@ -428,7 +477,9 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
   private async releasePlugin(): Promise<void> {
     if (!this.nativeSupported) return;
     await Promise.allSettled([WiFiProv.stopBleScan(), WiFiProv.clearState()]);
-    await Promise.allSettled(this.listeners.map(listener => listener.remove()));
+    await Promise.allSettled(
+      this.listeners.map((listener) => listener.remove())
+    );
     this.listeners = [];
   }
 
@@ -439,7 +490,11 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
   }
 
   private async showToast(message: string): Promise<void> {
-    const toast = await this.toastController.create({ message, duration: 2400, position: 'bottom' });
+    const toast = await this.toastController.create({
+      message,
+      duration: 2400,
+      position: 'bottom',
+    });
     await toast.present();
   }
 }

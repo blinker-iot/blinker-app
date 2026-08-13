@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 
@@ -7,31 +6,25 @@ import { ModalController } from '@ionic/angular';
   standalone: true,
   templateUrl: './selector-modal.component.html',
   styleUrls: ['./selector-modal.component.scss'],
-  imports: [CommonModule],
+  imports: [],
 })
 export class SelectorModalComponent implements OnInit {
+  @Output() dataChange = new EventEmitter();
 
-  @Output() dataChange = new EventEmitter()
+  @Output() done = new EventEmitter();
+  @Output() cancel = new EventEmitter();
 
-  @Output() done = new EventEmitter()
-  @Output() cancel = new EventEmitter()
+  @Input() items: { text: string; value: any }[] = [];
 
+  actions = [];
 
-  @Input() items: { text: string, value: any }[] = [];
+  constructor(private modalController: ModalController) {}
 
-  actions = []
-
-  constructor(
-    private modalController: ModalController
-  ) { }
-
-  ngOnInit(): void {
-
-  }
+  ngOnInit(): void {}
 
   selectItem(item) {
-    this.done.emit(item)
-    this.modalController.dismiss(item)
+    this.done.emit(item);
+    this.modalController.dismiss(item);
   }
 
   // clickConfirm() {
@@ -40,8 +33,7 @@ export class SelectorModalComponent implements OnInit {
   // }
 
   clickCancel() {
-    this.cancel.emit()
-    this.modalController.dismiss()
+    this.cancel.emit();
+    this.modalController.dismiss();
   }
-
 }

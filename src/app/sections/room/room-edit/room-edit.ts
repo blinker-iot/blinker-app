@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { AlertController, IonicModule } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
@@ -7,17 +6,12 @@ import { DataService } from 'src/app/core/services/data.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { RoomService } from '../room.service';
 
-
 @Component({
   selector: 'page-room-edit',
   standalone: true,
   templateUrl: 'room-edit.html',
   styleUrls: ['room-edit.scss'],
-  imports: [
-    CommonModule,
-    IonicModule,
-    BDeviceImgComponent,
-  ],
+  imports: [IonicModule, BDeviceImgComponent],
 })
 export class RoomEditPage implements OnInit, OnDestroy {
   roomName = '';
@@ -44,7 +38,7 @@ export class RoomEditPage implements OnInit, OnDestroy {
   }
 
   get availableDeviceDataList(): string[] {
-    return this.deviceDataList.filter(deviceId => !this.isExist(deviceId));
+    return this.deviceDataList.filter((deviceId) => !this.isExist(deviceId));
   }
 
   get currentRoomData() {
@@ -63,8 +57,7 @@ export class RoomEditPage implements OnInit, OnDestroy {
     private alertCtrl: AlertController,
     private noticeService: NoticeService,
     private activatedRoute: ActivatedRoute
-  ) {
-  }
+  ) {}
 
   ngOnInit(): void {
     this.subscription = this.dataService.userDataLoader.subscribe(() => {
@@ -76,7 +69,10 @@ export class RoomEditPage implements OnInit, OnDestroy {
     this.subscription?.unsubscribe();
     this.alert?.dismiss();
 
-    if (!this.loaded || this.originalRoomData === JSON.stringify(this.dataService.room)) {
+    if (
+      !this.loaded ||
+      this.originalRoomData === JSON.stringify(this.dataService.room)
+    ) {
       return;
     }
     void this.roomService.saveData(this.dataService.room);
@@ -85,7 +81,11 @@ export class RoomEditPage implements OnInit, OnDestroy {
   private bindRoom(): void {
     const roomName = this.activatedRoute.snapshot.params['room'];
     const room = this.dataService.room;
-    if (!room?.dict || !Array.isArray(room.dict[roomName]) || !this.dataService.device) {
+    if (
+      !room?.dict ||
+      !Array.isArray(room.dict[roomName]) ||
+      !this.dataService.device
+    ) {
       return;
     }
 
@@ -110,14 +110,21 @@ export class RoomEditPage implements OnInit, OnDestroy {
   async changeRoomName() {
     this.alert = await this.alertCtrl.create({
       header: '修改房间名称',
-      inputs: [{ name: 'newRoomName', value: this.tempRoomName, placeholder: this.tempRoomName }],
+      inputs: [
+        {
+          name: 'newRoomName',
+          value: this.tempRoomName,
+          placeholder: this.tempRoomName,
+        },
+      ],
       buttons: [
         {
           text: '取消',
           role: 'cancel',
         },
         {
-          text: '确认修改', handler: data => {
+          text: '确认修改',
+          handler: (data) => {
             const newRoomName = data.newRoomName?.trim();
             if (!newRoomName || newRoomName === this.roomName) return;
             if (newRoomName.length > 10) {
@@ -129,9 +136,9 @@ export class RoomEditPage implements OnInit, OnDestroy {
               return;
             }
             this.renameRoom(newRoomName);
-          }
-        }
-      ]
+          },
+        },
+      ],
     });
     await this.alert.present();
   }
@@ -170,5 +177,4 @@ export class RoomEditPage implements OnInit, OnDestroy {
       this.currentRoomData.push(deviceName);
     }
   }
-
 }

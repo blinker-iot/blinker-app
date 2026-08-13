@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
-import { CommonModule } from '@angular/common';
+
 import { IonicModule } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
@@ -25,7 +25,7 @@ import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-devi
   templateUrl: 'deviceblock.html',
   styleUrls: ['deviceblock.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, BDeviceImgComponent],
+  imports: [IonicModule, BDeviceImgComponent],
 })
 export class Deviceblock {
   private _device: BlinkerDevice;
@@ -89,7 +89,7 @@ export class Deviceblock {
       : Object.entries(data)
           .filter(
             (entry): entry is [string, number] =>
-              typeof entry[1] === 'number' && Number.isFinite(entry[1]),
+              typeof entry[1] === 'number' && Number.isFinite(entry[1])
           )
           .map(([key]) => ({ key }));
 

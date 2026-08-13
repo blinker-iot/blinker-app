@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -40,7 +39,15 @@ import {
   readUint16LE,
 } from '../ota/ota-protocol';
 
-type BleOtaState = 'idle' | 'connecting' | 'starting' | 'uploading' | 'verifying' | 'success' | 'error' | 'cancelled';
+type BleOtaState =
+  | 'idle'
+  | 'connecting'
+  | 'starting'
+  | 'uploading'
+  | 'verifying'
+  | 'success'
+  | 'error'
+  | 'cancelled';
 type BleOtaUpdateType = 'flash' | 'filesystem';
 
 interface OtaDevice extends BleDevice {
@@ -77,7 +84,7 @@ const SECTOR_ACK_TIMEOUT = 15000;
   styleUrls: ['./ble-ota.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule, FormsModule, IonicModule, HeroCardComponent],
+  imports: [FormsModule, IonicModule, HeroCardComponent],
 })
 export class BleOtaPage implements OnDestroy {
   devices: OtaDevice[] = [];
@@ -111,11 +118,13 @@ export class BleOtaPage implements OnDestroy {
   constructor(
     private zone: NgZone,
     private cdr: ChangeDetectorRef,
-    private toastController: ToastController,
+    private toastController: ToastController
   ) {}
 
   get isBusy(): boolean {
-    return ['connecting', 'starting', 'uploading', 'verifying'].includes(this.state);
+    return ['connecting', 'starting', 'uploading', 'verifying'].includes(
+      this.state
+    );
   }
 
   get canUpload(): boolean {
@@ -173,7 +182,9 @@ export class BleOtaPage implements OnDestroy {
       this.devices = [];
 
       if (this.isWeb) {
-        const device = await BleClient.requestDevice({ services: [BLE_OTA_SERVICE_UUID] });
+        const device = await BleClient.requestDevice({
+          services: [BLE_OTA_SERVICE_UUID],
+        });
         const otaDevice: OtaDevice = { ...device, lastSeen: Date.now() };
         this.devices = [otaDevice];
         this.selectedDevice = otaDevice;
@@ -189,7 +200,7 @@ export class BleOtaPage implements OnDestroy {
           allowDuplicates: true,
           scanMode: ScanMode.SCAN_MODE_LOW_LATENCY,
         },
-        result => this.zone.run(() => this.upsertDevice(result)),
+        (result) => this.zone.run(() => this.upsertDevice(result))
       );
 
       this.clearScanTimer();
@@ -211,8 +222,12 @@ export class BleOtaPage implements OnDestroy {
     this.isScanning = false;
     try {
       await BleClient.stopLEScan();
-      this.statusMessage = this.devices.length ? `发现 ${this.devices.length} 台 OTA 设备` : '未发现 OTA 设备';
-      this.statusDetail = this.devices.length ? '请选择设备后开始升级' : '请确认设备已进入 BLE OTA 模式';
+      this.statusMessage = this.devices.length
+        ? `发现 ${this.devices.length} 台 OTA 设备`
+        : '未发现 OTA 设备';
+      this.statusDetail = this.devices.length
+        ? '请选择设备后开始升级'
+        : '请确认设备已进入 BLE OTA 模式';
     } catch {
       // The native scanner may already have stopped when the timeout fires.
     }
@@ -235,18 +250,30 @@ export class BleOtaPage implements OnDestroy {
 
     try {
       await this.stopScan();
-      this.setState('connecting', 0, '正在连接 OTA 设备', this.deviceName(this.selectedDevice));
+      this.setState(
+        'connecting',
+        0,
+        '正在连接 OTA 设备',
+        this.deviceName(this.selectedDevice)
+      );
       await this.connect(this.selectedDevice);
       this.throwIfCancelled();
 
       const firmware = new Uint8Array(await this.firmwareFile.arrayBuffer());
       const packetSize = await this.getPacketSize();
       this.sectorCount = Math.ceil(firmware.byteLength / OTA_SECTOR_SIZE);
-      this.setState('starting', 2, '正在启动 OTA 会话', `BLE 包大小 ${packetSize} 字节`);
+      this.setState(
+        'starting',
+        2,
+        '正在启动 OTA 会话',
+        `BLE 包大小 ${packetSize} 字节`
+      );
 
       await this.sendCommand(
-        this.updateType === 'filesystem' ? OTA_COMMAND_START_FILESYSTEM : OTA_COMMAND_START_FLASH,
-        firmware.byteLength,
+        this.updateType === 'filesystem'
+          ? OTA_COMMAND_START_FILESYSTEM
+          : OTA_COMMAND_START_FLASH,
+        firmware.byteLength
       );
       await this.sendFirmware(firmware, packetSize, startedAt);
 
@@ -257,12 +284,27 @@ export class BleOtaPage implements OnDestroy {
       const elapsedMs = Math.max(Date.now() - startedAt, 1);
       this.bytesSent = firmware.byteLength;
       this.speed = Math.round(firmware.byteLength / (elapsedMs / 1000));
-      this.setState('success', 100, 'OTA 升级完成', `已发送 ${formatBytes(firmware.byteLength)}，设备将自动重启`);
+      this.setState(
+        'success',
+        100,
+        'OTA 升级完成',
+        `已发送 ${formatBytes(firmware.byteLength)}，设备将自动重启`
+      );
     } catch (error) {
       if (this.cancelRequested) {
-        this.setState('cancelled', this.progress, '升级已取消', '未完成的固件不会被启用');
+        this.setState(
+          'cancelled',
+          this.progress,
+          '升级已取消',
+          '未完成的固件不会被启用'
+        );
       } else {
-        this.setState('error', this.progress, 'OTA 升级失败', this.errorMessage(error));
+        this.setState(
+          'error',
+          this.progress,
+          'OTA 升级失败',
+          this.errorMessage(error)
+        );
       }
     } finally {
       if (this.state !== 'success') await this.disconnect();
@@ -281,7 +323,8 @@ export class BleOtaPage implements OnDestroy {
   }
 
   signalIcon(rssi?: number): string {
-    if (rssi === undefined || rssi < -88) return 'fa-light fa-signal-bars-slash';
+    if (rssi === undefined || rssi < -88)
+      return 'fa-light fa-signal-bars-slash';
     if (rssi < -74) return 'fa-light fa-signal-bars-weak';
     if (rssi < -60) return 'fa-light fa-signal-bars-fair';
     return 'fa-light fa-signal-bars-good';
@@ -308,7 +351,7 @@ export class BleOtaPage implements OnDestroy {
 
   private upsertDevice(result: ScanResult): void {
     const id = result.device.deviceId;
-    const current = this.devices.find(device => device.deviceId === id);
+    const current = this.devices.find((device) => device.deviceId === id);
     const next: OtaDevice = {
       ...(current || result.device),
       ...result.device,
@@ -317,30 +360,34 @@ export class BleOtaPage implements OnDestroy {
       lastSeen: Date.now(),
     };
 
-    this.devices = [next, ...this.devices.filter(device => device.deviceId !== id)]
-      .sort((left, right) => (right.rssi ?? -999) - (left.rssi ?? -999));
+    this.devices = [
+      next,
+      ...this.devices.filter((device) => device.deviceId !== id),
+    ].sort((left, right) => (right.rssi ?? -999) - (left.rssi ?? -999));
     if (this.selectedDevice?.deviceId === id) this.selectedDevice = next;
     this.cdr.detectChanges();
   }
 
   private async connect(device: OtaDevice): Promise<void> {
     await this.ensureInitialized();
-    if (this.connectedId === device.deviceId && this.notificationsActive) return;
+    if (this.connectedId === device.deviceId && this.notificationsActive)
+      return;
     await this.disconnect();
 
     this.connectingId = device.deviceId;
     try {
       await BleClient.connect(
         device.deviceId,
-        disconnectedId => this.zone.run(() => this.handleDisconnect(disconnectedId)),
-        { timeout: 15000 },
+        (disconnectedId) =>
+          this.zone.run(() => this.handleDisconnect(disconnectedId)),
+        { timeout: 15000 }
       );
       this.connectedId = device.deviceId;
 
       if (this.isAndroid) {
         await BleClient.requestConnectionPriority(
           device.deviceId,
-          ConnectionPriority.CONNECTION_PRIORITY_HIGH,
+          ConnectionPriority.CONNECTION_PRIORITY_HIGH
         ).catch(() => undefined);
       }
 
@@ -348,13 +395,13 @@ export class BleOtaPage implements OnDestroy {
         device.deviceId,
         BLE_OTA_SERVICE_UUID,
         BLE_OTA_COMMAND_CHARACTERISTIC_UUID,
-        value => this.zone.run(() => this.handleCommandNotification(value)),
+        (value) => this.zone.run(() => this.handleCommandNotification(value))
       );
       await BleClient.startNotifications(
         device.deviceId,
         BLE_OTA_SERVICE_UUID,
         BLE_OTA_FIRMWARE_CHARACTERISTIC_UUID,
-        value => this.zone.run(() => this.handleFirmwareNotification(value)),
+        (value) => this.zone.run(() => this.handleFirmwareNotification(value))
       );
       this.notificationsActive = true;
     } finally {
@@ -371,12 +418,12 @@ export class BleOtaPage implements OnDestroy {
       await BleClient.stopNotifications(
         deviceId,
         BLE_OTA_SERVICE_UUID,
-        BLE_OTA_COMMAND_CHARACTERISTIC_UUID,
+        BLE_OTA_COMMAND_CHARACTERISTIC_UUID
       ).catch(() => undefined);
       await BleClient.stopNotifications(
         deviceId,
         BLE_OTA_SERVICE_UUID,
-        BLE_OTA_FIRMWARE_CHARACTERISTIC_UUID,
+        BLE_OTA_FIRMWARE_CHARACTERISTIC_UUID
       ).catch(() => undefined);
     }
     this.notificationsActive = false;
@@ -393,13 +440,19 @@ export class BleOtaPage implements OnDestroy {
 
   private handleCommandNotification(value: DataView): void {
     const data = dataViewToBytes(value);
-    if (data.byteLength < 20 || !isValidCrcFrame(data) || readUint16LE(data, 0) !== OTA_COMMAND_ACK) return;
+    if (
+      data.byteLength < 20 ||
+      !isValidCrcFrame(data) ||
+      readUint16LE(data, 0) !== OTA_COMMAND_ACK
+    )
+      return;
 
     const ack: CommandAck = {
       commandId: readUint16LE(data, 2),
       status: readUint16LE(data, 4),
     };
-    if (!this.pendingCommand || this.pendingCommand.commandId !== ack.commandId) return;
+    if (!this.pendingCommand || this.pendingCommand.commandId !== ack.commandId)
+      return;
 
     const pending = this.pendingCommand;
     this.pendingCommand = undefined;
@@ -416,7 +469,11 @@ export class BleOtaPage implements OnDestroy {
       status: readUint16LE(data, 2),
       expectedIndex: readUint16LE(data, 4),
     };
-    if (!this.pendingSector || this.pendingSector.sectorIndex !== ack.sectorIndex) return;
+    if (
+      !this.pendingSector ||
+      this.pendingSector.sectorIndex !== ack.sectorIndex
+    )
+      return;
 
     const pending = this.pendingSector;
     this.pendingSector = undefined;
@@ -430,7 +487,11 @@ export class BleOtaPage implements OnDestroy {
     return Math.max(20, Math.min(510, mtu - 3));
   }
 
-  private async sendFirmware(firmware: Uint8Array, packetSize: number, startedAt: number): Promise<void> {
+  private async sendFirmware(
+    firmware: Uint8Array,
+    packetSize: number,
+    startedAt: number
+  ): Promise<void> {
     let sectorIndex = 0;
 
     while (sectorIndex < this.sectorCount) {
@@ -440,14 +501,26 @@ export class BleOtaPage implements OnDestroy {
       for (let attempt = 0; attempt <= 3 && !accepted; attempt += 1) {
         this.throwIfCancelled();
         const start = sectorIndex * OTA_SECTOR_SIZE;
-        const sector = firmware.subarray(start, Math.min(start + OTA_SECTOR_SIZE, firmware.byteLength));
+        const sector = firmware.subarray(
+          start,
+          Math.min(start + OTA_SECTOR_SIZE, firmware.byteLength)
+        );
 
         try {
-          const ack = await this.sendSector(sectorIndex, sector, packetSize, firmware.byteLength, startedAt);
+          const ack = await this.sendSector(
+            sectorIndex,
+            sector,
+            packetSize,
+            firmware.byteLength,
+            startedAt
+          );
           if (ack.status === OTA_ACK_OK) {
             sectorIndex += 1;
             accepted = true;
-          } else if (ack.status === OTA_ACK_INDEX_ERROR && ack.expectedIndex < this.sectorCount) {
+          } else if (
+            ack.status === OTA_ACK_INDEX_ERROR &&
+            ack.expectedIndex < this.sectorCount
+          ) {
             sectorIndex = ack.expectedIndex;
             accepted = true;
           } else {
@@ -459,7 +532,8 @@ export class BleOtaPage implements OnDestroy {
         }
       }
 
-      if (!accepted) throw lastError || new Error(`分片 ${sectorIndex + 1} 多次发送失败`);
+      if (!accepted)
+        throw lastError || new Error(`分片 ${sectorIndex + 1} 多次发送失败`);
     }
   }
 
@@ -468,7 +542,7 @@ export class BleOtaPage implements OnDestroy {
     sector: Uint8Array,
     packetSize: number,
     totalBytes: number,
-    startedAt: number,
+    startedAt: number
   ): Promise<SectorAck> {
     const ackPromise = this.waitForSectorAck(sectorIndex);
     const packets = buildSectorPackets(sectorIndex, sector, packetSize);
@@ -481,12 +555,22 @@ export class BleOtaPage implements OnDestroy {
         await this.writeFirmwarePacket(packet);
         offset += packet.byteLength - 3 - (packet[2] === 0xff ? 2 : 0);
 
-        this.bytesSent = Math.min((sectorIndex * OTA_SECTOR_SIZE) + offset, totalBytes);
+        this.bytesSent = Math.min(
+          sectorIndex * OTA_SECTOR_SIZE + offset,
+          totalBytes
+        );
         this.currentSector = sectorIndex + 1;
-        this.progress = Math.max(2, Math.floor((this.bytesSent / totalBytes) * 98));
-        this.speed = Math.round(this.bytesSent / (Math.max(Date.now() - startedAt, 1) / 1000));
+        this.progress = Math.max(
+          2,
+          Math.floor((this.bytesSent / totalBytes) * 98)
+        );
+        this.speed = Math.round(
+          this.bytesSent / (Math.max(Date.now() - startedAt, 1) / 1000)
+        );
         this.state = 'uploading';
-        this.statusMessage = `正在发送固件 ${Math.floor((this.bytesSent / totalBytes) * 100)}%`;
+        this.statusMessage = `正在发送固件 ${Math.floor(
+          (this.bytesSent / totalBytes) * 100
+        )}%`;
         this.statusDetail = `分片 ${this.currentSector} / ${this.sectorCount}`;
 
         if ((index + 1) % 8 === 0) await this.delay(0);
@@ -498,7 +582,11 @@ export class BleOtaPage implements OnDestroy {
     return ackPromise;
   }
 
-  private async sendCommand(commandId: number, totalSize?: number, timeout = COMMAND_ACK_TIMEOUT): Promise<void> {
+  private async sendCommand(
+    commandId: number,
+    totalSize?: number,
+    timeout = COMMAND_ACK_TIMEOUT
+  ): Promise<void> {
     if (!this.connectedId) throw new Error('OTA 设备未连接');
     const ackPromise = this.waitForCommandAck(commandId, timeout);
 
@@ -507,7 +595,7 @@ export class BleOtaPage implements OnDestroy {
         this.connectedId,
         BLE_OTA_SERVICE_UUID,
         BLE_OTA_COMMAND_CHARACTERISTIC_UUID,
-        bytesToDataView(buildCommandFrame(commandId, totalSize)),
+        bytesToDataView(buildCommandFrame(commandId, totalSize))
       );
     } catch (error) {
       this.rejectPendingCommand(this.errorAsError(error));
@@ -521,7 +609,13 @@ export class BleOtaPage implements OnDestroy {
     try {
       await this.sendCommand(OTA_COMMAND_STOP, undefined, STOP_ACK_TIMEOUT);
     } catch (error) {
-      if (!this.connectedId || /disconnect|not connected|connection closed|gatt.*133/i.test(this.errorMessage(error))) return;
+      if (
+        !this.connectedId ||
+        /disconnect|not connected|connection closed|gatt.*133/i.test(
+          this.errorMessage(error)
+        )
+      )
+        return;
       throw error;
     }
   }
@@ -532,11 +626,14 @@ export class BleOtaPage implements OnDestroy {
       this.connectedId,
       BLE_OTA_SERVICE_UUID,
       BLE_OTA_FIRMWARE_CHARACTERISTIC_UUID,
-      bytesToDataView(packet),
+      bytesToDataView(packet)
     );
   }
 
-  private waitForCommandAck(commandId: number, timeout: number): Promise<CommandAck> {
+  private waitForCommandAck(
+    commandId: number,
+    timeout: number
+  ): Promise<CommandAck> {
     this.rejectPendingCommand(new Error('上一条 OTA 命令已被替换'));
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -581,15 +678,25 @@ export class BleOtaPage implements OnDestroy {
 
   private ackError(status: number): string {
     switch (status) {
-      case OTA_ACK_CRC_ERROR: return '设备报告 CRC 校验失败';
-      case OTA_ACK_INDEX_ERROR: return '设备报告固件分片序号错误';
-      case OTA_ACK_SIGNATURE_ERROR: return '设备报告固件签名校验失败';
-      case OTA_ACK_START_ERROR: return '设备无法启动 OTA 会话';
-      default: return `设备返回未知错误 0x${status.toString(16)}`;
+      case OTA_ACK_CRC_ERROR:
+        return '设备报告 CRC 校验失败';
+      case OTA_ACK_INDEX_ERROR:
+        return '设备报告固件分片序号错误';
+      case OTA_ACK_SIGNATURE_ERROR:
+        return '设备报告固件签名校验失败';
+      case OTA_ACK_START_ERROR:
+        return '设备无法启动 OTA 会话';
+      default:
+        return `设备返回未知错误 0x${status.toString(16)}`;
     }
   }
 
-  private setState(state: BleOtaState, progress: number, message: string, detail = ''): void {
+  private setState(
+    state: BleOtaState,
+    progress: number,
+    message: string,
+    detail = ''
+  ): void {
     this.state = state;
     this.progress = progress;
     this.statusMessage = message;
@@ -618,19 +725,26 @@ export class BleOtaPage implements OnDestroy {
   }
 
   private errorMessage(error: unknown): string {
-    const message = error instanceof Error ? error.message : String(error || '未知错误');
+    const message =
+      error instanceof Error ? error.message : String(error || '未知错误');
     if (/cancel|cancelled|canceled/i.test(message)) return '操作已取消';
-    if (/permission|denied|not allowed/i.test(message)) return '缺少蓝牙权限，请在系统设置中允许“附近的设备”权限';
-    if (/not found|service|characteristic/i.test(message)) return '设备未提供兼容的 BLE OTA 服务';
+    if (/permission|denied|not allowed/i.test(message))
+      return '缺少蓝牙权限，请在系统设置中允许“附近的设备”权限';
+    if (/not found|service|characteristic/i.test(message))
+      return '设备未提供兼容的 BLE OTA 服务';
     return message;
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private async showToast(message: string): Promise<void> {
-    const toast = await this.toastController.create({ message, duration: 2200, position: 'bottom' });
+    const toast = await this.toastController.create({
+      message,
+      duration: 2200,
+      position: 'bottom',
+    });
     await toast.present();
   }
 }

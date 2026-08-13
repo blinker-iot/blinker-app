@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { Router, RouterModule } from '@angular/router';
@@ -18,13 +18,7 @@ import { createProfileMenuGroups } from './profile-menu.config';
   styleUrls: ['tab-profile.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonicModule,
-    RouterModule,
-    MenuListComponent,
-  ],
+  imports: [FormsModule, IonicModule, RouterModule, MenuListComponent],
 })
 export class TabProfileComponent {
   get menuGroups() {

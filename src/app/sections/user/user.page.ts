@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -18,7 +17,7 @@ import { UserService } from 'src/app/core/services/user.service';
   templateUrl: './user.page.html',
   styleUrls: ['./user.page.scss'],
   standalone: true,
-  imports: [CommonModule, FormsModule, IonicModule, RouterModule],
+  imports: [FormsModule, IonicModule, RouterModule],
 })
 export class UserPage implements OnInit, OnDestroy {
   private subscription?: Subscription;
@@ -45,7 +44,7 @@ export class UserPage implements OnInit, OnDestroy {
     private actionSheetCtrl: ActionSheetController,
     private alertCtrl: AlertController,
     private noticeService: NoticeService,
-    private dataService: DataService,
+    private dataService: DataService
   ) {}
 
   ngOnInit() {
@@ -90,7 +89,9 @@ export class UserPage implements OnInit, OnDestroy {
         this.user.username = name;
       }
       if (this.user && this.selectedAvatarFile) {
-        const avatarSaved = await this.userService.uploadAvatar(this.selectedAvatarFile);
+        const avatarSaved = await this.userService.uploadAvatar(
+          this.selectedAvatarFile
+        );
         if (!avatarSaved) {
           await this.noticeService.showToast('头像上传失败，请稍后重试');
           return;
@@ -116,9 +117,24 @@ export class UserPage implements OnInit, OnDestroy {
     const sheet = await this.actionSheetCtrl.create({
       header: '选择所在地区',
       buttons: [
-        { text: '中国大陆 · 上海市', handler: () => { this.draftRegion = '中国大陆 · 上海市'; } },
-        { text: '中国大陆 · 北京市', handler: () => { this.draftRegion = '中国大陆 · 北京市'; } },
-        { text: '中国大陆 · 广东省', handler: () => { this.draftRegion = '中国大陆 · 广东省'; } },
+        {
+          text: '中国大陆 · 上海市',
+          handler: () => {
+            this.draftRegion = '中国大陆 · 上海市';
+          },
+        },
+        {
+          text: '中国大陆 · 北京市',
+          handler: () => {
+            this.draftRegion = '中国大陆 · 北京市';
+          },
+        },
+        {
+          text: '中国大陆 · 广东省',
+          handler: () => {
+            this.draftRegion = '中国大陆 · 广东省';
+          },
+        },
         { text: '取消', role: 'cancel' },
       ],
     });
@@ -152,21 +168,38 @@ export class UserPage implements OnInit, OnDestroy {
       header: '修改登录密码',
       inputs: [
         { name: 'oldPassword', placeholder: '当前密码', type: 'password' },
-        { name: 'newPassword', placeholder: '新密码（至少 8 位）', type: 'password' },
-        { name: 'newPassword2', placeholder: '再次输入新密码', type: 'password' },
+        {
+          name: 'newPassword',
+          placeholder: '新密码（至少 8 位）',
+          type: 'password',
+        },
+        {
+          name: 'newPassword2',
+          placeholder: '再次输入新密码',
+          type: 'password',
+        },
       ],
       buttons: [
         { text: '取消', role: 'cancel' },
         {
           text: '确认修改',
-          handler: (data) => this.changePassword(data.oldPassword, data.newPassword, data.newPassword2),
+          handler: (data) =>
+            this.changePassword(
+              data.oldPassword,
+              data.newPassword,
+              data.newPassword2
+            ),
         },
       ],
     });
     await this.alert.present();
   }
 
-  private async changePassword(oldPassword: string, newPassword: string, confirmation: string) {
+  private async changePassword(
+    oldPassword: string,
+    newPassword: string,
+    confirmation: string
+  ) {
     if (newPassword !== confirmation) {
       await this.noticeService.showToast('两次输入的新密码不一致');
       return false;
@@ -176,7 +209,10 @@ export class UserPage implements OnInit, OnDestroy {
       return false;
     }
 
-    const changed = await this.userService.changePassword(oldPassword, newPassword);
+    const changed = await this.userService.changePassword(
+      oldPassword,
+      newPassword
+    );
     if (changed) {
       await this.noticeService.showToast('密码修改成功，请重新登录');
       this.logout();
@@ -196,14 +232,18 @@ export class UserPage implements OnInit, OnDestroy {
       this.alert = await this.alertCtrl.create({
         header: '注销账号',
         message: '注销后相关数据将被永久删除且无法恢复，请谨慎操作。',
-        inputs: [{ name: 'password', placeholder: '输入当前密码', type: 'password' }],
+        inputs: [
+          { name: 'password', placeholder: '输入当前密码', type: 'password' },
+        ],
         buttons: [
           { text: '取消', role: 'cancel' },
           {
             text: '确认注销',
             role: 'destructive',
             handler: async (data) => {
-              const cancelled = await this.userService.cancelAccount(data.password);
+              const cancelled = await this.userService.cancelAccount(
+                data.password
+              );
               if (cancelled) this.logout();
             },
           },

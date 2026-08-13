@@ -1,5 +1,11 @@
-import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  NgZone,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { App } from '@capacitor/app';
 import { Clipboard } from '@capacitor/clipboard';
@@ -37,7 +43,7 @@ interface ConnectionStatus {
   styleUrls: ['./lan-discovery.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule, FormsModule, IonicModule, HeroCardComponent],
+  imports: [FormsModule, IonicModule, HeroCardComponent],
 })
 export class LanDiscoveryPage implements OnInit, OnDestroy {
   readonly nativeSupported = Capacitor.isNativePlatform();
@@ -45,7 +51,11 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
     { label: 'HTTP', type: '_http._tcp.', icon: 'fa-globe' },
     { label: 'HTTPS', type: '_https._tcp.', icon: 'fa-lock' },
     { label: 'MQTT', type: '_mqtt._tcp.', icon: 'fa-share-nodes' },
-    { label: 'Home Assistant', type: '_home-assistant._tcp.', icon: 'fa-house-signal' },
+    {
+      label: 'Home Assistant',
+      type: '_home-assistant._tcp.',
+      icon: 'fa-house-signal',
+    },
     { label: 'ESPHome', type: '_esphomelib._tcp.', icon: 'fa-microchip' },
     { label: 'Chromecast', type: '_googlecast._tcp.', icon: 'fa-display' },
     { label: 'AirPlay', type: '_airplay._tcp.', icon: 'fa-airplay' },
@@ -59,7 +69,10 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
   scanElapsed = 0;
   statusMessage = '选择服务类型后开始发现';
   errorMessage = '';
-  networkStatus: ConnectionStatus = { connected: false, connectionType: 'unknown' };
+  networkStatus: ConnectionStatus = {
+    connected: false,
+    connectionType: 'unknown',
+  };
   expandedIds = new Set<string>();
 
   private activeRequest?: MdnsWatchOptions;
@@ -86,39 +99,58 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
     });
     if (!keyword) return sorted;
 
-    return sorted.filter(service => this.searchableText(service).includes(keyword));
+    return sorted.filter((service) =>
+      this.searchableText(service).includes(keyword)
+    );
   }
 
   get networkLabel(): string {
     if (!this.networkStatus.connected) return '未连接网络';
     if (this.networkStatus.connectionType === 'wifi') return 'Wi-Fi 已连接';
-    if (this.networkStatus.connectionType === 'cellular') return '当前为移动网络';
-    if (this.networkStatus.connectionType === 'ethernet') return '有线网络已连接';
+    if (this.networkStatus.connectionType === 'cellular')
+      return '当前为移动网络';
+    if (this.networkStatus.connectionType === 'ethernet')
+      return '有线网络已连接';
     return '网络已连接';
   }
 
   get canStartScan(): boolean {
-    return this.nativeSupported && this.networkStatus.connected && this.networkStatus.connectionType !== 'cellular';
+    return (
+      this.nativeSupported &&
+      this.networkStatus.connected &&
+      this.networkStatus.connectionType !== 'cellular'
+    );
   }
 
   async ngOnInit(): Promise<void> {
     await this.refreshNetworkStatus();
-    this.networkListener = await Network.addListener('networkStatusChange', status => {
-      this.zone.run(() => {
-        this.networkStatus = status;
-        if ((!status.connected || status.connectionType === 'cellular') && this.isScanning) {
-          void this.stopScan(true, '网络连接已变化，发现已停止');
-        }
-        this.markForCheck();
-      });
-    });
+    this.networkListener = await Network.addListener(
+      'networkStatusChange',
+      (status) => {
+        this.zone.run(() => {
+          this.networkStatus = status;
+          if (
+            (!status.connected || status.connectionType === 'cellular') &&
+            this.isScanning
+          ) {
+            void this.stopScan(true, '网络连接已变化，发现已停止');
+          }
+          this.markForCheck();
+        });
+      }
+    );
 
     if (this.nativeSupported) {
-      this.appStateListener = await App.addListener('appStateChange', state => {
-        if (!state.isActive && this.isScanning) {
-          this.zone.run(() => void this.stopScan(true, 'App 已进入后台，发现已停止'));
+      this.appStateListener = await App.addListener(
+        'appStateChange',
+        (state) => {
+          if (!state.isActive && this.isScanning) {
+            this.zone.run(
+              () => void this.stopScan(true, 'App 已进入后台，发现已停止')
+            );
+          }
         }
-      });
+      );
     }
   }
 
@@ -149,7 +181,10 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
     }
 
     await this.refreshNetworkStatus();
-    if (!this.networkStatus.connected || this.networkStatus.connectionType === 'cellular') {
+    if (
+      !this.networkStatus.connected ||
+      this.networkStatus.connectionType === 'cellular'
+    ) {
       await this.showToast('请先连接到需要发现设备的 Wi-Fi 或有线网络');
       return;
     }
@@ -183,8 +218,12 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
     this.startElapsedTimer();
 
     try {
-      this.discoverListener = await Mdns.addListener('discover', event => {
-        if (session !== this.scanSession || !this.matchesActiveWatch(event.service)) return;
+      this.discoverListener = await Mdns.addListener('discover', (event) => {
+        if (
+          session !== this.scanSession ||
+          !this.matchesActiveWatch(event.service)
+        )
+          return;
         this.zone.run(() => this.handleWatchEvent(event));
       });
       if (session !== this.scanSession) {
@@ -192,8 +231,9 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
         return;
       }
 
-      this.errorListener = await Mdns.addListener('error', event => {
-        if (session !== this.scanSession || !this.matchesActiveError(event)) return;
+      this.errorListener = await Mdns.addListener('error', (event) => {
+        if (session !== this.scanSession || !this.matchesActiveError(event))
+          return;
         this.zone.run(() => this.handleNativeError(event));
       });
       if (session !== this.scanSession) {
@@ -221,9 +261,11 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
     }
 
     if (updateStatus) {
-      this.statusMessage = statusOverride || (this.services.length
-        ? `发现已停止，共找到 ${this.services.length} 项`
-        : '发现已停止，未找到广播该服务的设备');
+      this.statusMessage =
+        statusOverride ||
+        (this.services.length
+          ? `发现已停止，共找到 ${this.services.length} 项`
+          : '发现已停止，未找到广播该服务的设备');
       this.markForCheck();
     }
   }
@@ -232,7 +274,9 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
     this.services = [];
     this.expandedIds = new Set<string>();
     this.searchKeyword = '';
-    this.statusMessage = this.isScanning ? `正在发现 ${this.typeLabel(this.serviceType)} 服务…` : '发现结果已清空';
+    this.statusMessage = this.isScanning
+      ? `正在发现 ${this.typeLabel(this.serviceType)} 服务…`
+      : '发现结果已清空';
   }
 
   toggleDetails(service: DiscoveredService): void {
@@ -247,13 +291,22 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
   }
 
   primaryAddress(service: DiscoveredService): string {
-    return service.ipv4Addresses[0] || service.ipv6Addresses[0] || service.hostname || '正在解析地址…';
+    return (
+      service.ipv4Addresses[0] ||
+      service.ipv6Addresses[0] ||
+      service.hostname ||
+      '正在解析地址…'
+    );
   }
 
   endpoint(service: DiscoveredService): string {
-    const rawAddress = service.ipv4Addresses[0] || service.ipv6Addresses[0] || service.hostname;
+    const rawAddress =
+      service.ipv4Addresses[0] || service.ipv6Addresses[0] || service.hostname;
     if (!rawAddress) return '';
-    const address = rawAddress.includes(':') && !rawAddress.startsWith('[') ? `[${rawAddress}]` : rawAddress;
+    const address =
+      rawAddress.includes(':') && !rawAddress.startsWith('[')
+        ? `[${rawAddress}]`
+        : rawAddress;
     return service.port ? `${address}:${service.port}` : address;
   }
 
@@ -267,14 +320,20 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
     return `${scheme}://${endpoint}${path.startsWith('/') ? path : `/${path}`}`;
   }
 
-  txtEntries(service: DiscoveredService): Array<{ key: string; value: string }> {
-    return Object.entries(service.txtRecord || {}).map(([key, value]) => ({ key, value }));
+  txtEntries(
+    service: DiscoveredService
+  ): Array<{ key: string; value: string }> {
+    return Object.entries(service.txtRecord || {}).map(([key, value]) => ({
+      key,
+      value,
+    }));
   }
 
   serviceIcon(service: DiscoveredService): string {
     const type = service.type.toLowerCase();
     if (type.includes('mqtt')) return 'fa-light fa-share-nodes';
-    if (type.includes('home-assistant') || type.includes('hap')) return 'fa-light fa-house-signal';
+    if (type.includes('home-assistant') || type.includes('hap'))
+      return 'fa-light fa-house-signal';
     if (type.includes('esphome')) return 'fa-light fa-microchip';
     if (type.includes('googlecast')) return 'fa-light fa-display';
     if (type.includes('airplay')) return 'fa-light fa-airplay';
@@ -283,8 +342,14 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
   }
 
   typeLabel(type: string): string {
-    return this.serviceTypes.find(item => item.type === this.normalizeType(type))?.label
-      || type.replace(/^_/, '').replace(/\._(?:tcp|udp)\.$/i, '').toUpperCase();
+    return (
+      this.serviceTypes.find((item) => item.type === this.normalizeType(type))
+        ?.label ||
+      type
+        .replace(/^_/, '')
+        .replace(/\._(?:tcp|udp)\.$/i, '')
+        .toUpperCase()
+    );
   }
 
   async copyEndpoint(service: DiscoveredService): Promise<void> {
@@ -304,7 +369,7 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
     const id = this.serviceId(service);
 
     if (event.action === 'removed') {
-      this.services = this.services.filter(item => item.id !== id);
+      this.services = this.services.filter((item) => item.id !== id);
       const nextExpanded = new Set(this.expandedIds);
       nextExpanded.delete(id);
       this.expandedIds = nextExpanded;
@@ -315,15 +380,21 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
       return;
     }
 
-    const index = this.services.findIndex(item => item.id === id);
+    const index = this.services.findIndex((item) => item.id === id);
     const previous = index >= 0 ? this.services[index] : undefined;
     const incoming: DiscoveredService = {
       ...service,
       hostname: service.hostname || previous?.hostname || '',
       port: service.port || previous?.port || 0,
-      ipv4Addresses: service.ipv4Addresses.length ? service.ipv4Addresses : previous?.ipv4Addresses || [],
-      ipv6Addresses: service.ipv6Addresses.length ? service.ipv6Addresses : previous?.ipv6Addresses || [],
-      txtRecord: Object.keys(service.txtRecord).length ? service.txtRecord : previous?.txtRecord || {},
+      ipv4Addresses: service.ipv4Addresses.length
+        ? service.ipv4Addresses
+        : previous?.ipv4Addresses || [],
+      ipv6Addresses: service.ipv6Addresses.length
+        ? service.ipv6Addresses
+        : previous?.ipv6Addresses || [],
+      txtRecord: Object.keys(service.txtRecord).length
+        ? service.txtRecord
+        : previous?.txtRecord || {},
       id,
       resolved: event.action === 'resolved' || previous?.resolved || false,
     };
@@ -375,15 +446,19 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
   private matchesActiveWatch(service: MdnsService): boolean {
     const request = this.activeRequest;
     if (!request) return false;
-    return this.normalizeType(service.type) === request.type
-      && this.normalizeDomain(service.domain) === request.domain;
+    return (
+      this.normalizeType(service.type) === request.type &&
+      this.normalizeDomain(service.domain) === request.domain
+    );
   }
 
   private matchesActiveError(event: MdnsErrorEvent): boolean {
     const request = this.activeRequest;
     if (!request) return false;
-    if (event.type && this.normalizeType(event.type) !== request.type) return false;
-    if (event.domain && this.normalizeDomain(event.domain) !== request.domain) return false;
+    if (event.type && this.normalizeType(event.type) !== request.type)
+      return false;
+    if (event.domain && this.normalizeDomain(event.domain) !== request.domain)
+      return false;
     return true;
   }
 
@@ -395,11 +470,15 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
       ...service.ipv4Addresses,
       ...service.ipv6Addresses,
       ...Object.entries(service.txtRecord).flat(),
-    ].join(' ').toLowerCase();
+    ]
+      .join(' ')
+      .toLowerCase();
   }
 
   private normalizeType(value: string, strict = false): string {
-    let type = String(value || '').trim().toLowerCase();
+    let type = String(value || '')
+      .trim()
+      .toLowerCase();
     if (type && !type.startsWith('_')) type = `_${type}`;
     if (type && !type.endsWith('.')) type += '.';
     if (strict && !/^_[a-z0-9][a-z0-9-]{0,61}\._(?:tcp|udp)\.$/.test(type)) {
@@ -409,7 +488,10 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
   }
 
   private normalizeDomain(value: string): string {
-    const domain = String(value || '').trim().toLowerCase() || 'local.';
+    const domain =
+      String(value || '')
+        .trim()
+        .toLowerCase() || 'local.';
     return domain.endsWith('.') ? domain : `${domain}.`;
   }
 
@@ -430,7 +512,10 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
     try {
       this.networkStatus = await Network.getStatus();
     } catch {
-      this.networkStatus = { connected: navigator.onLine, connectionType: 'unknown' };
+      this.networkStatus = {
+        connected: navigator.onLine,
+        connectionType: 'unknown',
+      };
     }
   }
 
@@ -456,13 +541,14 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
   }
 
   private readError(error: unknown, fallback = '操作失败，请稍后重试'): string {
-    const message = error instanceof Error
-      ? error.message
-      : typeof error === 'string'
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
         ? error
         : typeof error === 'object' && error && 'message' in error
-          ? String(error.message || '')
-          : '';
+        ? String(error.message || '')
+        : '';
     if (/not available on this platform|unimplemented/i.test(message)) {
       return '当前平台不支持 mDNS 发现，请在手机 App 中使用';
     }
@@ -477,7 +563,11 @@ export class LanDiscoveryPage implements OnInit, OnDestroy {
   }
 
   private async showToast(message: string): Promise<void> {
-    const toast = await this.toastController.create({ message, duration: 2200, position: 'bottom' });
+    const toast = await this.toastController.create({
+      message,
+      duration: 2200,
+      position: 'bottom',
+    });
     await toast.present();
   }
 }

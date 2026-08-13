@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
@@ -10,24 +9,18 @@ import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { Act2TextPipe } from 'src/app/core/pipes/actcmd2text';
 import { SelectorModalComponent } from 'src/app/core/modals/selector-modal/selector-modal.component';
 
-
 @Component({
   selector: 'scene-edit-addact',
   standalone: true,
   templateUrl: 'scene-edit-addact.html',
   styleUrls: ['scene-edit-addact.scss'],
-  imports: [
-    CommonModule,
-    IonicModule,
-    Act2TextPipe,
-  ],
+  imports: [IonicModule, Act2TextPipe],
 })
 export class SceneEditorAddact {
-
   typeItems = [
     { text: '设备动作', value: 'action' },
-    { text: '延迟执行', value: 'delay' }
-  ]
+    { text: '延迟执行', value: 'delay' },
+  ];
   delayItems = [
     { text: '1s', value: '1' },
     { text: '2s', value: '2' },
@@ -40,30 +33,27 @@ export class SceneEditorAddact {
     { text: '9s', value: '9' },
     { text: '10s', value: '10' },
     { text: '11s', value: '11' },
-  ]
-
+  ];
 
   @Input() sceneName;
   currentSceneData;
 
   get sceneDataDict() {
-    return this.dataService.scene.dict
+    return this.dataService.scene.dict;
   }
 
   get disableSave() {
-    return this.selectedType.value == 'action' && this.selectedAction == null
+    return this.selectedType.value == 'action' && this.selectedAction == null;
   }
 
   get disableActionSelector() {
-    return this.selectedDevice == null
+    return this.selectedDevice == null;
   }
-
-
 
   selectedDevice: BlinkerDevice = null;
   selectedAction: any = null;
-  selectedType: any = this.typeItems[0]
-  selectedDelay: any = this.delayItems[0]
+  selectedType: any = this.typeItems[0];
+  selectedDelay: any = this.delayItems[0];
 
   delayTask;
 
@@ -72,46 +62,47 @@ export class SceneEditorAddact {
     public deviceService: DeviceService,
     private dataService: DataService,
     private modalCtrl: ModalController
-  ) { }
+  ) {}
 
   ngOnInit(): void {
-    this.currentSceneData = this.sceneDataDict[this.sceneName]
+    this.currentSceneData = this.sceneDataDict[this.sceneName];
   }
 
   close() {
-    this.modalCtrl.dismiss()
+    this.modalCtrl.dismiss();
   }
 
   save() {
     if (typeof this.selectedAction == 'undefined') return;
-    if (this.disableSave) return
-    if (typeof this.currentSceneData.acts == 'undefined') this.currentSceneData.acts = []
+    if (this.disableSave) return;
+    if (typeof this.currentSceneData.acts == 'undefined')
+      this.currentSceneData.acts = [];
     if (this.selectedType.value == 'action') {
       let action = {
         deviceId: this.selectedDevice.id,
         text: this.selectedAction,
-        data: this.selectedAction
+        data: this.selectedAction,
       };
       this.currentSceneData.acts.push(action);
     } else {
       this.currentSceneData.acts.push({ delay: this.selectedDelay.value });
     }
 
-    this.modalCtrl.dismiss()
+    this.modalCtrl.dismiss();
   }
 
   async openTypeSelectModal() {
     const modal = await this.modalCtrl.create({
       component: SelectorModalComponent,
       componentProps: {
-        items: this.typeItems
+        items: this.typeItems,
+      },
+    });
+    modal.onDidDismiss().then((result) => {
+      if (typeof result.data != 'undefined') {
+        this.selectedType = result.data;
       }
     });
-    modal.onDidDismiss().then(result => {
-      if (typeof result.data != 'undefined') {
-        this.selectedType = result.data
-      }
-    })
     return await modal.present();
   }
 
@@ -119,44 +110,43 @@ export class SceneEditorAddact {
     const modal = await this.modalCtrl.create({
       component: SelectorModalComponent,
       componentProps: {
-        items: this.delayItems
+        items: this.delayItems,
+      },
+    });
+    modal.onDidDismiss().then((result) => {
+      if (typeof result.data != 'undefined') {
+        this.selectedDelay = result.data;
       }
     });
-    modal.onDidDismiss().then(result => {
-      if (typeof result.data != 'undefined') {
-        this.selectedDelay = result.data
-      }
-    })
     return await modal.present();
   }
 
   async openDeviceSelectModal() {
     const modal = await this.modalCtrl.create({
-      component: DeviceSelectorModalComponent
+      component: DeviceSelectorModalComponent,
     });
-    modal.onDidDismiss().then(result => {
+    modal.onDidDismiss().then((result) => {
       if (typeof result.data != 'undefined') {
-        this.selectedDevice = result.data
-        this.selectedAction = null
+        this.selectedDevice = result.data;
+        this.selectedAction = null;
       }
-    })
+    });
     return await modal.present();
   }
 
   async openActionSelectorModal() {
-    if (this.disableActionSelector) return
+    if (this.disableActionSelector) return;
     const modal = await this.modalCtrl.create({
       component: ActionSelectorModalComponent,
       componentProps: {
-        device: this.selectedDevice
+        device: this.selectedDevice,
+      },
+    });
+    modal.onDidDismiss().then((result) => {
+      if (typeof result.data != 'undefined') {
+        this.selectedAction = result.data;
       }
     });
-    modal.onDidDismiss().then(result => {
-      if (typeof result.data != 'undefined') {
-        this.selectedAction = result.data
-      }
-    })
     return await modal.present();
   }
-
 }

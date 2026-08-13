@@ -11,7 +11,10 @@
   <!-- 设备图片 -->
   <div item class="device-item">
     <b-device-img [filename]="image"></b-device-img>
-    <div class="description" [innerHTML]="descriptionText | markdown | async"></div>
+    <div
+      class="description"
+      [innerHTML]="descriptionText | markdown | async"
+    ></div>
   </div>
   <!-- 使用说明 -->
   <div item class="text-item" [innerHTML]="guideText | markdown | async"></div>
@@ -20,28 +23,39 @@
 <ion-footer class="ion-no-border">
   <ion-toolbar>
     <div class="btnbox">
-      <div class="btn" [ngClass]="{'onebtn': tools.length==1}" *ngFor="let tool of tools"
-        [routerLink]="[ '/adddevice', deviceType, tool ]">
-        <div class="btninner" *ngIf="tool=='bleConfig'">
+      @for (tool of tools; track tool) {
+      <div
+        class="btn"
+        [ngClass]="{'onebtn': tools.length==1}"
+        [routerLink]="[ '/adddevice', deviceType, tool ]"
+      >
+        @if (tool=='bleConfig') {
+        <div class="btninner">
           <i class="fab fa-bluetooth"></i>
           <div>蓝牙接入</div>
         </div>
-        <div class="btninner" *ngIf="tool=='KeyConfig'">
+        } @if (tool=='KeyConfig') {
+        <div class="btninner">
           <i class="fal fa-globe"></i>
           <div>网络接入</div>
         </div>
-        <div class="btninner" *ngIf="tool=='apConfig' && tools.length>1">
+        } @if (tool=='apConfig' && tools.length>1) {
+        <div class="btninner">
           <i class="fal fa-cloud"></i>
           <div>AP配网</div>
         </div>
-        <div class="btninner" *ngIf="tool=='apConfig' && tools.length==1">
+        } @if (tool=='apConfig' && tools.length==1) {
+        <div class="btninner">
           <div>下一步</div>
         </div>
-        <div class="btninner" *ngIf="tool=='qrScanner'">
+        } @if (tool=='qrScanner') {
+        <div class="btninner">
           <i class="fal fa-qrcode"></i>
           <div>扫码配置</div>
         </div>
+        }
       </div>
+      }
     </div>
   </ion-toolbar>
 </ion-footer>

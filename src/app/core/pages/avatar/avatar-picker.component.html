@@ -1,28 +1,35 @@
 <ion-header>
-    <ion-toolbar>
-        <ion-buttons slot="start">
-            <ion-button (click)="close()">
-                <ion-icon name="close-outline"></ion-icon>
-            </ion-button>
-        </ion-buttons>
-        <ion-title>头像截取</ion-title>
-        <ion-buttons slot="end">
-            <ion-button *ngIf="tempImgFile" (click)="confirm()">
-                <ion-icon name="checkmark-outline"></ion-icon>
-            </ion-button>
-        </ion-buttons>
-    </ion-toolbar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="close()">
+        <ion-icon name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>头像截取</ion-title>
+    <ion-buttons slot="end">
+      @if (tempImgFile) {
+      <ion-button (click)="confirm()">
+        <ion-icon name="checkmark-outline"></ion-icon>
+      </ion-button>
+      }
+    </ion-buttons>
+  </ion-toolbar>
 </ion-header>
 
 <ion-content>
-    <div class="avatar-page animate__animated animate__fadeIn animate__faster">
-        <button *ngIf="!tempImgFile" class="chose-btn" (click)="showActionSheet()">选择图片或拍摄照片</button>
-        <div *ngIf="tempImgFile" class="imgbox animated fadeIn">
-            <img class="source-img" src="{{tempImgFile}}" #image>
-            <div class="btn" (click)="rotate()">
-                <ion-icon name="sync-outline"></ion-icon>
-                <div class="btn-text">旋转90°</div>
-            </div>
-        </div>
+  <div class="avatar-page animate__animated animate__fadeIn animate__faster">
+    @if (!tempImgFile) {
+    <button class="chose-btn" (click)="showActionSheet()">
+      选择图片或拍摄照片
+    </button>
+    } @if (tempImgFile) {
+    <div class="imgbox animated fadeIn">
+      <img class="source-img" src="{{ tempImgFile }}" #image />
+      <div class="btn" (click)="rotate()">
+        <ion-icon name="sync-outline"></ion-icon>
+        <div class="btn-text">旋转90°</div>
+      </div>
     </div>
+    }
+  </div>
 </ion-content>

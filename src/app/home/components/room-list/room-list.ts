@@ -12,7 +12,7 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { CommonModule } from '@angular/common';
+
 import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
@@ -21,7 +21,7 @@ import { DataService } from 'src/app/core/services/data.service';
   styleUrls: ['room-list.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
+  imports: [],
 })
 export class RoomListComponent implements AfterViewInit, OnDestroy {
   private _roomid = -1;
@@ -86,7 +86,8 @@ export class RoomListComponent implements AfterViewInit, OnDestroy {
       );
       if (!container || !chip) return;
 
-      const left = chip.offsetLeft - (container.clientWidth - chip.offsetWidth) / 2;
+      const left =
+        chip.offsetLeft - (container.clientWidth - chip.offsetWidth) / 2;
       container.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
     });
   }

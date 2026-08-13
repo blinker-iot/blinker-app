@@ -1,6 +1,5 @@
 // 需修复 12.27
 
-import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { IonicModule, ModalController } from '@ionic/angular';
 import { IconList } from 'src/app/configs/app.config';
@@ -11,7 +10,7 @@ import { IconList } from 'src/app/configs/app.config';
   standalone: true,
   templateUrl: 'icon-list.html',
   styleUrls: ['icon-list.scss'],
-  imports: [CommonModule, IonicModule],
+  imports: [IonicModule],
 })
 export class IconListPage {
   @Input() item;
@@ -22,28 +21,23 @@ export class IconListPage {
 
   style = 'fad';
 
-  constructor(
-    private modalCtrl: ModalController,
-    // private iab: InAppBrowser
-  ) {
-  }
+  constructor(private modalCtrl: ModalController) // private iab: InAppBrowser
+  {}
 
   ngOnInit() {
-    this.iconList = IconList
+    this.iconList = IconList;
   }
 
   async select(icon) {
     if (this.item)
-      if (typeof this.iconId == 'undefined')
-        this.item['ico'] = icon;
-      else
-        this.item[this.iconId] = icon;
-    (await this.modalCtrl.getTop()).dismiss(icon)
+      if (typeof this.iconId == 'undefined') this.item['ico'] = icon;
+      else this.item[this.iconId] = icon;
+    (await this.modalCtrl.getTop()).dismiss(icon);
   }
 
   async close() {
     // this.modalCtrl.dismiss()
-    (await this.modalCtrl.getTop()).dismiss()
+    (await this.modalCtrl.getTop()).dismiss();
   }
 
   open(url) {

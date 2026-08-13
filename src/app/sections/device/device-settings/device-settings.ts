@@ -1,41 +1,35 @@
-import { Component, OnDestroy, OnInit } from "@angular/core";
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import {
   AlertController,
   IonicModule,
   ModalController,
   NavController,
   Platform,
-} from "@ionic/angular";
-import { DeviceService } from "src/app/core/services/device.service";
-import { UserService } from "src/app/core/services/user.service";
-import { ActivatedRoute } from "@angular/router";
-import { DeviceIconPage } from "../../../core/pages/device-icon/device-icon";
-import { DataService } from "src/app/core/services/data.service";
-import { BlinkerDevice } from "src/app/core/model/device.model";
-import { ImageService } from "src/app/core/services/image.service";
-import { AndroidShortcuts } from "capacitor-android-shortcuts";
-import { TranslatePipe } from "@ngx-translate/core";
-import { BDeviceImgComponent } from "src/app/core/components/b-device-img/b-device-img.component";
-import { CommonModule } from "@angular/common";
-import { ShareService } from "../device-share/share.service";
-import { Layouter2Service } from "src/app/device/layouter2/layouter2.service";
+} from '@ionic/angular';
+import { DeviceService } from 'src/app/core/services/device.service';
+import { UserService } from 'src/app/core/services/user.service';
+import { ActivatedRoute } from '@angular/router';
+import { DeviceIconPage } from '../../../core/pages/device-icon/device-icon';
+import { DataService } from 'src/app/core/services/data.service';
+import { BlinkerDevice } from 'src/app/core/model/device.model';
+import { ImageService } from 'src/app/core/services/image.service';
+import { AndroidShortcuts } from 'capacitor-android-shortcuts';
+import { TranslatePipe } from '@ngx-translate/core';
+import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
+
+import { ShareService } from '../device-share/share.service';
+import { LayouterService } from 'src/app/device/layouter.service';
 import {
   MenuListComponent,
   MenuListItem,
-} from "src/app/core/components/menu-list/menu-list";
+} from 'src/app/core/components/menu-list/menu-list';
 
 @Component({
-    selector: "app-device-settings",
-    standalone: true,
-    templateUrl: "device-settings.html",
-    styleUrls: ["device-settings.scss"],
-    imports: [
-        CommonModule,
-        IonicModule,
-        BDeviceImgComponent,
-        MenuListComponent,
-        TranslatePipe,
-    ]
+  selector: 'app-device-settings',
+  standalone: true,
+  templateUrl: 'device-settings.html',
+  styleUrls: ['device-settings.scss'],
+  imports: [IonicModule, BDeviceImgComponent, MenuListComponent, TranslatePipe],
 })
 export class DeviceSettingsPage implements OnInit, OnDestroy {
   id;
@@ -60,8 +54,8 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   get hasTimerTask() {
-    if (typeof this.device?.data?.timer != "undefined") {
-      if (this.device.data.timer != "000") {
+    if (typeof this.device?.data?.timer != 'undefined') {
+      if (this.device.data.timer != '000') {
         return true;
       }
     }
@@ -75,24 +69,24 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   get deviceMenuItems(): readonly MenuListItem[] {
     return [
       {
-        id: "timer",
-        title: "定时任务",
-        description: "设置设备按计划自动执行",
-        icon: "fa-timer",
-        badge: this.hasTimerTask ? "已启用" : undefined,
+        id: 'timer',
+        title: '定时任务',
+        description: '设置设备按计划自动执行',
+        icon: 'fa-timer',
+        badge: this.hasTimerTask ? '已启用' : undefined,
         route: `/device-manager/${this.id}/timer`,
       },
       {
-        id: "shortcut",
-        title: "添加到桌面",
-        description: "创建快速访问设备的桌面入口",
-        icon: "fa-grid-2-plus",
+        id: 'shortcut',
+        title: '添加到桌面',
+        description: '创建快速访问设备的桌面入口',
+        icon: 'fa-grid-2-plus',
       },
       {
-        id: "guide",
-        title: "配置向导",
-        description: "重新查看设备面板的配置说明",
-        icon: "fa-message-bot",
+        id: 'guide',
+        title: '配置向导',
+        description: '重新查看设备面板的配置说明',
+        icon: 'fa-message-bot',
       },
     ];
   }
@@ -100,12 +94,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   get dangerMenuItems(): readonly MenuListItem[] {
     return [
       {
-        id: "unbind",
-        title: this.isSharedDevice ? "退出设备共享" : "解除设备绑定",
+        id: 'unbind',
+        title: this.isSharedDevice ? '退出设备共享' : '解除设备绑定',
         description: this.isSharedDevice
-          ? "移除这台由其他用户共享的设备"
-          : "从账户中移除设备及其关联自动化",
-        icon: "fa-link-slash",
+          ? '移除这台由其他用户共享的设备'
+          : '从账户中移除设备及其关联自动化',
+        icon: 'fa-link-slash',
         danger: true,
         showChevron: false,
       },
@@ -113,12 +107,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   settingList = [
-    "CustomName",
-    "CustomIcon",
-    "LoadingExample",
-    "VoiceAssistant",
-    "AddShortcut",
-    "UpdateFirmware",
+    'CustomName',
+    'CustomIcon',
+    'LoadingExample',
+    'VoiceAssistant',
+    'AddShortcut',
+    'UpdateFirmware',
   ];
   constructor(
     private activatedRoute: ActivatedRoute,
@@ -131,9 +125,8 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private modalCtrl: ModalController,
     private shareService: ShareService,
     private imageService: ImageService,
-    private layouter2Service: Layouter2Service
-  ) {
-  }
+    private layouterService: LayouterService
+  ) {}
 
   subscription;
   ngOnInit() {
@@ -146,7 +139,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   private bindDevice() {
-    this.id = this.activatedRoute.snapshot.params["id"];
+    this.id = this.activatedRoute.snapshot.params['id'];
     this.device = this.dataService.device?.dict?.[this.id];
     this.loaded = !!this.device;
   }
@@ -168,22 +161,21 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   async showChangeNameConfirm() {
     this.confirm = await this.alertCtrl.create({
-      header: "自定义设备名",
+      header: '自定义设备名',
       inputs: [
         {
-          name: "customName",
+          name: 'customName',
           value: this.device.config.customName,
           placeholder: this.device.config.customName,
         },
       ],
       buttons: [
         {
-          text: "取消",
-          handler: () => {
-          },
+          text: '取消',
+          handler: () => {},
         },
         {
-          text: "确认修改",
+          text: '确认修改',
           handler: (data) => {
             this.saveName(data.customName);
           },
@@ -195,7 +187,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   async saveName(customName) {
     let newConfig = {
-      "customName": customName,
+      customName: customName,
     };
     if (await this.deviceService.saveDeviceConfig(this.device, newConfig)) {
       this.device.config.customName = customName;
@@ -210,13 +202,13 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       },
     });
     modal.onDidDismiss().then(async (image) => {
-      if (typeof image.data == "undefined") return;
+      if (typeof image.data == 'undefined') return;
       let newConfig = {
-        "image": image.data,
+        image: image.data,
       };
       if (this.device.config.isPreview) {
         this.device.config.image = image.data;
-        this.device.subject.next({ key: "image", value: image.data });
+        this.device.subject.next({ key: 'image', value: image.data });
         return;
       }
       if (await this.deviceService.saveDeviceConfig(this.device, newConfig)) {
@@ -232,24 +224,23 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   async showUnbindConfirm() {
     this.confirm = await this.alertCtrl.create({
-      header: "确认解除绑定",
-      message: "解绑后，你将无法控制这个设备，关联该设备的自动化规则也将失效",
+      header: '确认解除绑定',
+      message: '解绑后，你将无法控制这个设备，关联该设备的自动化规则也将失效',
       buttons: [
         {
-          text: "取消",
-          handler: () => {
-          },
+          text: '取消',
+          handler: () => {},
         },
         {
-          text: "确认解除",
+          text: '确认解除',
           handler: async () => {
             if (this.isSharedDevice) {
               if (await this.shareService.deleteSharedDevice(this.device.id)) {
-                this.navCtrl.navigateRoot("/");
+                this.navCtrl.navigateRoot('/');
               }
               this.userService.getAllInfo();
             } else if (await this.userService.delDevice(this.device)) {
-              this.navCtrl.navigateRoot("/");
+              this.navCtrl.navigateRoot('/');
               this.userService.getAllInfo();
             }
           },
@@ -260,27 +251,27 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   async addShortcut() {
-    if (!((await this.checkSupportShort()).result)) return;
+    if (!(await this.checkSupportShort()).result) return;
     let base64Data: any;
     if (
-      this.device.config.image.indexOf("https://") > -1 ||
-      this.device.config.image.indexOf("http://") > -1
+      this.device.config.image.indexOf('https://') > -1 ||
+      this.device.config.image.indexOf('http://') > -1
     ) {
       base64Data = await this.getBase64ImageByUrl(this.device.config.image);
     } else {
       base64Data = await this.getBase64Image(
-        this.getImagePath(this.device.config.image),
+        this.getImagePath(this.device.config.image)
       );
     }
-    let shortcut:any = {
+    let shortcut: any = {
       id: this.device.id,
       shortLabel: this.device.config.customName,
-      longLabel: "a blinker device",
+      longLabel: 'a blinker device',
       icon: {
-        type: "Bitmap",
+        type: 'Bitmap',
         name: base64Data,
       },
-      data: "/device/" + this.device.id,
+      data: '/device/' + this.device.id,
     };
     AndroidShortcuts.pin(shortcut);
   }
@@ -304,17 +295,17 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   getBase64Image(imgurl) {
     return new Promise<string>((resolve, reject) => {
       let image = new Image();
-      image.setAttribute("crossOrigin", "anonymous");
+      image.setAttribute('crossOrigin', 'anonymous');
       image.src = imgurl;
       image.onload = () => {
-        let canvas = document.createElement("canvas");
+        let canvas = document.createElement('canvas');
         canvas.width = image.width;
         canvas.height = image.height;
-        let ctx = canvas.getContext("2d");
+        let ctx = canvas.getContext('2d');
         ctx.drawImage(image, 0, 0, image.width, image.height);
         // console.log(image.src);
-        let base64 = canvas.toDataURL("image/png");
-        base64 = base64.replace(/^data:image\/png;base64,/, "");
+        let base64 = canvas.toDataURL('image/png');
+        base64 = base64.replace(/^data:image\/png;base64,/, '');
         return resolve(base64);
       };
     });
@@ -328,13 +319,13 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     return AndroidShortcuts.isPinnedSupported();
   }
 
-  showGuide(){
-    this.navCtrl.navigateBack('/device/'+this.device.id)
+  showGuide() {
+    this.navCtrl.navigateBack('/device/' + this.device.id);
     setTimeout(() => {
-      this.layouter2Service.action.next({
+      this.layouterService.action.next({
         name: 'showGuide',
-        data: this.device.id
-      })
+        data: this.device.id,
+      });
     }, 100);
   }
 
@@ -344,17 +335,17 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       return;
     }
 
-    if (item.id === "shortcut") {
+    if (item.id === 'shortcut') {
       void this.addShortcut();
       return;
     }
 
-    if (item.id === "guide") {
+    if (item.id === 'guide') {
       this.showGuide();
       return;
     }
 
-    if (item.id === "unbind") {
+    if (item.id === 'unbind') {
       this.unbind();
     }
   }

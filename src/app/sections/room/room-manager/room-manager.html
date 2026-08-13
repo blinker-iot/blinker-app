@@ -1,14 +1,19 @@
 <ion-header class="manager-header ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text="" defaultHref="/home?tab=profile"></ion-back-button>
+      <ion-back-button
+        text=""
+        defaultHref="/home?tab=profile"
+      ></ion-back-button>
     </ion-buttons>
     <ion-title>{{'MENU.REGIONAL_MANAGER' | translate}}</ion-title>
-    <ion-buttons slot="end" *ngIf="loaded && roomDataList.length">
+    @if (loaded && roomDataList.length) {
+    <ion-buttons slot="end">
       <ion-button class="edit-button" (click)="switchMode()">
         {{ editMode ? '完成' : '编辑' }}
       </ion-button>
     </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
 <ion-content fullscreen="true">
@@ -26,12 +31,17 @@
 
     <div class="section-label">我的区域</div>
 
-    <section class="manager-card" *ngIf="loaded && roomDataList.length">
-      <app-menu-list class="manager-list" [editMode]="editMode" (sortChange)="sortChange($event)">
+    @if (loaded && roomDataList.length) {
+    <section class="manager-card">
+      <app-menu-list
+        class="manager-list"
+        [editMode]="editMode"
+        (sortChange)="sortChange($event)"
+      >
+        @for (roomName of roomDataList; track roomName) {
         <app-menu-item
           [id]="roomName"
           showArrow="true"
-          *ngFor="let roomName of roomDataList"
           (delete)="delRoom(roomName)"
           (enter)="editRoom(roomName)"
         >
@@ -43,17 +53,22 @@
             <small>{{ roomDataDict[roomName]?.length || 0 }} 台设备</small>
           </span>
         </app-menu-item>
+        }
       </app-menu-list>
     </section>
-
-    <section class="empty-state" *ngIf="loaded && !roomDataList.length">
-      <span class="empty-icon" aria-hidden="true"><i class="fa-light fa-house-circle-plus"></i></span>
+    } @if (loaded && !roomDataList.length) {
+    <section class="empty-state">
+      <span class="empty-icon" aria-hidden="true"
+        ><i class="fa-light fa-house-circle-plus"></i
+      ></span>
       <strong>还没有区域</strong>
       <p>创建第一个区域，将设备按空间分类管理。</p>
     </section>
+    }
   </main>
 </ion-content>
-<ion-footer class="manager-footer ion-no-border" *ngIf="loaded && !editMode">
+@if (loaded && !editMode) {
+<ion-footer class="manager-footer ion-no-border">
   <ion-toolbar>
     <div class="footer-shell">
       <button type="button" class="primary-action" (click)="addRoom()">
@@ -63,3 +78,4 @@
     </div>
   </ion-toolbar>
 </ion-footer>
+}

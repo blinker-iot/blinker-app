@@ -1,25 +1,21 @@
-import { Component } from "@angular/core";
-import { AlertController, IonicModule } from "@ionic/angular";
-import { DeviceService } from "src/app/core/services/device.service";
-import { UserService } from "src/app/core/services/user.service";
-import { deviceName12 } from "src/app/core/functions/func";
-import { ActivatedRoute } from "@angular/router";
-import { ShareService } from "./share.service";
-import { DataService } from "src/app/core/services/data.service";
-import { API } from "src/app/configs/api.config";
-import { NoticeService } from "src/app/core/services/notice.service";
-import { CommonModule } from "@angular/common";
-import { MsToDatePipe } from "src/app/core/pipes/ms-to-date";
+import { Component } from '@angular/core';
+import { AlertController, IonicModule } from '@ionic/angular';
+import { DeviceService } from 'src/app/core/services/device.service';
+import { UserService } from 'src/app/core/services/user.service';
+import { deviceName12 } from 'src/app/core/functions/func';
+import { ActivatedRoute } from '@angular/router';
+import { ShareService } from './share.service';
+import { DataService } from 'src/app/core/services/data.service';
+import { API } from 'src/app/configs/api.config';
+import { NoticeService } from 'src/app/core/services/notice.service';
+
+import { MsToDatePipe } from 'src/app/core/pipes/ms-to-date';
 
 @Component({
-    selector: "device-share",
-    templateUrl: "device-share.html",
-    styleUrls: ["device-share.scss"],
-    imports: [
-        IonicModule,
-        CommonModule,
-        MsToDatePipe,
-    ]
+  selector: 'device-share',
+  templateUrl: 'device-share.html',
+  styleUrls: ['device-share.scss'],
+  imports: [IonicModule, MsToDatePipe],
 })
 export class DeviceSharePage {
   id;
@@ -40,7 +36,7 @@ export class DeviceSharePage {
   }
 
   get deviceName() {
-    return this.device ? deviceName12(this.device.deviceName) : "";
+    return this.device ? deviceName12(this.device.deviceName) : '';
   }
 
   get pendingShares(): any[] {
@@ -56,7 +52,7 @@ export class DeviceSharePage {
   }
 
   get AVATAR_API() {
-    return API.USER.AVATAR + "/";
+    return API.USER.AVATAR + '/';
   }
 
   constructor(
@@ -66,9 +62,8 @@ export class DeviceSharePage {
     private dataService: DataService,
     private shareService: ShareService,
     public alertCtrl: AlertController,
-    private noticeService: NoticeService,
-  ) {
-  }
+    private noticeService: NoticeService
+  ) {}
 
   ngOnInit(): void {
     this.resolveDevice();
@@ -80,43 +75,44 @@ export class DeviceSharePage {
   }
 
   private resolveDevice(): void {
-    this.id = this.activatedRoute.snapshot.params["id"];
+    this.id = this.activatedRoute.snapshot.params['id'];
     this.device = this.dataService.device?.dict?.[this.id];
   }
 
   ngOnDestroy(): void {
-    if (typeof this.alert != "undefined") {
+    if (typeof this.alert != 'undefined') {
       this.alert.dismiss();
     }
   }
 
   async addShare() {
     // 一个设备最多分享给9个用户，超出后弹出提示
-    let share0Length = 0, shareLength = 0;
-    if (typeof this.shareData.share0[this.deviceName] != "undefined") {
+    let share0Length = 0,
+      shareLength = 0;
+    if (typeof this.shareData.share0[this.deviceName] != 'undefined') {
       share0Length = this.shareData.share0[this.deviceName].length;
     }
-    if (typeof this.shareData.share[this.deviceName] != "undefined") {
+    if (typeof this.shareData.share[this.deviceName] != 'undefined') {
       shareLength = this.shareData.share[this.deviceName].length;
     }
     if (share0Length + shareLength >= 9) {
-      this.noticeService.showToast("deviceShareLimit");
+      this.noticeService.showToast('deviceShareLimit');
       return;
     }
 
     this.alert = await this.alertCtrl.create({
-      header: "指定接受用户",
-      subHeader: "请输入接受该设备的用户手机号",
-      inputs: [{ name: "phone", placeholder: "用户手机号" }],
+      header: '指定接受用户',
+      subHeader: '请输入接受该设备的用户手机号',
+      inputs: [{ name: 'phone', placeholder: '用户手机号' }],
       buttons: [
         {
-          text: "取消",
+          text: '取消',
           handler: (data) => {
-            console.log("Cancel clicked");
+            console.log('Cancel clicked');
           },
         },
         {
-          text: "确认",
+          text: '确认',
           handler: (data) => {
             this.shareService.shareDevice2User(this.device, data.phone);
           },
@@ -131,22 +127,22 @@ export class DeviceSharePage {
   cancel0(uuid, index) {
     this.share0Selected = index;
     setTimeout(() => {
-      this.shareService.deleteShareDevice2User(this.deviceName, uuid).then(
-        () => {
+      this.shareService
+        .deleteShareDevice2User(this.deviceName, uuid)
+        .then(() => {
           this.share0Selected = 99;
-        },
-      );
+        });
     }, 500);
   }
 
   cancel(uuid, index) {
     this.shareSelected = index;
     setTimeout(() => {
-      this.shareService.deleteShareDevice2User(this.deviceName, uuid).then(
-        () => {
+      this.shareService
+        .deleteShareDevice2User(this.deviceName, uuid)
+        .then(() => {
           this.shareSelected = 99;
-        },
-      );
+        });
     }, 500);
   }
 }

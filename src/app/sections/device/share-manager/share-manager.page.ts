@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
@@ -16,13 +15,7 @@ import { ShareService } from '../device-share/share.service';
   standalone: true,
   templateUrl: './share-manager.page.html',
   styleUrls: ['./share-manager.page.scss'],
-  imports: [
-    CommonModule,
-    IonicModule,
-    RouterModule,
-    TranslatePipe,
-    BDeviceImgComponent,
-  ],
+  imports: [IonicModule, RouterModule, TranslatePipe, BDeviceImgComponent],
 })
 export class ShareManagerPage implements OnInit, OnDestroy {
   loaded = false;
@@ -46,7 +39,9 @@ export class ShareManagerPage implements OnInit, OnDestroy {
   }
 
   get shareableDeviceList(): string[] {
-    return this.deviceDataList.filter(deviceId => !this.isReceivedDevice(deviceId));
+    return this.deviceDataList.filter(
+      (deviceId) => !this.isReceivedDevice(deviceId)
+    );
   }
 
   get sharedByMeCount(): number {
@@ -59,7 +54,7 @@ export class ShareManagerPage implements OnInit, OnDestroy {
   constructor(
     private readonly shareService: ShareService,
     private readonly dataService: DataService,
-    private readonly userService: UserService,
+    private readonly userService: UserService
   ) {}
 
   ngOnInit(): void {
@@ -67,9 +62,9 @@ export class ShareManagerPage implements OnInit, OnDestroy {
     this.loaded = Boolean(this.dataService.device);
 
     this.userDataSubscription = this.dataService.userDataLoader.subscribe(
-      loaded => {
+      (loaded) => {
         if (loaded) void this.loadShareList();
-      },
+      }
     );
   }
 
@@ -82,7 +77,7 @@ export class ShareManagerPage implements OnInit, OnDestroy {
   }
 
   isReceivedDevice(deviceId: string): boolean {
-    return this.shareData.shared.some(item => item.deviceName === deviceId);
+    return this.shareData.shared.some((item) => item.deviceName === deviceId);
   }
 
   async accept(taskId: string, index: number): Promise<void> {

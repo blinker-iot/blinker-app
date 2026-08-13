@@ -1,13 +1,17 @@
-<ion-header class="device-settings-header ion-no-border" *ngIf="loaded">
+@if (loaded) {
+<ion-header class="device-settings-header ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text="" [defaultHref]="'/device/' + id"></ion-back-button>
+      <ion-back-button
+        text=""
+        [defaultHref]="'/device/' + id"
+      ></ion-back-button>
     </ion-buttons>
     <ion-title>{{ 'DEVICE.SETTING' | translate }}</ion-title>
   </ion-toolbar>
 </ion-header>
-
-<ion-content fullscreen="true" *ngIf="loaded">
+} @if (loaded) {
+<ion-content fullscreen="true">
   <main class="device-settings-content">
     <section class="device-card">
       <button
@@ -21,11 +25,12 @@
         <span class="device-image-shell">
           <b-device-img [filename]="device.config.image"></b-device-img>
         </span>
-        <span class="image-edit-badge" *ngIf="!isSharedDevice" aria-hidden="true">
+        @if (!isSharedDevice) {
+        <span class="image-edit-badge" aria-hidden="true">
           <i class="fa-light fa-camera"></i>
         </span>
+        }
       </button>
-
       <div class="device-summary">
         <span class="device-kicker">
           <i
@@ -37,20 +42,20 @@
         </span>
         <div class="device-name-row">
           <h1>{{ device.config.customName }}</h1>
+          @if (!isSharedDevice) {
           <button
             type="button"
             class="rename-button"
-            *ngIf="!isSharedDevice"
             (click)="changeName()"
             aria-label="修改设备名称"
           >
             <i class="fa-light fa-pen"></i>
           </button>
+          }
         </div>
         <p>{{ device.deviceType }}</p>
       </div>
     </section>
-
     <div class="section-label">设备信息</div>
     <section class="info-card">
       <div class="info-row">
@@ -60,8 +65,8 @@
           <strong>{{ device.id }}</strong>
         </span>
       </div>
-
-      <div class="info-row" *ngIf="device.config.authKey && !isSharedDevice">
+      @if (device.config.authKey && !isSharedDevice) {
+      <div class="info-row">
         <span class="info-icon secret"><i class="fa-light fa-key"></i></span>
         <span class="info-copy">
           <small>{{ 'DEVICE.SECRET' | translate }}</small>
@@ -76,11 +81,15 @@
           [disabled]="showKey"
           [attr.aria-label]="showKey ? '设备密钥已显示' : '显示设备密钥'"
         >
-          <i class="fa-light" [class.fa-eye]="!showKey" [class.fa-eye-slash]="showKey"></i>
+          <i
+            class="fa-light"
+            [class.fa-eye]="!showKey"
+            [class.fa-eye-slash]="showKey"
+          ></i>
         </button>
       </div>
+      }
     </section>
-
     <div class="section-label menu-section-label">设备功能</div>
     <app-menu-list
       ariaLabel="设备功能"
@@ -88,7 +97,6 @@
       [items]="deviceMenuItems"
       (itemSelected)="selectMenuItem($event)"
     ></app-menu-list>
-
     <div class="section-label danger-section-label">设备管理</div>
     <app-menu-list
       ariaLabel="设备管理"
@@ -96,10 +104,12 @@
       [items]="dangerMenuItems"
       (itemSelected)="selectMenuItem($event)"
     ></app-menu-list>
-
     <aside class="settings-tip">
       <i class="fa-light fa-circle-info" aria-hidden="true"></i>
-      <p>设备名称和图标会同步到你的账户；设备密钥属于敏感信息，请勿分享给他人。</p>
+      <p>
+        设备名称和图标会同步到你的账户；设备密钥属于敏感信息，请勿分享给他人。
+      </p>
     </aside>
   </main>
 </ion-content>
+}

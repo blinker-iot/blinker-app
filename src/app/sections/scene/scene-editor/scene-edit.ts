@@ -1,10 +1,5 @@
-import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import {
-  AlertController,
-  IonicModule,
-  ModalController
-} from '@ionic/angular';
+import { AlertController, IonicModule, ModalController } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { IconListPage } from 'src/app/core/pages/icon-list/icon-list';
@@ -19,19 +14,13 @@ import { SceneService } from '../scene.service';
   standalone: true,
   templateUrl: 'scene-edit.html',
   styleUrls: ['scene-edit.scss'],
-  imports: [
-    CommonModule,
-    IonicModule,
-    Act2TextPipe,
-    BDeviceImgComponent,
-  ],
+  imports: [IonicModule, Act2TextPipe, BDeviceImgComponent],
 })
 export class SceneEditor implements OnInit, OnDestroy {
-
   sceneName = '';
   currentSceneData;
 
-  tempSceneName = "unknown";
+  tempSceneName = 'unknown';
   alert;
 
   loaded = false;
@@ -71,8 +60,7 @@ export class SceneEditor implements OnInit, OnDestroy {
     public notice: NoticeService,
     private sceneService: SceneService,
     private activatedRoute: ActivatedRoute
-  ) {
-  }
+  ) {}
 
   ngOnInit(): void {
     this.subscription = this.dataService.userDataLoader.subscribe(() => {
@@ -84,7 +72,10 @@ export class SceneEditor implements OnInit, OnDestroy {
     this.subscription?.unsubscribe();
     this.alert?.dismiss();
 
-    if (!this.loaded || this.originalSceneData === JSON.stringify(this.dataService.scene)) {
+    if (
+      !this.loaded ||
+      this.originalSceneData === JSON.stringify(this.dataService.scene)
+    ) {
       return;
     }
     void this.sceneService.saveData(this.dataService.scene);
@@ -103,9 +94,10 @@ export class SceneEditor implements OnInit, OnDestroy {
     this.originalSceneData = JSON.stringify(scene);
 
     // 移除已解绑设备的动作，但保留延时动作。
-    this.acts = this.acts.filter(action =>
-      typeof action.delay !== 'undefined' ||
-      typeof this.deviceDataDict[action.deviceId] !== 'undefined'
+    this.acts = this.acts.filter(
+      (action) =>
+        typeof action.delay !== 'undefined' ||
+        typeof this.deviceDataDict[action.deviceId] !== 'undefined'
     );
     this.loaded = true;
   }
@@ -113,14 +105,21 @@ export class SceneEditor implements OnInit, OnDestroy {
   async changeSceneName() {
     this.alert = await this.alertCtrl.create({
       header: '修改场景名称',
-      inputs: [{ name: 'newSceneName', value: this.tempSceneName, placeholder: this.tempSceneName }],
+      inputs: [
+        {
+          name: 'newSceneName',
+          value: this.tempSceneName,
+          placeholder: this.tempSceneName,
+        },
+      ],
       buttons: [
         {
           text: '取消',
           role: 'cancel',
         },
         {
-          text: '确认修改', handler: data => {
+          text: '确认修改',
+          handler: (data) => {
             const newSceneName = data.newSceneName?.trim();
             if (!newSceneName || newSceneName === this.sceneName) return;
             if (newSceneName.length > 10) {
@@ -132,9 +131,9 @@ export class SceneEditor implements OnInit, OnDestroy {
               return;
             }
             this.renameScene(newSceneName);
-          }
-        }
-      ]
+          },
+        },
+      ],
     });
     await this.alert.present();
   }
@@ -161,8 +160,8 @@ export class SceneEditor implements OnInit, OnDestroy {
     let modal = await this.modalCtrl.create({
       component: IconListPage,
       componentProps: {
-        'item': this.currentSceneData
-      }
+        item: this.currentSceneData,
+      },
     });
     await modal.present();
   }
@@ -171,8 +170,8 @@ export class SceneEditor implements OnInit, OnDestroy {
     let modal = await this.modalCtrl.create({
       component: SceneEditorAddact,
       componentProps: {
-        'sceneName': this.sceneName
-      }
+        sceneName: this.sceneName,
+      },
     });
     await modal.present();
   }
@@ -180,5 +179,4 @@ export class SceneEditor implements OnInit, OnDestroy {
   delAct(index: number): void {
     this.acts.splice(index, 1);
   }
-
 }
