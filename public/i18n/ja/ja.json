@@ -62,6 +62,10 @@
     "WELCOME": "blinker の旅を始めましょう",
     "ADD_DEVICE": "デバイスを追加"
   },
+  "PROFILE": {
+    "REGION_MANAGEMENT": "エリア管理",
+    "REGION_COUNT": "エリア：{{count}}"
+  },
   "ABOUT_US": {
     "CONTACT_US": "お問い合わせ"
   },

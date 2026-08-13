@@ -62,6 +62,10 @@
     "WELCOME": "ابدأ رحلتك مع blinker",
     "ADD_DEVICE": "إضافة جهاز"
   },
+  "PROFILE": {
+    "REGION_MANAGEMENT": "إدارة المناطق",
+    "REGION_COUNT": "عدد المناطق: {{count}}"
+  },
   "ABOUT_US": {
     "CONTACT_US": "اتصل بنا"
   },

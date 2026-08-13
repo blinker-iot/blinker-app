@@ -62,6 +62,10 @@
     "WELCOME": "Starten Sie Ihre Blinker-Reise",
     "ADD_DEVICE": "Gerät hinzufügen"
   },
+  "PROFILE": {
+    "REGION_MANAGEMENT": "Bereichsverwaltung",
+    "REGION_COUNT": "{{count}} Bereiche"
+  },
   "ABOUT_US": {
     "CONTACT_US": "Kontakt"
   },

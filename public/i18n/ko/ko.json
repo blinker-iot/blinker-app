@@ -62,6 +62,10 @@
     "WELCOME": "blinker 여정을 시작하세요",
     "ADD_DEVICE": "기기 추가"
   },
+  "PROFILE": {
+    "REGION_MANAGEMENT": "공간 관리",
+    "REGION_COUNT": "공간 {{count}}개"
+  },
   "ABOUT_US": {
     "CONTACT_US": "문의하기"
   },

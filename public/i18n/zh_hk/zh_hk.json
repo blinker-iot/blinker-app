@@ -62,6 +62,10 @@
     "WELCOME": "開始你的點燈之旅",
     "ADD_DEVICE": "新增設備"
   },
+  "PROFILE": {
+    "REGION_MANAGEMENT": "區域管理",
+    "REGION_COUNT": "{{count}} 個區域"
+  },
   "ABOUT_US": {
     "CONTACT_US": "聯絡我們"
   },

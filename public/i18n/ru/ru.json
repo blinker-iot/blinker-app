@@ -62,6 +62,10 @@
     "WELCOME": "Начните своё путешествие с blinker",
     "ADD_DEVICE": "Добавить устройство"
   },
+  "PROFILE": {
+    "REGION_MANAGEMENT": "Управление зонами",
+    "REGION_COUNT": "Зон: {{count}}"
+  },
   "ABOUT_US": {
     "CONTACT_US": "Связаться с нами"
   },

@@ -128,6 +128,10 @@
     "CREATE_FAILED": "Could not create the device. Please try again.",
     "AUTH_EXPIRED": "Your session has expired. Please sign in again."
   },
+  "PROFILE": {
+    "REGION_MANAGEMENT": "Area management",
+    "REGION_COUNT": "{{count}} areas"
+  },
   "ABOUT_US": {
     "CONTACT_US": "Contact Us"
   },
