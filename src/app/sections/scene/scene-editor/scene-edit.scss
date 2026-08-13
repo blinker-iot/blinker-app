@@ -1,4 +1,15 @@
 @use '../../editor-page';
+@use '../../transparent-page-header' as page-header;
+
+@include page-header.top-scroll-mask;
+
+.editor-header {
+  @include page-header.transparent;
+}
+
+.editor-content {
+  padding-top: calc(var(--ion-safe-area-top, 0px) + 68px);
+}
 
 .scene-icon {
   background: linear-gradient(145deg, #8e9dff, #5967df);

@@ -1,0 +1,117 @@
+<ion-header class="key-header ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        defaultHref="/adddevice"
+        text=""
+        [attr.aria-label]="'DEVICE_GUIDE.BACK' | translate"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ 'DEVICE_GUIDE.KEY_TITLE' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true">
+  <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
+
+  <main class="key-content">
+    @if (!secretKey) {
+    <section class="key-intro" aria-labelledby="key-heading">
+      <span class="key-hero-icon" aria-hidden="true"><i class="fa-light fa-key"></i></span>
+      <span class="eyebrow">{{ 'DEVICE_GUIDE.KEY_EYEBROW' | translate }}</span>
+      <h1 id="key-heading">{{ 'DEVICE_GUIDE.KEY_HERO_TITLE' | translate }}</h1>
+      <p>{{ 'DEVICE_GUIDE.KEY_HERO_DESCRIPTION' | translate }}</p>
+    </section>
+
+    <form class="key-form" (ngSubmit)="createKeyDevice()" novalidate>
+      <label class="form-label" for="key-device-name">
+        {{ 'DEVICE_GUIDE.KEY_DEVICE_NAME' | translate }}
+      </label>
+      <div class="input-shell">
+        <i class="fa-light fa-tag" aria-hidden="true"></i>
+        <input
+          id="key-device-name"
+          name="deviceName"
+          type="text"
+          maxlength="32"
+          autocomplete="off"
+          [placeholder]="'DEVICE_GUIDE.KEY_DEVICE_NAME_PLACEHOLDER' | translate"
+          [(ngModel)]="deviceName"
+          [disabled]="isCreatingKey"
+        />
+      </div>
+      <small class="field-help">{{ 'DEVICE_GUIDE.KEY_DEVICE_NAME_HELP' | translate }}</small>
+
+      @if (keyError) {
+      <div class="form-error" role="alert">
+        <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+        <span>{{ keyError }}</span>
+      </div>
+      }
+
+      <button class="primary-action" type="submit" [disabled]="isCreatingKey">
+        @if (isCreatingKey) {
+        <ion-spinner name="crescent"></ion-spinner>
+        {{ 'DEVICE_GUIDE.KEY_CREATING' | translate }}
+        } @else {
+        <i class="fa-light fa-key-skeleton" aria-hidden="true"></i>
+        {{ 'DEVICE_GUIDE.KEY_CREATE' | translate }}
+        }
+      </button>
+    </form>
+
+    <aside class="security-card">
+      <i class="fa-light fa-shield-check" aria-hidden="true"></i>
+      <div>
+        <strong>{{ 'DEVICE_GUIDE.KEY_SECURITY_TITLE' | translate }}</strong>
+        <p>{{ 'DEVICE_GUIDE.KEY_SECURITY_DESCRIPTION' | translate }}</p>
+      </div>
+    </aside>
+    } @else {
+    <section class="key-result" aria-live="polite">
+      <span class="success-icon" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+      <h1>{{ 'DEVICE_GUIDE.KEY_RESULT_TITLE' | translate }}</h1>
+      <p>{{ 'DEVICE_GUIDE.KEY_RESULT_DESCRIPTION' | translate }}</p>
+
+      <div class="key-card">
+        <span>{{ 'DEVICE_GUIDE.KEY_LABEL' | translate }}</span>
+        <div class="key-value-row">
+          <code [class.concealed]="!keyVisible">{{ keyVisible ? secretKey : '••••••••••••••••' }}</code>
+          <button
+            type="button"
+            class="key-visibility"
+            (click)="toggleKeyVisibility()"
+            [attr.aria-label]="
+              (keyVisible ? 'DEVICE_GUIDE.HIDE_KEY' : 'DEVICE_GUIDE.SHOW_KEY') | translate
+            "
+          >
+            <i
+              class="fa-light"
+              [class.fa-eye]="!keyVisible"
+              [class.fa-eye-slash]="keyVisible"
+              aria-hidden="true"
+            ></i>
+          </button>
+        </div>
+        <button type="button" class="copy-action" (click)="copyKey()">
+          <i class="fa-light fa-copy" aria-hidden="true"></i>
+          {{ 'DEVICE_GUIDE.COPY' | translate }}
+        </button>
+      </div>
+
+      <aside class="security-card result-security">
+        <i class="fa-light fa-triangle-exclamation" aria-hidden="true"></i>
+        <div>
+          <strong>{{ 'DEVICE_GUIDE.KEY_SAVE_TITLE' | translate }}</strong>
+          <p>{{ 'DEVICE_GUIDE.KEY_SAVE_DESCRIPTION' | translate }}</p>
+        </div>
+      </aside>
+
+      <button type="button" class="primary-action complete-action" (click)="finishKeySetup()">
+        {{ 'DEVICE_GUIDE.COMPLETE' | translate }}
+        <i class="fa-light fa-arrow-right" aria-hidden="true"></i>
+      </button>
+    </section>
+    }
+  </main>
+</ion-content>

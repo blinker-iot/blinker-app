@@ -1,8 +1,9 @@
+@use '../transparent-page-header' as page-header;
+
+@include page-header.top-scroll-mask;
+
 .profile-editor-header {
-  ion-toolbar {
-    --background: rgba(var(--ion-background-color-rgb), 0.9);
-    --border-width: 0;
-  }
+  @include page-header.transparent;
 
   ion-title {
     font-size: 17px;
@@ -22,7 +23,7 @@ ion-content {
 
 .editor-content {
   min-height: 100%;
-  padding: 20px 18px calc(28px + env(safe-area-inset-bottom));
+  padding: calc(var(--ion-safe-area-top, 0px) + 68px) 18px calc(28px + env(safe-area-inset-bottom));
   background:
     radial-gradient(circle at 50% 5%, rgba(var(--ion-color-primary-rgb), 0.12), transparent 23%),
     var(--blinker-bg);

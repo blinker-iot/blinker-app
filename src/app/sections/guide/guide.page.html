@@ -1,0 +1,48 @@
+<ion-header class="guide-header ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        defaultHref="/home?tab=device"
+        text=""
+        [attr.aria-label]="'DEVICE_GUIDE.BACK' | translate"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ 'DEVICE_GUIDE.TITLE' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true">
+  <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
+
+  <main class="guide-content">
+    <section class="guide-hero" aria-labelledby="guide-heading">
+      <div class="hero-copy">
+        <span class="eyebrow">{{ 'DEVICE_GUIDE.EYEBROW' | translate }}</span>
+        <h1 id="guide-heading">{{ 'DEVICE_GUIDE.HERO_TITLE' | translate }}</h1>
+        <p>{{ 'DEVICE_GUIDE.HERO_DESCRIPTION' | translate }}</p>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <span class="signal signal-wifi"><i class="fa-light fa-wifi"></i></span>
+        <span class="signal signal-ble"><i class="fa-brands fa-bluetooth-b"></i></span>
+        <span class="signal signal-key"><i class="fa-light fa-key"></i></span>
+        <span class="device-orbit"></span>
+        <span class="device-hub"><i class="fa-light fa-router"></i></span>
+      </div>
+    </section>
+
+    <section class="methods-section" aria-labelledby="methods-heading">
+      <h2 id="methods-heading" class="section-label">
+        {{ 'DEVICE_GUIDE.SECTION_TITLE' | translate }}
+      </h2>
+
+      <app-menu-list
+        [ariaLabel]="'DEVICE_GUIDE.SECTION_TITLE' | translate"
+        [items]="methodItems"
+        [detailed]="true"
+        (itemSelected)="selectMethod($event)"
+      ></app-menu-list>
+    </section>
+
+  </main>
+</ion-content>

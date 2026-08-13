@@ -1,10 +1,17 @@
+@use '../transparent-page-header' as page-header;
+
+@include page-header.top-scroll-mask;
+
 :host {
   color: var(--blinker-text-primary);
 }
 
-ion-toolbar {
-  --background: var(--ion-toolbar-background);
-  --color: var(--ion-toolbar-color);
+.settings-header {
+  @include page-header.transparent;
+
+  ion-toolbar {
+    --color: var(--ion-toolbar-color);
+  }
 }
 
 ion-content {
@@ -13,7 +20,7 @@ ion-content {
 
 .settings-content {
   min-height: 100%;
-  padding: 18px 16px calc(32px + env(safe-area-inset-bottom));
+  padding: calc(var(--ion-safe-area-top, 0px) + 68px) 16px calc(32px + env(safe-area-inset-bottom));
   background:
     radial-gradient(circle at 100% 0%, rgba(var(--ion-color-primary-rgb), 0.1), transparent 30%),
     var(--blinker-bg);

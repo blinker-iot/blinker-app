@@ -1,0 +1,64 @@
+<ion-header class="method-header ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        defaultHref="/adddevice"
+        text=""
+        [attr.aria-label]="'DEVICE_GUIDE.BACK' | translate"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ 'DEVICE_GUIDE.WIFI_PAGE_TITLE' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true">
+  <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
+
+  <main class="method-content method-content-wifi">
+    <section class="method-hero" aria-labelledby="wifi-guide-heading">
+      <span class="method-hero-icon" aria-hidden="true">
+        <i class="fa-light fa-wifi"></i>
+      </span>
+      <span class="eyebrow">{{ 'DEVICE_GUIDE.WIFI_PAGE_EYEBROW' | translate }}</span>
+      <h1 id="wifi-guide-heading">{{ 'DEVICE_GUIDE.WIFI_PAGE_HEADING' | translate }}</h1>
+      <p>{{ 'DEVICE_GUIDE.WIFI_PAGE_DESCRIPTION' | translate }}</p>
+    </section>
+
+    <section class="setup-card" aria-labelledby="wifi-prepare-heading">
+      <h2 id="wifi-prepare-heading">{{ 'DEVICE_GUIDE.PREPARE_TITLE' | translate }}</h2>
+      <ol class="setup-steps">
+        <li>
+          <span class="step-number">1</span>
+          <div>
+            <strong>{{ 'DEVICE_GUIDE.WIFI_STEP_DEVICE_TITLE' | translate }}</strong>
+            <p>{{ 'DEVICE_GUIDE.WIFI_STEP_DEVICE_DESCRIPTION' | translate }}</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-number">2</span>
+          <div>
+            <strong>{{ 'DEVICE_GUIDE.WIFI_STEP_BLUETOOTH_TITLE' | translate }}</strong>
+            <p>{{ 'DEVICE_GUIDE.WIFI_STEP_BLUETOOTH_DESCRIPTION' | translate }}</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-number">3</span>
+          <div>
+            <strong>{{ 'DEVICE_GUIDE.WIFI_STEP_NETWORK_TITLE' | translate }}</strong>
+            <p>{{ 'DEVICE_GUIDE.WIFI_STEP_NETWORK_DESCRIPTION' | translate }}</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <aside class="method-tip">
+      <i class="fa-light fa-circle-info" aria-hidden="true"></i>
+      <p>{{ 'DEVICE_GUIDE.WIFI_PAGE_TIP' | translate }}</p>
+    </aside>
+
+    <button type="button" class="primary-action" (click)="startProvisioning()">
+      <i class="fa-light fa-radar" aria-hidden="true"></i>
+      {{ 'DEVICE_GUIDE.WIFI_START' | translate }}
+    </button>
+  </main>
+</ion-content>

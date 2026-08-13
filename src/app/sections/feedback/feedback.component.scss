@@ -1,3 +1,7 @@
+@use '../transparent-page-header' as page-header;
+
+@include page-header.top-scroll-mask;
+
 :host {
   display: block;
   height: 100%;
@@ -6,30 +10,7 @@
 }
 
 .feedback-header {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  z-index: 10;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-
-  &::after {
-    display: none;
-  }
-
-  ion-toolbar {
-    --background: transparent;
-    --border-color: transparent;
-    --border-width: 0;
-    min-height: 56px;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
+  @include page-header.transparent;
 
   ion-title {
     font-size: 17px;
@@ -460,10 +441,6 @@ ion-content {
 }
 
 @media (min-width: 700px) {
-  .feedback-content {
-    padding-top: 24px;
-  }
-
   .type-option {
     min-height: 76px;
   }

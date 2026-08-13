@@ -1,0 +1,122 @@
+import { HttpClient } from '@angular/common/http';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+
+import { Clipboard } from '@capacitor/clipboard';
+import { IonicModule, NavController, ToastController } from '@ionic/angular';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+
+import { API } from '../../../configs/api.config';
+import { BlinkerResponse } from '../../../core/model/response.model';
+import { DataService } from '../../../core/services/data.service';
+import { UserService } from '../../../core/services/user.service';
+
+@Component({
+  selector: 'app-key-device-guide',
+  templateUrl: './key-device.page.html',
+  styleUrls: ['./key-device.page.scss'],
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [FormsModule, IonicModule, TranslatePipe],
+})
+export class KeyDeviceGuidePage {
+  deviceName = '';
+  secretKey = '';
+  keyVisible = true;
+  isCreatingKey = false;
+  keyError = '';
+
+  constructor(
+    private http: HttpClient,
+    private dataService: DataService,
+    private userService: UserService,
+    private navController: NavController,
+    private toastController: ToastController,
+    private translate: TranslateService,
+    private cd: ChangeDetectorRef
+  ) {}
+
+  async createKeyDevice(): Promise<void> {
+    if (this.isCreatingKey) return;
+
+    const auth = this.dataService.auth;
+    if (!auth?.uuid || !auth?.token) {
+      await this.showToast('DEVICE_GUIDE.AUTH_EXPIRED');
+      return;
+    }
+
+    const customName =
+      this.deviceName.trim() ||
+      this.translate.instant('DEVICE_GUIDE.DEFAULT_DEVICE_NAME');
+
+    this.isCreatingKey = true;
+    this.keyError = '';
+    this.cd.markForCheck();
+
+    try {
+      const response = await firstValueFrom(
+        this.http.get<BlinkerResponse>(API.ADDDEVICE.GET_MQTTKEY, {
+          params: {
+            uuid: auth.uuid,
+            token: auth.token,
+            deviceType: 'DiyArduino',
+            deviceConfig: JSON.stringify({
+              mode: 'mqtt',
+              broker: 'blinker',
+              image: 'diyarduino.png',
+              customName,
+              showSwitch: true,
+            }),
+          },
+        })
+      );
+
+      const authKey = response.message === 1000 ? response.detail?.authKey : '';
+      if (!authKey) {
+        throw new Error(
+          typeof response.detail === 'string'
+            ? response.detail
+            : this.translate.instant('DEVICE_GUIDE.CREATE_FAILED')
+        );
+      }
+
+      this.secretKey = authKey;
+      this.keyVisible = true;
+    } catch (error) {
+      this.keyError =
+        error instanceof Error && error.message
+          ? error.message
+          : this.translate.instant('DEVICE_GUIDE.CREATE_FAILED');
+    } finally {
+      this.isCreatingKey = false;
+      this.cd.markForCheck();
+    }
+  }
+
+  async copyKey(): Promise<void> {
+    if (!this.secretKey) return;
+    await Clipboard.write({ string: this.secretKey });
+    await this.showToast('DEVICE_GUIDE.COPIED');
+  }
+
+  toggleKeyVisibility(): void {
+    this.keyVisible = !this.keyVisible;
+  }
+
+  async finishKeySetup(): Promise<void> {
+    await this.userService.getAllInfo();
+    await this.navController.navigateRoot('/home', {
+      queryParams: { tab: 'device' },
+    });
+  }
+
+  private async showToast(messageKey: string): Promise<void> {
+    const toast = await this.toastController.create({
+      message: this.translate.instant(messageKey),
+      duration: 1800,
+      position: 'bottom',
+    });
+    await toast.present();
+  }
+}

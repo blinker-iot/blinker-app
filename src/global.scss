@@ -170,15 +170,3 @@ ion-tab-bar {
     transition: none;
   }
 }
-
-// 确保在PC移动端视图中，页面内容不会出现滚动条
-.pc-mobile-view {
-  body, html {
-    overflow: hidden;
-  }
-  
-  // 防止页面内容超出430x900的容器
-  ion-content {
-    --overflow: hidden;
-  }
-}

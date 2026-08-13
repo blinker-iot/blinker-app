@@ -1,0 +1,227 @@
+@use '../transparent-page-header' as page-header;
+
+@include page-header.top-scroll-mask;
+
+:host {
+  display: block;
+  height: 100%;
+  color: var(--blinker-text-primary);
+  background: var(--blinker-bg);
+}
+
+.method-header {
+  @include page-header.transparent;
+
+  ion-toolbar {
+    padding-top: 3px;
+  }
+
+  ion-title {
+    color: var(--blinker-text-primary);
+    font-size: 17px;
+    font-weight: 600;
+  }
+}
+
+ion-content {
+  --background: var(--blinker-bg);
+}
+
+.method-content {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 640px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding:
+    calc(var(--ion-safe-area-top, 0px) + 72px)
+    max(16px, var(--ion-safe-area-right, 0px))
+    calc(28px + var(--ion-safe-area-bottom, 0px))
+    max(16px, var(--ion-safe-area-left, 0px));
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(var(--method-color-rgb), 0.12), transparent 29%),
+    var(--blinker-bg);
+}
+
+.method-content-wifi {
+  --method-color: var(--ion-color-primary);
+  --method-color-rgb: var(--ion-color-primary-rgb);
+}
+
+.method-content-ble {
+  --method-color: var(--ion-color-secondary);
+  --method-color-rgb: var(--ion-color-secondary-rgb);
+}
+
+.method-hero {
+  padding: 9px 5px 22px;
+
+  h1 {
+    margin: 9px 0 7px;
+    color: var(--blinker-text-primary);
+    font-size: 23px;
+    font-weight: 680;
+    letter-spacing: -0.025em;
+    line-height: 1.28;
+  }
+
+  p {
+    max-width: 440px;
+    margin: 0;
+    color: var(--blinker-text-secondary);
+    font-size: 11px;
+    line-height: 1.65;
+  }
+}
+
+.method-hero-icon {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 17px;
+  border-radius: 18px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--method-color) 72%, white), var(--method-color));
+  box-shadow: 0 11px 24px rgba(var(--method-color-rgb), 0.24);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+
+.eyebrow {
+  color: var(--method-color);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.setup-card {
+  overflow: hidden;
+  border: 1px solid var(--blinker-border);
+  border-radius: var(--blinker-radius-card);
+  background: var(--blinker-surface);
+  box-shadow: var(--blinker-shadow-soft);
+
+  > h2 {
+    margin: 0;
+    padding: 14px 16px 11px;
+    border-bottom: 1px solid var(--blinker-divider);
+    color: var(--blinker-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+  }
+}
+
+.setup-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    min-height: 73px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--blinker-divider);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+
+  strong {
+    color: var(--blinker-text-primary);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: var(--blinker-text-secondary);
+    font-size: 10px;
+    line-height: 1.5;
+  }
+}
+
+.step-number {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  border-radius: 9px;
+  background: rgba(var(--method-color-rgb), 0.11);
+  color: var(--method-color);
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.method-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 12px 13px;
+  border: 1px solid rgba(var(--method-color-rgb), 0.2);
+  border-radius: var(--blinker-radius-control);
+  background: rgba(var(--method-color-rgb), 0.065);
+  color: var(--blinker-text-secondary);
+
+  i {
+    padding-top: 1px;
+    color: var(--method-color);
+    font-size: 14px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 10px;
+    line-height: 1.5;
+  }
+}
+
+.primary-action {
+  width: 100%;
+  height: 49px;
+  margin-top: 20px;
+  border: 0;
+  border-radius: 25px;
+  background: linear-gradient(135deg, var(--method-color), color-mix(in srgb, var(--method-color) 76%, #254de4));
+  box-shadow: 0 11px 24px rgba(var(--method-color-rgb), 0.23);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:active {
+    transform: scale(0.99);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--method-color);
+    outline-offset: 3px;
+  }
+}
+
+@media (min-height: 780px) {
+  .primary-action {
+    margin-top: auto;
+  }
+}
+
+@media (max-width: 370px) {
+  .method-content {
+    padding-right: 13px;
+    padding-left: 13px;
+  }
+
+  .method-hero h1 {
+    font-size: 20px;
+  }
+}
