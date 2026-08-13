@@ -41,9 +41,6 @@ export class TabDeviceComponent implements OnInit {
   @ViewChild('deviceAddMenuTrigger', { read: ElementRef })
   private deviceAddMenuTrigger?: ElementRef<HTMLElement>;
 
-  @ViewChild('deviceContent', { read: ElementRef })
-  private deviceContent?: ElementRef<HTMLElement>;
-
   @ViewChild('deviceAddMenu', { read: ElementRef })
   private deviceAddMenu?: ElementRef<HTMLIonPopoverElement>;
 
@@ -112,7 +109,14 @@ export class TabDeviceComponent implements OnInit {
     await this.deviceAddMenu?.nativeElement.dismiss();
   }
 
-  scheduleAddMenuPosition() {
+  prepareAddMenuPosition(): void {
+    const arrow = this.deviceAddMenu?.nativeElement.shadowRoot
+      ?.querySelector<HTMLElement>('.popover-arrow');
+    if (arrow) arrow.style.visibility = 'hidden';
+    this.scheduleAddMenuPosition();
+  }
+
+  scheduleAddMenuPosition(): void {
     if (typeof window === 'undefined') return;
     if (typeof this.addMenuLayoutFrame !== 'undefined') {
       window.cancelAnimationFrame(this.addMenuLayoutFrame);
@@ -120,46 +124,66 @@ export class TabDeviceComponent implements OnInit {
 
     this.addMenuLayoutFrame = window.requestAnimationFrame(() => {
       this.addMenuLayoutFrame = undefined;
-      this.constrainAddMenuToContent();
+      const popover = this.deviceAddMenu?.nativeElement;
+      const menu = popover?.shadowRoot?.querySelector<HTMLElement>('.popover-content');
+      if (!popover || !menu) {
+        this.showAddMenuArrow();
+        return;
+      }
+
+      popover.style.setProperty('--offset-x', '0px');
+      const menuRect = menu.getBoundingClientRect();
+      const viewportWidth = window.visualViewport?.width || window.innerWidth;
+      const edgeInset = 12;
+      let offsetX = 0;
+
+      if (menuRect.right > viewportWidth - edgeInset) {
+        offsetX = viewportWidth - edgeInset - menuRect.right;
+      }
+      if (menuRect.left + offsetX < edgeInset) {
+        offsetX += edgeInset - (menuRect.left + offsetX);
+      }
+      popover.style.setProperty('--offset-x', `${offsetX}px`);
+
+      // The offset CSS variable is applied asynchronously. Read the final
+      // geometry on the next frame before moving Ionic's arrow, otherwise
+      // Android can calculate it from the previous menu position.
+      this.addMenuLayoutFrame = window.requestAnimationFrame(() => {
+        this.addMenuLayoutFrame = undefined;
+        this.alignAddMenuArrow();
+      });
     });
   }
 
-  private constrainAddMenuToContent() {
+  private alignAddMenuArrow(): void {
     const popover = this.deviceAddMenu?.nativeElement;
     const trigger = this.deviceAddMenuTrigger?.nativeElement;
-    const contentBoundary = this.deviceContent?.nativeElement;
-    const popoverRoot = popover?.shadowRoot;
-    const menu = popoverRoot?.querySelector<HTMLElement>('.popover-content');
-    const arrow = popoverRoot?.querySelector<HTMLElement>('.popover-arrow');
-    if (!popover || !trigger || !contentBoundary || !menu) return;
+    const root = popover?.shadowRoot;
+    const menu = root?.querySelector<HTMLElement>('.popover-content');
+    const arrow = root?.querySelector<HTMLElement>('.popover-arrow');
+    if (!trigger || !menu || !arrow) {
+      this.showAddMenuArrow();
+      return;
+    }
 
-    popover.style.setProperty('--offset-x', '0px');
-    arrow?.style.removeProperty('translate');
-
-    const boundaryRect = contentBoundary.getBoundingClientRect();
+    arrow.style.removeProperty('translate');
+    const triggerRect = trigger.getBoundingClientRect();
     const menuRect = menu.getBoundingClientRect();
-    if (menuRect.width === 0) return;
+    const arrowRect = arrow.getBoundingClientRect();
+    const triggerCenter = triggerRect.left + triggerRect.width / 2;
+    const safeArrowInset = 18;
+    const targetCenter = Math.min(
+      Math.max(triggerCenter, menuRect.left + safeArrowInset),
+      menuRect.right - safeArrowInset
+    );
+    const arrowCenter = arrowRect.left + arrowRect.width / 2;
+    arrow.style.translate = `${targetCenter - arrowCenter}px 0`;
+    arrow.style.removeProperty('visibility');
+  }
 
-    const edgeInset = 12;
-    const minLeft = boundaryRect.left + edgeInset;
-    const maxRight = boundaryRect.right - edgeInset;
-    let offsetX = 0;
-
-    if (menuRect.right > maxRight) {
-      offsetX = maxRight - menuRect.right;
-    }
-    if (menuRect.left + offsetX < minLeft) {
-      offsetX += minLeft - (menuRect.left + offsetX);
-    }
-
-    popover.style.setProperty('--offset-x', `${offsetX}px`);
-
-    if (arrow) {
-      const triggerRect = trigger.getBoundingClientRect();
-      const arrowRect = arrow.getBoundingClientRect();
-      const triggerCenter = triggerRect.left + triggerRect.width / 2;
-      const shiftedArrowCenter = arrowRect.left + arrowRect.width / 2;
-      arrow.style.translate = `${triggerCenter - shiftedArrowCenter}px 0`;
-    }
+  private showAddMenuArrow(): void {
+    this.deviceAddMenu?.nativeElement.shadowRoot
+      ?.querySelector<HTMLElement>('.popover-arrow')
+      ?.style.removeProperty('visibility');
   }
 }

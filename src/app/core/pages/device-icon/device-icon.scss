@@ -35,6 +35,8 @@
     --color: var(--blinker-text-primary);
     --icon-color: var(--blinker-text-tertiary);
     --placeholder-color: var(--blinker-text-tertiary);
+    width: 100%;
+    min-width: 0;
     min-height: 42px;
     padding: 0;
   }
@@ -203,6 +205,18 @@
     ion-segment {
       width: 88px;
       justify-self: end;
+    }
+  }
+
+  // Ionic's iOS search field fits beside the compact theme toggle. Keeping
+  // both controls in one row avoids the detached toggle and empty second row
+  // seen on Dynamic Island devices, without changing Android's layout.
+  :host-context(.ios) .search-theme-row {
+    grid-template-columns: minmax(0, 1fr) 88px;
+
+    ion-segment {
+      width: auto;
+      justify-self: stretch;
     }
   }
 }

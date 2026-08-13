@@ -2,10 +2,7 @@
 <ion-header class="device-settings-header ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button
-        text=""
-        [defaultHref]="'/device/' + id"
-      ></ion-back-button>
+      <ion-back-button text="" [defaultHref]="'/device/' + id"></ion-back-button>
     </ion-buttons>
     <ion-title>{{ 'DEVICE.SETTING' | translate }}</ion-title>
   </ion-toolbar>
@@ -16,14 +13,8 @@
 
   <main class="device-settings-content">
     <section class="device-card">
-      <button
-        type="button"
-        class="device-image-button"
-        [class.editable]="!isSharedDevice"
-        [disabled]="isSharedDevice"
-        (click)="selectIcon()"
-        [attr.aria-label]="isSharedDevice ? null : ('DEVICE.CHANGE_ICON' | translate)"
-      >
+      <button type="button" class="device-image-button" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice"
+        (click)="selectIcon()" [attr.aria-label]="isSharedDevice ? null : ('DEVICE.CHANGE_ICON' | translate)">
         <span class="device-image-shell">
           <b-device-img [filename]="device.config.image"></b-device-img>
         </span>
@@ -34,28 +25,26 @@
         }
       </button>
       <div class="device-summary">
-        <span class="device-kicker">
+        <!-- <span class="device-kicker">
           <i
             class="fa-solid fa-circle"
             [class.online]="device.data?.enable"
             aria-hidden="true"
           ></i>
           {{ isSharedDevice ? '共享设备' : '我的设备' }}
-        </span>
+        </span> -->
         <div class="device-name-row">
           <h1>{{ device.config.customName }}</h1>
           @if (!isSharedDevice) {
-          <button
-            type="button"
-            class="rename-button"
-            (click)="changeName()"
-            aria-label="修改设备名称"
-          >
+          <button type="button" class="rename-button" (click)="changeName()" aria-label="修改设备名称">
             <i class="fa-light fa-pen"></i>
           </button>
           }
         </div>
-        <p>{{ device.deviceType }}</p>
+        <span class="info-copy">
+          <strong>ID: {{ device.id }}</strong>
+        </span>
+        <!-- <p>{{ device.deviceType }}</p> -->
       </div>
     </section>
     <div class="section-label">设备信息</div>
@@ -76,36 +65,19 @@
             {{ showKey ? device.config.authKey : '••••••••••••' }}
           </strong>
         </span>
-        <button
-          type="button"
-          class="reveal-button"
-          (click)="showAuthKey()"
-          [disabled]="showKey"
-          [attr.aria-label]="showKey ? '设备密钥已显示' : '显示设备密钥'"
-        >
-          <i
-            class="fa-light"
-            [class.fa-eye]="!showKey"
-            [class.fa-eye-slash]="showKey"
-          ></i>
+        <button type="button" class="reveal-button" (click)="showAuthKey()" [disabled]="showKey"
+          [attr.aria-label]="showKey ? '设备密钥已显示' : '显示设备密钥'">
+          <i class="fa-light" [class.fa-eye]="!showKey" [class.fa-eye-slash]="showKey"></i>
         </button>
       </div>
       }
     </section>
     <div class="section-label menu-section-label">设备功能</div>
-    <app-menu-list
-      ariaLabel="设备功能"
-      [detailed]="true"
-      [items]="deviceMenuItems"
-      (itemSelected)="selectMenuItem($event)"
-    ></app-menu-list>
+    <app-menu-list ariaLabel="设备功能" [detailed]="true" [items]="deviceMenuItems"
+      (itemSelected)="selectMenuItem($event)"></app-menu-list>
     <div class="section-label danger-section-label">设备管理</div>
-    <app-menu-list
-      ariaLabel="设备管理"
-      [detailed]="true"
-      [items]="dangerMenuItems"
-      (itemSelected)="selectMenuItem($event)"
-    ></app-menu-list>
+    <app-menu-list ariaLabel="设备管理" [detailed]="true" [items]="dangerMenuItems"
+      (itemSelected)="selectMenuItem($event)"></app-menu-list>
     <aside class="settings-tip">
       <i class="fa-light fa-circle-info" aria-hidden="true"></i>
       <p>
