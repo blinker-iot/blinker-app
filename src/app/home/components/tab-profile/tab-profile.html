@@ -1,8 +1,12 @@
 <ion-header whitebg class="main-tab-header profile-header">
   <ion-toolbar>
-    <ion-title>用户中心</ion-title>
+    <ion-title>{{ 'PROFILE.TITLE' | translate }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button class="header-action" aria-label="消息中心" (click)="goto('/message')">
+      <ion-button
+        class="header-action"
+        [attr.aria-label]="'PROFILE.MESSAGE_CENTER' | translate"
+        (click)="goto('/message')"
+      >
         <i class="fa-light fa-message-dots"></i>
         <span class="notice-dot"></span>
       </ion-button>
@@ -17,14 +21,16 @@
     <button type="button" class="user-info" (click)="goto('/user')">
       <div class="avatar">
         @if (avatar) {
-        <img [src]="avatar" alt="用户头像" />
+        <img [src]="avatar" [alt]="'PROFILE.USER_AVATAR' | translate" />
         } @else {
         <span>{{ userName.slice(0, 1) }}</span>
         }
       </div>
       <div class="info">
         <div class="name">{{ userName }}</div>
-        <div class="membership">Pro Plan ( 2026/12/1 过期 )</div>
+        <div class="membership">
+          {{ 'PROFILE.PRO_PLAN_EXPIRY' | translate: { date: '2026/12/1' } }}
+        </div>
       </div>
       <i class="fa-light fa-chevron-right profile-arrow"></i>
     </button>
@@ -35,7 +41,12 @@
     }
 
     <div class="profile-version">
-      <span>版本 {{ currentVersion || '2.4.1' }}</span>
+      <span>
+        {{
+          'PROFILE.VERSION'
+            | translate: { version: currentVersion || '2.4.1' }
+        }}
+      </span>
       @if (showNewVersion) {
       <span class="version-dot"></span>
       }

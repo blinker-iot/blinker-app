@@ -7,7 +7,7 @@
       [class.selected]="roomid === -1"
       (click)="selectRoom(-1)"
     >
-      全部
+      {{ 'HOME.ALL' | translate }}
     </button>
     @for (room of roomDataList; track room; let i = $index) {
     <button
@@ -21,7 +21,4 @@
     </button>
     }
   </div>
-  <button type="button" class="room-manage" aria-label="管理房间">
-    <i class="fa-light fa-ellipsis"></i>
-  </button>
 </div>

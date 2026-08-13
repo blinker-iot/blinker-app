@@ -1,15 +1,19 @@
 <ion-header whitebg class="main-tab-header device-header">
   <ion-toolbar>
-    <ion-title>设备</ion-title>
+    <ion-title>{{ 'NAVIGATION.DEVICE' | translate }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button class="header-action notice-button" aria-label="消息中心" [routerLink]="['/message']">
+      <ion-button
+        class="header-action notice-button"
+        [attr.aria-label]="'TAB_DEVICE.MESSAGE_CENTER' | translate"
+        [routerLink]="['/message']"
+      >
         <i class="fa-light fa-bell"></i>
       </ion-button>
       <ion-button
         #deviceAddMenuTrigger
         id="device-add-menu-trigger"
         class="header-action add-button"
-        aria-label="打开添加菜单"
+        [attr.aria-label]="'TAB_DEVICE.OPEN_ADD_MENU' | translate"
         aria-haspopup="menu"
       >
         <i class="fa-light fa-plus"></i>
@@ -35,11 +39,11 @@
     } @else {
     <div class="empty-devices">
       <div class="empty-icon"><i class="fa-light fa-house-signal"></i></div>
-      <h2>还没有设备</h2>
-      <p>添加你的第一台智能设备，开始轻松生活</p>
+      <h2>{{ 'TAB_DEVICE.EMPTY_TITLE' | translate }}</h2>
+      <p>{{ 'TAB_DEVICE.EMPTY_DESCRIPTION' | translate }}</p>
       <button type="button" [routerLink]="['/adddevice']">
         <i class="fa-light fa-plus"></i>
-        添加设备
+        {{ 'HOME.ADD_DEVICE' | translate }}
       </button>
     </div>
     }
@@ -60,12 +64,16 @@
   (didPresent)="scheduleAddMenuPosition()"
 >
   <ng-template>
-    <nav class="device-add-menu" role="menu" aria-label="添加">
+    <nav
+      class="device-add-menu"
+      role="menu"
+      [attr.aria-label]="'TAB_DEVICE.ADD_MENU' | translate"
+    >
       <button type="button" role="menuitem" (click)="openAddPage('/adddevice')">
         <span class="menu-icon"><i class="fa-light fa-router"></i></span>
         <span class="menu-copy">
-          <strong>添加新设备</strong>
-          <small>连接并配置智能设备</small>
+          <strong>{{ 'TAB_DEVICE.ADD_DEVICE' | translate }}</strong>
+          <small>{{ 'TAB_DEVICE.ADD_DEVICE_DESCRIPTION' | translate }}</small>
         </span>
         <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
       </button>
@@ -73,8 +81,8 @@
       <button type="button" role="menuitem" (click)="openAddPage('/room-manager')">
         <span class="menu-icon"><i class="fa-light fa-layer-group"></i></span>
         <span class="menu-copy">
-          <strong>添加区域</strong>
-          <small>添加设备所在区域</small>
+          <strong>{{ 'TAB_DEVICE.ADD_ROOM' | translate }}</strong>
+          <small>{{ 'TAB_DEVICE.ADD_ROOM_DESCRIPTION' | translate }}</small>
         </span>
         <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
       </button>
@@ -82,8 +90,8 @@
       <button type="button" role="menuitem" (click)="showComponentPending()">
         <span class="menu-icon"><i class="fa-light fa-puzzle-piece"></i></span>
         <span class="menu-copy">
-          <strong>添加组件</strong>
-          <small>自定义设备控制面板</small>
+          <strong>{{ 'TAB_DEVICE.ADD_COMPONENT' | translate }}</strong>
+          <small>{{ 'TAB_DEVICE.ADD_COMPONENT_DESCRIPTION' | translate }}</small>
         </span>
         <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
       </button>

@@ -14,6 +14,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { RoomListComponent } from '../room-list/room-list';
 import { DeviceblockZone } from '../deviceblock-zone/deviceblock-zone';
 import { DataService } from '../../../core/services/data.service';
@@ -25,7 +26,13 @@ import { DeviceService } from '../../../core/services/device.service';
   styleUrls: ['tab-device.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonicModule, RouterModule, RoomListComponent, DeviceblockZone],
+  imports: [
+    IonicModule,
+    RouterModule,
+    TranslatePipe,
+    RoomListComponent,
+    DeviceblockZone,
+  ],
 })
 export class TabDeviceComponent implements OnInit {
   private _roomid = -1;
@@ -60,6 +67,7 @@ export class TabDeviceComponent implements OnInit {
     private deviceService: DeviceService,
     private navController: NavController,
     private toastController: ToastController,
+    private translate: TranslateService,
     private cd: ChangeDetectorRef,
     private destroyRef: DestroyRef
   ) {
@@ -93,7 +101,7 @@ export class TabDeviceComponent implements OnInit {
   async showComponentPending(): Promise<void> {
     await this.dismissAddMenu();
     const toast = await this.toastController.create({
-      message: '功能待发布',
+      message: this.translate.instant('TAB_DEVICE.FEATURE_PENDING'),
       duration: 1600,
       position: 'bottom',
     });

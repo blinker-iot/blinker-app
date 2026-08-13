@@ -12,78 +12,80 @@ export interface ProfileMenuGroup {
   items: readonly MenuListItem[];
 }
 
+type ProfileMenuTranslate = (
+  key: string,
+  params?: Record<string, unknown>
+) => string;
+
 export function createProfileMenuGroups(
-  stats: ProfileMenuStats
+  stats: ProfileMenuStats,
+  translate: ProfileMenuTranslate
 ): readonly ProfileMenuGroup[] {
   return [
     {
       id: 'account',
-      ariaLabel: '账户功能',
+      ariaLabel: translate('PROFILE.ACCOUNT_FEATURES'),
       items: [
         {
           id: 'room',
-          title: '区域管理',
+          title: translate('PROFILE.REGION_MANAGEMENT'),
           icon: 'fa-house',
-          value: `${stats.roomNum} 个区域`,
+          value: translate('PROFILE.REGION_COUNT', { count: stats.roomNum }),
           route: '/room-manager',
         },
         {
           id: 'automation',
-          title: '自动化',
+          title: translate('PROFILE.AUTOMATION'),
           icon: 'fa-bullseye-pointer',
-          value: `${stats.sceneNum} 个场景`,
+          value: translate('PROFILE.SCENE_COUNT', { count: stats.sceneNum }),
           route: '/scene-manager',
         },
         {
           id: 'sharing',
-          title: '设备共享',
+          title: translate('PROFILE.DEVICE_SHARING'),
           icon: 'fa-user-group',
-          value: `已共享 ${stats.sharedDeviceNum} 台设备`,
+          value: translate('PROFILE.SHARED_DEVICE_COUNT', {
+            count: stats.sharedDeviceNum,
+          }),
           route: '/share-manager',
         },
-        // {
-        //   id: 'voice-assistant',
-        //   title: '语音助手',
-        //   icon: 'fa-microphone',
-        //   value: '小智',
-        // },
         {
           id: 'selfhost',
-          title: '自建服务器',
+          title: translate('PROFILE.SELF_HOSTED_SERVER'),
           icon: 'fa-server',
-          value: '配置地址与密钥',
+          value: translate('PROFILE.SELF_HOSTED_SERVER_DESCRIPTION'),
           route: '/self-hosted-server',
         },
       ],
     },
     {
       id: 'settings',
-      ariaLabel: '设置与账户',
+      ariaLabel: translate('PROFILE.SETTINGS_AND_ACCOUNT'),
       items: [
         {
           id: 'settings',
-          title: '设置',
+          title: translate('PROFILE.SETTINGS'),
           icon: 'fa-gear',
-          value: '语言和主题设置',
+          value: translate('PROFILE.SETTINGS_DESCRIPTION'),
           route: '/settings',
         },
         {
           id: 'feedback',
-          title: '反馈',
+          title: translate('PROFILE.FEEDBACK'),
           icon: 'fa-circle-question',
-          value: '提出建议和反馈问题',
+          value: translate('PROFILE.FEEDBACK_DESCRIPTION'),
           route: '/feedback',
         },
         {
           id: 'about',
-          title: '关于我们',
+          title: translate('PROFILE.ABOUT_US'),
           icon: 'fa-building',
-          value: '了解点灯科技',
+          value: translate('PROFILE.ABOUT_US_DESCRIPTION'),
           route: '/about',
         },
         {
           id: 'logout',
-          title: '退出登录',
+          title: translate('PROFILE.LOGOUT'),
           icon: 'fa-arrow-right-from-bracket',
           danger: true,
           showChevron: false,

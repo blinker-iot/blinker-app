@@ -3,6 +3,21 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+
+type CommunityCategoryId =
+  | 'recommended'
+  | 'inspiration'
+  | 'products'
+  | 'tips'
+  | 'events';
+
+interface CommunityProduct {
+  nameKey: string;
+  descriptionKey: string;
+  launchKey: string;
+  image: string;
+}
 
 @Component({
   selector: 'app-tab-community',
@@ -10,36 +25,47 @@ import { RouterModule } from '@angular/router';
   styleUrls: ['tab-community.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule, IonicModule, RouterModule],
+  imports: [FormsModule, IonicModule, RouterModule, TranslatePipe],
 })
 export class TabCommunityComponent {
-  readonly categories = ['推荐', '智能灵感', '产品百科', '使用技巧', '活动'];
-  activeCategory = '推荐';
+  readonly categories: readonly {
+    id: CommunityCategoryId;
+    labelKey: string;
+  }[] = [
+    { id: 'recommended', labelKey: 'COMMUNITY.CATEGORY_RECOMMENDED' },
+    { id: 'inspiration', labelKey: 'COMMUNITY.CATEGORY_INSPIRATION' },
+    { id: 'products', labelKey: 'COMMUNITY.CATEGORY_PRODUCTS' },
+    { id: 'tips', labelKey: 'COMMUNITY.CATEGORY_TIPS' },
+    { id: 'events', labelKey: 'COMMUNITY.CATEGORY_EVENTS' },
+  ];
+  activeCategory: CommunityCategoryId = 'recommended';
   searchVisible = false;
   searchKeyword = '';
 
   readonly inspirationCards = [
     {
-      title: '日常清洁自动化方案',
-      description: '设置清洁计划，回家即是整洁',
-      meta: '8 分钟阅读 · 1.2 万次浏览',
+      titleKey: 'COMMUNITY.DAILY_CLEANING_TITLE',
+      descriptionKey: 'COMMUNITY.DAILY_CLEANING_DESCRIPTION',
+      metaKey: 'COMMUNITY.DAILY_CLEANING_META',
       image: '/img/bg/f1.jpg',
-      category: '智能灵感',
+      category: 'inspiration' as CommunityCategoryId,
+      categoryKey: 'COMMUNITY.CATEGORY_INSPIRATION',
     },
     {
-      title: '厨房空气管理指南',
-      description: '油烟检测与空气净化联动',
-      meta: '6 分钟阅读 · 8,643 次浏览',
+      titleKey: 'COMMUNITY.KITCHEN_AIR_TITLE',
+      descriptionKey: 'COMMUNITY.KITCHEN_AIR_DESCRIPTION',
+      metaKey: 'COMMUNITY.KITCHEN_AIR_META',
       image: '/img/bg/f3.jpg',
-      category: '使用技巧',
+      category: 'tips' as CommunityCategoryId,
+      categoryKey: 'COMMUNITY.CATEGORY_TIPS',
     },
   ];
 
-  readonly products = [
+  readonly products: readonly CommunityProduct[] = [
     {
-      name: '全能基站',
-      description: '集清洁、集尘与烘干于一体',
-      launch: '敬请期待 · 2026 Q3 上线',
+      nameKey: 'COMMUNITY.OMNI_STATION_NAME',
+      descriptionKey: 'COMMUNITY.OMNI_STATION_DESCRIPTION',
+      launchKey: 'COMMUNITY.OMNI_STATION_LAUNCH',
       image: '/img/devices/icon/station.png',
     },
   ];
@@ -48,20 +74,33 @@ export class TabCommunityComponent {
     const keyword = this.searchKeyword.trim().toLowerCase();
     return this.inspirationCards.filter((card) => {
       const categoryMatched =
-        this.activeCategory === '推荐' || card.category === this.activeCategory;
+        this.activeCategory === 'recommended' ||
+        card.category === this.activeCategory;
       const keywordMatched =
         !keyword ||
-        `${card.title}${card.description}`.toLowerCase().includes(keyword);
+        `${this.translate.instant(card.titleKey)}${this.translate.instant(
+          card.descriptionKey
+        )}`
+          .toLowerCase()
+          .includes(keyword);
       return categoryMatched && keywordMatched;
     });
   }
 
-  selectCategory(category: string) {
+  constructor(private translate: TranslateService) {}
+
+  selectCategory(category: CommunityCategoryId) {
     this.activeCategory = category;
   }
 
   toggleSearch() {
     this.searchVisible = !this.searchVisible;
     if (!this.searchVisible) this.searchKeyword = '';
+  }
+
+  getProductAriaLabel(product: CommunityProduct): string {
+    return this.translate.instant('COMMUNITY.VIEW_PRODUCT', {
+      name: this.translate.instant(product.nameKey),
+    });
   }
 }

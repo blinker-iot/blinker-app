@@ -3,6 +3,7 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { Router, RouterModule } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { DataService } from '../../../core/services/data.service';
 import { UpdateService } from '../../../core/services/update.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -18,15 +19,24 @@ import { createProfileMenuGroups } from './profile-menu.config';
   styleUrls: ['tab-profile.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule, IonicModule, RouterModule, MenuListComponent],
+  imports: [
+    FormsModule,
+    IonicModule,
+    RouterModule,
+    TranslatePipe,
+    MenuListComponent,
+  ],
 })
 export class TabProfileComponent {
   get menuGroups() {
-    return createProfileMenuGroups({
-      roomNum: this.roomNum,
-      sceneNum: this.sceneNum,
-      sharedDeviceNum: this.sharedDeviceNum,
-    });
+    return createProfileMenuGroups(
+      {
+        roomNum: this.roomNum,
+        sceneNum: this.sceneNum,
+        sharedDeviceNum: this.sharedDeviceNum,
+      },
+      (key, params) => this.translate.instant(key, params)
+    );
   }
 
   get user() {
@@ -34,7 +44,10 @@ export class TabProfileComponent {
   }
 
   get userName() {
-    return this.user?.username || '张小北';
+    return (
+      this.user?.username ||
+      this.translate.instant('PROFILE.DEFAULT_USER_NAME')
+    );
   }
 
   get avatar() {
@@ -65,6 +78,7 @@ export class TabProfileComponent {
     private dataService: DataService,
     private updateService: UpdateService,
     private authService: AuthService,
+    private translate: TranslateService,
     private router: Router
   ) {}
 
