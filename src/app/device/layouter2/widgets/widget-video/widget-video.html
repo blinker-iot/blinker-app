@@ -1,35 +1,33 @@
-<div widget>
-  @if (streamType=='mjpg') {
-  <div
-    style="
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100%;
-    "
-  >
-    <img
-      src="{{url}}"
-      onError="this.src='img/url-error.png';this.style='width:2.5rem;opacity: 0.8;'"
-    />
+@if (streamType=='mjpg') {
+<div
+  style="
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+  "
+>
+  <img
+    src="{{url}}"
+    onError="this.src='assets/img/url-error.png';this.style='width:2.5rem;opacity: 0.8;'"
+  />
+</div>
+} @if (streamType=='hls') {
+<div class="vidbox" (click)="switch()">
+  <video class="full" #video></video>
+  <div class="full" [ngClass]="{'showVideo': showVideo}">
+    <div class="vbat">
+      <i class="fas fa-play-circle"></i>
+    </div>
   </div>
-  } @if (streamType=='hls') {
-  <div class="vidbox" (click)="switch()">
-    <video class="full" #video></video>
-    <div class="full" [ngClass]="{'showVideo': showVideo}">
-      <div class="vbat">
-        <i class="fas fa-play-circle"></i>
-      </div>
-    </div>
-    @if (showVideo) {
-    <div class="lb">
-      @if (playerState == 'pause'||playerState== 'load') {
-      <i class="fas fa-play"></i>
-      } @if (playerState == 'play') {
-      <i class="fas fa-pause"></i>
-      }
-    </div>
+  @if (showVideo) {
+  <div class="lb">
+    @if (playerState == 'pause'||playerState== 'load') {
+    <i class="fas fa-play"></i>
+    } @if (playerState == 'play') {
+    <i class="fas fa-pause"></i>
     }
   </div>
   }
 </div>
+}

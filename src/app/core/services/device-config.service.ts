@@ -210,8 +210,21 @@ export class DeviceConfigService {
     else if (typeof obj == 'string') {
       device = this.dataService.device.dict[obj]
     }
-    // return this.deviceConfigs[device.deviceType];
-    return {}
+    const builtInConfig = this.deviceConfigs[device.deviceType] || {};
+    const component =
+      device.config.component ||
+      builtInConfig.component ||
+      (device.config.isPreview ? 'TestDashboard' : 'Layouter2');
+
+    return {
+      ...builtInConfig,
+      component,
+      layouter: device.config.layouter ?? builtInConfig.layouter,
+      headerStyle:
+        device.config.headerStyle ||
+        builtInConfig.headerStyle ||
+        (component === 'TestDashboard' ? 'light' : 'dark'),
+    };
   }
 
 }

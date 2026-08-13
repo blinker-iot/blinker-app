@@ -1,14 +1,14 @@
 import { Component, Input } from '@angular/core';
 import { DeviceService } from 'src/app/core/services/device.service';
-// import { stringify, parse } from 'zipson';
-// import { Clipboard } from '@awesome-cordova-plugins/clipboard/ngx';
+import { stringify, parse } from 'zipson';
+import { Clipboard } from '@capacitor/clipboard';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
 @Component({
+  standalone: false,
   selector: 'layouter-ieconfig',
   templateUrl: './ieconfig.component.html',
-  styleUrls: ['./ieconfig.component.scss'],
-  providers: [Clipboard]
+  styleUrls: ['./ieconfig.component.scss']
 })
 export class IeconfigComponent {
   // id;
@@ -21,7 +21,6 @@ export class IeconfigComponent {
   configData;
 
   constructor(
-    private clipboard: Clipboard,
     private deviceService: DeviceService,
     private noticeService: NoticeService
   ) { }
@@ -31,24 +30,24 @@ export class IeconfigComponent {
   }
 
   async importData() {
-    // this.device.config.layouter = JSON.stringify(parse(this.configData))
-    // console.log(this.device.config.layouter);
-    // let layouterDataConfig = {
-    //   "layouter": this.device.config.layouter
-    // }
-    // this.deviceService.saveDeviceConfig(this.device, layouterDataConfig).then(result => {
-    //   if (result)
-    //     this.noticeService.showToast('importSuccess')
-    // });
+    this.device.config.layouter = JSON.stringify(parse(this.configData))
+    console.log(this.device.config.layouter);
+    let layouterDataConfig = {
+      "layouter": this.device.config.layouter
+    }
+    this.deviceService.saveDeviceConfig(this.device, layouterDataConfig).then(result => {
+      if (result)
+        this.noticeService.showToast('importSuccess')
+    });
   }
 
   exportData() {
-    // this.configData = stringify(JSON.parse(this.device.config.layouter))
+    this.configData = stringify(JSON.parse(this.device.config.layouter))
   }
 
-  copy() {
-    // this.clipboard.copy(this.configData);
-    // this.noticeService.showToast('copySuccess')
+  async copy() {
+    await Clipboard.write({ string: this.configData });
+    this.noticeService.showToast('copySuccess')
   }
 
 }

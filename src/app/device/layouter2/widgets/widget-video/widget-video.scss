@@ -10,7 +10,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  background-color: #fff;
+  background-color: var(--blinker-surface);
   opacity: 1;
   transform: opacity 0.5s;
   display: flex;
@@ -22,7 +22,7 @@
     justify-content: center;
     align-items: center;
     border-radius: 50%;
-    color: #999;
+    color: var(--blinker-text-tertiary);
     font-size: 50px;
   }
 }
@@ -40,6 +40,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  color: #CCC;
+  color: var(--blinker-text-tertiary);
   font-size: 20px;
 }

@@ -1,0 +1,11 @@
+<div class="btns">
+  @for (color of colorList; track color) {
+  <div
+    class="color-btn"
+    [ngStyle]="{ 'background-color': color }"
+    (click)="selectColor(color)"
+  >
+    <div [ngClass]="{ selected: selected == color }"></div>
+  </div>
+  }
+</div>

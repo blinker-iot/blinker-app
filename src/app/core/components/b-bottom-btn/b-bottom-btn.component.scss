@@ -1,22 +1,31 @@
 .bottom-btn {
-    position: fixed;
-    bottom: 0;
-    left: 15px;
-    
-    box-shadow: 0 0 10px #ccc;
-    border-radius: 8px 8px 0 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 20px 10px 20px;
-    background-color: #fff;
-    color: #389bee;
-    width: calc(100% - 32px);
-    height: 60px;
-    font-size: 15px;
+  position: fixed;
+  right: 12px;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  left: 12px;
+  z-index: 20;
+  width: auto;
+  height: 54px;
+  padding: 0 20px;
+  border: 1px solid color-mix(in srgb, currentColor 24%, var(--blinker-border));
+  border-radius: 16px;
+  color: var(--ion-color-primary);
+  background: color-mix(in srgb, var(--blinker-surface) 94%, transparent);
+  box-shadow: var(--blinker-shadow);
+  backdrop-filter: var(--blinker-nav-blur);
+  -webkit-backdrop-filter: var(--blinker-nav-blur);
+  font-size: 14px;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.isios{
-    height: 70px;
-    padding-bottom:20px;
+.bottom-btn:active {
+  background: var(--blinker-surface-active);
+  transform: scale(0.985);
+}
+
+.isios {
+  bottom: calc(8px + env(safe-area-inset-bottom));
 }

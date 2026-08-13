@@ -6,6 +6,8 @@ import { DeviceblockList2Component } from './deviceblock-list2/deviceblock-list2
 import { BColorpickerDiscComponent } from './b-colorpicker-disc/b-colorpicker-disc.component';
 import { FormsModule } from '@angular/forms';
 import { BDeviceImgComponent } from './b-device-img/b-device-img.component';
+import { BRangeComponent } from './b-range/b-range';
+import { BColorpickerBtnsComponent } from './b-colorpicker-btns/b-colorpicker-btns.component';
 
 import { BBottomBtnComponent } from './b-bottom-btn/b-bottom-btn.component';
 import { HeroCardComponent } from './hero-card/hero-card.component';
@@ -25,6 +27,8 @@ import { MenuItemComponent } from './menu-list/menu-item/menu-item';
     DeviceblockList2Component,
     BColorpickerDiscComponent,
     BDeviceImgComponent,
+    BRangeComponent,
+    BColorpickerBtnsComponent,
     BBottomBtnComponent,
     HeroCardComponent,
     BToastComponent,
@@ -37,6 +41,8 @@ import { MenuItemComponent } from './menu-list/menu-item/menu-item';
     DeviceblockList2Component,
     BColorpickerDiscComponent,
     BDeviceImgComponent,
+    BRangeComponent,
+    BColorpickerBtnsComponent,
     BBottomBtnComponent,
     HeroCardComponent,
     BToastComponent,

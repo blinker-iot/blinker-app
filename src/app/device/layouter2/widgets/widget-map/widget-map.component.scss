@@ -1,12 +1,7 @@
-[widget]{
-    overflow: hidden;
-}
-
 .mapbox {
-    position: absolute;
-    top: 0;
+    position: relative;
     width: 100%;
-    height: calc(100% + 36px);
+    height: 100%;
 }
 
 .bottom-box {
@@ -15,7 +10,9 @@
     left: 0;
     width: 100%;
     height: 36px;
-    background: rgba(255, 255, 255, 0.7);
+    border-top: 1px solid var(--blinker-border);
+    background: color-mix(in srgb, var(--blinker-surface) 82%, transparent);
+    backdrop-filter: blur(10px);
     z-index: 999;
     display: flex;
     align-items: center;
@@ -25,11 +22,11 @@
 
 .address {
     font-size: 12px;
-    text-shadow: 1px 1px 1px #fff;
+    color: var(--blinker-text-secondary);
 }
 
 i {
-    color: rgb(0, 76, 255);
+    color: var(--ion-color-primary);
     font-size: 22px;
     padding: 5px 10px;
 }

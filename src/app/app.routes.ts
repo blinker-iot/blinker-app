@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { LayouterGuard } from './device/layouter2/layouter.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -44,6 +45,7 @@ export const routes: Routes = [
   {
     path: 'device/:id',
     loadComponent: () => import('./device/device.page').then(m => m.DevicePage),
+    canDeactivate: [LayouterGuard],
   },
   {
     path: 'device-manager/:id',

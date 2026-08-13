@@ -1,69 +1,84 @@
-import {
-  Component,
-  ElementRef,
-  Input,
-  ChangeDetectionStrategy,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Layouter2Service } from '../layouter2.service';
-import { WidgetTextComponent } from './widget-text/widget-text';
-import { WidgetNumberComponent } from './widget-number/widget-number';
-import { WidgetButtonComponent } from './widget-button/widget-button';
-import { WidgetRangeComponent } from './widget-range/widget-range';
-import { WidgetTimerComponent } from './widget-timer/widget-timer';
-import { WidgetColorComponent } from './widget-color/widget-color';
-import { WidgetDebugComponent } from './widget-debug/widget-debug';
-import { WidgetJoystickComponent } from './widget-joystick/widget-joystick';
-import { WidgetChartComponent } from './widget-chart/widget-chart';
-import { WidgetMapComponent } from './widget-map/widget-map.component';
-import { WidgetInputComponent } from './widget-input/widget-input';
-import { WidgetVideoComponent } from './widget-video/widget-video';
-import { WidgetSelectComponent } from './widget-select/widget-select';
-import { WidgetCustomComponent } from './widget-custom/widget-custom';
+import { Component, Input, ViewChild } from '@angular/core';
+import { ModalController } from '@ionic/angular';
+import { WidgetEditor } from '../widget-editor/widget-editor';
+import { Layouter2Widget } from './config';
+import { EditGesturePoint, isEditGestureTap } from './edit-gesture';
 
 @Component({
+  standalone: false,
   selector: 'widget-dynamic',
   templateUrl: './parentDynamic.component.html',
-  styleUrls: ['parentDynamic.component.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [
-    CommonModule,
-    WidgetTextComponent,
-    WidgetNumberComponent,
-    WidgetButtonComponent,
-    WidgetRangeComponent,
-    WidgetTimerComponent,
-    WidgetColorComponent,
-    WidgetDebugComponent,
-    WidgetJoystickComponent,
-    WidgetChartComponent,
-    WidgetMapComponent,
-    WidgetInputComponent,
-    WidgetVideoComponent,
-    WidgetSelectComponent,
-    WidgetCustomComponent,
-  ],
+  styleUrls: ['parentDynamic.component.scss']
 })
 export class ParentDynamicComponent {
+  private editGestureStart?: EditGesturePoint;
+
   @Input()
   widget;
   @Input()
   device;
+  @Input()
+  resizeEvent;
 
-  public get mode() {
-    return this.layouterService.mode;
-  }
+  @Input()
+  isDemo = false;
+
+  @ViewChild('widgetComponent', { static: false }) widgetComponent: Layouter2Widget;
 
   get color() {
-    return this.widget.clr;
+    return this.widget.clr
   }
+
+  @Input()
+  lstyle;
 
   constructor(
-    private layouterService: Layouter2Service,
-    private el: ElementRef
-  ) {}
+    private modalCtrl: ModalController,
+  ) { }
 
-  select() {
-    this.layouterService.selectWidget(this.widget, this.el.nativeElement);
+  beginEditGesture(event: PointerEvent): void {
+    if (!event.isPrimary || event.button !== 0) {
+      this.cancelEditGesture();
+      return;
+    }
+
+    this.editGestureStart = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    };
   }
+
+  finishEditGesture(event: PointerEvent): void {
+    const start = this.editGestureStart;
+    this.cancelEditGesture();
+
+    if (!isEditGestureTap(start, event)) {
+      return;
+    }
+
+    void this.edit();
+  }
+
+  cancelEditGesture(): void {
+    this.editGestureStart = undefined;
+  }
+
+  async edit() {
+    let modal = await this.modalCtrl.create({
+      component: WidgetEditor,
+      componentProps: {
+        'widget': this.widget,
+        'device': this.device
+      }
+    });
+    if (typeof this.widgetComponent != 'undefined') {
+      modal.onDidDismiss().then(() => {
+        this.widgetComponent.refresh();
+      });
+    }
+
+    modal.present();
+  }
+
 }

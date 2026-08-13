@@ -1,20 +1,57 @@
 <div widget>
-  <div widget-name>{{widget.tit}}</div>
-  <div widget-content (click)="switchStyle()" [ngStyle]="{'transform': translateX}"
-    [ngClass]="{'x44': widget.sty!=0 && widget.sty!=1}">
-    <!-- @if (widget.sty==0 || widget.sty==1) { -->
-    <div class="s1">
-      <canvas chart #myCanvas width="60" height="60"></canvas>
-      <div class="icon-box" [ngStyle]="{'color':color}">
-        <i class="{{ico}}"></i>
-      </div>
+  @if (lstyle==0) {
+  <div class="numbox">
+    <i class="{{ico}}" [ngStyle]="{'color':color}"></i>
+    @if (value||value==0) {
+    <div class="valuebox" [ngStyle]="{'color':color,'transform':fontScale}">
+      <span class="value">{{value}}</span>
+      <span class="unit">{{unit}}</span>
     </div>
-    <div class="s2 ccenter" [ngStyle]="{'transform': fontScale}">
-      <div class="value" [ngStyle]="{'color':color}">{{value}}</div>
-      <div class="unit">{{unit}}</div>
-    </div>
-    <!-- <div class="s3" *ngIf="widget.sty==2 || widget.sty==3" [ngStyle]="{'right': '-'+this.elWidth+'px'}">
-
-    </div> -->
+    }
+    <div class="content" overflow>{{t0}}</div>
   </div>
+  } @if (lstyle==1) {
+  <div class="numbox1">
+    <div class="left-box">
+      <i class="{{ico}}" [ngStyle]="{'color':color}"></i>
+    </div>
+    <div class="right-box">
+      @if (value||value==0) {
+      <div class="valuebox" [ngStyle]="{'color':color,'transform':fontScale}">
+        <span class="value">{{value}}</span>
+        <span class="unit">{{unit}}</span>
+      </div>
+      }
+      <div class="content" overflow>{{t0}}</div>
+    </div>
+  </div>
+  } @if (lstyle==2) {
+  <div class="numbox10">
+    <div class="gauge-box" #Gauge>
+      <div class="label">{{t0}}</div>
+      <span class="value">{{value}} <span class="unit">{{unit}}</span></span>
+    </div>
+  </div>
+  } @if (lstyle==3) {
+  <div class="numbox11">
+    <div class="gauge-box" #Gauge>
+      <div class="label">{{t0}}</div>
+      <span class="value">{{value}} <span class="unit">{{unit}}</span></span>
+    </div>
+  </div>
+  } @if (lstyle==4) {
+  <div class="numbox12">
+    <div class="gauge-box" #Gauge>
+      <div class="label">{{t0}}</div>
+      <div class="label2">{{unit}}</div>
+    </div>
+  </div>
+  } @if (lstyle==5) {
+  <div class="numbox13">
+    <div class="gauge-box" #Gauge>
+      <div class="label">{{t0}}</div>
+      <div class="label2">{{unit}}</div>
+    </div>
+  </div>
+  }
 </div>

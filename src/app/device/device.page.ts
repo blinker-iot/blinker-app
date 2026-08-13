@@ -1,142 +1,109 @@
 import {
-  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  ComponentRef,
   OnDestroy,
   OnInit,
+  ViewChild,
+  ViewContainerRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
-import { Subscription } from 'rxjs';
+import { IonicModule, ModalController } from '@ionic/angular';
+import { TranslatePipe } from '@ngx-translate/core';
+import { Observable, of, Subscription } from 'rxjs';
 
-import { BDeviceImgComponent } from '../core/components/b-device-img/b-device-img.component';
+import { deviceComponentDict } from '../configs/components.config';
 import { BlinkerDevice } from '../core/model/device.model';
 import { DataService } from '../core/services/data.service';
+import { DebugComponent } from '../debug/debug.component';
+import { DebugService } from '../debug/debug.service';
+import { DeviceConfigService } from '../core/services/device-config.service';
 import { DeviceService } from '../core/services/device.service';
 import { ViewService } from '../core/services/view.service';
+import { LayouterService } from './layouter.service';
+import { canEditDeviceLayout } from './device-layout-edit';
+import { Mode } from './layouter2/layouter2-mode';
+import { Layouter2Module } from './layouter2/layouter2.module';
 
-interface DeviceMetric {
-  key: string;
-  label: string;
-  value: string | number;
-  unit: string;
+interface LoadedDeviceComponent {
+  device?: BlinkerDevice;
+  customizerUrl?: string;
+  layouterData?: string;
+  isChanged?: boolean;
 }
-
-const METRIC_METADATA: Record<string, { label: string; unit: string }> = {
-  temperature: { label: '温度', unit: '°C' },
-  temp: { label: '温度', unit: '°C' },
-  humidity: { label: '湿度', unit: '%' },
-  humi: { label: '湿度', unit: '%' },
-  soilMoisture: { label: '土壤湿度', unit: '%' },
-  moisture: { label: '湿度', unit: '%' },
-  pm25: { label: 'PM2.5', unit: '' },
-  co2: { label: 'CO₂', unit: 'ppm' },
-  voltage: { label: '电压', unit: 'V' },
-  current: { label: '电流', unit: 'A' },
-  power: { label: '功率', unit: 'W' },
-  energy: { label: '用电量', unit: 'kWh' },
-  frequency: { label: '频率', unit: 'Hz' },
-  powerFactor: { label: '功率因数', unit: '' },
-  position: { label: '位置', unit: '%' },
-  brightness: { label: '亮度', unit: '%' },
-};
 
 @Component({
   selector: 'app-device',
+  standalone: true,
+  imports: [
+    CommonModule,
+    IonicModule,
+    RouterModule,
+    TranslatePipe,
+    Layouter2Module,
+  ],
   templateUrl: './device.page.html',
   styleUrls: ['./device.page.scss'],
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule, IonicModule, RouterModule, BDeviceImgComponent],
 })
 export class DevicePage implements OnInit, OnDestroy {
+  loaded = false;
   id = '';
   device?: BlinkerDevice;
-  loaded = false;
-  refreshedAt = new Date();
+  deviceConfig: any;
+  headerStyle: 'dark' | 'light' = 'light';
+  editMode = false;
+  deviceComponent = '';
 
   private readonly subscriptions = new Subscription();
-  private deviceSubscription?: Subscription;
+  private deviceSubject?: Subscription;
+  private deviceComponentRef?: ComponentRef<unknown>;
+  private deviceViewContainer?: ViewContainerRef;
   private heartbeatTimer?: number;
-  private activeSessionId?: string;
+  private oldLayouterData = '';
+
+  @ViewChild('deviceView', { read: ViewContainerRef })
+  set deviceView(container: ViewContainerRef | undefined) {
+    const containerChanged = this.deviceViewContainer !== container;
+    this.deviceViewContainer = container;
+    if (
+      container &&
+      this.device &&
+      (containerChanged || !this.deviceComponentRef)
+    ) {
+      this.loadDevice();
+    }
+  }
 
   constructor(
     private readonly activatedRoute: ActivatedRoute,
-    private readonly dataService: DataService,
     public readonly deviceService: DeviceService,
+    private readonly dataService: DataService,
     private readonly viewService: ViewService,
+    private readonly deviceConfigService: DeviceConfigService,
+    private readonly debugService: DebugService,
+    private readonly modalCtrl: ModalController,
+    private readonly layouterService: LayouterService,
     private readonly cd: ChangeDetectorRef,
   ) {}
+
+  get isSharedDevice(): boolean {
+    return !!this.device?.config?.isShared;
+  }
+
+  get isDiyDevice(): boolean {
+    return (
+      !!this.device?.config?.isDiy ||
+      !!this.device?.deviceType?.includes('Diy')
+    );
+  }
 
   get isPreview(): boolean {
     return !!this.device?.config?.isPreview;
   }
 
-  get isOnline(): boolean {
-    if (!this.device) return false;
-    if (this.device.config.mode === 'ble') {
-      return this.deviceService.islocalDevice(this.device);
-    }
-    return !!this.device.data?.enable;
-  }
-
-  get statusText(): string {
-    if (this.isPreview) return this.isOnline ? '测试数据 · 在线' : '测试数据 · 离线';
-    if (this.device?.config.mode === 'ble' && this.isOnline) return '附近可连接';
-    return this.isOnline ? '在线' : '离线';
-  }
-
-  get hasSwitch(): boolean {
-    return typeof this.device?.data?.switch !== 'undefined';
-  }
-
-  get switchOn(): boolean {
-    return this.device?.data?.switch === 'on';
-  }
-
-  get switchWaiting(): boolean {
-    return this.device?.data?.switch === 'waiting';
-  }
-
-  get metrics(): DeviceMetric[] {
-    if (!this.device) return [];
-
-    const configured = this.device.config.card?.metrics || [];
-    const configuredByKey = new Map(configured.map((item) => [item.key, item]));
-    const orderedKeys = [
-      ...configured.map((item) => item.key),
-      ...Object.keys(this.device.data || {}).filter(
-        (key) => !configuredByKey.has(key),
-      ),
-    ];
-    const ignoredKeys = new Set(['enable', 'state', 'oldState', 'switch', 'hasNewVersion']);
-
-    return orderedKeys
-      .filter((key, index) => orderedKeys.indexOf(key) === index)
-      .filter((key) => !ignoredKeys.has(key))
-      .map((key) => {
-        const value = this.device?.data?.[key];
-        if (
-          (typeof value !== 'number' || !Number.isFinite(value)) &&
-          typeof value !== 'string'
-        ) {
-          return null;
-        }
-
-        const config = configuredByKey.get(key);
-        const metadata = METRIC_METADATA[key];
-        return {
-          key,
-          label: config?.label || metadata?.label || key,
-          value:
-            typeof value === 'number' && !Number.isInteger(value)
-              ? Number(value.toFixed(1))
-              : value,
-          unit: config?.unit ?? metadata?.unit ?? '',
-        };
-      })
-      .filter((metric): metric is DeviceMetric => metric !== null);
+  get canEditLayout(): boolean {
+    return canEditDeviceLayout(this.device, this.deviceComponent);
   }
 
   ngOnInit(): void {
@@ -148,50 +115,75 @@ export class DevicePage implements OnInit, OnDestroy {
     );
     this.subscriptions.add(
       this.dataService.initCompleted.subscribe((completed) => {
-        if (completed && !this.device) this.bindDevice();
+        if (completed) this.bindDevice();
       }),
     );
+    this.subscriptions.add(
+      this.layouterService.updateConfig.subscribe(() => {
+        const headerStyle =
+          this.device?.data?.layouterData?.config?.headerStyle;
+        if (headerStyle === 'dark' || headerStyle === 'light') {
+          this.headerStyle = headerStyle;
+          this.cd.detectChanges();
+        }
+      }),
+    );
+    this.debugService.init();
     this.viewService.setLightStatusBar();
   }
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
-    this.deviceSubscription?.unsubscribe();
-    this.stopDeviceSession();
+    this.deviceSubject?.unsubscribe();
+    this.deviceComponentRef?.destroy();
+    this.deviceComponentRef = undefined;
+    this.layouterService.resetMode();
+    this.disconnectDevice();
+    this.debugService.end();
     if (this.viewService.devicePageIsRoot) {
       this.viewService.devicePageIsRoot = false;
     }
   }
 
-  async refresh(): Promise<void> {
-    if (!this.device) return;
-    this.refreshedAt = new Date();
-    if (!this.isPreview) this.deviceService.queryDevice(this.device);
-    this.cd.detectChanges();
+  connectDevice(): Promise<void> {
+    if (!this.device || this.isPreview) return Promise.resolve();
+    return this.startDeviceSession();
   }
 
-  toggleSwitch(): void {
-    if (!this.device || !this.hasSwitch || !this.isOnline || this.switchWaiting) {
-      return;
+  disconnectDevice(): void {
+    if (typeof this.heartbeatTimer !== 'undefined') {
+      window.clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = undefined;
     }
-
-    const nextState = this.switchOn ? 'off' : 'on';
-    if (this.isPreview) {
-      this.device.data.switch = nextState;
-      this.device.subject.next({ key: 'switch', value: nextState });
-      this.cd.detectChanges();
-      return;
+    if (this.device && !this.isPreview) {
+      this.deviceService.disconnectDevice(this.device);
     }
+  }
 
-    const previousState = this.device.data.switch;
-    this.device.data.switch = 'waiting';
-    this.deviceService.pubMessage(this.device, JSON.stringify({ switch: nextState }));
-    window.setTimeout(() => {
-      if (this.device?.data?.switch === 'waiting') {
-        this.device.data.switch = previousState;
-        this.cd.detectChanges();
-      }
-    }, 3000);
+  lock(): void {
+    this.changeLayoutMode(Mode.Default);
+    this.saveLayouterData();
+  }
+
+  unlock(): void {
+    if (!this.canEditLayout) return;
+    this.oldLayouterData = JSON.stringify(this.device?.data?.layouterData);
+    this.changeLayoutMode(Mode.Edit);
+  }
+
+  cleanWidgets(): void {
+    this.layouterService.cleanWidgets();
+  }
+
+  canDeactivate(): Observable<boolean> | boolean {
+    if (!this.editMode) return true;
+    const component = this.deviceComponentRef?.instance as LoadedDeviceComponent;
+    if (!component?.isChanged) return true;
+    return this.confirm();
+  }
+
+  confirm(): Observable<boolean> {
+    return of(window.confirm('界面布局未保存，是否放弃保存并退出？'));
   }
 
   private bindDevice(): void {
@@ -200,49 +192,160 @@ export class DevicePage implements OnInit, OnDestroy {
       | undefined;
 
     if (!nextDevice) {
+      this.deviceSubject?.unsubscribe();
+      this.disconnectDevice();
       this.device = undefined;
       this.loaded = true;
       this.cd.detectChanges();
       return;
     }
 
-    if (this.device?.id === nextDevice.id && this.activeSessionId === nextDevice.id) {
+    if (this.device === nextDevice) {
+      if (this.deviceViewContainer && !this.deviceComponentRef) this.loadDevice();
       return;
     }
 
-    this.deviceSubscription?.unsubscribe();
-    this.stopDeviceSession();
+    this.deviceSubject?.unsubscribe();
+    this.disconnectDevice();
+    this.deviceComponentRef?.destroy();
+    this.deviceComponentRef = undefined;
+    this.editMode = false;
+    this.layouterService.resetMode();
     this.device = nextDevice;
     this.loaded = true;
-    this.deviceSubscription = nextDevice.subject.subscribe(() => {
-      this.refreshedAt = new Date();
+    this.deviceSubject = nextDevice.subject.subscribe(() => {
       this.cd.detectChanges();
     });
-    this.startDeviceSession();
+    this.loadDevice();
+    void this.startDeviceSession();
     this.cd.detectChanges();
+  }
+
+  private loadDevice(): void {
+    if (!this.device || !this.deviceViewContainer) return;
+
+    this.deviceConfig = this.deviceConfigService.getDeviceConfig(this.device);
+    let componentName = this.deviceConfig?.component || 'Layouter2';
+    let customizerUrl = '';
+
+    if (componentName.startsWith('Customizer?')) {
+      customizerUrl = componentName.slice('Customizer?'.length);
+      componentName = 'Customizer';
+    }
+
+    const componentType =
+      deviceComponentDict[componentName] || deviceComponentDict['Layouter2'];
+    this.deviceComponent = deviceComponentDict[componentName]
+      ? componentName
+      : 'Layouter2';
+    this.headerStyle = this.deviceConfig?.headerStyle ||
+      (this.deviceComponent === 'TestDashboard' ? 'light' : 'dark');
+
+    this.deviceViewContainer.clear();
+    this.deviceComponentRef =
+      this.deviceViewContainer.createComponent(componentType);
+    this.deviceComponentRef.setInput('device', this.device);
+
+    if (this.deviceComponent === 'Customizer') {
+      this.deviceComponentRef.setInput('customizerUrl', customizerUrl);
+    } else if (this.deviceComponent.includes('Layouter')) {
+      this.deviceComponentRef.setInput(
+        'layouterData',
+        this.deviceConfig?.layouter ?? this.device.config.layouter ?? '',
+      );
+      this.deviceComponentRef.setInput(
+        'mode',
+        this.editMode ? Mode.Edit : Mode.Default,
+      );
+    }
+
+    this.deviceComponentRef.changeDetectorRef.detectChanges();
+  }
+
+  private changeLayoutMode(mode: Mode): void {
+    // DevicePage owns edit mode. The dynamically-created layouter receives
+    // that state through one input; the service notification is retained for
+    // non-visual editor commands, but it is no longer a second UI state path.
+    this.editMode = mode === Mode.Edit;
+    this.layouterService.changeMode(mode);
+    if (this.deviceComponent.includes('Layouter') && this.deviceComponentRef) {
+      this.deviceComponentRef.setInput('mode', mode);
+    }
   }
 
   private async startDeviceSession(): Promise<void> {
     if (!this.device || this.isPreview) return;
 
-    this.activeSessionId = this.device.id || this.device.deviceName;
     if (this.device.config.mode === 'ble') {
       await this.deviceService.connectDevice(this.device);
     }
     this.deviceService.queryDevice(this.device);
+    if (
+      !this.isSharedDevice &&
+      !this.isDiyDevice &&
+      this.device.config.mode === 'mqtt'
+    ) {
+      window.setTimeout(() => {
+        if (this.device) this.deviceService.checkDeviceVersion(this.device);
+      }, 2000);
+    }
+
+    if (typeof this.heartbeatTimer !== 'undefined') {
+      window.clearInterval(this.heartbeatTimer);
+    }
     this.heartbeatTimer = window.setInterval(() => {
       if (this.device) this.deviceService.queryDevice(this.device);
     }, this.device.config.mode === 'mqtt' ? 59001 : 29001);
   }
 
-  private stopDeviceSession(): void {
-    if (typeof this.heartbeatTimer !== 'undefined') {
-      window.clearInterval(this.heartbeatTimer);
-      this.heartbeatTimer = undefined;
+  private saveLayouterData(): void {
+    if (!this.device?.data?.layouterData) return;
+
+    const data = JSON.stringify(this.device.data.layouterData);
+    if (this.oldLayouterData === data) return;
+    this.device.config.layouter = data;
+    this.oldLayouterData = data;
+
+    if (this.isPreview) {
+      this.device.subject.next({ key: 'layouter', value: data });
+      return;
     }
-    if (this.device && !this.isPreview) {
-      this.deviceService.disconnectDevice(this.device);
+
+    this.deviceService
+      .saveDeviceConfig(this.device, { layouter: data })
+      .then((result) => {
+        if (result && this.device) {
+          this.deviceService.loadDeviceLayouter(this.device);
+        }
+      });
+  }
+
+  private clickTime = 0;
+  private debugTimer?: number;
+
+  enterDebug(): void {
+    if (typeof this.debugTimer !== 'undefined') {
+      window.clearTimeout(this.debugTimer);
     }
-    this.activeSessionId = undefined;
+    if (this.clickTime !== 0) {
+      this.debugTimer = window.setTimeout(() => {
+        this.clickTime = 0;
+      }, 5000);
+    }
+    this.clickTime++;
+    if (this.clickTime === 5) {
+      this.clickTime = 0;
+      void this.showDebugModal();
+    }
+  }
+
+  private async showDebugModal(): Promise<void> {
+    if (!this.device) return;
+    const modal = await this.modalCtrl.create({
+      component: DebugComponent,
+      backdropDismiss: false,
+      componentProps: { device: this.device },
+    });
+    await modal.present();
   }
 }

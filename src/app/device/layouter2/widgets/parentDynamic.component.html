@@ -1,37 +1,66 @@
 @if (widget.type=='tex') {
-<widget-text [widget]="widget" [device]="device"></widget-text>
+<widget-text
+  [widget]="widget"
+  [lstyle]="lstyle"
+  [device]="device"
+></widget-text>
 } @if (widget.type=='num') {
-<widget-number [widget]="widget" [device]="device"></widget-number>
+<widget-number
+  #widgetComponent
+  [widget]="widget"
+  [lstyle]="lstyle"
+  [device]="device"
+  [color]="color"
+  [isDemo]="isDemo"
+></widget-number>
 } @if (widget.type=='btn') {
-<widget-button [widget]="widget" [device]="device"></widget-button>
+<widget-button
+  [widget]="widget"
+  [lstyle]="lstyle"
+  [device]="device"
+></widget-button>
 } @if (widget.type=='ran') {
-<widget-range [widget]="widget" [device]="device"></widget-range>
+<widget-range
+  #widgetComponent
+  [widget]="widget"
+  [lstyle]="lstyle"
+  [device]="device"
+>
+</widget-range>
 } @if (widget.type=='tim') {
 <widget-timer [widget]="widget" [device]="device"></widget-timer>
 } @if (widget.type=='col') {
-<widget-color [widget]="widget" [device]="device"></widget-color>
+<widget-color
+  [widget]="widget"
+  [lstyle]="lstyle"
+  [device]="device"
+></widget-color>
 } @if (widget.type=='deb') {
 <widget-debug [widget]="widget" [device]="device"></widget-debug>
 } @if (widget.type=='joy') {
 <widget-joystick [widget]="widget" [device]="device"></widget-joystick>
 } @if (widget.type=='cha') {
-<widget-chart [widget]="widget" [device]="device"></widget-chart>
+<widget-chart
+  #widgetComponent
+  [widget]="widget"
+  [device]="device"
+  [isDemo]="isDemo"
+>
+</widget-chart>
 } @if (widget.type=='map') {
 <widget-map [widget]="widget" [device]="device"></widget-map>
+} @if (widget.type=='tab') {
+<widget-tab [widget]="widget" [device]="device"></widget-tab>
 } @if (widget.type=='inp') {
 <widget-input [widget]="widget" [device]="device"></widget-input>
 } @if (widget.type=='vid') {
-<widget-video [widget]="widget" [device]="device"></widget-video>
-} @if (widget.type=='sel') {
-<widget-select [widget]="widget" [device]="device"></widget-select>
-}
-<!-- <widget-image *ngIf="widget.type=='img'" [widget]="widget" [device]="device"></widget-image> -->
-@if (widget.type=='cus') {
-<widget-custom [widget]="widget" [device]="device"></widget-custom>
-} @if (mode==1) {
-<div class="editMode" (tap)="select()">
-  <div class="key" [ngClass]="{ centerkey: widget.bg == 3 }">
-    {{ widget.key }}
-  </div>
-</div>
+<widget-video
+  #widgetComponent
+  [widget]="widget"
+  [device]="device"
+></widget-video>
+} @if (widget.type=='img') {
+<widget-image [widget]="widget" [device]="device"></widget-image>
+} @if (isDemo) {
+<div class="editMode"></div>
 }

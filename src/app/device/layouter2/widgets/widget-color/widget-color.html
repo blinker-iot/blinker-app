@@ -1,7 +1,30 @@
-<div widget>
-  <div widget-name>{{widget.tit}}</div>
-  <div widget-content>
-    <b-colorpicker-disc (colorChange)="colorChange($event)" (sendData)="sendData()"
-      [enableWhite]="true"></b-colorpicker-disc>
+<div widget class="color-box">
+  <b-colorpicker-disc
+    [ngClass]="{'full': lstyle==2 || lstyle==3}"
+    (colorChange)="colorChange($event)"
+    (sendData)="sendData()"
+    [enableWhite]="true"
+  ></b-colorpicker-disc>
+  @if (lstyle==0 || lstyle==1) {
+  <div class="brightness">
+    <i class="fal fa-minus"></i>
+    <b-range
+      [value]="brightness"
+      [min]="0"
+      [max]="255"
+      (sendData)="brightnessChange($event)"
+      [barcolor]="barcolor"
+      [activebar]="false"
+    >
+    </b-range>
+    <i class="fal fa-plus"></i>
   </div>
+  } @if (lstyle==0 || lstyle==1) {
+  <div class="content">
+    <span>{{t0}}</span>
+  </div>
+  }
+  <!-- <div test style="width:30px;height:30px;position: absolute;top: 0;left: 0;" [ngStyle]="{'background': rgbStr}">
+
+</div> -->
 </div>

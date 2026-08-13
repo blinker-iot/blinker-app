@@ -1,6 +1,10 @@
 import { Subject } from 'rxjs';
 import { OrderData } from '../model/data.model';
 import { BlinkerDevice, DeviceCardConfig } from '../model/device.model';
+import {
+  LAYOUTER2_PREVIEW_DATA,
+  LAYOUTER2_PREVIEW_DEVICE_DATA,
+} from '../../device/layouter2/layouter2-preview.data';
 
 interface GuestDevicePreview {
   device: OrderData;
@@ -20,6 +24,10 @@ interface PreviewDeviceOptions {
   metrics?: Record<string, number>;
   card?: DeviceCardConfig;
   isDev?: boolean;
+  isDiy?: boolean;
+  component?: 'TestDashboard' | 'Layouter2';
+  layouter?: string;
+  data?: Record<string, unknown>;
 }
 
 function createPreviewDevice(options: PreviewDeviceOptions): BlinkerDevice {
@@ -33,10 +41,14 @@ function createPreviewDevice(options: PreviewDeviceOptions): BlinkerDevice {
       mode: options.mode || 'mqtt',
       image: options.image,
       isDev: options.isDev,
+      isDiy: options.isDiy,
       isPreview: true,
       previewNearby: options.nearby,
       showSwitch: options.showSwitch,
       card: options.card,
+      component: options.component || 'TestDashboard',
+      layouter: options.layouter,
+      headerStyle: 'light',
     },
     data: {
       enable: options.online,
@@ -45,6 +57,7 @@ function createPreviewDevice(options: PreviewDeviceOptions): BlinkerDevice {
         ? { switch: options.switchedOn ? 'on' : 'off' }
         : {}),
       ...options.metrics,
+      ...options.data,
     },
     storage: {},
     subject: new Subject<unknown>(),
@@ -118,6 +131,10 @@ export function createGuestDevicePreview(): GuestDevicePreview {
         temperature: 31.2,
       },
       isDev: true,
+      isDiy: true,
+      component: 'Layouter2',
+      layouter: JSON.stringify(LAYOUTER2_PREVIEW_DATA),
+      data: LAYOUTER2_PREVIEW_DEVICE_DATA,
     }),
     createPreviewDevice({
       id: 'preview-air-quality',

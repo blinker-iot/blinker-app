@@ -1,66 +1,122 @@
 :host {
-    ::ng-deep {
-        [widget] {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            height: 100%;
-            position: relative;
-            background: #FFF;
-            border: 0px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 0px 0px 5px 0px #ccc;
-        }
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: block;
 
-        [widget-name] {
-            height: 20px;
-            width: 100%;
-            padding-left: 2vw;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            flex-grow: 0;
-            flex-shrink: 0;
-            color: #666;
-            transition: height 0.3s;
-        }
+  widget-text,
+  widget-number,
+  widget-button,
+  widget-range,
+  widget-timer,
+  widget-color,
+  widget-debug,
+  widget-joystick,
+  widget-chart,
+  widget-map,
+  widget-tab,
+  widget-input,
+  widget-video,
+  widget-image {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    display: block;
+  }
 
-        [widget-content] {
-            height: calc(100% - 20px);
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            flex-grow: 0;
-            flex-shrink: 0;
-        }
+  ::ng-deep {
+    [widget] {
+      position: relative;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+      margin: 0;
+      overflow: hidden;
+      border: 0;
+      color: inherit;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
+
+    [widget-name] {
+      width: 100%;
+      min-height: 20px;
+      padding-inline: 8px;
+      color: var(--blinker-text-secondary);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    [widget-content] {
+      position: relative;
+      width: 100%;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1 1 auto;
+    }
+  }
 }
 
 .editMode {
-    width: 100%;
-    height: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 99;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(var(--ion-color-primary-rgb), 0.04), transparent 56%);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+
+  &::after {
+    content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 99;
+    inset: 0;
+    border: 1px dashed rgba(var(--ion-color-primary-rgb), 0.48);
+    border-radius: inherit;
+    pointer-events: none;
+  }
 
-    .key {
-        text-shadow: 1px 1px 1px rgba(99, 99, 99, 0.8);
-        font-size: 0.8em;
-        color: white;
-        position: absolute;
-        top: 0;
-        left: 0;
-        padding: 2px 3px 2px 3px;
-        background-color: rgba(70, 210, 253, 0.5);
-    }
+  .key {
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    max-width: calc(100% - 14px);
+    padding: 4px 8px;
+    overflow: hidden;
+    border: 1px solid rgba(var(--ion-color-primary-rgb), 0.26);
+    border-radius: 999px;
+    color: var(--ion-color-primary-contrast);
+    background: color-mix(in srgb, var(--ion-color-primary) 88%, transparent);
+    box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.22);
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-    .centerkey {
-        text-align: center;
-        width: 100%;
-    }
+  .centerkey {
+    right: 7px;
+    width: auto;
+    text-align: center;
+  }
 }

@@ -1,23 +1,16 @@
-import {
-  Component,
-  Input,
-  ChangeDetectorRef,
-  ChangeDetectionStrategy,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Input, ChangeDetectorRef } from '@angular/core';
 import { Layouter2Widget } from '../config';
 import { Router } from '@angular/router';
 import { deviceName12 } from 'src/app/core/functions/func';
 
 @Component({
+  standalone: false,
   selector: 'widget-timer',
   templateUrl: 'widget-timer.html',
-  styleUrls: ['widget-timer.scss'],
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule],
+  styleUrls: ['widget-timer.scss']
 })
 export class WidgetTimerComponent implements Layouter2Widget {
+
   @Input() device;
   @Input() widget;
   @Input() t0 = '定时任务';
@@ -26,17 +19,19 @@ export class WidgetTimerComponent implements Layouter2Widget {
 
   get hasTask() {
     if (typeof this.device.data.timer != 'undefined')
-      if (this.device.data.timer != '000') return true;
-    return false;
+      if (this.device.data.timer != '000')
+        return true
+    return false
   }
 
   constructor(
     public changeDetectorRef: ChangeDetectorRef,
     private router: Router
-  ) {}
+  ) { }
 
   gotoTimingPage() {
-    if (this.device.config.mode == 'test') return;
-    this.router.navigate(['timer', deviceName12(this.device.deviceName)]);
+    if (this.device.config.mode == 'test') return
+    this.router.navigate(['timer', deviceName12(this.device.deviceName)])
   }
+
 }

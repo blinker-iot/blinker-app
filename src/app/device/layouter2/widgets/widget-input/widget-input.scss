@@ -16,9 +16,9 @@
         justify-content: space-between;
         width: 95%;
         height: 3rem;
-        background-color: rgba(255, 255, 255, 0.5);
-        box-shadow: 0px 2px 4px 1px rgba(0, 0, 0, 0.3);
-        border: 1px solid #E6E6E6;
+        background-color: color-mix(in srgb, var(--blinker-surface) 82%, transparent);
+        box-shadow: var(--blinker-shadow-soft);
+        border: 1px solid var(--blinker-border);
         border-radius: 1.5rem;
         margin: 6px 0 5px 0;
 
@@ -29,6 +29,8 @@
             margin-left: 16px;
             margin-right: 8px;
             font-size: 1.2rem;
+            color: var(--blinker-text-primary);
+            background: transparent;
         }
 
         .btn {
@@ -39,8 +41,9 @@
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            border: 1px solid rgba(0, 0, 0, 0.5);
-            color: rgba(0, 0, 0, 0.5);
+            border: 1px solid color-mix(in srgb, var(--ion-color-primary) 32%, var(--blinker-border));
+            color: var(--ion-color-primary);
+            background: var(--blinker-surface-active);
             font-size: 1.5rem;
         }
     }

@@ -9,9 +9,10 @@ import {
 } from '@angular/core';
 import {
   createChart,
+  AreaSeries,
+  AreaSeriesPartialOptions,
   IChartApi,
   ISeriesApi,
-  LineSeriesPartialOptions,
   UTCTimestamp,
 } from 'lightweight-charts';
 import { BehaviorSubject } from 'rxjs';
@@ -97,8 +98,8 @@ export class LineChartAreaComponent implements OnInit {
         borderColor: 'rgba(0, 0, 0, 0.3)',
       },
     });
-    const lineSeriesOptions: LineSeriesPartialOptions = {};
-    this.areaSeries = this.chart.addAreaSeries(lineSeriesOptions);
+    const areaSeriesOptions: AreaSeriesPartialOptions = {};
+    this.areaSeries = this.chart.addSeries(AreaSeries, areaSeriesOptions);
     this.intervalTimer = setInterval(() => {
       if (this.data.length > 0) {
         clearInterval(this.intervalTimer);

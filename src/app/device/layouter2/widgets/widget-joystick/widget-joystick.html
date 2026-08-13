@@ -1,12 +1,7 @@
-<div widget>
-  <div widget-name>{{widget.tit}}</div>
-  <div widget-content>
-    <div class="joystick-box">
-      <div class="joyout">
-        <img src="img/layouter/joyout.png" />
-      </div>
-      <div class="stick" #stick></div>
-      <div class="touch" #touchZone (panend)="panend($event)" (panmove)="panmove($event)"></div>
-    </div>
+<div class="joystick-box">
+  <div class="joyout">
+    <img src="assets/img/layouter/joyout.png" />
   </div>
+  <div class="stick" #stick></div>
+  <div class="touch" #touchZone (panend)="panend($event)" (panmove)="panmove($event)"></div>
 </div>

@@ -1,25 +1,84 @@
-[widget] {}
-
-[widget-name] {
-    &.on {
-        color: #EEE;
-    }
-}
-
-.widget-button {
+.btnbox {
+    padding: 0.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
     transition: all 0.1s;
+    color: var(--blinker-text-secondary);
+    width: 100%;
+    height: 100%;
 
-    // 按下动画
-    &:active {
-        transform: scale(0.95);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+
+    i {
+        font-size: 2.1rem;
+    }
+
+    .content {
+        position: absolute;
+        bottom: 0.25rem;
+        font-size: 0.7rem;
+        width: 100%;
+        text-align: center;
+        overflow: hidden;
+        white-space: nowrap;
     }
 }
 
-.icon-box {
+.action {
+    &.on {
+        i {
+            color: #fff !important;
+        }
+
+        .content {
+            color: #fff !important;
+        }
+    }
+
+    &.off {
+    }
+}
+
+.bigger {
+    font-size: 5rem !important;
+}
+
+.action:active {
+    border-radius: var(--blinker-radius-control);
+    transform: scale(0.95, 0.95);
+}
+
+.toggle-box {
+    position: relative;
+    border: 1px solid var(--blinker-border);
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 100%;
-    height: 100%;
-    font-size: 26px;
+    background-color: var(--blinker-surface-muted);
+    border-radius: 13.5px;
+    width: 45px;
+    height: 25px;
+    transition: all 0.3s;
+
+    .toggle-inner {
+        border-radius: 50%;
+        background: var(--blinker-surface);
+        box-shadow: 0 2px 7px rgba(7, 20, 35, 0.18);
+        height: 21px;
+        width: 21px;
+        position: absolute;
+        transition: all 0.3s;
+    }
+
+    .on {
+        right: 1px;
+    }
+
+    .off {
+        right: calc(100% - 22px);
+    }
 }

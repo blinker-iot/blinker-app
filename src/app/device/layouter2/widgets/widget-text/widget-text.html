@@ -1,13 +1,42 @@
-<div widget class="ccenter">
-  <div widget-name>{{widget.tit}}</div>
-  <div widget-content [ngStyle]="{'color':widget.clr}">
-    <div class="icon-box" [ngStyle]="{'width':widget.ico?gridSize+'px':'0px'}">
-      <i class="{{widget.ico}}"></i>
-    </div>
-    <div class="text-box">
-      <div class="text" #textBox>
-        {{tex}}
-      </div>
+<div widget [ngStyle]="{'color': color}">
+  @if (lstyle==0 || lstyle==1 || lstyle==5) {
+  <div class="textbox">
+    @if (ico!='') {
+    <i class="{{ico}}"></i>
+    }
+    <div class="title" overflow [ngStyle]="{'font-size': size+'px'}">
+      {{t0}}
     </div>
   </div>
+  } @if (lstyle==2) {
+  <div class="textbox2">
+    @if (ico!='') {
+    <i class="{{ico}}"></i>
+    }
+    <div class="contentbox">
+      <div class="title" overflow [ngStyle]="{'font-size': size+'px'}">
+        {{t0}}
+      </div>
+      <div class="content" overflow>{{t1}}</div>
+    </div>
+  </div>
+  } @if (lstyle==3 || lstyle==6) {
+  <div class="textbox3">
+    @if (ico!='') {
+    <i class="{{ico}}"></i>
+    }
+    <div class="contentbox">
+      <div class="title" overflow [ngStyle]="{'font-size': size+'px'}">
+        {{t0}}
+      </div>
+      <div class="content" overflow>{{t1}}</div>
+    </div>
+  </div>
+  } @if (lstyle==4) {
+  <div class="textbox4">
+    @if (ico!='') {
+    <i class="{{ico}}"></i>
+    }
+  </div>
+  }
 </div>

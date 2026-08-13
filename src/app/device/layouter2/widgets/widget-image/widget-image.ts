@@ -1,11 +1,12 @@
 import { Component, Input } from '@angular/core';
-import { Layouter2Service } from '../../layouter2.service';
+import { LayouterService } from '../../../layouter.service';
 import { Layouter2Widget } from '../config';
 
 @Component({
-    selector: 'widget-image',
-    templateUrl: 'widget-image.html',
-    styleUrls: ['widget-image.scss']
+  standalone: false,
+  selector: 'widget-image',
+  templateUrl: 'widget-image.html',
+  styleUrls: ['widget-image.scss']
 })
 export class WidgetImageComponent implements Layouter2Widget {
 
@@ -53,7 +54,7 @@ export class WidgetImageComponent implements Layouter2Widget {
   }
 
   constructor(
-    private LayouterService: Layouter2Service
+    private LayouterService: LayouterService
   ) { }
 
   // 预加载图片，避免切换时再加载一时显示不出来

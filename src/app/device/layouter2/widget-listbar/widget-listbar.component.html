@@ -1,14 +1,17 @@
 <div class="bar">
   <div class="btns">
-    <ng-container *ngFor="let button of widgetList;index as i">
-      <div class="btn" [ngClass]="{'begin':i==0,'end':i==widgetList.length-1}">
-        <div class="btn-inner " (click)="addWidget(button.type)">
-          <div class="block">
-            <i class="{{button.icon}}"></i>
-          </div>
-          <div class="name ">{{button.name | translate}}</div>
+    @for (button of widgetList; track button; let i = $index) {
+    <div
+      class="btn"
+      [ngClass]="{ begin: i == 0, end: i == widgetList.length - 1 }"
+    >
+      <div class="btn-inner" (click)="addWidget(button.type)">
+        <div class="block">
+          <i class="{{ button.icon }}"></i>
         </div>
+        <div class="name">{{ button.name }}</div>
       </div>
-    </ng-container>
+    </div>
+    }
   </div>
 </div>

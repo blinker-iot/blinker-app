@@ -1,0 +1,32 @@
+@if (url) {
+<iframe
+  class="animated fadeIn faster"
+  [src]="url"
+  width="100%"
+  frameborder="0"
+  #iframeBox
+></iframe>
+} @if (showLoading && !isFailed) {
+<div class="loading-box" [ngClass]="{ tohide: loaded }">
+  <div class="loader">
+    <div class="ball-grid-beat">
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+  </div>
+  <div class="text">loading</div>
+</div>
+} @if (isFailed) {
+<div class="fail-box">
+  <i class="fad fa-exclamation-triangle"></i>
+  <p>设备页面加载失败</p>
+  <p>请检查网络连接，或联系设备提供商</p>
+</div>
+}

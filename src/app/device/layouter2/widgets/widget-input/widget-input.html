@@ -1,8 +1,13 @@
-<div widget >
-  <div class="send-box">
-    <input input-zone type="text" [(ngModel)]="sendmess" name="sendmess" #myInput>
-    <button class="btn" (click)="send()">
-      <i class="fal fa-arrow-up"></i>
-    </button>
+<div widget [ngStyle]="{'color': color}">
+  <div class="inputbox">
+    <div class="send-box">
+      <form class="send" (ngSubmit)="send()" #formBox="ngForm">
+        <!-- <input input-zone type="text" [(ngModel)]="sendmess" name="sendmess" #myInput> -->
+        <div class="input" (click)="showInputModal()">{{sendmess}}</div>
+        <button class="btn" type="submit">
+          <i class="fal fa-arrow-up"></i>
+        </button>
+      </form>
+    </div>
   </div>
 </div>

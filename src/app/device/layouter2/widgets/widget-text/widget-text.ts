@@ -1,63 +1,66 @@
-import {
-  Component,
-  ElementRef,
-  Input,
-  ViewChild,
-  ChangeDetectionStrategy,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Input } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { Layouter2Service } from '../../layouter2.service';
 
 @Component({
+  standalone: false,
   selector: 'widget-text',
   templateUrl: 'widget-text.html',
-  styleUrls: ['widget-text.scss'],
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [CommonModule],
+  styleUrls: ['widget-text.scss']
 })
 export class WidgetTextComponent implements Layouter2Widget {
-  @Input()
-  widget;
-  @Input()
-  device;
+
+  @Input() widget;
+  @Input() device;
 
   get key() {
     return this.widget.key;
   }
 
-  get tex() {
-    return this.getValue(['tex', 't0']);
+  get t0() {
+    return this.getValue(['tex', 't0'])
   }
 
-  get gridSize() {
-    return this.layouter2Service.gridSize;
+  get t1() {
+    return this.getValue(['tex1', 't1'])
   }
 
-  @ViewChild('textBox', { static: false }) textBox: ElementRef;
-  @ViewChild('text1Box', { static: false }) text1Box: ElementRef;
+  get ico() {
+    return this.getValue(['ico', 'icon'])
+  }
+
+  get size() {
+    return this.getValue(['size'])
+  }
+
+  get color() {
+    return this.getValue(['clr', 'col', 'color'])
+  }
 
   getValue(valueKeys: string[]): any {
     for (let valueKey of valueKeys) {
-      if (typeof this.device.data[this.key] != 'undefined') {
-        if (typeof this.device.data[this.key][valueKey] != 'undefined') {
-          return this.device.data[this.key][valueKey];
-        }
-      }
-      if (typeof this.widget[valueKey] != 'undefined') {
-        return this.widget[valueKey];
-      }
-    }
-    return;
+      if (typeof this.device.data[this.key] != 'undefined')
+        if (typeof this.device.data[this.key][valueKey] != 'undefined')
+          return this.device.data[this.key][valueKey]
+      if (typeof this.widget[valueKey] != 'undefined')
+        return this.widget[valueKey]
+    };
+    return
+  }
+
+  _lstyle
+  @Input()
+  set lstyle(lstyle) {
+    this._lstyle = lstyle
+  }
+  get lstyle() {
+    if (typeof this._lstyle != 'undefined')
+      return this._lstyle
+    if (typeof this.widget.lstyle != 'undefined')
+      return this.widget.lstyle
+    return 0;
   }
 
   constructor(
-    private el: ElementRef,
-    private layouter2Service: Layouter2Service
-  ) {}
+  ) { }
 
-  ngAfterViewInit() {
-    // console.log(this.layouter2Service.gridSize);
-  }
 }

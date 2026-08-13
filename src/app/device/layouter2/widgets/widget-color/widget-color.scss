@@ -1,8 +1,41 @@
+.color-box {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0.3rem 0;
 
-[widget]{
+    .content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        color: var(--blinker-text-secondary);
+    }
 
-}
+    b-colorpicker-disc {
+        height: 70%;
+        width: calc(70% - 5px);
+    }
 
-b-colorpicker-disc {
-    height: 100%;
+    b-colorpicker-disc.full{
+        height: 100%;
+        width: calc(100% - 10px);
+    }
+
+    .brightness {
+        margin-top: 2%;
+        height: 16%;
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        color: var(--blinker-text-tertiary);
+
+        b-range {
+            width: 80%;
+            margin: 0 5px;
+        }
+    }
 }

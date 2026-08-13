@@ -1,18 +1,16 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
-
-import { FormsModule } from '@angular/forms';
+import { Component, Input } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { DeviceService } from 'src/app/core/services/device.service';
+import { AlertController } from '@ionic/angular';
+import { LayouterService } from '../../../layouter.service';
 
 @Component({
+  standalone: false,
   selector: 'widget-input',
   templateUrl: 'widget-input.html',
-  styleUrls: ['widget-input.scss'],
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule],
+  styleUrls: ['widget-input.scss']
 })
 export class WidgetInputComponent implements Layouter2Widget {
+
   @Input() widget;
   @Input() device;
 
@@ -21,51 +19,81 @@ export class WidgetInputComponent implements Layouter2Widget {
   }
 
   get t0() {
-    return this.getValue(['tex', 't0']);
+    return this.getValue(['tex','t0'])
   }
 
   get t1() {
-    return this.getValue(['tex1', 't1']);
+    return this.getValue(['tex1','t1'])
   }
 
   get ico() {
-    return this.getValue(['ico', 'icon']);
+    return this.getValue(['ico','icon'])
   }
 
   get color() {
-    return this.getValue(['clr', 'col', 'color']);
+    return this.getValue(['clr','col','color'])
   }
 
   getValue(valueKeys: string[]): any {
     for (let valueKey of valueKeys) {
       if (typeof this.device.data[this.key] != 'undefined')
         if (typeof this.device.data[this.key][valueKey] != 'undefined')
-          return this.device.data[this.key][valueKey];
+          return this.device.data[this.key][valueKey]
       if (typeof this.widget[valueKey] != 'undefined')
-        return this.widget[valueKey];
-    }
-    return;
+        return this.widget[valueKey]
+    };
+    return
   }
 
-  _lstyle;
+  _lstyle
   @Input()
   set lstyle(lstyle) {
-    this._lstyle = lstyle;
+    this._lstyle = lstyle
   }
   get lstyle() {
-    if (typeof this._lstyle != 'undefined') return this._lstyle;
-    if (typeof this.widget.lstyle != 'undefined') return this.widget.lstyle;
+    if (typeof this._lstyle != 'undefined')
+      return this._lstyle
+    if (typeof this.widget.lstyle != 'undefined')
+      return this.widget.lstyle
     return 0;
   }
 
   sendmess;
 
-  constructor(private deviceService: DeviceService) {}
+  constructor(
+    private alertCtrl: AlertController,
+    private layouterService: LayouterService,
+  ) {}
 
-  async showInputModal() {}
 
-  send() {
-    this.deviceService.sendData(this.device, this.sendmess);
-    this.sendmess = '';
+  send(){
   }
+
+  async showInputModal() {
+    const alert = await this.alertCtrl.create({
+      header: '发送数据',
+      inputs: [{
+        name: 'message',
+        type: 'text',
+        value: this.sendmess,
+        placeholder: '请输入要发送的内容'
+      }],
+      buttons: [
+        '取消',
+        {
+          text: '发送',
+          handler: (data) => {
+            this.sendmess = data.message;
+            if (this.sendmess) {
+              this.layouterService.send(
+                JSON.stringify({ [this.key]: this.sendmess }),
+              );
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
 }
