@@ -22,7 +22,6 @@ import { ComponentsModule } from './core/components/components.module';
 import { DebugModule } from './debug/debug.module';
 import { DocModule } from './core/pages/doc/doc.module';
 import { MarkdownModule } from 'ngx-markdown';
-import { BlinkerSpeechModule } from './sections/speech/speech.module';
 import { DataService } from './core/services/data.service';
 import { AuthService } from './core/services/auth.service';
 import { AdddeviceService } from './sections/adddevice/adddevice.service';
@@ -61,7 +60,6 @@ import { BlinkerDeviceModule } from './device/device.module';
     DebugModule,
     DocModule,
     AboutModule,
-    BlinkerSpeechModule,
     BlinkerFeedbackModule
   ],
   providers: [

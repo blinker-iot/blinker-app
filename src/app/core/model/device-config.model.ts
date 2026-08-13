@@ -9,7 +9,6 @@ export interface BlinkerDeviceConfig {
     layouter?: string,
     mode: string,
     name: string,
-    speech?: any[], // 2.3.0已移除
     timer?: any[],  // 2.3.0已移除
     actions?: string,
     triggers?: string,
@@ -26,7 +25,6 @@ export interface TriggerConfig {
     state_zh?: string[],
     unit?: string,
     unit_zh?: string,
-    speech?: string,
 }
 
 export interface ActionConfig {

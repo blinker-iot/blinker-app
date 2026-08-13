@@ -29,9 +29,4 @@ export class AudioService {
         this.audioEl.play();
     }
 
-    play(audioName) {
-        this.audioEl.src = `aac/Speech_${audioName}.aac`;
-        this.audioEl.play();
-    }
-
 }

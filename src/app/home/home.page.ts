@@ -64,11 +64,6 @@ export class HomePage implements AfterViewInit {
   ngAfterViewInit() {
     this.viewService.disableMenuSwipe();
     this.selectRequestedTab();
-    if ('webkitSpeechRecognition' in window) {
-      // this.speech()
-    } else {
-      alert('语音识别API不可用');
-    }
   }
 
   goto(page) {

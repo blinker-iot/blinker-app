@@ -33,7 +33,6 @@ export class ViewService {
   viewMode = "home";
   swipeEnable = true;
   menuSwipeEnable = false;
-  showSpeechModal = false;
   devicePageIsRoot = false;
 
   get isIos() {
@@ -116,8 +115,6 @@ export class ViewService {
       ) {
         console.log("close menu");
         this.menu.close();
-      } else if (this.showSpeechModal) {
-        this.showSpeechModal = false;
       } else if (this.platformLocation.pathname.indexOf("/view") > -1) {
         App.minimizeApp();
       } else if (
