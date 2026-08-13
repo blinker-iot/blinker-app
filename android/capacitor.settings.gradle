@@ -41,11 +41,17 @@ project(':capacitor-status-bar').projectDir = new File('../node_modules/@capacit
 include ':capacitor-android-shortcuts'
 project(':capacitor-android-shortcuts').projectDir = new File('../node_modules/capacitor-android-shortcuts/android')
 
+include ':capacitor-mdns'
+project(':capacitor-mdns').projectDir = new File('../../capacitor-mdns/android')
+
 include ':capacitor-native-settings'
 project(':capacitor-native-settings').projectDir = new File('../node_modules/capacitor-native-settings/android')
 
-include ':capacitor-wifiprov'
-project(':capacitor-wifiprov').projectDir = new File('../node_modules/capacitor-wifiprov/android')
+include ':capacitor-ntfy'
+project(':capacitor-ntfy').projectDir = new File('../../capacitor-ntfy/android')
 
-include ':capacitor-mdns'
-project(':capacitor-mdns').projectDir = new File('../node_modules/capacitor-mdns/android')
+include ':capacitor-wechat'
+project(':capacitor-wechat').projectDir = new File('../../capacitor-wechat/android')
+
+include ':capacitor-wifiprov'
+project(':capacitor-wifiprov').projectDir = new File('../../capacitor-wifiprov/android')

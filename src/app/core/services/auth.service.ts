@@ -5,6 +5,8 @@ import { BlinkerResponse } from '../model/response.model';
 import { API } from 'src/app/configs/api.config';
 import { sha256 } from '../functions/func';
 import { NavController } from '@ionic/angular/standalone';
+import { Capacitor } from '@capacitor/core';
+import { Wechat } from 'capacitor-wechat';
 
 
 @Injectable({
@@ -200,11 +202,20 @@ export class AuthService {
 
     // 微信登录
     async loginWithWechat(): Promise<boolean> {
-        return this.http.get<BlinkerResponse>(API.AUTH.WECHAT_LOGIN)
-            .toPromise()
+        const request = Capacitor.isNativePlatform()
+            ? Wechat.login().then(({ code, state }) =>
+                this.http.post<BlinkerResponse>(API.AUTH.WECHAT_LOGIN, {
+                    code,
+                    state,
+                    platform: Capacitor.getPlatform()
+                }).toPromise()
+            )
+            : this.http.get<BlinkerResponse>(API.AUTH.WECHAT_LOGIN).toPromise();
+
+        return request
             .then(resp => {
                 console.log(resp);
-                if (resp.message == 1000) {
+                if (resp?.message == 1000) {
                     this.dataService.auth = resp.detail;
                     return true;
                 } else {
