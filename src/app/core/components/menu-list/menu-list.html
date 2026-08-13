@@ -14,6 +14,7 @@
       class="menu-row"
       [class.menu-row--muted]="item.muted"
       [class.menu-row--danger]="item.danger"
+      [disabled]="item.disabled"
       (click)="select(item)"
     >
       <span class="menu-icon" aria-hidden="true">

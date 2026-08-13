@@ -25,6 +25,7 @@ export interface MenuListItem {
   route?: string;
   muted?: boolean;
   danger?: boolean;
+  disabled?: boolean;
   showChevron?: boolean;
 }
 

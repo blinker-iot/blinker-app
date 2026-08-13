@@ -1,5 +1,4 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import {
   ActionSheetController,
@@ -12,6 +11,10 @@ import {
   AvatarCropResult,
   AvatarPickerComponent,
 } from 'src/app/core/pages/avatar/avatar-picker.component';
+import {
+  MenuListComponent,
+  MenuListItem,
+} from 'src/app/core/components/menu-list/menu-list';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { DataService } from 'src/app/core/services/data.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
@@ -22,7 +25,7 @@ import { UserService } from 'src/app/core/services/user.service';
   templateUrl: './user.page.html',
   styleUrls: ['./user.page.scss'],
   standalone: true,
-  imports: [FormsModule, IonicModule, RouterModule],
+  imports: [IonicModule, MenuListComponent, RouterModule],
 })
 export class UserPage implements OnInit, OnDestroy {
   private subscription?: Subscription;
@@ -33,8 +36,6 @@ export class UserPage implements OnInit, OnDestroy {
   draftPhone = '138 0000 8888';
   draftRegion = '中国大陆 · 上海市';
   localAvatar = '';
-  selectedAvatarFile?: File;
-  saving = false;
 
   get user() {
     return this.dataService.user;
@@ -42,6 +43,57 @@ export class UserPage implements OnInit, OnDestroy {
 
   get avatar() {
     return this.localAvatar || this.user?.avatar || '';
+  }
+
+  get profileMenuItems(): readonly MenuListItem[] {
+    return [
+      {
+        id: 'username',
+        title: '用户名',
+        icon: 'fa-user',
+        value: this.draftName,
+      },
+      {
+        id: 'phone',
+        title: '手机号',
+        icon: 'fa-mobile-screen-button',
+        value: this.draftPhone,
+        disabled: true,
+        showChevron: false,
+      },
+      {
+        id: 'region',
+        title: '所在地区',
+        icon: 'fa-location-dot',
+        value: this.draftRegion,
+      },
+    ];
+  }
+
+  get securityMenuItems(): readonly MenuListItem[] {
+    return [
+      {
+        id: 'password',
+        title: '登录密码',
+        icon: 'fa-lock-keyhole',
+        value: '修改',
+      },
+      {
+        id: 'security',
+        title: '账号与安全',
+        icon: 'fa-shield-check',
+        value: '已保护',
+        disabled: true,
+        showChevron: false,
+      },
+      {
+        id: 'cancel-account',
+        title: '注销账号',
+        icon: 'fa-user-xmark',
+        danger: true,
+        showChevron: false,
+      },
+    ];
   }
 
   constructor(
@@ -79,54 +131,48 @@ export class UserPage implements OnInit, OnDestroy {
       : phone;
   }
 
-  async saveProfile() {
-    const name = this.draftName.trim();
-    if (this.getStrLength(name) < 2) {
-      await this.noticeService.showToast('用户名至少需要 2 个字符');
-      return;
+  selectMenuItem(item: MenuListItem): void {
+    switch (item.id) {
+      case 'username':
+        void this.showChangeUsername();
+        break;
+      case 'region':
+        void this.selectRegion();
+        break;
+      case 'password':
+        void this.showChangePassword();
+        break;
+      case 'cancel-account':
+        void this.showCancelAlert();
+        break;
     }
-    if (
-      this.user &&
-      this.selectedAvatarFile &&
-      !this.userService.avatarUploadConfigured
-    ) {
-      await this.noticeService.showToast('头像上传接口暂未配置');
-      return;
-    }
+  }
 
-    this.saving = true;
-    try {
-      if (this.user && name !== this.user.username) {
-        const saved = await this.userService.changeProfile(name);
-        if (!saved) {
-          await this.noticeService.showToast('保存失败，请稍后重试');
-          return;
-        }
-        this.user.username = name;
-      }
-      if (this.user && this.selectedAvatarFile) {
-        const avatarSaved = await this.userService.uploadAvatar(
-          this.selectedAvatarFile
-        );
-        if (!avatarSaved) {
-          await this.noticeService.showToast('头像上传失败，请稍后重试');
-          return;
-        }
-        this.selectedAvatarFile = undefined;
-        this.dataService.updateAvatarCache();
-      }
-      if (!this.user) {
-        this.dataService.user = {
-          username: name,
-          avatar: '',
-          phone: this.draftPhone.replace(/\s/g, ''),
-          level: 0,
-        };
-      }
-      await this.noticeService.showToast('资料已保存');
-    } finally {
-      this.saving = false;
-    }
+  private async showChangeUsername(): Promise<void> {
+    this.alert = await this.alertCtrl.create({
+      header: '修改用户名',
+      inputs: [
+        {
+          name: 'username',
+          value: this.draftName,
+          placeholder: '请输入用户名',
+          attributes: { maxlength: 32 },
+        },
+      ],
+      buttons: [
+        { text: '取消', role: 'cancel' },
+        {
+          text: '确认',
+          handler: (data) => {
+            const username = String(data.username ?? '').trim();
+            if (!username) return false;
+            this.draftName = username;
+            return true;
+          },
+        },
+      ],
+    });
+    await this.alert.present();
   }
 
   async selectRegion() {
@@ -187,7 +233,6 @@ export class UserPage implements OnInit, OnDestroy {
       const { data, role } = await modal.onDidDismiss<AvatarCropResult>();
       if (role !== 'confirm' || !data?.file) return;
 
-      this.selectedAvatarFile = data.file;
       this.revokeLocalAvatarUrl();
       this.localAvatarUrl = URL.createObjectURL(data.file);
       this.localAvatar = this.localAvatarUrl;
@@ -294,11 +339,5 @@ export class UserPage implements OnInit, OnDestroy {
 
   logout() {
     this.authService.logout();
-  }
-
-  private getStrLength(value: string) {
-    return Array.from(value).reduce((length, character) => {
-      return length + (character.charCodeAt(0) <= 128 ? 1 : 2);
-    }, 0);
   }
 }

@@ -26,6 +26,14 @@
   &:active {
     background: var(--blinker-surface-active);
   }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &:disabled:active {
+    background: transparent;
+  }
 }
 
 .menu-icon {

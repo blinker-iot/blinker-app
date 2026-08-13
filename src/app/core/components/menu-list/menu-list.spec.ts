@@ -24,6 +24,13 @@ describe('MenuListComponent', () => {
       danger: true,
       showChevron: false,
     },
+    {
+      id: 'readonly',
+      title: '只读菜单',
+      icon: 'fa-lock',
+      disabled: true,
+      showChevron: false,
+    },
   ];
 
   beforeEach(async () => {
@@ -41,13 +48,14 @@ describe('MenuListComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
     const rows = element.querySelectorAll<HTMLButtonElement>('.menu-row');
 
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     expect(rows[0].textContent).toContain('详细菜单');
     expect(rows[0].textContent).toContain('菜单说明');
     expect(rows[0].textContent).toContain('即将上线');
     expect(rows[0].classList).toContain('menu-row--muted');
     expect(rows[1].classList).toContain('menu-row--danger');
     expect(rows[1].querySelector('.menu-arrow')).toBeNull();
+    expect(rows[2].disabled).toBe(true);
   });
 
   it('emits the selected menu item', () => {

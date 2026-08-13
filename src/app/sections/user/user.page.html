@@ -28,44 +28,18 @@
       </div>
       <span class="camera-button"><i class="fa-light fa-camera"></i></span>
     </button>
-    <section class="form-card profile-card">
-      <label class="form-row">
-        <span>用户名</span>
-        <input [(ngModel)]="draftName" maxlength="32" aria-label="用户名" />
-        <i class="fa-light fa-chevron-right"></i>
-      </label>
-      <div class="form-row readonly-row">
-        <span>手机号</span>
-        <strong>{{ draftPhone }}</strong>
-      </div>
-      <button type="button" class="form-row" (click)="selectRegion()">
-        <span>所在地区</span>
-        <strong>{{ draftRegion }}</strong>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-    </section>
+    <app-menu-list
+      class="profile-menu-list"
+      ariaLabel="个人资料"
+      [items]="profileMenuItems"
+      (itemSelected)="selectMenuItem($event)"
+    ></app-menu-list>
 
     <div class="section-label">账户安全</div>
-    <section class="form-card security-card">
-      <button type="button" class="form-row" (click)="showChangePassword()">
-        <span>登录密码</span>
-        <strong class="link-value">修改</strong>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-      <button type="button" class="form-row">
-        <span>账号与安全</span>
-        <strong>已保护</strong>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-    </section>
-
-    <button type="button" class="primary-save" [disabled]="saving" (click)="saveProfile()">
-      @if (saving) {
-      <i class="fa-light fa-spinner-third fa-spin"></i>
-      } @else {
-      保存
-      }
-    </button>
-
+    <app-menu-list
+      ariaLabel="账户安全"
+      [items]="securityMenuItems"
+      (itemSelected)="selectMenuItem($event)"
+    ></app-menu-list>
   </div>
 </ion-content>
