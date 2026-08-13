@@ -26,7 +26,6 @@ import { ServerInterceptor } from './core/injectable/server.interceptor';
 import { ViewService } from './core/services/view.service';
 import { DataService } from './core/services/data.service';
 import { AuthService } from './core/services/auth.service';
-import { AdddeviceService } from './sections/adddevice/adddevice.service';
 import { NetworkService } from './core/services/network.service';
 import { ImageService } from './core/services/image.service';
 import { HammerGesturesPlugin } from './core/injectable/hammer-gestures.plugin';
@@ -64,7 +63,6 @@ export const appConfig: ApplicationConfig = {
     AuthService,
     DataService,
     UserService,
-    AdddeviceService,
     DeviceService,
     NetworkService,
     NoticeService,

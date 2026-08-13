@@ -12,7 +12,6 @@ import { PusherService } from 'src/app/core/services/pusher.service';
 import { ServerInterceptor } from './core/injectable/server.interceptor';
 import { GridsterModule } from 'angular-gridster2';
 import { ViewService } from './core/services/view.service';
-import { BlinkerAddDeviceModule } from './sections/adddevice/adddevice.module';
 import { BlinkerDeviceManagerModule } from './sections/device/device-manager-routing.module';
 import { BlinkerRoomManagerModule } from './sections/room/room-manager-routing.module';
 import { BlinkerUserModule } from './sections/user/user.module';
@@ -24,7 +23,6 @@ import { DocModule } from './core/pages/doc/doc.module';
 import { MarkdownModule } from 'ngx-markdown';
 import { DataService } from './core/services/data.service';
 import { AuthService } from './core/services/auth.service';
-import { AdddeviceService } from './sections/adddevice/adddevice.service';
 import { BlinkerFeedbackModule } from './sections/feedback/feedback.module';
 // import { BlinkerAutoModule } from './sections/auto/auto.module';
 import { NetworkService } from './core/services/network.service';
@@ -52,7 +50,6 @@ import { BlinkerDeviceModule } from './device/device.module';
     // --blinker module--
     BlinkerUserModule,
     BlinkerDeviceModule,
-    BlinkerAddDeviceModule,
     BlinkerDeviceManagerModule,
     BlinkerRoomManagerModule,
     BlinkerSceneManagerModule,
@@ -71,7 +68,6 @@ import { BlinkerDeviceModule } from './device/device.module';
     AuthService,
     DataService,
     UserService,
-    AdddeviceService,
     DeviceService,
     NetworkService,
     NoticeService,
