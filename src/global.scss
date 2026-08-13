@@ -105,7 +105,11 @@ ion-header.main-tab-header {
     --border-color: transparent;
     --border-width: 0;
     min-height: 56px;
-    padding: 4px 8px 0;
+    padding:
+      calc(var(--ion-safe-area-top, 0px) + 4px)
+      max(8px, var(--ion-safe-area-right, 0px))
+      0
+      max(8px, var(--ion-safe-area-left, 0px));
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
