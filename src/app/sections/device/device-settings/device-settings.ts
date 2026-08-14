@@ -4,7 +4,6 @@ import {
   IonicModule,
   ModalController,
   NavController,
-  Platform,
 } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
@@ -12,12 +11,12 @@ import { ActivatedRoute } from '@angular/router';
 import { DeviceIconPage } from '../../../core/pages/device-icon/device-icon';
 import { DataService } from 'src/app/core/services/data.service';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
-import { ImageService } from 'src/app/core/services/image.service';
-import { AndroidShortcuts } from 'capacitor-android-shortcuts';
 import { TranslatePipe } from '@ngx-translate/core';
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { firstValueFrom } from 'rxjs';
 import { ManagedDeviceService } from 'src/app/core/gateway/managed-device.service';
+import { DeviceShortcutService } from 'src/app/core/services/device-shortcut.service';
+import { NoticeService } from 'src/app/core/services/notice.service';
 
 import { ShareService } from '../device-share/share.service';
 import { LayouterService } from 'src/app/device/layouter.service';
@@ -84,12 +83,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         route: `/device-manager/${this.id}/timer`,
       },
       {
-        id: 'shortcut',
-        title: '添加到桌面',
-        description: '创建快速访问设备的桌面入口',
-        icon: 'fa-grid-2-plus',
-      },
-      {
         id: 'guide',
         title: '配置向导',
         description: '重新查看设备面板的配置说明',
@@ -99,7 +92,17 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   get dangerMenuItems(): readonly MenuListItem[] {
-    return [
+    const items: MenuListItem[] = [];
+    if (this.deviceShortcutService.isAvailable) {
+      items.push({
+        id: 'shortcut',
+        title: '添加桌面快捷方式',
+        description: '使用设备图片创建直达该设备的桌面图标',
+        icon: 'fa-grid-2-plus',
+      });
+    }
+
+    items.push(
       {
         id: 'unbind',
         title: this.isManaged
@@ -114,7 +117,8 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         danger: true,
         showChevron: false,
       },
-    ];
+    );
+    return items;
   }
 
   settingList = [
@@ -131,13 +135,13 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private deviceService: DeviceService,
     private dataService: DataService,
     private alertCtrl: AlertController,
-    public platform: Platform,
     private navCtrl: NavController,
     private modalCtrl: ModalController,
     private shareService: ShareService,
-    private imageService: ImageService,
+    private managedDevices: ManagedDeviceService,
     private layouterService: LayouterService,
-    private managedDevices: ManagedDeviceService
+    private deviceShortcutService: DeviceShortcutService,
+    private noticeService: NoticeService
   ) {}
 
   subscription;
@@ -286,72 +290,17 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   async addShortcut() {
-    if (!(await this.checkSupportShort()).result) return;
-    let base64Data: any;
-    if (
-      this.device.config.image.indexOf('https://') > -1 ||
-      this.device.config.image.indexOf('http://') > -1
-    ) {
-      base64Data = await this.getBase64ImageByUrl(this.device.config.image);
-    } else {
-      base64Data = await this.getBase64Image(
-        this.getImagePath(this.device.config.image)
-      );
+    try {
+      const result = await this.deviceShortcutService.pinDevice(this.device);
+      if (result === 'requested') {
+        await this.noticeService.showToast('已提交添加桌面快捷方式请求');
+      } else {
+        await this.noticeService.showToast('当前设备或桌面不支持添加快捷方式');
+      }
+    } catch (error) {
+      console.error('Failed to add the device shortcut', error);
+      await this.noticeService.showToast('添加桌面快捷方式失败，请稍后重试');
     }
-    let shortcut: any = {
-      id: this.device.id,
-      shortLabel: this.device.config.customName,
-      longLabel: 'a blinker device',
-      icon: {
-        type: 'Bitmap',
-        name: base64Data,
-      },
-      data: '/device/' + this.device.id,
-    };
-    AndroidShortcuts.pin(shortcut);
-  }
-
-  getBase64ImageByUrl(imgurl) {
-    // return new Promise<string>((resolve, reject) => {
-    //   console.log(imgurl);
-    //   let path = this.file.externalDataDirectory + 'temp.png';
-    //   const fileTransfer: FileTransferObject = this.fileTransfer.create();
-    //   fileTransfer.download(imgurl, path).then((entry) => {
-    //     console.log('download complete: ' + entry.toURL());
-    //     // let filename=entry.toURL().slice(entry.toURL().lastIndexOf("/"))
-    //     this.file.readAsDataURL(this.file.externalDataDirectory, 'temp.png').then(base64 => {
-    //       base64 = base64.replace("data:image/png;base64,", '');
-    //       return resolve(base64);
-    //     })
-    //   })
-    // })
-  }
-
-  getBase64Image(imgurl) {
-    return new Promise<string>((resolve, reject) => {
-      let image = new Image();
-      image.setAttribute('crossOrigin', 'anonymous');
-      image.src = imgurl;
-      image.onload = () => {
-        let canvas = document.createElement('canvas');
-        canvas.width = image.width;
-        canvas.height = image.height;
-        let ctx = canvas.getContext('2d');
-        ctx.drawImage(image, 0, 0, image.width, image.height);
-        // console.log(image.src);
-        let base64 = canvas.toDataURL('image/png');
-        base64 = base64.replace(/^data:image\/png;base64,/, '');
-        return resolve(base64);
-      };
-    });
-  }
-
-  getImagePath(filename) {
-    return this.imageService.resolveDeviceImage(filename).light;
-  }
-
-  async checkSupportShort() {
-    return AndroidShortcuts.isPinnedSupported();
   }
 
   showGuide() {

@@ -29,6 +29,7 @@ import { Capacitor } from '@capacitor/core';
 import { BTipComponent } from './core/components/b-tip/b-tip.component';
 import { BToastComponent } from './core/components/b-toast/b-toast.component';
 import { headerIconTransitionAnimation } from './core/animations/header-icon-transition.animation';
+import { NtfyService } from './core/services/ntfy.service';
 
 @Component({
   selector: 'app-root',
@@ -83,6 +84,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     private tipService: TipService,
     private translationService: TranslationService,
     private audioService: AudioService,
+    private ntfyService: NtfyService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -137,6 +139,7 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.viewService.init(); // 适配手机样式
       this.networkService.init();
       this.updateService.init();
+      await this.ntfyService.init();
       // 国内无法使用推送服务
       // this.pusherService.init();
     }

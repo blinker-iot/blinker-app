@@ -22,9 +22,11 @@ dependencies {
     implementation project(':capacitor-splash-screen')
     implementation project(':capacitor-status-bar')
     implementation project(':capacitor-android-shortcuts')
-    implementation project(':capacitor-native-settings')
-    implementation project(':capacitor-wifiprov')
     implementation project(':capacitor-mdns')
+    implementation project(':capacitor-native-settings')
+    implementation project(':capacitor-ntfy')
+    implementation project(':capacitor-wechat')
+    implementation project(':capacitor-wifiprov')
 
 }
 
