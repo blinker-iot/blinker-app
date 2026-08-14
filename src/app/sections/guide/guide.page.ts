@@ -7,6 +7,7 @@ import {
   MenuListComponent,
   MenuListItem,
 } from '../../core/components/menu-list/menu-list';
+import { GatewaySessionService } from '../../core/gateway/gateway-session.service';
 
 @Component({
   selector: 'app-device-guide',
@@ -19,11 +20,12 @@ import {
 export class GuidePage {
   constructor(
     private navController: NavController,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private gatewaySession: GatewaySessionService
   ) {}
 
   get methodItems(): readonly MenuListItem[] {
-    return [
+    const methods: MenuListItem[] = [
       {
         id: 'wifi',
         icon: 'fa-wifi',
@@ -51,6 +53,9 @@ export class GuidePage {
         route: '/guide/key',
       },
     ];
+    return this.gatewaySession.hasSession
+      ? methods.filter((method) => method.id !== 'key')
+      : methods;
   }
 
   async selectMethod(method: MenuListItem): Promise<void> {

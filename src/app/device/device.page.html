@@ -26,6 +26,11 @@
         } } @else { ({{'DEVICE.OFFLINE' | translate}}) }
         <ng-template #offline> ({{'DEVICE.OFFLINE' | translate}}) </ng-template>
         }
+        @if (device.config.mode=='managed-http') {
+        @if (device.data.state=='unknown') { (状态未知) }
+        @else if (device.data.enable) { ({{'DEVICE.ONLINE' | translate}}) }
+        @else { ({{'DEVICE.OFFLINE' | translate}}) }
+        }
       </div>
     </ion-title>
     <ion-buttons slot="end">

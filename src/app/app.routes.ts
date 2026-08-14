@@ -1,9 +1,10 @@
 import { Routes } from '@angular/router';
 import { LayouterGuard } from './device/layouter2/layouter.guard';
+import { AuthGuard } from './core/guard/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
-  { path: 'home', loadComponent: () => import('./home/home.page').then(m => m.HomePage) },
+  { path: 'home', loadComponent: () => import('./home/home.page').then(m => m.HomePage), canActivate: [AuthGuard] },
   { path: 'login', loadComponent: () => import('./sections/login/login').then(m => m.LoginPage) },
   { path: 'settings', loadComponent: () => import('./sections/settings/settings.page').then(m => m.SettingsPage) },
   {
@@ -12,8 +13,8 @@ export const routes: Routes = [
   },
   { path: 'feedback', loadComponent: () => import('./sections/feedback/feedback.component').then(m => m.FeedbackPage) },
   { path: 'about', loadComponent: () => import('./sections/about/about.page').then(m => m.AboutPage) },
-  { path: 'user', loadComponent: () => import('./sections/user/user.page').then(m => m.UserPage) },
-  { path: 'message', loadComponent: () => import('./sections/message/message.page').then(m => m.MessagePage) },
+  { path: 'user', loadComponent: () => import('./sections/user/user.page').then(m => m.UserPage), canActivate: [AuthGuard] },
+  { path: 'message', loadComponent: () => import('./sections/message/message.page').then(m => m.MessagePage), canActivate: [AuthGuard] },
   {
     path: 'guide',
     pathMatch: 'full',
@@ -34,35 +35,43 @@ export const routes: Routes = [
   {
     path: 'room-manager',
     loadComponent: () => import('./sections/room/room-manager/room-manager').then(m => m.RoomManagerPage),
+    canActivate: [AuthGuard],
   },
   {
     path: 'room-manager/:room',
     loadComponent: () => import('./sections/room/room-edit/room-edit').then(m => m.RoomEditPage),
+    canActivate: [AuthGuard],
   },
   {
     path: 'scene-manager',
     loadComponent: () => import('./sections/scene/scene-manager/scene-manager').then(m => m.SceneManager),
+    canActivate: [AuthGuard],
   },
   {
     path: 'scene-manager/:scene',
     loadComponent: () => import('./sections/scene/scene-editor/scene-edit').then(m => m.SceneEditor),
+    canActivate: [AuthGuard],
   },
   {
     path: 'share-manager',
     loadComponent: () => import('./sections/device/share-manager/share-manager.page').then(m => m.ShareManagerPage),
+    canActivate: [AuthGuard],
   },
   {
     path: 'share-manager/:id',
     loadComponent: () => import('./sections/device/device-share/device-share').then(m => m.DeviceSharePage),
+    canActivate: [AuthGuard],
   },
   {
     path: 'device/:id',
     loadComponent: () => import('./device/device.page').then(m => m.DevicePage),
+    canActivate: [AuthGuard],
     canDeactivate: [LayouterGuard],
   },
   {
     path: 'device-manager/:id',
     loadComponent: () => import('./sections/device/device-settings/device-settings').then(m => m.DeviceSettingsPage),
+    canActivate: [AuthGuard],
   },
   {
     path: 'tools/esp32-provision',

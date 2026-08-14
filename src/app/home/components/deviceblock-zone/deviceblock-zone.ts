@@ -19,6 +19,7 @@ import { DataService } from 'src/app/core/services/data.service';
 import PullToRefresh from 'pulltorefreshjs';
 import { DeviceblockListComponent } from '../deviceblock-list/deviceblock-list';
 import { DeviceService } from 'src/app/core/services/device.service';
+import { GatewaySessionService } from 'src/app/core/gateway/gateway-session.service';
 
 interface RoomSlide {
   roomId: number;
@@ -94,6 +95,7 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
     private deviceService: DeviceService,
     public userService: UserService,
     private dataService: DataService,
+    private gatewaySession: GatewaySessionService,
     private cd: ChangeDetectorRef,
     private ngZone: NgZone,
     destroyRef: DestroyRef
@@ -483,9 +485,11 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   }
 
   async refresh() {
-    if (!this.dataService.auth) return;
+    if (!this.dataService.auth && !this.gatewaySession.hasSession) return;
     await this.userService.getAllInfo();
-    this.deviceService.searchLocalDevice();
+    if (!this.gatewaySession.hasSession) {
+      this.deviceService.searchLocalDevice();
+    }
   }
 
   destroyRefresh() {

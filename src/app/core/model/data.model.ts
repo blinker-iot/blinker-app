@@ -7,7 +7,12 @@ export interface UserData {
     username: string,
     avatar: string,
     phone: string,
-    level?: number
+    level?: number,
+    id?: string,
+    email?: string,
+    subscriptionPlan?: Record<string, unknown> | null,
+    entitlementRevision?: number,
+    entitlements?: Record<string, unknown>
 }
 
 export interface OrderData {

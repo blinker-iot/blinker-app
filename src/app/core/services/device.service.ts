@@ -201,6 +201,7 @@ export class DeviceService {
   }
 
   pubMessage(device, message: string) {
+    if (device?.config?.mode === 'managed-http') return;
     // 检查设备是否在局域网中,如果在则切换成ws发送
     if (this.islocalDevice(device)) {
       if (this.lanDeviceList[device.deviceName].state == 'disconnected') {
@@ -457,6 +458,7 @@ export class DeviceService {
 
   // 查询设备是否在线
   queryDevice(device: BlinkerDevice) {
+    if (device?.config?.mode === 'managed-http') return;
     // MQTT设备,且APP已经在该broker中注册
     if (device.config.mode == "mqtt" && this.brokerDataList.indexOf(device.config.broker) > -1) {
       let connected: Subscription = this.brokerDataDict[device.config.broker].connected.subscribe(state => {
@@ -498,7 +500,8 @@ export class DeviceService {
   queryDevices() {
     try {
       for (let deviceName in this.deviceDataDict) {
-        this.queryDevice(this.deviceDataDict[deviceName]);
+        const device = this.deviceDataDict[deviceName];
+        if (device?.config?.mode !== 'managed-http') this.queryDevice(device);
       }
     } catch (error) {
       console.warn(error);

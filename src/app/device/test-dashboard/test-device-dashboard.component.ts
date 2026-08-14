@@ -4,6 +4,8 @@ import { CommonModule } from '@angular/common';
 import { BDeviceImgComponent } from '../../core/components/b-device-img/b-device-img.component';
 import { BlinkerDevice } from '../../core/model/device.model';
 import { DeviceService } from '../../core/services/device.service';
+import { ManagedDeviceService } from '../../core/gateway/managed-device.service';
+import { NoticeService } from '../../core/services/notice.service';
 
 interface DeviceMetric {
   key: string;
@@ -42,9 +44,15 @@ const METRIC_METADATA: Record<string, { label: string; unit: string }> = {
 export class TestDeviceDashboardComponent {
   @Input({ required: true }) device!: BlinkerDevice;
 
-  refreshedAt = new Date();
+  constructor(
+    public readonly deviceService: DeviceService,
+    private readonly managedDevices: ManagedDeviceService,
+    private readonly noticeService: NoticeService,
+  ) {}
 
-  constructor(public readonly deviceService: DeviceService) {}
+  get isManaged(): boolean {
+    return this.device?.config?.mode === 'managed-http';
+  }
 
   get isPreview(): boolean {
     return !!this.device?.config?.isPreview;
@@ -59,13 +67,29 @@ export class TestDeviceDashboardComponent {
   }
 
   get statusText(): string {
+    if (this.isManaged) {
+      const state = this.device?.data?.state;
+      return `HTTP 状态 · ${state === 'unknown' ? '未知' : this.isOnline ? '在线' : '离线'}`;
+    }
     if (this.isPreview) return this.isOnline ? '测试数据 · 在线' : '测试数据 · 离线';
     if (this.device?.config.mode === 'ble' && this.isOnline) return '附近可连接';
     return this.isOnline ? '在线' : '离线';
   }
 
+  get refreshedAt(): Date | null {
+    if (this.isManaged) {
+      const receivedAt = (this.device as BlinkerDevice & {
+        managed?: { latestSnapshot?: { receivedAt?: number } };
+      })?.managed?.latestSnapshot?.receivedAt;
+      return typeof receivedAt === 'number' ? new Date(receivedAt) : null;
+    }
+    return this.lastRefreshedAt;
+  }
+
+  private lastRefreshedAt = new Date();
+
   get hasSwitch(): boolean {
-    return typeof this.device?.data?.switch !== 'undefined';
+    return !this.isManaged && typeof this.device?.data?.switch !== 'undefined';
   }
 
   get switchOn(): boolean {
@@ -124,19 +148,28 @@ export class TestDeviceDashboardComponent {
       .filter((metric): metric is DeviceMetric => metric !== null);
   }
 
-  refresh(): void {
-    this.refreshedAt = new Date();
+  async refresh(): Promise<void> {
+    if (this.isManaged) {
+      try {
+        await this.managedDevices.refreshDevice(this.device.deviceName);
+      } catch {
+        await this.noticeService.showToast('刷新失败，请稍后重试');
+      }
+      return;
+    }
+    this.lastRefreshedAt = new Date();
     if (!this.isPreview) this.deviceService.queryDevice(this.device);
   }
 
   toggleSwitch(): void {
+    if (this.isManaged) return;
     if (!this.hasSwitch || !this.isOnline || this.switchWaiting) return;
 
     const nextState = this.switchOn ? 'off' : 'on';
     if (this.isPreview) {
       this.device.data.switch = nextState;
       this.device.subject.next({ key: 'switch', value: nextState });
-      this.refreshedAt = new Date();
+      this.lastRefreshedAt = new Date();
       return;
     }
 

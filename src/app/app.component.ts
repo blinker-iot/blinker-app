@@ -26,7 +26,6 @@ import { TipService } from './core/services/tip.service';
 import { TranslationService } from './core/services/translation.service';
 import { AudioService } from './core/services/audio.service';
 import { Capacitor } from '@capacitor/core';
-import { environment } from '../environments/environment';
 import { BTipComponent } from './core/components/b-tip/b-tip.component';
 import { BToastComponent } from './core/components/b-toast/b-toast.component';
 import { headerIconTransitionAnimation } from './core/animations/header-icon-transition.animation';
@@ -90,11 +89,6 @@ export class AppComponent implements OnInit, AfterViewInit {
   ngOnInit() {
     // 在 ngOnInit 中初始化 isPcBrowser 以避免 ExpressionChangedAfterItHasBeenCheckedError
     this.isPcBrowser = this.checkIsPcBrowser();
-    // Development builds use deterministic preview data. Load it before the
-    // routed home view is created so its first render already has devices.
-    if (!environment.production) {
-      this.dataService.loadGuestDevicePreview(true);
-    }
   }
 
   ngAfterViewInit() {
@@ -128,12 +122,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
   async initService() {
     console.log('init service');
-    // Do not restore stale production credentials while running the local
-    // preview; they would make the app skip the test-device data.
-    if (environment.production) {
-      await this.dataService.init();
-    }
-    this.checkLoginStatus();
+    void this.checkLoginStatus();
     this.authService.init();
     // this.deviceConfigService.init();
     this.deviceService.init();
@@ -153,14 +142,9 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
   }
 
-  checkLoginStatus() {
-    if (!environment.production) {
-      console.log('[DEV MODE] 使用设备预览数据');
-      return;
-    }
-
+  async checkLoginStatus() {
     if (this.authService.isLogin()) {
-      this.userService.getAllInfo();
+      if (!(await this.userService.getAllInfo())) await this.authService.logout();
     } else {
       this.navCtrl.navigateRoot('/login');
     }

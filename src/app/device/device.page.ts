@@ -16,6 +16,7 @@ import { Observable, of, Subscription } from 'rxjs';
 import { deviceComponentDict } from '../configs/components.config';
 import { BlinkerDevice } from '../core/model/device.model';
 import { DataService } from '../core/services/data.service';
+import { ManagedDeviceService } from '../core/gateway/managed-device.service';
 import { DebugComponent } from '../debug/debug.component';
 import { DebugService } from '../debug/debug.service';
 import { DeviceConfigService } from '../core/services/device-config.service';
@@ -78,6 +79,7 @@ export class DevicePage implements OnInit, OnDestroy {
   constructor(
     private readonly activatedRoute: ActivatedRoute,
     public readonly deviceService: DeviceService,
+    private readonly managedDevices: ManagedDeviceService,
     private readonly dataService: DataService,
     private readonly viewService: ViewService,
     private readonly deviceConfigService: DeviceConfigService,
@@ -155,6 +157,7 @@ export class DevicePage implements OnInit, OnDestroy {
       window.clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = undefined;
     }
+    if (this.device?.config?.mode === 'managed-http') return;
     if (this.device && !this.isPreview) {
       this.deviceService.disconnectDevice(this.device);
     }
@@ -275,6 +278,11 @@ export class DevicePage implements OnInit, OnDestroy {
 
   private async startDeviceSession(): Promise<void> {
     if (!this.device || this.isPreview) return;
+
+    if (this.device.config.mode === 'managed-http') {
+      await this.managedDevices.refreshDevice(this.device.deviceName);
+      return;
+    }
 
     if (this.device.config.mode === 'ble') {
       await this.deviceService.connectDevice(this.device);

@@ -16,6 +16,8 @@ import { ImageService } from 'src/app/core/services/image.service';
 import { AndroidShortcuts } from 'capacitor-android-shortcuts';
 import { TranslatePipe } from '@ngx-translate/core';
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
+import { firstValueFrom } from 'rxjs';
+import { ManagedDeviceService } from 'src/app/core/gateway/managed-device.service';
 
 import { ShareService } from '../device-share/share.service';
 import { LayouterService } from 'src/app/device/layouter.service';
@@ -66,7 +68,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     return this.device?.data?.hasNewVersion;
   }
 
+  get isManaged() {
+    return this.device?.config?.mode === 'managed-http';
+  }
+
   get deviceMenuItems(): readonly MenuListItem[] {
+    if (this.isManaged) return [];
     return [
       {
         id: 'timer',
@@ -95,8 +102,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     return [
       {
         id: 'unbind',
-        title: this.isSharedDevice ? '退出设备共享' : '解除设备绑定',
-        description: this.isSharedDevice
+        title: this.isManaged
+          ? '删除设备'
+          : (this.isSharedDevice ? '退出设备共享' : '解除设备绑定'),
+        description: this.isManaged
+          ? '从当前账户中删除这台设备'
+          : this.isSharedDevice
           ? '移除这台由其他用户共享的设备'
           : '从账户中移除设备及其关联自动化',
         icon: 'fa-link-slash',
@@ -125,7 +136,8 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private modalCtrl: ModalController,
     private shareService: ShareService,
     private imageService: ImageService,
-    private layouterService: LayouterService
+    private layouterService: LayouterService,
+    private managedDevices: ManagedDeviceService
   ) {}
 
   subscription;
@@ -186,6 +198,16 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   async saveName(customName) {
+    if (this.isManaged) {
+      const name = String(customName ?? '').trim();
+      if (!name) return;
+      await firstValueFrom(this.managedDevices.updateConfig(
+        this.device.deviceName,
+        { displayName: name },
+      ));
+      this.device.config.customName = name;
+      return;
+    }
     let newConfig = {
       customName: customName,
     };
@@ -211,6 +233,14 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         this.device.subject.next({ key: 'image', value: image.data });
         return;
       }
+      if (this.isManaged) {
+        await firstValueFrom(this.managedDevices.updateConfig(
+          this.device.deviceName,
+          { image: image.data },
+        ));
+        this.device.config.image = image.data;
+        return;
+      }
       if (await this.deviceService.saveDeviceConfig(this.device, newConfig)) {
         this.device.config.image = image.data;
       }
@@ -224,8 +254,10 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   async showUnbindConfirm() {
     this.confirm = await this.alertCtrl.create({
-      header: '确认解除绑定',
-      message: '解绑后，你将无法控制这个设备，关联该设备的自动化规则也将失效',
+      header: this.isManaged ? '确认删除设备' : '确认解除绑定',
+      message: this.isManaged
+        ? '删除后将无法再从当前账户访问这台设备。'
+        : '解绑后，你将无法控制这个设备，关联该设备的自动化规则也将失效',
       buttons: [
         {
           text: '取消',
@@ -234,7 +266,10 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         {
           text: '确认解除',
           handler: async () => {
-            if (this.isSharedDevice) {
+            if (this.isManaged) {
+              await firstValueFrom(this.managedDevices.deleteDevice(this.device.deviceName));
+              this.navCtrl.navigateRoot('/');
+            } else if (this.isSharedDevice) {
               if (await this.shareService.deleteSharedDevice(this.device.id)) {
                 this.navCtrl.navigateRoot('/');
               }

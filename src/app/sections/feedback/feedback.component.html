@@ -16,7 +16,11 @@
         <i class="fa-light fa-check"></i>
       </div>
       <h1>感谢你的反馈</h1>
+      @if (issueSyncFailed) {
+      <p>反馈内容已经保存，但工单同步暂时失败。请勿重复提交，我们会继续处理已保存的记录。</p>
+      } @else {
       <p>“{{ selectedTypeLabel }}”已成功提交。需要进一步了解情况时，我们会通过你填写的联系方式与你联系。</p>
+      }
       <button type="button" class="primary-action success-action" (click)="returnToProfile()">
         返回我的
       </button>
@@ -124,7 +128,7 @@
         <div>
           <strong>提交小贴士</strong>
           <p>提供设备型号、固件版本和复现步骤，可以帮助我们更快定位问题。</p>
-          <p>请勿填写密码、设备密钥等敏感信息。</p>
+          <p>请勿填写 Token、验证码、AuthKey、私钥、密码或其他敏感信息。</p>
           @if (isDeveloper) {
           <p>开发相关问题也可以前往点灯官网的开发者社区交流。</p>
           }

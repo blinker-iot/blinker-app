@@ -123,7 +123,12 @@ export class Deviceblock {
 
   get enable() {
     if (!this.device) return false;
-    if (this.device.config.mode == 'mqtt') return !!this.device.data?.enable;
+    if (
+      this.device.config.mode === 'mqtt' ||
+      this.device.config.mode === 'managed-http'
+    ) {
+      return !!this.device.data?.enable;
+    }
     if (
       this.device.config.mode == 'ble' &&
       this.deviceService.islocalDevice(this.device)
@@ -141,6 +146,12 @@ export class Deviceblock {
 
   get statusText() {
     if (this.isNearbyBle) return '附近可连接';
+    if (
+      this.device?.config?.mode === 'managed-http' &&
+      this.device.data?.state === 'unknown'
+    ) {
+      return '状态未知';
+    }
     return this.enable ? '在线' : '离线';
   }
 

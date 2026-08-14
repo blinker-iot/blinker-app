@@ -21,7 +21,6 @@ import { DocPage } from 'src/app/core/pages/doc/doc.page';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { DataService } from 'src/app/core/services/data.service';
 
 @Component({
   selector: 'app-login',
@@ -58,8 +57,7 @@ export class LoginPage implements OnInit, OnDestroy {
     private noticeService: NoticeService,
     private navCtrl: NavController,
     private viewService: ViewService,
-    private modalCtrl: ModalController,
-    private dataService: DataService
+    private modalCtrl: ModalController
   ) { }
 
   ngOnInit(): void {
@@ -119,15 +117,6 @@ export class LoginPage implements OnInit, OnDestroy {
   }
 
   async login() {
-    // 临时测试入口：邮箱留空时加载预览设备并直接进入设备首页。
-    if (!this.email.trim()) {
-      this.dataService.loadGuestDevicePreview(true);
-      await this.navCtrl.navigateRoot('/home', {
-        queryParams: { tab: 'device' },
-      });
-      return;
-    }
-
     if (!this.email || !this.isValidEmail(this.email)) {
       this.noticeService.showToast('needValidEmail');
       return;
@@ -141,7 +130,6 @@ export class LoginPage implements OnInit, OnDestroy {
 
     // 使用邮箱+验证码登录，如果账号不存在会自动创建
     if (await this.authService.loginWithEmailCode(this.email, this.code)) {
-      await this.userService.getAllInfo();
       await this.noticeService.hideLoading();
       this.navCtrl.navigateRoot('/');
     } else {
@@ -169,35 +157,4 @@ export class LoginPage implements OnInit, OnDestroy {
     modal.present();
   }
 
-  async loginWithGithub() {
-    await this.noticeService.showLoading('login');
-    try {
-      if (await this.authService.loginWithGithub()) {
-        await this.userService.getAllInfo();
-        await this.noticeService.hideLoading();
-        this.navCtrl.navigateRoot('/');
-      } else {
-        await this.noticeService.hideLoading();
-      }
-    } catch (error) {
-      await this.noticeService.hideLoading();
-      this.noticeService.showToast('loginFailed');
-    }
-  }
-
-  async loginWithWechat() {
-    await this.noticeService.showLoading('login');
-    try {
-      if (await this.authService.loginWithWechat()) {
-        await this.userService.getAllInfo();
-        await this.noticeService.hideLoading();
-        this.navCtrl.navigateRoot('/');
-      } else {
-        await this.noticeService.hideLoading();
-      }
-    } catch (error) {
-      await this.noticeService.hideLoading();
-      this.noticeService.showToast('loginFailed');
-    }
-  }
 }

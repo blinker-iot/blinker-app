@@ -56,7 +56,7 @@
           <strong>{{ device.id }}</strong>
         </span>
       </div>
-      @if (device.config.authKey && !isSharedDevice) {
+      @if (device.config.authKey && !isSharedDevice && !isManaged) {
       <div class="info-row">
         <span class="info-icon secret"><i class="fa-light fa-key"></i></span>
         <span class="info-copy">
@@ -72,9 +72,11 @@
       </div>
       }
     </section>
+    @if (deviceMenuItems.length > 0) {
     <div class="section-label menu-section-label">设备功能</div>
     <app-menu-list ariaLabel="设备功能" [detailed]="true" [items]="deviceMenuItems"
       (itemSelected)="selectMenuItem($event)"></app-menu-list>
+    }
     <div class="section-label danger-section-label">设备管理</div>
     <app-menu-list ariaLabel="设备管理" [detailed]="true" [items]="dangerMenuItems"
       (itemSelected)="selectMenuItem($event)"></app-menu-list>

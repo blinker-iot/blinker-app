@@ -5,6 +5,10 @@ import { NoticeService } from './notice.service';
 import { BlinkerResponse } from '../model/response.model';
 import { API } from 'src/app/configs/api.config';
 import { DataService } from './data.service';
+import { firstValueFrom } from 'rxjs';
+import { GatewayAccountService } from '../gateway/gateway-account.service';
+import { GatewaySessionService } from '../gateway/gateway-session.service';
+import { ManagedDeviceService } from '../gateway/managed-device.service';
 
 
 @Injectable({
@@ -32,10 +36,23 @@ export class UserService {
     private http: HttpClient,
     private dataService: DataService,
     private noticeService: NoticeService,
+    private gatewayAccount: GatewayAccountService,
+    private gatewaySession: GatewaySessionService,
+    private managedDevices: ManagedDeviceService,
   ) { }
 
 
   async getAllInfo(): Promise<boolean> {
+    if (this.gatewaySession.hasSession) {
+      try {
+        await this.gatewayAccount.loadAll();
+        this.noticeService.hideLoading();
+        return true;
+      } catch {
+        this.noticeService.hideLoading();
+        return false;
+      }
+    }
     return this.http.get<BlinkerResponse>(API.USER.ALL, {
       params: {
         uuid: this.uuid,
@@ -98,6 +115,7 @@ export class UserService {
   }
 
   saveUserConfig(userConfig): Promise<boolean> {
+    if (this.gatewaySession.hasSession) return Promise.resolve(false);
     return this.http.post(API.USER.SAVE_CONFIG,
       {
         uuid: this.uuid,
@@ -118,6 +136,11 @@ export class UserService {
   }
 
   delDevice(device) {
+    if (device?.isManaged || device?.config?.mode === 'managed-http') {
+      return firstValueFrom(this.managedDevices.deleteDevice(device.deviceName))
+        .then(() => true)
+        .catch(() => false);
+    }
     return this.http.get(API.USER.DEL_DEVICE, {
       params: {
         uuid: this.uuid,

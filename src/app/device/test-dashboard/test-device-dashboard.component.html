@@ -35,10 +35,10 @@
   <section class="detail-section">
     <div class="section-title">
       <div>
-        <span>实时数据</span>
+        <span>{{ isManaged ? '最近数据' : '实时数据' }}</span>
         <button type="button" (click)="refresh()">
           <i class="fa-light fa-rotate-right"></i>
-          {{ refreshedAt | date:'HH:mm:ss' }}
+          {{ refreshedAt ? (refreshedAt | date:'HH:mm:ss') : '暂无数据' }}
         </button>
       </div>
     </div>
@@ -58,7 +58,7 @@
     <div class="info-card">
       <div>
         <span>连接方式</span>
-        <strong>{{ device.config.mode === 'ble' ? 'Bluetooth LE' : 'MQTT' }}</strong>
+        <strong>{{ isManaged ? 'HTTP' : (device.config.mode === 'ble' ? 'Bluetooth LE' : 'MQTT') }}</strong>
       </div>
       <div>
         <span>设备类型</span>

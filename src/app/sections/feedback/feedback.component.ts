@@ -10,7 +10,7 @@ type FeedbackTypeId = 'device' | 'account' | 'feature' | 'other';
 
 interface FeedbackTypeOption {
   value: FeedbackTypeId;
-  recordType: number;
+  gatewayLabel: 'bug' | 'feature' | 'question' | 'other';
   label: string;
   description: string;
   icon: string;
@@ -35,28 +35,28 @@ export class FeedbackPage implements OnInit, OnDestroy {
   readonly feedbackTypes: readonly FeedbackTypeOption[] = [
     {
       value: 'device',
-      recordType: 0,
+      gatewayLabel: 'bug',
       label: '设备问题',
       description: '配网、控制或设备异常',
       icon: 'fa-microchip',
     },
     {
       value: 'account',
-      recordType: 1,
+      gatewayLabel: 'question',
       label: '账户问题',
       description: '登录、资料或设备共享',
       icon: 'fa-user-circle',
     },
     {
       value: 'feature',
-      recordType: 2,
+      gatewayLabel: 'feature',
       label: '功能建议',
       description: '告诉我们你期待的功能',
       icon: 'fa-lightbulb',
     },
     {
       value: 'other',
-      recordType: 2,
+      gatewayLabel: 'other',
       label: '其他问题',
       description: '其他意见与使用反馈',
       icon: 'fa-message-dots',
@@ -69,6 +69,7 @@ export class FeedbackPage implements OnInit, OnDestroy {
   email = '';
   isSubmitting = false;
   isDone = false;
+  issueSyncFailed = false;
   errorMessage = '';
 
   get isDeveloper() {
@@ -135,28 +136,20 @@ export class FeedbackPage implements OnInit, OnDestroy {
     this.isSubmitting = true;
     this.errorMessage = '';
 
-    const feedbackContent = [
-      `标题：${title}`,
-      '',
-      content,
-      ...(email ? ['', `联系邮箱：${email}`] : []),
-    ].join('\n');
-
     try {
       const selectedType = this.feedbackTypes.find(
         (type) => type.value === this.feedbackType
       );
       const result = await this.feedbackService.newFeedback({
-        recordType: selectedType?.recordType ?? 2,
-        deviceType: '',
-        content: feedbackContent,
+        title,
+        content,
+        label: selectedType?.gatewayLabel ?? 'other',
+        ...(email ? { email } : {}),
+        ...(navigator.userAgent
+          ? { userAgent: navigator.userAgent.slice(0, 1024) }
+          : {}),
       });
-
-      if (!result) {
-        this.errorMessage = '提交失败，请稍后重试';
-        return;
-      }
-
+      this.issueSyncFailed = !result.issueSynced;
       this.isDone = true;
       this.clearDraft();
     } catch (error) {

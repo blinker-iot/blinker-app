@@ -12,6 +12,7 @@ import {
 import {
   HTTP_INTERCEPTORS,
   provideHttpClient,
+  withInterceptors,
   withInterceptorsFromDi,
   withXhr,
 } from '@angular/common/http';
@@ -38,6 +39,7 @@ import {
   provideTranslateService,
 } from '@ngx-translate/core';
 import { StaticTranslationLoader } from './core/services/translation.loader';
+import { gatewayInterceptor } from './core/gateway/gateway.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -47,7 +49,11 @@ export const appConfig: ApplicationConfig = {
       scrollAssist: true,
       scrollPadding: false,
     }),
-    provideHttpClient(withXhr(), withInterceptorsFromDi()),
+    provideHttpClient(
+      withXhr(),
+      withInterceptors([gatewayInterceptor]),
+      withInterceptorsFromDi()
+    ),
     provideMarkdown(),
     provideTranslateService({
       fallbackLang: CONFIG.I18N.DEFAULT,

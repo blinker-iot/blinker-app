@@ -1,5 +1,9 @@
-export const BROKER_HOST = 'wss://broker.diandeng.tech:1886';
-const SERVER_URL_BASE = "https://iot.diandeng.tech";
+import { environment } from '../../environments/environment';
+
+export const MQTT_HOST = environment.mqttBrokerUrl;
+export const MQTTS_HOST = environment.mqttsBrokerUrl;
+export const BROKER_HOST = MQTTS_HOST;
+const SERVER_URL_BASE = environment.gatewayBaseUrl;
 const SERVER_URL = SERVER_URL_BASE + "/api/v1";
 const SERVER_URL2 = SERVER_URL_BASE + "/api/v2";
 

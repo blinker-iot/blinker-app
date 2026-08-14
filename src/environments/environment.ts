@@ -3,7 +3,10 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  gatewayBaseUrl: 'https://iot.yiyu.pro',
+  mqttBrokerUrl: 'https://mqtt.yiyu.pro:1883',
+  mqttsBrokerUrl: 'https://mqtt.yiyu.pro:8883',
 };
 
 /*
