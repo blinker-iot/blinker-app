@@ -11,7 +11,7 @@ import { API } from '../../../configs/api.config';
 import { BlinkerResponse } from '../../../core/model/response.model';
 import { DataService } from '../../../core/services/data.service';
 import { UserService } from '../../../core/services/user.service';
-import { GatewaySessionService } from '../../../core/gateway/gateway-session.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-key-device-guide',
@@ -32,7 +32,7 @@ export class KeyDeviceGuidePage {
     private http: HttpClient,
     private dataService: DataService,
     private userService: UserService,
-    private gatewaySession: GatewaySessionService,
+    private authService: AuthService,
     private navController: NavController,
     private toastController: ToastController,
     private translate: TranslateService,
@@ -41,7 +41,7 @@ export class KeyDeviceGuidePage {
 
   async createKeyDevice(): Promise<void> {
     if (this.isCreatingKey) return;
-    if (this.gatewaySession.hasSession) {
+    if (this.authService.hasGatewaySession) {
       this.keyError = '当前服务暂未开放安全的 AuthKey 交付流程。';
       this.cd.markForCheck();
       return;

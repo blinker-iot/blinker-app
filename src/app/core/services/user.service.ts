@@ -6,9 +6,9 @@ import { BlinkerResponse } from '../model/response.model';
 import { API } from 'src/app/configs/api.config';
 import { DataService } from './data.service';
 import { firstValueFrom } from 'rxjs';
-import { GatewayAccountService } from '../gateway/gateway-account.service';
-import { GatewaySessionService } from '../gateway/gateway-session.service';
-import { ManagedDeviceService } from '../gateway/managed-device.service';
+import { AuthService } from './auth.service';
+import { AuthSessionService } from './auth-session.service';
+import { ManagedDeviceService } from './managed-device.service';
 
 
 @Injectable({
@@ -36,16 +36,16 @@ export class UserService {
     private http: HttpClient,
     private dataService: DataService,
     private noticeService: NoticeService,
-    private gatewayAccount: GatewayAccountService,
-    private gatewaySession: GatewaySessionService,
+    private authService: AuthService,
+    private authSession: AuthSessionService,
     private managedDevices: ManagedDeviceService,
   ) { }
 
 
   async getAllInfo(): Promise<boolean> {
-    if (this.gatewaySession.hasSession) {
+    if (this.authSession.hasSession) {
       try {
-        await this.gatewayAccount.loadAll();
+        await this.authService.loadGatewayAccount();
         this.noticeService.hideLoading();
         return true;
       } catch {
@@ -115,7 +115,7 @@ export class UserService {
   }
 
   saveUserConfig(userConfig): Promise<boolean> {
-    if (this.gatewaySession.hasSession) return Promise.resolve(false);
+    if (this.authSession.hasSession) return Promise.resolve(false);
     return this.http.post(API.USER.SAVE_CONFIG,
       {
         uuid: this.uuid,

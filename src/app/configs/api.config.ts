@@ -3,12 +3,30 @@ import { environment } from '../../environments/environment';
 export const MQTT_HOST = environment.mqttBrokerUrl;
 export const MQTTS_HOST = environment.mqttsBrokerUrl;
 export const BROKER_HOST = MQTTS_HOST;
-const SERVER_URL_BASE = environment.gatewayBaseUrl;
+const SERVER_URL_BASE = environment.gatewayBaseUrl.trim().replace(/\/+$/, '');
 const SERVER_URL = SERVER_URL_BASE + "/api/v1";
 const SERVER_URL2 = SERVER_URL_BASE + "/api/v2";
 
+const managedDeviceUrl = (deviceId: string, suffix = '') => {
+    if (!deviceId.trim()) throw new Error('Device ID is required.');
+    return SERVER_URL + '/devices/' + encodeURIComponent(deviceId) + suffix;
+};
+
+export function isGatewayApiUrl(url: string): boolean {
+    try {
+        const base = new URL(SERVER_URL);
+        const request = new URL(url, base);
+        const apiPath = base.pathname.replace(/\/+$/, '');
+        return request.origin === base.origin
+            && (request.pathname === apiPath || request.pathname.startsWith(apiPath + '/'));
+    } catch {
+        return false;
+    }
+}
+
 
 export const API = {
+    BASE: SERVER_URL_BASE,
     LOGIN: SERVER_URL + '/user/login',
     REGISTER: SERVER_URL + '/web/register',
     RETRIEVE: SERVER_URL + '/web/password',
@@ -77,6 +95,27 @@ export const API = {
         PRODEVICE_CONFIG: SERVER_URL2 + "/dev/device/conf",
         PRODEVICE_LAYOUTER: SERVER_URL2 + "/dev/device/conf/layouter",
         PUBLIC_PRODEVICE: SERVER_URL2 + "/dev/device/public",
+    },
+    GATEWAY: {
+        BASE: SERVER_URL,
+        AUTH: {
+            ALTCHA_CHALLENGE: SERVER_URL + '/auth/altcha/challenge',
+            EMAIL_CODE: SERVER_URL + '/auth/email/code',
+            EMAIL_LOGIN: SERVER_URL + '/auth/email/login',
+            ME: SERVER_URL + '/auth/me',
+            LOGOUT: SERVER_URL + '/auth/logout',
+            REFRESH: SERVER_URL + '/auth/refresh',
+        },
+        FEEDBACK: {
+            SUBMIT: SERVER_URL + '/feedback/submit',
+        },
+        DEVICE: {
+            ALL: SERVER_URL + '/devices',
+            DETAIL: (deviceId: string) => managedDeviceUrl(deviceId),
+            STATUS: (deviceId: string) => managedDeviceUrl(deviceId, '/status'),
+            DATA: (deviceId: string) => managedDeviceUrl(deviceId, '/data'),
+            CONFIG: (deviceId: string) => managedDeviceUrl(deviceId, '/config'),
+        },
     },
     MESSAGE: SERVER_URL + '/user/message',
     FEEDBACK: SERVER_URL + '/feedback',

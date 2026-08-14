@@ -7,7 +7,7 @@ import {
   MenuListComponent,
   MenuListItem,
 } from '../../core/components/menu-list/menu-list';
-import { GatewaySessionService } from '../../core/gateway/gateway-session.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-device-guide',
@@ -21,7 +21,7 @@ export class GuidePage {
   constructor(
     private navController: NavController,
     private translate: TranslateService,
-    private gatewaySession: GatewaySessionService
+    private authService: AuthService
   ) {}
 
   get methodItems(): readonly MenuListItem[] {
@@ -53,7 +53,7 @@ export class GuidePage {
         route: '/guide/key',
       },
     ];
-    return this.gatewaySession.hasSession
+    return this.authService.hasGatewaySession
       ? methods.filter((method) => method.id !== 'key')
       : methods;
   }

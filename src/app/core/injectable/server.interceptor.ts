@@ -6,7 +6,8 @@ import { NavController } from '@ionic/angular';
 import { NoticeService } from "../services/notice.service";
 import { DataService } from "../services/data.service";
 import { environment } from "../../../environments/environment";
-import { isGatewayRequest } from '../gateway/gateway.config';
+import { GATEWAY_REQUEST } from './gateway.context';
+import { API } from '../../configs/api.config';
 
 @Injectable()
 export class ServerInterceptor implements HttpInterceptor {
@@ -28,9 +29,9 @@ export class ServerInterceptor implements HttpInterceptor {
   ) { }
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<any> {
-    if (isGatewayRequest(req.url)) return next.handle(req);
+    if (req.context.get(GATEWAY_REQUEST)) return next.handle(req);
 
-    const isLegacyRequest = req.url.startsWith('https://iot.yiyu.pro/api/');
+    const isLegacyRequest = req.url.startsWith(API.BASE + '/api/');
     if (!isLegacyRequest) return next.handle(req);
 
     const shouldAttachLegacyAuth =

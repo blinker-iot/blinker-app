@@ -1,5 +1,5 @@
 import { UserData } from '../model/data.model';
-import { GatewayUserProfile } from './gateway.models';
+import { GatewayUserProfile } from '../model/gateway.model';
 
 export type GatewayUserData = UserData & {
   id: string;

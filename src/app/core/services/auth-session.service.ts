@@ -1,7 +1,7 @@
 import { HttpBackend, HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { DataService } from '../services/data.service';
+import { DataService } from './data.service';
 import {
   BehaviorSubject,
   Observable,
@@ -12,12 +12,13 @@ import {
   tap,
   throwError,
 } from 'rxjs';
-import { createGatewayRequestId, gatewayUrl } from './gateway.config';
-import { GatewayError, normalizeGatewayError } from './gateway-error';
-import { AilyEnvelope, GatewayTokenPair, GatewayTokenResponse } from './gateway.models';
+import { API } from '../../configs/api.config';
+import { createGatewayRequestId } from '../injectable/gateway.context';
+import { GatewayError, normalizeGatewayError } from '../model/gateway-error.model';
+import { AilyEnvelope, GatewayTokenPair, GatewayTokenResponse } from '../model/gateway.model';
 
 @Injectable({ providedIn: 'root' })
-export class GatewaySessionService {
+export class AuthSessionService {
   private readonly rawHttp: HttpClient;
   private readonly tokenPairSubject = new BehaviorSubject<GatewayTokenPair | null>(null);
   private refreshRequest?: Observable<GatewayTokenPair>;
@@ -103,7 +104,7 @@ export class GatewaySessionService {
     }
 
     this.refreshRequest = this.rawHttp.post<AilyEnvelope<GatewayTokenResponse>>(
-      gatewayUrl('/api/v1/auth/refresh'),
+      API.GATEWAY.AUTH.REFRESH,
       { refresh_token: refreshToken },
       {
         headers: new HttpHeaders({

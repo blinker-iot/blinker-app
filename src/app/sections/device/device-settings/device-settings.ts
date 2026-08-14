@@ -14,7 +14,7 @@ import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { TranslatePipe } from '@ngx-translate/core';
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { firstValueFrom } from 'rxjs';
-import { ManagedDeviceService } from 'src/app/core/gateway/managed-device.service';
+import { ManagedDeviceService } from 'src/app/core/services/managed-device.service';
 import { DeviceShortcutService } from 'src/app/core/services/device-shortcut.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Router, UrlTree } from '@angular/router';
-import { GatewaySessionService } from '../gateway/gateway-session.service';
+import { AuthService } from '../services/auth.service';
 
 
 @Injectable({
@@ -9,11 +9,11 @@ import { GatewaySessionService } from '../gateway/gateway-session.service';
 export class AuthGuard  {
   constructor(
     private router: Router,
-    private session: GatewaySessionService,
+    private authService: AuthService,
   ) {
   }
 
   canActivate(): boolean | UrlTree {
-    return this.session.hasSession || this.router.createUrlTree(['/login']);
+    return this.authService.isLogin() || this.router.createUrlTree(['/login']);
   }
 }

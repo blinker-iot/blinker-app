@@ -5,9 +5,9 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { DataService } from '../services/data.service';
-import { GATEWAY_AUTH_MODE } from './gateway.context';
-import { gatewayUrl } from './gateway.config';
+import { DataService } from './data.service';
+import { GATEWAY_AUTH_MODE } from '../injectable/gateway.context';
+import { API } from '../../configs/api.config';
 import { ManagedDeviceDto } from './managed-device.mapper';
 import { ManagedDeviceService } from './managed-device.service';
 
@@ -52,7 +52,7 @@ describe('ManagedDeviceService', () => {
     service.getStatus('device_full/id').subscribe((value) => (result = value));
 
     const request = httpTesting.expectOne(
-      gatewayUrl('/api/v1/devices/device_full%2Fid/status')
+      API.GATEWAY.DEVICE.STATUS('device_full/id')
     );
     expect(request.request.method).toBe('GET');
     expect(request.request.context.get(GATEWAY_AUTH_MODE)).toBe('required');
@@ -72,7 +72,7 @@ describe('ManagedDeviceService', () => {
       )
       .subscribe((response) => (responseAuthKey = response.authKey));
 
-    const request = httpTesting.expectOne(gatewayUrl('/api/v1/devices'));
+    const request = httpTesting.expectOne(API.GATEWAY.DEVICE.ALL);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({
       name: '客厅传感器',
@@ -94,14 +94,14 @@ describe('ManagedDeviceService', () => {
 
   it('sends an exact config patch envelope and updates local raw config', () => {
     service.createDevice({ name: 'A', deviceType: 'diy' }, 'key').subscribe();
-    httpTesting.expectOne(gatewayUrl('/api/v1/devices')).flush({
+    httpTesting.expectOne(API.GATEWAY.DEVICE.ALL).flush({
       device: deviceDto('device-1'),
       replayed: false,
     });
 
     service.updateConfig('device-1', { displayName: '新名称' }).subscribe();
     const request = httpTesting.expectOne(
-      gatewayUrl('/api/v1/devices/device-1/config')
+      API.GATEWAY.DEVICE.CONFIG('device-1')
     );
     expect(request.request.method).toBe('PUT');
     expect(request.request.body).toEqual({
@@ -120,7 +120,7 @@ describe('ManagedDeviceService', () => {
 
   it('removes a deleted device from the list and every room reference', () => {
     service.createDevice({ name: 'A', deviceType: 'diy' }, 'key').subscribe();
-    httpTesting.expectOne(gatewayUrl('/api/v1/devices')).flush({
+    httpTesting.expectOne(API.GATEWAY.DEVICE.ALL).flush({
       device: deviceDto('device-1'),
       replayed: false,
     });
@@ -131,7 +131,7 @@ describe('ManagedDeviceService', () => {
 
     service.deleteDevice('device-1').subscribe();
     const request = httpTesting.expectOne(
-      gatewayUrl('/api/v1/devices/device-1')
+      API.GATEWAY.DEVICE.DETAIL('device-1')
     );
     expect(request.request.method).toBe('DELETE');
     request.flush({
@@ -146,19 +146,19 @@ describe('ManagedDeviceService', () => {
 
   it('keeps list devices usable when supplemental requests fail', async () => {
     const loadPromise = service.loadAll();
-    httpTesting.expectOne(gatewayUrl('/api/v1/devices')).flush({
+    httpTesting.expectOne(API.GATEWAY.DEVICE.ALL).flush({
       devices: [deviceDto('device-1')],
     });
     await Promise.resolve();
 
-    httpTesting.expectOne(gatewayUrl('/api/v1/devices/device-1/status')).flush(
+    httpTesting.expectOne(API.GATEWAY.DEVICE.STATUS('device-1')).flush(
       { code: 'BROKER_UNAVAILABLE', message: 'unavailable' },
       {
         status: 502,
         statusText: 'Bad Gateway',
       }
     );
-    httpTesting.expectOne(gatewayUrl('/api/v1/devices/device-1/data')).flush({
+    httpTesting.expectOne(API.GATEWAY.DEVICE.DATA('device-1')).flush({
       device: { deviceId: 'device-1' },
       data: {
         protocol: 'json',
@@ -168,7 +168,7 @@ describe('ManagedDeviceService', () => {
       },
     });
     httpTesting
-      .expectOne(gatewayUrl('/api/v1/devices/device-1/config'))
+      .expectOne(API.GATEWAY.DEVICE.CONFIG('device-1'))
       .flush({ config: { interval: 60 } });
 
     const devices = await loadPromise;
@@ -181,20 +181,20 @@ describe('ManagedDeviceService', () => {
 
   it('propagates supplemental authentication failures', async () => {
     const loadPromise = service.loadAll();
-    httpTesting.expectOne(gatewayUrl('/api/v1/devices')).flush({
+    httpTesting.expectOne(API.GATEWAY.DEVICE.ALL).flush({
       devices: [deviceDto('device-1')],
     });
     await Promise.resolve();
 
-    httpTesting.expectOne(gatewayUrl('/api/v1/devices/device-1/status')).flush(
+    httpTesting.expectOne(API.GATEWAY.DEVICE.STATUS('device-1')).flush(
       { errorCode: 'AUTH_SESSION_EXPIRED', errorMessage: 'expired' },
       { status: 401, statusText: 'Unauthorized' }
     );
     httpTesting
-      .expectOne(gatewayUrl('/api/v1/devices/device-1/data'))
+      .expectOne(API.GATEWAY.DEVICE.DATA('device-1'))
       .flush({ device: { deviceId: 'device-1' }, data: null });
     httpTesting
-      .expectOne(gatewayUrl('/api/v1/devices/device-1/config'))
+      .expectOne(API.GATEWAY.DEVICE.CONFIG('device-1'))
       .flush({ config: {} });
 
     await expect(loadPromise).rejects.toBeDefined();
@@ -203,7 +203,7 @@ describe('ManagedDeviceService', () => {
 
   it('reconciles list refreshes without replacing device subjects', async () => {
     const firstLoad = service.loadAll();
-    httpTesting.expectOne(gatewayUrl('/api/v1/devices')).flush({
+    httpTesting.expectOne(API.GATEWAY.DEVICE.ALL).flush({
       devices: [deviceDto('device-1')],
     });
     await Promise.resolve();
@@ -212,7 +212,7 @@ describe('ManagedDeviceService', () => {
     const previous = dataService.device.dict['device-1'];
 
     const secondLoad = service.loadAll();
-    httpTesting.expectOne(gatewayUrl('/api/v1/devices')).flush({
+    httpTesting.expectOne(API.GATEWAY.DEVICE.ALL).flush({
       devices: [deviceDto('device-1')],
     });
     await Promise.resolve();
@@ -229,15 +229,15 @@ function flushSupplementalRequests(
   deviceId: string
 ): void {
   httpTesting
-    .expectOne(gatewayUrl(`/api/v1/devices/${deviceId}/status`))
+    .expectOne(API.GATEWAY.DEVICE.STATUS(deviceId))
     .flush({
       device: { deviceId, status: 'active' },
       status: { status: 0, mqttOnline: false },
     });
   httpTesting
-    .expectOne(gatewayUrl(`/api/v1/devices/${deviceId}/data`))
+    .expectOne(API.GATEWAY.DEVICE.DATA(deviceId))
     .flush({ device: { deviceId }, data: null });
   httpTesting
-    .expectOne(gatewayUrl(`/api/v1/devices/${deviceId}/config`))
+    .expectOne(API.GATEWAY.DEVICE.CONFIG(deviceId))
     .flush({ config: {} });
 }

@@ -1,19 +1,21 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
-import { createGatewayRequestId, isGatewayRequest } from './gateway.config';
+import { isGatewayApiUrl } from '../../configs/api.config';
 import {
+  createGatewayRequestId,
   GATEWAY_ALLOW_REFRESH,
   GATEWAY_AUTH_MODE,
+  GATEWAY_REQUEST,
   GATEWAY_REPLAYED,
 } from './gateway.context';
-import { normalizeGatewayError } from './gateway-error';
-import { GatewaySessionService } from './gateway-session.service';
+import { normalizeGatewayError } from '../model/gateway-error.model';
+import { AuthSessionService } from '../services/auth-session.service';
 
 export const gatewayInterceptor: HttpInterceptorFn = (request, next) => {
-  if (!isGatewayRequest(request.url)) return next(request);
+  if (!request.context.get(GATEWAY_REQUEST) || !isGatewayApiUrl(request.url)) return next(request);
 
-  const session = inject(GatewaySessionService);
+  const session = inject(AuthSessionService);
   const authMode = request.context.get(GATEWAY_AUTH_MODE);
   const accessToken = session.accessToken;
   let outbound = request.clone({

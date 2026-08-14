@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { BDeviceImgComponent } from '../../core/components/b-device-img/b-device-img.component';
 import { BlinkerDevice } from '../../core/model/device.model';
 import { DeviceService } from '../../core/services/device.service';
-import { ManagedDeviceService } from '../../core/gateway/managed-device.service';
+import { ManagedDeviceService } from '../../core/services/managed-device.service';
 import { NoticeService } from '../../core/services/notice.service';
 
 interface DeviceMetric {

@@ -5,21 +5,20 @@ import { Capacitor } from '@capacitor/core';
 import { firstValueFrom } from 'rxjs';
 import { Wechat } from 'capacitor-wechat';
 import { API } from 'src/app/configs/api.config';
-import { AltchaChallenge, solveAltcha } from '../gateway/altcha-solver';
-import { gatewayContext } from '../gateway/gateway.context';
-import { GatewayError } from '../gateway/gateway-error';
-import { gatewayUrl } from '../gateway/gateway.config';
+import { AltchaChallenge, solveAltcha } from '../functions/altcha-solver';
+import { gatewayContext } from '../injectable/gateway.context';
+import { GatewayError } from '../model/gateway-error.model';
 import {
     AilyEnvelope,
     GatewayTokenResponse,
     GatewayUserProfile,
-} from '../gateway/gateway.models';
-import { GatewaySessionService } from '../gateway/gateway-session.service';
-import { mapGatewayUser } from '../gateway/gateway-user.adapter';
-import { ManagedDeviceService } from '../gateway/managed-device.service';
+} from '../model/gateway.model';
+import { mapGatewayUser } from '../functions/gateway-user.adapter';
 import { sha256 } from '../functions/func';
 import { BlinkerResponse } from '../model/response.model';
+import { AuthSessionService } from './auth-session.service';
 import { DataService } from './data.service';
+import { ManagedDeviceService } from './managed-device.service';
 
 
 @Injectable({
@@ -37,11 +36,15 @@ export class AuthService {
         return this.dataService.auth?.token
     }
 
+    get hasGatewaySession(): boolean {
+        return this.authSession.hasSession;
+    }
+
     constructor(
         private http: HttpClient,
         private dataService: DataService,
         private navCtrl: NavController,
-        private gatewaySession: GatewaySessionService,
+        private authSession: AuthSessionService,
         private managedDevices: ManagedDeviceService,
     ) { }
 
@@ -49,7 +52,7 @@ export class AuthService {
         this.dataService.authCheck.subscribe(state => {
             if (
                 state
-                && !this.gatewaySession.hasSession
+                && !this.authSession.hasSession
                 && this.dataService.auth?.uuid
                 && this.dataService.auth?.token
             ) {
@@ -59,14 +62,14 @@ export class AuthService {
     }
 
     isLogin(): boolean {
-        return this.gatewaySession.hasSession
+        return this.authSession.hasSession
             || !!(this.dataService.auth?.uuid && this.dataService.auth?.token)
     }
 
     // 检查是否有其他设备登录
     checkAuthState() {
         if (
-            this.gatewaySession.hasSession
+            this.authSession.hasSession
             || !this.dataService.auth?.uuid
             || !this.dataService.auth?.token
         ) {
@@ -112,12 +115,12 @@ export class AuthService {
         try {
             const normalizedEmail = email.trim();
             const challenge = await firstValueFrom(this.http.get<AltchaChallenge>(
-                gatewayUrl('/api/v1/auth/altcha/challenge'),
+                API.GATEWAY.AUTH.ALTCHA_CHALLENGE,
                 { context: gatewayContext('none') },
             ));
             const altcha = await solveAltcha(challenge, { timeoutMs: 30_000 });
             const response = await firstValueFrom(this.http.post<AilyEnvelope<null>>(
-                gatewayUrl('/api/v1/auth/email/code'),
+                API.GATEWAY.AUTH.EMAIL_CODE,
                 { email: normalizedEmail, altcha },
                 { context: gatewayContext('none') },
             ));
@@ -138,18 +141,16 @@ export class AuthService {
         try {
             const response = await firstValueFrom(
                 this.http.post<AilyEnvelope<GatewayTokenResponse>>(
-                    gatewayUrl('/api/v1/auth/email/login'),
+                    API.GATEWAY.AUTH.EMAIL_LOGIN,
                     { email: email.trim(), code: code.trim() },
                     { context: gatewayContext('none') },
                 ),
             );
             this.assertGatewaySuccess(response, 'AUTH_LOGIN_FAILED');
-            this.gatewaySession.establish(response.data);
+            this.authSession.establish(response.data);
 
             try {
-                const profile = await this.getCurrentGatewayUser();
-                this.dataService.user = mapGatewayUser(profile);
-                await this.managedDevices.loadAll();
+                await this.loadGatewayAccount();
                 return true;
             } catch (error) {
                 this.clearGatewayLoginState();
@@ -162,11 +163,17 @@ export class AuthService {
         }
     }
 
+    async loadGatewayAccount(): Promise<void> {
+        const profile = await this.getCurrentGatewayUser();
+        this.dataService.user = mapGatewayUser(profile);
+        await this.managedDevices.loadAll();
+    }
+
     async logout(): Promise<void> {
         try {
-            if (this.gatewaySession.accessToken) {
+            if (this.authSession.accessToken) {
                 await firstValueFrom(this.http.post(
-                    gatewayUrl('/api/v1/auth/logout'),
+                    API.GATEWAY.AUTH.LOGOUT,
                     {},
                     { context: gatewayContext('required', false) },
                 ));
@@ -292,7 +299,7 @@ export class AuthService {
 
     private async getCurrentGatewayUser(): Promise<GatewayUserProfile> {
         const response = await firstValueFrom(this.http.get<AilyEnvelope<GatewayUserProfile>>(
-            gatewayUrl('/api/v1/auth/me'),
+            API.GATEWAY.AUTH.ME,
             { context: gatewayContext('required') },
         ));
         this.assertGatewaySuccess(response, 'AUTH_ME_FAILED');
@@ -322,7 +329,7 @@ export class AuthService {
     }
 
     private clearGatewayLoginState(): void {
-        this.gatewaySession.clear();
+        this.authSession.clear();
         this.managedDevices.clearLocal();
         this.dataService.user = undefined;
         this.dataService.userDataLoader.next(false);

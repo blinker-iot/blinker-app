@@ -16,7 +16,7 @@ import { Observable, of, Subscription } from 'rxjs';
 import { deviceComponentDict } from '../configs/components.config';
 import { BlinkerDevice } from '../core/model/device.model';
 import { DataService } from '../core/services/data.service';
-import { ManagedDeviceService } from '../core/gateway/managed-device.service';
+import { ManagedDeviceService } from '../core/services/managed-device.service';
 import { DebugComponent } from '../debug/debug.component';
 import { DebugService } from '../debug/debug.service';
 import { DeviceConfigService } from '../core/services/device-config.service';

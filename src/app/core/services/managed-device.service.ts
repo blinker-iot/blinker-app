@@ -2,10 +2,10 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom, Observable, tap } from 'rxjs';
 
-import { DataService } from '../services/data.service';
-import { gatewayContext } from './gateway.context';
-import { gatewayUrl } from './gateway.config';
-import { normalizeGatewayError } from './gateway-error';
+import { DataService } from './data.service';
+import { gatewayContext } from '../injectable/gateway.context';
+import { API } from '../../configs/api.config';
+import { normalizeGatewayError } from '../model/gateway-error.model';
 import {
   applyManagedDeviceConfig,
   applyManagedDeviceSnapshot,
@@ -39,7 +39,7 @@ export class ManagedDeviceService {
 
   listDevices(): Observable<ManagedDeviceListResponse> {
     return this.http.get<ManagedDeviceListResponse>(
-      gatewayUrl('/api/v1/devices'),
+      API.GATEWAY.DEVICE.ALL,
       {
         context: gatewayContext('required'),
       }
@@ -47,28 +47,28 @@ export class ManagedDeviceService {
   }
 
   getDevice(deviceId: string): Observable<ManagedDeviceResponse> {
-    return this.http.get<ManagedDeviceResponse>(this.deviceUrl(deviceId), {
+    return this.http.get<ManagedDeviceResponse>(API.GATEWAY.DEVICE.DETAIL(deviceId), {
       context: gatewayContext('required'),
     });
   }
 
   getStatus(deviceId: string): Observable<ManagedDeviceStatusResponse> {
     return this.http.get<ManagedDeviceStatusResponse>(
-      `${this.deviceUrl(deviceId)}/status`,
+      API.GATEWAY.DEVICE.STATUS(deviceId),
       { context: gatewayContext('required') }
     );
   }
 
   getData(deviceId: string): Observable<ManagedDeviceSnapshotResponse> {
     return this.http.get<ManagedDeviceSnapshotResponse>(
-      `${this.deviceUrl(deviceId)}/data`,
+      API.GATEWAY.DEVICE.DATA(deviceId),
       { context: gatewayContext('required') }
     );
   }
 
   getConfig(deviceId: string): Observable<ManagedDeviceConfigResponse> {
     return this.http.get<ManagedDeviceConfigResponse>(
-      `${this.deviceUrl(deviceId)}/config`,
+      API.GATEWAY.DEVICE.CONFIG(deviceId),
       { context: gatewayContext('required') }
     );
   }
@@ -94,7 +94,7 @@ export class ManagedDeviceService {
 
     return this.http
       .post<ManagedDeviceCreateResponse>(
-        gatewayUrl('/api/v1/devices'),
+        API.GATEWAY.DEVICE.ALL,
         { name, deviceType },
         {
           context: gatewayContext('required'),
@@ -117,7 +117,7 @@ export class ManagedDeviceService {
   ): Observable<ManagedDeviceConfigResponse> {
     return this.http
       .put<ManagedDeviceConfigResponse>(
-        `${this.deviceUrl(deviceId)}/config`,
+        API.GATEWAY.DEVICE.CONFIG(deviceId),
         { config: patch },
         { context: gatewayContext('required') }
       )
@@ -136,7 +136,7 @@ export class ManagedDeviceService {
 
   deleteDevice(deviceId: string): Observable<ManagedDeviceResponse> {
     return this.http
-      .delete<ManagedDeviceResponse>(this.deviceUrl(deviceId), {
+      .delete<ManagedDeviceResponse>(API.GATEWAY.DEVICE.DETAIL(deviceId), {
         context: gatewayContext('required'),
       })
       .pipe(
@@ -319,8 +319,4 @@ export class ManagedDeviceService {
     }
   }
 
-  private deviceUrl(deviceId: string): string {
-    if (!deviceId.trim()) throw new Error('Device ID is required.');
-    return gatewayUrl(`/api/v1/devices/${encodeURIComponent(deviceId)}`);
-  }
 }

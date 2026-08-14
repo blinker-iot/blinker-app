@@ -39,7 +39,7 @@ import {
   provideTranslateService,
 } from '@ngx-translate/core';
 import { StaticTranslationLoader } from './core/services/translation.loader';
-import { gatewayInterceptor } from './core/gateway/gateway.interceptor';
+import { gatewayInterceptor } from './core/injectable/gateway.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
