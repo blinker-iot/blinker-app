@@ -1,4 +1,4 @@
-<ion-header whitebg class="message-header">
+<ion-header class="message-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button text="" defaultHref="/home"></ion-back-button>
@@ -13,8 +13,6 @@
 </ion-header>
 
 <ion-content fullscreen="true">
-  <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
-
   <div class="message-content">
     <div class="message-filters" role="tablist" aria-label="消息分类">
       @for (filter of filters; track filter.value) {

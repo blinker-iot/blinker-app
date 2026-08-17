@@ -346,7 +346,7 @@ app-ble-debug {
   .value-history-block code { overflow: hidden; color: var(--blinker-text-primary); font: 9px monospace; text-overflow: ellipsis; white-space: nowrap; }
   .value-history-block small { text-align: right; }
 
-  .characteristic-write-sheet { position: relative; margin: 10px -12px -24px; padding: 24px 24px calc(18px + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; background: var(--blinker-surface); box-shadow: 0 -8px 30px color-mix(in srgb, #000 13%, transparent); }
+  .characteristic-write-sheet { position: relative; margin: 10px calc(0px - var(--tool-page-padding-inline)) calc(0px - var(--tool-page-padding-bottom)); padding: 24px 24px calc(18px + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; background: var(--blinker-surface); box-shadow: 0 -8px 30px color-mix(in srgb, #000 13%, transparent); }
   .sheet-handle { position: absolute; top: 9px; left: 50%; width: 36px; height: 4px; transform: translateX(-50%); border-radius: 4px; background: var(--blinker-border); }
   .characteristic-write-sheet h2 { margin: 0 0 12px; color: var(--blinker-text-primary); font-size: 15px; }
   .write-mode-tabs { width: 100%; padding: 0; overflow: hidden; }
@@ -399,7 +399,7 @@ app-ble-debug {
     right: 0;
     bottom: 0;
     left: 0;
-    width: min(100%, 520px);
+    width: min(100%, var(--tool-page-max-width));
     height: calc(67px + env(safe-area-inset-bottom));
     margin: 0 auto;
     padding: 4px 10px env(safe-area-inset-bottom);

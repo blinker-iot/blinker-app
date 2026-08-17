@@ -1,9 +1,8 @@
 @if (loaded && device) {
 <ion-header
-  no-border
   [ngClass]="{'dark': headerStyle=='dark','light':headerStyle=='light'}"
 >
-  <ion-toolbar color="transparent" overlayPadding>
+  <ion-toolbar color="transparent">
     <ion-buttons slot="start">
       <ion-back-button text="" defaultHref="/home?tab=device"></ion-back-button>
     </ion-buttons>
@@ -69,10 +68,13 @@
 </ion-header>
 } @if (loaded && device) {
 <ion-content
+  [fullscreen]="true"
   [ngClass]="{'offline': device.data.state=='offline'}"
   [scrollY]="false"
 >
-  <ng-template #deviceView></ng-template>
+  <div class="device-view">
+    <ng-template #deviceView></ng-template>
+  </div>
   <!-- <router-outlet></router-outlet> -->
 </ion-content>
 } @if (loaded && !device) {

@@ -7,22 +7,8 @@
 }
 
 .ble-nav {
-  background: color-mix(in srgb, var(--blinker-bg) 94%, transparent);
-
-  &::after { display: none; }
-
-  ion-toolbar {
-    --background: transparent;
-    --border-width: 0;
-    min-height: 54px;
-  }
-
   ion-title {
     padding-inline: 52px;
-    color: var(--blinker-text-primary);
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: -.02em;
     text-align: left;
   }
 
@@ -45,20 +31,4 @@
 
     &.active { --background: rgba(var(--ble-accent-rgb), .1); --color: var(--ble-accent); }
   }
-}
-
-ion-content {
-  --background: var(--blinker-bg);
-  --overflow: auto;
-}
-
-.ble-shell {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 520px;
-  min-height: 100%;
-  margin: 0 auto;
-  padding: 10px 12px calc(24px + env(safe-area-inset-bottom));
-
-  &.has-bottom-nav { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
 }

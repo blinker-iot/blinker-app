@@ -129,7 +129,6 @@ export class DevicePage implements OnInit, OnDestroy {
       }),
     );
     this.debugService.init();
-    this.viewService.setLightStatusBar();
   }
 
   ngOnDestroy(): void {

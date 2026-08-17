@@ -1,5 +1,5 @@
 @if (loaded) {
-<ion-header class="device-settings-header ion-no-border">
+<ion-header class="device-settings-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button text="" [defaultHref]="'/device/' + id"></ion-back-button>
@@ -9,8 +9,6 @@
 </ion-header>
 } @if (loaded) {
 <ion-content fullscreen="true">
-  <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
-
   <main class="device-settings-content">
     <section class="device-card">
       <button type="button" class="device-image-button" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice"

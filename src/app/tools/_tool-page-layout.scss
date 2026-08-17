@@ -1,0 +1,30 @@
+// Shared layout tokens and shell for every standalone tool page.
+:root {
+  --tool-page-max-width: 680px;
+  --tool-page-padding-top: 5px;
+  --tool-page-padding-inline: 16px;
+  --tool-page-padding-bottom: 104px;
+}
+
+.tool-page-header ion-title {
+  color: var(--blinker-text-primary);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+ion-content.tool-page-content {
+  --background: var(--blinker-bg);
+  --overflow: auto;
+}
+
+.tool-page-shell {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--tool-page-max-width);
+  min-height: 100%;
+  margin: 0 auto;
+  padding:
+    var(--tool-page-padding-top)
+    var(--tool-page-padding-inline)
+    calc(var(--tool-page-padding-bottom) + var(--ion-safe-area-bottom, 0px));
+}

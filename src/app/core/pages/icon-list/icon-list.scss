@@ -6,13 +6,7 @@
 }
 
 .icon-header {
-  background: color-mix(in srgb, var(--blinker-bg) 88%, transparent);
-  backdrop-filter: var(--blinker-nav-blur);
-  -webkit-backdrop-filter: var(--blinker-nav-blur);
-
   ion-toolbar {
-    --background: transparent;
-    --border-width: 0;
     --color: var(--blinker-text-primary);
   }
 

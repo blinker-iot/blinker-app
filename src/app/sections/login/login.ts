@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnDestroy,
-  OnInit,
 } from '@angular/core';
 import {
   IonButton,
@@ -14,7 +13,6 @@ import {
   NavController,
 } from '@ionic/angular/standalone';
 import { UserService } from 'src/app/core/services/user.service';
-import { ViewService } from 'src/app/core/services/view.service';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CONFIG } from 'src/app/configs/app.config';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
@@ -39,7 +37,7 @@ import { DataService } from 'src/app/core/services/data.service';
     IonContent,
   ],
 })
-export class LoginPage implements OnInit, OnDestroy {
+export class LoginPage implements OnDestroy {
   LOGO = CONFIG.LOGIN_LOGO;
 
   email: string = '';
@@ -57,15 +55,9 @@ export class LoginPage implements OnInit, OnDestroy {
     private userService: UserService,
     private noticeService: NoticeService,
     private navCtrl: NavController,
-    private viewService: ViewService,
     private modalCtrl: ModalController,
     private dataService: DataService
   ) { }
-
-  ngOnInit(): void {
-    // if (localStorage.getItem('showFirstModal') == null) this.openFirstModal();
-    this.viewService.setLightStatusBar();
-  }
 
   ngOnDestroy(): void {
     if (this.countdownTimer) {

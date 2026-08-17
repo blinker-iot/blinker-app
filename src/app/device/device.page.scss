@@ -95,6 +95,19 @@ ion-content {
   }
 }
 
+.device-view {
+  box-sizing: border-box;
+  height: 100%;
+
+  ::ng-deep > * {
+    position: relative;
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+  }
+}
+
 ion-content.offline {
   filter: grayscale(30%);
 }

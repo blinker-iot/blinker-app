@@ -1,21 +1,5 @@
 :host { --tool-accent: var(--ion-color-primary); }
 
-.page-header {
-  background: color-mix(in srgb, var(--blinker-bg) 90%, transparent);
-  ion-toolbar { --background: transparent; --border-width: 0 0 1px; --border-color: var(--blinker-divider); }
-  ion-title { color: var(--blinker-text-primary); font-size: 17px; font-weight: 600; }
-}
-
-ion-content { --background: var(--blinker-bg); --overflow: auto; }
-
-.provision-page {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 18px 16px calc(104px + env(safe-area-inset-bottom));
-}
-
 .notice,
 .connected-card {
   margin-top: 12px;

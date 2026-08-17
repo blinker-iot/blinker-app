@@ -1,4 +1,4 @@
-<ion-header class="ble-nav">
+<ion-header class="ble-nav tool-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/home?tab=tools" text=""></ion-back-button>
@@ -28,8 +28,8 @@
   }
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <main class="ble-shell" [class.has-bottom-nav]="connectedDevice && screen !== 'scanner' && screen !== 'advertisement' && screen !== 'characteristic'">
+<ion-content class="tool-page-content" [fullscreen]="true">
+  <main class="tool-page-shell">
     @if (screen === 'scanner') {
       <section class="scan-status-card" [class.scanning]="isScanning">
         <div class="radar-visual">
