@@ -18,9 +18,9 @@ ion-header:not(.main-tab-header):not(.opaque-page-header) {
   z-index: 10;
   background: linear-gradient(
     to bottom,
-    color-mix(in srgb, var(--transparent-page-mask-color) 96%, transparent) 0%,
-    color-mix(in srgb, var(--transparent-page-mask-color) 90%, transparent) 55%,
-    color-mix(in srgb, var(--transparent-page-mask-color) 72%, transparent) 78%,
+    color-mix(in srgb, var(--transparent-page-mask-color) 78%, transparent) 0%,
+    color-mix(in srgb, var(--transparent-page-mask-color) 54%, transparent) 55%,
+    color-mix(in srgb, var(--transparent-page-mask-color) 24%, transparent) 78%,
     transparent 100%
   ) !important;
   box-shadow: none !important;

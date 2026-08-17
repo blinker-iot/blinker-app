@@ -6,40 +6,6 @@
   background: var(--blinker-bg);
 }
 
-ion-header.dark {
-  ion-toolbar {
-    ion-title {
-      color: #fff;
-    }
-
-    ion-back-button {
-      --color: #fff;
-    }
-
-    ion-icon,
-    i {
-      color: #fff;
-    }
-  }
-}
-
-ion-header.light {
-  ion-toolbar {
-    ion-title {
-      color: #555;
-    }
-
-    ion-back-button {
-      --color: #555;
-    }
-
-    ion-icon,
-    i {
-      color: #555;
-    }
-  }
-}
-
 ion-header {
   ion-toolbar {
     ion-title {

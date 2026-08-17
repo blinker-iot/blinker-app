@@ -1,5 +1,5 @@
 @if (loaded) {
-<ion-header class="device-settings-header">
+<ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button text="" [defaultHref]="'/device/' + id"></ion-back-button>
@@ -8,7 +8,7 @@
   </ion-toolbar>
 </ion-header>
 } @if (loaded) {
-<ion-content fullscreen="true">
+<ion-content [fullscreen]="true">
   <main class="device-settings-content">
     <section class="device-card">
       <button type="button" class="device-image-button" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice"
@@ -45,16 +45,8 @@
         <!-- <p>{{ device.deviceType }}</p> -->
       </div>
     </section>
-    <div class="section-label">设备信息</div>
+    @if (device.config.authKey && !isSharedDevice) {
     <section class="info-card">
-      <div class="info-row">
-        <span class="info-icon"><i class="fa-light fa-fingerprint"></i></span>
-        <span class="info-copy">
-          <small>{{ 'DEVICE.ID' | translate }}</small>
-          <strong>{{ device.id }}</strong>
-        </span>
-      </div>
-      @if (device.config.authKey && !isSharedDevice) {
       <div class="info-row">
         <span class="info-icon secret"><i class="fa-light fa-key"></i></span>
         <span class="info-copy">
@@ -68,8 +60,8 @@
           <i class="fa-light" [class.fa-eye]="!showKey" [class.fa-eye-slash]="showKey"></i>
         </button>
       </div>
-      }
     </section>
+    }
     <div class="section-label menu-section-label">设备功能</div>
     <app-menu-list ariaLabel="设备功能" [detailed]="true" [items]="deviceMenuItems"
       (itemSelected)="selectMenuItem($event)"></app-menu-list>
