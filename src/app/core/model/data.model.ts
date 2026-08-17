@@ -1,3 +1,8 @@
+import type {
+    GatewayEntitlements,
+    GatewaySubscriptionPlan,
+} from './gateway.model';
+
 export interface AuthData {
     uuid: string,
     token: string
@@ -9,10 +14,13 @@ export interface UserData {
     phone: string,
     level?: number,
     id?: string,
+    nickname?: string | null,
     email?: string,
-    subscriptionPlan?: Record<string, unknown> | null,
+    subscriptionPlan?: GatewaySubscriptionPlan | null,
+    permissions?: string[],
+    rbacPermissions?: string[],
     entitlementRevision?: number,
-    entitlements?: Record<string, unknown>
+    entitlements?: GatewayEntitlements
 }
 
 export interface OrderData {

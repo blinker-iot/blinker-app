@@ -166,6 +166,8 @@ export class AuthService {
     async loadGatewayAccount(): Promise<void> {
         const profile = await this.getCurrentGatewayUser();
         this.dataService.user = mapGatewayUser(profile);
+        this.dataService.userDataLoader.next(true);
+
         await this.managedDevices.loadAll();
     }
 

@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-back-button text="" defaultHref="/home"></ion-back-button>
     </ion-buttons>
-    <ion-title>编辑资料</ion-title>
+    <ion-title>用户资料</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -11,14 +11,7 @@
   <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
 
   <div class="editor-content">
-    <input
-      #avatarInput
-      class="avatar-file-input"
-      type="file"
-      accept="image/*"
-      (change)="onAvatarSelected($event)"
-    />
-    <button type="button" class="avatar-editor" (click)="avatarInput.click()" aria-label="更换头像">
+    <div class="avatar-display" aria-label="用户头像">
       <div class="avatar-preview">
         @if (avatar) {
         <img [src]="avatar" alt="用户头像" />
@@ -26,8 +19,7 @@
         <span>{{ draftName.slice(0, 1) || 'A' }}</span>
         }
       </div>
-      <span class="camera-button"><i class="fa-light fa-camera"></i></span>
-    </button>
+    </div>
     <app-menu-list
       class="profile-menu-list"
       ariaLabel="个人资料"

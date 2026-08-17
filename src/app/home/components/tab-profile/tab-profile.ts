@@ -54,6 +54,18 @@ export class TabProfileComponent {
     return this.user?.avatar || '';
   }
 
+  get planSummary(): string {
+    const plan = this.user?.subscriptionPlan;
+    const planName = plan?.display_name?.trim() || plan?.name?.trim() || '';
+    if (!planName) return '';
+
+    const endDate = plan?.end_date?.trim();
+    if (!endDate) return planName;
+
+    const dateOnly = endDate.match(/^\d{4}-\d{2}-\d{2}/)?.[0] || endDate;
+    return `${planName} · ${dateOnly}`;
+  }
+
   get roomNum() {
     return this.dataService.room?.list?.length || 2;
   }
