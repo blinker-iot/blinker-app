@@ -33,8 +33,7 @@
               "node_modules/cropperjs/dist/cropper.css",
               "node_modules/pickerjs/dist/picker.css",
               "node_modules/animate.css/animate.min.css",
-              "node_modules/loaders.css/loaders.min.css",
-              "node_modules/jsoneditor/dist/jsoneditor.min.css"
+              "node_modules/loaders.css/loaders.min.css"
             ],
             "scripts": ["node_modules/hammerjs/hammer.min.js"],
             "allowedCommonJsDependencies": [
@@ -43,7 +42,6 @@
               "crypto-js",
               "text-encoding",
               "cropperjs",
-              "jsoneditor",
               "pulltorefreshjs"
             ],
             "browser": "src/main.ts"
