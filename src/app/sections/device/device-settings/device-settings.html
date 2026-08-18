@@ -9,7 +9,7 @@
 </ion-header>
 } @if (loaded) {
 <ion-content [fullscreen]="true">
-  <main class="device-settings-content">
+  <main>
     <section class="device-card">
       <button type="button" class="device-image-button" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice"
         (click)="selectIcon()" [attr.aria-label]="isSharedDevice ? null : ('DEVICE.CHANGE_ICON' | translate)">

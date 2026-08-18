@@ -28,17 +28,7 @@
 
 ion-content {
   --background: var(--blinker-bg);
-}
-
-.action-content {
-  width: 100%;
-  max-width: 720px;
-  min-height: 100%;
-  margin: 0 auto;
-  padding: 24px 16px 34px;
-  background:
-    radial-gradient(circle at 100% 0%, rgba(89, 103, 223, 0.11), transparent 29%),
-    var(--blinker-bg);
+  --section-main-accent-rgb: 89, 103, 223;
 }
 
 .action-intro {

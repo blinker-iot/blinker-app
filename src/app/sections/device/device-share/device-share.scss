@@ -19,17 +19,7 @@
 
 ion-content {
   --background: var(--blinker-bg);
-}
-
-.share-detail-content {
-  width: 100%;
-  max-width: 720px;
-  min-height: 100%;
-  margin: 0 auto;
-  padding: 24px 16px calc(100px + env(safe-area-inset-bottom));
-  background:
-    radial-gradient(circle at 100% 0%, rgba(var(--ion-color-primary-rgb), 0.11), transparent 28%),
-    var(--blinker-bg);
+  --section-main-padding-bottom: 100px;
 }
 
 .device-hero {

@@ -9,15 +9,8 @@ ion-content {
   --background:
     radial-gradient(circle at 100% 0%, rgba(var(--ion-color-primary-rgb), 0.11), transparent 28%),
     var(--blinker-bg);
-}
-
-.device-settings-content {
-  width: 100%;
-  max-width: 720px;
-  min-height: 100%;
-  margin: 0 auto;
-  padding: 0 16px calc(38px + env(safe-area-inset-bottom));
-  background: transparent;
+  --section-main-accent-opacity: 0;
+  --section-main-background: transparent;
 }
 
 .device-card {

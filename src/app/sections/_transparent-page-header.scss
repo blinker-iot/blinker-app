@@ -1,12 +1,15 @@
-// Default shell for every page that has a regular ion-header followed by
-// ion-content. Normal pages require no classes or per-page header styles.
-// Main tabs keep their own taller shell because they include extra fixed UI.
+// Global shell for routed pages such as sections/room, sections/scene and
+// sections/self-hosted-server. Main tab pages keep their existing header and
+// fixed scroll-mask implementation.
 :root {
   --transparent-page-header-height: 44px;
   --transparent-page-mask-color: var(--blinker-bg);
   --transparent-page-content-top: calc(
     var(--ion-safe-area-top, 0px) +
     var(--transparent-page-header-height)
+  );
+  --transparent-page-mask-height: calc(
+    var(--transparent-page-content-top) + 20px
   );
 }
 
@@ -16,24 +19,52 @@ ion-header:not(.main-tab-header):not(.opaque-page-header) {
   right: 0;
   left: 0;
   z-index: 10;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--transparent-page-mask-color) 78%, transparent) 0%,
-    color-mix(in srgb, var(--transparent-page-mask-color) 54%, transparent) 55%,
-    color-mix(in srgb, var(--transparent-page-mask-color) 24%, transparent) 78%,
-    transparent 100%
-  ) !important;
+  isolation: isolate;
+  overflow: visible !important;
+  background: transparent !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+
+  // The header surface remains transparent. This visual layer sits above
+  // scrolling content and below the toolbar controls.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 0;
+    height: var(--transparent-page-mask-height);
+    pointer-events: none;
+    // rgba() is the WebView fallback; color-mix() preserves page-specific
+    // mask colors in engines that support it.
+    background: linear-gradient(
+      to bottom,
+      rgba(var(--ion-background-color-rgb), 0.44) 0%,
+      rgba(var(--ion-background-color-rgb), 0.24) 55%,
+      rgba(var(--ion-background-color-rgb), 0.08) 78%,
+      transparent 100%
+    );
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--transparent-page-mask-color) 44%, transparent) 0%,
+      color-mix(in srgb, var(--transparent-page-mask-color) 24%, transparent) 55%,
+      color-mix(in srgb, var(--transparent-page-mask-color) 8%, transparent) 78%,
+      transparent 100%
+    );
+  }
 
   &::after {
     display: none;
   }
 
   ion-toolbar {
+    position: relative;
+    z-index: 1;
     --min-height: var(--transparent-page-header-height) !important;
     --background: transparent !important;
+    --ion-color-base: transparent !important;
     --border-color: transparent !important;
     --border-width: 0 !important;
     min-height: var(--transparent-page-header-height) !important;
@@ -44,9 +75,53 @@ ion-header:not(.main-tab-header):not(.opaque-page-header) {
   }
 }
 
-// The header is an overlay, so reserve exactly safe-area + 44px in the
-// ion-content scroll viewport. Page layouts may still add their own visual
-// spacing inside their content wrapper.
+// The scroll surface and its page background start at the top edge. The first
+// content container supplies an internal spacer so actual controls begin below
+// the safe area and toolbar without recreating an ion-content-level white bar.
 ion-header:not(.main-tab-header):not(.opaque-page-header) ~ ion-content {
-  --padding-top: var(--transparent-page-content-top) !important;
+  --offset-top: 0px !important;
+  --padding-top: 0px !important;
+
+  > main {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: var(--section-main-max-width, 720px);
+    min-height: 100%;
+    margin: 0 auto;
+    padding:
+      0
+      max(var(--section-main-padding-inline, 16px), var(--ion-safe-area-right, 0px))
+      calc(
+        var(--section-main-padding-bottom, 34px) +
+        var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px))
+      )
+      max(var(--section-main-padding-inline, 16px), var(--ion-safe-area-left, 0px));
+    padding-top: 0 !important;
+    display: var(--section-main-display, block);
+    flex-direction: var(--section-main-direction, column);
+    background:
+      radial-gradient(
+        circle at 100% 0%,
+        rgba(
+          var(--section-main-accent-rgb, var(--ion-color-primary-rgb)),
+          var(--section-main-accent-opacity, 0.11)
+        ),
+        transparent 28%
+      ),
+      var(--section-main-background, var(--blinker-bg));
+  }
+
+  > :first-child::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: var(--transparent-page-content-top);
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 380px) {
+  ion-header:not(.main-tab-header):not(.opaque-page-header) ~ ion-content > main {
+    --section-main-padding-inline: 13px;
+  }
 }

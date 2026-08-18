@@ -6,14 +6,6 @@ ion-content {
   --background: var(--blinker-bg);
 }
 
-.settings-content {
-  min-height: 100%;
-  padding: 24px 16px calc(32px + env(safe-area-inset-bottom));
-  background:
-    radial-gradient(circle at 100% 0%, rgba(var(--ion-color-primary-rgb), 0.1), transparent 30%),
-    var(--blinker-bg);
-}
-
 .section-label {
   margin: 4px 4px 10px;
   color: var(--blinker-text-secondary);

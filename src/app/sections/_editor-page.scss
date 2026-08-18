@@ -30,17 +30,6 @@ ion-content {
   --background: var(--blinker-bg);
 }
 
-.editor-content {
-  width: 100%;
-  max-width: 720px;
-  min-height: 100%;
-  margin: 0 auto;
-  padding: 18px 16px calc(34px + env(safe-area-inset-bottom));
-  background:
-    radial-gradient(circle at 100% 0%, rgba(var(--ion-color-primary-rgb), 0.1), transparent 28%),
-    var(--blinker-bg);
-}
-
 .editor-hero {
   padding: 18px;
   border: 1px solid color-mix(in srgb, var(--ion-color-primary) 20%, var(--blinker-border));
@@ -317,10 +306,6 @@ ion-content {
 }
 
 @media (max-width: 380px) {
-  .editor-content {
-    padding-inline: 13px;
-  }
-
   .editor-hero {
     grid-template-columns: 46px minmax(0, 1fr) auto;
     padding: 15px;

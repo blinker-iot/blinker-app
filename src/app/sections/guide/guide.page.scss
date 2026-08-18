@@ -5,32 +5,8 @@
   background: var(--blinker-bg);
 }
 
-.guide-header {
-  ion-title {
-    color: var(--blinker-text-primary);
-    font-size: 17px;
-    font-weight: 600;
-  }
-}
-
 ion-content {
   --background: var(--blinker-bg);
-}
-
-.guide-content {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 720px;
-  min-height: 100%;
-  margin: 0 auto;
-  padding:
-    23px
-    max(16px, var(--ion-safe-area-right, 0px))
-    calc(30px + var(--ion-safe-area-bottom, 0px))
-    max(16px, var(--ion-safe-area-left, 0px));
-  background:
-    radial-gradient(circle at 100% 0%, rgba(var(--ion-color-primary-rgb), 0.12), transparent 29%),
-    var(--blinker-bg);
 }
 
 .guide-hero {
@@ -149,11 +125,6 @@ ion-content {
 }
 
 @media (max-width: 370px) {
-  .guide-content {
-    padding-right: 13px;
-    padding-left: 13px;
-  }
-
   .guide-hero {
     min-height: 151px;
     padding: 19px 121px 19px 17px;

@@ -15,24 +15,7 @@
 
 ion-content {
   --background: var(--blinker-bg);
-}
-
-.migration-content {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 640px;
-  min-height: 100%;
-  margin: 0 auto;
-  padding:
-    28px
-    max(16px, var(--ion-safe-area-right, 0px))
-    calc(28px + var(--ion-safe-area-bottom, 0px))
-    max(16px, var(--ion-safe-area-left, 0px));
-  display: flex;
-  flex-direction: column;
-  background:
-    radial-gradient(circle at 100% 0%, rgba(var(--ion-color-primary-rgb), 0.12), transparent 29%),
-    var(--blinker-bg);
+  --section-main-display: flex;
 }
 
 .migration-intro {
@@ -229,11 +212,6 @@ ion-content {
 }
 
 @media (max-width: 370px) {
-  .migration-content {
-    padding-right: 13px;
-    padding-left: 13px;
-  }
-
   .migration-intro h1 {
     font-size: 20px;
   }
