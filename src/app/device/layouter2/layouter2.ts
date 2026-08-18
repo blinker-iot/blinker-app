@@ -1,5 +1,6 @@
 import { ModalController, Platform } from '@ionic/angular';
 import {
+  ChangeDetectorRef,
   Component,
   ViewChild,
   Renderer2,
@@ -258,6 +259,7 @@ export class Layouter2 implements DeviceComponent {
   private currentMode = Mode.Default;
   private appliedMode?: Mode;
   private viewReady = false;
+  private dashboardRefreshPending = false;
 
   public hasDebug = false;
   public hasTiming = false;
@@ -294,7 +296,8 @@ export class Layouter2 implements DeviceComponent {
     private LayouterService: LayouterService,
     private platform: Platform,
     private viewService: ViewService,
-    private noticeService: NoticeService
+    private noticeService: NoticeService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -511,7 +514,6 @@ export class Layouter2 implements DeviceComponent {
     // }
     let component = Object.assign({}, configList[type], styleList[type][0]);
     component['key'] = component.type + '-' + randomString();
-    this.dashboard.push(component);
     if (type == 'deb') {
       this.hasDebug = true;
       component['key'] = 'debug';
@@ -522,6 +524,24 @@ export class Layouter2 implements DeviceComponent {
       this.hasTiming = true;
       component['key'] = 'timing';
     }
+    this.dashboard = [...this.dashboard, component];
+    this.scheduleDashboardRefresh();
+  }
+
+  private scheduleDashboardRefresh(): void {
+    if (this.dashboardRefreshPending) return;
+
+    this.dashboardRefreshPending = true;
+    queueMicrotask(() => {
+      this.dashboardRefreshPending = false;
+      if (!this.viewReady) return;
+
+      // Widget additions are emitted by the sibling toolbar through a
+      // service, so explicitly refresh this dynamically-created view before
+      // the browser paints. Recalculate once after Angular creates the item.
+      this.changeDetectorRef.detectChanges();
+      this.gridster?.api.calculateLayout();
+    });
   }
 
   //检测组件是否成功放置，如未放置，删除数据并提示用户
