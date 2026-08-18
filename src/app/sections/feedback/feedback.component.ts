@@ -168,7 +168,7 @@ export class FeedbackPage implements OnInit, OnDestroy {
   }
 
   returnToProfile(): void {
-    void this.navController.navigateBack('/home?tab=profile');
+    void this.navController.navigateBack('/home/profile');
   }
 
   private isValidEmail(email: string): boolean {

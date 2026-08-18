@@ -114,9 +114,7 @@ export class LoginPage implements OnDestroy {
     // 临时测试入口：邮箱留空时加载预览设备并直接进入设备首页。
     if (!this.email.trim()) {
       this.dataService.loadGuestDevicePreview(true);
-      await this.navCtrl.navigateRoot('/home', {
-        queryParams: { tab: 'device' },
-      });
+      await this.navCtrl.navigateRoot('/home/device');
       return;
     }
 

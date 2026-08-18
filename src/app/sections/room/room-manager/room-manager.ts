@@ -29,7 +29,7 @@ export class RoomManagerPage {
   alert;
   editMode = false;
   oldRoomData;
-  defaultBackHref = '/home';
+  defaultBackHref = '/home/device';
 
   get roomData() {
     return this.dataService.room;

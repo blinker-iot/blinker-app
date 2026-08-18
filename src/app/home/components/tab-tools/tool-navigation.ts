@@ -2,7 +2,6 @@ interface RouterLike {
   navigate(
     commands: string[],
     extras: {
-      queryParams: { tab: 'tools' };
       replaceUrl: true;
     }
   ): Promise<boolean>;
@@ -19,8 +18,7 @@ export async function navigateToTool(
 ): Promise<void> {
   // Keep the selected tab in the current history entry so browser/native
   // back navigation restores the tools tab instead of the default device tab.
-  await router.navigate(['/home'], {
-    queryParams: { tab: 'tools' },
+  await router.navigate(['/home/tools'], {
     replaceUrl: true,
   });
   await navController.navigateForward(route);

@@ -17,6 +17,22 @@ describe('Angular test environment', () => {
     expect(deviceRoute?.loadComponent).toBeTypeOf('function');
   });
 
+  it('registers each home tab as a lazy child route', () => {
+    const homeRoute = routes.find((route) => route.path === 'home');
+    const tabRoutes = homeRoute?.children?.filter(
+      (route) => route.path && route.path !== '**',
+    );
+
+    expect(tabRoutes?.map((route) => route.path)).toEqual([
+      'device',
+      'community',
+      'tools',
+      'profile',
+    ]);
+    expect(tabRoutes?.every((route) => typeof route.loadComponent === 'function'))
+      .toBe(true);
+  });
+
   it('registers the device timer routes', () => {
     const timerRoute = routes.find(
       (route) => route.path === 'device-manager/:id/timer',

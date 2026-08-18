@@ -1,9 +1,53 @@
 import { Routes } from '@angular/router';
 import { LayouterGuard } from './device/layouter2/layouter.guard';
+import { asHomeTabId } from './home/home-tab-state';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'home', pathMatch: 'full' },
-  { path: 'home', loadComponent: () => import('./home/home.page').then(m => m.HomePage) },
+  { path: '', redirectTo: 'home/device', pathMatch: 'full' },
+  {
+    path: 'home',
+    loadComponent: () =>
+      import('./home/home.page').then((m) => m.HomePage),
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        // Keep old /home?tab=... bookmarks working while removing the query
+        // parameter from the resulting URL.
+        redirectTo: ({ queryParamMap }) =>
+          asHomeTabId(queryParamMap.get('tab')) ?? 'device',
+      },
+      {
+        path: 'device',
+        loadComponent: () =>
+          import('./home/components/tab-device/tab-device').then(
+            (m) => m.TabDeviceComponent
+          ),
+      },
+      {
+        path: 'community',
+        loadComponent: () =>
+          import('./home/components/tab-community/tab-community').then(
+            (m) => m.TabCommunityComponent
+          ),
+      },
+      {
+        path: 'tools',
+        loadComponent: () =>
+          import('./home/components/tab-tools/tab-tools').then(
+            (m) => m.TabToolsComponent
+          ),
+      },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./home/components/tab-profile/tab-profile').then(
+            (m) => m.TabProfileComponent
+          ),
+      },
+      { path: '**', redirectTo: 'device' },
+    ],
+  },
   { path: 'login', loadComponent: () => import('./sections/login/login').then(m => m.LoginPage) },
   { path: 'settings', loadComponent: () => import('./sections/settings/settings.page').then(m => m.SettingsPage) },
   {

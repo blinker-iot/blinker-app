@@ -128,9 +128,7 @@ export class KeyDeviceGuidePage {
 
   async finishKeySetup(): Promise<void> {
     await this.userService.getAllInfo();
-    await this.navController.navigateRoot('/home', {
-      queryParams: { tab: 'device' },
-    });
+    await this.navController.navigateRoot('/home/device');
   }
 
   private async showToast(messageKey: string): Promise<void> {

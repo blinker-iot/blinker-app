@@ -155,8 +155,6 @@ export class OldDevicePage {
       console.warn('刷新迁移后的设备列表失败:', error);
     }
 
-    await this.navController.navigateRoot('/home', {
-      queryParams: { tab: 'device' },
-    });
+    await this.navController.navigateRoot('/home/device');
   }
 }

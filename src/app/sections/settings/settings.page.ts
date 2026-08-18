@@ -38,7 +38,9 @@ export class SettingsPage {
   ) {
     this.languageList = this.translationService.getLanguageList();
     this.defaultBackHref =
-      route.snapshot.queryParamMap.get('from') === 'login' ? '/login' : '/home';
+      route.snapshot.queryParamMap.get('from') === 'login'
+        ? '/login'
+        : '/home/profile';
   }
 
   selectTheme(theme: AppTheme): void {

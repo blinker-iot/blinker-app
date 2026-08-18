@@ -2,7 +2,7 @@
 <ion-header>
   <ion-toolbar color="transparent">
     <ion-buttons slot="start">
-      <ion-back-button text="" defaultHref="/home?tab=device"></ion-back-button>
+      <ion-back-button text="" defaultHref="/home/device"></ion-back-button>
     </ion-buttons>
     <ion-title (click)="enterDebug()">
       <div class="name">{{device.config.customName}}</div>
@@ -81,7 +81,7 @@
     <i class="fa-light fa-circle-exclamation"></i>
     <h1>未找到设备</h1>
     <p>设备可能已被删除，或登录数据尚未加载完成。</p>
-    <a routerLink="/home">返回设备列表</a>
+    <a routerLink="/home/device">返回设备列表</a>
   </div>
 </ion-content>
 }

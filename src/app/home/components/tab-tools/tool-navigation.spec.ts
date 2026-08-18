@@ -11,8 +11,7 @@ describe('navigateToTool', () => {
       '/tools/ble-debug'
     );
 
-    expect(navigate).toHaveBeenCalledWith(['/home'], {
-      queryParams: { tab: 'tools' },
+    expect(navigate).toHaveBeenCalledWith(['/home/tools'], {
       replaceUrl: true,
     });
     expect(navigateForward).toHaveBeenCalledWith('/tools/ble-debug');
