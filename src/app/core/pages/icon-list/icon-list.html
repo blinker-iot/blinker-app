@@ -23,31 +23,31 @@
       <div class="style-tabs" role="group" aria-label="图标风格">
         <button
           type="button"
-          (click)="selectStyle('fad')"
-          [class.selected]="style === 'fad'"
+          (click)="selectStyle('fa-light')"
+          [class.selected]="style === 'fa-light'"
         >
-          双色
+          纤细
         </button>
         <button
           type="button"
-          (click)="selectStyle('fas')"
-          [class.selected]="style === 'fas'"
-        >
-          实体
-        </button>
-        <button
-          type="button"
-          (click)="selectStyle('far')"
-          [class.selected]="style === 'far'"
+          (click)="selectStyle('fa-regular')"
+          [class.selected]="style === 'fa-regular'"
         >
           常规
         </button>
         <button
           type="button"
-          (click)="selectStyle('fal')"
-          [class.selected]="style === 'fal'"
+          (click)="selectStyle('fa-solid')"
+          [class.selected]="style === 'fa-solid'"
         >
-          纤细
+          实体
+        </button>
+        <button
+          type="button"
+          (click)="selectStyle('fa-duotone')"
+          [class.selected]="style === 'fa-duotone'"
+        >
+          双色
         </button>
       </div>
     </section>
@@ -60,10 +60,10 @@
         <button
           type="button"
           class="icon-item"
-          (click)="select(icon.replace('fad', style))"
+          (click)="select(applyStyle(icon))"
           aria-label="选择此图标"
         >
-          <i class="{{icon.replace('fad',style)}}"></i>
+          <i [class]="applyStyle(icon)"></i>
         </button>
         }
       </div>

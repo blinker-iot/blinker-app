@@ -2,7 +2,7 @@
 
 import { Component, Input } from '@angular/core';
 import { IonicModule, ModalController } from '@ionic/angular';
-import { IconList } from 'src/app/configs/app.config';
+import { IconList, IconStyle } from './icons.config';
 // import { InAppBrowser } from '@awesome-cordova-plugins/in-app-browser/ngx';
 
 @Component({
@@ -17,16 +17,11 @@ export class IconListPage {
   @Input() iconId;
   @Input() icon;
 
-  iconList;
-
-  style = 'fad';
+  readonly iconList = IconList;
+  style: IconStyle = 'fa-light';
 
   constructor(private modalCtrl: ModalController) // private iab: InAppBrowser
   {}
-
-  ngOnInit() {
-    this.iconList = IconList;
-  }
 
   async select(icon) {
     if (this.item)
@@ -44,7 +39,14 @@ export class IconListPage {
     // let browser = this.iab.create(url, '_system', 'location=no,hidden=no');
   }
 
-  selectStyle(style) {
+  applyStyle(icon: string) {
+    return icon.replace(
+      /^fa-(?:light|regular|solid|duotone)\b/,
+      this.style,
+    );
+  }
+
+  selectStyle(style: IconStyle) {
     this.style = style;
   }
 }

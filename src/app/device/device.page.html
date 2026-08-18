@@ -35,8 +35,7 @@
       <!-- 设置 -->
       @if (!editMode) {
       <ion-button [routerLink]="['/device-manager',id]">
-        <!-- <i class="fal fa-cog"></i> -->
-        <i class="iconfont icon-more"></i>
+        <i class="fa-light fa-circle-ellipsis"></i>
         @if (device.data.hasNewVersion) {
         <div redpoint></div>
         }
@@ -45,20 +44,17 @@
       <!-- 清空布局器 -->
       @if (editMode && deviceComponent.indexOf('Layouter')>-1) {
       <ion-button (click)="cleanWidgets()">
-        <!-- <i class="fal fa-trash-alt"></i> -->
-        <i class="iconfont icon-trash"></i>
+        <i class="fa-light fa-trash-can"></i>
       </ion-button>
       }
       <!-- 编辑/保存 -->
       @if (!editMode && canEditLayout) {
       <ion-button (click)="unlock()">
-        <!-- <i class="fal fa-edit"></i> -->
-        <i class="iconfont icon-edit"></i>
+        <i class="fa-light fa-pen-to-square"></i>
       </ion-button>
       } @if (editMode && deviceComponent.indexOf('Layouter')>-1) {
       <ion-button (click)="lock()">
-        <!-- <i class="fal fa-lock"></i> -->
-        <i class="iconfont icon-lock"></i>
+        <i class="fa-light fa-lock"></i>
       </ion-button>
       }
     </ion-buttons>
