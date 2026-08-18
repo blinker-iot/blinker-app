@@ -1,7 +1,6 @@
 export const BROKER_HOST = 'wss://broker.diandeng.tech:1886';
 const SERVER_URL_BASE = "https://iot.diandeng.tech";
 const SERVER_URL = SERVER_URL_BASE + "/api/v1";
-const SERVER_URL2 = SERVER_URL_BASE + "/api/v2";
 
 
 export const API = {
@@ -46,10 +45,6 @@ export const API = {
         TEXT_DATA: '',
         OBJECT_DATA: ''
     },
-    DEVICE_CONFIG: {
-        DEV: SERVER_URL2 + '/dev/device/conf/all',
-        PUBLIC: SERVER_URL2 + '/device/conf/all',
-    },
     ADDDEVICE: {
         ADDDEVICE: SERVER_URL + '/user/device/add',
         GET_MQTTKEY: SERVER_URL + '/user/device/diy/add',
@@ -63,16 +58,6 @@ export const API = {
         ACCEPT_SHARED: SERVER_URL + '/user/device/share/slaver/accept',
         REFUSE_SHARED: SERVER_URL + '/user/device/share/slaver/refuse',
         DEL_SHARED: SERVER_URL + '/user/device/share/slaver/delete',
-    },
-    DEV_CENTER: {
-        USER_LEVEL: SERVER_URL2 + "/dev/user",
-        USER_AUTH: SERVER_URL2 + "/dev/auth",
-        DATAKEYS: SERVER_URL2 + "/dev/storage",
-        PRODEVICE: SERVER_URL2 + "/dev/device",
-        PRODEVICE_KEY: SERVER_URL2 + "/dev/device/key",
-        PRODEVICE_CONFIG: SERVER_URL2 + "/dev/device/conf",
-        PRODEVICE_LAYOUTER: SERVER_URL2 + "/dev/device/conf/layouter",
-        PUBLIC_PRODEVICE: SERVER_URL2 + "/dev/device/public",
     },
     MESSAGE: SERVER_URL + '/user/message',
     FEEDBACK: SERVER_URL + '/feedback',

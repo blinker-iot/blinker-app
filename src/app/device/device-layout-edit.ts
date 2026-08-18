@@ -8,9 +8,5 @@ export function canEditDeviceLayout(
     return false;
   }
 
-  return (
-    !!device.config.isPreview ||
-    !!device.config.isDiy ||
-    !!device.deviceType?.includes('Diy')
-  );
+  return true;
 }

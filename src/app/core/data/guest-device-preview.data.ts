@@ -23,8 +23,6 @@ interface PreviewDeviceOptions {
   switchedOn?: boolean;
   metrics?: Record<string, number>;
   card?: DeviceCardConfig;
-  isDev?: boolean;
-  isDiy?: boolean;
   component?: 'TestDashboard' | 'Layouter2';
   layouter?: string;
   data?: Record<string, unknown>;
@@ -40,8 +38,6 @@ function createPreviewDevice(options: PreviewDeviceOptions): BlinkerDevice {
       customName: options.name,
       mode: options.mode || 'mqtt',
       image: options.image,
-      isDev: options.isDev,
-      isDiy: options.isDiy,
       isPreview: true,
       previewNearby: options.nearby,
       showSwitch: options.showSwitch,
@@ -130,8 +126,6 @@ export function createGuestDevicePreview(): GuestDevicePreview {
         voltage: 3.3,
         temperature: 31.2,
       },
-      isDev: true,
-      isDiy: true,
       component: 'Layouter2',
       layouter: JSON.stringify(LAYOUTER2_PREVIEW_DATA),
       data: LAYOUTER2_PREVIEW_DEVICE_DATA,

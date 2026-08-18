@@ -76,7 +76,6 @@ export class AppComponent implements OnInit, AfterViewInit {
     // private pusherService: PusherService,
     private updateService: UpdateService,
     private networkService: NetworkService,
-    // private deviceConfigService: DeviceConfigService,
     private navCtrl: NavController,
     private deviceService: DeviceService,
     // private screenOrientation: ScreenOrientation,
@@ -137,7 +136,6 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
     this.checkLoginStatus();
     this.authService.init();
-    // this.deviceConfigService.init();
     this.deviceService.init();
     this.noticeService.init();
     this.imageService.init();

@@ -3,18 +3,14 @@ import {
   Input,
   Output,
   EventEmitter,
-  SimpleChanges,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { DeviceConfigService } from 'src/app/core/services/device-config.service';
-import { Act2TextPipe } from '../../pipes/actcmd2text';
 import { widgetButtonListComponent } from 'src/app/device/layouter2/widget-buttonlist/widget-buttonlist';
 
 @Component({
   selector: 'b-actcmd-list',
   standalone: true,
-  imports: [CommonModule, Act2TextPipe, widgetButtonListComponent],
+  imports: [widgetButtonListComponent],
   templateUrl: './b-actcmd-list.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./b-actcmd-list.component.scss'],
@@ -24,29 +20,6 @@ export class BActcmdListComponent {
   @Output() updateAct = new EventEmitter();
 
   selectedItem;
-
-  cmdList = [];
-
-  get deviceConfig() {
-    return this.deviceConfigService.deviceConfigs;
-  }
-
-  get isDiy() {
-    if (this.device.deviceType.indexOf('Diy') > -1) return true;
-    else return false;
-  }
-
-  constructor(private deviceConfigService: DeviceConfigService) {}
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (this.isDiy) return;
-    // console.log(changes);
-    let deviceConfig = this.deviceConfigService.getDeviceConfig(this.device);
-    if (typeof deviceConfig.actions == 'undefined')
-      deviceConfig['actions'] = '[]';
-    console.log(deviceConfig.actions);
-    this.cmdList = JSON.parse(deviceConfig.actions);
-  }
 
   updateSelectedAction(event) {
     this.selectedItem = event[0];

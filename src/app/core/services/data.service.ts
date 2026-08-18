@@ -48,8 +48,6 @@ export class DataService {
     brokers: OrderData;
     tempImgFile: any;
 
-    hasProDevice = false;
-
     constructor(
         // private storage: Storage,
     ) { }
@@ -145,7 +143,6 @@ export class DataService {
             this.initCompleted.next(true);
             this.firstBoot = false;
         }
-        this.checkDeveloper();
     }
 
     fixData() {
@@ -172,20 +169,11 @@ export class DataService {
             this.share.shared.forEach(sharedDevice => {
                 this.device.dict[sharedDevice.deviceName].config['isShared'] = true
             });
-        // 添加isDiy
-        this.device.list.forEach(deviceId => {
-            if (this.device.dict[deviceId].deviceType.indexOf('Diy') > -1)
-                this.device.dict[deviceId].config['isDiy'] = true
-        })
     }
 
     initDevices(devices) {
         let deviceDict = {};
         for (const device of devices) {
-            // 判断用户是否有专属设备
-            if (!this.hasProDevice && device.deviceType != 'DiyArduino') {
-                this.hasProDevice = true
-            }
             let id = getDeviceId(device);
             let newDevice = device;
             newDevice['id'] = id;
@@ -303,16 +291,6 @@ export class DataService {
                 this.device.list.push(deviceName)
             }
         }
-    }
-
-    isDeveloper = false;
-    checkDeveloper() {
-        this.device.list.forEach(deviceId => {
-            if (this.device.dict[deviceId].deviceType.indexOf("Diy") > -1) {
-                this.isDeveloper = true;
-                return false
-            }
-        })
     }
 
     updateAvatarCache() {

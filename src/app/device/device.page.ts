@@ -18,7 +18,6 @@ import { BlinkerDevice } from '../core/model/device.model';
 import { DataService } from '../core/services/data.service';
 import { DebugComponent } from '../debug/debug.component';
 import { DebugService } from '../debug/debug.service';
-import { DeviceConfigService } from '../core/services/device-config.service';
 import { DeviceService } from '../core/services/device.service';
 import { ViewService } from '../core/services/view.service';
 import { LayouterService } from './layouter.service';
@@ -48,7 +47,6 @@ export class DevicePage implements OnInit, OnDestroy {
   loaded = false;
   id = '';
   device?: BlinkerDevice;
-  deviceConfig: any;
   editMode = false;
   deviceComponent = '';
 
@@ -77,7 +75,6 @@ export class DevicePage implements OnInit, OnDestroy {
     public readonly deviceService: DeviceService,
     private readonly dataService: DataService,
     private readonly viewService: ViewService,
-    private readonly deviceConfigService: DeviceConfigService,
     private readonly debugService: DebugService,
     private readonly modalCtrl: ModalController,
     private readonly layouterService: LayouterService,
@@ -86,13 +83,6 @@ export class DevicePage implements OnInit, OnDestroy {
 
   get isSharedDevice(): boolean {
     return !!this.device?.config?.isShared;
-  }
-
-  get isDiyDevice(): boolean {
-    return (
-      !!this.device?.config?.isDiy ||
-      !!this.device?.deviceType?.includes('Diy')
-    );
   }
 
   get isPreview(): boolean {
@@ -210,8 +200,7 @@ export class DevicePage implements OnInit, OnDestroy {
   private loadDevice(): void {
     if (!this.device || !this.deviceViewContainer) return;
 
-    this.deviceConfig = this.deviceConfigService.getDeviceConfig(this.device);
-    let componentName = this.deviceConfig?.component || 'Layouter2';
+    let componentName = this.device.config.component || 'Layouter2';
     let customizerUrl = '';
 
     if (componentName.startsWith('Customizer?')) {
@@ -234,7 +223,7 @@ export class DevicePage implements OnInit, OnDestroy {
     } else if (this.deviceComponent.includes('Layouter')) {
       this.deviceComponentRef.setInput(
         'layouterData',
-        this.deviceConfig?.layouter ?? this.device.config.layouter ?? '',
+        this.device.config.layouter ?? '',
       );
       this.deviceComponentRef.setInput(
         'mode',
@@ -263,16 +252,6 @@ export class DevicePage implements OnInit, OnDestroy {
       await this.deviceService.connectDevice(this.device);
     }
     this.deviceService.queryDevice(this.device);
-    if (
-      !this.isSharedDevice &&
-      !this.isDiyDevice &&
-      this.device.config.mode === 'mqtt'
-    ) {
-      window.setTimeout(() => {
-        if (this.device) this.deviceService.checkDeviceVersion(this.device);
-      }, 2000);
-    }
-
     if (typeof this.heartbeatTimer !== 'undefined') {
       window.clearInterval(this.heartbeatTimer);
     }

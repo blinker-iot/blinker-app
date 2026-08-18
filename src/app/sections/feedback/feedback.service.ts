@@ -6,7 +6,6 @@ import { firstValueFrom } from 'rxjs';
 
 export interface FeedbackRequest {
   recordType: number;
-  deviceType: string;
   content: string;
 }
 
@@ -37,7 +36,6 @@ export class FeedbackService {
         'uuid': this.uuid,
         'token': this.token,
         'recordType': feedback.recordType,
-        'deviceType': feedback.deviceType,
         'content': feedback.content,
       })
     );

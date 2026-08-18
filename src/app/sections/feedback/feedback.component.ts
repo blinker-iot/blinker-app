@@ -71,10 +71,6 @@ export class FeedbackPage implements OnInit, OnDestroy {
   isDone = false;
   errorMessage = '';
 
-  get isDeveloper() {
-    return this.dataService.isDeveloper;
-  }
-
   get selectedTypeLabel(): string {
     return (
       this.feedbackTypes.find((type) => type.value === this.feedbackType)
@@ -148,7 +144,6 @@ export class FeedbackPage implements OnInit, OnDestroy {
       );
       const result = await this.feedbackService.newFeedback({
         recordType: selectedType?.recordType ?? 2,
-        deviceType: '',
         content: feedbackContent,
       });
 

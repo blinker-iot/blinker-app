@@ -4,7 +4,7 @@
     <ion-buttons slot="start">
       <ion-back-button text="" [defaultHref]="'/device/' + id"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{ 'DEVICE.SETTING' | translate }}</ion-title>
+    <ion-title>{{ device.config.customName }} {{ 'DEVICE.SETTING' | translate }}</ion-title>
   </ion-toolbar>
 </ion-header>
 } @if (loaded) {
@@ -42,7 +42,6 @@
         <span class="info-copy">
           <strong>ID: {{ device.id }}</strong>
         </span>
-        <!-- <p>{{ device.deviceType }}</p> -->
       </div>
     </section>
     @if (device.config.authKey && !isSharedDevice) {
@@ -62,17 +61,9 @@
     </section>
     }
     <div class="section-label menu-section-label">设备功能</div>
-    <app-menu-list [detailed]="true" [items]="deviceMenuItems"
-      (itemSelected)="selectMenuItem($event)"></app-menu-list>
+    <app-menu-list [detailed]="true" [items]="deviceMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
     <div class="section-label danger-section-label">设备管理</div>
-    <app-menu-list [detailed]="true" [items]="dangerMenuItems"
-      (itemSelected)="selectMenuItem($event)"></app-menu-list>
-    <aside class="settings-tip">
-      <i class="fa-light fa-circle-info" aria-hidden="true"></i>
-      <p>
-        设备名称和图标会同步到你的账户；设备密钥属于敏感信息，请勿分享给他人。
-      </p>
-    </aside>
+    <app-menu-list [detailed]="true" [items]="dangerMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
   </main>
 </ion-content>
 }

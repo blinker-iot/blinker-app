@@ -3,7 +3,6 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ModalController } from '@ionic/angular';
 import { Act2TextPipe } from 'src/app/core/pipes/actcmd2text';
-import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 
 @Component({
   selector: 'blinker-action-selector-modal',
@@ -26,36 +25,16 @@ export class ActionSelectorModalComponent implements OnInit {
 
   selectedItem;
 
-  get deviceConfig() {
-    return this.deviceConfigService.deviceConfigs;
-  }
-
-  get isDiy() {
-    if (this.device.deviceType.indexOf('Diy') > -1)
-      return true
-    else
-      return false
-  }
-
   actions = []
 
   constructor(
-    private modalController: ModalController,
-    private deviceConfigService: DeviceConfigService
+    private modalController: ModalController
   ) { }
 
   ngOnInit(): void {
-    if (this.isDiy) {
-      let deviceConfig = JSON.parse(this.device.config.layouter)
-      if (deviceConfig == null) return;
-      if (typeof deviceConfig == 'undefined') return
-      if (typeof deviceConfig.actions == 'undefined') return
-      this.actions = deviceConfig.actions;
-    } else {
-      let deviceConfig = this.deviceConfigService.getDeviceConfig(this.device)
-      if (typeof deviceConfig.actions == 'undefined') deviceConfig['actions'] = '[]';
-      this.actions = JSON.parse(deviceConfig.actions)
-    }
+    if (!this.device?.config?.layouter) return;
+    const deviceConfig = JSON.parse(this.device.config.layouter)
+    this.actions = deviceConfig?.actions ?? [];
     // console.log(this.actions);
 
   }

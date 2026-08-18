@@ -10,7 +10,6 @@ import { MsToDatePipe } from "src/app/core/pipes/ms-to-date";
 import { HtmlPipe } from "src/app/core/pipes/html.pipe";
 import { WrapPipe } from "src/app/core/pipes/wrap.pipe";
 import { Act2TextPipe } from "src/app/core/pipes/actcmd2text";
-import { Device2NamePipe } from "src/app/core/pipes/device2name";
 import { Days2TextPipe } from "src/app/core/pipes/days2text";
 import { DataService } from "src/app/core/services/data.service";
 
@@ -29,7 +28,6 @@ import { DataService } from "src/app/core/services/data.service";
         HtmlPipe,
         WrapPipe,
         Act2TextPipe,
-        Device2NamePipe,
         Days2TextPipe,
     ]
 })

@@ -31,7 +31,6 @@ import { Layouter2GuidePage } from './guide/layouter2-guide';
 import { Mode } from './layouter2-mode';
 import { ActivatedRoute } from '@angular/router';
 import { BlinkerDevice, DeviceComponent } from 'src/app/core/model/device.model';
-import { DeviceConfigService } from 'src/app/core/services/device-config.service';
 import { ViewService } from 'src/app/core/services/view.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
@@ -228,10 +227,6 @@ export class Layouter2 implements DeviceComponent {
     return this.device.config.isShared
   }
 
-  get isDiyDevice() {
-    return this.device.config.isDiy || this.device.config.isPreview
-  }
-
   realtimeDataTimer;
 
   constructor(
@@ -242,7 +237,6 @@ export class Layouter2 implements DeviceComponent {
     private nativeService: NativeService,
     private LayouterService: LayouterService,
     private platform: Platform,
-    private deviceListService: DeviceConfigService,
     private viewService: ViewService,
     private noticeService: NoticeService,
   ) {
@@ -347,7 +341,7 @@ export class Layouter2 implements DeviceComponent {
 
   //显示使用向导
   async showGuide() {
-    if (this.isSharedDevice || !this.isDiyDevice) return
+    if (this.isSharedDevice) return
     let modal = await this.modalCtrl.create({
       component: Layouter2GuidePage,
       cssClass: 'modal'
@@ -411,10 +405,6 @@ export class Layouter2 implements DeviceComponent {
     this.device.data['layouterData']['rt'] = this.dashboard.filter(widget => {
       return widget['rt']
     }).map(widget => widget['key'])
-  }
-
-  loadProDevice() {
-    this.deviceListService.deviceConfigs[this.device.deviceType]
   }
 
   //清空组件

@@ -15,7 +15,6 @@ import { MsToDatePipe } from 'src/app/core/pipes/ms-to-date';
 import { HtmlPipe } from 'src/app/core/pipes/html.pipe';
 import { WrapPipe } from 'src/app/core/pipes/wrap.pipe';
 import { Act2TextPipe } from 'src/app/core/pipes/actcmd2text';
-import { Device2NamePipe } from 'src/app/core/pipes/device2name';
 import { Days2TextPipe } from 'src/app/core/pipes/days2text';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { ActivatedRoute } from '@angular/router';
@@ -48,7 +47,6 @@ import { DeviceblockList2Component } from 'src/app/core/components/deviceblock-l
     HtmlPipe,
     WrapPipe,
     Act2TextPipe,
-    Device2NamePipe,
     Days2TextPipe,
     BActcmdListComponent,
     BBottomBtnComponent,

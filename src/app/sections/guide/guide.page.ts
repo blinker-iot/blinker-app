@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 import { IonicModule, NavController } from '@ionic/angular';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { ActivatedRoute } from '@angular/router';
 
 import {
   MenuListComponent,
@@ -17,10 +18,52 @@ import {
   imports: [IonicModule, TranslatePipe, MenuListComponent],
 })
 export class GuidePage {
+  readonly isReconfiguration: boolean;
+  readonly backHref: string;
+
   constructor(
     private navController: NavController,
-    private translate: TranslateService
-  ) {}
+    private translate: TranslateService,
+    route: ActivatedRoute
+  ) {
+    this.isReconfiguration =
+      route.snapshot.queryParamMap.get('mode') === 'reconfigure';
+    const deviceId = route.snapshot.queryParamMap.get('deviceId');
+    this.backHref =
+      this.isReconfiguration && deviceId
+        ? `/device-manager/${deviceId}`
+        : '/home/device';
+  }
+
+  get titleKey(): string {
+    return this.isReconfiguration
+      ? 'DEVICE_GUIDE.RECONFIGURE_TITLE'
+      : 'DEVICE_GUIDE.TITLE';
+  }
+
+  get eyebrowKey(): string {
+    return this.isReconfiguration
+      ? 'DEVICE_GUIDE.RECONFIGURE_EYEBROW'
+      : 'DEVICE_GUIDE.EYEBROW';
+  }
+
+  get heroTitleKey(): string {
+    return this.isReconfiguration
+      ? 'DEVICE_GUIDE.RECONFIGURE_TITLE'
+      : 'DEVICE_GUIDE.HERO_TITLE';
+  }
+
+  get heroDescriptionKey(): string {
+    return this.isReconfiguration
+      ? 'DEVICE_GUIDE.RECONFIGURE_DESCRIPTION'
+      : 'DEVICE_GUIDE.HERO_DESCRIPTION';
+  }
+
+  get sectionTitleKey(): string {
+    return this.isReconfiguration
+      ? 'DEVICE_GUIDE.RECONFIGURE_SECTION_TITLE'
+      : 'DEVICE_GUIDE.SECTION_TITLE';
+  }
 
   get methodItems(): readonly MenuListItem[] {
     return [

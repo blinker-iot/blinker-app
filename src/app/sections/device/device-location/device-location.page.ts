@@ -28,10 +28,6 @@ export class DeviceLocationPage implements OnInit {
   id;
   device;
 
-  get isDiyDevice() {
-    return this.device.config.isDiy;
-  }
-
   get address() {
     return this.geolocationService.address;
   }

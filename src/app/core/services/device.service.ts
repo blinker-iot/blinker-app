@@ -218,7 +218,7 @@ export class DeviceService {
     if (typeof broker == 'undefined') return;
     let mqttJson = JSON.parse(JSON.stringify(broker.dataTemplate));
     mqttJson.toDevice = device.deviceName;
-    mqttJson.deviceType = ((device.deviceType == 'DiyArduino' || device.deviceType == 'DiyLinux') ? device.deviceType : 'ProDevice');
+    mqttJson.deviceType = device.deviceType;
     try {
       mqttJson.data = JSON.parse(message);
     } catch (error) {

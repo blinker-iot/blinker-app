@@ -27,8 +27,6 @@ import { AuthService } from './core/services/auth.service';
 import { NetworkService } from './core/services/network.service';
 import { ImageService } from './core/services/image.service';
 import { HammerGesturesPlugin } from './core/injectable/hammer-gestures.plugin';
-import { CONFIG } from './configs/app.config';
-
 import { routes } from './app.routes';
 import { provideMarkdown } from 'ngx-markdown';
 import {
@@ -48,7 +46,6 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withXhr(), withInterceptorsFromDi()),
     provideMarkdown(),
     provideTranslateService({
-      fallbackLang: CONFIG.I18N.DEFAULT,
       loader: provideTranslateLoader(StaticTranslationLoader),
     }),
     {

@@ -2,7 +2,6 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
-import { CONFIG } from 'src/app/configs/app.config';
 import {
   LanguageCode,
   SUPPORTED_LANGUAGE_CODES,
@@ -22,6 +21,39 @@ const LEGACY_LANGUAGE_CODES: Readonly<Record<string, LanguageCode>> = {
 
 const SUPPORTED_LANGUAGE_SET = new Set<string>(SUPPORTED_LANGUAGE_CODES);
 
+const TIME_ZONE_LANGUAGE_MAP: Readonly<Partial<Record<string, LanguageCode>>> = {
+  // Chinese time zones
+  'Asia/Shanghai': 'zh_cn',
+  'Asia/Chongqing': 'zh_cn',
+  'Asia/Harbin': 'zh_cn',
+  'Asia/Urumqi': 'zh_cn',
+  'Asia/Beijing': 'zh_cn',
+  PRC: 'zh_cn',
+  'Asia/Hong_Kong': 'zh_hk',
+  'Asia/Macau': 'zh_hk',
+  'Asia/Taipei': 'zh_hk',
+
+  // Other supported languages with an unambiguous primary time zone
+  'Asia/Tokyo': 'ja',
+  'Asia/Seoul': 'ko',
+  'Asia/Pyongyang': 'ko',
+  'Europe/Berlin': 'de',
+  'Europe/Vienna': 'de',
+  'Europe/Madrid': 'es',
+  'Europe/Paris': 'fr',
+  'Europe/Lisbon': 'pt',
+  'Europe/Moscow': 'ru',
+  'Africa/Cairo': 'ar',
+  'Asia/Baghdad': 'ar',
+  'Asia/Dubai': 'ar',
+  'Asia/Riyadh': 'ar',
+};
+
+export function getLanguageForTimeZone(timeZone: string | undefined): LanguageCode {
+  if (!timeZone) return 'en';
+  return TIME_ZONE_LANGUAGE_MAP[timeZone] || 'en';
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -36,11 +68,9 @@ export class TranslationService {
   async init(): Promise<void> {
     await this.loadLanguageList();
     this.translate.addLangs(this.languageList.map(({ code }) => code));
-    this.translate.setFallbackLang(CONFIG.I18N.DEFAULT);
-
-    if (CONFIG.I18N.ENABLE) {
-      await this.setLanguage(this.getSelectedLanguage());
-    }
+    const selectedLanguage = this.getSelectedLanguage();
+    this.translate.setFallbackLang(selectedLanguage);
+    await this.setLanguage(selectedLanguage);
   }
 
   async setLanguage(language: string): Promise<void> {
@@ -67,9 +97,7 @@ export class TranslationService {
       return normalizedStoredLanguage;
     }
 
-    return this.getSystemLanguage()
-      || this.normalizeLanguageCode(this.translate.getFallbackLang())
-      || CONFIG.I18N.DEFAULT;
+    return this.getTimeZoneLanguage();
   }
 
   getLanguageImage(code: LanguageCode): string {
@@ -96,26 +124,13 @@ export class TranslationService {
     }
   }
 
-  private getSystemLanguage(): LanguageCode | undefined {
-    if (typeof navigator === 'undefined') return undefined;
-
-    const locales = navigator.languages?.length
-      ? navigator.languages
-      : [navigator.language];
-
-    for (const locale of locales) {
-      const normalizedLocale = locale.toLowerCase().replace(/-/g, '_');
-      if (normalizedLocale.startsWith('zh_')) {
-        return /zh_(hant|hk|mo|tw)/.test(normalizedLocale) ? 'zh_hk' : 'zh_cn';
-      }
-
-      const languageCode = normalizedLocale.split('_')[0];
-      if (SUPPORTED_LANGUAGE_SET.has(languageCode)) {
-        return languageCode as LanguageCode;
-      }
+  private getTimeZoneLanguage(): LanguageCode {
+    try {
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      return getLanguageForTimeZone(timeZone);
+    } catch {
+      return 'en';
     }
-
-    return undefined;
   }
 
   private normalizeLanguageCode(

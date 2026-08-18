@@ -1,9 +1,9 @@
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/home/device" text=""></ion-back-button>
+      <ion-back-button [defaultHref]="backHref" text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>{{ 'DEVICE_GUIDE.TITLE' | translate }}</ion-title>
+    <ion-title>{{ titleKey | translate }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -11,9 +11,9 @@
   <main>
     <section class="guide-hero" aria-labelledby="guide-heading">
       <div class="hero-copy">
-        <span class="eyebrow">{{ 'DEVICE_GUIDE.EYEBROW' | translate }}</span>
-        <h1 id="guide-heading">{{ 'DEVICE_GUIDE.HERO_TITLE' | translate }}</h1>
-        <p>{{ 'DEVICE_GUIDE.HERO_DESCRIPTION' | translate }}</p>
+        <span class="eyebrow">{{ eyebrowKey | translate }}</span>
+        <h1 id="guide-heading">{{ heroTitleKey | translate }}</h1>
+        <p>{{ heroDescriptionKey | translate }}</p>
       </div>
 
       <div class="hero-visual" aria-hidden="true">
@@ -27,7 +27,7 @@
 
     <section class="methods-section" aria-labelledby="methods-heading">
       <h2 id="methods-heading" class="section-label">
-        {{ 'DEVICE_GUIDE.SECTION_TITLE' | translate }}
+        {{ sectionTitleKey | translate }}
       </h2>
 
       <app-menu-list [items]="methodItems" [detailed]="true"

@@ -17,7 +17,6 @@ import { DeviceShortcutService } from 'src/app/core/services/device-shortcut.ser
 import { NoticeService } from 'src/app/core/services/notice.service';
 
 import { ShareService } from '../device-share/share.service';
-import { LayouterService } from 'src/app/device/layouter.service';
 import {
   MenuListComponent,
   MenuListItem,
@@ -48,10 +47,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     return this.dataService.isAdvancedDeveloper;
   }
 
-  get isDevDevice() {
-    return Boolean(this.device?.config?.isDev);
-  }
-
   get hasTimerTask() {
     if (typeof this.device?.data?.timer != 'undefined') {
       if (this.device.data.timer != '000') {
@@ -77,9 +72,9 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       },
       {
         id: 'guide',
-        title: '配置向导',
-        description: '重新查看设备面板的配置说明',
-        icon: 'fa-message-bot',
+        title: '设备配置',
+        description: '重新配置该设备网络和密钥',
+        icon: 'fa-screwdriver-wrench',
       },
     ];
   }
@@ -137,7 +132,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private navCtrl: NavController,
     private modalCtrl: ModalController,
     private shareService: ShareService,
-    private layouterService: LayouterService,
     private deviceShortcutService: DeviceShortcutService,
     private noticeService: NoticeService
   ) {}
@@ -279,13 +273,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   showGuide() {
-    this.navCtrl.navigateBack('/device/' + this.device.id);
-    setTimeout(() => {
-      this.layouterService.action.next({
-        name: 'showGuide',
-        data: this.device.id,
-      });
-    }, 100);
+    void this.navCtrl.navigateForward('/guide', {
+      queryParams: {
+        mode: 'reconfigure',
+        deviceId: this.device.id,
+      },
+    });
   }
 
   selectMenuItem(item: MenuListItem): void {

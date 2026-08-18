@@ -7,7 +7,6 @@ import { MsToDatePipe } from './ms-to-date';
 import { HtmlPipe } from './html.pipe';
 import { WrapPipe } from './wrap.pipe';
 import { Act2TextPipe } from './actcmd2text';
-import { Device2NamePipe } from './device2name';
 import { Days2TextPipe } from './days2text';
 
 @NgModule({
@@ -20,7 +19,6 @@ import { Days2TextPipe } from './days2text';
         HtmlPipe,
         WrapPipe,
         Act2TextPipe,
-        Device2NamePipe,
         Days2TextPipe
     ],
     exports: [
@@ -31,7 +29,6 @@ import { Days2TextPipe } from './days2text';
         HtmlPipe,
         WrapPipe,
         Act2TextPipe,
-        Device2NamePipe,
         Days2TextPipe
     ]
 })
