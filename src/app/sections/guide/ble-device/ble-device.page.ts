@@ -1,7 +1,16 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
-import { IonicModule, NavController } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  NavController,
+} from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
+import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
 
 @Component({
   selector: 'app-ble-device-guide',
@@ -9,7 +18,16 @@ import { TranslatePipe } from '@ngx-translate/core';
   styleUrls: ['../connection-method.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonicModule, TranslatePipe],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonBackButton,
+    IonTitle,
+    IonContent,
+    TranslatePipe,
+    HeroCardComponent,
+  ],
 })
 export class BleDeviceGuidePage {
   constructor(private navController: NavController) {}

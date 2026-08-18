@@ -1,10 +1,21 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { IonicModule, NavController, ToastController } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+  NavController,
+  ToastController,
+} from '@ionic/angular/standalone';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { UserService } from '../../../core/services/user.service';
+import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
 
 interface OldDeviceMigrationResponse {
   message?: number | string;
@@ -19,7 +30,18 @@ interface OldDeviceMigrationResponse {
   styleUrls: ['./old-device.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IonicModule, TranslatePipe],
+  imports: [
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonBackButton,
+    IonTitle,
+    IonContent,
+    IonSpinner,
+    TranslatePipe,
+    HeroCardComponent,
+  ],
 })
 export class OldDevicePage {
   phoneNumber = '';

@@ -29,45 +29,9 @@ ion-content.method-ble {
   --method-color-rgb: var(--ion-color-secondary-rgb);
 }
 
-.method-hero {
-  padding: 9px 5px 22px;
-
-  h1 {
-    margin: 9px 0 7px;
-    color: var(--blinker-text-primary);
-    font-size: 23px;
-    font-weight: 680;
-    letter-spacing: -0.025em;
-    line-height: 1.28;
-  }
-
-  p {
-    max-width: 440px;
-    margin: 0;
-    color: var(--blinker-text-secondary);
-    font-size: 11px;
-    line-height: 1.65;
-  }
-}
-
-.method-hero-icon {
-  width: 58px;
-  height: 58px;
-  margin-bottom: 17px;
-  border-radius: 18px;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--method-color) 72%, white), var(--method-color));
-  box-shadow: 0 11px 24px rgba(var(--method-color-rgb), 0.24);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 22px;
-}
-
-.eyebrow {
-  color: var(--method-color);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+app-hero-card {
+  --tool-hero-accent: var(--method-color);
+  margin-bottom: 20px;
 }
 
 .setup-card {
@@ -186,11 +150,5 @@ ion-content.method-ble {
 @media (min-height: 780px) {
   .primary-action {
     margin-top: auto;
-  }
-}
-
-@media (max-width: 370px) {
-  .method-hero h1 {
-    font-size: 20px;
   }
 }

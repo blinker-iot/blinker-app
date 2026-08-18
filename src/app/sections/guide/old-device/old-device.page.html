@@ -1,10 +1,7 @@
 <ion-header class="migration-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button
-        defaultHref="/guide"
-        text=""
-      ></ion-back-button>
+      <ion-back-button defaultHref="/guide" text=""></ion-back-button>
     </ion-buttons>
     <ion-title>{{ 'DEVICE_GUIDE.OLD_DEVICE_TITLE' | translate }}</ion-title>
   </ion-toolbar>
@@ -12,14 +9,12 @@
 
 <ion-content fullscreen="true">
   <main>
-    <section class="migration-intro" aria-labelledby="migration-heading">
-      <span class="migration-hero-icon" aria-hidden="true">
-        <i class="fa-light fa-cloud-arrow-up"></i>
-      </span>
-      <span class="eyebrow">{{ 'DEVICE_GUIDE.OLD_DEVICE_EYEBROW' | translate }}</span>
-      <h1 id="migration-heading">{{ 'DEVICE_GUIDE.OLD_DEVICE_HEADING' | translate }}</h1>
-      <p>{{ 'DEVICE_GUIDE.OLD_DEVICE_DESCRIPTION' | translate }}</p>
-    </section>
+    <app-hero-card
+      iconClass="fa-light fa-cloud-arrow-up"
+      [eyebrow]="'DEVICE_GUIDE.OLD_DEVICE_EYEBROW' | translate"
+      [heading]="'DEVICE_GUIDE.OLD_DEVICE_HEADING' | translate"
+      [description]="'DEVICE_GUIDE.OLD_DEVICE_DESCRIPTION' | translate"
+    />
 
     <form class="migration-form" (ngSubmit)="migrateData()" novalidate>
       <label class="form-label" for="old-device-phone">

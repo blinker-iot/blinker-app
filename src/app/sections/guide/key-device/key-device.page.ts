@@ -4,13 +4,24 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 
 import { Clipboard } from '@capacitor/clipboard';
-import { IonicModule, NavController, ToastController } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+  NavController,
+  ToastController,
+} from '@ionic/angular/standalone';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { API } from '../../../configs/api.config';
 import { BlinkerResponse } from '../../../core/model/response.model';
 import { DataService } from '../../../core/services/data.service';
 import { UserService } from '../../../core/services/user.service';
+import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
 
 @Component({
   selector: 'app-key-device-guide',
@@ -18,7 +29,18 @@ import { UserService } from '../../../core/services/user.service';
   styleUrls: ['./key-device.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IonicModule, TranslatePipe],
+  imports: [
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonBackButton,
+    IonTitle,
+    IonContent,
+    IonSpinner,
+    TranslatePipe,
+    HeroCardComponent,
+  ],
 })
 export class KeyDeviceGuidePage {
   deviceName = '';

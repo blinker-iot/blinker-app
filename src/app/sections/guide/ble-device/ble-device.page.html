@@ -1,10 +1,7 @@
 <ion-header class="method-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button
-        defaultHref="/adddevice"
-        text=""
-      ></ion-back-button>
+      <ion-back-button defaultHref="/guide" text=""></ion-back-button>
     </ion-buttons>
     <ion-title>{{ 'DEVICE_GUIDE.BLE_PAGE_TITLE' | translate }}</ion-title>
   </ion-toolbar>
@@ -12,14 +9,12 @@
 
 <ion-content class="method-ble" fullscreen="true">
   <main>
-    <section class="method-hero" aria-labelledby="ble-guide-heading">
-      <span class="method-hero-icon" aria-hidden="true">
-        <i class="fa-brands fa-bluetooth-b"></i>
-      </span>
-      <span class="eyebrow">{{ 'DEVICE_GUIDE.BLE_PAGE_EYEBROW' | translate }}</span>
-      <h1 id="ble-guide-heading">{{ 'DEVICE_GUIDE.BLE_PAGE_HEADING' | translate }}</h1>
-      <p>{{ 'DEVICE_GUIDE.BLE_PAGE_DESCRIPTION' | translate }}</p>
-    </section>
+    <app-hero-card
+      iconClass="fa-brands fa-bluetooth-b"
+      [eyebrow]="'DEVICE_GUIDE.BLE_PAGE_EYEBROW' | translate"
+      [heading]="'DEVICE_GUIDE.BLE_PAGE_HEADING' | translate"
+      [description]="'DEVICE_GUIDE.BLE_PAGE_DESCRIPTION' | translate"
+    />
 
     <section class="setup-card" aria-labelledby="ble-prepare-heading">
       <h2 id="ble-prepare-heading">{{ 'DEVICE_GUIDE.PREPARE_TITLE' | translate }}</h2>

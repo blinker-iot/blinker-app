@@ -1,10 +1,7 @@
 <ion-header class="key-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button
-        defaultHref="/adddevice"
-        text=""
-      ></ion-back-button>
+      <ion-back-button defaultHref="/guide" text=""></ion-back-button>
     </ion-buttons>
     <ion-title>{{ 'DEVICE_GUIDE.KEY_TITLE' | translate }}</ion-title>
   </ion-toolbar>
@@ -13,12 +10,12 @@
 <ion-content fullscreen="true">
   <main>
     @if (!secretKey) {
-    <section class="key-intro" aria-labelledby="key-heading">
-      <span class="key-hero-icon" aria-hidden="true"><i class="fa-light fa-key"></i></span>
-      <span class="eyebrow">{{ 'DEVICE_GUIDE.KEY_EYEBROW' | translate }}</span>
-      <h1 id="key-heading">{{ 'DEVICE_GUIDE.KEY_HERO_TITLE' | translate }}</h1>
-      <p>{{ 'DEVICE_GUIDE.KEY_HERO_DESCRIPTION' | translate }}</p>
-    </section>
+    <app-hero-card
+      iconClass="fa-light fa-key"
+      [eyebrow]="'DEVICE_GUIDE.KEY_EYEBROW' | translate"
+      [heading]="'DEVICE_GUIDE.KEY_HERO_TITLE' | translate"
+      [description]="'DEVICE_GUIDE.KEY_HERO_DESCRIPTION' | translate"
+    />
 
     <form class="key-form" (ngSubmit)="createKeyDevice()" novalidate>
       <label class="form-label" for="key-device-name">
