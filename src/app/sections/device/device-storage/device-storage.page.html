@@ -1,39 +1,90 @@
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{device?.config.customName}} 存储</ion-title>
+    <ion-title>数据存储</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <div class=" top-box">
-    <div class="blinker-box">
-      <div>存储使用情况： 15/20</div>
-      <div style="margin-top: 5px;">最长存储时长： 30天</div>
+  @if (loaded) {
+  <main>
+    <app-hero-card
+      iconClass="fa-light fa-database"
+      eyebrow="DATA STORAGE"
+      [heading]="deviceName"
+      description="查看设备上报的数据项、最近记录和云端存储使用情况。"
+      [meta]="datasets.length"
+    />
+
+    <section class="usage-card surface-card">
+      <div class="usage-heading">
+        <div>
+          <small>云端存储</small>
+          <strong>{{ storageUsed }} / {{ storageQuota }} MB</strong>
+        </div>
+        <span>{{ usagePercent }}%</span>
+      </div>
+      <div class="progress-track" role="progressbar" [attr.aria-valuenow]="usagePercent" aria-valuemin="0"
+        aria-valuemax="100">
+        <span [style.width.%]="usagePercent"></span>
+      </div>
+      <div class="usage-meta">
+        <span><i class="fa-light fa-clock-rotate-left"></i> 保留 {{ retentionDays }} 天</span>
+        <span><i class="fa-light fa-list-tree"></i> {{ totalRecords }} 条样本</span>
+      </div>
+    </section>
+
+    @if (usingTestData) {
+    <p class="test-data-note">
+      <i class="fa-light fa-flask" aria-hidden="true"></i>
+      当前设备暂无存储数据，已载入温度、湿度、CO₂ 和 PM2.5 测试序列。
+    </p>
+    }
+
+    <div class="section-label">数据项</div>
+    <section class="dataset-grid">
+      @for (dataset of datasets; track dataset.key) {
+      <button type="button" class="dataset-card surface-card" [class.selected]="selectedKey === dataset.key"
+        [style.--dataset-color]="dataset.color" (click)="selectDataset(dataset.key)">
+        <span class="dataset-icon"><i class="fa-light" [class]="'fa-light ' + dataset.icon"></i></span>
+        <span class="dataset-copy">
+          <small>{{ dataset.label }}</small>
+          <strong>{{ latestValue(dataset) }}<em>{{ dataset.unit }}</em></strong>
+        </span>
+        <span class="record-count">{{ dataset.points.length }} 条</span>
+      </button>
+      }
+    </section>
+
+    @if (selectedDataset; as dataset) {
+    <div class="section-label detail-label">
+      <span>{{ dataset.label }}最近数据</span>
+      <small>最近 {{ dataset.points.length }} 条</small>
     </div>
+    <section class="surface-card data-detail" [style.--dataset-color]="dataset.color">
+      <div class="mini-chart" aria-label="数据变化预览">
+        @for (point of dataset.points; track point.time) {
+        <span [style.height.%]="pointPercent(point, dataset)" [title]="point.value + dataset.unit"></span>
+        }
+      </div>
+      <div class="data-list">
+        @for (point of dataset.points.slice().reverse(); track point.time) {
+        <div class="data-row">
+          <time [attr.datetime]="point.time.toISOString()">{{ point.time | date: 'MM-dd HH:mm' }}</time>
+          <span class="row-line"></span>
+          <strong>{{ point.value }}<small>{{ dataset.unit }}</small></strong>
+        </div>
+        }
+      </div>
+    </section>
+    }
+  </main>
+  } @else {
+  <div class="loading-state">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>正在加载存储数据…</span>
   </div>
-  <app-menu-list>
-    <app-menu-item icon="fa-light fa-database" [text]="'humi'">
-    </app-menu-item>
-    <app-menu-item icon="fa-light fa-database" [text]="'temp'">
-    </app-menu-item>
-    <app-menu-item icon="fa-light fa-database" [text]="'co2'">
-    </app-menu-item>
-    <app-menu-item icon="fa-light fa-database" [text]="'pm25'">
-    </app-menu-item>
-    <app-menu-item icon="fa-light fa-database" [text]="'pm25'">
-    </app-menu-item>
-    <app-menu-item icon="fa-light fa-database" [text]="'pm25'">
-    </app-menu-item>
-    <app-menu-item icon="fa-light fa-database" [text]="'pm25'">
-    </app-menu-item>
-    <app-menu-item icon="fa-light fa-database" [text]="'pm25'">
-    </app-menu-item>
-    <app-menu-item icon="fa-light fa-database" [text]="'pm25'">
-    </app-menu-item>
-    <app-menu-item icon="fa-light fa-database" [text]="'pm25'">
-    </app-menu-item>
-  </app-menu-list>
+  }
 </ion-content>

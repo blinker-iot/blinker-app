@@ -198,6 +198,8 @@
     "SHARED_DEVICE_COUNT": "已共享 {{count}} 台设备",
     "SELF_HOSTED_SERVER": "自建服务器",
     "SELF_HOSTED_SERVER_DESCRIPTION": "配置地址与密钥",
+    "THIRD_PARTY_SERVICES": "第三方服务",
+    "THIRD_PARTY_SERVICES_DESCRIPTION": "配置天气与地理信息服务密钥",
     "SETTINGS": "设置",
     "SETTINGS_DESCRIPTION": "语言和主题设置",
     "FEEDBACK": "反馈",

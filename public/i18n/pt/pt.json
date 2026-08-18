@@ -111,6 +111,8 @@
     "SHARED_DEVICE_COUNT": "{{count}} dispositivos partilhados",
     "SELF_HOSTED_SERVER": "Servidor próprio",
     "SELF_HOSTED_SERVER_DESCRIPTION": "Configurar endereço e chave",
+    "THIRD_PARTY_SERVICES": "Serviços de terceiros",
+    "THIRD_PARTY_SERVICES_DESCRIPTION": "Configurar chaves de meteorologia e geolocalização",
     "SETTINGS": "Definições",
     "SETTINGS_DESCRIPTION": "Definições de idioma e tema",
     "FEEDBACK": "Comentários",

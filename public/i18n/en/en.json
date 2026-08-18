@@ -198,6 +198,8 @@
     "SHARED_DEVICE_COUNT": "{{count}} devices shared",
     "SELF_HOSTED_SERVER": "Self-hosted server",
     "SELF_HOSTED_SERVER_DESCRIPTION": "Configure address and key",
+    "THIRD_PARTY_SERVICES": "Third-party services",
+    "THIRD_PARTY_SERVICES_DESCRIPTION": "Configure weather and geolocation keys",
     "SETTINGS": "Settings",
     "SETTINGS_DESCRIPTION": "Language and theme settings",
     "FEEDBACK": "Feedback",

@@ -111,6 +111,8 @@
     "SHARED_DEVICE_COUNT": "{{count}} Geräte freigegeben",
     "SELF_HOSTED_SERVER": "Eigener Server",
     "SELF_HOSTED_SERVER_DESCRIPTION": "Adresse und Schlüssel konfigurieren",
+    "THIRD_PARTY_SERVICES": "Drittanbieterdienste",
+    "THIRD_PARTY_SERVICES_DESCRIPTION": "Schlüssel für Wetter und Geodaten konfigurieren",
     "SETTINGS": "Einstellungen",
     "SETTINGS_DESCRIPTION": "Sprache und Design einstellen",
     "FEEDBACK": "Feedback",

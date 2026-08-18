@@ -111,6 +111,8 @@
     "SHARED_DEVICE_COUNT": "共有デバイス：{{count}}",
     "SELF_HOSTED_SERVER": "セルフホストサーバー",
     "SELF_HOSTED_SERVER_DESCRIPTION": "アドレスとキーを設定",
+    "THIRD_PARTY_SERVICES": "サードパーティサービス",
+    "THIRD_PARTY_SERVICES_DESCRIPTION": "天気・位置情報サービスのキーを設定",
     "SETTINGS": "設定",
     "SETTINGS_DESCRIPTION": "言語とテーマの設定",
     "FEEDBACK": "フィードバック",

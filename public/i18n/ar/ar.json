@@ -111,6 +111,8 @@
     "SHARED_DEVICE_COUNT": "الأجهزة المشتركة: {{count}}",
     "SELF_HOSTED_SERVER": "خادم مستضاف ذاتيًا",
     "SELF_HOSTED_SERVER_DESCRIPTION": "إعداد العنوان والمفتاح",
+    "THIRD_PARTY_SERVICES": "خدمات الجهات الخارجية",
+    "THIRD_PARTY_SERVICES_DESCRIPTION": "إعداد مفاتيح الطقس والموقع الجغرافي",
     "SETTINGS": "الإعدادات",
     "SETTINGS_DESCRIPTION": "إعدادات اللغة والسمة",
     "FEEDBACK": "الملاحظات",

@@ -1,44 +1,216 @@
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
     </ion-buttons>
-    <ion-title>
-      @if (mode=='new') { {{'TIMING.NEW_TIMING_TASK' | translate}} } @if
-      (mode=='edit') { {{'TIMING.EDIT_TIMING_TASK' | translate}} }
-    </ion-title>
+    <ion-title>{{ pageTitle }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  @if (device) {
-  <app-menu-list>
-    <app-menu-item showArrow="true" (click)="openTimeModal()">
-      <div>任务时间</div>
-      <div class="right-box">{{timeInfo}}</div>
-    </app-menu-item>
-    <app-menu-item showArrow="true" (click)="openRepeatModal()">
-      <div>重复设置</div>
-      <div class="right-box">{{timingData.day | days2text}}</div>
-    </app-menu-item>
-    <app-menu-item showArrow="true" (click)="openActionModal()">
-      <div>执行动作</div>
-      <div class="right-box">
-        {{ this.timingData.act[0] | actcmd2text:device.id}}
-      </div>
-    </app-menu-item>
-  </app-menu-list>
-  }
-  <div class="bottom-box">
-    @if (device) {
-    <app-menu-list>
-      <app-menu-item icon="fa-light fa-trash" (click)="save()">
-        保存任务
-      </app-menu-item>
-      <app-menu-item icon="fa-light fa-floppy-disk" (click)="delete()">
-        删除任务
-      </app-menu-item>
-    </app-menu-list>
+<ion-content [fullscreen]="true">
+  @if (loaded && !taskNotFound) {
+  <main>
+    <app-hero-card
+      [iconClass]="editorIcon"
+      eyebrow="TASK EDITOR"
+      [heading]="mode === 'new' ? '创建自动任务' : pageTitle"
+      [description]="editorDescription"
+    />
+
+    @if (usingTestData) {
+    <p class="test-data-note">
+      <i class="fa-light fa-flask" aria-hidden="true"></i>
+      当前为预览设备，保存和删除只修改本地测试数据。
+    </p>
     }
+
+    @if (mode === 'new') {
+    <div class="section-label">选择任务类型</div>
+    <section class="task-type-grid" aria-label="任务类型">
+      <button
+        type="button"
+        class="timing"
+        [class.selected]="selectedType === 'timing'"
+        [disabled]="!canSelectType('timing')"
+        (click)="selectTaskType('timing')"
+      >
+        <span><i class="fa-light fa-calendar-clock"></i></span>
+        <strong>定时任务</strong>
+        <small>{{ typeAvailability('timing') }}</small>
+      </button>
+      <button
+        type="button"
+        class="loop"
+        [class.selected]="selectedType === 'loop'"
+        [disabled]="!canSelectType('loop')"
+        (click)="selectTaskType('loop')"
+      >
+        <span><i class="fa-light fa-arrows-repeat"></i></span>
+        <strong>循环任务</strong>
+        <small>{{ typeAvailability('loop') }}</small>
+      </button>
+      <button
+        type="button"
+        class="countdown"
+        [class.selected]="selectedType === 'countdown'"
+        [disabled]="!canSelectType('countdown')"
+        (click)="selectTaskType('countdown')"
+      >
+        <span><i class="fa-light fa-hourglass-clock"></i></span>
+        <strong>倒计时任务</strong>
+        <small>{{ typeAvailability('countdown') }}</small>
+      </button>
+    </section>
+    }
+
+    @if (selectedType === 'timing') {
+    <div class="section-label">执行计划</div>
+    <section class="surface-card setting-card">
+      <button type="button" class="setting-row" (click)="openTimeModal()">
+        <span class="setting-icon timing"><i class="fa-light fa-clock"></i></span>
+        <span class="setting-copy"><small>任务时间</small><strong>{{ timeInfo }}</strong></span>
+        <i class="fa-light fa-chevron-right"></i>
+      </button>
+      <button type="button" class="setting-row" (click)="openRepeatModal()">
+        <span class="setting-icon repeat"><i class="fa-light fa-repeat"></i></span>
+        <span class="setting-copy"><small>重复设置</small><strong>{{ timingData.day | days2text }}</strong></span>
+        <i class="fa-light fa-chevron-right"></i>
+      </button>
+    </section>
+    }
+
+    @if (selectedType === 'countdown') {
+    <div class="section-label">倒计时设置</div>
+    <section class="surface-card duration-card">
+      <div class="duration-heading">
+        <span class="setting-icon countdown"><i class="fa-light fa-hourglass-clock"></i></span>
+        <div><small>倒计时总时长</small><strong>{{ countdownDurationText }}</strong></div>
+      </div>
+      <div class="duration-inputs">
+        <label>
+          <input type="number" inputmode="numeric" min="0" max="68" [(ngModel)]="countdownHours" />
+          <span>小时</span>
+        </label>
+        <label>
+          <input type="number" inputmode="numeric" min="0" max="59" [(ngModel)]="countdownMinutes" />
+          <span>分钟</span>
+        </label>
+      </div>
+      <div class="run-setting">
+        <div><strong>保存后立即开始</strong><small>关闭时任务将保持暂停</small></div>
+        <ion-toggle
+          aria-label="保存后立即开始倒计时"
+          [checked]="startImmediately"
+          (ionChange)="startImmediately = $event.detail.checked"
+        ></ion-toggle>
+      </div>
+    </section>
+    }
+
+    @if (selectedType === 'loop') {
+    <div class="section-label">循环设置</div>
+    <section class="surface-card loop-card">
+      <label class="number-setting">
+        <span class="setting-icon loop"><i class="fa-light fa-arrows-repeat"></i></span>
+        <span class="setting-copy"><small>循环次数</small><strong>{{ loopCycleText }}</strong></span>
+        <input type="number" inputmode="numeric" min="0" max="100" [(ngModel)]="loopCycles" />
+      </label>
+      <p class="field-tip">输入 0 表示无限循环，最大 100 次。</p>
+      <div class="phase-grid">
+        <label>
+          <span><i class="fa-light fa-play"></i> 阶段一</span>
+          <input type="number" inputmode="numeric" min="1" max="2047" [(ngModel)]="loopPhase1Minutes" />
+          <small>分钟</small>
+        </label>
+        <label>
+          <span><i class="fa-light fa-forward-step"></i> 阶段二</span>
+          <input type="number" inputmode="numeric" min="1" max="2047" [(ngModel)]="loopPhase2Minutes" />
+          <small>分钟</small>
+        </label>
+      </div>
+      <div class="run-setting">
+        <div><strong>保存后立即运行</strong><small>按阶段一开始循环</small></div>
+        <ion-toggle
+          aria-label="保存后立即运行循环任务"
+          [checked]="startImmediately"
+          (ionChange)="startImmediately = $event.detail.checked"
+        ></ion-toggle>
+      </div>
+    </section>
+    }
+
+    <div class="section-label action-label">
+      <span>执行动作</span>
+      <small>{{ activeActionText }}</small>
+    </div>
+
+    @if (selectedType === 'loop') {
+    <section class="action-targets" aria-label="循环阶段动作">
+      <button
+        type="button"
+        [class.selected]="activeActionTarget === 'primary'"
+        (click)="selectActionTarget('primary')"
+      >
+        <small>阶段一动作</small>
+        <strong>{{ selectedActionText }}</strong>
+      </button>
+      <button
+        type="button"
+        [class.selected]="activeActionTarget === 'secondary'"
+        (click)="selectActionTarget('secondary')"
+      >
+        <small>阶段二动作</small>
+        <strong>{{ secondaryActionText }}</strong>
+      </button>
+    </section>
+    }
+
+    <section class="surface-card action-list" role="radiogroup" aria-label="执行动作">
+      @for (option of actionOptions; track option.text) {
+      <button
+        type="button"
+        [class.selected]="isActionSelected(option)"
+        role="radio"
+        [attr.aria-checked]="isActionSelected(option)"
+        (click)="selectAction(option)"
+      >
+        <span class="action-icon"><i class="fa-light" [class]="'fa-light ' + option.icon"></i></span>
+        <strong>{{ option.text }}</strong>
+        <i
+          class="selection-icon fa-solid"
+          [class.fa-circle-check]="isActionSelected(option)"
+          [class.fa-circle]="!isActionSelected(option)"
+        ></i>
+      </button>
+      }
+    </section>
+
+    <section class="save-actions">
+      <button type="button" class="primary-action" [disabled]="isSaveDisabled" (click)="save()">
+        <i class="fa-light fa-floppy-disk"></i>
+        {{ saving ? '正在保存' : '保存任务' }}
+      </button>
+      @if (mode === 'edit') {
+      <button type="button" class="delete-action" [disabled]="saving" (click)="deleteTask()">
+        <i class="fa-light fa-trash"></i>
+        删除任务
+      </button>
+      }
+    </section>
+  </main>
+  } @else if (loaded && taskNotFound) {
+  <main>
+    <section class="not-found surface-card">
+      <i class="fa-light fa-calendar-xmark"></i>
+      <strong>找不到该任务</strong>
+      <p>任务可能已经被设备删除，或任务列表刚刚发生变化。</p>
+      <button type="button" class="primary-action" (click)="backToList()">返回任务列表</button>
+    </section>
+  </main>
+  } @else {
+  <div class="loading-state">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>正在载入任务设置…</span>
   </div>
+  }
 </ion-content>

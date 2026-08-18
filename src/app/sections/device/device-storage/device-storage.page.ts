@@ -1,98 +1,193 @@
-import { Component, OnInit } from '@angular/core';
-
-import { FormsModule } from '@angular/forms';
-import {
-  AlertController,
-  IonicModule,
-  ModalController,
-  NavController,
-  Platform,
-} from '@ionic/angular';
-import { MinuteToTimePipe } from 'src/app/core/pipes/minute-to-time';
-import { ObjToStrPipe } from 'src/app/core/pipes/obj-to-str';
-import { OwnplugAct2strPipe } from 'src/app/core/pipes/ownplug-act2str';
-import { MsToDatePipe } from 'src/app/core/pipes/ms-to-date';
-import { HtmlPipe } from 'src/app/core/pipes/html.pipe';
-import { WrapPipe } from 'src/app/core/pipes/wrap.pipe';
-import { Act2TextPipe } from 'src/app/core/pipes/actcmd2text';
-import { Days2TextPipe } from 'src/app/core/pipes/days2text';
-import { BlinkerDevice } from 'src/app/core/model/device.model';
+import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { UserService } from 'src/app/core/services/user.service';
-import { DeviceService } from 'src/app/core/services/device.service';
+import { IonicModule } from '@ionic/angular';
+import { Subscription } from 'rxjs';
+import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
+import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { DataService } from 'src/app/core/services/data.service';
-import { NoticeService } from 'src/app/core/services/notice.service';
-import { ImageService } from 'src/app/core/services/image.service';
-import { BActcmdListComponent } from 'src/app/core/components/b-actcmd-list/b-actcmd-list.component';
-import { BBottomBtnComponent } from 'src/app/core/components/b-bottom-btn/b-bottom-btn.component';
-import { BColorpickerDiscComponent } from 'src/app/core/components/b-colorpicker-disc/b-colorpicker-disc.component';
-import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
-import { MenuListComponent } from 'src/app/core/components/menu-list/menu-list';
-import { MenuItemComponent } from 'src/app/core/components/menu-list/menu-item/menu-item';
-import { BTipComponent } from 'src/app/core/components/b-tip/b-tip.component';
-import { BToastComponent } from 'src/app/core/components/b-toast/b-toast.component';
-import { DeviceblockList2Component } from 'src/app/core/components/deviceblock-list2/deviceblock-list2';
+
+interface StoragePoint {
+  time: Date;
+  value: number;
+}
+
+interface StorageDataset {
+  key: string;
+  label: string;
+  unit: string;
+  icon: string;
+  color: string;
+  points: StoragePoint[];
+}
+
+const DATASET_META: Record<string, Omit<StorageDataset, 'key' | 'points'>> = {
+  temperature: { label: '温度', unit: '°C', icon: 'fa-temperature-half', color: '#f97316' },
+  temp: { label: '温度', unit: '°C', icon: 'fa-temperature-half', color: '#f97316' },
+  humidity: { label: '湿度', unit: '%', icon: 'fa-droplet', color: '#0ea5e9' },
+  humi: { label: '湿度', unit: '%', icon: 'fa-droplet', color: '#0ea5e9' },
+  co2: { label: 'CO₂', unit: 'ppm', icon: 'fa-cloud', color: '#8b5cf6' },
+  pm25: { label: 'PM2.5', unit: 'μg/m³', icon: 'fa-wind', color: '#22c55e' },
+  power: { label: '功率', unit: 'W', icon: 'fa-bolt', color: '#eab308' },
+};
+
+function points(values: number[], minuteStep = 30): StoragePoint[] {
+  const now = Date.now();
+  return values.map((value, index) => ({
+    time: new Date(now - (values.length - index - 1) * minuteStep * 60_000),
+    value,
+  }));
+}
+
+function createTestDatasets(): StorageDataset[] {
+  return [
+    {
+      key: 'temperature',
+      ...DATASET_META['temperature'],
+      points: points([23.2, 23.6, 24.1, 24.8, 24.5, 24.6]),
+    },
+    {
+      key: 'humidity',
+      ...DATASET_META['humidity'],
+      points: points([58, 57, 55, 54, 55, 56]),
+    },
+    {
+      key: 'co2',
+      ...DATASET_META['co2'],
+      points: points([612, 635, 680, 724, 658, 620]),
+    },
+    {
+      key: 'pm25',
+      ...DATASET_META['pm25'],
+      points: points([12, 15, 18, 21, 17, 16]),
+    },
+  ];
+}
 
 @Component({
-  selector: 'device-storage',
+  selector: 'app-device-storage',
   templateUrl: './device-storage.page.html',
   styleUrls: ['./device-storage.page.scss'],
-  imports: [
-    FormsModule,
-    IonicModule,
-    MinuteToTimePipe,
-    ObjToStrPipe,
-    OwnplugAct2strPipe,
-    MsToDatePipe,
-    HtmlPipe,
-    WrapPipe,
-    Act2TextPipe,
-    Days2TextPipe,
-    BActcmdListComponent,
-    BBottomBtnComponent,
-    BColorpickerDiscComponent,
-    BDeviceImgComponent,
-    MenuListComponent,
-    MenuItemComponent,
-    BTipComponent,
-    BToastComponent,
-    DeviceblockList2Component,
-  ],
+  imports: [CommonModule, IonicModule, HeroCardComponent],
 })
-export class DeviceStoragePage implements OnInit {
-  id;
-  device: BlinkerDevice;
-  loaded;
-  confirm;
+export class DeviceStoragePage implements OnInit, OnDestroy {
+  id = '';
+  device?: BlinkerDevice;
+  loaded = false;
+  usingTestData = false;
+  datasets: StorageDataset[] = [];
+  selectedKey = '';
+  storageUsed = 13.6;
+  storageQuota = 20;
+  retentionDays = 30;
+
+  private subscription?: Subscription;
+
+  get defaultBackHref(): string {
+    return `/device-manager/${this.id}`;
+  }
+
+  get deviceName(): string {
+    return this.device?.config?.customName || '设备';
+  }
+
+  get selectedDataset(): StorageDataset | undefined {
+    return this.datasets.find((dataset) => dataset.key === this.selectedKey);
+  }
+
+  get usagePercent(): number {
+    if (!this.storageQuota) return 0;
+    return Math.min(100, Math.round((this.storageUsed / this.storageQuota) * 100));
+  }
+
+  get totalRecords(): number {
+    return this.datasets.reduce((total, dataset) => total + dataset.points.length, 0);
+  }
 
   constructor(
-    private activatedRoute: ActivatedRoute,
-    private userService: UserService,
-    private deviceService: DeviceService,
-    private dataService: DataService,
-    private alertCtrl: AlertController,
-    private noticeService: NoticeService,
-    public platform: Platform,
-    private navCtrl: NavController,
-    private modalCtrl: ModalController,
-    private imageService: ImageService
+    private readonly activatedRoute: ActivatedRoute,
+    private readonly dataService: DataService,
   ) {}
 
-  subscription;
-  ngOnInit() {
+  ngOnInit(): void {
+    this.id = this.activatedRoute.snapshot.paramMap.get('id') || '';
+    this.bindDevice();
     this.subscription = this.dataService.userDataLoader.subscribe((loaded) => {
-      if (loaded) {
-        this.id = this.activatedRoute.snapshot.params['id'];
-        this.device = this.dataService.device.dict[this.id];
-        this.loaded = loaded;
-      }
+      if (loaded) this.bindDevice();
     });
   }
 
-  ngOnDestroy() {
-    this.subscription.unsubscribe();
-    if (this.confirm) {
-      this.confirm.dismiss();
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
+  }
+
+  selectDataset(key: string): void {
+    this.selectedKey = key;
+  }
+
+  latestValue(dataset: StorageDataset): number {
+    return dataset.points.at(-1)?.value ?? 0;
+  }
+
+  pointPercent(point: StoragePoint, dataset: StorageDataset): number {
+    const values = dataset.points.map((item) => item.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    if (max === min) return 65;
+    return 18 + ((point.value - min) / (max - min)) * 82;
+  }
+
+  private bindDevice(): void {
+    this.device = this.dataService.device?.dict?.[this.id];
+    this.loaded = Boolean(this.device);
+    if (!this.device) return;
+
+    const realDatasets = this.normalizeStorage(this.device.storage);
+    this.usingTestData = realDatasets.length === 0;
+    this.datasets = this.usingTestData ? createTestDatasets() : realDatasets;
+    this.selectedKey = this.datasets.some((dataset) => dataset.key === this.selectedKey)
+      ? this.selectedKey
+      : this.datasets[0]?.key || '';
+
+    const storageInfo = this.device.data?.storageInfo;
+    if (storageInfo && typeof storageInfo === 'object') {
+      this.storageUsed = Number(storageInfo.used) || this.storageUsed;
+      this.storageQuota = Number(storageInfo.quota) || this.storageQuota;
+      this.retentionDays = Number(storageInfo.retentionDays) || this.retentionDays;
     }
+  }
+
+  private normalizeStorage(storage: unknown): StorageDataset[] {
+    if (!storage || typeof storage !== 'object') return [];
+
+    return Object.entries(storage as Record<string, unknown>)
+      .filter(([, value]) => Array.isArray(value) && value.length > 0)
+      .map(([key, value]) => {
+        const meta = DATASET_META[key.toLocaleLowerCase()] || {
+          label: key,
+          unit: '',
+          icon: 'fa-chart-line',
+          color: '#6366f1',
+        };
+        const normalizedPoints = (value as unknown[])
+          .map((item, index) => this.normalizePoint(item, index))
+          .filter((item): item is StoragePoint => Boolean(item));
+        return { key, ...meta, points: normalizedPoints };
+      })
+      .filter((dataset) => dataset.points.length > 0);
+  }
+
+  private normalizePoint(item: unknown, index: number): StoragePoint | undefined {
+    if (typeof item === 'number') {
+      return { time: new Date(Date.now() - index * 60_000), value: item };
+    }
+    if (!item || typeof item !== 'object') return undefined;
+
+    const entry = item as Record<string, unknown>;
+    const value = Number(entry['value'] ?? entry['data']);
+    if (!Number.isFinite(value)) return undefined;
+    const rawTime = entry['time'] ?? entry['date'] ?? entry['timestamp'];
+    const time = rawTime ? new Date(rawTime as string | number) : new Date();
+    return { time: Number.isNaN(time.getTime()) ? new Date() : time, value };
   }
 }

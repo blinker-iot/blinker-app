@@ -1,31 +1,100 @@
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{ device?.config.customName }} 记录</ion-title>
+    <ion-title>运行日志</ion-title>
+    @if (loaded) {
+    <ion-buttons slot="end">
+      <ion-button aria-label="刷新日志" (click)="refreshLogs()">
+        <i class="fa-light fa-rotate-right"></i>
+      </ion-button>
+    </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
-<ion-content>
-  <!-- <div textcenter-temp>当前版本暂不支持此功能</div> -->
-  <div class="top-box">
-    <div class="blinker-box">
-      <div>存储使用情况： 15/20</div>
-      <div style="margin-top: 5px">最长存储时长： 30天</div>
-    </div>
-  </div>
-  <div class="log-box">
-    <div class="line header">
-      <div>时间</div>
-      <div>类型</div>
-      <div>内容</div>
-    </div>
-    @for (log of logList; track log) {
-    <div class="line blinker-box">
-      <div>{{ log.date | date : "MM-dd hh:mm:ss" }}</div>
-      <div>{{ log.type }}</div>
-      <div>{{ log.data }}</div>
-    </div>
+
+<ion-content [fullscreen]="true">
+  @if (loaded) {
+  <main>
+    <app-hero-card
+      iconClass="fa-light fa-rectangle-list"
+      eyebrow="RUNTIME LOG"
+      [heading]="deviceName"
+      description="集中查看设备状态、数据上报和用户操作记录。"
+      [meta]="logs.length"
+    />
+
+    <section class="summary-grid" aria-label="日志概览">
+      <div class="summary-card surface-card">
+        <span class="summary-icon blue"><i class="fa-light fa-wave-pulse"></i></span>
+        <span><small>记录总数</small><strong>{{ logs.length }}</strong></span>
+      </div>
+      <div class="summary-card surface-card">
+        <span class="summary-icon orange"><i class="fa-light fa-triangle-exclamation"></i></span>
+        <span><small>异常记录</small><strong>{{ warningCount }}</strong></span>
+      </div>
+    </section>
+
+    @if (usingTestData) {
+    <p class="test-data-note">
+      <i class="fa-light fa-flask" aria-hidden="true"></i>
+      当前设备暂无日志接口数据，页面已载入系统、设备、操作和异常测试记录。
+    </p>
     }
+
+    <div class="section-label log-label">
+      <span>日志明细</span>
+      <small>更新于 {{ lastRefreshed | date: 'HH:mm:ss' }}</small>
+    </div>
+
+    <section class="filter-card surface-card">
+      <label class="search-box">
+        <i class="fa-light fa-magnifying-glass" aria-hidden="true"></i>
+        <input type="search" placeholder="搜索日志内容" [(ngModel)]="searchText" />
+        @if (searchText) {
+        <button type="button" aria-label="清空搜索" (click)="searchText = ''">
+          <i class="fa-solid fa-circle-xmark"></i>
+        </button>
+        }
+      </label>
+      <div class="filter-row" role="group" aria-label="日志类型">
+        @for (filter of filters; track filter.id) {
+        <button type="button" [class.selected]="selectedType === filter.id" (click)="selectType(filter.id)">
+          {{ filter.label }}
+        </button>
+        }
+      </div>
+    </section>
+
+    @if (visibleLogs.length) {
+    <section class="timeline surface-card">
+      @for (log of visibleLogs; track log.id) {
+      <article class="log-row" [class]="'log-row type-' + log.type">
+        <span class="timeline-marker" aria-hidden="true"><i class="fa-solid fa-circle"></i></span>
+        <div class="log-copy">
+          <div class="log-heading">
+            <strong>{{ log.title }}</strong>
+            <span>{{ typeLabel(log.type) }}</span>
+          </div>
+          <p>{{ log.detail }}</p>
+          <time [attr.datetime]="log.date.toISOString()">{{ log.date | date: 'MM-dd HH:mm:ss' }}</time>
+        </div>
+      </article>
+      }
+    </section>
+    } @else {
+    <section class="empty-state surface-card">
+      <i class="fa-light fa-file-magnifying-glass"></i>
+      <strong>没有匹配的日志</strong>
+      <p>尝试切换日志类型或清空搜索关键词。</p>
+    </section>
+    }
+  </main>
+  } @else {
+  <div class="loading-state">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>正在加载运行日志…</span>
   </div>
+  }
 </ion-content>

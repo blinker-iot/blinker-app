@@ -1,92 +1,117 @@
-@if (loaded) {
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{device.config.customName}}固件更新</ion-title>
+    <ion-title>固件更新</ion-title>
+    @if (loaded && !usingTestData) {
+    <ion-buttons slot="end">
+      <ion-button aria-label="检查更新" [disabled]="checking || isWorking" (click)="refreshStatus()">
+        <i class="fa-light fa-rotate-right" [class.fa-spin]="checking"></i>
+      </ion-button>
+    </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
-} @if (loaded) {
-<ion-content>
-  <!-- 设备在线 -->
-  @if (deviceEnable || updateState!=0) {
-  <!-- 有更新版本 -->
-  @if (updateState == 0 && hasNewVersion) {
-  <div updatebox>
-    <!-- <img src="./assets/img/icon/update-blue.png"> -->
-    <i class="fal fa-sync" style="color: #007bb7"></i>
-    <div ver>当前版本：{{device.data.version}}</div>
-    <div ver2>新的版本：{{device.data.newVersion}}</div>
-    <div des-title>更新说明：</div>
-    @if (device.data.newVersionDescription) {
-    <div des [innerHTML]="device.data.newVersionDescription | wrap"></div>
+
+<ion-content [fullscreen]="true">
+  @if (loaded) {
+  <main>
+    <app-hero-card
+      iconClass="fa-light fa-microchip"
+      eyebrow="FIRMWARE UPDATE"
+      [heading]="deviceName"
+      description="检查并安装设备固件，更新期间请保持设备联网和供电。"
+    />
+
+    <section [class]="'update-status surface-card tone-' + stateMeta.tone">
+      <span class="status-icon" aria-hidden="true">
+        <i class="fa-light" [class]="'fa-light ' + stateMeta.icon" [class.fa-spin]="updateState === 1"></i>
+      </span>
+      <div class="status-copy">
+        <span class="status-kicker">UPDATE STATUS</span>
+        <h2>{{ stateMeta.title }}</h2>
+        <p>{{ stateMeta.description }}</p>
+      </div>
+
+      @if (isWorking) {
+      <div class="update-progress">
+        <div class="progress-copy">
+          <span>{{ updateState === 1 ? '下载固件' : '安装固件' }}</span>
+          @if (usingTestData) { <strong>{{ progress }}%</strong> }
+        </div>
+        <div class="progress-track">
+          <span [class.indeterminate]="!usingTestData" [style.width.%]="usingTestData ? progress : null"></span>
+        </div>
+      </div>
+      }
+
+      <div class="status-action">
+        @if (canUpdate) {
+        <button type="button" class="primary-action" (click)="updateDevice()">
+          <i class="fa-light fa-cloud-arrow-up"></i>
+          立即更新到 {{ latestVersion }}
+        </button>
+        } @else if (updateState < 0) {
+        <button type="button" class="primary-action" (click)="updateDevice()">
+          <i class="fa-light fa-rotate-right"></i>
+          重新尝试
+        </button>
+        } @else if (updateState === 100) {
+        <button type="button" class="primary-action success-action" (click)="finish()">
+          <i class="fa-light fa-check"></i>
+          完成
+        </button>
+        } @else if (updateState === 0 && !hasNewVersion && deviceEnable) {
+        <button type="button" class="secondary-action" [disabled]="checking" (click)="refreshStatus()">
+          <i class="fa-light fa-rotate-right" [class.fa-spin]="checking"></i>
+          {{ checking ? '检查中' : '再次检查' }}
+        </button>
+        }
+      </div>
+    </section>
+
+    @if (usingTestData) {
+    <p class="test-data-note">
+      <i class="fa-light fa-flask" aria-hidden="true"></i>
+      当前使用固件测试数据；点击更新可完整模拟下载、安装和完成流程。
+    </p>
     }
-    <div btn (click)="updateDevice()">
-      <div>立即更新</div>
-    </div>
+
+    <div class="section-label">版本信息</div>
+    <section class="surface-card version-card">
+      <div class="version-row">
+        <span><i class="fa-light fa-microchip"></i>当前版本</span>
+        <strong>{{ updateState === 100 ? latestVersion : currentVersion }}</strong>
+      </div>
+      <div class="version-row">
+        <span><i class="fa-light fa-sparkles"></i>最新版本</span>
+        <strong class="latest">{{ latestVersion }}</strong>
+      </div>
+      <div class="release-notes">
+        <span>更新说明</span>
+        <p>{{ releaseDescription }}</p>
+      </div>
+    </section>
+
+    @if (usingTestData) {
+    <div class="section-label">调试状态</div>
+    <section class="surface-card debug-card">
+      <p>快速切换页面状态，检查不同更新阶段的显示效果。</p>
+      <div class="debug-actions">
+        @for (item of debugStates; track item.state) {
+        <button type="button" [class.selected]="updateState === item.state" (click)="setDebugState(item.state)">
+          {{ item.label }}
+        </button>
+        }
+      </div>
+    </section>
+    }
+  </main>
+  } @else {
+  <div class="loading-state">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>正在读取固件信息…</span>
   </div>
   }
-  <!-- 已经是最新版本 -->
-  @if (updateState == 0 && !hasNewVersion) {
-  <div updatebox>
-    <!-- <img src="./assets/img/icon/update-gray.png"> -->
-    <i class="fal fa-clipboard-check" style="color: #a2a2a2"></i>
-    <div ver>当前版本：{{device.data.version}}</div>
-    <div ver2>当前固件是最新版本</div>
-  </div>
-  } @if (updateState == 1) {
-  <div updatebox>
-    <!-- <img src="./assets/img/icon/update-blue.png"> -->
-    <i class="fal fa-sync updating" style="color: #007bb7"></i>
-    <div ver>下载中···</div>
-    <div ver2>固件下载中，请勿断电，等待更新完成再使用本设备</div>
-  </div>
-  } @if (updateState == -2) {
-  <div updatebox>
-    <!-- <img src="./assets/img/icon/update-blue.png"> -->
-    <i class="fal fa-times-circle" style="color: #d91500"></i>
-    <div ver>下载失败</div>
-    <div ver2>固件下载失败，请稍后尝试更新</div>
-    <div btn (click)="updateDevice()">
-      <div>重新尝试更新</div>
-    </div>
-  </div>
-  } @if (updateState == 99) {
-  <div updatebox>
-    <!-- <img src="./assets/img/icon/update-blue.png"> -->
-    <i class="fal fa-sync updating" style="color: #007bb7"></i>
-    <div ver>更新中···</div>
-    <div ver2>固件更新中，请勿断电，等待更新完成再使用本设备</div>
-  </div>
-  } @if (updateState == 100) {
-  <div updatebox>
-    <!-- <img src="./assets/img/icon/update-done.png"> -->
-    <i class="fal fa-check-circle" style="color: #00880b"></i>
-    <div ver>更新成功</div>
-    <div ver2>当前版本：{{device.data.version}}</div>
-    <div btn (click)="popDevicePage()">
-      <div>确定</div>
-    </div>
-  </div>
-  } @if (updateState == -1) {
-  <div updatebox>
-    <i class="fal fa-times-circle" style="color: #d91500"></i>
-    <!-- <img src="./assets/img/icon/update-fail.png"> -->
-    <div ver>更新失败</div>
-    <div ver2>固件更新失败，请稍后尝试更新</div>
-    <div btn (click)="updateDevice()">
-      <div>重新尝试更新</div>
-    </div>
-  </div>
-  } } @else {
-  <div updatebox style="margin-top: 0">
-    <div ver style="text-align: center; margin-top: 0">
-      <p>当前设备处于离线状态</p>
-      <p>请先上线设备，再尝试更新固件</p>
-    </div>
-  </div>
-  }
-  <!-- 设备不在线 -->
 </ion-content>
-}

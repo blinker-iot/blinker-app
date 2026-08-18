@@ -1,0 +1,101 @@
+@mixin base {
+  :host {
+    display: block;
+    height: 100%;
+    color: var(--blinker-text-primary);
+    background: var(--blinker-bg);
+  }
+
+  ion-content {
+    --background: var(--blinker-bg);
+  }
+
+  app-hero-card {
+    --tool-hero-accent: var(--feature-accent, var(--ion-color-primary));
+    margin: 2px 2px 22px;
+  }
+
+  .section-label {
+    margin: 22px 4px 9px;
+    color: var(--blinker-text-secondary);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+
+  .surface-card {
+    overflow: hidden;
+    border: 1px solid var(--blinker-border);
+    border-radius: var(--blinker-radius-card);
+    background: var(--blinker-surface);
+    box-shadow: var(--blinker-shadow-soft);
+  }
+
+  .test-data-note {
+    margin: 14px 3px 0;
+    padding: 10px 12px;
+    border-radius: 11px;
+    color: var(--blinker-text-secondary);
+    background: rgba(var(--ion-color-primary-rgb), 0.07);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 11px;
+    line-height: 1.5;
+
+    i {
+      margin-top: 2px;
+      color: var(--ion-color-primary);
+    }
+  }
+
+  .primary-action,
+  .secondary-action {
+    appearance: none;
+    min-height: 45px;
+    padding: 0 16px;
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 650;
+
+    &:active:not(:disabled) {
+      transform: scale(0.99);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+
+  .primary-action {
+    border: 0;
+    color: #fff;
+    background: linear-gradient(135deg, #3aa7ff, var(--ion-color-primary));
+    box-shadow: 0 9px 20px rgba(var(--ion-color-primary-rgb), 0.22);
+  }
+
+  .secondary-action {
+    border: 1px solid var(--blinker-border);
+    color: var(--blinker-text-primary);
+    background: var(--blinker-bg-elevated);
+  }
+
+  .loading-state {
+    min-height: 260px;
+    color: var(--blinker-text-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 12px;
+
+    ion-spinner {
+      color: var(--ion-color-primary);
+    }
+  }
+}

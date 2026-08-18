@@ -1,70 +1,208 @@
-[updatebox] {
-    font-size: 13px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    margin-top: 15vh;
-    font-size: 14px;
+@use '../device-feature-page' as feature;
 
-    // img {
-    //     width: 21%;
-    // }
-    i {
-        font-size: 90px;
-    }
+@include feature.base;
 
-    [ver] {
-        color: #595959;
-        margin-top: 3vh;
-    }
-
-    [ver2] {
-        color: #fba613;
-        margin-top: 2vh;
-    }
-
-    [des-title] {
-        font-size: 13px;
-        color: #959595;
-        margin-top: 5vh;
-        margin-left: 10px;
-        align-self: flex-start;
-    }
-
-    [des] {
-        font-size: 13px;
-        color: #959595;
-        margin-top: 1vh;
-        margin-left: 10px;
-        align-self: flex-start;
-        line-height: 16px;
-    }
-
-    [btn] {
-        width: 90%;
-        height: 40px;
-        border-radius: 20px;
-        border: solid 1px #dddddd;
-        position: absolute;
-        bottom: 10vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-    }
+:host {
+  --feature-accent: #8b5cf6;
 }
 
-@keyframes rotate {
-    from {
-        transform: rotate(0deg);
-    }
+.update-status {
+  --status-color: #8b5cf6;
+  padding: 22px 18px 17px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--status-color) 13%, transparent), transparent 45%),
+    var(--blinker-surface);
 
-    to {
-        transform: rotate(359deg);
-    }
+  &.tone-working { --status-color: #0ea5e9; }
+  &.tone-success { --status-color: #22c55e; }
+  &.tone-error { --status-color: #ef4444; }
+  &.tone-current { --status-color: #22c55e; }
+  &.tone-offline { --status-color: #94a3b8; }
 }
 
-.updating {
-    animation: rotate 3s linear infinite;
+.status-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  color: #fff;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--status-color) 75%, #fff), var(--status-color));
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--status-color) 30%, transparent);
+  display: grid;
+  place-items: center;
+  font-size: 31px;
+}
+
+.status-copy {
+  margin-top: 17px;
+
+  .status-kicker {
+    color: var(--status-color);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+  }
+
+  h2 {
+    margin: 5px 0 7px;
+    color: var(--blinker-text-primary);
+    font-size: 19px;
+    font-weight: 650;
+  }
+
+  p {
+    max-width: 360px;
+    margin: 0 auto;
+    color: var(--blinker-text-secondary);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+}
+
+.update-progress {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.progress-copy {
+  margin-bottom: 7px;
+  color: var(--blinker-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+
+  strong {
+    color: var(--status-color);
+  }
+}
+
+.progress-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--blinker-surface-muted);
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--status-color);
+    transition: width 280ms ease;
+
+    &.indeterminate {
+      width: 42%;
+      animation: progress-slide 1.25s ease-in-out infinite;
+    }
+  }
+}
+
+.status-action {
+  width: 100%;
+  margin-top: 20px;
+
+  button {
+    width: 100%;
+  }
+
+  .success-action {
+    background: linear-gradient(135deg, #34d399, #16a34a);
+    box-shadow: 0 9px 20px rgba(34, 197, 94, 0.22);
+  }
+}
+
+.version-card {
+  padding: 0 15px;
+}
+
+.version-row {
+  min-height: 54px;
+  border-bottom: 1px solid var(--blinker-divider);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  span {
+    color: var(--blinker-text-secondary);
+    font-size: 12px;
+  }
+
+  i {
+    width: 23px;
+    color: #8b5cf6;
+  }
+
+  strong {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+
+    &.latest {
+      color: #8b5cf6;
+    }
+  }
+}
+
+.release-notes {
+  padding: 14px 0 16px;
+
+  > span {
+    color: var(--blinker-text-tertiary);
+    font-size: 10px;
+  }
+
+  p {
+    margin: 7px 0 0;
+    color: var(--blinker-text-secondary);
+    font-size: 11px;
+    line-height: 1.6;
+  }
+}
+
+.debug-card {
+  padding: 14px;
+
+  > p {
+    margin: 0 0 11px;
+    color: var(--blinker-text-secondary);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+}
+
+.debug-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+
+  button {
+    min-height: 34px;
+    padding: 0 4px;
+    border: 1px solid var(--blinker-border);
+    border-radius: 9px;
+    color: var(--blinker-text-secondary);
+    background: var(--blinker-bg-elevated);
+    font: inherit;
+    font-size: 9px;
+
+    &.selected {
+      border-color: #8b5cf6;
+      color: #8b5cf6;
+      background: rgba(139, 92, 246, 0.09);
+    }
+  }
+}
+
+@keyframes progress-slide {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(240%); }
+}
+
+@media (max-width: 370px) {
+  .debug-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }

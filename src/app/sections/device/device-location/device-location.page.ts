@@ -1,134 +1,181 @@
-import { Component, ElementRef, OnInit, ViewChild } from "@angular/core";
-import { DeviceService } from "src/app/core/services/device.service";
-import { GeolocationService } from "src/app/core/services/geolocation.service";
-import { ActivatedRoute } from "@angular/router";
-import { IonicModule, NavController } from "@ionic/angular";
-import { DataService } from "src/app/core/services/data.service";
-import { NoticeService } from "src/app/core/services/notice.service";
-import { FormsModule } from "@angular/forms";
-import { CommonModule } from "@angular/common";
-// import * as maptalks from "maptalks";
-import { toBD09, toWsg84 } from "src/app/core/functions/func";
+import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { IonicModule } from '@ionic/angular';
+import { Subscription } from 'rxjs';
+import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
+import { BlinkerDevice } from 'src/app/core/model/device.model';
+import { DataService } from 'src/app/core/services/data.service';
+import { DeviceService } from 'src/app/core/services/device.service';
+import { NoticeService } from 'src/app/core/services/notice.service';
+
+interface LocationPreset {
+  name: string;
+  description: string;
+  longitude: number;
+  latitude: number;
+}
+
+const TEST_LOCATION: LocationPreset = {
+  name: '杭州测试点',
+  description: '默认调试坐标',
+  longitude: 120.1551,
+  latitude: 30.2741,
+};
 
 @Component({
-    selector: "app-device-location",
-    templateUrl: "./device-location.page.html",
-    styleUrls: ["./device-location.page.scss"],
-    imports: [
-        CommonModule,
-        FormsModule,
-        IonicModule
-    ]
+  selector: 'app-device-location',
+  templateUrl: './device-location.page.html',
+  styleUrls: ['./device-location.page.scss'],
+  imports: [CommonModule, FormsModule, IonicModule, HeroCardComponent],
 })
-export class DeviceLocationPage implements OnInit {
-  mymap;
-  devicePosition;
-  centerPosition;
-  btnDisabled = true;
-  id;
-  device;
+export class DeviceLocationPage implements OnInit, OnDestroy {
+  readonly presets: readonly LocationPreset[] = [
+    TEST_LOCATION,
+    {
+      name: '上海测试点',
+      description: '华东设备样例',
+      longitude: 121.4737,
+      latitude: 31.2304,
+    },
+    {
+      name: '成都测试点',
+      description: '西南设备样例',
+      longitude: 104.0665,
+      latitude: 30.5723,
+    },
+  ];
 
-  get address() {
-    return this.geolocationService.address;
+  id = '';
+  device?: BlinkerDevice;
+  loaded = false;
+  locating = false;
+  saving = false;
+  usingTestData = false;
+  longitude = TEST_LOCATION.longitude;
+  latitude = TEST_LOCATION.latitude;
+  savedLongitude = TEST_LOCATION.longitude;
+  savedLatitude = TEST_LOCATION.latitude;
+
+  private subscription?: Subscription;
+
+  get defaultBackHref(): string {
+    return `/device-manager/${this.id}`;
   }
 
-  @ViewChild("mapbox", { read: ElementRef, static: true })
-  map: ElementRef;
+  get deviceName(): string {
+    return this.device?.config?.customName || '设备';
+  }
+
+  get coordinatesValid(): boolean {
+    return (
+      Number.isFinite(this.longitude) &&
+      Number.isFinite(this.latitude) &&
+      this.longitude >= -180 &&
+      this.longitude <= 180 &&
+      this.latitude >= -90 &&
+      this.latitude <= 90
+    );
+  }
+
+  get hasChanges(): boolean {
+    return (
+      this.coordinatesValid &&
+      (this.longitude !== this.savedLongitude || this.latitude !== this.savedLatitude)
+    );
+  }
 
   constructor(
-    private deviceService: DeviceService,
-    private dataService: DataService,
-    private geolocationService: GeolocationService,
-    private activatedRoute: ActivatedRoute,
-    private navCtrl: NavController,
-    private noticeService: NoticeService,
+    private readonly activatedRoute: ActivatedRoute,
+    private readonly dataService: DataService,
+    private readonly deviceService: DeviceService,
+    private readonly noticeService: NoticeService,
   ) {}
 
-  ngOnInit() {
-  }
-
-  ngAfterViewInit(): void {
-    this.dataService.initCompleted.subscribe(async (result) => {
-      if (result) {
-        this.id = this.activatedRoute.snapshot.params["id"];
-        this.device = this.dataService.device.dict[this.id];
-        this.devicePosition = await this.geolocationService.getDevicePosition(
-          this.device,
-        );
-        // this.initMap(this.devicePosition);
-      }
+  ngOnInit(): void {
+    this.id = this.activatedRoute.snapshot.paramMap.get('id') || '';
+    this.bindDevice();
+    this.subscription = this.dataService.userDataLoader.subscribe((loaded) => {
+      if (loaded) this.bindDevice();
     });
   }
 
-  // initMap(wsg04Position) {
-  //   let position = toBD09(wsg04Position);
-  //   this.centerPosition = position;
-  //   this.mymap = new maptalks.Map(this.map.nativeElement, {
-  //     center: position,
-  //     zoom: 13,
-  //     minZoom: 1,
-  //     maxZoom: 19,
-  //     spatialReference: {
-  //       projection: "baidu",
-  //     },
-  //     baseLayer: new maptalks.TileLayer("base", {
-  //       "urlTemplate":
-  //         "https://gss{s}.bdstatic.com/8bo_dTSlRsgBo1vgoIiO_jowehsv/tile/?qt=tile&x={x}&y={y}&z={z}&styles=pl&scaler=1&udt=20170927",
-  //       "subdomains": [0, 1, 2, 3],
-  //       "attribution":
-  //         '&copy; <a target="_blank" href="http://map.baidu.com">Baidu</a>',
-  //     }),
-  //   });
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
+  }
 
-  //   let marker = new maptalks.Marker(
-  //     position,
-  //     {
-  //       "symbol": {
-  //         "markerFile": "./assets/img/map/marker.png",
-  //         "markerWidth": 40,
-  //         "markerHeight": 40,
-  //         "markerDx": 0,
-  //         "markerDy": 0,
-  //         "markerOpacity": 1,
-  //       },
-  //     },
-  //   );
-  //   // let userMarker = new maptalks.Marker(
-  //   //   position,
-  //   //   {
-  //   //     "symbol": {
-  //   //       "markerFile": "./assets/img/map/user.png",
-  //   //       "markerWidth": 30,
-  //   //       "markerHeight": 30,
-  //   //       "markerDx": 0,
-  //   //       "markerDy": 0,
-  //   //       "markerOpacity": 0.5,
-  //   //     },
-  //   //   },
-  //   // );
-  //   // new maptalks.VectorLayer("userMarker", userMarker).addTo(this.mymap);
-  //   new maptalks.VectorLayer("marker", marker).addTo(this.mymap);
-  //   this.mymap.on("moving", (e) => {
-  //     let newPosition = this.mymap.getCenter();
-  //     this.centerPosition = toWsg84([newPosition.x, newPosition.y]);
-  //     marker.setCoordinates(newPosition);
-  //   });
-  //   this.mymap.on("moveend", (e) => {
-  //     this.btnDisabled = false;
-  //   });
-  // }
+  selectPreset(preset: LocationPreset): void {
+    this.longitude = preset.longitude;
+    this.latitude = preset.latitude;
+  }
 
-  async saveGeolocation() {
-    let newConfig = {
-      "position": {
-        "location": this.centerPosition,
-        "address": "",
-      },
-    };
-    if (await this.deviceService.saveDeviceConfig(this.device, newConfig)) {
-      this.deviceService.loadDeviceConfig(this.device);
-      this.noticeService.showToast("geolocationUpdated");
-      this.navCtrl.pop();
+  useCurrentLocation(): void {
+    if (!navigator.geolocation) {
+      void this.noticeService.showToast('当前设备不支持定位');
+      return;
     }
+
+    this.locating = true;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.longitude = Number(position.coords.longitude.toFixed(6));
+        this.latitude = Number(position.coords.latitude.toFixed(6));
+        this.locating = false;
+      },
+      () => {
+        this.locating = false;
+        void this.noticeService.showToast('无法获取当前位置，请检查定位权限');
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
+
+  async saveGeolocation(): Promise<void> {
+    if (!this.device || !this.coordinatesValid || this.saving) return;
+
+    this.saving = true;
+    const position = {
+      location: [this.longitude, this.latitude],
+      address: '',
+    };
+
+    try {
+      const saved = this.device.config.isPreview
+        ? true
+        : await this.deviceService.saveDeviceConfig(this.device, { position });
+
+      if (!saved) {
+        await this.noticeService.showToast('设备位置保存失败，请稍后重试');
+        return;
+      }
+
+      this.device.config.position = position;
+      this.savedLongitude = this.longitude;
+      this.savedLatitude = this.latitude;
+      this.usingTestData = false;
+      await this.noticeService.showToast('设备位置已更新');
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  private bindDevice(): void {
+    this.device = this.dataService.device?.dict?.[this.id];
+    this.loaded = Boolean(this.device);
+    if (!this.device) return;
+
+    const location = this.device.config?.position?.location;
+    const hasStoredLocation =
+      Array.isArray(location) &&
+      location.length >= 2 &&
+      Number.isFinite(Number(location[0])) &&
+      Number.isFinite(Number(location[1]));
+
+    this.longitude = hasStoredLocation ? Number(location[0]) : TEST_LOCATION.longitude;
+    this.latitude = hasStoredLocation ? Number(location[1]) : TEST_LOCATION.latitude;
+    this.savedLongitude = this.longitude;
+    this.savedLatitude = this.latitude;
+    this.usingTestData = !hasStoredLocation;
   }
 }

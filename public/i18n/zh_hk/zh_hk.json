@@ -111,6 +111,8 @@
     "SHARED_DEVICE_COUNT": "已共享 {{count}} 部設備",
     "SELF_HOSTED_SERVER": "自建伺服器",
     "SELF_HOSTED_SERVER_DESCRIPTION": "設定地址與密鑰",
+    "THIRD_PARTY_SERVICES": "第三方服務",
+    "THIRD_PARTY_SERVICES_DESCRIPTION": "設定天氣與地理資訊服務密鑰",
     "SETTINGS": "設定",
     "SETTINGS_DESCRIPTION": "語言和主題設定",
     "FEEDBACK": "意見反映",

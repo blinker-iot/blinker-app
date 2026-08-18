@@ -1,35 +1,91 @@
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text=""></ion-back-button>
+      <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{device?.config.customName}} 位置</ion-title>
+    <ion-title>设备位置设置</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  <div class="mapbox" #mapbox></div>
-  <div class="blinker-box">
-    <div class="line">
-      设备位置(WGS84)： @if (devicePosition) {
-      <div>{{devicePosition[0]}} , {{devicePosition[1]}}</div>
+<ion-content [fullscreen]="true">
+  @if (loaded) {
+  <main>
+    <app-hero-card
+      iconClass="fa-light fa-location-dot"
+      eyebrow="DEVICE LOCATION"
+      [heading]="deviceName"
+      description="设置设备坐标，便于按区域管理和调试位置相关功能。"
+    />
+
+    <section class="map-preview surface-card" aria-label="当前选择的设备位置">
+      <div class="map-grid" aria-hidden="true"></div>
+      <span class="map-pin" aria-hidden="true">
+        <i class="fa-solid fa-location-dot"></i>
+      </span>
+      <div class="coordinate-badge">
+        <small>WGS84</small>
+        <strong>{{ longitude | number: '1.4-6' }}, {{ latitude | number: '1.4-6' }}</strong>
+      </div>
+    </section>
+
+    @if (usingTestData) {
+    <p class="test-data-note">
+      <i class="fa-light fa-flask" aria-hidden="true"></i>
+      当前设备没有位置数据，已载入杭州测试坐标，可直接修改或保存用于调试。
+    </p>
+    }
+
+    <div class="section-label">坐标设置</div>
+    <form class="surface-card coordinate-form" (ngSubmit)="saveGeolocation()">
+      <label>
+        <span>经度</span>
+        <small>-180 至 180</small>
+        <input name="longitude" type="number" inputmode="decimal" step="0.000001" min="-180" max="180"
+          [(ngModel)]="longitude" />
+      </label>
+      <label>
+        <span>纬度</span>
+        <small>-90 至 90</small>
+        <input name="latitude" type="number" inputmode="decimal" step="0.000001" min="-90" max="90"
+          [(ngModel)]="latitude" />
+      </label>
+      @if (!coordinatesValid) {
+      <p class="validation-message">
+        <i class="fa-light fa-circle-exclamation"></i>
+        请输入有效的经纬度。
+      </p>
       }
-    </div>
-    <div class="line">
-      选择位置(WGS84)： @if (centerPosition) {
-      <div>{{centerPosition[0]}} , {{centerPosition[1]}}</div>
-      }
-    </div>
-    <div class="btnbox">
-      <button
-        [disabled]="btnDisabled"
-        [ngStyle]="{'opacity': btnDisabled?'0.5':'1'}"
-        class="savebtn"
-        fullbtn
-        (click)="saveGeolocation()"
-      >
-        更新设备位置
+      <div class="action-row">
+        <button type="button" class="secondary-action" [disabled]="locating" (click)="useCurrentLocation()">
+          <i class="fa-light" [class.fa-location-crosshairs]="!locating" [class.fa-spinner-third]="locating"
+            [class.fa-spin]="locating"></i>
+          {{ locating ? '定位中' : '使用当前位置' }}
+        </button>
+        <button type="submit" class="primary-action" [disabled]="!hasChanges || saving">
+          <i class="fa-light" [class.fa-check]="!saving" [class.fa-spinner-third]="saving" [class.fa-spin]="saving"></i>
+          {{ saving ? '保存中' : '保存位置' }}
+        </button>
+      </div>
+    </form>
+
+    <div class="section-label">测试位置</div>
+    <section class="surface-card preset-list">
+      @for (preset of presets; track preset.name) {
+      <button type="button" (click)="selectPreset(preset)">
+        <span class="preset-icon"><i class="fa-light fa-map-pin"></i></span>
+        <span class="preset-copy">
+          <strong>{{ preset.name }}</strong>
+          <small>{{ preset.description }} · {{ preset.longitude }}, {{ preset.latitude }}</small>
+        </span>
+        <i class="fa-light fa-chevron-right"></i>
       </button>
-    </div>
+      }
+    </section>
+  </main>
+  } @else {
+  <div class="loading-state">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>正在加载设备位置…</span>
   </div>
+  }
 </ion-content>

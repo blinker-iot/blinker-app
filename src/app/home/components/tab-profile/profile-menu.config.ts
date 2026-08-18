@@ -54,6 +54,13 @@ export function createProfileMenuGroups(
           value: translate('PROFILE.SELF_HOSTED_SERVER_DESCRIPTION'),
           route: '/self-hosted-server',
         },
+        {
+          id: 'third-party-services',
+          title: translate('PROFILE.THIRD_PARTY_SERVICES'),
+          icon: 'fa-plug',
+          value: translate('PROFILE.THIRD_PARTY_SERVICES_DESCRIPTION'),
+          route: '/third-party-services',
+        },
       ],
     },
     {

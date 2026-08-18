@@ -54,6 +54,13 @@ export const routes: Routes = [
     path: 'self-hosted-server',
     loadComponent: () => import('./sections/self-hosted-server/self-hosted-server.page').then(m => m.SelfHostedServerPage),
   },
+  {
+    path: 'third-party-services',
+    loadComponent: () =>
+      import('./sections/third-party-services/third-party-services.page').then(
+        (m) => m.ThirdPartyServicesPage
+      ),
+  },
   { path: 'feedback', loadComponent: () => import('./sections/feedback/feedback.component').then(m => m.FeedbackPage) },
   { path: 'about', loadComponent: () => import('./sections/about/about.page').then(m => m.AboutPage) },
   { path: 'user', loadComponent: () => import('./sections/user/user.page').then(m => m.UserPage) },
@@ -115,6 +122,22 @@ export const routes: Routes = [
   {
     path: 'device-manager/:id/timer/:taskid',
     loadComponent: () => import('./sections/device/device-timer/timing-edit/timing-edit').then(m => m.TimingEditPage),
+  },
+  {
+    path: 'device-manager/:id/location',
+    loadComponent: () => import('./sections/device/device-location/device-location.page').then(m => m.DeviceLocationPage),
+  },
+  {
+    path: 'device-manager/:id/logs',
+    loadComponent: () => import('./sections/device/device-log/device-log.component').then(m => m.DeviceLogComponent),
+  },
+  {
+    path: 'device-manager/:id/storage',
+    loadComponent: () => import('./sections/device/device-storage/device-storage.page').then(m => m.DeviceStoragePage),
+  },
+  {
+    path: 'device-manager/:id/update',
+    loadComponent: () => import('./sections/device/device-update/device-update').then(m => m.DeviceUpdatePage),
   },
   {
     path: 'device-manager/:id',

@@ -111,6 +111,8 @@
     "SHARED_DEVICE_COUNT": "Устройств с общим доступом: {{count}}",
     "SELF_HOSTED_SERVER": "Собственный сервер",
     "SELF_HOSTED_SERVER_DESCRIPTION": "Настроить адрес и ключ",
+    "THIRD_PARTY_SERVICES": "Сторонние сервисы",
+    "THIRD_PARTY_SERVICES_DESCRIPTION": "Настроить ключи погоды и геолокации",
     "SETTINGS": "Настройки",
     "SETTINGS_DESCRIPTION": "Язык и тема оформления",
     "FEEDBACK": "Обратная связь",

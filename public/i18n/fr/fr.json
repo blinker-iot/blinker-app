@@ -111,6 +111,8 @@
     "SHARED_DEVICE_COUNT": "{{count}} appareils partagés",
     "SELF_HOSTED_SERVER": "Serveur auto-hébergé",
     "SELF_HOSTED_SERVER_DESCRIPTION": "Configurer l’adresse et la clé",
+    "THIRD_PARTY_SERVICES": "Services tiers",
+    "THIRD_PARTY_SERVICES_DESCRIPTION": "Configurer les clés météo et de géolocalisation",
     "SETTINGS": "Paramètres",
     "SETTINGS_DESCRIPTION": "Paramètres de langue et de thème",
     "FEEDBACK": "Commentaires",
