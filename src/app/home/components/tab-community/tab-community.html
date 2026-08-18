@@ -76,7 +76,7 @@
       <div class="inspiration-grid">
         @for (card of filteredCards; track card.titleKey) {
         <article class="story-card">
-          <div class="story-image" [style.background-image]="'url(' + card.image + ')'">
+          <div class="story-image">
             <span>{{ card.categoryKey | translate }}</span>
           </div>
           <div class="story-copy">

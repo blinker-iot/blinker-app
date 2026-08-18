@@ -91,9 +91,7 @@ ion-content {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 18px;
-  background:
-    linear-gradient(90deg, rgba(9, 25, 42, 0.8) 0%, rgba(12, 33, 51, 0.48) 46%, rgba(12, 33, 51, 0.08) 78%),
-    url('/img/bg/f1.jpg') center 62% / cover;
+  background: linear-gradient(135deg, #123e63 0%, #2879ae 58%, #88bfdc 100%);
   box-shadow: var(--blinker-shadow);
 }
 
@@ -180,19 +178,23 @@ ion-content {
 .story-image {
   position: relative;
   min-height: 122px;
-  background-position: center;
-  background-size: cover;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--ion-color-primary-rgb), 0.38),
+    rgba(var(--ion-color-primary-rgb), 0.12)
+  );
 
   &::after {
     content: '';
     position: absolute;
     inset: 0;
+    z-index: 1;
     background: linear-gradient(180deg, rgba(5, 18, 31, 0.18), transparent 50%);
   }
 
   span {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     display: inline-block;
     margin: 9px;
     padding: 4px 7px;

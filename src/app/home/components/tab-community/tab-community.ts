@@ -12,6 +12,14 @@ type CommunityCategoryId =
   | 'tips'
   | 'events';
 
+interface CommunityInspirationCard {
+  titleKey: string;
+  descriptionKey: string;
+  metaKey: string;
+  category: CommunityCategoryId;
+  categoryKey: string;
+}
+
 interface CommunityProduct {
   nameKey: string;
   descriptionKey: string;
@@ -42,12 +50,11 @@ export class TabCommunityComponent {
   searchVisible = false;
   searchKeyword = '';
 
-  readonly inspirationCards = [
+  readonly inspirationCards: readonly CommunityInspirationCard[] = [
     {
       titleKey: 'COMMUNITY.DAILY_CLEANING_TITLE',
       descriptionKey: 'COMMUNITY.DAILY_CLEANING_DESCRIPTION',
       metaKey: 'COMMUNITY.DAILY_CLEANING_META',
-      image: '/img/bg/f1.jpg',
       category: 'inspiration' as CommunityCategoryId,
       categoryKey: 'COMMUNITY.CATEGORY_INSPIRATION',
     },
@@ -55,7 +62,6 @@ export class TabCommunityComponent {
       titleKey: 'COMMUNITY.KITCHEN_AIR_TITLE',
       descriptionKey: 'COMMUNITY.KITCHEN_AIR_DESCRIPTION',
       metaKey: 'COMMUNITY.KITCHEN_AIR_META',
-      image: '/img/bg/f3.jpg',
       category: 'tips' as CommunityCategoryId,
       categoryKey: 'COMMUNITY.CATEGORY_TIPS',
     },
