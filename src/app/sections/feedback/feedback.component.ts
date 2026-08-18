@@ -1,7 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { IonicModule } from '@ionic/angular';
-import { Router } from '@angular/router';
+import { IonicModule, NavController } from '@ionic/angular';
 import { TranslatePipe } from '@ngx-translate/core';
 import { FeedbackService } from './feedback.service';
 import { DataService } from 'src/app/core/services/data.service';
@@ -85,7 +84,7 @@ export class FeedbackPage implements OnInit, OnDestroy {
   constructor(
     private feedbackService: FeedbackService,
     private dataService: DataService,
-    private router: Router
+    private navController: NavController
   ) {}
 
   ngOnInit() {
@@ -168,7 +167,7 @@ export class FeedbackPage implements OnInit, OnDestroy {
   }
 
   returnToProfile(): void {
-    void this.router.navigate(['/home'], { queryParams: { tab: 'profile' } });
+    void this.navController.navigateBack('/home?tab=profile');
   }
 
   private isValidEmail(email: string): boolean {

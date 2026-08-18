@@ -1,8 +1,7 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
-import { IonicModule } from '@ionic/angular';
-import { Router, RouterModule } from '@angular/router';
+import { IonicModule, NavController } from '@ionic/angular';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { DataService } from '../../../core/services/data.service';
 import { UpdateService } from '../../../core/services/update.service';
@@ -22,7 +21,6 @@ import { createProfileMenuGroups } from './profile-menu.config';
   imports: [
     FormsModule,
     IonicModule,
-    RouterModule,
     TranslatePipe,
     MenuListComponent,
   ],
@@ -79,12 +77,12 @@ export class TabProfileComponent {
     private updateService: UpdateService,
     private authService: AuthService,
     private translate: TranslateService,
-    private router: Router
+    private navController: NavController
   ) {}
 
   goto(page?: string) {
     if (!page) return;
-    this.router.navigate([page]);
+    void this.navController.navigateForward(page);
   }
 
   logout() {

@@ -51,6 +51,13 @@ export class DeviceSharePage {
     return this.pendingShares.length + this.activeShares.length;
   }
 
+  get defaultBackHref(): string {
+    return this.activatedRoute.snapshot.queryParamMap.get('from') ===
+      'device-settings'
+      ? `/device-manager/${this.id}`
+      : '/share-manager';
+  }
+
   get AVATAR_API() {
     return API.USER.AVATAR + '/';
   }

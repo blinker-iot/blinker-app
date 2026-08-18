@@ -86,6 +86,16 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   get dangerMenuItems(): readonly MenuListItem[] {
     const items: MenuListItem[] = [];
+    if (!this.isSharedDevice) {
+      items.push({
+        id: 'sharing',
+        title: '设备共享',
+        description: '邀请其他用户共同控制这台设备',
+        icon: 'fa-user-group',
+        route: `/share-manager/${this.id}?from=device-settings`,
+      });
+    }
+
     if (this.deviceShortcutService.isAvailable) {
       items.push({
         id: 'shortcut',
