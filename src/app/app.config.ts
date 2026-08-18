@@ -2,8 +2,6 @@ import { ApplicationConfig } from '@angular/core';
 import {
   RouteReuseStrategy,
   provideRouter,
-  withPreloading,
-  PreloadAllModules,
 } from '@angular/router';
 import {
   IonicRouteStrategy,
@@ -41,7 +39,7 @@ import { StaticTranslationLoader } from './core/services/translation.loader';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes, withPreloading(PreloadAllModules)),
+    provideRouter(routes),
     provideIonicAngular({
       mode: 'ios',
       scrollAssist: true,
