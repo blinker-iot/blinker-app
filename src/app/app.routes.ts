@@ -33,6 +33,10 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/guide/key-device/key-device.page').then(m => m.KeyDeviceGuidePage),
   },
   {
+    path: 'old-device',
+    loadComponent: () => import('./sections/guide/old-device/old-device.page').then(m => m.OldDevicePage),
+  },
+  {
     path: 'room-manager',
     loadComponent: () => import('./sections/room/room-manager/room-manager').then(m => m.RoomManagerPage),
     canActivate: [AuthGuard],

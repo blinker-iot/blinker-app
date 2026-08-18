@@ -125,25 +125,51 @@ export class TabDeviceComponent implements OnInit {
     this.addMenuLayoutFrame = window.requestAnimationFrame(() => {
       this.addMenuLayoutFrame = undefined;
       const popover = this.deviceAddMenu?.nativeElement;
-      const menu = popover?.shadowRoot?.querySelector<HTMLElement>('.popover-content');
-      if (!popover || !menu) {
+      const root = popover?.shadowRoot;
+      const menu = root?.querySelector<HTMLElement>('.popover-content');
+      const trigger = this.deviceAddMenuTrigger?.nativeElement;
+      if (!popover || !menu || !trigger) {
         this.showAddMenuArrow();
         return;
       }
 
       popover.style.setProperty('--offset-x', '0px');
+      popover.style.setProperty('--offset-y', '0px');
       const menuRect = menu.getBoundingClientRect();
-      const viewportWidth = window.visualViewport?.width || window.innerWidth;
+      const triggerRect = trigger.getBoundingClientRect();
+      const visualViewport = window.visualViewport;
+      const viewportLeft = visualViewport?.offsetLeft ?? 0;
+      const viewportRight =
+        viewportLeft + (visualViewport?.width ?? window.innerWidth);
+      const viewportTop = visualViewport?.offsetTop ?? 0;
+      const viewportBottom =
+        viewportTop + (visualViewport?.height ?? window.innerHeight);
+      const appRect = trigger.closest('ion-app')?.getBoundingClientRect();
       const edgeInset = 12;
+      const minLeft =
+        Math.max(viewportLeft, appRect?.left ?? viewportLeft) + edgeInset;
+      const maxRight =
+        Math.min(viewportRight, appRect?.right ?? viewportRight) - edgeInset;
+      const minTop =
+        Math.max(viewportTop, appRect?.top ?? viewportTop) + edgeInset;
+      const maxBottom =
+        Math.min(viewportBottom, appRect?.bottom ?? viewportBottom) - edgeInset;
       let offsetX = 0;
 
-      if (menuRect.right > viewportWidth - edgeInset) {
-        offsetX = viewportWidth - edgeInset - menuRect.right;
+      if (menuRect.right > maxRight) {
+        offsetX = maxRight - menuRect.right;
       }
-      if (menuRect.left + offsetX < edgeInset) {
-        offsetX += edgeInset - (menuRect.left + offsetX);
+      if (menuRect.left + offsetX < minLeft) {
+        offsetX += minLeft - (menuRect.left + offsetX);
       }
       popover.style.setProperty('--offset-x', `${offsetX}px`);
+
+      const arrow = root?.querySelector<HTMLElement>('.popover-arrow');
+      const arrowHeight = arrow?.getBoundingClientRect().height ?? 0;
+      const preferredTop = triggerRect.bottom + Math.max(arrowHeight, 8) + 2;
+      const maxTop = maxBottom - menuRect.height;
+      const targetTop = Math.max(minTop, Math.min(preferredTop, maxTop));
+      popover.style.setProperty('--offset-y', `${targetTop - menuRect.top}px`);
 
       // The offset CSS variable is applied asynchronously. Read the final
       // geometry on the next frame before moving Ionic's arrow, otherwise

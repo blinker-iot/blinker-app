@@ -1,11 +1,13 @@
 import { Component } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { Platform, ModalController } from '@ionic/angular';
 
 @Component({
-  standalone: false,
+  standalone: true,
   selector: 'layouter2-guide',
   templateUrl: 'layouter2-guide.html',
-  styleUrls: ['layouter2-guide.scss']
+  styleUrls: ['layouter2-guide.scss'],
+  imports: [NgClass],
 })
 export class Layouter2GuidePage {
 

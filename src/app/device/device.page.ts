@@ -25,7 +25,6 @@ import { ViewService } from '../core/services/view.service';
 import { LayouterService } from './layouter.service';
 import { canEditDeviceLayout } from './device-layout-edit';
 import { Mode } from './layouter2/layouter2-mode';
-import { Layouter2Module } from './layouter2/layouter2.module';
 
 interface LoadedDeviceComponent {
   device?: BlinkerDevice;
@@ -42,7 +41,6 @@ interface LoadedDeviceComponent {
     IonicModule,
     RouterModule,
     TranslatePipe,
-    Layouter2Module,
   ],
   templateUrl: './device.page.html',
   styleUrls: ['./device.page.scss'],

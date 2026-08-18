@@ -1,5 +1,6 @@
 :host {
   --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 113px);
+  position: relative;
   display: block;
   height: 100%;
 }

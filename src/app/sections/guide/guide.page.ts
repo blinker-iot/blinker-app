@@ -63,4 +63,18 @@ export class GuidePage {
     await this.navController.navigateForward(method.route);
   }
 
+  get migrationItems(): readonly MenuListItem[] {
+    return [
+      {
+        id: 'old-device',
+        icon: 'fa-arrow-down-arrow-up',
+        iconColor: 'var(--ion-color-primary)',
+        title: this.translate.instant('DEVICE_GUIDE.OLD_DEVICE_ENTRY_TITLE'),
+        description: this.translate.instant(
+          'DEVICE_GUIDE.OLD_DEVICE_ENTRY_DESCRIPTION'
+        ),
+        route: '/old-device',
+      },
+    ];
+  }
 }

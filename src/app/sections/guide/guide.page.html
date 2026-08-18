@@ -34,9 +34,15 @@
         {{ 'DEVICE_GUIDE.SECTION_TITLE' | translate }}
       </h2>
 
+      <app-menu-list [ariaLabel]="'DEVICE_GUIDE.SECTION_TITLE' | translate" [items]="methodItems" [detailed]="true"
+        (itemSelected)="selectMethod($event)"></app-menu-list>
+
+      <h2 class="section-label" style="margin-top: 20px;">
+        {{ 'DEVICE_GUIDE.OTHER' | translate }}
+      </h2>
       <app-menu-list
-        [ariaLabel]="'DEVICE_GUIDE.SECTION_TITLE' | translate"
-        [items]="methodItems"
+        [ariaLabel]="'DEVICE_GUIDE.OLD_DEVICE_ENTRY_TITLE' | translate"
+        [items]="migrationItems"
         [detailed]="true"
         (itemSelected)="selectMethod($event)"
       ></app-menu-list>
