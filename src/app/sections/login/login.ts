@@ -54,8 +54,7 @@ export class LoginPage implements OnDestroy {
     private userService: UserService,
     private noticeService: NoticeService,
     private navCtrl: NavController,
-    private modalCtrl: ModalController,
-    private dataService: DataService
+    private modalCtrl: ModalController
   ) { }
 
   ngOnDestroy(): void {
