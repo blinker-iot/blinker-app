@@ -6,40 +6,6 @@
   background: var(--blinker-bg);
 }
 
-ion-header.dark {
-  ion-toolbar {
-    ion-title {
-      color: #fff;
-    }
-
-    ion-back-button {
-      --color: #fff;
-    }
-
-    ion-icon,
-    i {
-      color: #fff;
-    }
-  }
-}
-
-ion-header.light {
-  ion-toolbar {
-    ion-title {
-      color: #555;
-    }
-
-    ion-back-button {
-      --color: #555;
-    }
-
-    ion-icon,
-    i {
-      color: #555;
-    }
-  }
-}
-
 ion-header {
   ion-toolbar {
     ion-title {
@@ -91,6 +57,19 @@ ion-content {
   transition: filter 180ms ease;
 
   ::ng-deep [device-box] {
+    height: 100%;
+  }
+}
+
+.device-view {
+  box-sizing: border-box;
+  height: 100%;
+
+  ::ng-deep > * {
+    position: relative;
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
     height: 100%;
   }
 }

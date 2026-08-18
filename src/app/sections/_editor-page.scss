@@ -5,7 +5,6 @@
   background: var(--blinker-bg);
 }
 
-.editor-header,
 .editor-footer {
   background: color-mix(in srgb, var(--blinker-bg) 88%, transparent);
   backdrop-filter: var(--blinker-nav-blur);
@@ -16,6 +15,10 @@
     --border-width: 0;
     --color: var(--blinker-text-primary);
   }
+}
+
+.editor-header ion-toolbar {
+  --color: var(--blinker-text-primary);
 }
 
 .editor-header ion-title {

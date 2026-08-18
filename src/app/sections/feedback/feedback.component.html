@@ -1,4 +1,4 @@
-<ion-header class="feedback-header ion-no-border">
+<ion-header class="feedback-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button text="" defaultHref="/home?tab=profile"></ion-back-button>
@@ -7,8 +7,6 @@
   </ion-toolbar>
 </ion-header>
 <ion-content fullscreen="true">
-  <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
-
   <main class="feedback-content">
     @if (isDone) {
     <section class="success-card" aria-live="polite">

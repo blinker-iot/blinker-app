@@ -52,7 +52,6 @@ export class DevicePage implements OnInit, OnDestroy {
   id = '';
   device?: BlinkerDevice;
   deviceConfig: any;
-  headerStyle: 'dark' | 'light' = 'light';
   editMode = false;
   deviceComponent = '';
 
@@ -120,18 +119,7 @@ export class DevicePage implements OnInit, OnDestroy {
         if (completed) this.bindDevice();
       }),
     );
-    this.subscriptions.add(
-      this.layouterService.updateConfig.subscribe(() => {
-        const headerStyle =
-          this.device?.data?.layouterData?.config?.headerStyle;
-        if (headerStyle === 'dark' || headerStyle === 'light') {
-          this.headerStyle = headerStyle;
-          this.cd.detectChanges();
-        }
-      }),
-    );
     this.debugService.init();
-    this.viewService.setLightStatusBar();
   }
 
   ngOnDestroy(): void {
@@ -241,9 +229,6 @@ export class DevicePage implements OnInit, OnDestroy {
     this.deviceComponent = deviceComponentDict[componentName]
       ? componentName
       : 'Layouter2';
-    this.headerStyle = this.deviceConfig?.headerStyle ||
-      (this.deviceComponent === 'TestDashboard' ? 'light' : 'dark');
-
     this.deviceViewContainer.clear();
     this.deviceComponentRef =
       this.deviceViewContainer.createComponent(componentType);

@@ -1,4 +1,4 @@
-<ion-header class="editor-header ion-no-border">
+<ion-header class="editor-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button text="" defaultHref="/scene-manager"></ion-back-button>
@@ -6,9 +6,7 @@
     <ion-title>编辑场景</ion-title>
   </ion-toolbar>
 </ion-header>
-<ion-content>
-  <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
-
+<ion-content fullscreen="true">
   @if (loaded) {
   <main class="editor-content">
     <section class="editor-hero scene-hero">

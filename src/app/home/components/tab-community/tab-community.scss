@@ -1,9 +1,6 @@
-@use '../tab-scroll-mask' as tab-scroll-mask;
-
-@include tab-scroll-mask.top-scroll-mask(calc(var(--ion-safe-area-top, 0px) + 127px));
-
 :host {
   --page-gutter: 18px;
+  --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 127px);
   display: block;
   height: 100%;
 }

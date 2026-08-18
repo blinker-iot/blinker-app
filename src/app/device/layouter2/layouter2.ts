@@ -274,7 +274,6 @@ export class Layouter2 implements DeviceComponent {
 
     })
     setTimeout(() => {
-      this.checkBackground();
       // this.options.api.resize();
       this.getBgPosition();
     }, 50);
@@ -563,12 +562,6 @@ export class Layouter2 implements DeviceComponent {
       });
     } catch (error) {
       console.warn('Invalid preview widget payload', rawData, error);
-    }
-  }
-
-  checkBackground() {
-    if (this.config['headerStyle'] == 'light') {
-      this.viewService.setDarkStatusBar();
     }
   }
 

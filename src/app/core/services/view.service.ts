@@ -7,7 +7,7 @@ import {
   Platform,
 } from "@ionic/angular/standalone";
 import { PlatformLocation } from "@angular/common";
-import { NavigationEnd, Router } from "@angular/router";
+import { Router } from "@angular/router";
 import { Subject } from "rxjs";
 import { App } from "@capacitor/app";
 import {
@@ -65,7 +65,6 @@ export class ViewService {
   async init() {
     this.listenBackButton();
     this.checkShortcut();
-    this.listenRouter();
     // ScreenOrientation.lock({ type: OrientationType.Portrait });
     this.getStatusBarHeight();
   }
@@ -191,48 +190,6 @@ export class ViewService {
       ],
     });
     await actionSheet.present();
-  }
-
-  lastStatusBar = "dark";
-  currentStatusBar = "dark";
-  setLightStatusBar() {
-    this.lastStatusBar = this.currentStatusBar;
-    // StatusBar.setStyle({ style: Style.Light });
-    this.currentStatusBar = "light";
-  }
-
-  setDarkStatusBar() {
-    this.lastStatusBar = this.currentStatusBar;
-    // StatusBar.setStyle({ style: Style.Dark });
-    this.currentStatusBar = "dark";
-  }
-
-  // 用于改变StatusBar颜色
-  listenRouter() {
-    this.changeStatusBar(this.router.url);
-    this.router.events.subscribe((e) => {
-      if (e instanceof NavigationEnd) {
-        this.changeStatusBar(e.url);
-      }
-    });
-  }
-
-  changeStatusBar(url) {
-    // console.log('url:', url);
-    // if (url == '/view/home' || url == '/view/gis') this.setDarkStatusBar()
-    // else if (url == '/device-manager/') this.setDarkStatusBar()
-    // else if (url == '/device-manager') this.setLightStatusBar()
-    // else if (url == '/timer/') this.setDarkStatusBar()
-    // else if (url == '/location') this.setLightStatusBar()
-    setTimeout(() => {
-      let els = document.querySelectorAll("ion-header");
-      if (typeof els[els.length - 1] == "undefined") return;
-      if (typeof els[els.length - 1].attributes["whitebg"] != "undefined") {
-        this.setDarkStatusBar();
-      } else {
-        this.setLightStatusBar();
-      }
-    }, 800);
   }
 
   // 从shortcut进入app

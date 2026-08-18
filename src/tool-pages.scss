@@ -150,18 +150,6 @@ app-esp32-provision {
 // Shared shell for the two standalone OTA tools.
 app-ble-ota,
 app-wifi-ota {
-  .page-header {
-    background: color-mix(in srgb, var(--blinker-bg) 90%, transparent);
-    ion-toolbar { --background: transparent; --border-width: 0 0 1px; --border-color: var(--blinker-divider); }
-    ion-title { color: var(--blinker-text-primary); font-size: 17px; font-weight: 600; }
-  }
-
-  ion-content { --background: var(--blinker-bg); --overflow: auto; }
-  .ota-page {
-    box-sizing: border-box; width: 100%; max-width: 680px; min-height: 100%; margin: 0 auto;
-    padding: 18px 16px calc(104px + env(safe-area-inset-bottom));
-  }
-
   .ota-card,
   .ota-status {
     margin-top: 14px; padding: 16px; border: 1px solid var(--blinker-border); border-radius: 16px;

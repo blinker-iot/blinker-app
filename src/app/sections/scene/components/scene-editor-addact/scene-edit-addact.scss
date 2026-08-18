@@ -1,16 +1,8 @@
-@use '../../../transparent-page-header' as page-header;
-
-@include page-header.top-scroll-mask;
-
 :host {
   display: block;
   height: 100%;
   color: var(--blinker-text-primary);
   background: var(--blinker-bg);
-}
-
-.action-header {
-  @include page-header.transparent;
 }
 
 .action-footer {
@@ -43,7 +35,7 @@ ion-content {
   max-width: 720px;
   min-height: 100%;
   margin: 0 auto;
-  padding: calc(var(--ion-safe-area-top, 0px) + 68px) 16px 34px;
+  padding: 24px 16px 34px;
   background:
     radial-gradient(circle at 100% 0%, rgba(89, 103, 223, 0.11), transparent 29%),
     var(--blinker-bg);

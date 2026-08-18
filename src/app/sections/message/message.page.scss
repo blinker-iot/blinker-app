@@ -1,7 +1,3 @@
-@use '../transparent-page-header' as page-header;
-
-@include page-header.top-scroll-mask;
-
 :host {
   display: block;
   height: 100%;
@@ -9,8 +5,6 @@
 }
 
 .message-header {
-  @include page-header.transparent;
-
   ion-title {
     font-size: 18px;
     font-weight: 600;
@@ -31,7 +25,7 @@ ion-content {
 
 .message-content {
   min-height: 100%;
-  padding: calc(var(--ion-safe-area-top, 0px) + 68px) 18px calc(30px + env(safe-area-inset-bottom));
+  padding: 24px 18px calc(30px + env(safe-area-inset-bottom));
   background:
     radial-gradient(circle at 90% 4%, rgba(var(--ion-color-primary-rgb), 0.12), transparent 25%),
     var(--blinker-bg);
