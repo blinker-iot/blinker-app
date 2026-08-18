@@ -41,14 +41,12 @@
   "SETTINGS": {
     "TITLE": "Настройки",
     "APPEARANCE": "Оформление",
-    "THEME": "Тема",
     "THEME_HINT": "Выберите подходящее для ваших условий оформление",
     "LIGHT": "Светлая",
     "LIGHT_DESC": "Яркая и чёткая, тема по умолчанию",
     "DARK": "Тёмная",
     "DARK_DESC": "Комфортнее при слабом освещении",
     "LANGUAGE_SECTION": "Язык",
-    "LANGUAGE": "Язык интерфейса",
     "LANGUAGE_HINT": "Выберите язык интерфейса приложения",
     "SAVED_HINT": "Ваш выбор сохраняется и восстанавливается при следующем запуске."
   },
@@ -64,11 +62,8 @@
     "ALL": "Все"
   },
   "TAB_DEVICE": {
-    "MESSAGE_CENTER": "Центр сообщений",
-    "OPEN_ADD_MENU": "Открыть меню добавления",
     "EMPTY_TITLE": "Устройств пока нет",
     "EMPTY_DESCRIPTION": "Добавьте первое умное устройство и сделайте жизнь проще",
-    "ADD_MENU": "Добавить",
     "ADD_DEVICE": "Добавить устройство",
     "ADD_DEVICE_DESCRIPTION": "Подключить и настроить умное устройство",
     "ADD_ROOM": "Добавить комнату",
@@ -78,10 +73,7 @@
     "FEATURE_PENDING": "Эта функция скоро появится"
   },
   "COMMUNITY": {
-    "SEARCH": "Поиск",
     "SEARCH_PLACEHOLDER": "Искать идеи, продукты и советы",
-    "SEARCH_CONTENT": "Поиск по разделу «Обзор»",
-    "CONTENT_CATEGORIES": "Категории раздела «Обзор»",
     "CATEGORY_RECOMMENDED": "Рекомендуем",
     "CATEGORY_INSPIRATION": "Умные идеи",
     "CATEGORY_PRODUCTS": "О продуктах",
@@ -103,17 +95,14 @@
     "COMING_SOON": "Скоро",
     "OMNI_STATION_NAME": "Универсальная базовая станция",
     "OMNI_STATION_DESCRIPTION": "Уборка, сбор пыли и сушка в одном устройстве",
-    "OMNI_STATION_LAUNCH": "Выход в 3-м квартале 2026 года",
-    "VIEW_PRODUCT": "Посмотреть {{name}}"
+    "OMNI_STATION_LAUNCH": "Выход в 3-м квартале 2026 года"
   },
   "PROFILE": {
     "TITLE": "Профиль",
-    "MESSAGE_CENTER": "Центр сообщений",
     "USER_AVATAR": "Аватар пользователя",
     "PRO_PLAN_EXPIRY": "Тариф Pro (до {{date}})",
     "VERSION": "Версия {{version}}",
     "DEFAULT_USER_NAME": "Пользователь blinker",
-    "ACCOUNT_FEATURES": "Функции аккаунта",
     "REGION_MANAGEMENT": "Управление зонами",
     "REGION_COUNT": "Зон: {{count}}",
     "AUTOMATION": "Автоматизация",
@@ -122,7 +111,6 @@
     "SHARED_DEVICE_COUNT": "Устройств с общим доступом: {{count}}",
     "SELF_HOSTED_SERVER": "Собственный сервер",
     "SELF_HOSTED_SERVER_DESCRIPTION": "Настроить адрес и ключ",
-    "SETTINGS_AND_ACCOUNT": "Настройки и аккаунт",
     "SETTINGS": "Настройки",
     "SETTINGS_DESCRIPTION": "Язык и тема оформления",
     "FEEDBACK": "Обратная связь",
@@ -179,7 +167,6 @@
   },
   "DEVICE": {
     "SETTING": "Настройки",
-    "CHANGE_ICON": "Изменить значок",
     "NAME": "Имя устройства",
     "TYPE": "Тип устройства",
     "BROKER": "Брокер",

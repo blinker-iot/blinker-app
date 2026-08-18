@@ -3,13 +3,14 @@ import { CONFIG } from 'src/app/configs/app.config';
 import { IonicModule, ModalController } from '@ionic/angular';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
+import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 
 @Component({
     selector: 'app-about',
     standalone: true,
     templateUrl: './about.page.html',
     styleUrls: ['./about.page.scss'],
-    imports: [IonicModule, TranslatePipe],
+    imports: [IonicModule, TranslatePipe, HeroCardComponent],
 })
 export class AboutPage {
 

@@ -41,14 +41,12 @@
   "SETTINGS": {
     "TITLE": "Definições",
     "APPEARANCE": "Aspeto",
-    "THEME": "Tema",
     "THEME_HINT": "Escolha o aspeto adequado ao seu ambiente",
     "LIGHT": "Claro",
     "LIGHT_DESC": "Luminoso e nítido, o tema predefinido",
     "DARK": "Escuro",
     "DARK_DESC": "Mais confortável com pouca luz",
     "LANGUAGE_SECTION": "Idioma",
-    "LANGUAGE": "Idioma de apresentação",
     "LANGUAGE_HINT": "Escolha o idioma da interface da aplicação",
     "SAVED_HINT": "A sua escolha é guardada e restaurada no próximo arranque."
   },
@@ -64,11 +62,8 @@
     "ALL": "Todos"
   },
   "TAB_DEVICE": {
-    "MESSAGE_CENTER": "Centro de mensagens",
-    "OPEN_ADD_MENU": "Abrir menu de adição",
     "EMPTY_TITLE": "Ainda não existem dispositivos",
     "EMPTY_DESCRIPTION": "Adicione o seu primeiro dispositivo inteligente e simplifique o dia a dia",
-    "ADD_MENU": "Adicionar",
     "ADD_DEVICE": "Adicionar dispositivo",
     "ADD_DEVICE_DESCRIPTION": "Ligar e configurar um dispositivo inteligente",
     "ADD_ROOM": "Adicionar divisão",
@@ -78,10 +73,7 @@
     "FEATURE_PENDING": "Esta funcionalidade estará disponível em breve"
   },
   "COMMUNITY": {
-    "SEARCH": "Pesquisar",
     "SEARCH_PLACEHOLDER": "Pesquisar ideias, produtos e sugestões",
-    "SEARCH_CONTENT": "Pesquisar conteúdo de Descobrir",
-    "CONTENT_CATEGORIES": "Categorias de Descobrir",
     "CATEGORY_RECOMMENDED": "Recomendado",
     "CATEGORY_INSPIRATION": "Ideias inteligentes",
     "CATEGORY_PRODUCTS": "Guia de produtos",
@@ -103,17 +95,14 @@
     "COMING_SOON": "Brevemente",
     "OMNI_STATION_NAME": "Estação base multifunções",
     "OMNI_STATION_DESCRIPTION": "Limpeza, recolha de pó e secagem num só equipamento",
-    "OMNI_STATION_LAUNCH": "Disponível no 3.º trimestre de 2026",
-    "VIEW_PRODUCT": "Ver {{name}}"
+    "OMNI_STATION_LAUNCH": "Disponível no 3.º trimestre de 2026"
   },
   "PROFILE": {
     "TITLE": "Perfil",
-    "MESSAGE_CENTER": "Centro de mensagens",
     "USER_AVATAR": "Avatar do utilizador",
     "PRO_PLAN_EXPIRY": "Plano Pro (expira em {{date}})",
     "VERSION": "Versão {{version}}",
     "DEFAULT_USER_NAME": "Utilizador blinker",
-    "ACCOUNT_FEATURES": "Funcionalidades da conta",
     "REGION_MANAGEMENT": "Gestão de áreas",
     "REGION_COUNT": "{{count}} áreas",
     "AUTOMATION": "Automatização",
@@ -122,7 +111,6 @@
     "SHARED_DEVICE_COUNT": "{{count}} dispositivos partilhados",
     "SELF_HOSTED_SERVER": "Servidor próprio",
     "SELF_HOSTED_SERVER_DESCRIPTION": "Configurar endereço e chave",
-    "SETTINGS_AND_ACCOUNT": "Definições e conta",
     "SETTINGS": "Definições",
     "SETTINGS_DESCRIPTION": "Definições de idioma e tema",
     "FEEDBACK": "Comentários",
@@ -179,7 +167,6 @@
   },
   "DEVICE": {
     "SETTING": "Definições",
-    "CHANGE_ICON": "Ícone de alteração",
     "NAME": "Nome do dispositivo",
     "TYPE": "Tipo de dispositivo",
     "BROKER": "Intermediário",

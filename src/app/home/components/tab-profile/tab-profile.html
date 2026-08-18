@@ -4,7 +4,6 @@
     <ion-buttons slot="end">
       <ion-button
         class="header-action"
-        [attr.aria-label]="'PROFILE.MESSAGE_CENTER' | translate"
         (click)="goto('/message')"
       >
         <i class="fa-light fa-message-dots"></i>
@@ -36,7 +35,7 @@
     </button>
 
     @for (menuGroup of menuGroups; track menuGroup.id) {
-    <app-menu-list [ariaLabel]="menuGroup.ariaLabel" [items]="menuGroup.items"
+    <app-menu-list [items]="menuGroup.items"
       (itemSelected)="selectMenuItem($event)"></app-menu-list>
     }
 

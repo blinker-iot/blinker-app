@@ -75,7 +75,6 @@
         type="button"
         class="image-card"
         [class.selected]="isSelected(image)"
-        [attr.aria-label]="'选择 ' + image.name"
         (click)="select(image)"
       >
         <span class="image-preview">

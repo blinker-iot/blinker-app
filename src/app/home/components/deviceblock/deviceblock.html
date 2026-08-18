@@ -10,7 +10,6 @@
     <span
       class="device-state-dot"
       role="img"
-      [attr.aria-label]="statusText"
       [attr.title]="statusText"
     ></span>
 
@@ -31,7 +30,6 @@
           [class.checked]="switch"
           [class.waiting]="device.data?.switch === 'waiting'"
           [disabled]="!enable"
-          [attr.aria-label]="switch ? '关闭设备' : '开启设备'"
           [attr.aria-pressed]="switch"
           (click)="tapSwitch($event)"
         >

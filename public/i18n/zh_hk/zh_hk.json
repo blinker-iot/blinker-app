@@ -41,14 +41,12 @@
   "SETTINGS": {
     "TITLE": "設定",
     "APPEARANCE": "外觀",
-    "THEME": "主題風格",
     "THEME_HINT": "選擇適合當前環境的顯示風格",
     "LIGHT": "Light 淺色",
     "LIGHT_DESC": "明亮、清晰，預設風格",
     "DARK": "Dark 深色",
     "DARK_DESC": "在低亮度環境下更舒適",
     "LANGUAGE_SECTION": "語言",
-    "LANGUAGE": "顯示語言",
     "LANGUAGE_HINT": "選擇應用程式介面使用的語言",
     "SAVED_HINT": "選擇會自動儲存，並在下次啟動時繼續使用。"
   },
@@ -64,11 +62,8 @@
     "ALL": "全部"
   },
   "TAB_DEVICE": {
-    "MESSAGE_CENTER": "訊息中心",
-    "OPEN_ADD_MENU": "開啟新增選單",
     "EMPTY_TITLE": "尚未有設備",
     "EMPTY_DESCRIPTION": "新增你的第一部智能設備，開始輕鬆生活",
-    "ADD_MENU": "新增",
     "ADD_DEVICE": "新增設備",
     "ADD_DEVICE_DESCRIPTION": "連接並設定智能設備",
     "ADD_ROOM": "新增區域",
@@ -78,10 +73,7 @@
     "FEATURE_PENDING": "功能尚未推出"
   },
   "COMMUNITY": {
-    "SEARCH": "搜尋",
     "SEARCH_PLACEHOLDER": "搜尋靈感、產品與技巧",
-    "SEARCH_CONTENT": "搜尋探索內容",
-    "CONTENT_CATEGORIES": "探索內容分類",
     "CATEGORY_RECOMMENDED": "推薦",
     "CATEGORY_INSPIRATION": "智能靈感",
     "CATEGORY_PRODUCTS": "產品百科",
@@ -103,17 +95,14 @@
     "COMING_SOON": "即將推出",
     "OMNI_STATION_NAME": "全能基站",
     "OMNI_STATION_DESCRIPTION": "集清潔、集塵與烘乾於一體",
-    "OMNI_STATION_LAUNCH": "敬請期待 · 2026 年第 3 季推出",
-    "VIEW_PRODUCT": "查看{{name}}"
+    "OMNI_STATION_LAUNCH": "敬請期待 · 2026 年第 3 季推出"
   },
   "PROFILE": {
     "TITLE": "用戶中心",
-    "MESSAGE_CENTER": "訊息中心",
     "USER_AVATAR": "用戶頭像",
     "PRO_PLAN_EXPIRY": "Pro Plan（{{date}} 到期）",
     "VERSION": "版本 {{version}}",
     "DEFAULT_USER_NAME": "點燈用戶",
-    "ACCOUNT_FEATURES": "帳戶功能",
     "REGION_MANAGEMENT": "區域管理",
     "REGION_COUNT": "{{count}} 個區域",
     "AUTOMATION": "自動化",
@@ -122,7 +111,6 @@
     "SHARED_DEVICE_COUNT": "已共享 {{count}} 部設備",
     "SELF_HOSTED_SERVER": "自建伺服器",
     "SELF_HOSTED_SERVER_DESCRIPTION": "設定地址與密鑰",
-    "SETTINGS_AND_ACCOUNT": "設定與帳戶",
     "SETTINGS": "設定",
     "SETTINGS_DESCRIPTION": "語言和主題設定",
     "FEEDBACK": "意見反映",
@@ -179,7 +167,6 @@
   },
   "DEVICE": {
     "SETTING": "設定",
-    "CHANGE_ICON": "變更圖示",
     "NAME": "設備名稱",
     "TYPE": "型號",
     "BROKER": "中介",

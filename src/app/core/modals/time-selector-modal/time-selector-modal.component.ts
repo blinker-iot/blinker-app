@@ -1,11 +1,14 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ModalController } from '@ionic/angular';
 import Picker from 'pickerjs';
 
 @Component({
     selector: 'blinker-time-selector-modal',
+    standalone: true,
     templateUrl: './time-selector-modal.component.html',
-    styleUrls: ['./time-selector-modal.component.scss']
+    styleUrls: ['./time-selector-modal.component.scss'],
+    imports: [TranslatePipe],
 })
 export class TimeSelectorModalComponent implements OnInit {
   timePicker;

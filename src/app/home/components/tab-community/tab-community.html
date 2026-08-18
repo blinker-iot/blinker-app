@@ -7,7 +7,6 @@
     <ion-buttons slot="end">
       <ion-button
         class="header-action"
-        [attr.aria-label]="'COMMUNITY.SEARCH' | translate"
         [class.active]="searchVisible"
         (click)="toggleSearch()"
       >
@@ -22,7 +21,6 @@
         type="search"
         [(ngModel)]="searchKeyword"
         [placeholder]="'COMMUNITY.SEARCH_PLACEHOLDER' | translate"
-        [attr.aria-label]="'COMMUNITY.SEARCH_CONTENT' | translate"
         autofocus
       />
     </div>
@@ -30,7 +28,6 @@
   <div
     class="category-tabs"
     role="tablist"
-    [attr.aria-label]="'COMMUNITY.CONTENT_CATEGORIES' | translate"
   >
     @for (category of categories; track category.id) {
     <button
@@ -118,7 +115,7 @@
             <p>{{ product.descriptionKey | translate }}</p>
             <small>{{ product.launchKey | translate }}</small>
           </div>
-          <button type="button" [attr.aria-label]="getProductAriaLabel(product)">
+          <button type="button">
             <i class="fa-light fa-arrow-right"></i>
           </button>
         </article>

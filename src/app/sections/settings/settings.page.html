@@ -9,6 +9,13 @@
 
 <ion-content fullscreen="true">
   <main>
+    <app-hero-card
+      iconClass="fa-light fa-sliders"
+      eyebrow="APP PREFERENCES"
+      [heading]="'SETTINGS.TITLE' | translate"
+      [description]="'SETTINGS.SAVED_HINT' | translate"
+    />
+
     @if (languageList.length) {
     <div class="section-label">
       {{ 'SETTINGS.LANGUAGE_SECTION' | translate }}
@@ -17,13 +24,12 @@
     <section class="settings-card" aria-labelledby="language-heading">
       <div class="card-heading">
         <div>
-          <!-- <h2 id="language-heading">{{ 'SETTINGS.LANGUAGE' | translate }}</h2> -->
           <p>{{ 'SETTINGS.LANGUAGE_HINT' | translate }}</p>
         </div>
         <i class="fa-light fa-language" aria-hidden="true"></i>
       </div>
 
-      <div class="language-options" role="radiogroup" [attr.aria-label]="'SETTINGS.LANGUAGE' | translate">
+      <div class="language-options" role="radiogroup">
         @for (language of languageList; track language.code) {
         <button type="button" class="language-option" [class.selected]="currentLanguage === language.code" role="radio"
           [attr.aria-checked]="currentLanguage === language.code" (click)="selectLanguage(language.code)">
@@ -44,13 +50,12 @@
     <section class="settings-card" aria-labelledby="theme-heading">
       <div class="card-heading">
         <div>
-          <!-- <h2 id="theme-heading">{{ 'SETTINGS.THEME' | translate }}</h2> -->
           <p>{{ 'SETTINGS.THEME_HINT' | translate }}</p>
         </div>
         <i class="fa-light fa-moon-over-sun" aria-hidden="true"></i>
       </div>
 
-      <div class="theme-options" role="radiogroup" [attr.aria-label]="'SETTINGS.THEME' | translate">
+      <div class="theme-options" role="radiogroup">
         <button type="button" class="theme-option" [class.selected]="currentTheme === 'light'" role="radio"
           [attr.aria-checked]="currentTheme === 'light'" (click)="selectTheme('light')">
           <div class="theme-preview preview-light" aria-hidden="true">

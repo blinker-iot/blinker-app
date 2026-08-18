@@ -8,12 +8,19 @@ import { MenuListComponent } from 'src/app/core/components/menu-list/menu-list';
 import { MenuItemComponent } from 'src/app/core/components/menu-list/menu-item/menu-item';
 import { SceneService } from '../scene.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
+import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 
 @Component({
   selector: 'scene-manager',
   templateUrl: 'scene-manager.html',
   styleUrls: ['scene-manager.scss'],
-  imports: [IonicModule, TranslatePipe, MenuListComponent, MenuItemComponent],
+  imports: [
+    IonicModule,
+    TranslatePipe,
+    MenuListComponent,
+    MenuItemComponent,
+    HeroCardComponent,
+  ],
 })
 export class SceneManager {
   loaded = false;

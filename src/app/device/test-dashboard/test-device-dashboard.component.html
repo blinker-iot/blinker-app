@@ -21,7 +21,6 @@
       [class.on]="switchOn"
       [class.waiting]="switchWaiting"
       [disabled]="!isOnline || switchWaiting"
-      [attr.aria-label]="switchOn ? '关闭设备' : '开启设备'"
       [attr.aria-pressed]="switchOn"
       (click)="toggleSwitch()"
     >

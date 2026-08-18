@@ -39,7 +39,6 @@
         type="button"
         class="device-row"
         (click)="delDevice(deviceId)"
-        [attr.aria-label]="'从房间移除 ' + deviceDataDict[deviceId].config.customName"
       >
         <span class="device-image"
           ><b-device-img [deviceId]="deviceId"></b-device-img
@@ -72,7 +71,6 @@
         type="button"
         class="device-row"
         (click)="addDevice(deviceId)"
-        [attr.aria-label]="'添加 ' + deviceDataDict[deviceId].config.customName + ' 到房间'"
       >
         <span class="device-image"
           ><b-device-img [deviceId]="deviceId"></b-device-img

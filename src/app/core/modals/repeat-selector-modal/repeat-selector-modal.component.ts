@@ -1,10 +1,13 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ModalController } from '@ionic/angular';
 
 @Component({
     selector: 'blinker-repeat-selector-modal',
+    standalone: true,
     templateUrl: './repeat-selector-modal.component.html',
-    styleUrls: ['./repeat-selector-modal.component.scss']
+    styleUrls: ['./repeat-selector-modal.component.scss'],
+    imports: [TranslatePipe],
 })
 export class RepeatSelectorModalComponent implements OnInit {
 

@@ -28,14 +28,12 @@
     </button>
     <app-menu-list
       class="profile-menu-list"
-      ariaLabel="个人资料"
       [items]="profileMenuItems"
       (itemSelected)="selectMenuItem($event)"
     ></app-menu-list>
 
     <div class="section-label">账户安全</div>
     <app-menu-list
-      ariaLabel="账户安全"
       [items]="securityMenuItems"
       (itemSelected)="selectMenuItem($event)"
     ></app-menu-list>

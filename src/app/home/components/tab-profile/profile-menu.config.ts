@@ -8,7 +8,6 @@ export interface ProfileMenuStats {
 
 export interface ProfileMenuGroup {
   id: string;
-  ariaLabel: string;
   items: readonly MenuListItem[];
 }
 
@@ -24,7 +23,6 @@ export function createProfileMenuGroups(
   return [
     {
       id: 'account',
-      ariaLabel: translate('PROFILE.ACCOUNT_FEATURES'),
       items: [
         {
           id: 'room',
@@ -60,7 +58,6 @@ export function createProfileMenuGroups(
     },
     {
       id: 'settings',
-      ariaLabel: translate('PROFILE.SETTINGS_AND_ACCOUNT'),
       items: [
         {
           id: 'settings',

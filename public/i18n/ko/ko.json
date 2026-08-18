@@ -41,14 +41,12 @@
   "SETTINGS": {
     "TITLE": "설정",
     "APPEARANCE": "테마",
-    "THEME": "테마",
     "THEME_HINT": "환경에 맞는 표시 모드를 선택하세요",
     "LIGHT": "라이트",
     "LIGHT_DESC": "밝고 선명한 기본 테마",
     "DARK": "다크",
     "DARK_DESC": "어두운 환경에서 더 편안한 테마",
     "LANGUAGE_SECTION": "언어",
-    "LANGUAGE": "표시 언어",
     "LANGUAGE_HINT": "앱 인터페이스에 사용할 언어를 선택하세요",
     "SAVED_HINT": "선택 내용은 저장되어 다음 실행 시 복원됩니다."
   },
@@ -64,11 +62,8 @@
     "ALL": "전체"
   },
   "TAB_DEVICE": {
-    "MESSAGE_CENTER": "메시지 센터",
-    "OPEN_ADD_MENU": "추가 메뉴 열기",
     "EMPTY_TITLE": "아직 기기가 없습니다",
     "EMPTY_DESCRIPTION": "첫 스마트 기기를 추가하고 더 편리한 생활을 시작하세요",
-    "ADD_MENU": "추가",
     "ADD_DEVICE": "기기 추가",
     "ADD_DEVICE_DESCRIPTION": "스마트 기기를 연결하고 설정합니다",
     "ADD_ROOM": "공간 추가",
@@ -78,10 +73,7 @@
     "FEATURE_PENDING": "이 기능은 곧 제공될 예정입니다"
   },
   "COMMUNITY": {
-    "SEARCH": "검색",
     "SEARCH_PLACEHOLDER": "아이디어, 제품 및 팁 검색",
-    "SEARCH_CONTENT": "발견 콘텐츠 검색",
-    "CONTENT_CATEGORIES": "발견 콘텐츠 카테고리",
     "CATEGORY_RECOMMENDED": "추천",
     "CATEGORY_INSPIRATION": "스마트 아이디어",
     "CATEGORY_PRODUCTS": "제품 가이드",
@@ -103,17 +95,14 @@
     "COMING_SOON": "출시 예정",
     "OMNI_STATION_NAME": "올인원 베이스 스테이션",
     "OMNI_STATION_DESCRIPTION": "청소, 먼지 수집, 건조를 하나로",
-    "OMNI_STATION_LAUNCH": "2026년 3분기 출시 예정",
-    "VIEW_PRODUCT": "{{name}} 보기"
+    "OMNI_STATION_LAUNCH": "2026년 3분기 출시 예정"
   },
   "PROFILE": {
     "TITLE": "프로필",
-    "MESSAGE_CENTER": "메시지 센터",
     "USER_AVATAR": "사용자 아바타",
     "PRO_PLAN_EXPIRY": "Pro Plan ({{date}} 만료)",
     "VERSION": "버전 {{version}}",
     "DEFAULT_USER_NAME": "blinker 사용자",
-    "ACCOUNT_FEATURES": "계정 기능",
     "REGION_MANAGEMENT": "공간 관리",
     "REGION_COUNT": "공간 {{count}}개",
     "AUTOMATION": "자동화",
@@ -122,7 +111,6 @@
     "SHARED_DEVICE_COUNT": "공유 기기 {{count}}대",
     "SELF_HOSTED_SERVER": "자체 호스팅 서버",
     "SELF_HOSTED_SERVER_DESCRIPTION": "주소 및 키 설정",
-    "SETTINGS_AND_ACCOUNT": "설정 및 계정",
     "SETTINGS": "설정",
     "SETTINGS_DESCRIPTION": "언어 및 테마 설정",
     "FEEDBACK": "피드백",
@@ -179,7 +167,6 @@
   },
   "DEVICE": {
     "SETTING": "설정",
-    "CHANGE_ICON": "아이콘 변경",
     "NAME": "기기 이름",
     "TYPE": "기기 유형",
     "BROKER": "브로커",

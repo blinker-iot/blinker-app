@@ -20,15 +20,12 @@
       </button>
     </section>
     } @else {
-    <section class="feedback-intro">
-      <span class="intro-icon" aria-hidden="true">
-        <i class="fa-light fa-comment-heart"></i>
-      </span>
-      <div>
-        <h1>帮助我们做得更好</h1>
-        <p>你的建议会帮助我们持续改善点灯的使用体验。</p>
-      </div>
-    </section>
+    <app-hero-card
+      iconClass="fa-light fa-comment-heart"
+      eyebrow="USER FEEDBACK"
+      heading="帮助我们做得更好"
+      description="你的建议会帮助我们持续改善点灯的使用体验。"
+    />
 
     <form class="feedback-form" (ngSubmit)="submit()" novalidate>
       <div class="section-label">

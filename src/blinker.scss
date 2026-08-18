@@ -9,27 +9,6 @@
     padding-top: 0 !important;
 }
 
-/** fonts **/
-@font-face {
-    font-family: 'MiSans';
-    src: url('/fonts/MiSans-Regular.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'MiSans';
-    src: url('/fonts/MiSans-Demibold.woff2') format('woff2');
-    font-weight: 600;
-    /* Demibold 一般用较重的字体权重 */
-    font-style: normal;
-}
-
-html,
-body {
-    --ion-font-family: 'MiSans', sans-serif;
-}
-
 /** blinker theme **/
 ::-webkit-scrollbar {
     display: none;

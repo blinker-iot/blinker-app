@@ -9,23 +9,12 @@
 
 <ion-content fullscreen="true">
   <main>
-    <section class="brand-card">
-      <div class="brand-visual" aria-hidden="true">
-        <span class="orbit orbit-one"></span>
-        <span class="orbit orbit-two"></span>
-        <span class="logo-shell">
-          <img [src]="LOGO" alt="" />
-        </span>
-      </div>
-      <span class="brand-eyebrow">IoT DEVELOPMENT PLATFORM</span>
-      <h1>点灯 · Blinker</h1>
-      <p>让设备连接更简单，让每一个硬件创意更快成为现实。</p>
-      <div class="brand-tags" aria-label="平台特性">
-        <span><i class="fa-light fa-mobile-screen-button"></i> APP</span>
-        <span><i class="fa-light fa-microchip"></i> 设备</span>
-        <span><i class="fa-light fa-cloud"></i> 云服务</span>
-      </div>
-    </section>
+    <app-hero-card
+      [iconSrc]="LOGO"
+      eyebrow="IOT DEVELOPMENT PLATFORM"
+      heading="点灯 · Blinker"
+      description="让设备连接更简单，让每一个硬件创意更快成为现实。"
+    />
 
     <div class="section-label">关于我们</div>
     <section class="about-card">

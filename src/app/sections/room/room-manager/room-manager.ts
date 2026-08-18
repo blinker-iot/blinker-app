@@ -8,12 +8,19 @@ import { MenuItemComponent } from 'src/app/core/components/menu-list/menu-item/m
 import { DataService } from 'src/app/core/services/data.service';
 import { RoomService } from '../room.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
+import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 
 @Component({
   selector: 'room-manager',
   templateUrl: 'room-manager.html',
   styleUrls: ['room-manager.scss'],
-  imports: [IonicModule, TranslatePipe, MenuListComponent, MenuItemComponent],
+  imports: [
+    IonicModule,
+    TranslatePipe,
+    MenuListComponent,
+    MenuItemComponent,
+    HeroCardComponent,
+  ],
 })
 export class RoomManagerPage {
   @ViewChildren('sortbox') sortbox: QueryList<ElementRef>;
@@ -22,6 +29,7 @@ export class RoomManagerPage {
   alert;
   editMode = false;
   oldRoomData;
+  defaultBackHref = '/home';
 
   get roomData() {
     return this.dataService.room;
@@ -45,7 +53,17 @@ export class RoomManagerPage {
     private alertCtrl: AlertController,
     private noticeService: NoticeService,
     private dataService: DataService
-  ) {}
+  ) {
+    const navigation = this.router.getCurrentNavigation();
+    const stateBackHref = navigation?.extras.state?.['backHref'];
+    const previousHref = navigation?.previousNavigation?.finalUrl?.toString();
+
+    if (typeof stateBackHref === 'string') {
+      this.defaultBackHref = stateBackHref;
+    } else if (previousHref) {
+      this.defaultBackHref = previousHref;
+    }
+  }
 
   subscription;
   ngOnInit() {

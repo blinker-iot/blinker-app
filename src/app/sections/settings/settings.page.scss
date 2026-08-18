@@ -6,6 +6,10 @@ ion-content {
   --background: var(--blinker-bg);
 }
 
+app-hero-card {
+  margin-bottom: 20px;
+}
+
 .section-label {
   margin: 4px 4px 10px;
   color: var(--blinker-text-secondary);

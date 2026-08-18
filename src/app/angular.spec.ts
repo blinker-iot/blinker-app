@@ -16,4 +16,16 @@ describe('Angular test environment', () => {
 
     expect(deviceRoute?.loadComponent).toBeTypeOf('function');
   });
+
+  it('registers the device timer routes', () => {
+    const timerRoute = routes.find(
+      (route) => route.path === 'device-manager/:id/timer',
+    );
+    const timerEditRoute = routes.find(
+      (route) => route.path === 'device-manager/:id/timer/:taskid',
+    );
+
+    expect(timerRoute?.loadComponent).toBeTypeOf('function');
+    expect(timerEditRoute?.loadComponent).toBeTypeOf('function');
+  });
 });

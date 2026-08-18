@@ -41,14 +41,12 @@
   "SETTINGS": {
     "TITLE": "Paramètres",
     "APPEARANCE": "Apparence",
-    "THEME": "Thème",
     "THEME_HINT": "Choisissez l'apparence adaptée à votre environnement",
     "LIGHT": "Clair",
     "LIGHT_DESC": "Lumineux et net, le thème par défaut",
     "DARK": "Sombre",
     "DARK_DESC": "Plus confortable en faible luminosité",
     "LANGUAGE_SECTION": "Langue",
-    "LANGUAGE": "Langue d'affichage",
     "LANGUAGE_HINT": "Choisissez la langue de l'interface de l'application",
     "SAVED_HINT": "Votre choix est enregistré et restauré au prochain lancement."
   },
@@ -64,11 +62,8 @@
     "ALL": "Tous"
   },
   "TAB_DEVICE": {
-    "MESSAGE_CENTER": "Centre de messages",
-    "OPEN_ADD_MENU": "Ouvrir le menu d’ajout",
     "EMPTY_TITLE": "Aucun appareil pour le moment",
     "EMPTY_DESCRIPTION": "Ajoutez votre premier appareil intelligent et simplifiez-vous la vie",
-    "ADD_MENU": "Ajouter",
     "ADD_DEVICE": "Ajouter un appareil",
     "ADD_DEVICE_DESCRIPTION": "Connecter et configurer un appareil intelligent",
     "ADD_ROOM": "Ajouter une pièce",
@@ -78,10 +73,7 @@
     "FEATURE_PENDING": "Cette fonctionnalité sera bientôt disponible"
   },
   "COMMUNITY": {
-    "SEARCH": "Rechercher",
     "SEARCH_PLACEHOLDER": "Rechercher des idées, produits et conseils",
-    "SEARCH_CONTENT": "Rechercher dans Découvrir",
-    "CONTENT_CATEGORIES": "Catégories de Découvrir",
     "CATEGORY_RECOMMENDED": "Recommandé",
     "CATEGORY_INSPIRATION": "Idées intelligentes",
     "CATEGORY_PRODUCTS": "Guide des produits",
@@ -103,17 +95,14 @@
     "COMING_SOON": "Bientôt disponible",
     "OMNI_STATION_NAME": "Station de base tout-en-un",
     "OMNI_STATION_DESCRIPTION": "Nettoyage, collecte de poussière et séchage réunis",
-    "OMNI_STATION_LAUNCH": "Disponible au 3e trimestre 2026",
-    "VIEW_PRODUCT": "Voir {{name}}"
+    "OMNI_STATION_LAUNCH": "Disponible au 3e trimestre 2026"
   },
   "PROFILE": {
     "TITLE": "Profil",
-    "MESSAGE_CENTER": "Centre de messages",
     "USER_AVATAR": "Avatar utilisateur",
     "PRO_PLAN_EXPIRY": "Forfait Pro (expire le {{date}})",
     "VERSION": "Version {{version}}",
     "DEFAULT_USER_NAME": "Utilisateur blinker",
-    "ACCOUNT_FEATURES": "Fonctions du compte",
     "REGION_MANAGEMENT": "Gestion des zones",
     "REGION_COUNT": "{{count}} zones",
     "AUTOMATION": "Automatisation",
@@ -122,7 +111,6 @@
     "SHARED_DEVICE_COUNT": "{{count}} appareils partagés",
     "SELF_HOSTED_SERVER": "Serveur auto-hébergé",
     "SELF_HOSTED_SERVER_DESCRIPTION": "Configurer l’adresse et la clé",
-    "SETTINGS_AND_ACCOUNT": "Paramètres et compte",
     "SETTINGS": "Paramètres",
     "SETTINGS_DESCRIPTION": "Paramètres de langue et de thème",
     "FEEDBACK": "Commentaires",
@@ -179,7 +167,6 @@
   },
   "DEVICE": {
     "SETTING": "Paramètres",
-    "CHANGE_ICON": "Changer l'icône",
     "NAME": "Nom de l'appareil",
     "TYPE": "Type d'appareil",
     "BROKER": "Courtier",

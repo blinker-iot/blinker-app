@@ -41,14 +41,12 @@
   "SETTINGS": {
     "TITLE": "設定",
     "APPEARANCE": "外観",
-    "THEME": "テーマ",
     "THEME_HINT": "環境に適した表示を選択してください",
     "LIGHT": "ライト",
     "LIGHT_DESC": "明るく見やすいデフォルトテーマ",
     "DARK": "ダーク",
     "DARK_DESC": "暗い場所でも快適に表示",
     "LANGUAGE_SECTION": "言語",
-    "LANGUAGE": "表示言語",
     "LANGUAGE_HINT": "アプリのインターフェース言語を選択してください",
     "SAVED_HINT": "選択は保存され、次回起動時に復元されます。"
   },
@@ -64,11 +62,8 @@
     "ALL": "すべて"
   },
   "TAB_DEVICE": {
-    "MESSAGE_CENTER": "メッセージセンター",
-    "OPEN_ADD_MENU": "追加メニューを開く",
     "EMPTY_TITLE": "デバイスはまだありません",
     "EMPTY_DESCRIPTION": "最初のスマートデバイスを追加して、快適な暮らしを始めましょう",
-    "ADD_MENU": "追加",
     "ADD_DEVICE": "デバイスを追加",
     "ADD_DEVICE_DESCRIPTION": "スマートデバイスを接続して設定します",
     "ADD_ROOM": "部屋を追加",
@@ -78,10 +73,7 @@
     "FEATURE_PENDING": "この機能は近日公開予定です"
   },
   "COMMUNITY": {
-    "SEARCH": "検索",
     "SEARCH_PLACEHOLDER": "アイデア、製品、ヒントを検索",
-    "SEARCH_CONTENT": "見つけるのコンテンツを検索",
-    "CONTENT_CATEGORIES": "見つけるのカテゴリー",
     "CATEGORY_RECOMMENDED": "おすすめ",
     "CATEGORY_INSPIRATION": "スマートアイデア",
     "CATEGORY_PRODUCTS": "製品ガイド",
@@ -103,17 +95,14 @@
     "COMING_SOON": "近日公開",
     "OMNI_STATION_NAME": "オールインワンベースステーション",
     "OMNI_STATION_DESCRIPTION": "清掃、集じん、乾燥を一台に集約",
-    "OMNI_STATION_LAUNCH": "2026 年第 3 四半期に登場予定",
-    "VIEW_PRODUCT": "{{name}}を見る"
+    "OMNI_STATION_LAUNCH": "2026 年第 3 四半期に登場予定"
   },
   "PROFILE": {
     "TITLE": "プロフィール",
-    "MESSAGE_CENTER": "メッセージセンター",
     "USER_AVATAR": "ユーザーのアバター",
     "PRO_PLAN_EXPIRY": "Pro Plan（{{date}}まで）",
     "VERSION": "バージョン {{version}}",
     "DEFAULT_USER_NAME": "blinker ユーザー",
-    "ACCOUNT_FEATURES": "アカウント機能",
     "REGION_MANAGEMENT": "エリア管理",
     "REGION_COUNT": "エリア：{{count}}",
     "AUTOMATION": "オートメーション",
@@ -122,7 +111,6 @@
     "SHARED_DEVICE_COUNT": "共有デバイス：{{count}}",
     "SELF_HOSTED_SERVER": "セルフホストサーバー",
     "SELF_HOSTED_SERVER_DESCRIPTION": "アドレスとキーを設定",
-    "SETTINGS_AND_ACCOUNT": "設定とアカウント",
     "SETTINGS": "設定",
     "SETTINGS_DESCRIPTION": "言語とテーマの設定",
     "FEEDBACK": "フィードバック",
@@ -179,7 +167,6 @@
   },
   "DEVICE": {
     "SETTING": "設定",
-    "CHANGE_ICON": "アイコンを変更",
     "NAME": "デバイス名",
     "TYPE": "デバイスの種類",
     "BROKER": "ブローカー",

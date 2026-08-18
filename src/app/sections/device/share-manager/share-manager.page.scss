@@ -15,29 +15,6 @@ ion-content {
   --background: var(--blinker-bg);
 }
 
-.share-intro {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 13px;
-  margin: 2px 2px 20px;
-
-  h1 {
-    margin: 0 0 4px;
-    color: var(--blinker-text-primary);
-    font-size: 18px;
-    font-weight: 650;
-  }
-
-  p {
-    margin: 0;
-    color: var(--blinker-text-secondary);
-    font-size: 12px;
-    line-height: 1.5;
-  }
-}
-
-.intro-icon,
 .empty-icon {
   display: flex;
   align-items: center;
@@ -47,23 +24,9 @@ ion-content {
   box-shadow: 0 9px 20px rgba(82, 101, 220, 0.24);
 }
 
-.intro-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 15px;
-  font-size: 20px;
-}
-
-.share-stat {
-  min-width: 30px;
-  padding: 5px 9px;
-  border: 1px solid rgba(var(--ion-color-primary-rgb), 0.2);
-  border-radius: 14px;
-  color: var(--ion-color-primary);
-  background: rgba(var(--ion-color-primary-rgb), 0.08);
-  font-size: 12px;
-  font-weight: 650;
-  text-align: center;
+app-hero-card {
+  --tool-hero-accent: #5265dc;
+  margin: 2px 2px 20px;
 }
 
 .tab-btn-box {

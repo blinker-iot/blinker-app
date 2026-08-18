@@ -12,16 +12,13 @@
 
 <ion-content fullscreen="true">
   <main>
-    <section class="share-intro">
-      <span class="intro-icon" aria-hidden="true">
-        <i class="fa-light fa-user-group"></i>
-      </span>
-      <div>
-        <h1>与信任的人共享设备</h1>
-        <p>管理你发出和接收的设备共享。</p>
-      </div>
-      <span class="share-stat">{{ sharedByMeCount }}</span>
-    </section>
+    <app-hero-card
+      iconClass="fa-light fa-user-group"
+      eyebrow="DEVICE SHARING"
+      heading="与信任的人共享设备"
+      description="管理你发出和接收的设备共享。"
+      [meta]="sharedByMeCount"
+    />
 
     <div class="tab-btn-box" role="tablist" aria-label="设备共享分类">
       <button

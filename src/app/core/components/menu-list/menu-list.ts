@@ -57,7 +57,6 @@ export class MenuListComponent
   }
 
   @Input() detailed = false;
-  @Input() ariaLabel?: string;
 
   @Input()
   set editMode(value: boolean) {

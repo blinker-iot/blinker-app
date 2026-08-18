@@ -2,13 +2,14 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AlertController, IonicModule } from '@ionic/angular';
 import { SelfHostedServerService } from '../../core/services/self-hosted-server.service';
+import { HeroCardComponent } from '../../core/components/hero-card/hero-card.component';
 
 @Component({
   selector: 'app-self-hosted-server',
   standalone: true,
   templateUrl: './self-hosted-server.page.html',
   styleUrls: ['./self-hosted-server.page.scss'],
-  imports: [FormsModule, IonicModule],
+  imports: [FormsModule, IonicModule, HeroCardComponent],
 })
 export class SelfHostedServerPage {
   serverAddress = '';

@@ -1,34 +1,20 @@
-import {
-  Component,
-  ElementRef,
-  Input,
-  QueryList,
-  ViewChild,
-  ViewChildren,
-} from '@angular/core';
+import { Component } from '@angular/core';
 import { IonicModule, ModalController } from '@ionic/angular';
 import { minuteToTime, timeToMinute } from 'src/app/core/functions/func';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
-import { DeviceConfigService } from 'src/app/core/services/device-config.service';
-import { TimerService } from '../timer.service';
 import { RepeatSelectorModalComponent } from '../../../../core/modals/repeat-selector-modal/repeat-selector-modal.component';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { ActionSelectorModalComponent } from '../../../../core/modals/action-selector-modal/action-selector-modal.component';
 import { TimeSelectorModalComponent } from '../../../../core/modals/time-selector-modal/time-selector-modal.component';
-import { BActcmdListComponent } from 'src/app/core/components/b-actcmd-list/b-actcmd-list.component';
-import { BBottomBtnComponent } from 'src/app/core/components/b-bottom-btn/b-bottom-btn.component';
-import { BColorpickerDiscComponent } from 'src/app/core/components/b-colorpicker-disc/b-colorpicker-disc.component';
-import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { MenuListComponent } from 'src/app/core/components/menu-list/menu-list';
 import { MenuItemComponent } from 'src/app/core/components/menu-list/menu-item/menu-item';
-import { BTipComponent } from 'src/app/core/components/b-tip/b-tip.component';
-import { BToastComponent } from 'src/app/core/components/b-toast/b-toast.component';
-import { DeviceblockList2Component } from 'src/app/core/components/deviceblock-list2/deviceblock-list2';
 
 import { TranslatePipe } from '@ngx-translate/core';
 import { DataService } from 'src/app/core/services/data.service';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Act2TextPipe } from 'src/app/core/pipes/actcmd2text';
+import { Days2TextPipe } from 'src/app/core/pipes/days2text';
 
 @Component({
   selector: 'timing-edit',
@@ -36,16 +22,11 @@ import { ActivatedRoute, Router } from '@angular/router';
   styleUrls: ['timing-edit.scss'],
   imports: [
     IonicModule,
-    BActcmdListComponent,
-    BBottomBtnComponent,
-    BColorpickerDiscComponent,
-    BDeviceImgComponent,
     MenuListComponent,
     MenuItemComponent,
-    BTipComponent,
-    BToastComponent,
-    DeviceblockList2Component,
     TranslatePipe,
+    Act2TextPipe,
+    Days2TextPipe,
   ],
 })
 export class TimingEditPage {

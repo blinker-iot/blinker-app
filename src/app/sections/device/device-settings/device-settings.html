@@ -12,7 +12,7 @@
   <main>
     <section class="device-card">
       <button type="button" class="device-image-button" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice"
-        (click)="selectIcon()" [attr.aria-label]="isSharedDevice ? null : ('DEVICE.CHANGE_ICON' | translate)">
+        (click)="selectIcon()">
         <span class="device-image-shell">
           <b-device-img [filename]="device.config.image"></b-device-img>
         </span>
@@ -55,18 +55,17 @@
             {{ showKey ? device.config.authKey : '••••••••••••' }}
           </strong>
         </span>
-        <button type="button" class="reveal-button" (click)="showAuthKey()" [disabled]="showKey"
-          [attr.aria-label]="showKey ? '设备密钥已显示' : '显示设备密钥'">
+        <button type="button" class="reveal-button" (click)="showAuthKey()" [disabled]="showKey">
           <i class="fa-light" [class.fa-eye]="!showKey" [class.fa-eye-slash]="showKey"></i>
         </button>
       </div>
     </section>
     }
     <div class="section-label menu-section-label">设备功能</div>
-    <app-menu-list ariaLabel="设备功能" [detailed]="true" [items]="deviceMenuItems"
+    <app-menu-list [detailed]="true" [items]="deviceMenuItems"
       (itemSelected)="selectMenuItem($event)"></app-menu-list>
     <div class="section-label danger-section-label">设备管理</div>
-    <app-menu-list ariaLabel="设备管理" [detailed]="true" [items]="dangerMenuItems"
+    <app-menu-list [detailed]="true" [items]="dangerMenuItems"
       (itemSelected)="selectMenuItem($event)"></app-menu-list>
     <aside class="settings-tip">
       <i class="fa-light fa-circle-info" aria-hidden="true"></i>

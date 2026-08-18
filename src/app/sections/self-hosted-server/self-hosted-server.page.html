@@ -9,15 +9,12 @@
 
 <ion-content fullscreen="true">
   <main>
-    <section class="server-intro">
-      <span class="server-icon" aria-hidden="true">
-        <i class="fa-light fa-server"></i>
-      </span>
-      <div>
-        <h1>连接你的服务器</h1>
-        <p>保存独立的服务器地址和访问密钥，供自建服务功能使用。</p>
-      </div>
-    </section>
+    <app-hero-card
+      iconClass="fa-light fa-server"
+      eyebrow="SELF-HOSTED SERVICE"
+      heading="连接你的服务器"
+      description="保存独立的服务器地址和访问密钥，供自建服务功能使用。"
+    />
 
     <div class="section-label">连接配置</div>
     <form class="server-form" (ngSubmit)="save()" novalidate>
@@ -78,7 +75,6 @@
             type="button"
             class="key-toggle"
             (click)="toggleKeyVisibility()"
-            [attr.aria-label]="showKey ? '隐藏服务器密钥' : '显示服务器密钥'"
           >
             <i
               class="fa-light"

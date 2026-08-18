@@ -9,6 +9,7 @@ import {
 } from '../../core/services/translation.service';
 import { LanguageCode } from '../../core/services/translation.loader';
 import { AppTheme } from '../../core/theme/theme';
+import { HeroCardComponent } from '../../core/components/hero-card/hero-card.component';
 
 @Component({
   selector: 'app-settings',
@@ -16,7 +17,7 @@ import { AppTheme } from '../../core/theme/theme';
   templateUrl: './settings.page.html',
   styleUrls: ['./settings.page.scss'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [IonicModule, TranslatePipe],
+  imports: [IonicModule, TranslatePipe, HeroCardComponent],
 })
 export class SettingsPage {
   readonly languageList: readonly LanguageOption[];

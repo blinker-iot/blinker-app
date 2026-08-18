@@ -4,7 +4,6 @@
       <ion-back-button
         defaultHref="/adddevice"
         text=""
-        [attr.aria-label]="'DEVICE_GUIDE.BACK' | translate"
       ></ion-back-button>
     </ion-buttons>
     <ion-title>{{ 'DEVICE_GUIDE.KEY_TITLE' | translate }}</ion-title>
@@ -79,9 +78,6 @@
             type="button"
             class="key-visibility"
             (click)="toggleKeyVisibility()"
-            [attr.aria-label]="
-              (keyVisible ? 'DEVICE_GUIDE.HIDE_KEY' : 'DEVICE_GUIDE.SHOW_KEY') | translate
-            "
           >
             <i
               class="fa-light"

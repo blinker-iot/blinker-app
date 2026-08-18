@@ -5,6 +5,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
+import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { ShareDate } from 'src/app/core/model/data.model';
 import { DataService } from 'src/app/core/services/data.service';
 import { UserService } from 'src/app/core/services/user.service';
@@ -15,7 +16,13 @@ import { ShareService } from '../device-share/share.service';
   standalone: true,
   templateUrl: './share-manager.page.html',
   styleUrls: ['./share-manager.page.scss'],
-  imports: [IonicModule, RouterModule, TranslatePipe, BDeviceImgComponent],
+  imports: [
+    IonicModule,
+    RouterModule,
+    TranslatePipe,
+    BDeviceImgComponent,
+    HeroCardComponent,
+  ],
 })
 export class ShareManagerPage implements OnInit, OnDestroy {
   loaded = false;

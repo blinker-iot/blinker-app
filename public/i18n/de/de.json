@@ -41,14 +41,12 @@
   "SETTINGS": {
     "TITLE": "Einstellungen",
     "APPEARANCE": "Darstellung",
-    "THEME": "Design",
     "THEME_HINT": "Wählen Sie die passende Darstellung für Ihre Umgebung",
     "LIGHT": "Hell",
     "LIGHT_DESC": "Hell und klar, das Standarddesign",
     "DARK": "Dunkel",
     "DARK_DESC": "Angenehmer bei schwachem Licht",
     "LANGUAGE_SECTION": "Sprache",
-    "LANGUAGE": "Anzeigesprache",
     "LANGUAGE_HINT": "Wählen Sie die Sprache der App-Oberfläche",
     "SAVED_HINT": "Ihre Auswahl wird gespeichert und beim nächsten Start wiederhergestellt."
   },
@@ -64,11 +62,8 @@
     "ALL": "Alle"
   },
   "TAB_DEVICE": {
-    "MESSAGE_CENTER": "Nachrichtenzentrale",
-    "OPEN_ADD_MENU": "Menü zum Hinzufügen öffnen",
     "EMPTY_TITLE": "Noch keine Geräte",
     "EMPTY_DESCRIPTION": "Fügen Sie Ihr erstes Smartgerät hinzu und machen Sie sich das Leben leichter",
-    "ADD_MENU": "Hinzufügen",
     "ADD_DEVICE": "Gerät hinzufügen",
     "ADD_DEVICE_DESCRIPTION": "Smartgerät verbinden und konfigurieren",
     "ADD_ROOM": "Raum hinzufügen",
@@ -78,10 +73,7 @@
     "FEATURE_PENDING": "Diese Funktion ist bald verfügbar"
   },
   "COMMUNITY": {
-    "SEARCH": "Suchen",
     "SEARCH_PLACEHOLDER": "Ideen, Produkte und Tipps suchen",
-    "SEARCH_CONTENT": "In Entdecken suchen",
-    "CONTENT_CATEGORIES": "Kategorien in Entdecken",
     "CATEGORY_RECOMMENDED": "Empfohlen",
     "CATEGORY_INSPIRATION": "Smarte Ideen",
     "CATEGORY_PRODUCTS": "Produktratgeber",
@@ -103,17 +95,14 @@
     "COMING_SOON": "Demnächst verfügbar",
     "OMNI_STATION_NAME": "Omni-Basisstation",
     "OMNI_STATION_DESCRIPTION": "Reinigung, Staubaufnahme und Trocknung in einem",
-    "OMNI_STATION_LAUNCH": "Verfügbar ab Q3 2026",
-    "VIEW_PRODUCT": "{{name}} ansehen"
+    "OMNI_STATION_LAUNCH": "Verfügbar ab Q3 2026"
   },
   "PROFILE": {
     "TITLE": "Profil",
-    "MESSAGE_CENTER": "Nachrichtenzentrale",
     "USER_AVATAR": "Benutzeravatar",
     "PRO_PLAN_EXPIRY": "Pro Plan (gültig bis {{date}})",
     "VERSION": "Version {{version}}",
     "DEFAULT_USER_NAME": "blinker-Benutzer",
-    "ACCOUNT_FEATURES": "Kontofunktionen",
     "REGION_MANAGEMENT": "Bereichsverwaltung",
     "REGION_COUNT": "{{count}} Bereiche",
     "AUTOMATION": "Automatisierung",
@@ -122,7 +111,6 @@
     "SHARED_DEVICE_COUNT": "{{count}} Geräte freigegeben",
     "SELF_HOSTED_SERVER": "Eigener Server",
     "SELF_HOSTED_SERVER_DESCRIPTION": "Adresse und Schlüssel konfigurieren",
-    "SETTINGS_AND_ACCOUNT": "Einstellungen und Konto",
     "SETTINGS": "Einstellungen",
     "SETTINGS_DESCRIPTION": "Sprache und Design einstellen",
     "FEEDBACK": "Feedback",
@@ -179,7 +167,6 @@
   },
   "DEVICE": {
     "SETTING": "Einstellungen",
-    "CHANGE_ICON": "Symbol ändern",
     "NAME": "Gerätename",
     "TYPE": "Gerätetyp",
     "BROKER": "Broker",

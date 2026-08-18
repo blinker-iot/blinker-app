@@ -4,7 +4,6 @@
       <ion-back-button
         defaultHref="/guide"
         text=""
-        [attr.aria-label]="'DEVICE_GUIDE.BACK' | translate"
       ></ion-back-button>
     </ion-buttons>
     <ion-title>{{ 'DEVICE_GUIDE.OLD_DEVICE_TITLE' | translate }}</ion-title>
@@ -65,10 +64,6 @@
           class="key-visibility"
           (click)="toggleKeyVisibility()"
           [disabled]="isMigrating"
-          [attr.aria-label]="
-            (keyVisible ? 'DEVICE_GUIDE.OLD_DEVICE_HIDE_KEY' : 'DEVICE_GUIDE.OLD_DEVICE_SHOW_KEY')
-              | translate
-          "
         >
           <i
             class="fa-light"

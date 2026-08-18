@@ -36,9 +36,37 @@
   color: #fff;
   box-shadow: 0 8px 20px color-mix(in srgb, var(--tool-hero-accent) 28%, transparent);
   font-size: var(--tool-hero-icon-font-size, 24px);
+
+  &.has-image {
+    box-sizing: border-box;
+    padding: 9px;
+    background: #fff;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 }
 
-.hero-copy { min-width: 0; }
+.hero-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.hero-meta {
+  align-self: center;
+  min-width: 30px;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--tool-hero-accent) 20%, var(--blinker-border));
+  border-radius: 14px;
+  color: var(--tool-hero-accent);
+  background: color-mix(in srgb, var(--tool-hero-accent) 8%, transparent);
+  font-size: 12px;
+  font-weight: 650;
+  text-align: center;
+}
 
 .eyebrow {
   color: var(--tool-hero-accent);

@@ -6,7 +6,6 @@
   [class.edit]="items === undefined && editMode"
   [class.sort]="items === undefined && enableSort"
   [attr.role]="items !== undefined ? 'group' : null"
-  [attr.aria-label]="items !== undefined ? ariaLabel : null"
 >
   @for (item of items ?? []; track item.id) {
     <button

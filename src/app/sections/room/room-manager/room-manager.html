@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-back-button
         text=""
-        defaultHref="/home?tab=profile"
+        [defaultHref]="defaultBackHref"
       ></ion-back-button>
     </ion-buttons>
     <ion-title>{{'MENU.REGIONAL_MANAGER' | translate}}</ion-title>
@@ -18,16 +18,13 @@
 </ion-header>
 <ion-content fullscreen="true">
   <main>
-    <section class="manager-intro">
-      <span class="intro-icon" aria-hidden="true">
-        <i class="fa-light fa-house-chimney-window"></i>
-      </span>
-      <div>
-        <h1>管理你的设备空间</h1>
-        <p>按房间整理设备，让查找和控制更直观。</p>
-      </div>
-      <span class="count-badge">{{ roomDataList.length }}</span>
-    </section>
+    <app-hero-card
+      iconClass="fa-light fa-house-chimney-window"
+      eyebrow="SPACE MANAGEMENT"
+      heading="管理你的设备空间"
+      description="按房间整理设备，让查找和控制更直观。"
+      [meta]="roomDataList.length"
+    />
 
     <div class="section-label">我的区域</div>
 

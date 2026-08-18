@@ -97,10 +97,4 @@ export class TabCommunityComponent {
     this.searchVisible = !this.searchVisible;
     if (!this.searchVisible) this.searchKeyword = '';
   }
-
-  getProductAriaLabel(product: CommunityProduct): string {
-    return this.translate.instant('COMMUNITY.VIEW_PRODUCT', {
-      name: this.translate.instant(product.nameKey),
-    });
-  }
 }

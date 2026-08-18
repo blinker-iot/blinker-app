@@ -41,14 +41,12 @@
   "SETTINGS": {
     "TITLE": "Settings",
     "APPEARANCE": "Appearance",
-    "THEME": "Theme",
     "THEME_HINT": "Choose the appearance that suits your environment",
     "LIGHT": "Light",
     "LIGHT_DESC": "Bright and clear, the default theme",
     "DARK": "Dark",
     "DARK_DESC": "More comfortable in low light",
     "LANGUAGE_SECTION": "Language",
-    "LANGUAGE": "Display language",
     "LANGUAGE_HINT": "Choose the language used by the app interface",
     "SAVED_HINT": "Your choice is saved and restored on the next launch."
   },
@@ -64,11 +62,8 @@
     "ALL": "All"
   },
   "TAB_DEVICE": {
-    "MESSAGE_CENTER": "Message center",
-    "OPEN_ADD_MENU": "Open add menu",
     "EMPTY_TITLE": "No devices yet",
     "EMPTY_DESCRIPTION": "Add your first smart device and start living with ease",
-    "ADD_MENU": "Add",
     "ADD_DEVICE": "Add device",
     "ADD_DEVICE_DESCRIPTION": "Connect and configure a smart device",
     "ADD_ROOM": "Add room",
@@ -80,7 +75,6 @@
   "DEVICE_GUIDE": {
     "TITLE": "Add device",
     "KEY_TITLE": "Add with a key",
-    "BACK": "Back",
     "EYEBROW": "DEVICE SETUP",
     "HERO_TITLE": "How would you like to add it?",
     "HERO_DESCRIPTION": "Power on your device and choose the connection method that matches it.",
@@ -134,8 +128,6 @@
     "KEY_RESULT_TITLE": "Your device is ready",
     "KEY_RESULT_DESCRIPTION": "Copy this key into your firmware configuration, then restart the device to connect.",
     "KEY_LABEL": "Device key",
-    "SHOW_KEY": "Show device key",
-    "HIDE_KEY": "Hide device key",
     "COPY": "Copy key",
     "COPIED": "Device key copied",
     "KEY_SAVE_TITLE": "Save this key now",
@@ -153,8 +145,6 @@
     "OLD_DEVICE_PHONE_PLACEHOLDER": "Enter the phone number for your old account",
     "OLD_DEVICE_KEY": "Device key",
     "OLD_DEVICE_KEY_PLACEHOLDER": "Enter the key for the device to migrate",
-    "OLD_DEVICE_SHOW_KEY": "Show device key",
-    "OLD_DEVICE_HIDE_KEY": "Hide device key",
     "OLD_DEVICE_SUBMIT": "Migrate data",
     "OLD_DEVICE_SUBMITTING": "Migrating…",
     "OLD_DEVICE_PHONE_REQUIRED": "Enter your phone number.",
@@ -166,10 +156,7 @@
     "OLD_DEVICE_API_PENDING": "The migration service is not connected yet. Please try again later."
   },
   "COMMUNITY": {
-    "SEARCH": "Search",
     "SEARCH_PLACEHOLDER": "Search ideas, products, and tips",
-    "SEARCH_CONTENT": "Search discovery content",
-    "CONTENT_CATEGORIES": "Discovery content categories",
     "CATEGORY_RECOMMENDED": "Recommended",
     "CATEGORY_INSPIRATION": "Smart ideas",
     "CATEGORY_PRODUCTS": "Product guide",
@@ -191,17 +178,14 @@
     "COMING_SOON": "Coming soon",
     "OMNI_STATION_NAME": "Omni Base Station",
     "OMNI_STATION_DESCRIPTION": "Cleaning, dust collection, and drying in one",
-    "OMNI_STATION_LAUNCH": "Coming in Q3 2026",
-    "VIEW_PRODUCT": "View {{name}}"
+    "OMNI_STATION_LAUNCH": "Coming in Q3 2026"
   },
   "PROFILE": {
     "TITLE": "Profile",
-    "MESSAGE_CENTER": "Message center",
     "USER_AVATAR": "User avatar",
     "PRO_PLAN_EXPIRY": "Pro Plan (expires {{date}})",
     "VERSION": "Version {{version}}",
     "DEFAULT_USER_NAME": "blinker user",
-    "ACCOUNT_FEATURES": "Account features",
     "REGION_MANAGEMENT": "Area management",
     "REGION_COUNT": "{{count}} areas",
     "AUTOMATION": "Automation",
@@ -210,7 +194,6 @@
     "SHARED_DEVICE_COUNT": "{{count}} devices shared",
     "SELF_HOSTED_SERVER": "Self-hosted server",
     "SELF_HOSTED_SERVER_DESCRIPTION": "Configure address and key",
-    "SETTINGS_AND_ACCOUNT": "Settings and account",
     "SETTINGS": "Settings",
     "SETTINGS_DESCRIPTION": "Language and theme settings",
     "FEEDBACK": "Feedback",
@@ -267,7 +250,6 @@
   },
   "DEVICE": {
     "SETTING": "Setting",
-    "CHANGE_ICON": "Change Icon",
     "NAME": "Device Name",
     "TYPE": "Device Type",
     "BROKER": "Broker",

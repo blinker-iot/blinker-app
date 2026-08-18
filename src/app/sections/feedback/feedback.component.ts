@@ -4,6 +4,7 @@ import { IonicModule, NavController } from '@ionic/angular';
 import { TranslatePipe } from '@ngx-translate/core';
 import { FeedbackService } from './feedback.service';
 import { DataService } from 'src/app/core/services/data.service';
+import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 
 type FeedbackTypeId = 'device' | 'account' | 'feature' | 'other';
 
@@ -26,7 +27,7 @@ interface FeedbackDraft {
   selector: 'app-feedback',
   templateUrl: './feedback.component.html',
   styleUrls: ['./feedback.component.scss'],
-  imports: [FormsModule, IonicModule, TranslatePipe],
+  imports: [FormsModule, IonicModule, TranslatePipe, HeroCardComponent],
 })
 export class FeedbackPage implements OnInit, OnDestroy {
   private readonly draftStorageKey = 'blinker_feedback_draft';

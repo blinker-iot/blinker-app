@@ -41,14 +41,12 @@
   "SETTINGS": {
     "TITLE": "الإعدادات",
     "APPEARANCE": "المظهر",
-    "THEME": "النسق",
     "THEME_HINT": "اختر المظهر المناسب لبيئتك",
     "LIGHT": "فاتح",
     "LIGHT_DESC": "مشرق وواضح، وهو النسق الافتراضي",
     "DARK": "داكن",
     "DARK_DESC": "أكثر راحة في الإضاءة المنخفضة",
     "LANGUAGE_SECTION": "اللغة",
-    "LANGUAGE": "لغة العرض",
     "LANGUAGE_HINT": "اختر لغة واجهة التطبيق",
     "SAVED_HINT": "يتم حفظ اختيارك واستعادته عند التشغيل التالي."
   },
@@ -64,11 +62,8 @@
     "ALL": "الكل"
   },
   "TAB_DEVICE": {
-    "MESSAGE_CENTER": "مركز الرسائل",
-    "OPEN_ADD_MENU": "فتح قائمة الإضافة",
     "EMPTY_TITLE": "لا توجد أجهزة حتى الآن",
     "EMPTY_DESCRIPTION": "أضف أول جهاز ذكي وابدأ حياة أكثر سهولة",
-    "ADD_MENU": "إضافة",
     "ADD_DEVICE": "إضافة جهاز",
     "ADD_DEVICE_DESCRIPTION": "توصيل جهاز ذكي وإعداده",
     "ADD_ROOM": "إضافة غرفة",
@@ -78,10 +73,7 @@
     "FEATURE_PENDING": "ستتوفر هذه الميزة قريبًا"
   },
   "COMMUNITY": {
-    "SEARCH": "بحث",
     "SEARCH_PLACEHOLDER": "البحث عن أفكار ومنتجات ونصائح",
-    "SEARCH_CONTENT": "البحث في محتوى الاستكشاف",
-    "CONTENT_CATEGORIES": "فئات محتوى الاستكشاف",
     "CATEGORY_RECOMMENDED": "مقترح",
     "CATEGORY_INSPIRATION": "أفكار ذكية",
     "CATEGORY_PRODUCTS": "دليل المنتجات",
@@ -103,17 +95,14 @@
     "COMING_SOON": "قريبًا",
     "OMNI_STATION_NAME": "المحطة الأساسية الشاملة",
     "OMNI_STATION_DESCRIPTION": "التنظيف وجمع الغبار والتجفيف في جهاز واحد",
-    "OMNI_STATION_LAUNCH": "متاح في الربع الثالث من 2026",
-    "VIEW_PRODUCT": "عرض {{name}}"
+    "OMNI_STATION_LAUNCH": "متاح في الربع الثالث من 2026"
   },
   "PROFILE": {
     "TITLE": "الملف الشخصي",
-    "MESSAGE_CENTER": "مركز الرسائل",
     "USER_AVATAR": "صورة المستخدم",
     "PRO_PLAN_EXPIRY": "خطة Pro (تنتهي في {{date}})",
     "VERSION": "الإصدار {{version}}",
     "DEFAULT_USER_NAME": "مستخدم blinker",
-    "ACCOUNT_FEATURES": "ميزات الحساب",
     "REGION_MANAGEMENT": "إدارة المناطق",
     "REGION_COUNT": "عدد المناطق: {{count}}",
     "AUTOMATION": "الأتمتة",
@@ -122,7 +111,6 @@
     "SHARED_DEVICE_COUNT": "الأجهزة المشتركة: {{count}}",
     "SELF_HOSTED_SERVER": "خادم مستضاف ذاتيًا",
     "SELF_HOSTED_SERVER_DESCRIPTION": "إعداد العنوان والمفتاح",
-    "SETTINGS_AND_ACCOUNT": "الإعدادات والحساب",
     "SETTINGS": "الإعدادات",
     "SETTINGS_DESCRIPTION": "إعدادات اللغة والسمة",
     "FEEDBACK": "الملاحظات",
@@ -179,7 +167,6 @@
   },
   "DEVICE": {
     "SETTING": "الإعدادات",
-    "CHANGE_ICON": "تغيير الرمز",
     "NAME": "اسم الجهاز",
     "TYPE": "نوع الجهاز",
     "BROKER": "الوسيط",

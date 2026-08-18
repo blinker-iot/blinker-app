@@ -1,11 +1,20 @@
 <section class="hero-card">
   @if (hasSummary) {
-    <span class="hero-icon" aria-hidden="true"><i [class]="iconClass"></i></span>
+    <span class="hero-icon" [class.has-image]="iconSrc" aria-hidden="true">
+      @if (iconSrc) {
+        <img [src]="iconSrc" alt="" />
+      } @else {
+        <i [class]="iconClass"></i>
+      }
+    </span>
     <div class="hero-copy">
       <span class="eyebrow">{{ eyebrow }}</span>
       <h1>{{ heading }}</h1>
       <p>{{ description }}</p>
     </div>
+    @if (hasMeta) {
+      <span class="hero-meta">{{ meta }}</span>
+    }
   }
   <div class="hero-content"><ng-content></ng-content></div>
 </section>

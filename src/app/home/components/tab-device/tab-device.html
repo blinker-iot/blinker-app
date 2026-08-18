@@ -4,7 +4,6 @@
     <ion-buttons slot="end">
       <ion-button
         class="header-action notice-button"
-        [attr.aria-label]="'TAB_DEVICE.MESSAGE_CENTER' | translate"
         [routerLink]="['/message']"
       >
         <i class="fa-light fa-bell"></i>
@@ -13,7 +12,6 @@
         #deviceAddMenuTrigger
         id="device-add-menu-trigger"
         class="header-action add-button"
-        [attr.aria-label]="'TAB_DEVICE.OPEN_ADD_MENU' | translate"
         aria-haspopup="menu"
       >
         <i class="fa-light fa-plus"></i>
@@ -67,7 +65,6 @@
     <nav
       class="device-add-menu"
       role="menu"
-      [attr.aria-label]="'TAB_DEVICE.ADD_MENU' | translate"
     >
       <button type="button" role="menuitem" (click)="openAddPage('/guide')">
         <span class="menu-icon"><i class="fa-light fa-router"></i></span>

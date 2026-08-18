@@ -17,39 +17,8 @@ ion-content {
   --section-main-padding-bottom: 100px;
 }
 
-.feedback-intro {
-  display: flex;
-  align-items: center;
-  gap: 13px;
+app-hero-card {
   margin: 2px 2px 20px;
-
-  h1 {
-    margin: 0 0 4px;
-    color: var(--blinker-text-primary);
-    font-size: 18px;
-    font-weight: 650;
-  }
-
-  p {
-    margin: 0;
-    color: var(--blinker-text-secondary);
-    font-size: 12px;
-    line-height: 1.5;
-  }
-}
-
-.intro-icon {
-  width: 45px;
-  height: 45px;
-  flex: 0 0 auto;
-  border-radius: 14px;
-  background: linear-gradient(145deg, #5cb2ff, var(--ion-color-primary));
-  box-shadow: 0 9px 20px rgba(var(--ion-color-primary-rgb), 0.24);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 19px;
 }
 
 .section-label {

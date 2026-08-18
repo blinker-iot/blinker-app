@@ -41,14 +41,12 @@
   "SETTINGS": {
     "TITLE": "设置",
     "APPEARANCE": "外观",
-    "THEME": "主题风格",
     "THEME_HINT": "选择适合当前环境的显示风格",
     "LIGHT": "Light 浅色",
     "LIGHT_DESC": "明亮、清晰，默认风格",
     "DARK": "Dark 深色",
     "DARK_DESC": "低亮度环境下更舒适",
     "LANGUAGE_SECTION": "语言",
-    "LANGUAGE": "显示语言",
     "LANGUAGE_HINT": "选择应用界面使用的语言",
     "SAVED_HINT": "选择会自动保存，并在下次启动时继续使用。"
   },
@@ -64,11 +62,8 @@
     "ALL": "全部"
   },
   "TAB_DEVICE": {
-    "MESSAGE_CENTER": "消息中心",
-    "OPEN_ADD_MENU": "打开添加菜单",
     "EMPTY_TITLE": "还没有设备",
     "EMPTY_DESCRIPTION": "添加你的第一台智能设备，开始轻松生活",
-    "ADD_MENU": "添加",
     "ADD_DEVICE": "添加设备",
     "ADD_DEVICE_DESCRIPTION": "连接并配置智能设备",
     "ADD_ROOM": "添加区域",
@@ -80,7 +75,6 @@
   "DEVICE_GUIDE": {
     "TITLE": "添加设备",
     "KEY_TITLE": "通过密钥添加",
-    "BACK": "返回",
     "EYEBROW": "设备接入向导",
     "HERO_TITLE": "想用哪种方式添加？",
     "HERO_DESCRIPTION": "请先为设备通电，再选择与设备匹配的连接方式。",
@@ -134,8 +128,6 @@
     "KEY_RESULT_TITLE": "设备已创建",
     "KEY_RESULT_DESCRIPTION": "将密钥复制到固件配置中，然后重启设备即可开始连接。",
     "KEY_LABEL": "设备密钥",
-    "SHOW_KEY": "显示设备密钥",
-    "HIDE_KEY": "隐藏设备密钥",
     "COPY": "复制密钥",
     "COPIED": "设备密钥已复制",
     "KEY_SAVE_TITLE": "请立即保存密钥",
@@ -153,8 +145,6 @@
     "OLD_DEVICE_PHONE_PLACEHOLDER": "请输入旧版账户手机号",
     "OLD_DEVICE_KEY": "设备密钥",
     "OLD_DEVICE_KEY_PLACEHOLDER": "请输入需要迁移的设备密钥",
-    "OLD_DEVICE_SHOW_KEY": "显示设备密钥",
-    "OLD_DEVICE_HIDE_KEY": "隐藏设备密钥",
     "OLD_DEVICE_SUBMIT": "迁移数据",
     "OLD_DEVICE_SUBMITTING": "正在迁移…",
     "OLD_DEVICE_PHONE_REQUIRED": "请输入手机号。",
@@ -166,10 +156,7 @@
     "OLD_DEVICE_API_PENDING": "迁移服务尚未接入，请稍后再试。"
   },
   "COMMUNITY": {
-    "SEARCH": "搜索",
     "SEARCH_PLACEHOLDER": "搜索灵感、产品与技巧",
-    "SEARCH_CONTENT": "搜索发现内容",
-    "CONTENT_CATEGORIES": "发现内容分类",
     "CATEGORY_RECOMMENDED": "推荐",
     "CATEGORY_INSPIRATION": "智能灵感",
     "CATEGORY_PRODUCTS": "产品百科",
@@ -191,17 +178,14 @@
     "COMING_SOON": "即将上线",
     "OMNI_STATION_NAME": "全能基站",
     "OMNI_STATION_DESCRIPTION": "集清洁、集尘与烘干于一体",
-    "OMNI_STATION_LAUNCH": "敬请期待 · 2026 Q3 上线",
-    "VIEW_PRODUCT": "查看{{name}}"
+    "OMNI_STATION_LAUNCH": "敬请期待 · 2026 Q3 上线"
   },
   "PROFILE": {
     "TITLE": "用户中心",
-    "MESSAGE_CENTER": "消息中心",
     "USER_AVATAR": "用户头像",
     "PRO_PLAN_EXPIRY": "Pro Plan（{{date}} 到期）",
     "VERSION": "版本 {{version}}",
     "DEFAULT_USER_NAME": "点灯用户",
-    "ACCOUNT_FEATURES": "账户功能",
     "REGION_MANAGEMENT": "区域管理",
     "REGION_COUNT": "{{count}} 个区域",
     "AUTOMATION": "自动化",
@@ -210,7 +194,6 @@
     "SHARED_DEVICE_COUNT": "已共享 {{count}} 台设备",
     "SELF_HOSTED_SERVER": "自建服务器",
     "SELF_HOSTED_SERVER_DESCRIPTION": "配置地址与密钥",
-    "SETTINGS_AND_ACCOUNT": "设置与账户",
     "SETTINGS": "设置",
     "SETTINGS_DESCRIPTION": "语言和主题设置",
     "FEEDBACK": "反馈",
@@ -267,7 +250,6 @@
   },
   "DEVICE": {
     "SETTING": "设置",
-    "CHANGE_ICON": "更改图标",
     "NAME": "设备名",
     "TYPE": "型号",
     "BROKER": "中介",

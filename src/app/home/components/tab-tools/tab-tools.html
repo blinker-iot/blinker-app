@@ -13,7 +13,6 @@
       <section class="tool-section">
         <h2>{{ group.title }}</h2>
         <app-menu-list
-          [ariaLabel]="group.title"
           [items]="group.tools"
           [detailed]="true"
           (itemSelected)="openTool($event)"

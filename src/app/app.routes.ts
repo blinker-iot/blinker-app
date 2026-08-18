@@ -65,6 +65,14 @@ export const routes: Routes = [
     canDeactivate: [LayouterGuard],
   },
   {
+    path: 'device-manager/:id/timer',
+    loadComponent: () => import('./sections/device/device-timer/device-timer.page').then(m => m.DeviceTimerPage),
+  },
+  {
+    path: 'device-manager/:id/timer/:taskid',
+    loadComponent: () => import('./sections/device/device-timer/timing-edit/timing-edit').then(m => m.TimingEditPage),
+  },
+  {
     path: 'device-manager/:id',
     loadComponent: () => import('./sections/device/device-settings/device-settings').then(m => m.DeviceSettingsPage),
   },
