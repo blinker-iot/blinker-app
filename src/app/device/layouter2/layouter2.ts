@@ -33,7 +33,6 @@ import {
 import { ViewService } from 'src/app/core/services/view.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { ParentDynamicComponent } from './widgets/parentDynamic.component';
-import { WidgetListbarComponent } from './widget-listbar/widget-listbar.component';
 
 @Component({
   standalone: true,
@@ -46,7 +45,6 @@ import { WidgetListbarComponent } from './widget-listbar/widget-listbar.componen
     Gridster,
     GridsterItem,
     ParentDynamicComponent,
-    WidgetListbarComponent,
   ],
 })
 export class Layouter2 implements DeviceComponent {

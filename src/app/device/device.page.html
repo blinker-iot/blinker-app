@@ -69,6 +69,11 @@
   <div class="device-view">
     <ng-template #deviceView></ng-template>
   </div>
+  @if (editMode && deviceComponent.indexOf('Layouter') > -1) {
+  <div slot="fixed" class="animated slideInUp faster layouter-bar">
+    <widget-listbar></widget-listbar>
+  </div>
+  }
   <!-- <router-outlet></router-outlet> -->
 </ion-content>
 } @if (loaded && !device) {
