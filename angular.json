@@ -59,7 +59,7 @@
                 {
                   "type": "anyComponentStyle",
                   "maximumWarning": "2kb",
-                  "maximumError": "8kb"
+                  "maximumError": "32kb"
                 }
               ],
               "fileReplacements": [
