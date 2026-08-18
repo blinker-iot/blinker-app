@@ -14,11 +14,15 @@ import {
   DisplayGrid,
   Gridster,
   GridsterConfig,
+  GridsterItem,
   GridsterItemConfig,
   GridType,
 } from 'angular-gridster2';
+import { NgClass, NgStyle } from '@angular/common';
 
 import { widgetList, configList, styleList } from './widgets/config'
+import { WidgetsModule } from './widgets/widgets.module';
+import { WidgetListbarModule } from './widget-listbar/widget-listbar.module';
 import { arrayRemove, randomString } from 'src/app/core/functions/func';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { NativeService } from 'src/app/core/services/native.service';
@@ -32,10 +36,18 @@ import { ViewService } from 'src/app/core/services/view.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
 @Component({
-  standalone: false,
+  standalone: true,
   selector: 'layouter2',
   templateUrl: 'layouter2.html',
   styleUrls: ['layouter2.scss'],
+  imports: [
+    NgClass,
+    NgStyle,
+    Gridster,
+    GridsterItem,
+    WidgetsModule,
+    WidgetListbarModule,
+  ],
 })
 export class Layouter2 implements DeviceComponent {
 

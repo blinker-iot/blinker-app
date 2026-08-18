@@ -1,18 +1,45 @@
-import { Component, ChangeDetectorRef, ViewChildren, QueryList, ElementRef, Renderer2, Input } from '@angular/core';
-import { ModalController, AlertController, Platform } from '@ionic/angular';
+import {
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  Input,
+  QueryList,
+  Renderer2,
+  ViewChildren,
+} from '@angular/core';
+import { NgClass, NgStyle } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import {
+  AlertController,
+  IonicModule,
+  ModalController,
+  Platform,
+} from '@ionic/angular';
 import { styleList } from '../widgets/config';
+import { WidgetsModule } from '../widgets/widgets.module';
 import { LayouterService } from '../../layouter.service';
 import { IconListPage } from 'src/app/core/pages/icon-list/icon-list';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { arrayRemove } from 'src/app/core/functions/func';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
+import { BBottomBtnComponent } from 'src/app/core/components/b-bottom-btn/b-bottom-btn.component';
+import { BColorpickerBtnsComponent } from 'src/app/core/components/b-colorpicker-btns/b-colorpicker-btns.component';
 
 @Component({
-  standalone: false,
+  standalone: true,
   selector: 'widget-editor',
   templateUrl: 'widget-editor.html',
-  styleUrls: ['widget-editor.scss']
+  styleUrls: ['widget-editor.scss'],
+  imports: [
+    NgClass,
+    NgStyle,
+    FormsModule,
+    IonicModule,
+    WidgetsModule,
+    BBottomBtnComponent,
+    BColorpickerBtnsComponent,
+  ],
 })
 export class WidgetEditor {
 
