@@ -1,17 +1,46 @@
 import { Component, Input, ViewChild } from '@angular/core';
 import { ModalController } from '@ionic/angular';
-import { WidgetEditor } from '../widget-editor/widget-editor';
 import { Layouter2Widget } from './config';
-import { EditGesturePoint, isEditGestureTap } from './edit-gesture';
+import { WidgetTextComponent } from './widget-text/widget-text';
+import { WidgetNumberComponent } from './widget-number/widget-number';
+import { WidgetButtonComponent } from './widget-button/widget-button';
+import { WidgetRangeComponent } from './widget-range/widget-range';
+import { WidgetTimerComponent } from './widget-timer/widget-timer';
+import { WidgetColorComponent } from './widget-color/widget-color';
+import { WidgetDebugComponent } from './widget-debug/widget-debug';
+import { WidgetJoystickComponent } from './widget-joystick/widget-joystick';
+import { WidgetChartComponent } from './widget-chart/widget-chart';
+import { WidgetMapComponent } from './widget-map/widget-map.component';
+import { WidgetTabComponent } from './widget-tab/widget-tab.component';
+import { WidgetInputComponent } from './widget-input/widget-input';
+import { WidgetVideoComponent } from './widget-video/widget-video';
+import { WidgetImageComponent } from './widget-image/widget-image';
+import { Layouter2EditTapDirective } from './edit-tap.directive';
 
 @Component({
-  standalone: false,
   selector: 'widget-dynamic',
   templateUrl: './parentDynamic.component.html',
-  styleUrls: ['parentDynamic.component.scss']
+  styleUrls: ['parentDynamic.component.scss'],
+  imports: [
+    WidgetTextComponent,
+    WidgetNumberComponent,
+    WidgetButtonComponent,
+    WidgetRangeComponent,
+    WidgetTimerComponent,
+    WidgetColorComponent,
+    WidgetDebugComponent,
+    WidgetJoystickComponent,
+    WidgetChartComponent,
+    WidgetMapComponent,
+    WidgetTabComponent,
+    WidgetInputComponent,
+    WidgetVideoComponent,
+    WidgetImageComponent,
+    Layouter2EditTapDirective,
+  ],
 })
 export class ParentDynamicComponent {
-  private editGestureStart?: EditGesturePoint;
+  private editorOpening = false;
 
   @Input()
   widget;
@@ -23,62 +52,48 @@ export class ParentDynamicComponent {
   @Input()
   isDemo = false;
 
-  @ViewChild('widgetComponent', { static: false }) widgetComponent: Layouter2Widget;
+  @Input()
+  editMode = false;
+
+  @ViewChild('widgetComponent', { static: false })
+  widgetComponent: Layouter2Widget;
 
   get color() {
-    return this.widget.clr
+    return this.widget.clr;
   }
 
   @Input()
   lstyle;
 
-  constructor(
-    private modalCtrl: ModalController,
-  ) { }
-
-  beginEditGesture(event: PointerEvent): void {
-    if (!event.isPrimary || event.button !== 0) {
-      this.cancelEditGesture();
-      return;
-    }
-
-    this.editGestureStart = {
-      pointerId: event.pointerId,
-      clientX: event.clientX,
-      clientY: event.clientY,
-    };
-  }
-
-  finishEditGesture(event: PointerEvent): void {
-    const start = this.editGestureStart;
-    this.cancelEditGesture();
-
-    if (!isEditGestureTap(start, event)) {
-      return;
-    }
-
-    void this.edit();
-  }
-
-  cancelEditGesture(): void {
-    this.editGestureStart = undefined;
-  }
+  constructor(private modalCtrl: ModalController) {}
 
   async edit() {
-    let modal = await this.modalCtrl.create({
-      component: WidgetEditor,
-      componentProps: {
-        'widget': this.widget,
-        'device': this.device
-      }
-    });
-    if (typeof this.widgetComponent != 'undefined') {
-      modal.onDidDismiss().then(() => {
-        this.widgetComponent.refresh();
+    if (this.editorOpening) return;
+    this.editorOpening = true;
+
+    try {
+      // WidgetEditor imports this standalone component for its preview.
+      // Loading it lazily prevents a static ParentDynamic -> WidgetEditor ->
+      // ParentDynamic cycle that causes Angular NG0919.
+      const { WidgetEditor } = await import('../widget-editor/widget-editor');
+      const modal = await this.modalCtrl.create({
+        component: WidgetEditor,
+        componentProps: {
+          widget: this.widget,
+          device: this.device,
+        },
       });
+      const didDismiss = modal.onDidDismiss();
+      if (typeof this.widgetComponent != 'undefined') {
+        void didDismiss.then(() => {
+          this.widgetComponent.refresh();
+        });
+      }
+
+      await modal.present();
+      await didDismiss;
+    } finally {
+      this.editorOpening = false;
     }
-
-    modal.present();
   }
-
 }

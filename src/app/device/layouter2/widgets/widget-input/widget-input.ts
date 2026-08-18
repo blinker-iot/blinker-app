@@ -2,15 +2,16 @@ import { Component, Input } from '@angular/core';
 import { Layouter2Widget } from '../config';
 import { AlertController } from '@ionic/angular';
 import { LayouterService } from '../../../layouter.service';
+import { NgStyle } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 @Component({
-  standalone: false,
   selector: 'widget-input',
   templateUrl: 'widget-input.html',
-  styleUrls: ['widget-input.scss']
+  styleUrls: ['widget-input.scss'],
+  imports: [NgStyle, FormsModule],
 })
 export class WidgetInputComponent implements Layouter2Widget {
-
   @Input() widget;
   @Input() device;
 
@@ -19,42 +20,40 @@ export class WidgetInputComponent implements Layouter2Widget {
   }
 
   get t0() {
-    return this.getValue(['tex','t0'])
+    return this.getValue(['tex', 't0']);
   }
 
   get t1() {
-    return this.getValue(['tex1','t1'])
+    return this.getValue(['tex1', 't1']);
   }
 
   get ico() {
-    return this.getValue(['ico','icon'])
+    return this.getValue(['ico', 'icon']);
   }
 
   get color() {
-    return this.getValue(['clr','col','color'])
+    return this.getValue(['clr', 'col', 'color']);
   }
 
   getValue(valueKeys: string[]): any {
     for (let valueKey of valueKeys) {
       if (typeof this.device.data[this.key] != 'undefined')
         if (typeof this.device.data[this.key][valueKey] != 'undefined')
-          return this.device.data[this.key][valueKey]
+          return this.device.data[this.key][valueKey];
       if (typeof this.widget[valueKey] != 'undefined')
-        return this.widget[valueKey]
-    };
-    return
+        return this.widget[valueKey];
+    }
+    return;
   }
 
-  _lstyle
+  _lstyle;
   @Input()
   set lstyle(lstyle) {
-    this._lstyle = lstyle
+    this._lstyle = lstyle;
   }
   get lstyle() {
-    if (typeof this._lstyle != 'undefined')
-      return this._lstyle
-    if (typeof this.widget.lstyle != 'undefined')
-      return this.widget.lstyle
+    if (typeof this._lstyle != 'undefined') return this._lstyle;
+    if (typeof this.widget.lstyle != 'undefined') return this.widget.lstyle;
     return 0;
   }
 
@@ -62,22 +61,22 @@ export class WidgetInputComponent implements Layouter2Widget {
 
   constructor(
     private alertCtrl: AlertController,
-    private layouterService: LayouterService,
+    private layouterService: LayouterService
   ) {}
 
-
-  send(){
-  }
+  send() {}
 
   async showInputModal() {
     const alert = await this.alertCtrl.create({
       header: '发送数据',
-      inputs: [{
-        name: 'message',
-        type: 'text',
-        value: this.sendmess,
-        placeholder: '请输入要发送的内容'
-      }],
+      inputs: [
+        {
+          name: 'message',
+          type: 'text',
+          value: this.sendmess,
+          placeholder: '请输入要发送的内容',
+        },
+      ],
       buttons: [
         '取消',
         {
@@ -86,14 +85,13 @@ export class WidgetInputComponent implements Layouter2Widget {
             this.sendmess = data.message;
             if (this.sendmess) {
               this.layouterService.send(
-                JSON.stringify({ [this.key]: this.sendmess }),
+                JSON.stringify({ [this.key]: this.sendmess })
               );
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     });
     await alert.present();
   }
-
 }

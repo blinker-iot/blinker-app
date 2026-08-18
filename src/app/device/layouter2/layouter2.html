@@ -16,24 +16,11 @@
       [ngClass]="{'default':widget['bg']==0,'translucent':widget['bg']==1,'transparent':widget['bg']==2,'round':widget['bg']==3}"
     >
       <widget-dynamic
-        #widgetDynamic
         [widget]="widget"
         [device]="device"
         [resizeEvent]="resizeEvent"
+        [editMode]="mode=='1'"
       ></widget-dynamic>
-      @if (mode=='1') {
-      <div
-        class="layouter2-edit-mask layouter2-drag-handle"
-        [attr.data-widget-key]="widget['key']"
-        (pointerdown)="widgetDynamic.beginEditGesture($event)"
-        (pointerup)="widgetDynamic.finishEditGesture($event)"
-        (pointercancel)="widgetDynamic.cancelEditGesture()"
-      >
-        <div class="key" [class.centerkey]="widget['bg']==3">
-          {{ widget['key'] }}
-        </div>
-      </div>
-      }
     </gridster-item>
     }
   </gridster>

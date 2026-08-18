@@ -79,56 +79,6 @@ gridster {
 .is-editing gridster gridster-item {
   border-color: color-mix(in srgb, var(--ion-color-primary) 28%, var(--blinker-border));
   box-shadow: 0 8px 22px rgba(var(--ion-color-primary-rgb), 0.09);
-
-  > widget-dynamic {
-    pointer-events: none;
-  }
-}
-
-.layouter2-edit-mask {
-  position: absolute;
-  inset: 0;
-  z-index: 100;
-  box-sizing: border-box;
-  width: 100%;
-  height: 100%;
-  border: 2px dashed rgba(var(--ion-color-primary-rgb), 0.62);
-  border-radius: inherit;
-  background: linear-gradient(
-    135deg,
-    rgba(var(--ion-color-primary-rgb), 0.12),
-    rgba(var(--ion-color-primary-rgb), 0.025) 58%
-  );
-  cursor: grab;
-  pointer-events: auto;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-
-  .key {
-    position: absolute;
-    top: 7px;
-    left: 7px;
-    max-width: calc(100% - 14px);
-    padding: 4px 8px;
-    overflow: hidden;
-    border-radius: 999px;
-    color: var(--ion-color-primary-contrast);
-    background: color-mix(in srgb, var(--ion-color-primary) 88%, transparent);
-    box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.22);
-    font-size: 10px;
-    font-weight: 650;
-    line-height: 1.2;
-    pointer-events: none;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .centerkey {
-    right: 7px;
-    width: auto;
-    text-align: center;
-  }
 }
 
 .flexbox {

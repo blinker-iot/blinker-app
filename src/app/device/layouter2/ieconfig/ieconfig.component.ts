@@ -3,12 +3,13 @@ import { DeviceService } from 'src/app/core/services/device.service';
 import { stringify, parse } from 'zipson';
 import { Clipboard } from '@capacitor/clipboard';
 import { NoticeService } from 'src/app/core/services/notice.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
-  standalone: false,
   selector: 'layouter-ieconfig',
   templateUrl: './ieconfig.component.html',
-  styleUrls: ['./ieconfig.component.scss']
+  styleUrls: ['./ieconfig.component.scss'],
+  imports: [FormsModule],
 })
 export class IeconfigComponent {
   // id;

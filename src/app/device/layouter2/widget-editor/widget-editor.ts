@@ -16,7 +16,7 @@ import {
   Platform,
 } from '@ionic/angular';
 import { styleList } from '../widgets/config';
-import { WidgetsModule } from '../widgets/widgets.module';
+
 import { LayouterService } from '../../layouter.service';
 import { IconListPage } from 'src/app/core/pages/icon-list/icon-list';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
@@ -25,6 +25,7 @@ import { DeviceService } from 'src/app/core/services/device.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { BBottomBtnComponent } from 'src/app/core/components/b-bottom-btn/b-bottom-btn.component';
 import { BColorpickerBtnsComponent } from 'src/app/core/components/b-colorpicker-btns/b-colorpicker-btns.component';
+import { ParentDynamicComponent } from '../widgets/parentDynamic.component';
 
 @Component({
   standalone: true,
@@ -36,22 +37,21 @@ import { BColorpickerBtnsComponent } from 'src/app/core/components/b-colorpicker
     NgStyle,
     FormsModule,
     IonicModule,
-    WidgetsModule,
+    ParentDynamicComponent,
     BBottomBtnComponent,
     BColorpickerBtnsComponent,
   ],
 })
 export class WidgetEditor {
-
   @Input() widget;
   @Input() device: BlinkerDevice;
 
   get widgets() {
-    return styleList[this.widget.type]
+    return styleList[this.widget.type];
   }
 
   get layouterData() {
-    return this.device.data.layouterData
+    return this.device.data.layouterData;
   }
 
   @ViewChildren('widgetItem') widgetItems: QueryList<ElementRef>;
@@ -65,10 +65,9 @@ export class WidgetEditor {
     private LayouterService: LayouterService,
     private deviceService: DeviceService,
     private noticeService: NoticeService
-  ) { }
+  ) {}
 
-  ngOnInit() {
-  }
+  ngOnInit() {}
 
   ngAfterViewInit() {
     if (this.platform.is('android')) {
@@ -85,8 +84,12 @@ export class WidgetEditor {
     for (let item of this.widgetItems.toArray()) {
       let cols = styleList[this.widget.type][i].cols;
       let rows = styleList[this.widget.type][i].rows;
-      let width = cols * this.LayouterService.gridLength + ((cols - 1) * this.LayouterService.gridMargin);
-      let height = (rows * this.LayouterService.gridLength) + ((rows - 1) * this.LayouterService.gridMargin);
+      let width =
+        cols * this.LayouterService.gridLength +
+        (cols - 1) * this.LayouterService.gridMargin;
+      let height =
+        rows * this.LayouterService.gridLength +
+        (rows - 1) * this.LayouterService.gridMargin;
       this.renderer.setStyle(item.nativeElement, 'width', `${width}px`);
       this.renderer.setStyle(item.nativeElement, 'height', `${height}px`);
       i++;
@@ -103,52 +106,50 @@ export class WidgetEditor {
   async save() {
     // this.saveRealtime()
     this.LayouterService.changeWidget();
-    (await this.modalCtrl.getTop()).dismiss()
+    (await this.modalCtrl.getTop()).dismiss();
   }
 
   async delete() {
     this.LayouterService.delWidget(this.widget);
-    (await this.modalCtrl.getTop()).dismiss()
+    (await this.modalCtrl.getTop()).dismiss();
   }
 
   async close() {
-    (await this.modalCtrl.getTop()).dismiss()
+    (await this.modalCtrl.getTop()).dismiss();
   }
 
   changeStyle(lstyle) {
-    this.widget["lstyle"] = lstyle;
+    this.widget['lstyle'] = lstyle;
     this.widget.cols = styleList[this.widget.type][lstyle].cols;
     this.widget.rows = styleList[this.widget.type][lstyle].rows;
   }
 
   changeColor(color) {
-    this.widget["clr"] = color;
+    this.widget['clr'] = color;
     if (this.widget.type == 'num' && this.widget.lstyle != 0)
-      this.LayouterService.refreshWidget(this.widget)
+      this.LayouterService.refreshWidget(this.widget);
   }
 
   choseBtnMode(mode) {
-    this.widget["mode"] = mode;
+    this.widget['mode'] = mode;
   }
 
   choseBgMode(bgmode) {
-    this.widget["bg"] = bgmode;
+    this.widget['bg'] = bgmode;
   }
 
   chosePlayMode(mode) {
-    this.widget["mode"] = mode;
+    this.widget['mode'] = mode;
   }
 
-  changeChartStyle(id, style) {
-
-  }
+  changeChartStyle(id, style) {}
 
   async changeIcon() {
     let modal = await this.modalCtrl.create({
       component: IconListPage,
       componentProps: {
-        'item': this.widget
-      }
+        item: this.widget,
+      },
     });
     modal.present();
   }
@@ -157,9 +158,9 @@ export class WidgetEditor {
     let modal = await this.modalCtrl.create({
       component: IconListPage,
       componentProps: {
-        'item': this.widget,
-        'iconId': iconId
-      }
+        item: this.widget,
+        iconId: iconId,
+      },
     });
     modal.present();
   }
@@ -168,25 +169,34 @@ export class WidgetEditor {
   listenKeyboardShow;
   listenKeyboardHide;
   listenKeyboard() {
-    this.listenKeyboardShow = this.renderer.listen('window', 'native.keyboardshow', e => {
-      this.showKeyboard = true;
-    });
-    this.listenKeyboardHide = this.renderer.listen('window', 'native.keyboardhide', e => {
-      this.showKeyboard = false;
-    });
+    this.listenKeyboardShow = this.renderer.listen(
+      'window',
+      'native.keyboardshow',
+      (e) => {
+        this.showKeyboard = true;
+      }
+    );
+    this.listenKeyboardHide = this.renderer.listen(
+      'window',
+      'native.keyboardhide',
+      (e) => {
+        this.showKeyboard = false;
+      }
+    );
   }
 
   unlistenKeyboard() {
-    if (typeof (this.listenKeyboardShow) === 'function') this.listenKeyboardShow();
-    if (typeof (this.listenKeyboardHide) === 'function') this.listenKeyboardHide();
+    if (typeof this.listenKeyboardShow === 'function')
+      this.listenKeyboardShow();
+    if (typeof this.listenKeyboardHide === 'function')
+      this.listenKeyboardHide();
   }
 
   choseStream(stream) {
-    this.widget["str"] = stream;
+    this.widget['str'] = stream;
   }
 
   turnRealtime() {
-    this.widget['rt'] = !this.widget['rt']
+    this.widget['rt'] = !this.widget['rt'];
   }
-
 }

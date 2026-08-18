@@ -3,35 +3,34 @@ import { widgetList } from '../widgets/config';
 import { ActivatedRoute } from '@angular/router';
 import { DataService } from 'src/app/core/services/data.service';
 import { LayouterService } from '../../layouter.service';
+import { NgClass } from '@angular/common';
 
 @Component({
-  standalone: false,
   selector: 'widget-listbar',
   templateUrl: './widget-listbar.component.html',
-  styleUrls: ['./widget-listbar.component.scss']
+  styleUrls: ['./widget-listbar.component.scss'],
+  imports: [NgClass],
 })
 export class WidgetListbarComponent implements OnInit {
-
   id;
   device;
 
   get widgetList() {
-    return widgetList
+    return widgetList;
   }
 
   constructor(
     private activatedRoute: ActivatedRoute,
     private dataService: DataService,
     private LayouterService: LayouterService
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.id = this.activatedRoute.snapshot.params['id'];
-    this.device = this.dataService.device.dict[this.id]
+    this.device = this.dataService.device.dict[this.id];
   }
 
   addWidget(type) {
-    this.LayouterService.addWidget(type)
+    this.LayouterService.addWidget(type);
   }
-
 }

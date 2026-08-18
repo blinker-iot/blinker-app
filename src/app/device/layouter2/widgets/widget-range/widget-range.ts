@@ -1,15 +1,16 @@
 import { Component, ElementRef, Input, ViewChild } from '@angular/core';
 import { Layouter2Widget } from '../config';
 import { LayouterService } from '../../../layouter.service';
+import { NgClass, NgStyle } from '@angular/common';
+import { BRangeComponent } from '../../../../core/components/b-range/b-range';
 
 @Component({
-  standalone: false,
   selector: 'widget-range',
   templateUrl: 'widget-range.html',
-  styleUrls: ['widget-range.scss']
+  styleUrls: ['widget-range.scss'],
+  imports: [NgClass, BRangeComponent, NgStyle],
 })
 export class WidgetRangeComponent implements Layouter2Widget {
-
   @Input() device;
   @Input() widget;
 
@@ -18,7 +19,7 @@ export class WidgetRangeComponent implements Layouter2Widget {
   }
 
   get t0() {
-    return this.getValue('t0')
+    return this.getValue('t0');
   }
 
   @ViewChild('rangbox', { read: ElementRef, static: true }) rangbox: ElementRef;
@@ -31,68 +32,63 @@ export class WidgetRangeComponent implements Layouter2Widget {
   }
 
   get value() {
-    return this.getValue('val')
+    return this.getValue('val');
   }
 
   get max() {
-    return this.getValue('max')
+    return this.getValue('max');
   }
 
   get min() {
-    return this.getValue('min')
+    return this.getValue('min');
   }
 
   get ico() {
-    return this.getValue('ico')
+    return this.getValue('ico');
   }
 
   get color() {
-    return this.getValue('clr')
+    return this.getValue('clr');
   }
 
   get state() {
-    return this.getValue('swi')
+    return this.getValue('swi');
   }
 
   get mode() {
-    return this.getValue('mode')
+    return this.getValue('mode');
   }
 
   get custom() {
-    return this.getValue('cus')
+    return this.getValue('cus');
   }
 
-  textBoxWidth = '300px'
+  textBoxWidth = '300px';
 
   getValue(valueKey) {
     if (typeof this.device.data[this.key] != 'undefined')
       if (typeof this.device.data[this.key][valueKey] != 'undefined')
-        return this.device.data[this.key][valueKey]
+        return this.device.data[this.key][valueKey];
     if (typeof this.widget[valueKey] != 'undefined')
-      return this.widget[valueKey]
-    return
+      return this.widget[valueKey];
+    return;
   }
 
-  _lstyle
+  _lstyle;
   @Input()
   set lstyle(lstyle) {
-    this._lstyle = lstyle
+    this._lstyle = lstyle;
   }
   get lstyle() {
-    if (typeof this._lstyle != 'undefined')
-      return this._lstyle
-    if (typeof this.widget.lstyle != 'undefined')
-      return this.widget.lstyle
+    if (typeof this._lstyle != 'undefined') return this._lstyle;
+    if (typeof this.widget.lstyle != 'undefined') return this.widget.lstyle;
     return 0;
   }
 
-  constructor(
-    private LayouterService: LayouterService
-  ) {
-  }
+  constructor(private LayouterService: LayouterService) {}
 
   ngAfterViewInit(): void {
-    this.refresh()
+    this.refresh();
   }
 
   canSend = true;
@@ -102,20 +98,19 @@ export class WidgetRangeComponent implements Layouter2Widget {
 
   refresh() {
     setTimeout(() => {
-      this.textBoxWidth = `${this.rangbox.nativeElement.clientWidth}px`
-    }, 100)
+      this.textBoxWidth = `${this.rangbox.nativeElement.clientWidth}px`;
+    }, 100);
   }
 
   jia() {
-    if (typeof this.value == 'undefined') this.value = 0
-    if (this.value < this.max) this.value++
-    this.sendData(this.value)
+    if (typeof this.value == 'undefined') this.value = 0;
+    if (this.value < this.max) this.value++;
+    this.sendData(this.value);
   }
 
   jian() {
-    if (typeof this.value == 'undefined') this.value = 0
-    if (this.value > this.min) this.value--
-    this.sendData(this.value)
+    if (typeof this.value == 'undefined') this.value = 0;
+    if (this.value > this.min) this.value--;
+    this.sendData(this.value);
   }
-
 }

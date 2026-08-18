@@ -1,16 +1,17 @@
 import { Component, Input, ChangeDetectorRef } from '@angular/core';
 import { Layouter2Widget } from '../config';
 import { LayouterService } from '../../../layouter.service';
+import { BColorpickerDiscComponent } from '../../../../core/components/b-colorpicker-disc/b-colorpicker-disc.component';
+import { NgClass } from '@angular/common';
+import { BRangeComponent } from '../../../../core/components/b-range/b-range';
 
 @Component({
-  standalone: false,
   selector: 'widget-color',
   templateUrl: 'widget-color.html',
-  styleUrls: ['widget-color.scss']
+  styleUrls: ['widget-color.scss'],
+  imports: [BColorpickerDiscComponent, NgClass, BRangeComponent],
 })
-
 export class WidgetColorComponent implements Layouter2Widget {
-
   @Input() device;
   @Input() widget;
 
@@ -20,42 +21,39 @@ export class WidgetColorComponent implements Layouter2Widget {
 
   get color() {
     if (typeof this.device.data[this.key] != 'undefined')
-      return this.device.data[this.key]
-    return this.rgb
+      return this.device.data[this.key];
+    return this.rgb;
   }
 
   get t0() {
-    return this.getValue('t0')
+    return this.getValue('t0');
   }
 
   get brightness() {
     if (typeof this.device.data[this.key] != 'undefined')
       if (typeof this.device.data[this.key][3] != 'undefined')
-        return this.device.data[this.key][3]
+        return this.device.data[this.key][3];
     return this.value;
   }
 
-  _lstyle
+  _lstyle;
   @Input()
   set lstyle(lstyle) {
-    this._lstyle = lstyle
+    this._lstyle = lstyle;
   }
   get lstyle() {
-    if (typeof this._lstyle != 'undefined')
-      return this._lstyle
-    if (typeof this.widget.lstyle != 'undefined')
-      return this.widget.lstyle
+    if (typeof this._lstyle != 'undefined') return this._lstyle;
+    if (typeof this.widget.lstyle != 'undefined') return this.widget.lstyle;
     return 0;
   }
-
 
   getValue(valueKey) {
     if (typeof this.device.data[this.key] != 'undefined')
       if (typeof this.device.data[this.key][valueKey] != 'undefined')
-        return this.device.data[this.key][valueKey]
+        return this.device.data[this.key][valueKey];
     if (typeof this.widget[valueKey] != 'undefined')
-      return this.widget[valueKey]
-    return ''
+      return this.widget[valueKey];
+    return '';
   }
 
   rgb = [255, 255, 255];
@@ -66,7 +64,7 @@ export class WidgetColorComponent implements Layouter2Widget {
   constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private LayouterService: LayouterService
-  ) { }
+  ) {}
 
   timer;
   oldColor;
@@ -76,23 +74,23 @@ export class WidgetColorComponent implements Layouter2Widget {
         this.oldColor = this.color;
         this.rgb = this.color;
       }
-    }, 1100)
+    }, 1100);
   }
 
   ngOnDestroy() {
-    clearInterval(this.timer)
+    clearInterval(this.timer);
   }
 
   get rgbStr() {
-    return `rgb(${this.rgb[0]},${this.rgb[1]},${this.rgb[2]})`
+    return `rgb(${this.rgb[0]},${this.rgb[1]},${this.rgb[2]})`;
   }
 
   get barcolor() {
-    return `linear-gradient(to right, #333, ${this.rgbStr})`
+    return `linear-gradient(to right, #333, ${this.rgbStr})`;
   }
 
   colorChange(e) {
-    this.value = this.brightness
+    this.value = this.brightness;
     this.rgb = e;
     // this.sendData();
   }
@@ -104,7 +102,6 @@ export class WidgetColorComponent implements Layouter2Widget {
 
   sendData() {
     let data = `{"${this.key}":[${this.rgb[0]},${this.rgb[1]},${this.rgb[2]},${this.value}]}\n`;
-    this.LayouterService.send(data)
+    this.LayouterService.send(data);
   }
-
 }

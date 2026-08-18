@@ -1,12 +1,20 @@
-import { Component, Input, ViewChild, ElementRef, ChangeDetectorRef, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  Input,
+  ViewChild,
+  ElementRef,
+  ChangeDetectorRef,
+  SimpleChanges,
+} from '@angular/core';
 import { Layouter2Widget } from '../config';
+import { NgStyle } from '@angular/common';
 // import {Gauge} from 'svg-gauge-latest';
 
 @Component({
-  standalone: false,
   selector: 'widget-number',
   templateUrl: 'widget-number.html',
-  styleUrls: ['widget-number.scss']
+  styleUrls: ['widget-number.scss'],
+  imports: [NgStyle],
 })
 export class WidgetNumberComponent implements Layouter2Widget {
   @Input() widget;
@@ -20,11 +28,11 @@ export class WidgetNumberComponent implements Layouter2Widget {
   }
 
   get t0() {
-    return this.getValue(['tex', 't0'])
+    return this.getValue(['tex', 't0']);
   }
 
   get ico() {
-    return this.getValue(['ico', 'icon'])
+    return this.getValue(['ico', 'icon']);
   }
 
   @Input()
@@ -32,33 +40,29 @@ export class WidgetNumberComponent implements Layouter2Widget {
     this.setValue('clr', color);
   }
   get color() {
-    return this.getValue(['clr', 'col', 'color'])
+    return this.getValue(['clr', 'col', 'color']);
   }
 
   get value() {
-    let val = this.getValue(['val', 'value'])
-    if (typeof val == 'undefined')
-      return 0
+    let val = this.getValue(['val', 'value']);
+    if (typeof val == 'undefined') return 0;
     try {
-      if ((val.toString()).indexOf(".") > -1)
-        return Math.floor(val * 100) / 100
-    } catch (error) {
-
-    }
-    return val
+      if (val.toString().indexOf('.') > -1) return Math.floor(val * 100) / 100;
+    } catch (error) {}
+    return val;
   }
 
   get unit() {
-    return this.getValue(['uni', 'unit'])
+    return this.getValue(['uni', 'unit']);
   }
 
   get max() {
-    return this.getValue(['max'])
+    return this.getValue(['max']);
   }
 
   setValue(valueKey, value) {
     if (typeof this.device.data[this.key] == 'undefined')
-      this.device.data[this.key] = {}
+      this.device.data[this.key] = {};
     this.device.data[this.key][valueKey] = value;
   }
 
@@ -66,32 +70,30 @@ export class WidgetNumberComponent implements Layouter2Widget {
     for (let valueKey of valueKeys) {
       if (typeof this.device.data[this.key] != 'undefined')
         if (typeof this.device.data[this.key][valueKey] != 'undefined')
-          return this.device.data[this.key][valueKey]
+          return this.device.data[this.key][valueKey];
       if (typeof this.widget[valueKey] != 'undefined')
-        return this.widget[valueKey]
-    };
-    return
+        return this.widget[valueKey];
+    }
+    return;
   }
 
-  _lstyle
+  _lstyle;
   @Input()
   set lstyle(lstyle) {
-    this._lstyle = lstyle
+    this._lstyle = lstyle;
   }
   get lstyle() {
-    if (typeof this._lstyle != 'undefined')
-      return this._lstyle
-    if (typeof this.widget.lstyle != 'undefined')
-      return this.widget.lstyle
+    if (typeof this._lstyle != 'undefined') return this._lstyle;
+    if (typeof this.widget.lstyle != 'undefined') return this.widget.lstyle;
     return 0;
   }
 
   get valueWithUnit() {
-    return `${this.value} ${this.unit}`
+    return `${this.value} ${this.unit}`;
   }
 
   get valuePer() {
-    return (this.value / this.max).toFixed(2)
+    return (this.value / this.max).toFixed(2);
   }
 
   get is2Long() {
@@ -99,31 +101,27 @@ export class WidgetNumberComponent implements Layouter2Widget {
     return false;
   }
 
-  @ViewChild('Gauge', { read: ElementRef, static: false }) progressBar: ElementRef;
+  @ViewChild('Gauge', { read: ElementRef, static: false })
+  progressBar: ElementRef;
 
   scale = 1;
   fontScale = `scale(${this.scale})`;
 
-  constructor(
-    private cd: ChangeDetectorRef
-  ) { }
+  constructor(private cd: ChangeDetectorRef) {}
 
   timer;
-  scaleInterval
+  scaleInterval;
   ngAfterViewInit() {
     this.initChart();
     if (this.isDemo) return;
     this.cd.detectChanges();
     this.scaleInterval = setInterval(() => {
-      let textLength = this.value.toString().length + this.unit.length
-      if (textLength > 9)
-        this.scale = 0.6
-      else if (textLength > 6)
-        this.scale = 0.8
-      else
-        this.scale = 1
+      let textLength = this.value.toString().length + this.unit.length;
+      if (textLength > 9) this.scale = 0.6;
+      else if (textLength > 6) this.scale = 0.8;
+      else this.scale = 1;
       this.fontScale = `scale(${this.scale})`;
-    }, 1111)
+    }, 1111);
   }
 
   ngOnDestroy() {
@@ -135,7 +133,7 @@ export class WidgetNumberComponent implements Layouter2Widget {
     if (typeof this.bar != 'undefined') {
       console.log('change color');
       // this.bar.destroy()
-      this.refresh()
+      this.refresh();
     }
   }
 
@@ -164,7 +162,6 @@ export class WidgetNumberComponent implements Layouter2Widget {
       this.initCircle();
       this.oldLstyle = 5;
     }
-
   }
 
   // 上半圆
@@ -203,7 +200,6 @@ export class WidgetNumberComponent implements Layouter2Widget {
     // }, 1100);
   }
 
-
   initSemiCircle3() {
     // this.bar = Gauge(this.progressBar.nativeElement, {
     //   min: 0,
@@ -234,8 +230,6 @@ export class WidgetNumberComponent implements Layouter2Widget {
     // }, 1100);
   }
 
-
-
   update() {
     this.bar.setValueAnimated(this.value, 1);
   }
@@ -247,8 +241,9 @@ export class WidgetNumberComponent implements Layouter2Widget {
   refresh() {
     if (typeof this.progressBar != 'undefined')
       if (this.progressBar.nativeElement.querySelector('svg') != null)
-        this.progressBar.nativeElement.removeChild(this.progressBar.nativeElement.querySelector('svg'))
+        this.progressBar.nativeElement.removeChild(
+          this.progressBar.nativeElement.querySelector('svg')
+        );
     this.initChart();
   }
-
 }

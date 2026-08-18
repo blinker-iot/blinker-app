@@ -19,6 +19,7 @@ import { BehaviorSubject } from 'rxjs';
 import { color2Rgba } from '../../functions/func';
 
 @Component({
+  standalone: true,
   selector: 'line-chart-area',
   templateUrl: './line-chart-area.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,

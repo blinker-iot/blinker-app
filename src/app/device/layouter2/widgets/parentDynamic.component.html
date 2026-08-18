@@ -61,6 +61,13 @@
 ></widget-video>
 } @if (widget.type=='img') {
 <widget-image [widget]="widget" [device]="device"></widget-image>
+} @if (editMode && !isDemo) {
+<div
+  class="editMode layouter2-drag-handle"
+  (appLayouter2EditTap)="edit()"
+>
+  <div class="key" [class.centerkey]="widget.bg==3">{{ widget.key }}</div>
+</div>
 } @if (isDemo) {
 <div class="editMode"></div>
 }

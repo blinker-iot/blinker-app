@@ -1,15 +1,15 @@
 import { Component, Input } from '@angular/core';
 import { Layouter2Widget } from '../config';
 import { LayouterService } from '../../../layouter.service';
+import { NgStyle } from '@angular/common';
 
 @Component({
-  standalone: false,
   selector: 'widget-tab',
   templateUrl: './widget-tab.component.html',
   styleUrls: ['./widget-tab.component.scss'],
+  imports: [NgStyle],
 })
 export class WidgetTabComponent implements Layouter2Widget {
-
   @Input() device;
   @Input() widget;
 
@@ -20,92 +20,90 @@ export class WidgetTabComponent implements Layouter2Widget {
   @Input() lstyle;
 
   get t0() {
-    return this.getValue(['tex', 't0'])
+    return this.getValue(['tex', 't0']);
   }
 
   get ico() {
-    return this.getValue(['ico', 'icon'])
+    return this.getValue(['ico', 'icon']);
   }
 
   get value() {
-    return this.getValue(['val'])
+    return this.getValue(['val']);
   }
 
   get val() {
-    if (typeof this.value == 'undefined') return false
-    return this.getValue(['val'])[0] == '1' ? true : false
+    if (typeof this.value == 'undefined') return false;
+    return this.getValue(['val'])[0] == '1' ? true : false;
   }
 
   get t1() {
-    return this.getValue(['tex1', 't1'])
+    return this.getValue(['tex1', 't1']);
   }
 
   get ico1() {
-    return this.getValue(['ico1', 'icon1'])
+    return this.getValue(['ico1', 'icon1']);
   }
 
   get val1() {
-    if (typeof this.value == 'undefined') return false
-    return this.getValue(['val'])[1] == '1' ? true : false
+    if (typeof this.value == 'undefined') return false;
+    return this.getValue(['val'])[1] == '1' ? true : false;
   }
 
   get t2() {
-    return this.getValue(['tex2', 't2'])
+    return this.getValue(['tex2', 't2']);
   }
 
   get ico2() {
-    return this.getValue(['ico2', 'icon2'])
+    return this.getValue(['ico2', 'icon2']);
   }
 
   get val2() {
-    if (typeof this.value == 'undefined') return false
-    return this.getValue(['val'])[2] == '1' ? true : false
+    if (typeof this.value == 'undefined') return false;
+    return this.getValue(['val'])[2] == '1' ? true : false;
   }
 
   get t3() {
-    return this.getValue(['tex3', 't3'])
+    return this.getValue(['tex3', 't3']);
   }
 
   get ico3() {
-    return this.getValue(['ico3', 'icon3'])
+    return this.getValue(['ico3', 'icon3']);
   }
 
   get val3() {
-    if (typeof this.value == 'undefined') return false
-    return this.getValue(['val'])[3] == '1' ? true : false
+    if (typeof this.value == 'undefined') return false;
+    return this.getValue(['val'])[3] == '1' ? true : false;
   }
 
   get t4() {
-    return this.getValue(['tex4', 't4'])
+    return this.getValue(['tex4', 't4']);
   }
 
   get ico4() {
-    return this.getValue(['ico4', 'icon4'])
+    return this.getValue(['ico4', 'icon4']);
   }
 
   get val4() {
-    if (typeof this.value == 'undefined') return false
-    return this.getValue(['val'])[4] == '1'
+    if (typeof this.value == 'undefined') return false;
+    return this.getValue(['val'])[4] == '1';
   }
 
   get color() {
-    return this.getValue(['clr', 'col'])
+    return this.getValue(['clr', 'col']);
   }
 
   getValue(valueKeys: string[]): any {
     for (let valueKey of valueKeys) {
       if (typeof this.device.data[this.key] != 'undefined')
         if (typeof this.device.data[this.key][valueKey] != 'undefined')
-          return this.device.data[this.key][valueKey]
+          return this.device.data[this.key][valueKey];
       if (typeof this.widget[valueKey] != 'undefined')
-        return this.widget[valueKey]
-    };
-    return
+        return this.widget[valueKey];
+    }
+    return;
   }
 
-  constructor(
-    private LayouterService: LayouterService
-  ) { }
+  constructor(private LayouterService: LayouterService) {}
 
   ngOnInit() {
     // this.device.data[this.key]={}
@@ -114,10 +112,8 @@ export class WidgetTabComponent implements Layouter2Widget {
 
   selectTab(tabId) {
     let selectList;
-    if (typeof this.value == 'undefined')
-      selectList = '00000'
-    else
-      selectList = this.value;
+    if (typeof this.value == 'undefined') selectList = '00000';
+    else selectList = this.value;
 
     let newSelectList = '';
     for (var i = 0; i < selectList.length; i++) {
@@ -128,7 +124,6 @@ export class WidgetTabComponent implements Layouter2Widget {
       }
     }
     let data = `{"${this.key}":"${newSelectList}"}`;
-    this.LayouterService.send(data + '\n')
+    this.LayouterService.send(data + '\n');
   }
-
 }
