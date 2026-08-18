@@ -13,7 +13,8 @@ import { WidgetTextComponent } from './widget-text/widget-text';
 import { IonicModule } from '@ionic/angular';
 import { PipesModule } from 'src/app/core/pipes/pipes.module';
 import { ParentDynamicComponent } from './parentDynamic.component';
-import { ComponentsModule } from 'src/app/core/components/components.module';
+import { BColorpickerDiscComponent } from 'src/app/core/components/b-colorpicker-disc/b-colorpicker-disc.component';
+import { BRangeComponent } from 'src/app/core/components/b-range/b-range';
 import { FormsModule } from '@angular/forms';
 import { WidgetMapComponent } from './widget-map/widget-map.component';
 import { WidgetTabComponent } from './widget-tab/widget-tab.component';
@@ -43,7 +44,8 @@ import { ChartsModule } from 'src/app/core/charts/charts.module';
     CommonModule,
     IonicModule,
     PipesModule,
-    ComponentsModule,
+    BColorpickerDiscComponent,
+    BRangeComponent,
     FormsModule,
     ChartsModule
   ],
