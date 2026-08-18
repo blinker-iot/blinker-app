@@ -12,6 +12,7 @@ export interface TimingTask {
 }
 
 export interface CountdownTask {
+  task?: number;
   run: number | string;
   ttim: number;
   rtim: number;
@@ -20,6 +21,7 @@ export interface CountdownTask {
 }
 
 export interface LoopTask {
+  task?: number;
   run: number | string;
   /** Current firmware uses `tis`; older app data used `tim`. */
   tis?: number;
@@ -40,6 +42,11 @@ export const TIMER_TYPE_LABELS: Readonly<Record<TimerTaskType, string>> = {
 
 export function isTimerObject<T>(value: unknown): value is T {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+export function normalizeTaskCollection<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+  return isTimerObject<T>(value) ? [value] : [];
 }
 
 export function normalizeRepeatDays(value: unknown): string {

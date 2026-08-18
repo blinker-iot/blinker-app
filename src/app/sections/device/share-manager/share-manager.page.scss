@@ -29,50 +29,8 @@ app-hero-card {
   margin: 2px 2px 20px;
 }
 
-.tab-btn-box {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 5px;
+app-tab-selector {
   margin-bottom: 21px;
-  padding: 4px;
-  border: 1px solid var(--blinker-border);
-  border-radius: 14px;
-  background: var(--blinker-surface-muted);
-
-  > button {
-    min-height: 42px;
-    padding: 0 8px;
-    border: 0;
-    border-radius: 10px;
-    color: var(--blinker-text-secondary);
-    background: transparent;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font: inherit;
-    font-size: 12px;
-    font-weight: 550;
-
-    &.selected {
-      color: var(--blinker-text-primary);
-      background: var(--blinker-surface);
-      box-shadow: var(--blinker-shadow-soft);
-    }
-  }
-}
-
-.pending-badge {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  color: #fff;
-  background: var(--ion-color-primary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
 }
 
 .section-label {

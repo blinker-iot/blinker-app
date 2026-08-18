@@ -20,30 +20,12 @@
       [meta]="sharedByMeCount"
     />
 
-    <div class="tab-btn-box" role="tablist" aria-label="设备共享分类">
-      <button
-        type="button"
-        role="tab"
-        [attr.aria-selected]="tab === 'sharing'"
-        [class.selected]="tab === 'sharing'"
-        (click)="changeTab('sharing')"
-      >
-        <i class="fa-light fa-share-nodes" aria-hidden="true"></i>
-        我的共享
-      </button>
-      <button
-        type="button"
-        role="tab"
-        [attr.aria-selected]="tab === 'received'"
-        [class.selected]="tab === 'received'"
-        (click)="changeTab('received')"
-      >
-        <i class="fa-light fa-inbox-in" aria-hidden="true"></i>
-        接收的设备 @if (shareData.shared0.length) {
-        <span class="pending-badge"> {{ shareData.shared0.length }} </span>
-        }
-      </button>
-    </div>
+    <app-tab-selector
+      ariaLabel="设备共享分类"
+      [options]="shareTabs"
+      [value]="tab"
+      (valueChange)="changeTab($event)"
+    />
 
     @if (loaded) { @if (tab === 'sharing') {
     <div class="section-label">可共享设备</div>

@@ -4,6 +4,7 @@ import {
   formatTimerDuration,
   loopRunPayload,
   loopTimes,
+  normalizeTaskCollection,
   normalizeRepeatDays,
   parseTimerAction,
 } from './device-timer.models';
@@ -24,6 +25,13 @@ describe('device timer models', () => {
   it('reads current and legacy loop-count fields', () => {
     expect(loopTimes({ run: 1, tis: 6, dur1: 1, act1: [], dur2: 1, act2: [] })).toBe(6);
     expect(loopTimes({ run: 1, tim: 9, dur1: 1, act1: [], dur2: 1, act2: [] })).toBe(9);
+  });
+
+  it('normalizes legacy singleton tasks into collections', () => {
+    const task = { task: 0, run: 1, ttim: 30, rtim: 0, act: [] };
+    expect(normalizeTaskCollection([task])).toEqual([task]);
+    expect(normalizeTaskCollection(task)).toEqual([task]);
+    expect(normalizeTaskCollection(false)).toEqual([]);
   });
 
   it('round-trips device action objects', () => {

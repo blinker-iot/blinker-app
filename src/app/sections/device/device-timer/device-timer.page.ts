@@ -7,16 +7,15 @@ import { minuteToTime } from 'src/app/core/functions/func';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { Days2TextPipe } from 'src/app/core/pipes/days2text';
 import { DataService } from 'src/app/core/services/data.service';
-import { NoticeService } from 'src/app/core/services/notice.service';
 import {
   actionJson,
   CountdownTask,
   formatTimerDuration,
   isTaskRunning,
-  isTimerObject,
   LoopTask,
   loopTimes,
   normalizeRepeatDays,
+  normalizeTaskCollection,
   TIMER_TYPE_LABELS,
   TimingTask,
   TimerTaskType,
@@ -54,24 +53,49 @@ const TEST_TIMING_TASKS: TimingTask[] = [
   },
 ];
 
-const TEST_COUNTDOWN_TASK: CountdownTask = {
-  run: 1,
-  ttim: 45,
-  rtim: 12,
-  act: [{ switch: 'off' }],
-  label: '45 分钟后关闭设备',
-};
+const TEST_COUNTDOWN_TASKS: CountdownTask[] = [
+  {
+    task: 0,
+    run: 1,
+    ttim: 45,
+    rtim: 12,
+    act: [{ switch: 'off' }],
+    label: '45 分钟后关闭设备',
+  },
+  {
+    task: 1,
+    run: 0,
+    ttim: 120,
+    rtim: 0,
+    act: [{ switch: 'on' }],
+    label: '2 小时后开启设备',
+  },
+];
 
-const TEST_LOOP_TASK: LoopTask = {
-  run: 1,
-  tis: 6,
-  tri: 2,
-  dur1: 10,
-  act1: [{ switch: 'on' }],
-  dur2: 5,
-  act2: [{ switch: 'off' }],
-  label: '间歇运行演示',
-};
+const TEST_LOOP_TASKS: LoopTask[] = [
+  {
+    task: 0,
+    run: 1,
+    tis: 6,
+    tri: 2,
+    dur1: 10,
+    act1: [{ switch: 'on' }],
+    dur2: 5,
+    act2: [{ switch: 'off' }],
+    label: '间歇运行演示',
+  },
+  {
+    task: 1,
+    run: 0,
+    tis: 0,
+    tri: 0,
+    dur1: 30,
+    act1: [{ switch: 'on' }],
+    dur2: 15,
+    act2: [{ switch: 'off' }],
+    label: '无限循环演示',
+  },
+];
 
 @Component({
   selector: 'app-device-timer',
@@ -85,7 +109,6 @@ export class DeviceTimerPage implements OnInit, OnDestroy {
   device?: BlinkerDevice;
   loaded = false;
   syncing = false;
-  usingTestData = false;
 
   private readonly daysPipe = new Days2TextPipe();
   private subscription?: Subscription;
@@ -106,14 +129,12 @@ export class DeviceTimerPage implements OnInit, OnDestroy {
       : [];
   }
 
-  get countdownTask(): CountdownTask | undefined {
-    const value: unknown = this.device?.data?.countdown;
-    return isTimerObject<CountdownTask>(value) ? value : undefined;
+  get countdownTasks(): CountdownTask[] {
+    return normalizeTaskCollection<CountdownTask>(this.device?.data?.countdown);
   }
 
-  get loopTask(): LoopTask | undefined {
-    const value: unknown = this.device?.data?.loop;
-    return isTimerObject<LoopTask>(value) ? value : undefined;
+  get loopTasks(): LoopTask[] {
+    return normalizeTaskCollection<LoopTask>(this.device?.data?.loop);
   }
 
   get timerItems(): TimerListItem[] {
@@ -129,52 +150,44 @@ export class DeviceTimerPage implements OnInit, OnDestroy {
       source: task,
     }));
 
-    if (this.loopTask) {
-      const times = loopTimes(this.loopTask);
+    this.loopTasks.forEach((task, index) => {
+      task.task ??= index;
+      const times = loopTimes(task);
       timingItems.push({
-        routeId: 'loop',
+        routeId: `loop-${index}`,
         type: 'loop',
         typeLabel: TIMER_TYPE_LABELS.loop,
         icon: 'fa-arrows-repeat',
         title: times ? `${times} 次循环` : '无限循环',
-        schedule: `${formatTimerDuration(this.loopTask.dur1)} · ${formatTimerDuration(this.loopTask.dur2)}`,
-        action: this.loopTask.label || `${this.taskActionLabel(this.loopTask.act1)} → ${this.taskActionLabel(this.loopTask.act2)}`,
-        enabled: isTaskRunning(this.loopTask.run),
-        source: this.loopTask,
+        schedule: `${formatTimerDuration(task.dur1)} · ${formatTimerDuration(task.dur2)}`,
+        action: task.label || `${this.taskActionLabel(task.act1)} → ${this.taskActionLabel(task.act2)}`,
+        enabled: isTaskRunning(task.run),
+        source: task,
       });
-    }
+    });
 
-    if (this.countdownTask) {
+    this.countdownTasks.forEach((task, index) => {
+      task.task ??= index;
       timingItems.push({
-        routeId: 'countdown',
+        routeId: `countdown-${index}`,
         type: 'countdown',
         typeLabel: TIMER_TYPE_LABELS.countdown,
         icon: 'fa-hourglass-clock',
-        title: formatTimerDuration(this.countdownTask.ttim),
-        schedule: this.countdownSchedule(this.countdownTask),
-        action: this.taskActionLabel(this.countdownTask.act, this.countdownTask.label),
-        enabled: isTaskRunning(this.countdownTask.run),
-        source: this.countdownTask,
+        title: formatTimerDuration(task.ttim),
+        schedule: this.countdownSchedule(task),
+        action: this.taskActionLabel(task.act, task.label),
+        enabled: isTaskRunning(task.run),
+        source: task,
       });
-    }
+    });
 
     return timingItems;
-  }
-
-  get activeTaskCount(): number {
-    return this.timerItems.filter((task) => task.enabled).length;
-  }
-
-  get typeSummary(): string {
-    const singletonCount = Number(Boolean(this.loopTask)) + Number(Boolean(this.countdownTask));
-    return `${this.timingTasks.length} 定时 · ${singletonCount} 专项`;
   }
 
   constructor(
     private readonly dataService: DataService,
     private readonly activatedRoute: ActivatedRoute,
     private readonly timerService: TimerService,
-    private readonly noticeService: NoticeService,
     private readonly router: Router,
   ) {}
 
@@ -203,10 +216,6 @@ export class DeviceTimerPage implements OnInit, OnDestroy {
 
   addTask(): void {
     if (!this.device) return;
-    if (this.timingTasks.length >= 20 && this.loopTask && this.countdownTask) {
-      void this.noticeService.showToast('当前设备的三类任务均已达到数量上限');
-      return;
-    }
     void this.router.navigate([`/device-manager/${this.id}/timer/new`]);
   }
 
@@ -299,8 +308,7 @@ export class DeviceTimerPage implements OnInit, OnDestroy {
     if (!this.device) return;
 
     this.device.data ||= {};
-    this.usingTestData = Boolean(this.device.config?.isPreview);
-    if (this.usingTestData) this.ensurePreviewTasks();
+    if (this.device.config?.isPreview) this.ensurePreviewTasks();
 
     if (this.initializedDeviceId !== this.id) {
       this.initializedDeviceId = this.id;
@@ -313,11 +321,11 @@ export class DeviceTimerPage implements OnInit, OnDestroy {
     if (!Array.isArray(this.device.data.timing)) {
       this.device.data.timing = structuredClone(TEST_TIMING_TASKS);
     }
-    if (!isTimerObject<CountdownTask>(this.device.data.countdown)) {
-      this.device.data.countdown = structuredClone(TEST_COUNTDOWN_TASK);
+    if (!normalizeTaskCollection<CountdownTask>(this.device.data.countdown).length) {
+      this.device.data.countdown = structuredClone(TEST_COUNTDOWN_TASKS);
     }
-    if (!isTimerObject<LoopTask>(this.device.data.loop)) {
-      this.device.data.loop = structuredClone(TEST_LOOP_TASK);
+    if (!normalizeTaskCollection<LoopTask>(this.device.data.loop).length) {
+      this.device.data.loop = structuredClone(TEST_LOOP_TASKS);
     }
   }
 }

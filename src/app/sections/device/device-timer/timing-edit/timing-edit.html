@@ -13,7 +13,7 @@
     <app-hero-card
       [iconClass]="editorIcon"
       eyebrow="TASK EDITOR"
-      [heading]="mode === 'new' ? '创建自动任务' : pageTitle"
+      [heading]="heroTitle"
       [description]="editorDescription"
     />
 
@@ -26,41 +26,12 @@
 
     @if (mode === 'new') {
     <div class="section-label">选择任务类型</div>
-    <section class="task-type-grid" aria-label="任务类型">
-      <button
-        type="button"
-        class="timing"
-        [class.selected]="selectedType === 'timing'"
-        [disabled]="!canSelectType('timing')"
-        (click)="selectTaskType('timing')"
-      >
-        <span><i class="fa-light fa-calendar-clock"></i></span>
-        <strong>定时任务</strong>
-        <small>{{ typeAvailability('timing') }}</small>
-      </button>
-      <button
-        type="button"
-        class="loop"
-        [class.selected]="selectedType === 'loop'"
-        [disabled]="!canSelectType('loop')"
-        (click)="selectTaskType('loop')"
-      >
-        <span><i class="fa-light fa-arrows-repeat"></i></span>
-        <strong>循环任务</strong>
-        <small>{{ typeAvailability('loop') }}</small>
-      </button>
-      <button
-        type="button"
-        class="countdown"
-        [class.selected]="selectedType === 'countdown'"
-        [disabled]="!canSelectType('countdown')"
-        (click)="selectTaskType('countdown')"
-      >
-        <span><i class="fa-light fa-hourglass-clock"></i></span>
-        <strong>倒计时任务</strong>
-        <small>{{ typeAvailability('countdown') }}</small>
-      </button>
-    </section>
+    <app-tab-selector
+      ariaLabel="任务类型"
+      [options]="taskTypeTabs"
+      [value]="selectedType"
+      (valueChange)="selectTaskTypeValue($event)"
+    />
     }
 
     @if (selectedType === 'timing') {

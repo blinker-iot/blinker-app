@@ -10,127 +10,18 @@ ion-content {
   --section-main-padding-bottom: 34px;
 }
 
+app-hero-card {
+  margin-bottom: 14px;
+}
+
 .add-task-button {
   width: 100%;
-  margin-top: 16px;
+  margin: 0;
 }
 
-.summary-card {
-  min-height: 68px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 11px;
-
-  > div {
-    min-width: 0;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  small {
-    color: var(--blinker-text-tertiary);
-    font-size: 10px;
-  }
-
-  strong {
-    color: var(--blinker-text-primary);
-    font-size: 13px;
-    font-weight: 600;
-  }
-}
-
-.summary-icon {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
-  border-radius: 12px;
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.11);
-  display: grid;
-  place-items: center;
-  font-size: 17px;
-}
-
-.online-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--blinker-text-tertiary);
-
-  &.active {
-    background: var(--ion-color-success);
-    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
-  }
-}
-
-.type-overview {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.type-card {
-  min-width: 0;
-  padding: 12px 9px;
-  border: 1px solid var(--blinker-border);
-  border-radius: 14px;
-  background: var(--blinker-surface);
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-
-  > span {
-    width: 31px;
-    height: 31px;
-    border-radius: 10px;
-    display: grid;
-    place-items: center;
-    font-size: 13px;
-  }
-
-  > div {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-
-  strong,
-  small {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  strong {
-    color: var(--blinker-text-primary);
-    font-size: 11px;
-    font-weight: 650;
-  }
-
-  small {
-    color: var(--blinker-text-tertiary);
-    font-size: 8px;
-  }
-
-  &.timing > span {
-    color: #f59e0b;
-    background: rgba(245, 158, 11, 0.11);
-  }
-
-  &.loop > span {
-    color: #6366f1;
-    background: rgba(99, 102, 241, 0.11);
-  }
-
-  &.countdown > span {
-    color: #06b6d4;
-    background: rgba(6, 182, 212, 0.11);
-  }
+.task-list,
+.empty-state {
+  margin-top: 12px;
 }
 
 .task-row {
@@ -309,10 +200,4 @@ ion-content {
   font: inherit;
   font-size: 11px;
   font-weight: 650;
-}
-
-@media (max-width: 360px) {
-  .type-card {
-    padding-inline: 7px;
-  }
 }

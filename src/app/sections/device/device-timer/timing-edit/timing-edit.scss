@@ -6,81 +6,6 @@
   --feature-accent: #f59e0b;
 }
 
-.task-type-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-
-  button {
-    appearance: none;
-    min-width: 0;
-    min-height: 112px;
-    padding: 12px 8px;
-    border: 1px solid var(--blinker-border);
-    border-radius: 14px;
-    color: var(--blinker-text-primary);
-    background: var(--blinker-surface);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    text-align: center;
-
-    > span {
-      width: 35px;
-      height: 35px;
-      border-radius: 11px;
-      display: grid;
-      place-items: center;
-      font-size: 15px;
-    }
-
-    strong,
-    small {
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    strong {
-      font-size: 11px;
-      font-weight: 650;
-    }
-
-    small {
-      color: var(--blinker-text-tertiary);
-      font-size: 8px;
-    }
-
-    &.selected {
-      border-color: rgba(245, 158, 11, 0.5);
-      background: rgba(245, 158, 11, 0.065);
-      box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.08);
-    }
-
-    &:disabled {
-      opacity: 0.43;
-    }
-  }
-
-  .timing > span {
-    color: #f59e0b;
-    background: rgba(245, 158, 11, 0.11);
-  }
-
-  .loop > span {
-    color: #6366f1;
-    background: rgba(99, 102, 241, 0.11);
-  }
-
-  .countdown > span {
-    color: #0891b2;
-    background: rgba(6, 182, 212, 0.11);
-  }
-}
-
 .setting-row,
 .action-list button {
   appearance: none;
@@ -481,11 +406,5 @@
     color: var(--blinker-text-tertiary);
     font-size: 11px;
     line-height: 1.55;
-  }
-}
-
-@media (max-width: 360px) {
-  .task-type-grid button {
-    padding-inline: 6px;
   }
 }

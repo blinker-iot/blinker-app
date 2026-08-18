@@ -6,6 +6,10 @@ import { Subscription } from 'rxjs';
 
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
+import {
+  TabSelectorComponent,
+  TabSelectorOption,
+} from 'src/app/core/components/tab-selector/tab-selector.component';
 import { ShareDate } from 'src/app/core/model/data.model';
 import { DataService } from 'src/app/core/services/data.service';
 import { UserService } from 'src/app/core/services/user.service';
@@ -22,6 +26,7 @@ import { ShareService } from '../device-share/share.service';
     TranslatePipe,
     BDeviceImgComponent,
     HeroCardComponent,
+    TabSelectorComponent,
   ],
 })
 export class ShareManagerPage implements OnInit, OnDestroy {
@@ -58,6 +63,22 @@ export class ShareManagerPage implements OnInit, OnDestroy {
     ]).size;
   }
 
+  get shareTabs(): readonly TabSelectorOption[] {
+    return [
+      {
+        value: 'sharing',
+        label: '我的共享',
+        icon: 'fa-light fa-share-nodes',
+      },
+      {
+        value: 'received',
+        label: '接收的设备',
+        icon: 'fa-light fa-inbox-in',
+        badge: this.shareData.shared0.length || null,
+      },
+    ];
+  }
+
   constructor(
     private readonly shareService: ShareService,
     private readonly dataService: DataService,
@@ -79,8 +100,8 @@ export class ShareManagerPage implements OnInit, OnDestroy {
     this.userDataSubscription?.unsubscribe();
   }
 
-  changeTab(tab: 'sharing' | 'received'): void {
-    this.tab = tab;
+  changeTab(tab: string): void {
+    if (tab === 'sharing' || tab === 'received') this.tab = tab;
   }
 
   isReceivedDevice(deviceId: string): boolean {

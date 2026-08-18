@@ -25,43 +25,11 @@
       [meta]="timerItems.length"
     />
 
-    <section class="summary-card surface-card">
-      <span class="summary-icon"><i class="fa-light fa-clock"></i></span>
-      <div>
-        <small>{{ typeSummary }}</small>
-        <strong>{{ activeTaskCount }} 个运行中 · {{ timerItems.length - activeTaskCount }} 个已暂停</strong>
-      </div>
-      <span class="online-dot" [class.active]="device?.data?.enable"></span>
-    </section>
-
-    <section class="type-overview" aria-label="支持的任务类型">
-      <article class="type-card timing">
-        <span><i class="fa-light fa-calendar-clock"></i></span>
-        <div><strong>定时任务</strong><small>指定时间与重复日</small></div>
-      </article>
-      <article class="type-card loop">
-        <span><i class="fa-light fa-arrows-repeat"></i></span>
-        <div><strong>循环任务</strong><small>两个阶段交替执行</small></div>
-      </article>
-      <article class="type-card countdown">
-        <span><i class="fa-light fa-hourglass-clock"></i></span>
-        <div><strong>倒计时任务</strong><small>延时后执行一次</small></div>
-      </article>
-    </section>
-
-    @if (usingTestData) {
-    <p class="test-data-note">
-      <i class="fa-light fa-flask" aria-hidden="true"></i>
-      已载入三类测试任务，可直接测试启停、新建、编辑和删除流程。
-    </p>
-    }
-
     <button type="button" class="add-task-button primary-action" (click)="addTask()">
       <i class="fa-light fa-calendar-plus"></i>
       新建任务
     </button>
 
-    <div class="section-label">全部任务</div>
     @if (timerItems.length) {
     <section class="task-list surface-card">
       @for (item of timerItems; track item.routeId) {

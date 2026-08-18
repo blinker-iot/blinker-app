@@ -4,6 +4,10 @@ import { ActivatedRoute } from '@angular/router';
 import { IonicModule, ModalController, NavController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
+import {
+  TabSelectorComponent,
+  TabSelectorOption,
+} from 'src/app/core/components/tab-selector/tab-selector.component';
 import { minuteToTime, timeToMinute } from 'src/app/core/functions/func';
 import { RepeatSelectorModalComponent } from 'src/app/core/modals/repeat-selector-modal/repeat-selector-modal.component';
 import { TimeSelectorModalComponent } from 'src/app/core/modals/time-selector-modal/time-selector-modal.component';
@@ -16,10 +20,10 @@ import {
   CountdownTask,
   formatTimerDuration,
   isTaskRunning,
-  isTimerObject,
   LoopTask,
   loopTimes,
   normalizeRepeatDays,
+  normalizeTaskCollection,
   parseTimerAction,
   TIMER_TYPE_LABELS,
   TimingTask,
@@ -40,7 +44,13 @@ type ActionTarget = 'primary' | 'secondary';
   selector: 'app-timing-edit',
   templateUrl: 'timing-edit.html',
   styleUrls: ['timing-edit.scss'],
-  imports: [IonicModule, FormsModule, Days2TextPipe, HeroCardComponent],
+  imports: [
+    IonicModule,
+    FormsModule,
+    Days2TextPipe,
+    HeroCardComponent,
+    TabSelectorComponent,
+  ],
   providers: [TimerService],
 })
 export class TimingEditPage implements OnInit, OnDestroy {
@@ -83,6 +93,10 @@ export class TimingEditPage implements OnInit, OnDestroy {
 
   get pageTitle(): string {
     return `${this.mode === 'new' ? '新建' : '编辑'}${TIMER_TYPE_LABELS[this.selectedType]}`;
+  }
+
+  get heroTitle(): string {
+    return `${this.mode === 'new' ? '创建' : '编辑'}${TIMER_TYPE_LABELS[this.selectedType]}`;
   }
 
   get editorDescription(): string {
@@ -170,6 +184,29 @@ export class TimingEditPage implements OnInit, OnDestroy {
     return !this.timingData.act.length;
   }
 
+  get taskTypeTabs(): readonly TabSelectorOption[] {
+    return [
+      {
+        value: 'timing',
+        label: TIMER_TYPE_LABELS.timing,
+        icon: 'fa-light fa-calendar-clock',
+        disabled: !this.canSelectType('timing'),
+      },
+      {
+        value: 'loop',
+        label: TIMER_TYPE_LABELS.loop,
+        icon: 'fa-light fa-arrows-repeat',
+        disabled: !this.canSelectType('loop'),
+      },
+      {
+        value: 'countdown',
+        label: TIMER_TYPE_LABELS.countdown,
+        icon: 'fa-light fa-hourglass-clock',
+        disabled: !this.canSelectType('countdown'),
+      },
+    ];
+  }
+
   private get primaryActions(): TimerAction[] {
     if (this.selectedType === 'loop') return this.loopData.act1;
     if (this.selectedType === 'countdown') return this.countdownData.act;
@@ -201,24 +238,20 @@ export class TimingEditPage implements OnInit, OnDestroy {
   canSelectType(type: TimerTaskType): boolean {
     if (this.mode === 'edit') return this.selectedType === type;
     if (type === 'timing') return this.ensureTimingTasks().length < 20;
-    if (type === 'loop') return !this.currentLoopTask;
-    return !this.currentCountdownTask;
-  }
-
-  typeAvailability(type: TimerTaskType): string {
-    if (this.mode === 'edit' && this.selectedType === type) return '当前类型';
-    if (type === 'timing') {
-      return this.canSelectType(type)
-        ? `${this.ensureTimingTasks().length}/20 条`
-        : '已达 20 条上限';
-    }
-    return this.canSelectType(type) ? '可创建 1 条' : '已有任务，请从列表编辑';
+    if (type === 'loop') return this.ensureLoopTasks().length < 20;
+    return this.ensureCountdownTasks().length < 20;
   }
 
   selectTaskType(type: TimerTaskType): void {
     if (!this.canSelectType(type)) return;
     this.selectedType = type;
     this.activeActionTarget = 'primary';
+  }
+
+  selectTaskTypeValue(type: string): void {
+    if (type === 'timing' || type === 'loop' || type === 'countdown') {
+      this.selectTaskType(type);
+    }
   }
 
   selectActionTarget(target: ActionTarget): void {
@@ -270,19 +303,21 @@ export class TimingEditPage implements OnInit, OnDestroy {
 
     this.saving = true;
     try {
-      if (this.selectedType === 'timing') {
-        const taskIndex = this.timingTaskIndex;
-        const tasks = this.ensureTimingTasks();
-        if (taskIndex < 0 || !tasks[taskIndex]) return;
-        this.timerService.deleteTask(this.device, 'timing', this.timingData.task);
-        tasks.splice(taskIndex, 1);
-        tasks.forEach((task, index) => {
-          task.task = index;
-        });
-      } else {
-        this.timerService.deleteTask(this.device, this.selectedType);
-        this.device.data[this.selectedType] = false;
-      }
+      const taskIndex = this.selectedType === 'timing'
+        ? this.timingTaskIndex
+        : this.taskIndexFor(this.selectedType);
+      const tasks = this.selectedType === 'timing'
+        ? this.ensureTimingTasks()
+        : this.selectedType === 'loop'
+          ? this.ensureLoopTasks()
+          : this.ensureCountdownTasks();
+      const task = tasks[taskIndex];
+      if (taskIndex < 0 || !task) return;
+      this.timerService.deleteTask(this.device, this.selectedType, task.task ?? taskIndex);
+      tasks.splice(taskIndex, 1);
+      tasks.forEach((item, index) => {
+        item.task = index;
+      });
 
       await this.noticeService.showToast(`${TIMER_TYPE_LABELS[this.selectedType]}已删除`);
       await this.navController.navigateBack(this.defaultBackHref);
@@ -315,20 +350,16 @@ export class TimingEditPage implements OnInit, OnDestroy {
     if (result.data) this.timingData.day = normalizeRepeatDays(result.data);
   }
 
-  private get currentCountdownTask(): CountdownTask | undefined {
-    const value: unknown = this.device?.data?.countdown;
-    return isTimerObject<CountdownTask>(value) ? value : undefined;
-  }
-
-  private get currentLoopTask(): LoopTask | undefined {
-    const value: unknown = this.device?.data?.loop;
-    return isTimerObject<LoopTask>(value) ? value : undefined;
-  }
-
   private get timingTaskIndex(): number {
     const match = this.taskId.match(/^timing-(\d+)$/);
     const value = match ? Number(match[1]) : Number(this.taskId);
     return Number.isInteger(value) ? value : -1;
+  }
+
+  private taskIndexFor(type: 'loop' | 'countdown'): number {
+    if (this.taskId === type) return 0;
+    const match = this.taskId.match(new RegExp(`^${type}-(\\d+)$`));
+    return match ? Number(match[1]) : -1;
   }
 
   private bindDevice(): void {
@@ -349,14 +380,16 @@ export class TimingEditPage implements OnInit, OnDestroy {
     }
 
     this.mode = 'edit';
-    if (this.taskId === 'loop') this.loadLoopTask();
-    else if (this.taskId === 'countdown') this.loadCountdownTask();
+    if (this.taskId === 'loop' || this.taskId.startsWith('loop-')) this.loadLoopTask();
+    else if (this.taskId === 'countdown' || this.taskId.startsWith('countdown-')) {
+      this.loadCountdownTask();
+    }
     else this.loadTimingTask();
   }
 
   private firstAvailableType(): TimerTaskType {
     if (this.ensureTimingTasks().length < 20) return 'timing';
-    if (!this.currentLoopTask) return 'loop';
+    if (this.ensureLoopTasks().length < 20) return 'loop';
     return 'countdown';
   }
 
@@ -377,7 +410,7 @@ export class TimingEditPage implements OnInit, OnDestroy {
 
   private loadCountdownTask(): void {
     this.selectedType = 'countdown';
-    const source = this.currentCountdownTask;
+    const source = this.ensureCountdownTasks()[this.taskIndexFor('countdown')];
     if (!source) {
       this.taskNotFound = true;
       return;
@@ -391,7 +424,7 @@ export class TimingEditPage implements OnInit, OnDestroy {
 
   private loadLoopTask(): void {
     this.selectedType = 'loop';
-    const source = this.currentLoopTask;
+    const source = this.ensureLoopTasks()[this.taskIndexFor('loop')];
     if (!source) {
       this.taskNotFound = true;
       return;
@@ -425,20 +458,27 @@ export class TimingEditPage implements OnInit, OnDestroy {
 
   private saveCountdownTask(): void {
     if (!this.device) return;
+    const tasks = this.ensureCountdownTasks();
+    const taskIndex = this.mode === 'edit' ? this.taskIndexFor('countdown') : tasks.length;
     const uploadTask: CountdownTask = {
+      task: this.mode === 'edit' ? this.countdownData.task ?? taskIndex : tasks.length,
       run: this.startImmediately ? 1 : 0,
       ttim: this.clampNumber(this.countdownDuration, 1, 4095),
       rtim: 0,
       act: this.countdownData.act.map((action) => parseTimerAction(action)),
     };
     this.timerService.saveCountdown(this.device, uploadTask);
-    this.device.data.countdown = uploadTask;
+    if (this.mode === 'edit') tasks[taskIndex] = uploadTask;
+    else tasks.push(uploadTask);
   }
 
   private saveLoopTask(): void {
     if (!this.device) return;
+    const tasks = this.ensureLoopTasks();
+    const taskIndex = this.mode === 'edit' ? this.taskIndexFor('loop') : tasks.length;
     const cycles = this.clampNumber(this.loopCycles, 0, 100);
     const uploadTask: LoopTask = {
+      task: this.mode === 'edit' ? this.loopData.task ?? taskIndex : tasks.length,
       run: this.startImmediately ? 1 : 0,
       tis: cycles,
       tim: cycles,
@@ -449,7 +489,8 @@ export class TimingEditPage implements OnInit, OnDestroy {
       act2: this.loopData.act2.map((action) => parseTimerAction(action)),
     };
     this.timerService.saveLoop(this.device, uploadTask);
-    this.device.data.loop = uploadTask;
+    if (this.mode === 'edit') tasks[taskIndex] = uploadTask;
+    else tasks.push(uploadTask);
   }
 
   private ensureTimingTasks(): TimingTask[] {
@@ -458,16 +499,44 @@ export class TimingEditPage implements OnInit, OnDestroy {
     return this.device.data.timing as TimingTask[];
   }
 
+  private ensureCountdownTasks(): CountdownTask[] {
+    if (!this.device) return [];
+    if (!Array.isArray(this.device.data.countdown)) {
+      this.device.data.countdown = normalizeTaskCollection<CountdownTask>(
+        this.device.data.countdown,
+      );
+    }
+    return this.device.data.countdown as CountdownTask[];
+  }
+
+  private ensureLoopTasks(): LoopTask[] {
+    if (!this.device) return [];
+    if (!Array.isArray(this.device.data.loop)) {
+      this.device.data.loop = normalizeTaskCollection<LoopTask>(this.device.data.loop);
+    }
+    return this.device.data.loop as LoopTask[];
+  }
+
   private createNewTimingTask(task: number): TimingTask {
     return { task, ena: 1, tim: 480, act: [], day: '0000000' };
   }
 
   private createNewCountdownTask(): CountdownTask {
-    return { run: 1, ttim: 30, rtim: 0, act: [] };
+    return { task: 0, run: 1, ttim: 30, rtim: 0, act: [] };
   }
 
   private createNewLoopTask(): LoopTask {
-    return { run: 1, tis: 0, tim: 0, tri: 0, dur1: 10, act1: [], dur2: 5, act2: [] };
+    return {
+      task: 0,
+      run: 1,
+      tis: 0,
+      tim: 0,
+      tri: 0,
+      dur1: 10,
+      act1: [],
+      dur2: 5,
+      act2: [],
+    };
   }
 
   private cloneActions(actions: TimerAction[] | undefined): TimerAction[] {

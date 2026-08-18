@@ -43,37 +43,36 @@ export class TimerService implements OnDestroy {
 
   saveCountdown(device: BlinkerDevice, task: CountdownTask): void {
     if (isTaskRunning(task.run)) {
-      this.sendSet(device, 'countdown', task);
+      this.sendSet(device, 'countdown', [task]);
       return;
     }
 
     // Firmware only accepts a null action when pausing. Configure the task
     // first, then pause it after DeviceService has flushed the first command.
-    this.sendSet(device, 'countdown', countdownRunPayload(task, true));
+    this.sendSet(device, 'countdown', [countdownRunPayload(task, true)]);
     setTimeout(() => this.setCountdownRunning(device, task, false), 160);
   }
 
   saveLoop(device: BlinkerDevice, task: LoopTask): void {
     if (isTaskRunning(task.run)) {
-      this.sendSet(device, 'loop', task);
+      this.sendSet(device, 'loop', [task]);
       return;
     }
 
-    this.sendSet(device, 'loop', loopRunPayload(task, true));
+    this.sendSet(device, 'loop', [loopRunPayload(task, true)]);
     setTimeout(() => this.setLoopRunning(device, task, false), 160);
   }
 
   setCountdownRunning(device: BlinkerDevice, task: CountdownTask, running: boolean): void {
-    this.sendSet(device, 'countdown', countdownRunPayload(task, running));
+    this.sendSet(device, 'countdown', [countdownRunPayload(task, running)]);
   }
 
   setLoopRunning(device: BlinkerDevice, task: LoopTask, running: boolean): void {
-    this.sendSet(device, 'loop', loopRunPayload(task, running));
+    this.sendSet(device, 'loop', [loopRunPayload(task, running)]);
   }
 
   deleteTask(device: BlinkerDevice, type: TimerTaskType, taskId?: number): void {
-    const value = type === 'timing' ? [{ dlt: taskId }] : 'dlt';
-    this.sendSet(device, type, value);
+    this.sendSet(device, type, [{ dlt: taskId }]);
   }
 
   ngOnDestroy(): void {
