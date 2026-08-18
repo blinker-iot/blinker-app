@@ -24,7 +24,6 @@ interface CommunityProduct {
   nameKey: string;
   descriptionKey: string;
   launchKey: string;
-  image: string;
 }
 
 @Component({
@@ -72,7 +71,6 @@ export class TabCommunityComponent {
       nameKey: 'COMMUNITY.OMNI_STATION_NAME',
       descriptionKey: 'COMMUNITY.OMNI_STATION_DESCRIPTION',
       launchKey: 'COMMUNITY.OMNI_STATION_LAUNCH',
-      image: '/img/devices/icon/station.png',
     },
   ];
 

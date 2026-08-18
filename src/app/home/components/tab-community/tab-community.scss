@@ -274,16 +274,14 @@ ion-content {
   flex: 0 0 auto;
   overflow: hidden;
   border-radius: 11px;
-  background: var(--blinker-surface-muted);
+  background: linear-gradient(
+    135deg,
+    rgba(var(--ion-color-primary-rgb), 0.32),
+    rgba(var(--ion-color-primary-rgb), 0.1)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
-
-  img {
-    width: 72%;
-    height: 72%;
-    object-fit: contain;
-  }
 }
 
 .product-copy {

@@ -104,12 +104,7 @@
       <div class="product-list">
         @for (product of products; track product.nameKey) {
         <article class="product-card">
-          <div class="product-image">
-            <img
-              [src]="product.image"
-              [alt]="product.nameKey | translate"
-            />
-          </div>
+          <div class="product-image" aria-hidden="true"></div>
           <div class="product-copy">
             <h3>{{ product.nameKey | translate }}</h3>
             <p>{{ product.descriptionKey | translate }}</p>
