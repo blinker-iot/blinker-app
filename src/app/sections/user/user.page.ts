@@ -10,7 +10,7 @@ import { Subscription } from 'rxjs';
 import {
   AvatarCropResult,
   AvatarPickerComponent,
-} from 'src/app/core/pages/avatar/avatar-picker.component';
+} from './avatar/avatar-picker.component';
 import {
   MenuListComponent,
   MenuListItem,
