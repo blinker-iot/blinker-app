@@ -1,23 +1,35 @@
-<div
-  class="blinke-tip animate__animated animate__faster"
-  [ngClass]="{ animate__fadeInUp: !hide, animate__fadeOutDown: hide }"
+<article
+  class="blinker-notice blinker-tip"
+  [class.is-leaving]="hide"
+  [class.tip-error]="visualType === 'error'"
+  [class.tip-warn]="visualType === 'warn'"
+  [class.tip-success]="visualType === 'success'"
+  [class.tip-info]="visualType === 'info'"
+  [attr.role]="visualType === 'error' ? 'alert' : 'status'"
+  [attr.aria-live]="visualType === 'error' ? 'assertive' : 'polite'"
 >
-  <div text-box>
-    @if (tip.type=='error') {
-    <i class="fal fa-exclamation-circle error"></i>
-    } @if (tip.type=='warn') {
-    <i class="fal fa-exclamation-circle warn"></i>
-    } @if (tip.type=='done') {
-    <i class="fal fa-check-circle done"></i>
-    }
-    <div mess>{{ tip.message }}</div>
+  <div class="notice-leading tip-icon" aria-hidden="true">
+    <i [class]="iconClass"></i>
+  </div>
+
+  <div class="notice-copy">
+    <p class="notice-message">{{ tip.message }}</p>
+  </div>
+
+  <div class="notice-actions">
     @if (tip.url) {
-    <div>
-      <i class="fal fa-question-circle"></i>
-    </div>
+    <a
+      class="notice-action"
+      [href]="tip.url"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="查看详情"
+    >
+      <i class="fal fa-question-circle" aria-hidden="true"></i>
+    </a>
     }
+    <button class="notice-close" type="button" aria-label="关闭提示" (click)="close()">
+      <i class="fal fa-times" aria-hidden="true"></i>
+    </button>
   </div>
-  <div close-btn (click)="close()">
-    <i class="fal fa-times"></i>
-  </div>
-</div>
+</article>

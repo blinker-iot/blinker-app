@@ -29,6 +29,7 @@
 @use "./tool-pages.scss";
 @use "./app/sections/transparent-page-header";
 @use "./app/home/components/tab-scroll-mask";
+@use "./app/core/components/notice-card";
 
 // Capacitor 8 injects --safe-area-inset-* on Android when SystemBars uses
 // CSS inset handling. Keep Ionic's variables tied to those values, with the

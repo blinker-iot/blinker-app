@@ -4,16 +4,14 @@
       [swipeGesture]="swipeEnable"
       [animation]="routerAnimation"
     ></ion-router-outlet>
+    <div class="notice-stack">
+      @for (tip of tipList; track tip) {
+      <b-tip [tip]="tip"></b-tip>
+      }
+      @for (toast of toastList; track toast) {
+      <b-toast [toast]="toast"></b-toast>
+      }
+    </div>
   </ion-app>
-  <div tip-box>
-    @for (tip of tipList; track tip) {
-    <b-tip [tip]="tip"></b-tip>
-    }
-  </div>
-  <div toast-box>
-    @for (toast of toastList; track toast) {
-    <b-toast [toast]="toast"></b-toast>
-    }
-  </div>
   <audio autoplay="autoplay" #audio></audio>
 </div>

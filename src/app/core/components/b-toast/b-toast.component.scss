@@ -1,49 +1,15 @@
-.blinke-toast {
-    position: fixed;
-    bottom: 15px;
-    left: 15px;
-    height: 60px;
-    width: calc(100% - 30px);
-    box-shadow: 0 0 5px #ccc;
-    background: #fff;
-    border-radius: 10px;
-    padding: 10px;
-    display: flex;
-    align-items: center;
+.blinker-toast {
+  --notice-accent: var(--ion-color-primary);
+}
 
-    b-device-img {
-        width: 40px;
-        height: 40px;
-        ::ng-deep {
-            img {
-                width: 40px;
-            }
-        }
-    }
+.device-image b-device-img {
+  display: block;
+  width: 38px;
+  height: 38px;
+}
 
-    [text-box] {
-        font-size: 12px;
-        margin-left: 10px;
-        margin-top: -2px;
-        width: calc(100% - 90px);
-        [name] {
-            color: #333;
-        }
-        [mess] {
-            margin-top: 3px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-    }
-
-    [close-btn] {
-        position: absolute;
-        right: 10px;
-        width: 40px;
-        height:40px;
-        display:flex;
-        align-items: center;
-        justify-content:center;
-    }
+::ng-deep .device-image b-device-img img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
 }
