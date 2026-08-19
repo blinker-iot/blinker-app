@@ -23,7 +23,7 @@ interface PreviewDeviceOptions {
   switchedOn?: boolean;
   metrics?: Record<string, number>;
   card?: DeviceCardConfig;
-  component?: 'TestDashboard' | 'Layouter2';
+  component?: string;
   layouter?: string;
   data?: Record<string, unknown>;
 }
@@ -126,7 +126,7 @@ export function createGuestDevicePreview(): GuestDevicePreview {
         voltage: 3.3,
         temperature: 31.2,
       },
-      component: 'Layouter2',
+      component: 'Layouter2Component',
       layouter: JSON.stringify(LAYOUTER2_PREVIEW_DATA),
       data: LAYOUTER2_PREVIEW_DEVICE_DATA,
     }),

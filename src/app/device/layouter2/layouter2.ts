@@ -40,7 +40,7 @@ import { WidgetListbarComponent } from './widget-listbar/widget-listbar.componen
 
 @Component({
   standalone: true,
-  selector: 'layouter2',
+  selector: 'app-layouter2',
   templateUrl: 'layouter2.html',
   styleUrls: ['layouter2.scss'],
   imports: [
@@ -52,7 +52,7 @@ import { WidgetListbarComponent } from './widget-listbar/widget-listbar.componen
     WidgetListbarComponent,
   ],
 })
-export class Layouter2 implements DeviceComponent {
+export class Layouter2Component implements DeviceComponent {
   static deviceType = 'Layouter2';
 
   id;

@@ -105,6 +105,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         description: '重新配置该设备网络和密钥',
         icon: 'fa-screwdriver-wrench',
       },
+      {
+        id: 'layouter',
+        title: '界面配置',
+        description: '配置该设备的界面',
+        icon: 'fa-grid-4',
+      },
     ];
   }
 
@@ -163,7 +169,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private shareService: ShareService,
     private deviceShortcutService: DeviceShortcutService,
     private noticeService: NoticeService
-  ) {}
+  ) { }
 
   subscription;
   ngOnInit() {
@@ -209,7 +215,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       buttons: [
         {
           text: '取消',
-          handler: () => {},
+          handler: () => { },
         },
         {
           text: '确认修改',
@@ -266,7 +272,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       buttons: [
         {
           text: '取消',
-          handler: () => {},
+          handler: () => { },
         },
         {
           text: '确认解除',
