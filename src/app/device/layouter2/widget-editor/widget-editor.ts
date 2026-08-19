@@ -23,7 +23,6 @@ import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { arrayRemove } from 'src/app/core/functions/func';
 import { DeviceService } from 'src/app/core/services/device.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
-import { BBottomBtnComponent } from 'src/app/core/components/b-bottom-btn/b-bottom-btn.component';
 import { BColorpickerBtnsComponent } from 'src/app/core/components/b-colorpicker-btns/b-colorpicker-btns.component';
 import { ParentDynamicComponent } from '../widgets/parentDynamic.component';
 
@@ -38,7 +37,6 @@ import { ParentDynamicComponent } from '../widgets/parentDynamic.component';
     FormsModule,
     IonicModule,
     ParentDynamicComponent,
-    BBottomBtnComponent,
     BColorpickerBtnsComponent,
   ],
 })

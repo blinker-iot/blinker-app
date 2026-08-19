@@ -26,6 +26,10 @@ interface PreviewDeviceOptions {
   component?: string;
   layouter?: string;
   data?: Record<string, unknown>;
+  position?: {
+    location: [number, number];
+    address: string;
+  };
 }
 
 function createPreviewDevice(options: PreviewDeviceOptions): BlinkerDevice {
@@ -45,6 +49,7 @@ function createPreviewDevice(options: PreviewDeviceOptions): BlinkerDevice {
       component: options.component || 'TestDashboard',
       layouter: options.layouter,
       headerStyle: 'light',
+      position: options.position,
     },
     data: {
       enable: options.online,
@@ -129,6 +134,10 @@ export function createGuestDevicePreview(): GuestDevicePreview {
       component: 'Layouter2Component',
       layouter: JSON.stringify(LAYOUTER2_PREVIEW_DATA),
       data: LAYOUTER2_PREVIEW_DEVICE_DATA,
+      position: {
+        location: [104.0668, 30.5728],
+        address: '四川省成都市',
+      },
     }),
     createPreviewDevice({
       id: 'preview-air-quality',

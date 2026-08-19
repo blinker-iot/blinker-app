@@ -42,8 +42,8 @@
       justify-content: center;
 
       .block {
-        width: 46px;
-        height: 46px;
+        width: 48px;
+        height: 48px;
         border: 1px solid var(--blinker-border);
         border-radius: 14px;
         color: var(--ion-color-primary);
@@ -72,7 +72,7 @@
       .name {
         overflow: hidden;
         width: 100%;
-        margin-top: 5px;
+        margin-top: 3px;
         color: var(--blinker-text-secondary);
         font-size: 10px;
         font-weight: 550;

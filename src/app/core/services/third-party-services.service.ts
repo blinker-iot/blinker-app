@@ -11,7 +11,6 @@ export interface GeolocationServiceKeys {
   tianditu: string;
   geoapify: string;
   locationIq: string;
-  googleMaps: string;
 }
 
 export type WeatherServiceProvider = keyof WeatherServiceKeys;
@@ -32,8 +31,7 @@ export interface ActiveThirdPartyService<TProvider extends string> {
   key: string;
 }
 
-export const WEATHER_SERVICE_KEYS_STORAGE_KEY =
-  'blinker:weather-service-keys';
+export const WEATHER_SERVICE_KEYS_STORAGE_KEY = 'blinker:weather-service-keys';
 export const GEOLOCATION_SERVICE_KEYS_STORAGE_KEY =
   'blinker:geolocation-service-keys';
 
@@ -43,12 +41,8 @@ export const WEATHER_SERVICE_PROVIDERS: readonly WeatherServiceProvider[] = [
   'weatherApi',
   'visualCrossing',
 ];
-export const GEOLOCATION_SERVICE_PROVIDERS: readonly GeolocationServiceProvider[] = [
-  'tianditu',
-  'geoapify',
-  'locationIq',
-  'googleMaps',
-];
+export const GEOLOCATION_SERVICE_PROVIDERS: readonly GeolocationServiceProvider[] =
+  ['tianditu', 'geoapify', 'locationIq'];
 
 export const DEFAULT_WEATHER_SERVICE_PROVIDER: WeatherServiceProvider =
   'seniverse';
@@ -62,12 +56,12 @@ export const EMPTY_WEATHER_SERVICE_KEYS: Readonly<WeatherServiceKeys> = {
   visualCrossing: '',
 };
 
-export const EMPTY_GEOLOCATION_SERVICE_KEYS: Readonly<GeolocationServiceKeys> = {
-  tianditu: '',
-  geoapify: '',
-  locationIq: '',
-  googleMaps: '',
-};
+export const EMPTY_GEOLOCATION_SERVICE_KEYS: Readonly<GeolocationServiceKeys> =
+  {
+    tianditu: '',
+    geoapify: '',
+    locationIq: '',
+  };
 
 @Injectable({
   providedIn: 'root',
@@ -94,16 +88,14 @@ export class ThirdPartyServicesService {
     };
   }
 
-  saveWeatherServiceConfig(
-    config: WeatherServiceConfig,
-  ): WeatherServiceConfig {
+  saveWeatherServiceConfig(config: WeatherServiceConfig): WeatherServiceConfig {
     const normalizedConfig: WeatherServiceConfig = {
       selectedProvider: config.selectedProvider,
       keys: this.normalizeWeatherServiceKeys(config.keys),
     };
     localStorage.setItem(
       WEATHER_SERVICE_KEYS_STORAGE_KEY,
-      JSON.stringify(normalizedConfig),
+      JSON.stringify(normalizedConfig)
     );
     return normalizedConfig;
   }
@@ -142,7 +134,7 @@ export class ThirdPartyServicesService {
   }
 
   saveGeolocationServiceConfig(
-    config: GeolocationServiceConfig,
+    config: GeolocationServiceConfig
   ): GeolocationServiceConfig {
     const normalizedConfig: GeolocationServiceConfig = {
       selectedProvider: config.selectedProvider,
@@ -150,7 +142,7 @@ export class ThirdPartyServicesService {
     };
     localStorage.setItem(
       GEOLOCATION_SERVICE_KEYS_STORAGE_KEY,
-      JSON.stringify(normalizedConfig),
+      JSON.stringify(normalizedConfig)
     );
     return normalizedConfig;
   }
@@ -168,7 +160,7 @@ export class ThirdPartyServicesService {
   }
 
   private normalizeWeatherServiceKeys(
-    source: Partial<WeatherServiceKeys> | Record<string, unknown>,
+    source: Partial<WeatherServiceKeys> | Record<string, unknown>
   ): WeatherServiceKeys {
     return {
       seniverse: this.normalizeKey(source['seniverse']),
@@ -179,13 +171,12 @@ export class ThirdPartyServicesService {
   }
 
   private normalizeGeolocationServiceKeys(
-    source: Partial<GeolocationServiceKeys> | Record<string, unknown>,
+    source: Partial<GeolocationServiceKeys> | Record<string, unknown>
   ): GeolocationServiceKeys {
     return {
       tianditu: this.normalizeKey(source['tianditu']),
       geoapify: this.normalizeKey(source['geoapify']),
       locationIq: this.normalizeKey(source['locationIq']),
-      googleMaps: this.normalizeKey(source['googleMaps']),
     };
   }
 
@@ -212,13 +203,13 @@ export class ThirdPartyServicesService {
 
   private firstConfiguredProvider<
     TProvider extends string,
-    TKeys extends Record<TProvider, string>,
+    TKeys extends Record<TProvider, string>
   >(keys: TKeys, providers: readonly TProvider[]): TProvider | null {
     return providers.find((provider) => Boolean(keys[provider])) ?? null;
   }
 
   private hasConfiguredKey(
-    keys: WeatherServiceKeys | GeolocationServiceKeys,
+    keys: WeatherServiceKeys | GeolocationServiceKeys
   ): boolean {
     return Object.values(keys).some(Boolean);
   }
@@ -231,7 +222,7 @@ export class ThirdPartyServicesService {
   }
 
   private isGeolocationProvider(
-    value: unknown,
+    value: unknown
   ): value is GeolocationServiceProvider {
     return (
       typeof value === 'string' &&

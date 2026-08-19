@@ -12,31 +12,6 @@
     font-size: 17px;
     font-weight: 650;
   }
-
-  .editor-action {
-    width: 38px;
-    height: 38px;
-    margin: 0 4px;
-    --padding-start: 0;
-    --padding-end: 0;
-    --background: rgba(var(--ion-color-primary-rgb), 0.04);
-    --background-activated: var(--blinker-surface-active);
-    --border-color: var(--blinker-border);
-    --border-radius: 50%;
-    --border-style: solid;
-    --border-width: 1px;
-    --color: var(--blinker-text-primary);
-
-    i {
-      font-size: 17px;
-    }
-
-    &.primary {
-      --background: var(--ion-color-primary);
-      --border-color: var(--ion-color-primary);
-      --color: var(--ion-color-primary-contrast);
-    }
-  }
 }
 
 ion-content {
@@ -55,7 +30,7 @@ ion-content {
 .setting-box {
   position: relative;
   width: calc(100% - 32px);
-  margin: 16px;
+  margin: 0 16px 16px 16px;
   padding: 16px;
   border: 1px solid var(--blinker-border);
   border-radius: var(--blinker-radius-card);
@@ -350,9 +325,52 @@ ion-content {
   }
 }
 
-b-bottom-btn {
-  ::ng-deep .bottom-btn {
+.editor-bottom-actions {
+  position: fixed;
+  right: 16px;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  left: 16px;
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+
+  button {
+    height: 48px;
+    border-radius: 16px;
+    box-shadow: var(--blinker-shadow);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 140ms ease, transform 140ms ease;
+
+    &:active {
+      transform: scale(0.985);
+    }
+  }
+
+  .save-action {
+    min-width: 0;
+    border: 1px solid var(--ion-color-primary);
+    color: var(--ion-color-primary-contrast);
+    background: var(--ion-color-primary);
+    flex: 1;
+    gap: 8px;
+  }
+
+  .delete-action {
+    width: 48px;
+    padding: 0;
+    border: 1px solid rgba(var(--ion-color-danger-rgb), 0.28);
     color: var(--ion-color-danger);
+    background: color-mix(in srgb, var(--ion-color-danger) 8%, var(--blinker-surface));
+    flex: 0 0 48px;
+
+    i {
+      font-size: 18px;
+    }
   }
 }
 

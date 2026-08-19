@@ -1,16 +1,11 @@
 <ion-header class="editor-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button class="editor-action" (click)="close()">
+      <ion-button aria-label="关闭" (click)="close()">
         <i class="fa-light fa-xmark"></i>
       </ion-button>
     </ion-buttons>
     <ion-title>组件编辑</ion-title>
-    <ion-buttons slot="end">
-      <ion-button class="editor-action primary" (click)="save()">
-        <i class="fa-light fa-check"></i>
-      </ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 <ion-content>
@@ -408,4 +403,17 @@
     </div>
   </div>
 </ion-content>
-<b-bottom-btn (click)="delete()"> 删除组件 </b-bottom-btn>
+<div class="editor-bottom-actions">
+  <button type="button" class="save-action" (click)="save()">
+    <span>保存</span>
+  </button>
+  <button
+    type="button"
+    class="delete-action"
+    aria-label="删除组件"
+    title="删除组件"
+    (click)="delete()"
+  >
+    <i class="fa-light fa-trash-can"></i>
+  </button>
+</div>

@@ -95,6 +95,14 @@ export const LAYOUTER2_PREVIEW_DATA: Layouter2PreviewData = {
       cols: 8,
       rows: 2,
     },
+    {
+      type: 'map',
+      key: 'position',
+      x: 0,
+      y: 5,
+      cols: 8,
+      rows: 4,
+    },
   ],
   actions: [
     { cmd: { switch: 'on' }, text: '打开测试开关' },
