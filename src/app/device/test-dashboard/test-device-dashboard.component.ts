@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { BDeviceImgComponent } from '../../core/components/b-device-img/b-device-img.component';
+import { HeroCardComponent } from '../../core/components/hero-card/hero-card.component';
 import { BlinkerDevice } from '../../core/model/device.model';
 import { DeviceService } from '../../core/services/device.service';
 
@@ -34,7 +35,7 @@ const METRIC_METADATA: Record<string, { label: string; unit: string }> = {
 @Component({
   selector: 'app-test-device-dashboard',
   standalone: true,
-  imports: [CommonModule, BDeviceImgComponent],
+  imports: [CommonModule, BDeviceImgComponent, HeroCardComponent],
   templateUrl: './test-device-dashboard.component.html',
   styleUrls: ['./test-device-dashboard.component.scss'],
   changeDetection: ChangeDetectionStrategy.Eager,

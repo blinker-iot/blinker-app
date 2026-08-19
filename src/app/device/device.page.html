@@ -37,8 +37,8 @@
   </ion-toolbar>
 </ion-header>
 } @if (loaded && device) {
-<ion-content [fullscreen]="true" [ngClass]="{'offline': device.data.state=='offline'}" [scrollY]="false">
-  <div class="device-view">
+<ion-content [fullscreen]="true" [ngClass]="{'offline': device.data.state=='offline'}">
+  <div class="device-view content-under-header">
     <ng-template #deviceView></ng-template>
   </div>
 </ion-content>

@@ -5,7 +5,7 @@
       class="widgetitem"
       #widgetItem
       (click)="changeAction(i)"
-      [ngClass]="{'selected':isSelected(widget),'default':widget.bg==0,'translucent':widget.bg==1,'transparent':widget.bg==2,'round':widget.bg==3}"
+      [ngClass]="{'selected':isSelected(widget)}"
     >
       <widget-dynamic
         [widget]="widget"

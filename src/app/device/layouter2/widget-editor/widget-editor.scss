@@ -65,7 +65,6 @@ ion-content {
 
 .setting-box {
   margin-top: 0;
-  padding-bottom: 22px;
 }
 
 .scrollHeight {
@@ -115,30 +114,9 @@ ion-content {
     overflow: hidden;
     border: 1px solid var(--blinker-border);
     border-radius: var(--blinker-radius-card);
+    background: var(--blinker-surface);
+    box-shadow: var(--blinker-shadow-soft);
     transition: box-shadow 150ms ease, border-color 150ms ease;
-  }
-
-  .default {
-    background: var(--blinker-surface);
-    box-shadow: var(--blinker-shadow-soft);
-  }
-
-  .translucent {
-    background: color-mix(in srgb, var(--blinker-surface) 68%, transparent);
-    box-shadow: var(--blinker-shadow-soft);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-
-  .transparent {
-    border-color: transparent;
-    background: none;
-  }
-
-  .round {
-    border-radius: 50%;
-    background: var(--blinker-surface);
-    box-shadow: var(--blinker-shadow-soft);
   }
 }
 

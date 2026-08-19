@@ -27,20 +27,20 @@ export let widgetList = [
 ]
 
 export let configList = {
-  "tex": { type: "tex", t0: "文本1", t1: "文本2", size: 14,bg: 0, ico: "fal fa-font" },
-  "num": { type: "num", t0: "文本1", ico: "fal fa-question", clr: "#389BEE", min: 0, max: 100, uni: "单位", bg: 0 },
-  "btn": { type: "btn", ico: "fal fa-power-off", mode: 0, t0: "文本1", t1: "文本2", bg: 0 },
-  "col": { type: "col", t0: "颜色拾取", clr: "#389BEE", bg: 0 },
-  "ran": { type: "ran", t0: "滑动条", clr: "#389BEE", max: 100, min: 0, bg: 0 },
-  "cha": { type: "cha", bg: 0, sty: 'line', clr: '#389BEE', sty1: 'line', clr1: '#389BEE', sty2: 'line', clr2: '#389BEE' },
-  "map": { type: "map", bg: 0 },
-  "joy": { type: "joy", bg: 0 },
-  "deb": { type: "deb", mode: 0, bg: 0 },
-  "tim": { type: "tim", bg: 0 },
-  "vid": { type: "vid", bg: 0 },
-  "tab": { type: "tab", bg: 0 },
-  "inp": { type: "inp", bg: 0 },
-  "img": { type: "img", bg: 0, list: [{ url: '' }, { url: '' }, { url: '' }, { url: '' }, { url: '' }], img: 0 },
+  "tex": { type: "tex", t0: "文本1", t1: "文本2", size: 14, ico: "fal fa-font" },
+  "num": { type: "num", t0: "文本1", ico: "fal fa-question", clr: "#389BEE", min: 0, max: 100, uni: "单位" },
+  "btn": { type: "btn", ico: "fal fa-power-off", mode: 0, t0: "文本1", t1: "文本2" },
+  "col": { type: "col", t0: "颜色拾取", clr: "#389BEE" },
+  "ran": { type: "ran", t0: "滑动条", clr: "#389BEE", max: 100, min: 0 },
+  "cha": { type: "cha", sty: 'line', clr: '#389BEE', sty1: 'line', clr1: '#389BEE', sty2: 'line', clr2: '#389BEE' },
+  "map": { type: "map" },
+  "joy": { type: "joy" },
+  "deb": { type: "deb", mode: 0 },
+  "tim": { type: "tim" },
+  "vid": { type: "vid" },
+  "tab": { type: "tab" },
+  "inp": { type: "inp" },
+  "img": { type: "img", list: [{ url: '' }, { url: '' }, { url: '' }, { url: '' }, { url: '' }], img: 0 },
 }
 
 export let styleList = {

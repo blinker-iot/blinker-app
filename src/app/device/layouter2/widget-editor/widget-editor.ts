@@ -134,10 +134,6 @@ export class WidgetEditor {
     this.widget['mode'] = mode;
   }
 
-  choseBgMode(bgmode) {
-    this.widget['bg'] = bgmode;
-  }
-
   chosePlayMode(mode) {
     this.widget['mode'] = mode;
   }

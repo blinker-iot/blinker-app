@@ -1,0 +1,44 @@
+@mixin page-background {
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      rgba(
+        var(--section-main-accent-rgb, var(--ion-color-primary-rgb)),
+        var(--section-main-accent-opacity, 0.11)
+      ),
+      transparent 28%
+    ),
+    var(--section-main-background, var(--blinker-bg));
+}
+
+@mixin layout {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--section-main-max-width, 720px);
+  min-height: 100%;
+  margin: 0 auto;
+  padding:
+    0
+    max(var(--section-main-padding-inline, 16px), var(--ion-safe-area-right, 0px))
+    calc(
+      var(--section-main-padding-bottom, 34px) +
+      var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px))
+    )
+    max(var(--section-main-padding-inline, 16px), var(--ion-safe-area-left, 0px));
+  padding-top: 0 !important;
+  display: var(--section-main-display, block);
+  flex-direction: var(--section-main-direction, column);
+  @include page-background;
+}
+
+@mixin compact {
+  --section-main-padding-inline: 13px;
+}
+
+@mixin content-offset {
+  content: '';
+  display: block;
+  width: 100%;
+  height: var(--transparent-page-content-top);
+  pointer-events: none;
+}

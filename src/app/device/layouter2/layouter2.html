@@ -1,6 +1,6 @@
 <ng-template #headerActions>
   @if (canEditLayout) {
-  @if (mode != '1') {
+  @if (mode != 'edit') {
   <ion-button class="layouter-action" (click)="unlock()">
     <i class="fa-light fa-pen-to-square"></i>
   </ion-button>
@@ -14,24 +14,21 @@
   }
   }
 </ng-template>
-<div device-box #gridsterBox [class.is-editing]="mode=='1'">
+<div device-box #gridsterBox [class.is-editing]="mode == 'edit'">
   <gridster [options]="options">
     @for (widget of dashboard; track widget) {
-    <gridster-item
-      [item]="widget"
-      [ngClass]="{'default':widget['bg']==0,'translucent':widget['bg']==1,'transparent':widget['bg']==2,'round':widget['bg']==3}"
-    >
+    <gridster-item [item]="widget">
       <widget-dynamic
         [widget]="widget"
         [device]="device"
         [resizeEvent]="resizeEvent"
-        [editMode]="mode=='1'"
+        [editMode]="mode == 'edit'"
       ></widget-dynamic>
     </gridster-item>
     }
   </gridster>
 </div>
-@if (mode == '1') {
+@if (mode == 'edit') {
 <div class="animated slideInUp faster layouter-bar">
   <widget-listbar></widget-listbar>
 </div>
