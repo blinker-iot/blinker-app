@@ -78,6 +78,7 @@ export class ParentDynamicComponent {
       const { WidgetEditor } = await import('../widget-editor/widget-editor');
       const modal = await this.modalCtrl.create({
         component: WidgetEditor,
+        cssClass: 'widget-editor-modal',
         componentProps: {
           widget: this.widget,
           device: this.device,

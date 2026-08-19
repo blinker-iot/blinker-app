@@ -88,6 +88,13 @@ ion-header ion-toolbar {
   -webkit-backdrop-filter: var(--blinker-nav-blur);
 }
 
+// Ionic limits desktop modals to 500/600px by default. The widget editor is a
+// full-height editing surface on every viewport while retaining Ionic's
+// desktop modal width.
+ion-modal.widget-editor-modal {
+  --height: 100%;
+}
+
 // 首页四个主标签共用的顶部导航：左侧标题，右侧圆形操作按钮。
 ion-header.main-tab-header {
   position: absolute;

@@ -64,14 +64,8 @@ ion-content {
 }
 
 .setting-box {
-  height: min(52vh, 480px);
-  min-height: 280px;
   margin-top: 0;
   padding-bottom: 22px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--blinker-border) transparent;
 }
 
 .scrollHeight {
@@ -82,7 +76,10 @@ ion-content {
   margin: 0 -15px;
   overflow-x: auto;
   overflow-y: hidden;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
 
   &::-webkit-scrollbar {
     display: none;

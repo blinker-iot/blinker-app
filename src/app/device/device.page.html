@@ -6,10 +6,7 @@
     </ion-buttons>
     <ion-title (click)="enterDebug()">
       <div class="name">{{device.config.customName}}</div>
-      <div
-        class="state"
-        [ngClass]="{'showState': device.data.state!='waiting'}"
-      >
+      <div class="state" [ngClass]="{'showState': device.data.state!='waiting'}">
         @if (device.config.mode=='ble') { @if ((device.data.state=='connected')
         || (device.data.oldState=='connected' && device.data.state=='waiting'))
         { ({{'DEVICE.CONNECTED' | translate}}) } @if
@@ -26,55 +23,24 @@
       </div>
     </ion-title>
     <ion-buttons slot="end">
-      <!-- 连接 -->
-      @if (!editMode && device.data.state=='disconnected') {
-      <ion-button (click)="connectDevice()">
-        <i class="fal fa-link"></i>
-      </ion-button>
-      }
+      <ng-container
+        [ngTemplateOutlet]="deviceHeaderActions"
+      ></ng-container>
       <!-- 设置 -->
-      @if (!editMode) {
       <ion-button [routerLink]="['/device-manager',id]">
         <i class="fa-light fa-circle-ellipsis"></i>
         @if (device.data.hasNewVersion) {
         <div redpoint></div>
         }
       </ion-button>
-      }
-      <!-- 清空布局器 -->
-      @if (editMode && deviceComponent.indexOf('Layouter')>-1) {
-      <ion-button (click)="cleanWidgets()">
-        <i class="fa-light fa-trash-can"></i>
-      </ion-button>
-      }
-      <!-- 编辑/保存 -->
-      @if (!editMode && canEditLayout) {
-      <ion-button (click)="unlock()">
-        <i class="fa-light fa-pen-to-square"></i>
-      </ion-button>
-      } @if (editMode && deviceComponent.indexOf('Layouter')>-1) {
-      <ion-button (click)="lock()">
-        <i class="fa-light fa-lock"></i>
-      </ion-button>
-      }
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 } @if (loaded && device) {
-<ion-content
-  [fullscreen]="true"
-  [ngClass]="{'offline': device.data.state=='offline'}"
-  [scrollY]="false"
->
+<ion-content [fullscreen]="true" [ngClass]="{'offline': device.data.state=='offline'}" [scrollY]="false">
   <div class="device-view">
     <ng-template #deviceView></ng-template>
   </div>
-  @if (editMode && deviceComponent.indexOf('Layouter') > -1) {
-  <div slot="fixed" class="animated slideInUp faster layouter-bar">
-    <widget-listbar></widget-listbar>
-  </div>
-  }
-  <!-- <router-outlet></router-outlet> -->
 </ion-content>
 } @if (loaded && !device) {
 <ion-content>
