@@ -1,11 +1,13 @@
-import { ModalController, Platform } from '@ionic/angular';
+import { IonicModule, ModalController, Platform } from '@ionic/angular';
 import {
+  ChangeDetectorRef,
   Component,
   ViewChild,
   Renderer2,
   ElementRef,
   Input,
   EventEmitter,
+  TemplateRef,
 } from '@angular/core';
 import {
   DisplayGrid,
@@ -15,7 +17,8 @@ import {
   GridsterItemConfig,
   GridType,
 } from 'angular-gridster2';
-import { NgClass, NgStyle } from '@angular/common';
+import { NgClass } from '@angular/common';
+import { Observable, of } from 'rxjs';
 
 import { widgetList, configList, styleList } from './widgets/config';
 
@@ -33,6 +36,7 @@ import {
 import { ViewService } from 'src/app/core/services/view.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { ParentDynamicComponent } from './widgets/parentDynamic.component';
+import { WidgetListbarComponent } from './widget-listbar/widget-listbar.component';
 
 @Component({
   standalone: true,
@@ -41,10 +45,11 @@ import { ParentDynamicComponent } from './widgets/parentDynamic.component';
   styleUrls: ['layouter2.scss'],
   imports: [
     NgClass,
-    NgStyle,
+    IonicModule,
     Gridster,
     GridsterItem,
     ParentDynamicComponent,
+    WidgetListbarComponent,
   ],
 })
 export class Layouter2 implements DeviceComponent {
@@ -258,6 +263,8 @@ export class Layouter2 implements DeviceComponent {
   private currentMode = Mode.Default;
   private appliedMode?: Mode;
   private viewReady = false;
+  private dashboardRefreshPending = false;
+  private oldLayouterData = '';
 
   public hasDebug = false;
   public hasTiming = false;
@@ -267,8 +274,8 @@ export class Layouter2 implements DeviceComponent {
 
   @ViewChild('gridsterBox', { read: ElementRef, static: true })
   gridsterBox: ElementRef;
-  @ViewChild('backgroundimg', { read: ElementRef, static: true })
-  backgroundimg: ElementRef;
+  @ViewChild('headerActions', { static: true })
+  headerActions: TemplateRef<unknown>;
   @ViewChild(Gridster) gridster?: Gridster;
 
   // detectChangesTimer;
@@ -283,6 +290,10 @@ export class Layouter2 implements DeviceComponent {
     return this.device.config.isShared;
   }
 
+  get canEditLayout(): boolean {
+    return !!this.device && !this.device.config.isShared;
+  }
+
   realtimeDataTimer;
 
   constructor(
@@ -294,7 +305,8 @@ export class Layouter2 implements DeviceComponent {
     private LayouterService: LayouterService,
     private platform: Platform,
     private viewService: ViewService,
-    private noticeService: NoticeService
+    private noticeService: NoticeService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -332,8 +344,7 @@ export class Layouter2 implements DeviceComponent {
     this.viewReady = true;
     this.applyMode();
     this.actionSubject = this.LayouterService.action.subscribe(async (act) => {
-      if (act.name == 'cleanWidgets') this.cleanWidgets();
-      else if (act.name == 'addWidget') this.addWidget(act.data);
+      if (act.name == 'addWidget') this.addWidget(act.data);
       else if (act.name == 'delWidget') this.delWidget(act.data);
       else if (act.name == 'changeWidget') this.changedOptions();
       else if (act.name == 'showGuide') {
@@ -491,6 +502,46 @@ export class Layouter2 implements DeviceComponent {
     this.hasTiming = false;
   }
 
+  unlock(): void {
+    if (!this.canEditLayout) return;
+    this.oldLayouterData = JSON.stringify(this.device?.data?.layouterData);
+    this.changeLayoutMode(Mode.Edit);
+  }
+
+  lock(): void {
+    this.changeLayoutMode(Mode.Default);
+    this.saveLayouterData();
+  }
+
+  canDeactivate(): Observable<boolean> | boolean {
+    if (this.mode !== Mode.Edit || !this.isChanged) return true;
+    return of(window.confirm('界面布局未保存，是否放弃保存并退出？'));
+  }
+
+  private changeLayoutMode(mode: Mode): void {
+    this.mode = mode;
+  }
+
+  private saveLayouterData(): void {
+    if (!this.device?.data?.layouterData) return;
+
+    const data = JSON.stringify(this.device.data.layouterData);
+    if (this.oldLayouterData === data) return;
+    this.device.config.layouter = data;
+    this.oldLayouterData = data;
+
+    if (this.device.config.isPreview) {
+      this.device.subject.next({ key: 'layouter', value: data });
+      return;
+    }
+
+    this.deviceService
+      .saveDeviceConfig(this.device, { layouter: data })
+      .then((result) => {
+        if (result) this.deviceService.loadDeviceLayouter(this.device);
+      });
+  }
+
   //删除组件
   delWidget(item) {
     this.dashboard.splice(this.dashboard.indexOf(item), 1);
@@ -511,7 +562,6 @@ export class Layouter2 implements DeviceComponent {
     // }
     let component = Object.assign({}, configList[type], styleList[type][0]);
     component['key'] = component.type + '-' + randomString();
-    this.dashboard.push(component);
     if (type == 'deb') {
       this.hasDebug = true;
       component['key'] = 'debug';
@@ -522,6 +572,24 @@ export class Layouter2 implements DeviceComponent {
       this.hasTiming = true;
       component['key'] = 'timing';
     }
+    this.dashboard = [...this.dashboard, component];
+    this.scheduleDashboardRefresh();
+  }
+
+  private scheduleDashboardRefresh(): void {
+    if (this.dashboardRefreshPending) return;
+
+    this.dashboardRefreshPending = true;
+    queueMicrotask(() => {
+      this.dashboardRefreshPending = false;
+      if (!this.viewReady) return;
+
+      // Widget additions are emitted by the sibling toolbar through a
+      // service, so explicitly refresh this dynamically-created view before
+      // the browser paints. Recalculate once after Angular creates the item.
+      this.changeDetectorRef.detectChanges();
+      this.gridster?.api.calculateLayout();
+    });
   }
 
   //检测组件是否成功放置，如未放置，删除数据并提示用户

@@ -97,13 +97,10 @@
 
   .key {
     position: absolute;
-    top: 7px;
-    left: 7px;
-    max-width: calc(100% - 14px);
-    padding: 4px 8px;
+    padding: 2px 8px;
     overflow: hidden;
     border: 1px solid rgba(var(--ion-color-primary-rgb), 0.26);
-    border-radius: 999px;
+    border-radius: 0 0 100px;
     color: var(--ion-color-primary-contrast);
     background: color-mix(in srgb, var(--ion-color-primary) 88%, transparent);
     box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.22);

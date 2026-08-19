@@ -47,6 +47,7 @@ ion-header {
         font-size: 1.4rem;
       }
     }
+
   }
 }
 
@@ -72,16 +73,6 @@ ion-content {
     width: 100%;
     height: 100%;
   }
-}
-
-.layouter-bar {
-  right: 0;
-  bottom: calc(10px + var(--ion-safe-area-bottom, 0px));
-  left: 0;
-  z-index: 999;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 
 ion-content.offline {
