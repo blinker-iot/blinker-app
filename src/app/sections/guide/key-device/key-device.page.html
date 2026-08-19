@@ -9,7 +9,6 @@
 
 <ion-content fullscreen="true">
   <main>
-    @if (!secretKey) {
     <app-hero-card
       iconClass="fa-light fa-key"
       [eyebrow]="'DEVICE_GUIDE.KEY_EYEBROW' | translate"
@@ -17,6 +16,7 @@
       [description]="'DEVICE_GUIDE.KEY_HERO_DESCRIPTION' | translate"
     />
 
+    @if (showsCreateForm) {
     <form class="key-form" (ngSubmit)="createKeyDevice()" novalidate>
       <label class="form-label" for="key-device-name">
         {{ 'DEVICE_GUIDE.KEY_DEVICE_NAME' | translate }}
@@ -27,11 +27,11 @@
           id="key-device-name"
           name="deviceName"
           type="text"
-          maxlength="32"
+          maxlength="128"
           autocomplete="off"
           [placeholder]="'DEVICE_GUIDE.KEY_DEVICE_NAME_PLACEHOLDER' | translate"
           [(ngModel)]="deviceName"
-          [disabled]="isCreatingKey"
+          [disabled]="isBusy"
         />
       </div>
       <small class="field-help">{{ 'DEVICE_GUIDE.KEY_DEVICE_NAME_HELP' | translate }}</small>
@@ -43,10 +43,13 @@
       </div>
       }
 
-      <button class="primary-action" type="submit" [disabled]="isCreatingKey">
-        @if (isCreatingKey) {
+      <button class="primary-action" type="submit" [disabled]="isBusy">
+        @if (phase === 'creating') {
         <ion-spinner name="crescent"></ion-spinner>
         {{ 'DEVICE_GUIDE.KEY_CREATING' | translate }}
+        } @else if (phase === 'revealing') {
+        <ion-spinner name="crescent"></ion-spinner>
+        {{ 'DEVICE_GUIDE.KEY_REVEALING' | translate }}
         } @else {
         <i class="fa-light fa-key-skeleton" aria-hidden="true"></i>
         {{ 'DEVICE_GUIDE.KEY_CREATE' | translate }}
@@ -61,7 +64,51 @@
         <p>{{ 'DEVICE_GUIDE.KEY_SECURITY_DESCRIPTION' | translate }}</p>
       </div>
     </aside>
-    } @else {
+    } @else if (phase === 'reveal-failed') {
+    <section class="flow-status" role="alert">
+      <span class="status-icon warning-icon" aria-hidden="true">
+        <i class="fa-light fa-triangle-exclamation"></i>
+      </span>
+      <h1>{{ 'DEVICE_GUIDE.KEY_REVEAL_FAILED_TITLE' | translate }}</h1>
+      <p>{{ keyError }}</p>
+      <button type="button" class="primary-action" (click)="retryReveal()">
+        {{ 'DEVICE_GUIDE.KEY_RETRY_REVEAL' | translate }}
+      </button>
+      <small>{{ 'DEVICE_GUIDE.KEY_RETRY_REVEAL_HELP' | translate }}</small>
+    </section>
+    } @else if (phase === 'step-up-blocked') {
+    <section class="flow-status blocked-state" role="alert">
+      <span class="status-icon blocked-icon" aria-hidden="true">
+        <i class="fa-light fa-shield-exclamation"></i>
+      </span>
+      <h1>{{ 'DEVICE_GUIDE.KEY_STEP_UP_BLOCKED_TITLE' | translate }}</h1>
+      <p>{{ keyError || ('DEVICE_GUIDE.KEY_STEP_UP_BLOCKED_DESCRIPTION' | translate) }}</p>
+    </section>
+    } @else if (phase === 'reveal-blocked') {
+    <section class="flow-status blocked-state" role="alert">
+      <span class="status-icon blocked-icon" aria-hidden="true">
+        <i class="fa-light fa-circle-xmark"></i>
+      </span>
+      <h1>{{ 'DEVICE_GUIDE.KEY_REVEAL_BLOCKED_TITLE' | translate }}</h1>
+      <p>{{ keyError }}</p>
+    </section>
+    } @else if (phase === 'production-blocked') {
+    <section class="flow-status blocked-state" role="alert">
+      <span class="status-icon blocked-icon" aria-hidden="true">
+        <i class="fa-light fa-shield-exclamation"></i>
+      </span>
+      <h1>{{ 'DEVICE_GUIDE.KEY_PRODUCTION_BLOCKED_TITLE' | translate }}</h1>
+      <p>{{ keyError || ('DEVICE_GUIDE.KEY_PRODUCTION_BLOCKED_DESCRIPTION' | translate) }}</p>
+    </section>
+    } @else if (phase === 'create-blocked') {
+    <section class="flow-status blocked-state" role="alert">
+      <span class="status-icon blocked-icon" aria-hidden="true">
+        <i class="fa-light fa-circle-xmark"></i>
+      </span>
+      <h1>{{ 'DEVICE_GUIDE.KEY_CREATE_BLOCKED_TITLE' | translate }}</h1>
+      <p>{{ keyError }}</p>
+    </section>
+    } @else if (phase === 'revealed' && diagnosticKeyDisplayEnabled) {
     <section class="key-result" aria-live="polite">
       <span class="success-icon" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
       <h1>{{ 'DEVICE_GUIDE.KEY_RESULT_TITLE' | translate }}</h1>
@@ -75,6 +122,7 @@
             type="button"
             class="key-visibility"
             (click)="toggleKeyVisibility()"
+            [attr.aria-label]="'DEVICE_GUIDE.KEY_TOGGLE_VISIBILITY' | translate"
           >
             <i
               class="fa-light"
@@ -86,15 +134,15 @@
         </div>
         <button type="button" class="copy-action" (click)="copyKey()">
           <i class="fa-light fa-copy" aria-hidden="true"></i>
-          {{ 'DEVICE_GUIDE.COPY' | translate }}
+          {{ 'DEVICE_GUIDE.KEY_DIAGNOSTIC_COPY' | translate }}
         </button>
       </div>
 
       <aside class="security-card result-security">
-        <i class="fa-light fa-triangle-exclamation" aria-hidden="true"></i>
+        <i class="fa-light fa-flask" aria-hidden="true"></i>
         <div>
-          <strong>{{ 'DEVICE_GUIDE.KEY_SAVE_TITLE' | translate }}</strong>
-          <p>{{ 'DEVICE_GUIDE.KEY_SAVE_DESCRIPTION' | translate }}</p>
+          <strong>{{ 'DEVICE_GUIDE.KEY_DIAGNOSTIC_TITLE' | translate }}</strong>
+          <p>{{ 'DEVICE_GUIDE.KEY_DIAGNOSTIC_DESCRIPTION' | translate }}</p>
         </div>
       </aside>
 

@@ -2,10 +2,14 @@ import { environment } from '../../environments/environment';
 
 const GATEWAY_BASE_URL = environment.gatewayBaseUrl.replace(/\/$/, '');
 const API_V1_URL = GATEWAY_BASE_URL + '/api/v1';
+const API_V2_URL = GATEWAY_BASE_URL + '/api/v2';
 export const BROKER_HOST = 'wss://broker.diandeng.tech:1886';
 
 const deviceUrl = (deviceId: string) =>
   API_V1_URL + '/devices/' + encodeURIComponent(deviceId);
+
+const deviceKeyV2Url = (logicalDeviceId: string) =>
+  API_V2_URL + '/devices/' + encodeURIComponent(logicalDeviceId);
 
 export const API = {
   BASE_URL: GATEWAY_BASE_URL,
@@ -48,6 +52,13 @@ export const API = {
     TIME_SERIES_DATA: API_V1_URL + '/user/device/pull_cloudStorage/',
     LOAD_CONFIG: API_V1_URL + '/user/device/config/load',
     SAVE_CONFIG: API_V1_URL + '/user/device/config/save',
+  },
+  DEVICE_V2: {
+    CREATE: API_V2_URL + '/devices',
+    REVEAL: (logicalDeviceId: string) =>
+      deviceKeyV2Url(logicalDeviceId) + '/device-key:reveal',
+    ROTATE: (logicalDeviceId: string) =>
+      deviceKeyV2Url(logicalDeviceId) + '/device-key:rotate',
   },
   FEEDBACK: {
     SUBMIT: API_V1_URL + '/feedback/submit',
@@ -99,5 +110,22 @@ export function isGatewayUrl(url: string): boolean {
     || url.startsWith(API_V1_URL + '/devices/')
     || url === API_V1_URL + '/account'
     || url.startsWith(API_V1_URL + '/account/')
-    || url.startsWith(API_V1_URL + '/feedback/');
+    || url.startsWith(API_V1_URL + '/feedback/')
+    || isDeviceKeyManagementUrl(url);
+}
+
+function isDeviceKeyManagementUrl(url: string): boolean {
+  if (url === API_V2_URL + '/devices') return true;
+
+  const prefix = API_V2_URL + '/devices/';
+  if (!url.startsWith(prefix)) return false;
+
+  const resourcePath = url.slice(prefix.length);
+  const separatorIndex = resourcePath.indexOf('/');
+  if (separatorIndex <= 0 || separatorIndex !== resourcePath.lastIndexOf('/')) {
+    return false;
+  }
+
+  const action = resourcePath.slice(separatorIndex + 1);
+  return action === 'device-key:reveal' || action === 'device-key:rotate';
 }

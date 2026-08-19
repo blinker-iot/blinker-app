@@ -81,6 +81,47 @@ export interface DeviceCreateResponse extends DeviceResponse {
   replayed: boolean;
 }
 
+export interface DeviceKeyContext {
+  logicalDeviceId: string;
+  credentialVersion: number;
+  locator: string;
+}
+
+export interface DeviceKeyLogicalDevice extends DeviceKeyContext {
+  tenantId: string;
+  name: string;
+  deviceType: string;
+  state: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DeviceKeyCreateResponse {
+  status: number;
+  data: {
+    device: DeviceKeyLogicalDevice;
+    replayed: boolean;
+  };
+}
+
+export interface DeviceKeyRevealData extends DeviceKeyContext {
+  deviceKey: string;
+}
+
+export interface DeviceKeyRevealResponse {
+  status: number;
+  data: DeviceKeyRevealData;
+}
+
+export interface DeviceKeyRotateData extends DeviceKeyContext {
+  deviceKey: string;
+}
+
+export interface DeviceKeyRotateResponse {
+  status: number;
+  data: DeviceKeyRotateData;
+}
+
 export interface DeviceConnectionStatus {
   status: 0 | 1;
   mode: 'mqtt' | 'http' | null;

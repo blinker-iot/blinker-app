@@ -22,9 +22,14 @@ import {
   DeviceConfigResponse,
   DeviceCreateResponse,
   DeviceDataResponse,
+  DeviceKeyContext,
+  DeviceKeyCreateResponse,
+  DeviceKeyRevealResponse,
+  DeviceKeyRotateResponse,
   DeviceListResponse,
   DeviceResponse,
   DeviceStatusResponse,
+  GatewayHttpError,
   GatewayDevice,
   MqttConnection,
 } from '../model/response.model';
@@ -753,6 +758,89 @@ export class DeviceService {
     );
   }
 
+  async createDeviceKeyV2(
+    name: string,
+    idempotencyKey: string,
+    deviceType = 'diy',
+  ): Promise<DeviceKeyCreateResponse> {
+    const input = this.normalizeDeviceKeyCreateInput(
+      name,
+      deviceType,
+      idempotencyKey,
+    );
+    const httpResponse = await firstValueFrom(
+      this.http.post<DeviceKeyCreateResponse>(
+        API.DEVICE_V2.CREATE,
+        { name: input.name, deviceType: input.deviceType },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': input.idempotencyKey,
+          },
+          observe: 'response',
+        },
+      ),
+    );
+    return this.parseDeviceKeyCreateResponse(
+      httpResponse.body,
+      httpResponse.status,
+      input.name,
+      input.deviceType,
+    );
+  }
+
+  async revealDeviceKeyV2(
+    context: DeviceKeyContext,
+  ): Promise<DeviceKeyRevealResponse> {
+    this.assertDeviceKeyContext(context);
+    const httpResponse = await firstValueFrom(
+      this.http.post<DeviceKeyRevealResponse>(
+        API.DEVICE_V2.REVEAL(context.logicalDeviceId),
+        {},
+        {
+          headers: { 'Content-Type': 'application/json' },
+          observe: 'response',
+        },
+      ),
+    );
+    this.assertNoStore(httpResponse.headers.get('Cache-Control'));
+    return this.parseDeviceKeySecretResponse(
+      httpResponse.body,
+      httpResponse.status,
+      context.logicalDeviceId,
+      context.credentialVersion,
+      context.locator,
+    ) as DeviceKeyRevealResponse;
+  }
+
+  async rotateDeviceKeyV2(
+    context: DeviceKeyContext,
+    idempotencyKey: string,
+  ): Promise<DeviceKeyRotateResponse> {
+    this.assertDeviceKeyContext(context);
+    const normalizedKey = this.normalizeIdempotencyKey(idempotencyKey);
+    const httpResponse = await firstValueFrom(
+      this.http.post<DeviceKeyRotateResponse>(
+        API.DEVICE_V2.ROTATE(context.logicalDeviceId),
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': normalizedKey,
+          },
+          observe: 'response',
+        },
+      ),
+    );
+    this.assertNoStore(httpResponse.headers.get('Cache-Control'));
+    return this.parseDeviceKeySecretResponse(
+      httpResponse.body,
+      httpResponse.status,
+      context.logicalDeviceId,
+      context.credentialVersion + 1,
+    ) as DeviceKeyRotateResponse;
+  }
+
   getDeviceDetails(deviceId: string): Promise<DeviceResponse> {
     return firstValueFrom(
       this.http.get<DeviceResponse>(API.DEVICE.DETAIL(deviceId)),
@@ -819,6 +907,228 @@ export class DeviceService {
   private deviceIdOf(device: DeviceReference): string {
     if (typeof device === 'string') return device;
     return 'deviceId' in device ? device.deviceId : device.deviceName;
+  }
+
+  private normalizeDeviceKeyCreateInput(
+    name: string,
+    deviceType: string,
+    idempotencyKey: string,
+  ): { name: string; deviceType: string; idempotencyKey: string } {
+    const normalizedName = name.trim();
+    const normalizedDeviceType = deviceType.trim();
+    if (
+      !normalizedName ||
+      Array.from(normalizedName).length > 128 ||
+      this.utf8Length(normalizedName) > 256
+    ) {
+      throw this.deviceKeyInputError('The device name is invalid.');
+    }
+    if (
+      !normalizedDeviceType ||
+      Array.from(normalizedDeviceType).length > 64 ||
+      this.utf8Length(normalizedDeviceType) > 128
+    ) {
+      throw this.deviceKeyInputError('The device type is invalid.');
+    }
+    return {
+      name: normalizedName,
+      deviceType: normalizedDeviceType,
+      idempotencyKey: this.normalizeIdempotencyKey(idempotencyKey),
+    };
+  }
+
+  private normalizeIdempotencyKey(idempotencyKey: string): string {
+    const normalized = idempotencyKey.trim();
+    if (
+      !normalized ||
+      normalized.length > 128 ||
+      normalized.includes('\0')
+    ) {
+      throw this.deviceKeyInputError('The idempotency key is invalid.');
+    }
+    return normalized;
+  }
+
+  private assertDeviceKeyContext(context: DeviceKeyContext): void {
+    if (
+      !context ||
+      typeof context.logicalDeviceId !== 'string' ||
+      !context.logicalDeviceId.trim() ||
+      !Number.isInteger(context.credentialVersion) ||
+      context.credentialVersion < 1 ||
+      !this.isValidDeviceKeyLocator(context.locator)
+    ) {
+      throw this.deviceKeyInputError('The DeviceKey context is invalid.');
+    }
+  }
+
+  private parseDeviceKeyCreateResponse(
+    body: unknown,
+    httpStatus: number,
+    expectedName: string,
+    expectedDeviceType: string,
+  ): DeviceKeyCreateResponse {
+    if (
+      (httpStatus !== 200 && httpStatus !== 201) ||
+      !this.isRecord(body) ||
+      body['status'] !== httpStatus ||
+      this.hasCredentialField(body)
+    ) {
+      throw this.deviceKeyResponseError('The DeviceKey create response is invalid.');
+    }
+    const data = body['data'];
+    if (!this.isRecord(data) || typeof data['replayed'] !== 'boolean') {
+      throw this.deviceKeyResponseError('The DeviceKey create response is invalid.');
+    }
+    if (
+      (httpStatus === 200 && data['replayed'] !== true) ||
+      (httpStatus === 201 && data['replayed'] !== false)
+    ) {
+      throw this.deviceKeyResponseError('The DeviceKey create replay state is invalid.');
+    }
+    const device = data['device'];
+    const context = this.deviceKeyContextOf(device);
+    if (
+      !context ||
+      !this.isRecord(device) ||
+      device['name'] !== expectedName ||
+      device['deviceType'] !== expectedDeviceType ||
+      !this.isNonEmptyString(device['tenantId']) ||
+      !this.isNonEmptyString(device['state']) ||
+      !this.isTimestamp(device['createdAt']) ||
+      !this.isTimestamp(device['updatedAt'])
+    ) {
+      throw this.deviceKeyResponseError('The DeviceKey device response is invalid.');
+    }
+    return body as unknown as DeviceKeyCreateResponse;
+  }
+
+  private parseDeviceKeySecretResponse(
+    body: unknown,
+    httpStatus: number,
+    expectedLogicalDeviceId: string,
+    expectedCredentialVersion: number,
+    expectedLocator?: string,
+  ): DeviceKeyRevealResponse | DeviceKeyRotateResponse {
+    if (
+      httpStatus !== 200 ||
+      !this.isRecord(body) ||
+      body['status'] !== 200 ||
+      this.hasField(body, 'authKey')
+    ) {
+      throw this.deviceKeyResponseError('The DeviceKey response is invalid.');
+    }
+    const data = body['data'];
+    const context = this.deviceKeyContextOf(data);
+    if (
+      !context ||
+      context.logicalDeviceId !== expectedLogicalDeviceId ||
+      context.credentialVersion !== expectedCredentialVersion ||
+      (expectedLocator !== undefined && context.locator !== expectedLocator) ||
+      !this.isRecord(data) ||
+      !this.isValidDeviceKey(data['deviceKey'])
+    ) {
+      throw this.deviceKeyResponseError('The DeviceKey response context is invalid.');
+    }
+    return body as unknown as DeviceKeyRevealResponse | DeviceKeyRotateResponse;
+  }
+
+  private deviceKeyContextOf(value: unknown): DeviceKeyContext | null {
+    if (!this.isRecord(value)) return null;
+    const logicalDeviceId = value['logicalDeviceId'];
+    const credentialVersion = value['credentialVersion'];
+    const locator = value['locator'];
+    if (
+      !this.isNonEmptyString(logicalDeviceId) ||
+      !Number.isInteger(credentialVersion) ||
+      (credentialVersion as number) < 1 ||
+      !this.isValidDeviceKeyLocator(locator)
+    ) {
+      return null;
+    }
+    return {
+      logicalDeviceId,
+      credentialVersion: credentialVersion as number,
+      locator,
+    };
+  }
+
+  private isValidDeviceKeyLocator(value: unknown): value is string {
+    return typeof value === 'string' && /^[A-Za-z0-9_-]{22}$/.test(value);
+  }
+
+  private isValidDeviceKey(value: unknown): value is string {
+    if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(value)) {
+      return false;
+    }
+    try {
+      const decoded = atob(
+        value.replace(/-/g, '+').replace(/_/g, '/') + '=',
+      );
+      if (decoded.length !== 32) return false;
+      if (![...decoded].some((byte) => byte.charCodeAt(0) !== 0)) return false;
+      return btoa(decoded)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '') === value;
+    } catch {
+      return false;
+    }
+  }
+
+  private assertNoStore(cacheControl: string | null): void {
+    if (
+      !cacheControl
+        ?.split(',')
+        .some((directive) => directive.trim().toLowerCase() === 'no-store')
+    ) {
+      throw this.deviceKeyResponseError('The DeviceKey response is cacheable.');
+    }
+  }
+
+  private hasCredentialField(value: unknown): boolean {
+    return this.hasField(value, 'authKey') || this.hasField(value, 'deviceKey');
+  }
+
+  private hasField(value: unknown, field: string): boolean {
+    if (Array.isArray(value)) {
+      return value.some((item) => this.hasField(item, field));
+    }
+    if (!this.isRecord(value)) return false;
+    if (Object.prototype.hasOwnProperty.call(value, field)) return true;
+    return Object.values(value).some((item) => this.hasField(item, field));
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  private isNonEmptyString(value: unknown): value is string {
+    return typeof value === 'string' && !!value.trim();
+  }
+
+  private isTimestamp(value: unknown): boolean {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+  }
+
+  private utf8Length(value: string): number {
+    return new TextEncoder().encode(value).byteLength;
+  }
+
+  private deviceKeyInputError(message: string): GatewayHttpError {
+    return new GatewayHttpError({
+      httpStatus: 400,
+      code: 'INVALID_REQUEST',
+      message,
+    });
+  }
+
+  private deviceKeyResponseError(message: string): GatewayHttpError {
+    return new GatewayHttpError({
+      httpStatus: 502,
+      code: 'DEVICE_KEY_V2_INVALID_RESPONSE',
+      message,
+    });
   }
 
   //读取设备Layouter配置
