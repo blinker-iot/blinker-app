@@ -1,3 +1,8 @@
+import type {
+    GatewayEntitlements,
+    GatewaySubscriptionPlan,
+} from './response.model';
+
 export interface AuthData {
     accessToken: string;
     refreshToken: string;
@@ -8,13 +13,17 @@ export interface AuthData {
 
 export interface UserData {
     username: string,
+    nickname?: string | null,
     avatar: string,
     phone: string,
     level?: number,
     email?: string,
     id?: string,
-    subscriptionPlan?: string,
-    entitlements?: Record<string, unknown>
+    subscriptionPlan?: GatewaySubscriptionPlan | null,
+    permissions?: string[],
+    rbacPermissions?: string[],
+    entitlementRevision?: number,
+    entitlements?: GatewayEntitlements
 }
 
 export interface OrderData {

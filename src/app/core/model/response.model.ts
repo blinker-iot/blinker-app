@@ -32,18 +32,29 @@ export interface AuthTokenResponseData {
   token_type?: string;
 }
 
+export interface GatewaySubscriptionPlan {
+  name: string;
+  display_name: string;
+  service_tier: string;
+  subscription_id: string | null;
+  status: string;
+  end_date: string | null;
+  [key: string]: unknown;
+}
+
+export type GatewayEntitlements = Record<string, boolean | number>;
+
 export interface CurrentUser {
   id: string;
+  nickname: string | null;
   email: string;
-  subscription_plan?: {
-    name?: string;
-    display_name?: string;
-    service_tier?: string;
-    status?: string;
-    end_date?: string | null;
-  } | null;
+  phone: string | null;
+  avatar: string | null;
+  subscription_plan: GatewaySubscriptionPlan | null;
+  permissions: string[];
+  rbac_permissions: string[];
   entitlement_revision?: number;
-  entitlements?: Record<string, unknown>;
+  entitlements: GatewayEntitlements;
   [key: string]: unknown;
 }
 
