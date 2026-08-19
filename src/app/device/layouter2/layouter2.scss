@@ -6,17 +6,11 @@
   color: var(--blinker-text-primary);
 }
 
-[device-bg] {
-  position: absolute;
-  inset: 0 0 auto;
-  width: 100%;
-  overflow: hidden;
-  background: var(--blinker-bg);
+.layouter-action {
+  width: 2.2rem;
 
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+  i {
+    font-size: 1.4rem;
   }
 }
 
@@ -46,7 +40,7 @@ gridster {
     border-radius: var(--blinker-radius-card);
     background: none;
     box-shadow: var(--blinker-shadow-soft);
-    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
   }
 
   gridster-item.gridster-item-moving {
@@ -79,6 +73,17 @@ gridster {
 .is-editing gridster gridster-item {
   border-color: color-mix(in srgb, var(--ion-color-primary) 28%, var(--blinker-border));
   box-shadow: 0 8px 22px rgba(var(--ion-color-primary-rgb), 0.09);
+}
+
+.layouter-bar {
+  position: fixed;
+  right: 0;
+  bottom: calc(10px + var(--ion-safe-area-bottom, 0px));
+  left: 0;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .flexbox {

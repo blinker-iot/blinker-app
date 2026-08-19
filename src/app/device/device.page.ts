@@ -4,6 +4,7 @@ import {
   ComponentRef,
   OnDestroy,
   OnInit,
+  TemplateRef,
   ViewChild,
   ViewContainerRef,
 } from '@angular/core';
@@ -11,7 +12,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { IonicModule, ModalController } from '@ionic/angular';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Observable, of, Subscription } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 
 import { deviceComponentDict } from '../configs/components.config';
 import { BlinkerDevice } from '../core/model/device.model';
@@ -20,16 +21,13 @@ import { DebugComponent } from '../debug/debug.component';
 import { DebugService } from '../debug/debug.service';
 import { DeviceService } from '../core/services/device.service';
 import { ViewService } from '../core/services/view.service';
-import { LayouterService } from './layouter.service';
-import { canEditDeviceLayout } from './device-layout-edit';
-import { Mode } from './layouter2/layouter2-mode';
-import { WidgetListbarComponent } from './layouter2/widget-listbar/widget-listbar.component';
 
 interface LoadedDeviceComponent {
   device?: BlinkerDevice;
   customizerUrl?: string;
   layouterData?: string;
-  isChanged?: boolean;
+  headerActions?: TemplateRef<unknown>;
+  canDeactivate?: () => Observable<boolean> | boolean;
 }
 
 @Component({
@@ -40,7 +38,6 @@ interface LoadedDeviceComponent {
     IonicModule,
     RouterModule,
     TranslatePipe,
-    WidgetListbarComponent,
   ],
   templateUrl: './device.page.html',
   styleUrls: ['./device.page.scss'],
@@ -49,15 +46,14 @@ export class DevicePage implements OnInit, OnDestroy {
   loaded = false;
   id = '';
   device?: BlinkerDevice;
-  editMode = false;
   deviceComponent = '';
+  deviceHeaderActions: TemplateRef<unknown> | null = null;
 
   private readonly subscriptions = new Subscription();
   private deviceSubject?: Subscription;
   private deviceComponentRef?: ComponentRef<unknown>;
   private deviceViewContainer?: ViewContainerRef;
   private heartbeatTimer?: number;
-  private oldLayouterData = '';
 
   @ViewChild('deviceView', { read: ViewContainerRef })
   set deviceView(container: ViewContainerRef | undefined) {
@@ -79,20 +75,11 @@ export class DevicePage implements OnInit, OnDestroy {
     private readonly viewService: ViewService,
     private readonly debugService: DebugService,
     private readonly modalCtrl: ModalController,
-    private readonly layouterService: LayouterService,
     private readonly cd: ChangeDetectorRef,
   ) {}
 
-  get isSharedDevice(): boolean {
-    return !!this.device?.config?.isShared;
-  }
-
   get isPreview(): boolean {
     return !!this.device?.config?.isPreview;
-  }
-
-  get canEditLayout(): boolean {
-    return canEditDeviceLayout(this.device, this.deviceComponent);
   }
 
   ngOnInit(): void {
@@ -113,9 +100,9 @@ export class DevicePage implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
     this.deviceSubject?.unsubscribe();
+    this.deviceHeaderActions = null;
     this.deviceComponentRef?.destroy();
     this.deviceComponentRef = undefined;
-    this.layouterService.resetMode();
     this.disconnectDevice();
     this.debugService.end();
     if (this.viewService.devicePageIsRoot) {
@@ -138,30 +125,9 @@ export class DevicePage implements OnInit, OnDestroy {
     }
   }
 
-  lock(): void {
-    this.changeLayoutMode(Mode.Default);
-    this.saveLayouterData();
-  }
-
-  unlock(): void {
-    if (!this.canEditLayout) return;
-    this.oldLayouterData = JSON.stringify(this.device?.data?.layouterData);
-    this.changeLayoutMode(Mode.Edit);
-  }
-
-  cleanWidgets(): void {
-    this.layouterService.cleanWidgets();
-  }
-
   canDeactivate(): Observable<boolean> | boolean {
-    if (!this.editMode) return true;
     const component = this.deviceComponentRef?.instance as LoadedDeviceComponent;
-    if (!component?.isChanged) return true;
-    return this.confirm();
-  }
-
-  confirm(): Observable<boolean> {
-    return of(window.confirm('界面布局未保存，是否放弃保存并退出？'));
+    return component?.canDeactivate?.() ?? true;
   }
 
   private bindDevice(): void {
@@ -172,6 +138,7 @@ export class DevicePage implements OnInit, OnDestroy {
     if (!nextDevice) {
       this.deviceSubject?.unsubscribe();
       this.disconnectDevice();
+      this.deviceHeaderActions = null;
       this.device = undefined;
       this.loaded = true;
       this.cd.detectChanges();
@@ -185,10 +152,9 @@ export class DevicePage implements OnInit, OnDestroy {
 
     this.deviceSubject?.unsubscribe();
     this.disconnectDevice();
+    this.deviceHeaderActions = null;
     this.deviceComponentRef?.destroy();
     this.deviceComponentRef = undefined;
-    this.editMode = false;
-    this.layouterService.resetMode();
     this.device = nextDevice;
     this.loaded = true;
     this.deviceSubject = nextDevice.subject.subscribe(() => {
@@ -215,6 +181,7 @@ export class DevicePage implements OnInit, OnDestroy {
     this.deviceComponent = deviceComponentDict[componentName]
       ? componentName
       : 'Layouter2';
+    this.deviceHeaderActions = null;
     this.deviceViewContainer.clear();
     this.deviceComponentRef =
       this.deviceViewContainer.createComponent(componentType);
@@ -227,24 +194,17 @@ export class DevicePage implements OnInit, OnDestroy {
         'layouterData',
         this.device.config.layouter ?? '',
       );
-      this.deviceComponentRef.setInput(
-        'mode',
-        this.editMode ? Mode.Edit : Mode.Default,
-      );
     }
 
     this.deviceComponentRef.changeDetectorRef.detectChanges();
-  }
-
-  private changeLayoutMode(mode: Mode): void {
-    // DevicePage owns edit mode. The dynamically-created layouter receives
-    // that state through one input; the service notification is retained for
-    // non-visual editor commands, but it is no longer a second UI state path.
-    this.editMode = mode === Mode.Edit;
-    this.layouterService.changeMode(mode);
-    if (this.deviceComponent.includes('Layouter') && this.deviceComponentRef) {
-      this.deviceComponentRef.setInput('mode', mode);
-    }
+    const componentRef = this.deviceComponentRef;
+    const component = componentRef.instance as LoadedDeviceComponent;
+    const headerActions = component.headerActions ?? null;
+    queueMicrotask(() => {
+      if (this.deviceComponentRef !== componentRef) return;
+      this.deviceHeaderActions = headerActions;
+      this.cd.detectChanges();
+    });
   }
 
   private async startDeviceSession(): Promise<void> {
@@ -260,28 +220,6 @@ export class DevicePage implements OnInit, OnDestroy {
     this.heartbeatTimer = window.setInterval(() => {
       if (this.device) this.deviceService.queryDevice(this.device);
     }, this.device.config.mode === 'mqtt' ? 59001 : 29001);
-  }
-
-  private saveLayouterData(): void {
-    if (!this.device?.data?.layouterData) return;
-
-    const data = JSON.stringify(this.device.data.layouterData);
-    if (this.oldLayouterData === data) return;
-    this.device.config.layouter = data;
-    this.oldLayouterData = data;
-
-    if (this.isPreview) {
-      this.device.subject.next({ key: 'layouter', value: data });
-      return;
-    }
-
-    this.deviceService
-      .saveDeviceConfig(this.device, { layouter: data })
-      .then((result) => {
-        if (result && this.device) {
-          this.deviceService.loadDeviceLayouter(this.device);
-        }
-      });
   }
 
   private clickTime = 0;

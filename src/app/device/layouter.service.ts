@@ -1,18 +1,11 @@
 import { Injectable } from '@angular/core';
-import { Mode } from './layouter2/layouter2-mode';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { Subject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LayouterService {
   action: Subject<any> = new Subject;
-  private readonly modeSubject = new BehaviorSubject<Mode>(Mode.Default);
-  readonly modeChanges = this.modeSubject.asObservable();
-
-  get mode(): Mode {
-    return this.modeSubject.value;
-  }
   gridLength;
   gridMargin;
 
@@ -43,19 +36,6 @@ export class LayouterService {
 
   addWidget(data) {
     this.action.next({ name: 'addWidget', data: data })
-  }
-
-  changeMode(mode: Mode) {
-    this.modeSubject.next(mode)
-    this.action.next({ name: 'changeMode', data: mode })
-  }
-
-  resetMode() {
-    this.modeSubject.next(Mode.Default)
-  }
-
-  cleanWidgets() {
-    this.action.next({ name: 'cleanWidgets' })
   }
 
 }
