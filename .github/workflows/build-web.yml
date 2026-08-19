@@ -1,0 +1,129 @@
+name: Build and deploy web
+
+on:
+  push:
+    branches:
+      - 3.0-deploy
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-web-production
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "24.15.0"
+
+jobs:
+  build:
+    name: Build and deploy web
+    if: github.ref == 'refs/heads/3.0-deploy'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+
+    steps:
+      - name: Checkout blinker app
+        uses: actions/checkout@v7
+        with:
+          path: blinker-app
+          persist-credentials: false
+
+      # These repositories must be siblings of blinker-app because package.json
+      # references them with file:../capacitor-* paths.
+      - name: Checkout capacitor-android-shortcuts
+        uses: actions/checkout@v7
+        with:
+          repository: coloz/capacitor-android-shortcuts
+          ref: 2c187e447542843dba1264bd95c297686ade6c49
+          path: capacitor-android-shortcuts
+          token: ${{ secrets.CI_REPOS_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Checkout capacitor-mdns
+        uses: actions/checkout@v7
+        with:
+          repository: coloz/capacitor-mdns
+          ref: ef56689c7a974fa6f718374de57045e548cec1ce
+          path: capacitor-mdns
+          token: ${{ secrets.CI_REPOS_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Checkout capacitor-ntfy
+        uses: actions/checkout@v7
+        with:
+          repository: coloz/capacitor-ntfy
+          ref: edcf3fb507c0743c0452f0b14ae9b5e040acec27
+          path: capacitor-ntfy
+          token: ${{ secrets.CI_REPOS_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Checkout capacitor-wechat
+        uses: actions/checkout@v7
+        with:
+          repository: coloz/capacitor-wechat
+          ref: ba0bfc5677b2a0dfe11d231c43b52e07af0bf487
+          path: capacitor-wechat
+          token: ${{ secrets.CI_REPOS_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Checkout capacitor-wifiprov
+        uses: actions/checkout@v7
+        with:
+          repository: coloz/capacitor-wifiprov
+          ref: fd8589c0cfd1363d6a6388cddd4efe4719ca1534
+          path: capacitor-wifiprov
+          token: ${{ secrets.CI_REPOS_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            blinker-app/package-lock.json
+            capacitor-android-shortcuts/package-lock.json
+            capacitor-mdns/package-lock.json
+            capacitor-ntfy/package-lock.json
+            capacitor-wechat/package-lock.json
+            capacitor-wifiprov/package-lock.json
+
+      - name: Build local Capacitor plugins
+        shell: bash
+        run: |
+          set -euo pipefail
+          for plugin in \
+            capacitor-android-shortcuts \
+            capacitor-mdns \
+            capacitor-ntfy \
+            capacitor-wechat \
+            capacitor-wifiprov
+          do
+            npm --prefix "$plugin" ci
+            npm --prefix "$plugin" run build
+          done
+
+      - name: Build web app
+        working-directory: blinker-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          test -f www/index.html
+
+      - name: Upload web files
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          source: "blinker-app/www/*"
+          target: ${{ secrets.DEPLOY_PATH }}
+          strip_components: 2
+          overwrite: true
+          rm: false
