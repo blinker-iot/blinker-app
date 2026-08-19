@@ -1,300 +1,534 @@
-// 数据服务
-// 用于服务和组件间共享数据、数据加载与初始化
 import { Injectable } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
+import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { getDeviceId } from '../functions/func';
-import { API, BROKER_HOST } from 'src/app/configs/api.config';
-import { AuthData, UserData, OrderData, ShareDate } from '../model/data.model';
+import { AuthData, OrderData, ShareDate, UserData } from '../model/data.model';
+import { BlinkerDevice } from '../model/device.model';
+import {
+  CurrentUser,
+  DeviceConfigResponse,
+  DeviceDataResponse,
+  DeviceStatusResponse,
+  GatewayDevice,
+} from '../model/response.model';
 import { createGuestDevicePreview } from '../data/guest-device-preview.data';
 
-@Injectable({
-    providedIn: 'root'
-})
+const AUTH_STORAGE_KEY = 'session';
+export const AUTH_INVALIDATED_STORAGE_KEY = 'blinker-auth-invalidated';
+const INSTALLATION_ID_KEY = 'blinker-installation-id';
+const FEEDBACK_DRAFT_STORAGE_KEY = 'blinker_feedback_draft';
+
+export interface GatewayDeviceHydration {
+  configs?: Record<string, DeviceConfigResponse | undefined>;
+  statuses?: Record<string, DeviceStatusResponse | undefined>;
+  snapshots?: Record<string, DeviceDataResponse | undefined>;
+}
+
+@Injectable({ providedIn: 'root' })
 export class DataService {
+  readonly authDataLoader = new BehaviorSubject(false);
+  readonly userDataLoader = new BehaviorSubject(false);
+  readonly deviceDataLoader = new BehaviorSubject(false);
+  readonly initCompleted = new BehaviorSubject(false);
+  readonly authCheck = new Subject<boolean>();
+  readonly authDataExpire = new Subject<boolean>();
+  readonly authDataChanged = new Subject<void>();
+  readonly userLoadError = new BehaviorSubject<unknown>(null);
+  readonly deviceLoadError = new BehaviorSubject<unknown>(null);
+  readonly configLoadError = new BehaviorSubject<unknown>(null);
+  readonly authStorageCleanupError = new BehaviorSubject<unknown>(null);
 
-    authDataLoader = new BehaviorSubject(false);
-    userDataLoader = new BehaviorSubject(false);
-    deviceDataLoader = new BehaviorSubject(false);
-    initCompleted = new BehaviorSubject(false);
-    authCheck = new Subject;
-    authDataExpire = new Subject;
+  firstBoot = true;
 
-    firstBoot = true;
+  private _auth: AuthData | null = null;
+  private _sessionEpoch = 0;
+  private secureStorageReady: Promise<void> | null = null;
 
-    _auth: AuthData;
-    set auth(auth: AuthData) {
-        this._auth = auth
-        this.saveAuthData()
-        this.authDataLoader.next(true)
+  user: UserData = this.emptyUser();
+  device: OrderData = this.emptyOrder();
+  scene: OrderData = this.emptyOrder();
+  room: OrderData = this.emptyOrder();
+  auto: OrderData = this.emptyOrder();
+  block: OrderData = this.emptyOrder();
+  share: ShareDate = this.emptyShare();
+  brokers: OrderData = this.emptyOrder();
+  tempImgFile: unknown;
+
+  set auth(auth: AuthData | null) {
+    this._sessionEpoch += 1;
+    this._auth = auth
+      ? { ...auth, token: auth.token || auth.accessToken }
+      : null;
+    this.authDataLoader.next(!!auth);
+    this.authDataChanged.next();
+    if (this._auth) void this.persistAuthData(this._auth);
+  }
+
+  get auth(): AuthData | null {
+    return this._auth;
+  }
+
+  get sessionEpoch(): number {
+    return this._sessionEpoch;
+  }
+
+  get isAdvancedDeveloper(): boolean {
+    return (this.user?.level ?? 0) > 0;
+  }
+
+  async init(): Promise<void> {
+    this.removeLegacyAuthData();
+    await this.loadAuthData();
+  }
+
+  async setAuthData(auth: AuthData): Promise<boolean> {
+    if (!this.isValidAuth(auth)) {
+      throw new Error('The Gateway did not return a complete token pair.');
     }
-
-    get auth() {
-        return this._auth
+    const previous = this._auth ? { ...this._auth } : null;
+    this._sessionEpoch += 1;
+    const next = { ...auth, token: auth.token || auth.accessToken };
+    this._auth = next;
+    this.authDataLoader.next(true);
+    this.authDataChanged.next();
+    try {
+      await this.persistAuthData(next);
+      if (!this.authMatches(next)) {
+        await this.persistCurrentAuth();
+        return false;
+      }
+      this.authDataExpire.next(true);
+      this.resetBlinkerMemory();
+      try {
+        this.getLocalStorage()?.removeItem(FEEDBACK_DRAFT_STORAGE_KEY);
+        this.getLocalStorage()?.removeItem(AUTH_INVALIDATED_STORAGE_KEY);
+      } catch {
+        // Authentication still succeeds when local storage is unavailable.
+      }
+      return true;
+    } catch (error) {
+      if (this.authMatches(next)) {
+        this._auth = previous;
+        this.authDataLoader.next(!!previous);
+        this.authDataChanged.next();
+      }
+      throw error;
     }
+  }
 
-    get isAdvancedDeveloper() {
-        return (this.user?.level ?? 0) > 0
+  async replaceAuthData(
+    expected: Pick<AuthData, 'accessToken' | 'refreshToken'>,
+    auth: AuthData,
+  ): Promise<boolean> {
+    if (!this.isValidAuth(auth)) {
+      throw new Error('The Gateway did not return a complete token pair.');
     }
+    if (!this.authMatches(expected)) return false;
 
-    user: UserData;
-
-    device: OrderData;
-    scene: OrderData;
-    room: OrderData;
-    auto: OrderData;
-    block: OrderData;
-    share: ShareDate;
-
-    brokers: OrderData;
-    tempImgFile: any;
-
-    constructor(
-        // private storage: Storage,
-    ) { }
-
-    loadGuestDevicePreview(force = false) {
-        if (!force && this.auth?.uuid && this.auth?.token) return;
-
-        const preview = createGuestDevicePreview();
-        this.device = preview.device;
-        this.room = preview.room;
+    const previous = this._auth ? { ...this._auth } : null;
+    const next = {
+      ...auth,
+      ...(previous?.uuid ? { uuid: previous.uuid } : {}),
+      token: auth.token || auth.accessToken,
+    };
+    this._auth = next;
+    this.authDataLoader.next(true);
+    this.authDataChanged.next();
+    try {
+      await this.persistAuthData(next);
+      if (!this.authMatches(next)) {
+        await this.persistCurrentAuth();
+        return false;
+      }
+      return true;
+    } catch (error) {
+      if (this.authMatches(next)) {
+        this._auth = previous;
+        this.authDataLoader.next(!!previous);
+        this.authDataChanged.next();
+      }
+      throw error;
     }
+  }
 
-    async init() {
-        await this.loadAuthData()
+  async loadAuthData(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+    if (this.authIsInvalidated()) {
+      const cleanupError = await this.clearPersistedAuthData();
+      this._auth = null;
+      this.authDataLoader.next(false);
+      this.authDataChanged.next();
+      this.authStorageCleanupError.next(cleanupError);
+      return;
     }
-
-    async loadAuthData() {
-        let auth = localStorage.getItem('auth')
-        if (auth != null && auth != '') {
-            const savedAuth = JSON.parse(auth)
-            if (savedAuth?.uuid && savedAuth?.token) {
-                this.auth = savedAuth
-            } else {
-                localStorage.removeItem('auth')
-            }
-        }
-    }
-
-    saveAuthData() {
-        localStorage.setItem('auth', JSON.stringify(this.auth))
-    }
-
-    removeAuthData() {
-        localStorage.removeItem('auth')
-        this._auth = null;
-        this.initCompleted.next(false);
-        this.firstBoot = true;
-    }
-
-    load(data) {
-        this.user = {
-            avatar: API.USER.AVATAR + `/${data.profiles.avatar}.jpg?date = ${(new Date()).getTime()}`,
-            username: data.profiles.username,
-            phone: data.profiles.phone,
-            level: data.profiles.userLevel
-        }
-        //获取brokers
-        this.brokers = {
-            dict: this.initBrokers(data.brokers),
-            list: this.getBrokerArray(data.brokers)
-        }
-
-        // 获取devices
-        this.device = {
-            dict: this.initDevices(data.devices),
-            list: data.profiles.userConf.deviceList
+    try {
+      await this.configureSecureStorage();
+      const saved = await SecureStorage.get(AUTH_STORAGE_KEY);
+      if (this.isValidAuth(saved)) {
+        this._sessionEpoch += 1;
+        this._auth = {
+          accessToken: saved.accessToken,
+          refreshToken: saved.refreshToken,
+          tokenType: saved.tokenType,
+          ...(this.nonEmptyString(saved.uuid) ? { uuid: saved.uuid } : {}),
+          token: this.nonEmptyString(saved.token)
+            ? saved.token
+            : saved.accessToken,
         };
+        this.authDataLoader.next(true);
+        this.authDataChanged.next();
+      } else if (saved !== null) {
+        await SecureStorage.remove(AUTH_STORAGE_KEY);
+      }
+    } catch {
+      this._sessionEpoch += 1;
+      this._auth = null;
+      this.authDataLoader.next(false);
+      this.authDataChanged.next();
+    }
+  }
 
-        if (typeof (data.profiles.userConf.sceneList) != 'undefined') {
-            this.scene = {
-                dict: typeof data.profiles.userConf.sceneList.data == "undefined" ? {} : data.profiles.userConf.sceneList.data,
-                list: typeof data.profiles.userConf.sceneList.order == "undefined" ? [] : data.profiles.userConf.sceneList.order
-            };
-        }
-        // 读取room
-        if (typeof (data.profiles.userConf.roomList) != 'undefined') {
-            this.room = {
-                dict: typeof data.profiles.userConf.roomList.data == "undefined" ? {} : data.profiles.userConf.roomList.data,
-                list: typeof data.profiles.userConf.roomList.order == "undefined" ? [] : data.profiles.userConf.roomList.order
-            }
-        }
-        // 读取block
-        if (typeof (data.profiles.userConf.blockList) != 'undefined') {
+  async removeAuthData(): Promise<void> {
+    this._sessionEpoch += 1;
+    this._auth = null;
+    this.authDataLoader.next(false);
+    this.authDataChanged.next();
+    this.clearBlinkerData();
+    let cleanupError = this.markAuthInvalidated();
+    cleanupError = (await this.clearPersistedAuthData()) || cleanupError;
+    if (this._auth) {
+      try {
+        await this.persistCurrentAuth();
+      } catch (error) {
+        cleanupError = error;
+      }
+    }
+    this.authStorageCleanupError.next(cleanupError);
+  }
 
-            this.block = {
-                dict: data.profiles.userConf.blockList.data,
-                list: data.profiles.userConf.blockList.order,
-            }
-        }
-        // 读取share
-        if (typeof (data.profiles.userConf.shareList) != 'undefined') {
-            this.share = data.profiles.userConf.shareList;
-        }
-        // 数据修复
-        this.fixData()
-        // 添加设备必要属性
-        this.addAttribute()
+  clearBlinkerData(): void {
+    try {
+      const storage = this.getLocalStorage();
+      storage?.removeItem(FEEDBACK_DRAFT_STORAGE_KEY);
+    } catch {
+      // Memory cleanup still proceeds when local storage is unavailable.
+    }
+    this.resetBlinkerMemory();
+  }
 
+  private resetBlinkerMemory(): void {
+    this.user = this.emptyUser();
+    this.device = this.emptyOrder();
+    this.scene = this.emptyOrder();
+    this.room = this.emptyOrder();
+    this.auto = this.emptyOrder();
+    this.block = this.emptyOrder();
+    this.share = this.emptyShare();
+    this.brokers = this.emptyOrder();
+    this.userDataLoader.next(false);
+    this.deviceDataLoader.next(false);
+    this.initCompleted.next(false);
+    this.firstBoot = true;
+  }
 
-        this.userDataLoader.next(true);
-        if (this.firstBoot) {
-            // console.log('data service init completed');
-            this.initCompleted.next(true);
-            this.firstBoot = false;
-        }
+  getInstallationId(): string {
+    const storage = this.getLocalStorage();
+    const saved = storage?.getItem(INSTALLATION_ID_KEY);
+    if (saved) return saved;
+
+    const generated = this.createInstallationId();
+    storage?.setItem(INSTALLATION_ID_KEY, generated);
+    return generated;
+  }
+
+  loadGuestDevicePreview(force = false): void {
+    if (!force && this.auth) return;
+    const preview = createGuestDevicePreview();
+    this.device = preview.device;
+    this.room = preview.room;
+  }
+
+  loadGatewayData(
+    currentUser: CurrentUser,
+    devices: GatewayDevice[],
+    hydration: GatewayDeviceHydration = {},
+  ): void {
+    this.loadGatewayUser(currentUser);
+    const previousDevices = this.device?.dict || {};
+    const deviceDict: Record<string, BlinkerDevice> = {};
+
+    for (const gatewayDevice of devices || []) {
+      const id = gatewayDevice.deviceId;
+      if (!id) continue;
+
+      const hydratedConfig = hydration.configs?.[id]?.config;
+      const hasHydratedConfig =
+        Object.prototype.hasOwnProperty.call(hydration.configs || {}, id) &&
+        this.isRecord(hydratedConfig);
+      const previousConfig = this.isRecord(previousDevices[id]?.config)
+        ? previousDevices[id].config
+        : {};
+      const rawConfig = hasHydratedConfig ? hydratedConfig : previousConfig;
+      const safeConfig = { ...rawConfig };
+      delete safeConfig['authKey'];
+      delete safeConfig['auth_key'];
+
+      const hasHydratedStatus = Object.prototype.hasOwnProperty.call(
+        hydration.statuses || {},
+        id,
+      );
+      const status = hydration.statuses?.[id]?.status;
+      const snapshot = hydration.snapshots?.[id]?.data;
+      const previousData = this.isRecord(previousDevices[id]?.data)
+        ? previousDevices[id].data
+        : {};
+      const snapshotData = this.isRecord(snapshot?.data) ? snapshot.data : {};
+      const data: Record<string, unknown> = {
+        switch: '',
+        ...previousData,
+        ...snapshotData,
+      };
+      if (hasHydratedStatus) {
+        const online = status?.mqttOnline === true;
+        data['state'] = online ? 'online' : 'offline';
+        data['enable'] = online;
+      }
+
+      const customName = this.nonEmptyString(safeConfig['customName']) ||
+        this.nonEmptyString(safeConfig['displayName']) || gatewayDevice.name || id;
+      const config = {
+        ...safeConfig,
+        customName,
+        image: this.nonEmptyString(safeConfig['image']) || 'diyarduino.png',
+        broker: this.nonEmptyString(safeConfig['broker']) || 'blinker',
+        mode: this.nonEmptyString(safeConfig['mode']) || 'mqtt',
+        disabled: typeof safeConfig['disabled'] === 'boolean'
+          ? safeConfig['disabled']
+          : gatewayDevice.status !== 'active',
+        layouter: this.normalizeLayouterConfig(safeConfig['layouter']),
+      } as BlinkerDevice['config'];
+
+      deviceDict[id] = {
+        ...gatewayDevice,
+        id,
+        deviceName: id,
+        deviceType: gatewayDevice.deviceType,
+        config,
+        data,
+        storage: previousDevices[id]?.storage || {},
+        subject: previousDevices[id]?.subject || new Subject<unknown>(),
+      } as BlinkerDevice;
     }
 
-    fixData() {
-        this.device.list = this.checkInvalidDevice(this.device.list);
-        this.checkDeviceList();
-        if (typeof this.room.list != 'undefined')
-            this.room.list.forEach(roomName => {
-                this.room.dict[roomName] = this.checkInvalidDevice(this.room.dict[roomName])
-            });
-        // if (typeof this.scene.list != 'undefined') {
-        //     console.log(this.scene);
+    const previousDeviceList = Array.isArray(this.device?.list)
+      ? this.device.list.filter(
+          (deviceId, index, list) =>
+            !!deviceDict[deviceId] && list.indexOf(deviceId) === index,
+        )
+      : [];
+    const deviceList = [
+      ...previousDeviceList,
+      ...Object.keys(deviceDict).filter(
+        (deviceId) => !previousDeviceList.includes(deviceId),
+      ),
+    ];
+    this.device = { dict: deviceDict, list: deviceList };
+    this.deviceDataLoader.next(true);
+    if (this.firstBoot) {
+      this.initCompleted.next(true);
+      this.firstBoot = false;
+    }
+  }
 
-        //     this.scene.list.forEach(sceneName => {
-        //         this.scene.dict[sceneName] = this.checkInvalidDevice(this.scene.dict[sceneName])
-        //     });
-        // }
-        console.log(this.device);
+  loadGatewayUser(currentUser: CurrentUser): void {
+    if (this._auth) {
+      this._auth = {
+        ...this._auth,
+        uuid: currentUser.id,
+        token: this._auth.accessToken,
+      };
+    }
+    this.user = {
+      id: currentUser.id,
+      email: currentUser.email,
+      username: currentUser.email?.split('@')[0] || 'Blinker User',
+      avatar: '',
+      phone: '',
+      level: 0,
+      subscriptionPlan:
+        currentUser.subscription_plan?.display_name ||
+        currentUser.subscription_plan?.name ||
+        currentUser.subscription_plan?.service_tier ||
+        '',
+      entitlements: currentUser.entitlements || {},
+    };
+    this.userDataLoader.next(true);
+  }
 
+  getDevice(id: string): BlinkerDevice | undefined {
+    return this.device?.dict?.[id];
+  }
+
+  checkInvalidDevice(deviceList: string[] | undefined): string[] {
+    return (deviceList || []).filter((deviceId) => !!this.device?.dict?.[deviceId]);
+  }
+
+  checkDeviceList(): void {
+    for (const deviceId of Object.keys(this.device?.dict || {})) {
+      if (!this.device.list.includes(deviceId)) this.device.list.push(deviceId);
+    }
+  }
+
+  updateAvatarCache(): void {
+    if (!this.user?.avatar) return;
+    this.user.avatar = this.user.avatar.split('?')[0] + '?date=' + Date.now();
+  }
+
+  private async persistAuthData(auth: AuthData): Promise<void> {
+    this.removeLegacyAuthData();
+    if (!Capacitor.isNativePlatform()) return;
+    await this.configureSecureStorage();
+    await SecureStorage.set(
+      AUTH_STORAGE_KEY,
+      auth as unknown as Record<string, unknown>,
+    );
+  }
+
+  private async persistCurrentAuth(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+    const current = this._auth;
+    if (current) {
+      await this.persistAuthData(current);
+      return;
+    }
+    await this.configureSecureStorage();
+    await SecureStorage.remove(AUTH_STORAGE_KEY);
+  }
+
+  private async clearPersistedAuthData(): Promise<unknown | null> {
+    if (!Capacitor.isNativePlatform()) return null;
+    try {
+      await this.configureSecureStorage();
+    } catch (error) {
+      return error;
     }
 
-    addAttribute() {
-        // 添加isShared
-        if (typeof this.share != 'undefined')
-            this.share.shared.forEach(sharedDevice => {
-                this.device.dict[sharedDevice.deviceName].config['isShared'] = true
-            });
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await SecureStorage.remove(AUTH_STORAGE_KEY);
+        return null;
+      } catch (error) {
+        lastError = error;
+      }
     }
 
-    initDevices(devices) {
-        let deviceDict = {};
-        for (const device of devices) {
-            let id = getDeviceId(device);
-            let newDevice = device;
-            newDevice['id'] = id;
-            newDevice['subject'] = new Subject;
-            if (typeof this.device != 'undefined' && typeof this.device.dict[id] != "undefined") {
-                if (typeof this.device.dict[id].data != "undefined")
-                    newDevice['data'] = this.device.dict[id].data
-                if (typeof this.device.dict[id].storage == "undefined")
-                    device['storage'] = this.device.dict[id].storage
-            } else {
-                newDevice['data'] = {
-                    switch: '',
-                    state: ''
-                }
-                newDevice['storage'] = {}
-            }
-            deviceDict[id] = newDevice;
-        }
-        return deviceDict;
+    try {
+      await SecureStorage.set(AUTH_STORAGE_KEY, { invalidated: true });
+    } catch (error) {
+      return error;
     }
-
-    initBrokers(brokers) {
-        let newBrokers = {}
-        for (let broker of brokers) {
-            // 不再适配onenet
-            if (broker.vender == 'onenet') continue
-            if (broker.vender == 'aliyun') continue
-            if (typeof this.brokers != 'undefined' && typeof this.brokers.dict[broker.vender] != 'undefined' && !this.firstBoot) {
-                newBrokers[broker.vender] = this.brokers.dict[broker.vender]
-                // 点灯broker每次刷新都会生成新的username、password，这里替换为新username、password
-                if (broker.vender == "blinker") {
-                    newBrokers['blinker'].client.options.password = this.initBlinkerBroker(broker).options.password
-                    newBrokers['blinker'].client.options.username = this.initBlinkerBroker(broker).options.username
-                }
-            } else if (broker.vender == "blinker") {
-                newBrokers['blinker'] = this.initBlinkerBroker(broker)
-            }
-        }
-        return newBrokers
+    try {
+      await SecureStorage.remove(AUTH_STORAGE_KEY);
+      return null;
+    } catch (error) {
+      return error || lastError;
     }
+  }
 
-    getBrokerArray(brokers) {
-        let brokerArray = []
-        for (let broker of brokers) {
-            if (broker.vender == 'onenet') continue
-            if (broker.vender == 'aliyun') continue
-            brokerArray.push(broker.vender)
-        }
-        return brokerArray
+  private authIsInvalidated(): boolean {
+    try {
+      return this.getLocalStorage()?.getItem(AUTH_INVALIDATED_STORAGE_KEY) === '1';
+    } catch {
+      return true;
     }
+  }
 
-
-    initBlinkerBroker(broker) {
-        // console.log(broker);
-        let options = {
-            keepalive: 65,
-            clientId: broker.deviceName,
-            protocolId: 'MQTT',
-            protocolVersion: 4,
-            clean: true,
-            reconnectPeriod: 1000,
-            connectTimeout: 30 * 1000,
-            username: broker.iotId,
-            password: broker.iotToken
-        }
-        let dataTemplate = {
-            fromDevice: broker.deviceName,
-            toDevice: '',
-            deviceType: '',
-            data: ''
-        }
-        let topic = {
-            receive: '/device/' + broker.deviceName + '/r',
-            send: '/device/' + broker.deviceName + '/s',
-        }
-        return {
-            vender: "blinker",
-            host: BROKER_HOST,
-            options: options,
-            topic: topic,
-            dataTemplate: dataTemplate,
-            connected: new BehaviorSubject(false)
-        }
+  private markAuthInvalidated(): unknown | null {
+    try {
+      const storage = this.getLocalStorage();
+      if (!storage) return new Error('Persistent invalidation storage is unavailable.');
+      storage.setItem(AUTH_INVALIDATED_STORAGE_KEY, '1');
+      return null;
+    } catch (error) {
+      return error;
     }
+  }
 
-    initOnenetBroker(broker) {
-        return {}
+  private configureSecureStorage(): Promise<void> {
+    if (!this.secureStorageReady) {
+      this.secureStorageReady = SecureStorage.setKeyPrefix('blinker_');
     }
+    return this.secureStorageReady;
+  }
 
-    getDevice(id) {
-        return this.device.dict[id]
+  private removeLegacyAuthData(): void {
+    try {
+      this.getLocalStorage()?.removeItem('auth');
+    } catch {
+      // Storage can be unavailable in privacy modes. Tokens remain in memory.
     }
+  }
 
-    // 检查deviceList中是否有无效的设备
-    checkInvalidDevice(deviceList) {
-        if (typeof deviceList == 'undefined') return []
-        let newDeviceList = [];
-        deviceList.forEach(deviceId => {
-            if (typeof this.device.dict[deviceId] != 'undefined') {
-                newDeviceList.push(deviceId)
-            }
-        });
-        // if (newDeviceList.length == 0) {
-        //     for (const deviceId in this.device.dict) {
-        //         newDeviceList.push(deviceId)
-        //     }
-        // }
-        return newDeviceList
+  private isValidAuth(value: unknown): value is AuthData {
+    if (!this.isRecord(value)) return false;
+    return this.nonEmptyString(value['accessToken']) !== '' &&
+      this.nonEmptyString(value['refreshToken']) !== '' &&
+      this.nonEmptyString(value['tokenType']) !== '';
+  }
+
+  private authMatches(
+    value: Pick<AuthData, 'accessToken' | 'refreshToken'>,
+  ): boolean {
+    return this._auth?.accessToken === value.accessToken &&
+      this._auth.refreshToken === value.refreshToken;
+  }
+
+  private createInstallationId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
     }
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, '0'));
+    return hex.slice(0, 4).join('') + '-' + hex.slice(4, 6).join('') + '-' +
+      hex.slice(6, 8).join('') + '-' + hex.slice(8, 10).join('') + '-' +
+      hex.slice(10).join('');
+  }
 
-    // 检查deviceList是否有设备缺失
-    checkDeviceList() {
-        for (const deviceName in this.device.dict) {
-            if (this.device.list.indexOf(deviceName) < 0) {
-                this.device.list.push(deviceName)
-            }
-        }
+  private getLocalStorage(): Storage | null {
+    try {
+      return typeof localStorage === 'undefined' ? null : localStorage;
+    } catch {
+      return null;
     }
+  }
 
-    updateAvatarCache() {
-        this.user.avatar = this.user.avatar.split('?')[0] + `?date = ${(new Date()).getTime()}`
-    }
+  private isRecord(value: unknown): value is Record<string, any> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
 
+  private nonEmptyString(value: unknown): string {
+    return typeof value === 'string' && value.trim() ? value.trim() : '';
+  }
+
+  private normalizeLayouterConfig(value: unknown): string {
+    if (typeof value === 'string') return value;
+    if (this.isRecord(value)) return JSON.stringify(value);
+    return '';
+  }
+
+  private emptyOrder(): OrderData {
+    return { dict: {}, list: [] };
+  }
+
+  private emptyShare(): ShareDate {
+    return { share: {}, share0: {}, shared: [], shared0: [] };
+  }
+
+  private emptyUser(): UserData {
+    return { username: '', avatar: '', phone: '', level: 0 };
+  }
 }

@@ -1,7 +1,5 @@
-import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
 
 import { Clipboard } from '@capacitor/clipboard';
 import {
@@ -17,9 +15,8 @@ import {
 } from '@ionic/angular/standalone';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
-import { API } from '../../../configs/api.config';
-import { BlinkerResponse } from '../../../core/model/response.model';
 import { DataService } from '../../../core/services/data.service';
+import { DeviceService } from '../../../core/services/device.service';
 import { UserService } from '../../../core/services/user.service';
 import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
 
@@ -48,10 +45,12 @@ export class KeyDeviceGuidePage {
   keyVisible = true;
   isCreatingKey = false;
   keyError = '';
+  private idempotencyKey = '';
+  private idempotencyName = '';
 
   constructor(
-    private http: HttpClient,
     private dataService: DataService,
+    private deviceService: DeviceService,
     private userService: UserService,
     private navController: NavController,
     private toastController: ToastController,
@@ -63,7 +62,7 @@ export class KeyDeviceGuidePage {
     if (this.isCreatingKey) return;
 
     const auth = this.dataService.auth;
-    if (!auth?.uuid || !auth?.token) {
+    if (!auth?.accessToken) {
       await this.showToast('DEVICE_GUIDE.AUTH_EXPIRED');
       return;
     }
@@ -77,29 +76,18 @@ export class KeyDeviceGuidePage {
     this.cd.markForCheck();
 
     try {
-      const response = await firstValueFrom(
-        this.http.get<BlinkerResponse>(API.ADDDEVICE.GET_MQTTKEY, {
-          params: {
-            uuid: auth.uuid,
-            token: auth.token,
-            deviceType: 'DiyArduino',
-            deviceConfig: JSON.stringify({
-              mode: 'mqtt',
-              broker: 'blinker',
-              image: 'diyarduino.png',
-              customName,
-              showSwitch: true,
-            }),
-          },
-        })
+      if (!this.idempotencyKey || this.idempotencyName !== customName) {
+        this.idempotencyKey = this.createIdempotencyKey();
+        this.idempotencyName = customName;
+      }
+      const response = await this.deviceService.createDevice(
+        customName,
+        this.idempotencyKey,
       );
-
-      const authKey = response.message === 1000 ? response.detail?.authKey : '';
+      const authKey = response.authKey?.trim() || '';
       if (!authKey) {
         throw new Error(
-          typeof response.detail === 'string'
-            ? response.detail
-            : this.translate.instant('DEVICE_GUIDE.CREATE_FAILED')
+          this.translate.instant('DEVICE_GUIDE.CREATE_FAILED')
         );
       }
 
@@ -138,5 +126,16 @@ export class KeyDeviceGuidePage {
       position: 'bottom',
     });
     await toast.present();
+  }
+
+  private createIdempotencyKey(): string {
+    if (
+      typeof crypto !== 'undefined' &&
+      typeof crypto.randomUUID === 'function'
+    ) {
+      return crypto.randomUUID();
+    }
+    return 'device-' + Date.now().toString(36) + '-' +
+      Math.random().toString(36).slice(2);
   }
 }

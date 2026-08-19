@@ -136,8 +136,8 @@ export class DeviceLocationPage implements OnInit, OnDestroy {
 
     this.saving = true;
     const position = {
+      ...(this.device.config.position || {}),
       location: [this.longitude, this.latitude],
-      address: '',
     };
 
     try {

@@ -1,68 +1,103 @@
-export const BROKER_HOST = 'wss://broker.diandeng.tech:1886';
-const SERVER_URL_BASE = "https://iot.diandeng.tech";
-const SERVER_URL = SERVER_URL_BASE + "/api/v1";
+import { environment } from '../../environments/environment';
 
+const GATEWAY_BASE_URL = environment.gatewayBaseUrl.replace(/\/$/, '');
+const API_V1_URL = GATEWAY_BASE_URL + '/api/v1';
+export const BROKER_HOST = 'wss://broker.diandeng.tech:1886';
+
+const deviceUrl = (deviceId: string) =>
+  API_V1_URL + '/devices/' + encodeURIComponent(deviceId);
 
 export const API = {
-    LOGIN: SERVER_URL + '/user/login',
-    REGISTER: SERVER_URL + '/web/register',
-    RETRIEVE: SERVER_URL + '/web/password',
-    SMSCODE: SERVER_URL + '/web/sms',
-    AUTH: {
-        LOGIN: SERVER_URL + '/user/login',
-        REGISTER: SERVER_URL + '/user/register',
-        RETRIEVE: SERVER_URL + '/user/password/reset',
-        SMSCODE: SERVER_URL + '/user/smscode',
-        CHECK: SERVER_URL + '/user/token/check',
-        EMAIL_CODE: SERVER_URL + '/user/email/code',
-        EMAIL_LOGIN: SERVER_URL + '/user/email/login',
-        GITHUB_LOGIN: SERVER_URL + '/user/oauth/github',
-        WECHAT_LOGIN: SERVER_URL + '/user/oauth/wechat',
-    },
-    USER: {
-        ALL: SERVER_URL + '/user/overview',
-        DEVICE: SERVER_URL + '/user/device/pull',
-        INFO: SERVER_URL + '/user/profile/get',
-        SAVE_CONFIG: SERVER_URL + '/user/config/save',
-        AVATAR: SERVER_URL_BASE + '/avatar',
-        // TODO: 待提供新的 WebP 头像上传地址。
-        UPLOAD_AVATAR: '',
-        CHANGE_PASSWORD: SERVER_URL + "/user/password/change",
-        CHANGE_PROFILE: SERVER_URL + "/user/profile/modify",
-        ADD_DEVICE: SERVER_URL + '/user/config/save',
-        DEL_DEVICE: SERVER_URL + '/user/device/remove',
-        CANCEL_ACCOUNT: SERVER_URL + '/user/cancel'
-    },
-    DEVICE: {
-        NEW_VERSION: SERVER_URL + '/user/device/ota/get',
-        OTA_STATE: SERVER_URL + '/user/device/ota/upgrade_status',
-        TIME_SERIES_DATA: SERVER_URL + '/user/device/pull_cloudStorage/',
-        LOAD_CONFIG: SERVER_URL + '/user/device/config/load',
-        SAVE_CONFIG: SERVER_URL + '/user/device/config/save',
-    },
-    STORAGE: {
-        TIME_SERIES_DATA: '',
-        TEXT_DATA: '',
-        OBJECT_DATA: ''
-    },
-    ADDDEVICE: {
-        ADDDEVICE: SERVER_URL + '/user/device/add',
-        GET_MQTTKEY: SERVER_URL + '/user/device/diy/add',
-        CHECK: SERVER_URL + '/user/device/check',
-        ADDDEVICE_SCAN: SERVER_URL + '/user/device/scancode/register',
-    },
-    SHARE: {
-        SHARE_LIST: SERVER_URL + '/user/device/share/list',
-        SHARE_DEVIE: SERVER_URL + '/user/device/share/master',
-        DEL_SHARE: SERVER_URL + '/user/device/share/master/delete',
-        ACCEPT_SHARED: SERVER_URL + '/user/device/share/slaver/accept',
-        REFUSE_SHARED: SERVER_URL + '/user/device/share/slaver/refuse',
-        DEL_SHARED: SERVER_URL + '/user/device/share/slaver/delete',
-    },
-    MESSAGE: SERVER_URL + '/user/message',
-    FEEDBACK: SERVER_URL + '/feedback',
-    AUTO: {
-        TASK: SERVER_URL + "/auto",
-        TASK_STATE: SERVER_URL + "/auto/state"
-    }
+  BASE_URL: GATEWAY_BASE_URL,
+  LOGIN: API_V1_URL + '/user/login',
+  REGISTER: API_V1_URL + '/web/register',
+  RETRIEVE: API_V1_URL + '/web/password',
+  SMSCODE: API_V1_URL + '/web/sms',
+  AUTH: {
+    LOGIN: API_V1_URL + '/user/login',
+    REGISTER: API_V1_URL + '/user/register',
+    RETRIEVE: API_V1_URL + '/user/password/reset',
+    SMSCODE: API_V1_URL + '/user/smscode',
+    CHECK: API_V1_URL + '/user/token/check',
+    GITHUB_LOGIN: API_V1_URL + '/user/oauth/github',
+    WECHAT_LOGIN: API_V1_URL + '/user/oauth/wechat',
+    ALTCHA_CHALLENGE: API_V1_URL + '/auth/altcha/challenge',
+    EMAIL_CODE: API_V1_URL + '/auth/email/code',
+    EMAIL_LOGIN: API_V1_URL + '/auth/email/login',
+    WECHAT_MOBILE_START: API_V1_URL + '/auth/wechat/mobile/start',
+    WECHAT_MOBILE_LOGIN: API_V1_URL + '/auth/wechat/mobile/login',
+    WECHAT_MOBILE_BIND: API_V1_URL + '/auth/wechat/mobile/bind',
+    ME: API_V1_URL + '/auth/me',
+    REFRESH: API_V1_URL + '/auth/refresh',
+    LOGOUT: API_V1_URL + '/auth/logout',
+  },
+  ACCOUNT: {
+    ROOT: API_V1_URL + '/account',
+    CONNECTION: API_V1_URL + '/account/connection',
+  },
+  DEVICE: {
+    LIST: API_V1_URL + '/devices',
+    CREATE: API_V1_URL + '/devices',
+    DETAIL: deviceUrl,
+    STATUS: (deviceId: string) => deviceUrl(deviceId) + '/status',
+    DATA: (deviceId: string) => deviceUrl(deviceId) + '/data',
+    CONFIG: (deviceId: string) => deviceUrl(deviceId) + '/config',
+    CONNECTION: (deviceId: string) => deviceUrl(deviceId) + '/connection',
+    NEW_VERSION: API_V1_URL + '/user/device/ota/get',
+    OTA_STATE: API_V1_URL + '/user/device/ota/upgrade_status',
+    TIME_SERIES_DATA: API_V1_URL + '/user/device/pull_cloudStorage/',
+    LOAD_CONFIG: API_V1_URL + '/user/device/config/load',
+    SAVE_CONFIG: API_V1_URL + '/user/device/config/save',
+  },
+  FEEDBACK: {
+    SUBMIT: API_V1_URL + '/feedback/submit',
+    UPLOAD_IMAGE: API_V1_URL + '/feedback/upload-image',
+  },
+  USER: {
+    ALL: API_V1_URL + '/user/overview',
+    DEVICE: API_V1_URL + '/user/device/pull',
+    INFO: API_V1_URL + '/user/profile/get',
+    SAVE_CONFIG: API_V1_URL + '/user/config/save',
+    AVATAR: GATEWAY_BASE_URL + '/avatar',
+    // The managed Gateway does not currently expose profile/avatar mutation.
+    UPLOAD_AVATAR: '',
+    CHANGE_PASSWORD: API_V1_URL + '/user/password/change',
+    CHANGE_PROFILE: API_V1_URL + '/user/profile/modify',
+    ADD_DEVICE: API_V1_URL + '/user/config/save',
+    DEL_DEVICE: API_V1_URL + '/user/device/remove',
+    CANCEL_ACCOUNT: API_V1_URL + '/user/cancel',
+  },
+  STORAGE: {
+    TIME_SERIES_DATA: '',
+    TEXT_DATA: '',
+    OBJECT_DATA: '',
+  },
+  ADDDEVICE: {
+    ADDDEVICE: API_V1_URL + '/user/device/add',
+    GET_MQTTKEY: API_V1_URL + '/user/device/diy/add',
+    CHECK: API_V1_URL + '/user/device/check',
+    ADDDEVICE_SCAN: API_V1_URL + '/user/device/scancode/register',
+  },
+  SHARE: {
+    SHARE_LIST: API_V1_URL + '/user/device/share/list',
+    SHARE_DEVIE: API_V1_URL + '/user/device/share/master',
+    DEL_SHARE: API_V1_URL + '/user/device/share/master/delete',
+    ACCEPT_SHARED: API_V1_URL + '/user/device/share/slaver/accept',
+    REFUSE_SHARED: API_V1_URL + '/user/device/share/slaver/refuse',
+    DEL_SHARED: API_V1_URL + '/user/device/share/slaver/delete',
+  },
+  MESSAGE: API_V1_URL + '/user/message',
+  AUTO: {
+    TASK: API_V1_URL + '/auto',
+    TASK_STATE: API_V1_URL + '/auto/state',
+  },
+} as const;
+
+export function isGatewayUrl(url: string): boolean {
+  return url.startsWith(API_V1_URL + '/auth/')
+    || url === API_V1_URL + '/devices'
+    || url.startsWith(API_V1_URL + '/devices/')
+    || url === API_V1_URL + '/account'
+    || url.startsWith(API_V1_URL + '/account/')
+    || url.startsWith(API_V1_URL + '/feedback/');
 }

@@ -139,7 +139,7 @@ export class ShareManagerPage implements OnInit, OnDestroy {
 
   private async loadShareList(): Promise<void> {
     try {
-      if (this.dataService.auth?.uuid && this.dataService.auth?.token) {
+      if (this.dataService.auth?.accessToken) {
         await this.shareService.getShareList();
       }
       if (this.shareData.shared0.length > 0) {

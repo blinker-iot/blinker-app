@@ -17,9 +17,20 @@ import {
 import { DataService } from './data.service';
 import { HttpClient } from '@angular/common/http';
 import { API } from 'src/app/configs/api.config';
+import {
+  AccountConnectionResponse,
+  DeviceConfigResponse,
+  DeviceCreateResponse,
+  DeviceDataResponse,
+  DeviceListResponse,
+  DeviceResponse,
+  DeviceStatusResponse,
+  GatewayDevice,
+  MqttConnection,
+} from '../model/response.model';
 import { BlinkerBroker } from '../model/broker.model';
 import { PermissionService } from './permission.service';
-import { Subscription, Subject } from 'rxjs';
+import { firstValueFrom, Subscription, Subject } from 'rxjs';
 import { DebugService } from 'src/app/debug/debug.service';
 import { BlinkerDevice } from '../model/device.model';
 import { NativeService } from './native.service';
@@ -27,6 +38,13 @@ import { NoticeService } from './notice.service';
 import { ToastService } from './toast.service';
 import { DeviceSwitchWaiting } from './device-switch-waiting';
 import mqtt from "mqtt"; 
+
+type DeviceReference = string | BlinkerDevice | GatewayDevice;
+
+interface DeviceConnectionResponse {
+  device: Pick<GatewayDevice, 'deviceId' | 'tenantId' | 'status'>;
+  mqtt: MqttConnection;
+}
 
 const DEBUG_MODE = false
 
@@ -711,52 +729,102 @@ export class DeviceService {
       this.debugService.update({ deviceName: device.deviceName, type: type, data: data });
   }
 
-  //saveDeviceConfig后需要调用loadConifg更新本地的config
-  saveDeviceConfig(device, deviceConfig) {
-    return this.http
-      .post(API.DEVICE.SAVE_CONFIG,
-        {
-          "uuid": this.uuid,
-          'token': this.token,
-          "deviceName": device.deviceName,
-          "deviceConfig": JSON.stringify(deviceConfig)
-        })
-      .toPromise()
-      .then(response => {
-        console.log(response);
-        let data = JSON.parse(JSON.stringify(response));
-        if (data.message == 1000) {
-          return true;
-        } else {
-          return false;
-        }
-      })
-      .catch(this.handleError);
+  listDevices(): Promise<DeviceListResponse> {
+    return firstValueFrom(
+      this.http.get<DeviceListResponse>(API.DEVICE.LIST),
+    );
   }
 
-  loadDeviceConfig(device) {
-    return this.http.get(API.DEVICE.LOAD_CONFIG, {
-      params: {
-        uuid: this.uuid,
-        token: this.token,
-        deviceName: device.deviceName
-      }
-    })
-      .toPromise()
-      .then(response => {
-        console.log(response);
-        let data = JSON.parse(JSON.stringify(response));
-        if (data.message == 1000) {
-          return data.detail;
-        }
-      })
-      .catch(this.handleError);
+  createDevice(
+    name: string,
+    idempotencyKey: string,
+  ): Promise<DeviceCreateResponse> {
+    return firstValueFrom(
+      this.http.post<DeviceCreateResponse>(
+        API.DEVICE.CREATE,
+        { name, deviceType: 'diy' },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': idempotencyKey,
+          },
+        },
+      ),
+    );
+  }
+
+  getDeviceDetails(deviceId: string): Promise<DeviceResponse> {
+    return firstValueFrom(
+      this.http.get<DeviceResponse>(API.DEVICE.DETAIL(deviceId)),
+    );
+  }
+
+  getDeviceStatus(deviceId: string): Promise<DeviceStatusResponse> {
+    return firstValueFrom(
+      this.http.get<DeviceStatusResponse>(API.DEVICE.STATUS(deviceId)),
+    );
+  }
+
+  getLatestDeviceData(deviceId: string): Promise<DeviceDataResponse> {
+    return firstValueFrom(
+      this.http.get<DeviceDataResponse>(API.DEVICE.DATA(deviceId)),
+    );
+  }
+
+  getDeviceConnection(deviceId: string): Promise<DeviceConnectionResponse> {
+    return firstValueFrom(
+      this.http.get<DeviceConnectionResponse>(API.DEVICE.CONNECTION(deviceId)),
+    );
+  }
+
+  getAccountConnection(): Promise<AccountConnectionResponse> {
+    return firstValueFrom(
+      this.http.get<AccountConnectionResponse>(API.ACCOUNT.CONNECTION),
+    );
+  }
+
+  async loadDeviceConfig(device: DeviceReference): Promise<Record<string, unknown>> {
+    const response = await firstValueFrom(
+      this.http.get<DeviceConfigResponse>(
+        API.DEVICE.CONFIG(this.deviceIdOf(device)),
+      ),
+    );
+    return response.config;
+  }
+
+  async saveDeviceConfig(
+    device: DeviceReference,
+    patch: Record<string, unknown>,
+  ): Promise<boolean> {
+    try {
+      await firstValueFrom(
+        this.http.put<DeviceConfigResponse>(
+          API.DEVICE.CONFIG(this.deviceIdOf(device)),
+          { config: patch },
+          { headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  deleteDevice(deviceId: string): Promise<DeviceResponse> {
+    return firstValueFrom(
+      this.http.delete<DeviceResponse>(API.DEVICE.DETAIL(deviceId)),
+    );
+  }
+
+  private deviceIdOf(device: DeviceReference): string {
+    if (typeof device === 'string') return device;
+    return 'deviceId' in device ? device.deviceId : device.deviceName;
   }
 
   //读取设备Layouter配置
   loadDeviceLayouter(device) {
     this.loadDeviceConfig(device).then(config => {
-      device.config.layouter = config.layouter
+      device.config.layouter = config['layouter'] as string
     })
   }
 

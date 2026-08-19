@@ -18,9 +18,7 @@ export class PusherService {
 
 
   async init() {
-    await PushNotifications.addListener('registration', token => {
-      console.info('Registration token: ', token.value);
-    });
+    await PushNotifications.addListener('registration', () => undefined);
 
     await PushNotifications.addListener('registrationError', err => {
       console.error('Registration error: ', err.error);

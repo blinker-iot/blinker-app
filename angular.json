@@ -121,13 +121,15 @@
             "reporters": ["default"],
             "coverageReporters": ["html", "text-summary"],
             "buildTarget": ":build:testing",
-            "runner": "vitest"
+            "runner": "vitest",
+            "runnerConfig": "vitest.config.ts",
+            "setupFiles": ["src/test-setup.ts"]
           },
           "configurations": {
             "ci": {
               "progress": false,
               "watch": false,
-              "buildTarget": ":build:testing-ci"
+              "buildTarget": ":build:testing"
             }
           }
         },

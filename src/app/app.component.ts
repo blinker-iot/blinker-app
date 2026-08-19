@@ -103,7 +103,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   initApp() {
-    this.initService();
+    void this.initService();
     if (this.isPcBrowser) {
       console.log('当前是PC端浏览器访问');
     }
@@ -129,11 +129,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
   async initService() {
     console.log('init service');
-    // Do not restore stale production credentials while running the local
-    // preview; they would make the app skip the test-device data.
-    if (environment.production) {
-      await this.dataService.init();
-    }
+    await this.dataService.init();
     this.checkLoginStatus();
     this.authService.init();
     this.deviceService.init();
@@ -155,11 +151,6 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   checkLoginStatus() {
-    if (!environment.production) {
-      console.log('[DEV MODE] 使用设备预览数据');
-      return;
-    }
-
     if (this.authService.isLogin()) {
       this.userService.getAllInfo();
     } else {
