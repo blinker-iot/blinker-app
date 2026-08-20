@@ -33,7 +33,7 @@ describe('FeedbackService', () => {
     httpTesting.verify();
   });
 
-  it('submits the Gateway feedback body and treats HTTP 201 as complete', async () => {
+  it('treats a feedback response body status of 201 as complete', async () => {
     const pending = service.newFeedback({
       title: '[设备问题] 控制异常',
       content: '设备控制后没有响应',
@@ -56,16 +56,20 @@ describe('FeedbackService', () => {
     request.flush(
       {
         status: 201,
-        data: { feedbackId: 42, issueStatus: 'created' },
+        data: {
+          feedbackId: 42,
+          issueId: '5200288733',
+          issueNumber: 24,
+          issueUrl: 'https://github.com/blinker-iot/blinker-app/issues/24',
+        },
         messages: 'Feedback created successfully',
-      },
-      { status: 201, statusText: 'Created' }
+      }
     );
 
     await expect(pending).resolves.toEqual({
       status: 'complete',
       feedbackId: 42,
-      issueStatus: 'created',
+      issueStatus: undefined,
     });
   });
 
