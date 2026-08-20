@@ -55,8 +55,7 @@
   padding: 10px 12px;
   border: 1px solid var(--blinker-border);
   border-radius: 11px;
-  background: color-mix(in srgb, var(--blinker-surface) 88%, transparent);
-  backdrop-filter: blur(10px);
+  background: var(--blinker-surface);
   display: flex;
   align-items: center;
   justify-content: space-between;

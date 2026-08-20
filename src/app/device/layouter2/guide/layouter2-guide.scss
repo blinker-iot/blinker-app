@@ -5,8 +5,6 @@
   height: 100vh;
   color: var(--blinker-text-primary);
   background: rgba(7, 20, 35, 0.58);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 
   span {
     font-size: 13px;
