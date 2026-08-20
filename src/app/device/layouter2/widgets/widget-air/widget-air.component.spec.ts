@@ -1,4 +1,5 @@
 import { ChangeDetectorRef, NgZone } from '@angular/core';
+import { NavController } from '@ionic/angular/standalone';
 import { Observable, of, throwError } from 'rxjs';
 import { WeatherService } from 'src/app/core/services/weather.service';
 import {
@@ -6,6 +7,10 @@ import {
   WeatherServiceProvider,
 } from 'src/app/core/services/third-party-services.service';
 import { WidgetAirComponent } from './widget-air.component';
+
+vi.mock('@ionic/angular/standalone', () => ({
+  NavController: class {},
+}));
 
 describe('WidgetAirComponent', () => {
   const components: WidgetAirComponent[] = [];
@@ -45,11 +50,15 @@ describe('WidgetAirComponent', () => {
     } as unknown as NgZone;
     const markForCheck = vi.fn();
     const changeDetectorRef = { markForCheck } as unknown as ChangeDetectorRef;
+    const navController = {
+      navigateForward: vi.fn().mockResolvedValue(true),
+    } as unknown as NavController;
     const component = new WidgetAirComponent(
       weatherService,
       thirdPartyServices,
       ngZone,
-      changeDetectorRef
+      changeDetectorRef,
+      navController
     );
     component.device = {
       config: {
@@ -79,12 +88,12 @@ describe('WidgetAirComponent', () => {
     expect(component.snapshot?.location).toBe('杭州');
     expect(component.providerName).toBe('心知天气');
     expect(component.displayPages).toHaveLength(1);
-    expect(component.particlePollutants.map((pollutant) => pollutant.label)).toEqual([
+    expect(component.featuredPollutants.map((pollutant) => pollutant.label)).toEqual([
       'PM2.5',
       'PM10',
-    ]);
-    expect(component.pollutantPages[0].map((pollutant) => pollutant.label)).toEqual([
       'O₃',
+    ]);
+    expect(component.pollutantPages.flat().map((pollutant) => pollutant.label)).toEqual([
       'NO₂',
       'SO₂',
       'CO',
@@ -109,13 +118,13 @@ describe('WidgetAirComponent', () => {
 
     expect(component.airState).toBe('ready');
     expect(component.snapshot?.aqiDisplay).toBe('42');
-    expect(component.particlePollutants.map((pollutant) => pollutant.label)).toEqual([
+    expect(component.featuredPollutants.map((pollutant) => pollutant.label)).toEqual([
       'PM2.5',
       'PM10',
-    ]);
-    expect(component.pollutantPages[0]).toHaveLength(4);
-    expect(component.pollutantPages[0].map((pollutant) => pollutant.label)).toEqual([
       'O₃',
+    ]);
+    expect(component.pollutantPages.every((page) => page.length <= 3)).toBe(true);
+    expect(component.pollutantPages.flat().map((pollutant) => pollutant.label)).toEqual([
       'NO₂',
       'SO₂',
       'CO',
@@ -124,7 +133,7 @@ describe('WidgetAirComponent', () => {
     expect(getAirQuality).not.toHaveBeenCalled();
   });
 
-  it('keeps PM2.5 and PM10 visible when the second row is empty', async () => {
+  it('keeps all three featured slots visible when the second row is empty', async () => {
     const { component } = createComponent('seniverse', {
       current: {
         results: [
@@ -141,22 +150,24 @@ describe('WidgetAirComponent', () => {
     component.ngOnInit();
     await vi.waitFor(() => expect(component.airState).toBe('ready'));
 
-    expect(component.particlePollutants.map((pollutant) => pollutant.id)).toEqual([
+    expect(component.featuredPollutants.map((pollutant) => pollutant.id)).toEqual([
       'pm2.5',
       'pm10',
+      'o3',
     ]);
-    expect(component.particlePollutants.map((pollutant) => pollutant.displayValue)).toEqual([
+    expect(component.featuredPollutants.map((pollutant) => pollutant.displayValue)).toEqual([
       '18',
       '35',
+      '--',
     ]);
     expect(component.displayPages).toHaveLength(1);
-    expect(component.displayPages[0].particles).toEqual(
-      component.particlePollutants
+    expect(component.displayPages[0].featured).toEqual(
+      component.featuredPollutants
     );
     expect(component.displayPages[0].pollutants).toEqual([]);
   });
 
-  it('keeps fixed PM slots and preserves a zero value when one PM value is missing', async () => {
+  it('keeps fixed featured slots and preserves a zero value when one value is missing', async () => {
     const { component } = createComponent('seniverse', {
       current: {
         results: [
@@ -171,13 +182,15 @@ describe('WidgetAirComponent', () => {
     component.ngOnInit();
     await vi.waitFor(() => expect(component.airState).toBe('ready'));
 
-    expect(component.particlePollutants.map((pollutant) => pollutant.label)).toEqual([
+    expect(component.featuredPollutants.map((pollutant) => pollutant.label)).toEqual([
       'PM2.5',
       'PM10',
+      'O₃',
     ]);
-    expect(component.particlePollutants.map((pollutant) => pollutant.displayValue)).toEqual([
+    expect(component.featuredPollutants.map((pollutant) => pollutant.displayValue)).toEqual([
       '--',
       '0',
+      '--',
     ]);
   });
 
@@ -222,25 +235,26 @@ describe('WidgetAirComponent', () => {
     expect(component.errorMessage).toContain('请求过于频繁');
   });
 
-  it('keeps PM data in the first row and paginates four details per second row', async () => {
+  it('keeps three featured values in the first row and three details in the second row', async () => {
     const current = createSeniverseCurrentWithPollutants();
     const component = createComponent('seniverse', { current }).component;
     component.lstyle = 0;
     component.ngOnInit();
     await vi.waitFor(() => expect(component.airState).toBe('ready'));
 
-    expect(component.particlePollutants.map((pollutant) => pollutant.id)).toEqual([
+    expect(component.featuredPollutants.map((pollutant) => pollutant.id)).toEqual([
       'pm2.5',
       'pm10',
+      'o3',
     ]);
-    expect(component.pollutantPages.map((page) => page.length)).toEqual([4, 3]);
+    expect(component.pollutantPages.map((page) => page.length)).toEqual([3, 3]);
     const detailIds = component.pollutantPages
       .flat()
       .map((pollutant) => pollutant.id);
     expect(detailIds).not.toContain('pm2.5');
     expect(detailIds).not.toContain('pm10');
+    expect(detailIds).not.toContain('o3');
     expect(component.pollutantPages.flat().map((pollutant) => pollutant.label)).toEqual([
-      'O₃',
       'NO₂',
       'SO₂',
       'CO',
@@ -251,7 +265,7 @@ describe('WidgetAirComponent', () => {
     expect(component.displayPages).toHaveLength(2);
     expect(
       component.displayPages.every((page) =>
-        page.particles === component.particlePollutants
+        page.featured === component.featuredPollutants
       )
     ).toBe(true);
   });
@@ -259,8 +273,8 @@ describe('WidgetAirComponent', () => {
   it('supports keyboard and direct navigation between pollutant pages', () => {
     const { component } = createComponent();
     component.displayPages = [
-      { id: 'first', particles: [], pollutants: [] },
-      { id: 'second', particles: [], pollutants: [] },
+      { id: 'first', featured: [], pollutants: [] },
+      { id: 'second', featured: [], pollutants: [] },
     ];
 
     component.nextPage();

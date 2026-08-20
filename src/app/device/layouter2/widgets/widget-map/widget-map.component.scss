@@ -70,6 +70,31 @@
   cursor: pointer;
 }
 
+.map-status .api-key-settings-button {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.map-status .api-key-settings-button > i {
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.map-status .api-key-settings-button:focus-visible {
+  outline: 2px solid rgba(var(--ion-color-primary-rgb), 0.32);
+  outline-offset: 2px;
+}
+
 .map-status-error i {
   color: var(--ion-color-danger);
 }

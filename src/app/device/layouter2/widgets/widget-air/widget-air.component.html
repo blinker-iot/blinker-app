@@ -1,11 +1,5 @@
-<div
-  widget
-  class="air-shell air-tall"
-  [attr.data-severity]="snapshot?.severity || 'unknown'"
-  (pointerdown)="onPointerDown($event)"
-  (pointerup)="onPointerUp($event)"
-  (pointercancel)="onPointerCancel()"
->
+<div widget class="air-shell air-tall" [attr.data-severity]="snapshot?.severity || 'unknown'"
+  (pointerdown)="onPointerDown($event)" (pointerup)="onPointerUp($event)" (pointercancel)="onPointerCancel()">
   @if (airState === 'ready' && snapshot) {
   <div class="air-content">
     <header class="air-header">
@@ -22,18 +16,9 @@
           }
           {{ updatedText }} · {{ providerName }}
         </span>
-        <button
-          type="button"
-          class="refresh-button"
-          aria-label="刷新空气质量"
-          title="刷新空气质量"
-          (click)="$event.stopPropagation(); refresh()"
-        >
-          <i
-            class="fa-light fa-arrows-rotate"
-            [class.fa-spin]="refreshing"
-            aria-hidden="true"
-          ></i>
+        <button type="button" class="refresh-button" aria-label="刷新空气质量" title="刷新空气质量"
+          (click)="$event.stopPropagation(); refresh()">
+          <i class="fa-light fa-arrows-rotate" [class.fa-spin]="refreshing" aria-hidden="true"></i>
         </button>
       </div>
     </header>
@@ -47,7 +32,6 @@
           </span>
           <div class="quality-copy">
             <strong [title]="snapshot.quality">{{ snapshot.quality || '暂无评级' }}</strong>
-            <small>{{ snapshot.scaleLabel || '空气质量指数' }}</small>
           </div>
         </div>
         <div class="primary-pollutant" [title]="snapshot.primaryPollutant || '无主要污染物'">
@@ -55,38 +39,20 @@
           <span>首要污染物</span>
           <strong>{{ snapshot.primaryPollutant || '无' }}</strong>
         </div>
-        <p class="health-advice" [title]="snapshot.healthAdvice">
-          <i class="fa-light fa-heart-pulse" aria-hidden="true"></i>
-          {{ snapshot.healthAdvice || '请根据当地空气质量合理安排户外活动。' }}
-        </p>
       </section>
 
       <section class="air-details" aria-label="空气质量详情">
-        <div
-          class="pages-window"
-          role="region"
-          tabindex="0"
-          [attr.aria-label]="'第 ' + (pageIndex + 1) + ' 页空气质量信息，左右方向键、点击或横向滑动切换'"
-          (click)="advanceFromClick()"
-          (keydown)="onCarouselKeydown($event)"
-        >
-          <div
-            class="pages-track"
-            [style.transform]="'translate3d(-' + pageIndex * 100 + '%, 0, 0)'"
-          >
+        <div class="pages-window" role="region" tabindex="0"
+          [attr.aria-label]="'第 ' + (pageIndex + 1) + ' 页空气质量信息，左右方向键、点击或横向滑动切换'" (click)="advanceFromClick()"
+          (keydown)="onCarouselKeydown($event)">
+          <div class="pages-track" [style.transform]="'translate3d(-' + pageIndex * 100 + '%, 0, 0)'">
             @for (page of displayPages; track page.id) {
-            <div
-              class="display-page"
-              [attr.aria-hidden]="$index === pageIndex ? null : 'true'"
-              [attr.inert]="$index === pageIndex ? null : ''"
-            >
+            <div class="display-page" [attr.aria-hidden]="$index === pageIndex ? null : 'true'"
+              [attr.inert]="$index === pageIndex ? null : ''">
               <div class="pollutants-page">
-                <div class="particle-pollutants-row" aria-label="颗粒物浓度">
-                  @for (pollutant of page.particles; track pollutant.id) {
-                  <div
-                    class="pollutant-card"
-                    [title]="pollutant.label + ' ' + pollutant.displayValue + pollutant.unit"
-                  >
+                <div class="featured-pollutants-row" aria-label="主要污染物浓度">
+                  @for (pollutant of page.featured; track pollutant.id) {
+                  <div class="pollutant-card" [title]="pollutant.label + ' ' + pollutant.displayValue + pollutant.unit">
                     <i [class]="pollutantIcon(pollutant.id)" aria-hidden="true"></i>
                     <div>
                       <span>{{ pollutant.label }}</span>
@@ -103,10 +69,7 @@
                 } @else {
                 <div class="detail-pollutants-row" aria-label="其他污染物浓度">
                   @for (pollutant of page.pollutants; track pollutant.id) {
-                  <div
-                    class="pollutant-card"
-                    [title]="pollutant.label + ' ' + pollutant.displayValue + pollutant.unit"
-                  >
+                  <div class="pollutant-card" [title]="pollutant.label + ' ' + pollutant.displayValue + pollutant.unit">
                     <div class="pollutant-card-heading">
                       <i [class]="pollutantIcon(pollutant.id)" aria-hidden="true"></i>
                       <span>{{ pollutant.label }}</span>
@@ -127,13 +90,9 @@
         @if (displayPages.length > 1) {
         <nav class="page-dots" aria-label="空气质量信息分页">
           @for (page of displayPages; track page.id) {
-          <button
-            type="button"
-            [class.active]="$index === pageIndex"
-            [attr.aria-label]="pageLabel($index)"
+          <button type="button" [class.active]="$index === pageIndex" [attr.aria-label]="pageLabel($index)"
             [attr.aria-current]="$index === pageIndex ? 'page' : null"
-            (click)="$event.stopPropagation(); showPage($index)"
-          ></button>
+            (click)="$event.stopPropagation(); showPage($index)"></button>
           }
         </nav>
         }
@@ -154,7 +113,10 @@
       <strong>未配置天气 API Key</strong>
       <small>请先在第三方服务中选择天气服务并保存 Key</small>
     </div>
-    <button type="button" routerLink="/third-party-services">点击配置</button>
+    <button type="button" class="api-key-settings-button" (click)="openThirdPartyServices()"
+      aria-label="配置天气 API Key" title="配置天气 API Key">
+      <i class="fa-light fa-gear" aria-hidden="true"></i>
+    </button>
     } @else if (airState === 'missing-location') {
     <i class="fa-light fa-location-crosshairs" aria-hidden="true"></i>
     <div>

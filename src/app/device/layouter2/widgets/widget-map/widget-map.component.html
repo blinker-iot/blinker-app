@@ -9,7 +9,15 @@
     <i class="fa-light fa-map-location-dot" aria-hidden="true"></i>
     <strong>未配置地图 API Key</strong>
     <small>请先在第三方服务中选择地图服务并保存对应的 Key</small>
-    <button type="button" routerLink="/third-party-services">点击配置</button>
+    <button
+      type="button"
+      class="api-key-settings-button"
+      (click)="openThirdPartyServices()"
+      aria-label="配置地图 API Key"
+      title="配置地图 API Key"
+    >
+      <i class="fa-light fa-gear" aria-hidden="true"></i>
+    </button>
     } @else {
     <i class="fa-light fa-triangle-exclamation" aria-hidden="true"></i>
     <strong>{{ mapProviderName }}加载失败</strong>

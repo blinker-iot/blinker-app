@@ -5,7 +5,6 @@ import { WidgetTextComponent } from './widget-text/widget-text';
 import { WidgetNumberComponent } from './widget-number/widget-number';
 import { WidgetButtonComponent } from './widget-button/widget-button';
 import { WidgetRangeComponent } from './widget-range/widget-range';
-import { WidgetTimerComponent } from './widget-timer/widget-timer';
 import { WidgetColorComponent } from './widget-color/widget-color';
 import { WidgetDebugComponent } from './widget-debug/widget-debug';
 import { WidgetJoystickComponent } from './widget-joystick/widget-joystick';
@@ -28,7 +27,6 @@ import { Layouter2EditTapDirective } from './edit-tap.directive';
     WidgetNumberComponent,
     WidgetButtonComponent,
     WidgetRangeComponent,
-    WidgetTimerComponent,
     WidgetColorComponent,
     WidgetDebugComponent,
     WidgetJoystickComponent,
@@ -94,7 +92,9 @@ export class ParentDynamicComponent {
         },
       });
       const didDismiss = modal.onDidDismiss();
-      void didDismiss.then(() => {
+      void didDismiss.then((result) => {
+        if (result.role === 'delete') return;
+
         const refresh = this.widgetComponent?.refresh;
         if (typeof refresh === 'function') {
           refresh.call(this.widgetComponent);

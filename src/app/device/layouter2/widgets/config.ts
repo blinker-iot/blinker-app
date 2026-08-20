@@ -1,3 +1,9 @@
+import {
+  TEXT_WIDGET_DEFAULT_ALIGNMENT,
+  TEXT_WIDGET_DEFAULT_FONT_SIZE,
+  TEXT_WIDGET_STYLES,
+} from './widget-text/widget-text-layout';
+
 export interface Layouter2Widget {
   device;
   widget;
@@ -16,7 +22,6 @@ export let widgetList = [
   { name: '滑块', icon: 'fa-light fa-sliders', type: 'ran' },
   { name: '颜色', icon: 'fa-light fa-palette', type: 'col' },
   { name: '摇杆', icon: 'fal fa-gamepad', type: 'joy' },
-  { name: '定时', icon: 'fa-light fa-stopwatch', type: 'tim' },
   { name: '调试', icon: 'fa-light fa-terminal', type: 'deb' },
   { name: '图表', icon: 'fa-light fa-chart-line', type: 'cha' },
   { name: '地图', icon: 'fa-light fa-map-location-dot', type: 'map' },
@@ -29,7 +34,7 @@ export let widgetList = [
 ]
 
 export let configList = {
-  "tex": { type: "tex", t0: "文本1", t1: "文本2", size: 14, ico: "fal fa-font" },
+  "tex": { type: "tex", t0: "文本", size: TEXT_WIDGET_DEFAULT_FONT_SIZE, align: TEXT_WIDGET_DEFAULT_ALIGNMENT, lstyle: 0 },
   "num": { type: "num", t0: "文本1", ico: "fal fa-question", clr: "#389BEE", min: 0, max: 100, uni: "单位" },
   "btn": { type: "btn", ico: "fal fa-power-off", mode: 0, t0: "文本1", t1: "文本2" },
   "col": { type: "col", t0: "颜色拾取", clr: "#389BEE" },
@@ -38,7 +43,6 @@ export let configList = {
   "map": { type: "map" },
   "joy": { type: "joy" },
   "deb": { type: "deb", mode: 0 },
-  "tim": { type: "tim" },
   "vid": { type: "vid" },
   "tab": { type: "tab" },
   "inp": { type: "inp" },
@@ -48,15 +52,7 @@ export let configList = {
 }
 
 export let styleList = {
-  'tex': [
-    { cols: 2, rows: 1 },
-    { cols: 4, rows: 1 },
-    { cols: 2, rows: 2 },
-    { cols: 4, rows: 2 },
-    { cols: 2, rows: 2 },
-    { cols: 8, rows: 1 },
-    { cols: 8, rows: 2 },
-  ],
+  'tex': TEXT_WIDGET_STYLES,
   "num": [
     { cols: 2, rows: 2 },
     { cols: 4, rows: 2 },
@@ -101,10 +97,6 @@ export let styleList = {
   "map": [
     { cols: 8, rows: 4 },
     { cols: 8, rows: 6 },
-  ],
-  "tim": [
-    { cols: 2, rows: 2 },
-    { cols: 1, rows: 1 },
   ],
   "vid": [
     { cols: 8, rows: 5 },

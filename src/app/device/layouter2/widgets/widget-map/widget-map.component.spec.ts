@@ -1,5 +1,6 @@
 import { ChangeDetectorRef, NgZone } from '@angular/core';
 import { ActionSheetController } from '@ionic/angular';
+import { NavController } from '@ionic/angular/standalone';
 import {
   ActiveThirdPartyService,
   GeolocationServiceProvider,
@@ -9,6 +10,10 @@ import { WidgetMapComponent } from './widget-map.component';
 
 vi.mock('@ionic/angular', () => ({
   ActionSheetController: class {},
+}));
+
+vi.mock('@ionic/angular/standalone', () => ({
+  NavController: class {},
 }));
 
 describe('WidgetMapComponent', () => {
@@ -25,12 +30,16 @@ describe('WidgetMapComponent', () => {
     const changeDetectorRef = {
       markForCheck: vi.fn(),
     } as unknown as ChangeDetectorRef;
+    const navController = {
+      navigateForward: vi.fn().mockResolvedValue(true),
+    } as unknown as NavController;
 
     return new WidgetMapComponent(
       actionSheetController,
       thirdPartyServices,
       ngZone,
-      changeDetectorRef
+      changeDetectorRef,
+      navController
     );
   }
 

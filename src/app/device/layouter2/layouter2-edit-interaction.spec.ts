@@ -14,7 +14,7 @@ import { Layouter2EditTapDirective } from './widgets/edit-tap.directive';
   standalone: true,
   imports: [Gridster, GridsterItem, Layouter2EditTapDirective],
   styles: `
-    gridster { width: 120px; height: 120px; }
+    gridster { width: 300px; height: 100px; }
     .edit-mask { position: absolute; inset: 0; }
   `,
   template: `
@@ -24,7 +24,18 @@ import { Layouter2EditTapDirective } from './widgets/edit-tap.directive';
           @if (editMode) {
           <div
             class="edit-mask layouter2-drag-handle"
+            data-index="0"
             (appLayouter2EditTap)="openEditor()"
+          ></div>
+          }
+        </div>
+      </gridster-item>
+      <gridster-item [item]="occupyingItem">
+        <div class="widget-dynamic">
+          @if (editMode) {
+          <div
+            class="edit-mask layouter2-drag-handle"
+            data-index="1"
           ></div>
           }
         </div>
@@ -43,12 +54,19 @@ class Layouter2EditInteractionHostComponent {
     rows: 1,
   };
 
+  readonly occupyingItem: GridsterItemConfig = {
+    x: 1,
+    y: 0,
+    cols: 1,
+    rows: 1,
+  };
+
   readonly options: GridsterConfig = {
     gridType: GridType.Fixed,
     fixedColWidth: 100,
     fixedRowHeight: 100,
-    minCols: 1,
-    maxCols: 1,
+    minCols: 3,
+    maxCols: 3,
     minRows: 1,
     maxRows: 1,
     mobileBreakpoint: 0,
@@ -58,6 +76,9 @@ class Layouter2EditInteractionHostComponent {
       dragHandleClass: 'layouter2-drag-handle',
     },
     resizable: { enabled: false },
+    swap: true,
+    swapWhileDragging: true,
+    pushItems: true,
   };
 
   openEditor(): void {
@@ -201,5 +222,47 @@ describe('Layouter2 edit and drag interaction', () => {
     await new Promise((resolve) => window.setTimeout(resolve));
     expect(item?.classList.contains('gridster-item-moving')).toBe(false);
     expect(fixture.componentInstance.editorOpened).toBe(false);
+  });
+
+  it('pushes the occupying widget into the next free cell', () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const handle = element.querySelector<HTMLElement>('[data-index="0"]');
+    const gridItems = element.querySelectorAll<HTMLElement>('gridster-item');
+
+    handle?.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      buttons: 1,
+      clientX: 50,
+      clientY: 50,
+    }));
+    expect(gridItems[0]?.classList.contains('gridster-item-moving')).toBe(true);
+    document.dispatchEvent(new MouseEvent('mousemove', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      buttons: 1,
+      clientX: 60,
+      clientY: 50,
+    }));
+    document.dispatchEvent(new MouseEvent('mousemove', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      buttons: 1,
+      clientX: 150,
+      clientY: 50,
+    }));
+    document.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      clientX: 150,
+      clientY: 50,
+    }));
+
+    expect(fixture.componentInstance.item.x).toBe(1);
+    expect(fixture.componentInstance.occupyingItem.x).toBe(2);
   });
 });

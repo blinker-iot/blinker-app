@@ -1,6 +1,9 @@
 <div class="joystick-box">
-  <div class="joyout">
-    <img src="assets/img/layouter/joyout.png" />
+  <div class="joyout" aria-hidden="true">
+    <span class="direction direction-up"></span>
+    <span class="direction direction-right"></span>
+    <span class="direction direction-down"></span>
+    <span class="direction direction-left"></span>
   </div>
   <div class="stick" #stick></div>
   <div class="touch" #touchZone (panend)="panend($event)" (panmove)="panmove($event)"></div>

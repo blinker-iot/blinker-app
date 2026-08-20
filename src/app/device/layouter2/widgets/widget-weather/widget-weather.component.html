@@ -111,7 +111,11 @@
                   }
                 }
                 @case ('forecast') {
-                <div class="forecast-page" aria-label="未来 3 小时天气预报">
+                <div
+                  class="forecast-page"
+                  aria-label="未来 3 小时天气预报"
+                  [style.--forecast-columns]="page.hours.length"
+                >
                   @for (hour of page.hours; track hour.id) {
                   <article class="forecast-hour" [title]="forecastDetail(hour)">
                     <span class="forecast-time">{{ forecastTime(hour) }}</span>
@@ -232,7 +236,15 @@
       <strong>未配置天气 API Key</strong>
       <small>请先在第三方服务中选择天气服务并保存 Key</small>
     </div>
-    <button type="button" routerLink="/third-party-services">点击配置</button>
+    <button
+      type="button"
+      class="api-key-settings-button"
+      (click)="openThirdPartyServices()"
+      aria-label="配置天气 API Key"
+      title="配置天气 API Key"
+    >
+      <i class="fa-light fa-gear" aria-hidden="true"></i>
+    </button>
     } @else if (weatherState === 'missing-location') {
     <i class="fa-light fa-location-crosshairs" aria-hidden="true"></i>
     <div>

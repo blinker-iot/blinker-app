@@ -27,6 +27,11 @@ import { BColorpickerBtnsComponent } from 'src/app/core/components/b-colorpicker
 import { ParentDynamicComponent } from '../widgets/parentDynamic.component';
 import { HorizontalDragScrollDirective } from '../horizontal-drag-scroll.directive';
 import { cloneWidgetDraft, commitWidgetDraft } from '../widget-update';
+import {
+  TextWidgetAlignment,
+  normalizeTextWidget,
+  normalizeTextWidgetFontSize,
+} from '../widgets/widget-text/widget-text-layout';
 
 @Component({
   standalone: true,
@@ -74,7 +79,7 @@ export class WidgetEditor {
     if (typeof this.widget === 'undefined') return;
 
     this.sourceWidget = this.widget;
-    this.widget = cloneWidgetDraft(this.widget);
+    this.widget = normalizeTextWidget(cloneWidgetDraft(this.widget));
   }
 
   ngAfterViewInit() {
@@ -106,14 +111,36 @@ export class WidgetEditor {
   }
 
   inputChange() {
-    console.log('inputChange');
-    console.log(this.widget);
-    this.changeDetectorRef.detectChanges();
+    this.widget = { ...this.widget };
+    this.changeDetectorRef.markForCheck();
+  }
+
+  updateWidgetParameter(parameter: string, value) {
+    this.widget = {
+      ...this.widget,
+      [parameter]: value,
+    };
+    this.changeDetectorRef.markForCheck();
+  }
+
+  updateTextSize(value: unknown) {
+    this.updateWidgetParameter('size', normalizeTextWidgetFontSize(value));
+  }
+
+  updateTextAlignment(align: TextWidgetAlignment) {
+    this.updateWidgetParameter('align', align);
+  }
+
+  updateImageUrl(index: number, url: string) {
+    const list = this.widget.list.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, url } : item
+    );
+    this.updateWidgetParameter('list', list);
   }
 
   async save() {
     const sourceWidget = this.sourceWidget ?? this.widget;
-    const updatedWidget = this.widget;
+    const updatedWidget = normalizeTextWidget(this.widget);
     const modal = await this.modalCtrl.getTop();
     await modal.dismiss();
 
@@ -124,9 +151,13 @@ export class WidgetEditor {
 
   async delete() {
     const sourceWidget = this.sourceWidget ?? this.widget;
-    const modal = await this.modalCtrl.getTop();
-    await modal.dismiss();
+
+    // Update the dashboard before waiting for Ionic's leave animation so the
+    // widget disappears as soon as the delete action is clicked.
     this.LayouterService.delWidget(sourceWidget);
+
+    const modal = await this.modalCtrl.getTop();
+    await modal?.dismiss(undefined, 'delete');
   }
 
   async close() {
@@ -134,23 +165,27 @@ export class WidgetEditor {
   }
 
   changeStyle(lstyle) {
-    this.widget['lstyle'] = lstyle;
-    this.widget.cols = styleList[this.widget.type][lstyle].cols;
-    this.widget.rows = styleList[this.widget.type][lstyle].rows;
+    const style = styleList[this.widget.type][lstyle];
+    this.widget = {
+      ...this.widget,
+      lstyle,
+      cols: style.cols,
+      rows: style.rows,
+    };
   }
 
   changeColor(color) {
-    this.widget['clr'] = color;
+    this.updateWidgetParameter('clr', color);
     if (this.widget.type == 'num' && this.widget.lstyle != 0)
       this.LayouterService.refreshWidget(this.widget);
   }
 
   choseBtnMode(mode) {
-    this.widget['mode'] = mode;
+    this.updateWidgetParameter('mode', mode);
   }
 
   chosePlayMode(mode) {
-    this.widget['mode'] = mode;
+    this.updateWidgetParameter('mode', mode);
   }
 
   changeChartStyle(id, style) {}
@@ -162,7 +197,10 @@ export class WidgetEditor {
         item: this.widget,
       },
     });
-    modal.present();
+    const didDismiss = modal.onDidDismiss();
+    await modal.present();
+    await didDismiss;
+    this.inputChange();
   }
 
   async selectIcon(iconId) {
@@ -173,7 +211,10 @@ export class WidgetEditor {
         iconId: iconId,
       },
     });
-    modal.present();
+    const didDismiss = modal.onDidDismiss();
+    await modal.present();
+    await didDismiss;
+    this.inputChange();
   }
 
   showKeyboard = false;
@@ -204,10 +245,10 @@ export class WidgetEditor {
   }
 
   choseStream(stream) {
-    this.widget['str'] = stream;
+    this.updateWidgetParameter('str', stream);
   }
 
   turnRealtime() {
-    this.widget['rt'] = !this.widget['rt'];
+    this.updateWidgetParameter('rt', !this.widget['rt']);
   }
 }

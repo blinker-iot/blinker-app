@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 export class WidgetInputComponent implements Layouter2Widget {
   @Input() widget;
   @Input() device;
+  @Input() isDemo = false;
 
   get key() {
     return this.widget.key;
@@ -36,6 +37,13 @@ export class WidgetInputComponent implements Layouter2Widget {
   }
 
   getValue(valueKeys: string[]): any {
+    if (this.isDemo) {
+      for (let valueKey of valueKeys) {
+        if (typeof this.widget[valueKey] != 'undefined')
+          return this.widget[valueKey];
+      }
+    }
+
     for (let valueKey of valueKeys) {
       if (typeof this.device.data[this.key] != 'undefined')
         if (typeof this.device.data[this.key][valueKey] != 'undefined')

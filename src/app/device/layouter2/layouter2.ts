@@ -36,6 +36,7 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 import { ParentDynamicComponent } from './widgets/parentDynamic.component';
 import { WidgetListbarComponent } from './widget-listbar/widget-listbar.component';
 import { replaceDashboardWidget } from './widget-update';
+import { normalizeTextWidget } from './widgets/widget-text/widget-text-layout';
 
 @Component({
   standalone: true,
@@ -98,15 +99,14 @@ export class Layouter2Component implements DeviceComponent {
     {
       type: 'tex',
       t0: 'blinker入门示例',
-      t1: '文本2',
-      ico: '',
+      size: 14,
+      align: 'left',
       cols: 4,
       rows: 1,
       key: 'tex-272',
       x: 0,
       y: 0,
       lstyle: 1,
-      clr: '#FFF',
     },
     {
       type: 'num',
@@ -204,7 +204,7 @@ export class Layouter2Component implements DeviceComponent {
     minCols: 8,
     maxCols: 8,
     minRows: 14,
-    maxRows: 20,
+    maxRows: 50,
     maxItemCols: 8,
     minItemCols: 1,
     maxItemRows: 8,
@@ -234,7 +234,7 @@ export class Layouter2Component implements DeviceComponent {
     },
     swap: true,
     swapWhileDragging: true,
-    pushItems: false,
+    pushItems: true,
     disableWindowResize: false,
     disableWarnings: false,
     scrollToNewItems: false,
@@ -264,7 +264,6 @@ export class Layouter2Component implements DeviceComponent {
   private oldLayouterData = '';
 
   public hasDebug = false;
-  public hasTiming = false;
   public hasVideo = false;
 
   oldState;
@@ -436,14 +435,15 @@ export class Layouter2Component implements DeviceComponent {
       this.device.data['layouterData'] = JSON.parse(this.layouterData);
     }
 
+    this.dashboard = (this.dashboard ?? []).map((widget) =>
+      normalizeTextWidget(widget)
+    );
+
     if (this.dashboard.length == 0) this.showGuide();
     else {
       for (let component of this.dashboard) {
         if (component['type'] == 'deb') {
           this.hasDebug = true;
-        }
-        if (component['type'] == 'tim') {
-          this.hasTiming = true;
         }
         if (component['type'] == 'vid') {
           this.hasVideo = true;
@@ -471,7 +471,6 @@ export class Layouter2Component implements DeviceComponent {
     this.dashboard = [];
     this.hasDebug = false;
     this.hasVideo = false;
-    this.hasTiming = false;
   }
 
   unlock(): void {
@@ -516,22 +515,21 @@ export class Layouter2Component implements DeviceComponent {
 
   //删除组件
   delWidget(item) {
-    this.dashboard.splice(this.dashboard.indexOf(item), 1);
+    const itemIndex = this.dashboard.indexOf(item);
+    if (itemIndex === -1) return;
+
+    this.dashboard = this.dashboard.filter((_, index) => index !== itemIndex);
     if (item.type == 'deb') {
       this.hasDebug = false;
     }
-    if (item.type == 'tim') {
-      this.hasTiming = false;
+    if (item.type == 'vid') {
+      this.hasVideo = false;
     }
+    this.scheduleDashboardRefresh();
   }
 
   //添加组件
   addWidget(type) {
-    // 蓝牙模式，禁用定时
-    // if (type == 'tim' && this.device.config.mode == "ble") {
-    //   this.noticeService.showToast('canNotBeUsed');
-    //   return;
-    // }
     let component = Object.assign({}, configList[type], styleList[type][0]);
     component['key'] = component.type + '-' + randomString();
     if (type == 'deb') {
@@ -540,9 +538,6 @@ export class Layouter2Component implements DeviceComponent {
     } else if (type == 'vid') {
       this.hasVideo = true;
       component['key'] = 'video';
-    } else if (type == 'tim') {
-      this.hasTiming = true;
-      component['key'] = 'timing';
     }
     this.dashboard = [...this.dashboard, component];
     this.scheduleDashboardRefresh();
@@ -574,9 +569,6 @@ export class Layouter2Component implements DeviceComponent {
           this.noticeService.showToast('notPlaced');
           if (GridsterItem.type == 'deb') {
             this.hasDebug = false;
-          }
-          if (GridsterItem.type == 'tim') {
-            this.hasTiming = false;
           }
           if (GridsterItem.type == 'vid') {
             this.hasVideo = false;

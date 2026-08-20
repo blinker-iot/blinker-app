@@ -6,7 +6,7 @@ import {
   OnDestroy,
   OnInit,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { NavController } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import {
   WeatherCoordinates,
@@ -95,8 +95,10 @@ const WEATHER_LANGUAGE: Partial<Record<WeatherServiceProvider, string>> = {
 // the WeatherService coordinate cache during these five-minute refreshes.
 const WEATHER_REFRESH_INTERVAL = 5 * 60 * 1000;
 const WEATHER_RETRY_INTERVAL = 3 * 60 * 1000;
-const CAROUSEL_INTERVAL = 6000;
+const CAROUSEL_INTERVAL = 15_000;
 const FORECAST_HOURS = 3;
+const METRICS_PER_PAGE = 6;
+const FORECAST_HOURS_PER_PAGE = 3;
 
 const WEATHER_DEMO: WeatherSnapshot = {
   provider: 'seniverse',
@@ -160,7 +162,6 @@ const WEATHER_DEMO_ALERTS: WeatherAlert[] = [
   selector: 'widget-weather',
   templateUrl: './widget-weather.component.html',
   styleUrls: ['./widget-weather.component.scss'],
-  imports: [RouterLink],
 })
 export class WidgetWeatherComponent
   implements Layouter2Widget, OnInit, OnDestroy
@@ -230,8 +231,13 @@ export class WidgetWeatherComponent
     private readonly weatherService: WeatherService,
     private readonly thirdPartyServices: ThirdPartyServicesService,
     private readonly ngZone: NgZone,
-    private readonly changeDetectorRef: ChangeDetectorRef
+    private readonly changeDetectorRef: ChangeDetectorRef,
+    private readonly navController: NavController
   ) {}
+
+  openThirdPartyServices(): void {
+    void this.navController.navigateForward('/third-party-services');
+  }
 
   ngOnInit(): void {
     if (this.isDemo) {
@@ -394,19 +400,14 @@ export class WidgetWeatherComponent
       primaryDetails.push(`降水 ${this.displayNumber(hour.precipitation)} mm`);
     }
 
-    const secondaryDetails: string[] = [];
-    if (hour.humidity !== null) {
-      secondaryDetails.push(`湿度 ${this.displayNumber(hour.humidity)}%`);
-    }
+    const humidity = hour.humidity === null
+      ? ''
+      : `湿度 ${this.displayNumber(hour.humidity)}%`;
     const windSpeed = hour.windSpeed === null
       ? ''
       : `${this.displayNumber(hour.windSpeed)} km/h`;
     const wind = [hour.windDirection, windSpeed].filter(Boolean).join(' ');
-    if (wind) secondaryDetails.push(wind);
-
-    const lines = [primaryDetails, secondaryDetails]
-      .map((details) => details.join(' · '))
-      .filter(Boolean);
+    const lines = [primaryDetails.join(' · '), humidity, wind].filter(Boolean);
     return lines.length ? lines : ['暂无更多数据'];
   }
 
@@ -707,7 +708,7 @@ export class WidgetWeatherComponent
     }
 
     const pages: WeatherDisplayPage[] = [];
-    this.metricPages = this.chunk(this.snapshot.metrics, 8);
+    this.metricPages = this.chunk(this.snapshot.metrics, METRICS_PER_PAGE);
     if (!this.metricPages.length) this.metricPages = [[]];
     this.metricPages.forEach((metrics, index) => {
       pages.push({
@@ -716,7 +717,7 @@ export class WidgetWeatherComponent
     });
 
     if (this.forecastState === 'ready' && this.forecastHours.length) {
-      this.chunk(this.forecastHours, FORECAST_HOURS).forEach((hours, index) => {
+      this.chunk(this.forecastHours, FORECAST_HOURS_PER_PAGE).forEach((hours, index) => {
         pages.push({
           id: `forecast-${index}-${hours[0]?.id || 'hour'}`,
           section: 'forecast', kind: 'forecast', hours,
