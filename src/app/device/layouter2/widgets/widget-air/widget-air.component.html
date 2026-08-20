@@ -1,0 +1,175 @@
+<div
+  widget
+  class="air-shell air-tall"
+  [attr.data-severity]="snapshot?.severity || 'unknown'"
+  (pointerdown)="onPointerDown($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="onPointerCancel()"
+>
+  @if (airState === 'ready' && snapshot) {
+  <div class="air-content">
+    <header class="air-header">
+      <div class="air-location" [title]="snapshot.location">
+        <i class="fa-light fa-location-dot" aria-hidden="true"></i>
+        @if (snapshot.region) {
+        <small>{{ snapshot.region }}</small>
+        }
+      </div>
+      <div class="air-meta">
+        <span [class.stale]="stale">
+          @if (stale) {
+          <i class="fa-light fa-triangle-exclamation" aria-hidden="true"></i>
+          }
+          {{ updatedText }} · {{ providerName }}
+        </span>
+        <button
+          type="button"
+          class="refresh-button"
+          aria-label="刷新空气质量"
+          title="刷新空气质量"
+          (click)="$event.stopPropagation(); refresh()"
+        >
+          <i
+            class="fa-light fa-arrows-rotate"
+            [class.fa-spin]="refreshing"
+            aria-hidden="true"
+          ></i>
+        </button>
+      </div>
+    </header>
+
+    <div class="air-body">
+      <section class="air-summary" aria-label="当前空气质量">
+        <div class="aqi-row">
+          <span class="aqi-orb">
+            <small>{{ snapshot.scaleLabel || 'AQI' }}</small>
+            <strong>{{ snapshot.aqiDisplay || '--' }}</strong>
+          </span>
+          <div class="quality-copy">
+            <strong [title]="snapshot.quality">{{ snapshot.quality || '暂无评级' }}</strong>
+            <small>{{ snapshot.scaleLabel || '空气质量指数' }}</small>
+          </div>
+        </div>
+        <div class="primary-pollutant" [title]="snapshot.primaryPollutant || '无主要污染物'">
+          <i class="fa-light fa-bullseye-arrow" aria-hidden="true"></i>
+          <span>首要污染物</span>
+          <strong>{{ snapshot.primaryPollutant || '无' }}</strong>
+        </div>
+        <p class="health-advice" [title]="snapshot.healthAdvice">
+          <i class="fa-light fa-heart-pulse" aria-hidden="true"></i>
+          {{ snapshot.healthAdvice || '请根据当地空气质量合理安排户外活动。' }}
+        </p>
+      </section>
+
+      <section class="air-details" aria-label="空气质量详情">
+        <div
+          class="pages-window"
+          role="region"
+          tabindex="0"
+          [attr.aria-label]="'第 ' + (pageIndex + 1) + ' 页空气质量信息，左右方向键、点击或横向滑动切换'"
+          (click)="advanceFromClick()"
+          (keydown)="onCarouselKeydown($event)"
+        >
+          <div
+            class="pages-track"
+            [style.transform]="'translate3d(-' + pageIndex * 100 + '%, 0, 0)'"
+          >
+            @for (page of displayPages; track page.id) {
+            <div
+              class="display-page"
+              [attr.aria-hidden]="$index === pageIndex ? null : 'true'"
+              [attr.inert]="$index === pageIndex ? null : ''"
+            >
+              <div class="pollutants-page">
+                <div class="particle-pollutants-row" aria-label="颗粒物浓度">
+                  @for (pollutant of page.particles; track pollutant.id) {
+                  <div
+                    class="pollutant-card"
+                    [title]="pollutant.label + ' ' + pollutant.displayValue + pollutant.unit"
+                  >
+                    <i [class]="pollutantIcon(pollutant.id)" aria-hidden="true"></i>
+                    <div>
+                      <span>{{ pollutant.label }}</span>
+                      <strong>
+                        {{ pollutant.displayValue }}<small>{{ pollutant.unit }}</small>
+                      </strong>
+                    </div>
+                  </div>
+                  }
+                </div>
+
+                @if (page.pollutants.length === 0) {
+                <div class="detail-pollutants-empty">暂无其他污染物数据</div>
+                } @else {
+                <div class="detail-pollutants-row" aria-label="其他污染物浓度">
+                  @for (pollutant of page.pollutants; track pollutant.id) {
+                  <div
+                    class="pollutant-card"
+                    [title]="pollutant.label + ' ' + pollutant.displayValue + pollutant.unit"
+                  >
+                    <div class="pollutant-card-heading">
+                      <i [class]="pollutantIcon(pollutant.id)" aria-hidden="true"></i>
+                      <span>{{ pollutant.label }}</span>
+                    </div>
+                    <strong>
+                      {{ pollutant.displayValue }}<small>{{ pollutant.unit }}</small>
+                    </strong>
+                  </div>
+                  }
+                </div>
+                }
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+
+        @if (displayPages.length > 1) {
+        <nav class="page-dots" aria-label="空气质量信息分页">
+          @for (page of displayPages; track page.id) {
+          <button
+            type="button"
+            [class.active]="$index === pageIndex"
+            [attr.aria-label]="pageLabel($index)"
+            [attr.aria-current]="$index === pageIndex ? 'page' : null"
+            (click)="$event.stopPropagation(); showPage($index)"
+          ></button>
+          }
+        </nav>
+        }
+      </section>
+    </div>
+  </div>
+  } @else {
+  <div class="air-status" [class.air-status-error]="airState === 'error'">
+    @if (airState === 'loading') {
+    <i class="fa-light fa-circle-notch fa-spin" aria-hidden="true"></i>
+    <div>
+      <strong>正在获取空气质量</strong>
+      <small>{{ providerName }}</small>
+    </div>
+    } @else if (airState === 'missing-key') {
+    <i class="fa-light fa-key-skeleton" aria-hidden="true"></i>
+    <div>
+      <strong>未配置天气 API Key</strong>
+      <small>请先在第三方服务中选择天气服务并保存 Key</small>
+    </div>
+    <button type="button" routerLink="/third-party-services">点击配置</button>
+    } @else if (airState === 'missing-location') {
+    <i class="fa-light fa-location-crosshairs" aria-hidden="true"></i>
+    <div>
+      <strong>无法确定当前地区</strong>
+      <small>请设置设备位置，或允许应用获取当前位置</small>
+    </div>
+    <button type="button" (click)="refresh()">重新定位</button>
+    } @else {
+    <i class="fa-light fa-smog" aria-hidden="true"></i>
+    <div>
+      <strong>{{ providerName }}加载失败</strong>
+      <small>{{ errorMessage }}</small>
+    </div>
+    <button type="button" (click)="refresh()">重试</button>
+    }
+  </div>
+  }
+</div>

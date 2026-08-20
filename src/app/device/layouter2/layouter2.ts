@@ -35,6 +35,7 @@ import { ViewService } from 'src/app/core/services/view.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { ParentDynamicComponent } from './widgets/parentDynamic.component';
 import { WidgetListbarComponent } from './widget-listbar/widget-listbar.component';
+import { replaceDashboardWidget } from './widget-update';
 
 @Component({
   standalone: true,
@@ -341,7 +342,7 @@ export class Layouter2Component implements DeviceComponent {
     this.actionSubject = this.LayouterService.action.subscribe(async (act) => {
       if (act.name == 'addWidget') this.addWidget(act.data);
       else if (act.name == 'delWidget') this.delWidget(act.data);
-      else if (act.name == 'changeWidget') this.changedOptions();
+      else if (act.name == 'changeWidget') this.changedOptions(act.data);
       else if (act.name == 'showGuide') {
         this.showGuide();
       } else if (act.name == 'send') {
@@ -646,10 +647,23 @@ export class Layouter2Component implements DeviceComponent {
     });
   }
 
-  changedOptions() {
+  changedOptions(changedWidget?) {
     // Gridster v22 observes the options input by reference. The legacy
     // optionsChanged() API no longer exists, so publish a fresh object.
     this.options = { ...this.options };
+
+    if (typeof changedWidget === 'undefined') return;
+
+    const updatedDashboard = replaceDashboardWidget(
+      this.dashboard,
+      changedWidget
+    );
+    if (typeof updatedDashboard === 'undefined') return;
+
+    // Gridster v22 caches item dimensions by input identity. Publish a new
+    // item reference so changed rows/cols are observed and rendered.
+    this.dashboard = updatedDashboard;
+    this.scheduleDashboardRefresh();
   }
 
   get isChanged() {

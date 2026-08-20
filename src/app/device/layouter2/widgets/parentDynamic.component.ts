@@ -15,6 +15,8 @@ import { WidgetTabComponent } from './widget-tab/widget-tab.component';
 import { WidgetInputComponent } from './widget-input/widget-input';
 import { WidgetVideoComponent } from './widget-video/widget-video';
 import { WidgetImageComponent } from './widget-image/widget-image';
+import { WidgetWeatherComponent } from './widget-weather/widget-weather.component';
+import { WidgetAirComponent } from './widget-air/widget-air.component';
 import { Layouter2EditTapDirective } from './edit-tap.directive';
 
 @Component({
@@ -36,6 +38,8 @@ import { Layouter2EditTapDirective } from './edit-tap.directive';
     WidgetInputComponent,
     WidgetVideoComponent,
     WidgetImageComponent,
+    WidgetWeatherComponent,
+    WidgetAirComponent,
     Layouter2EditTapDirective,
   ],
 })
@@ -62,6 +66,11 @@ export class ParentDynamicComponent {
     return this.widget.clr;
   }
 
+  get effectiveLstyle() {
+    if (typeof this.lstyle !== 'undefined') return this.lstyle;
+    return this.widget?.lstyle ?? 0;
+  }
+
   @Input()
   lstyle;
 
@@ -85,11 +94,12 @@ export class ParentDynamicComponent {
         },
       });
       const didDismiss = modal.onDidDismiss();
-      if (typeof this.widgetComponent != 'undefined') {
-        void didDismiss.then(() => {
-          this.widgetComponent.refresh();
-        });
-      }
+      void didDismiss.then(() => {
+        const refresh = this.widgetComponent?.refresh;
+        if (typeof refresh === 'function') {
+          refresh.call(this.widgetComponent);
+        }
+      });
 
       await modal.present();
       await didDismiss;
