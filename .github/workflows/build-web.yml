@@ -20,7 +20,7 @@ jobs:
   build:
     name: Build and deploy web
     if: github.ref == 'refs/heads/3.0-deploy'
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, ailydeMac-mini, macOS, ARM64]
     timeout-minutes: 30
     environment: production
 
@@ -82,14 +82,6 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: |
-            blinker-app/package-lock.json
-            capacitor-android-shortcuts/package-lock.json
-            capacitor-mdns/package-lock.json
-            capacitor-ntfy/package-lock.json
-            capacitor-wechat/package-lock.json
-            capacitor-wifiprov/package-lock.json
 
       - name: Build local Capacitor plugins
         shell: bash
