@@ -61,22 +61,15 @@
     font-size: 10px;
   }
 
-  span,
   small {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  span {
-    max-width: 112px;
-    color: var(--blinker-text-primary);
-  }
-
   small {
-    max-width: 72px;
     color: var(--blinker-text-tertiary);
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 500;
   }
 }
@@ -598,14 +591,6 @@
 
     i {
       font-size: 11px;
-    }
-
-    span {
-      max-width: 142px;
-    }
-
-    small {
-      font-size: 9px;
     }
   }
 

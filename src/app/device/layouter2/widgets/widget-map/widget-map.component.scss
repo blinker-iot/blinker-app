@@ -85,7 +85,7 @@
   border-bottom-left-radius: inherit;
   border-top: 1px solid
     color-mix(in srgb, var(--blinker-border) 65%, transparent);
-  background: var(--blinker-surface);
+  background: color-mix(in srgb, var(--blinker-surface) 62%, transparent);
   z-index: 999;
   display: flex;
   align-items: center;
