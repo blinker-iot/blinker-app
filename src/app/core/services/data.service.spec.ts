@@ -22,6 +22,21 @@ describe('DataService guest device preview', () => {
     expect(service.device.dict['preview-energy-monitor'].config.card?.metrics).toHaveLength(6);
     expect(service.device.dict['preview-nearby-ble'].config.mode).toBe('ble');
     expect(service.device.dict['preview-nearby-ble'].config.previewNearby).toBe(true);
+    const previewDashboard = JSON.parse(
+      service.device.dict['preview-esp32'].config.layouter as string,
+    ).dashboard as Array<Record<string, unknown>>;
+    expect(previewDashboard.find((widget) => widget['type'] === 'wea')).toMatchObject({
+      key: 'weather',
+      lstyle: 1,
+      cols: 8,
+      rows: 3,
+    });
+    expect(previewDashboard.find((widget) => widget['type'] === 'air')).toMatchObject({
+      key: 'air',
+      lstyle: 1,
+      cols: 8,
+      rows: 3,
+    });
     expect(
       Object.values(
         service.device.dict as Record<string, { config: { image: string } }>,

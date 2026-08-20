@@ -1,5 +1,8 @@
 :host {
   display: block;
+  // Keep Leaflet's high-z-index panes below the sibling edit-mode drag mask.
+  z-index: 0;
+  isolation: isolate;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -51,6 +54,20 @@
   max-width: 260px;
   font-size: 11px;
   line-height: 1.5;
+}
+
+.map-status button {
+  min-width: 54px;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid rgba(var(--ion-color-primary-rgb), 0.28);
+  border-radius: 13px;
+  color: var(--ion-color-primary);
+  background: rgba(var(--ion-color-primary-rgb), 0.07);
+  font-size: 9px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .map-status-error i {

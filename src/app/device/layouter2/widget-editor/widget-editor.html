@@ -16,7 +16,7 @@
         <div>样式设置</div>
         <div class="h-line"></div>
       </div>
-      <div class="scrollHeight">
+      <div class="scrollHeight" appHorizontalDragScroll>
         <div
           class="widgetitem-box"
           [ngClass]="{'scale07': widget.type!='tex','scale04': widget.type=='vid','scale03':widget.type=='img'||widget.type=='col'}"
@@ -46,11 +46,17 @@
         <div>参数设置</div>
         <div class="h-line"></div>
       </div>
-      @if (widget.type=='tim') {
+      @if (widget.type === 'tim' || widget.type === 'wea' || widget.type === 'air') {
       <div setting-item>
+        @if (widget.type === 'wea') {
+        <div>天气数据来自设备位置与第三方服务设置</div>
+        } @else if (widget.type === 'air') {
+        <div>空气质量数据来自设备位置与第三方天气服务设置</div>
+        } @else {
         <div>该组件没有提供可设置的参数</div>
+        }
       </div>
-      } @if (!(widget.type=='deb'|| widget.type=='vid' || widget.type=='tim')) {
+      } @if (!(widget.type=='deb'|| widget.type=='vid' || widget.type=='tim' || widget.type === 'wea' || widget.type === 'air')) {
       <div setting-item>
         <div item-name>组件键名</div>
         <div input-box>
@@ -176,7 +182,9 @@
           />
         </div>
       </div>
-      } @if (widget.type=='ran'||widget.type=='num') {
+      }
+      <!-- 实时数据配置项暂时停用。
+      @if (widget.type=='ran'||widget.type=='num') {
       <div setting-item>
         <div item-name>实时数据</div>
         <div item-item class="btnmode">
@@ -187,13 +195,15 @@
             <i class="fal fa-square"></i>
             } 启用
           </div>
-          <!-- <div>更新频率</div>
+          <div>更新频率</div>
             <div input-box style="width: 100px;">
               <input type="text" placeholder={{widget.key0}} [(ngModel)]="widget.key0">
-            </div> -->
+            </div>
         </div>
       </div>
-      } @if (widget.type=='tex' || widget.type=='btn' || widget.type=='num') {
+      }
+      -->
+      @if (widget.type=='tex' || widget.type=='btn' || widget.type=='num') {
       <div setting-item>
         <div item-name>显示图标</div>
         <div class="icon-box">

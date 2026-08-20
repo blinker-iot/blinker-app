@@ -156,18 +156,6 @@
       }
     </section>
 
-    <section class="save-actions">
-      <button type="button" class="primary-action" [disabled]="isSaveDisabled" (click)="save()">
-        <i class="fa-light fa-floppy-disk"></i>
-        {{ saving ? '正在保存' : '保存任务' }}
-      </button>
-      @if (mode === 'edit') {
-      <button type="button" class="delete-action" [disabled]="saving" (click)="deleteTask()">
-        <i class="fa-light fa-trash"></i>
-        删除任务
-      </button>
-      }
-    </section>
   </main>
   } @else if (loaded && taskNotFound) {
   <main>
@@ -185,3 +173,22 @@
   </div>
   }
 </ion-content>
+@if (loaded && !taskNotFound) {
+<div class="editor-bottom-actions">
+  <button type="button" class="save-action" [disabled]="isSaveDisabled" (click)="save()">
+    <span>{{ saving ? '正在保存' : '保存任务' }}</span>
+  </button>
+  @if (mode === 'edit') {
+  <button
+    type="button"
+    class="delete-action"
+    [disabled]="saving"
+    aria-label="删除任务"
+    title="删除任务"
+    (click)="deleteTask()"
+  >
+    <i class="fa-light fa-trash-can"></i>
+  </button>
+  }
+</div>
+}

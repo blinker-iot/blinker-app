@@ -25,6 +25,8 @@ import { DeviceService } from 'src/app/core/services/device.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { BColorpickerBtnsComponent } from 'src/app/core/components/b-colorpicker-btns/b-colorpicker-btns.component';
 import { ParentDynamicComponent } from '../widgets/parentDynamic.component';
+import { HorizontalDragScrollDirective } from '../horizontal-drag-scroll.directive';
+import { cloneWidgetDraft, commitWidgetDraft } from '../widget-update';
 
 @Component({
   standalone: true,
@@ -38,11 +40,14 @@ import { ParentDynamicComponent } from '../widgets/parentDynamic.component';
     IonicModule,
     ParentDynamicComponent,
     BColorpickerBtnsComponent,
+    HorizontalDragScrollDirective,
   ],
 })
 export class WidgetEditor {
   @Input() widget;
   @Input() device: BlinkerDevice;
+
+  private sourceWidget;
 
   get widgets() {
     return styleList[this.widget.type];
@@ -65,7 +70,12 @@ export class WidgetEditor {
     private noticeService: NoticeService
   ) {}
 
-  ngOnInit() {}
+  ngOnInit() {
+    if (typeof this.widget === 'undefined') return;
+
+    this.sourceWidget = this.widget;
+    this.widget = cloneWidgetDraft(this.widget);
+  }
 
   ngAfterViewInit() {
     if (this.platform.is('android')) {
@@ -102,14 +112,21 @@ export class WidgetEditor {
   }
 
   async save() {
-    // this.saveRealtime()
-    this.LayouterService.changeWidget();
-    (await this.modalCtrl.getTop()).dismiss();
+    const sourceWidget = this.sourceWidget ?? this.widget;
+    const updatedWidget = this.widget;
+    const modal = await this.modalCtrl.getTop();
+    await modal.dismiss();
+
+    this.LayouterService.changeWidget(
+      commitWidgetDraft(sourceWidget, updatedWidget)
+    );
   }
 
   async delete() {
-    this.LayouterService.delWidget(this.widget);
-    (await this.modalCtrl.getTop()).dismiss();
+    const sourceWidget = this.sourceWidget ?? this.widget;
+    const modal = await this.modalCtrl.getTop();
+    await modal.dismiss();
+    this.LayouterService.delWidget(sourceWidget);
   }
 
   async close() {

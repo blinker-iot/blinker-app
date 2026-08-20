@@ -1,14 +1,14 @@
 @if (widget.type=='tex') {
 <widget-text
   [widget]="widget"
-  [lstyle]="lstyle"
+  [lstyle]="effectiveLstyle"
   [device]="device"
 ></widget-text>
 } @if (widget.type=='num') {
 <widget-number
   #widgetComponent
   [widget]="widget"
-  [lstyle]="lstyle"
+  [lstyle]="effectiveLstyle"
   [device]="device"
   [color]="color"
   [isDemo]="isDemo"
@@ -16,51 +16,97 @@
 } @if (widget.type=='btn') {
 <widget-button
   [widget]="widget"
-  [lstyle]="lstyle"
+  [lstyle]="effectiveLstyle"
   [device]="device"
 ></widget-button>
 } @if (widget.type=='ran') {
 <widget-range
   #widgetComponent
   [widget]="widget"
-  [lstyle]="lstyle"
+  [lstyle]="effectiveLstyle"
   [device]="device"
 >
 </widget-range>
 } @if (widget.type=='tim') {
-<widget-timer [widget]="widget" [device]="device"></widget-timer>
+<widget-timer
+  [widget]="widget"
+  [lstyle]="effectiveLstyle"
+  [device]="device"
+></widget-timer>
 } @if (widget.type=='col') {
 <widget-color
   [widget]="widget"
-  [lstyle]="lstyle"
+  [lstyle]="effectiveLstyle"
   [device]="device"
 ></widget-color>
 } @if (widget.type=='deb') {
-<widget-debug [widget]="widget" [device]="device"></widget-debug>
+<widget-debug
+  [widget]="widget"
+  [lstyle]="effectiveLstyle"
+  [device]="device"
+></widget-debug>
 } @if (widget.type=='joy') {
-<widget-joystick [widget]="widget" [device]="device"></widget-joystick>
+<widget-joystick
+  [widget]="widget"
+  [lstyle]="effectiveLstyle"
+  [device]="device"
+></widget-joystick>
 } @if (widget.type=='cha') {
 <widget-chart
   #widgetComponent
   [widget]="widget"
+  [lstyle]="effectiveLstyle"
   [device]="device"
   [isDemo]="isDemo"
 >
 </widget-chart>
 } @if (widget.type=='map') {
-<widget-map [widget]="widget" [device]="device"></widget-map>
+<widget-map
+  [widget]="widget"
+  [lstyle]="effectiveLstyle"
+  [device]="device"
+></widget-map>
 } @if (widget.type=='tab') {
-<widget-tab [widget]="widget" [device]="device"></widget-tab>
+<widget-tab
+  [widget]="widget"
+  [lstyle]="effectiveLstyle"
+  [device]="device"
+></widget-tab>
 } @if (widget.type=='inp') {
-<widget-input [widget]="widget" [device]="device"></widget-input>
+<widget-input
+  [widget]="widget"
+  [lstyle]="effectiveLstyle"
+  [device]="device"
+></widget-input>
 } @if (widget.type=='vid') {
 <widget-video
   #widgetComponent
   [widget]="widget"
+  [lstyle]="effectiveLstyle"
   [device]="device"
 ></widget-video>
 } @if (widget.type=='img') {
-<widget-image [widget]="widget" [device]="device"></widget-image>
+<widget-image
+  [widget]="widget"
+  [lstyle]="effectiveLstyle"
+  [device]="device"
+></widget-image>
+} @if (widget.type === 'wea') {
+<widget-weather
+  #widgetComponent
+  [widget]="widget"
+  [device]="device"
+  [lstyle]="effectiveLstyle"
+  [isDemo]="isDemo"
+></widget-weather>
+} @if (widget.type === 'air') {
+<widget-air
+  #widgetComponent
+  [widget]="widget"
+  [device]="device"
+  [lstyle]="effectiveLstyle"
+  [isDemo]="isDemo"
+></widget-air>
 } @if (editMode && !isDemo) {
 <div
   class="editMode layouter2-drag-handle"
@@ -69,5 +115,5 @@
   <div class="key">{{ widget.key }}</div>
 </div>
 } @if (isDemo) {
-<div class="editMode"></div>
+<div class="editMode demoMode"></div>
 }

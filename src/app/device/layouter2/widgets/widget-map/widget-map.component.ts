@@ -9,6 +9,7 @@ import {
   OnInit,
   ViewChild,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ActionSheetController } from '@ionic/angular';
 import * as L from 'leaflet';
 import {
@@ -30,6 +31,7 @@ const MAP_PROVIDER_NAMES: Record<GeolocationServiceProvider, string> = {
   selector: 'widget-map',
   templateUrl: './widget-map.component.html',
   styleUrls: ['./widget-map.component.scss'],
+  imports: [RouterLink],
 })
 export class WidgetMapComponent
   implements Layouter2Widget, OnInit, AfterViewInit, OnDestroy

@@ -24,6 +24,8 @@ export let widgetList = [
   { name: '视频', icon: 'fal fa-camera-retro', type: 'vid' },
   { name: '输入框', icon: 'fal fa-keyboard', type: 'inp' },
   { name: '图片', icon: 'fal fa-images', type: 'img' },
+  { name: '天气', icon: 'fa-light fa-cloud-sun', type: 'wea' },
+  { name: '空气', icon: 'fa-light fa-lungs', type: 'air' },
 ]
 
 export let configList = {
@@ -41,6 +43,8 @@ export let configList = {
   "tab": { type: "tab" },
   "inp": { type: "inp" },
   "img": { type: "img", list: [{ url: '' }, { url: '' }, { url: '' }, { url: '' }, { url: '' }], img: 0 },
+  "wea": { type: "wea", lstyle: 0 },
+  "air": { type: "air", lstyle: 0 },
 }
 
 export let styleList = {
@@ -111,6 +115,12 @@ export let styleList = {
   "inp": [
     // { cols: 4, rows: 2 },
     { cols: 8, rows: 2 },
+  ],
+  "wea": [
+    { cols: 8, rows: 3 },
+  ],
+  "air": [
+    { cols: 8, rows: 3 },
   ],
   "img": [
     { cols: 2, rows: 2 },

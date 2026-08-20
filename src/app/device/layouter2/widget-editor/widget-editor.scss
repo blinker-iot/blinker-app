@@ -53,7 +53,17 @@ ion-content {
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   touch-action: pan-x;
+  cursor: grab;
   -webkit-overflow-scrolling: touch;
+
+  &.is-drag-scrolling {
+    cursor: grabbing;
+    user-select: none;
+
+    ::ng-deep * {
+      cursor: grabbing !important;
+    }
+  }
 
   &::-webkit-scrollbar {
     display: none;
