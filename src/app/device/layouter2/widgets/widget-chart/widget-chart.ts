@@ -2,12 +2,14 @@ import { Component, Input, ViewChild, ElementRef } from '@angular/core';
 import { Layouter2Widget } from '../config';
 import { CloudStorageService } from 'src/app/core/services/cloudStorage.service';
 import { LayouterService } from '../../../layouter.service';
-import { DataService } from 'src/app/core/services/data.service';
-import { NoticeService } from 'src/app/core/services/notice.service';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { NgStyle, NgClass } from '@angular/common';
 import { LineChartAreaComponent } from '../../../../core/charts/line-chart-area/line-chart-area.component';
 import { FormsModule } from '@angular/forms';
+import {
+  createWidgetChartDemoData,
+  WidgetChartDataPoint,
+} from './widget-chart-demo.data';
 
 @Component({
   selector: 'widget-chart',
@@ -37,7 +39,15 @@ export class WidgetChartComponent implements Layouter2Widget {
     if (this.quickCode == '1w') return 'M.D';
   }
 
-  data = [];
+  data: WidgetChartDataPoint[] = [];
+
+  private get shouldUsePreviewData() {
+    return (
+      this.isDemo ||
+      this.device?.config?.isPreview ||
+      this.device?.config?.mode == 'test'
+    );
+  }
 
   getRtData(key) {
     if (typeof this.device.data[key] != 'undefined') {
@@ -153,15 +163,18 @@ export class WidgetChartComponent implements Layouter2Widget {
 
   constructor(
     private cloudStorageService: CloudStorageService,
-    private LayouterService: LayouterService,
-    private dataService: DataService,
-    private noticeService: NoticeService
+    private LayouterService: LayouterService
   ) {}
 
   async ngOnInit() {
     this.selectedKey = this.key0;
-    this.quickCode =
-      localStorage.getItem(`${this.device.deviceName}:${this.key}`) ?? '1h';
+    if (this.shouldUsePreviewData) {
+      this.quickCode = '1h';
+      this.loadPreviewData();
+    } else {
+      this.quickCode =
+        localStorage.getItem(`${this.device.deviceName}:${this.key}`) ?? '1h';
+    }
     setTimeout(() => {
       this.showChart = true;
     }, 500);
@@ -172,26 +185,35 @@ export class WidgetChartComponent implements Layouter2Widget {
   }
 
   ngAfterViewInit() {
-    if (this.device.config.mode == 'test') return;
-    setTimeout(
-      () => {
+    if (this.shouldUsePreviewData) return;
+    setTimeout(() => {
+      this.changeQuickCode();
+    }, 100);
+    this.LayouterService.action.subscribe((act) => {
+      if (act.data == this.widget) {
         this.changeQuickCode();
-      },
-      this.isDemo ? 500 : 100
-    );
-    if (!this.isDemo)
-      this.LayouterService.action.subscribe((act) => {
-        if (act.data == this.widget) {
-          this.changeQuickCode();
-        }
-      });
+      }
+    });
+  }
+
+  private loadPreviewData() {
+    clearInterval(this.updateTimer);
+    const history =
+      this.device?.data?.['history']?.[this.selectedKey]?.[this.quickCode];
+
+    if (Array.isArray(history) && history.length > 0) {
+      this.processData();
+    } else {
+      this.data = createWidgetChartDemoData();
+    }
+    this.showNoData = false;
   }
 
   // times;
   processData() {
     let min = null;
     let max = null;
-    let data = [];
+    let data: WidgetChartDataPoint[] = [];
     // this.times = []
     this.device.data['history'][this.selectedKey][this.quickCode].forEach(
       (element) => {
@@ -212,22 +234,27 @@ export class WidgetChartComponent implements Layouter2Widget {
   }
 
   changeQuickCode() {
-    if (this.quickCode == 'rt') {
+    if (this.shouldUsePreviewData) {
+      this.loadPreviewData();
+    } else if (this.quickCode == 'rt') {
       this.renderRtChart();
     } else {
       clearInterval(this.updateTimer);
       this.getDataFromCloud();
     }
-    localStorage.setItem(
-      `${this.device.deviceName}:${this.key}`,
-      this.quickCode
-    );
+    if (!this.shouldUsePreviewData)
+      localStorage.setItem(
+        `${this.device.deviceName}:${this.key}`,
+        this.quickCode
+      );
   }
 
   changeKey(key) {
     if (this.selectedKey == key) return;
     this.selectedKey = key;
-    if (this.quickCode == 'rt') {
+    if (this.shouldUsePreviewData) {
+      this.loadPreviewData();
+    } else if (this.quickCode == 'rt') {
       this.renderRtChart();
     } else {
       this.getDataFromCloud();
@@ -254,11 +281,6 @@ export class WidgetChartComponent implements Layouter2Widget {
   }
 
   renderRtChart() {
-    // console.log('renderRtChart');
-    if (!this.dataService.isAdvancedDeveloper) {
-      this.noticeService.showToast('canNotBeUsed3');
-      return;
-    }
     if (typeof this.selectedKey == 'undefined') return;
     this.updateData();
   }
@@ -278,14 +300,25 @@ export class WidgetChartComponent implements Layouter2Widget {
       let newEl = this.getRtData(this.selectedKey);
       if (typeof newEl == 'undefined') return;
 
-      // if (newData != null) {
-      newData.push({
+      const nextPoint = {
         date: new Date(newEl.date * 1000),
         value: newEl.value,
-      });
+      };
+      const lastPoint = newData[newData.length - 1];
+      const nextTime = nextPoint.date.getTime();
+
+      if (!Number.isFinite(nextTime)) return;
+      if (lastPoint) {
+        const lastTime = lastPoint.date.getTime();
+        if (nextTime < lastTime) return;
+        if (nextTime === lastTime) newData[newData.length - 1] = nextPoint;
+        else newData.push(nextPoint);
+      } else {
+        newData.push(nextPoint);
+      }
+
       if (newData.length > 59) newData.shift();
       this.data = newData;
-      // }
     }, 1000);
   }
 

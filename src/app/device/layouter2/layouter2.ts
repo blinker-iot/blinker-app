@@ -137,7 +137,16 @@ export class Layouter2Component implements DeviceComponent {
       lstyle: 0,
       clr: '#389BEE',
     },
-    { type: 'deb', mode: 0, cols: 8, rows: 3, key: 'debug', x: 0, y: 3 },
+    {
+      type: 'deb',
+      mode: 0,
+      lstyle: 0,
+      cols: 8,
+      rows: 4,
+      key: 'debug',
+      x: 0,
+      y: 3,
+    },
   ];
 
   demoActions = [

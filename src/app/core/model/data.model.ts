@@ -6,8 +6,7 @@ export interface AuthData {
 export interface UserData {
     username: string,
     avatar: string,
-    phone: string,
-    level?: number
+    phone: string
 }
 
 export interface OrderData {

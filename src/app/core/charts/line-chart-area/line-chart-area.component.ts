@@ -2,7 +2,6 @@ import {
   Component,
   ElementRef,
   Input,
-  OnInit,
   SimpleChanges,
   ViewChild,
   ChangeDetectionStrategy,
@@ -15,7 +14,6 @@ import {
   ISeriesApi,
   UTCTimestamp,
 } from 'lightweight-charts';
-import { BehaviorSubject } from 'rxjs';
 import { color2Rgba } from '../../functions/func';
 
 @Component({
@@ -25,9 +23,7 @@ import { color2Rgba } from '../../functions/func';
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./line-chart-area.component.scss'],
 })
-export class LineChartAreaComponent implements OnInit {
-  loaded = new BehaviorSubject(false);
-
+export class LineChartAreaComponent {
   @Input() data;
   @Input() color;
   @Input() quickCode = '1h';
@@ -35,41 +31,20 @@ export class LineChartAreaComponent implements OnInit {
   @ViewChild('chart') chartContainer: ElementRef;
   private chart: IChartApi;
   private areaSeries: ISeriesApi<'Area'>;
-  private intervalTimer: any;
-
-  constructor() {}
-
-  ngOnInit(): void {}
 
   ngAfterViewInit(): void {
     this.darwChart();
   }
 
   ngOnDestroy(): void {
-    if (this.intervalTimer) {
-      clearInterval(this.intervalTimer);
-    }
     if (this.chart) {
       this.chart.remove();
     }
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (typeof changes['data'] != 'undefined') {
-      let subscription = this.loaded.subscribe((result) => {
-        if (result) {
-          setTimeout(() => {
-            // this.updateData()
-            subscription.unsubscribe();
-          }, 10);
-        }
-      });
-    }
-    if (typeof changes['color'] != 'undefined') {
-      setTimeout(() => {
-        this.darwChart();
-      }, 10);
-    }
+    if (!this.areaSeries) return;
+    if (changes['data'] || changes['color']) this.updateData();
   }
 
   darwChart() {
@@ -78,6 +53,7 @@ export class LineChartAreaComponent implements OnInit {
     }
     this.chart = createChart(this.chartContainer.nativeElement, {
       width: this.chartContainer.nativeElement.offsetWidth,
+      height: this.chartContainer.nativeElement.offsetHeight,
       layout: {
         textColor: 'rgba(0, 0, 0, 0.45)',
         fontSize: 10,
@@ -101,29 +77,26 @@ export class LineChartAreaComponent implements OnInit {
     });
     const areaSeriesOptions: AreaSeriesPartialOptions = {};
     this.areaSeries = this.chart.addSeries(AreaSeries, areaSeriesOptions);
-    this.intervalTimer = setInterval(() => {
-      if (this.data.length > 0) {
-        clearInterval(this.intervalTimer);
-      }
-      this.updateData();
-    }, 500);
-    this.loaded.next(true);
+    this.updateData();
   }
 
   updateData() {
+    if (!this.areaSeries) return;
     let dataList = [];
-    this.data.forEach((item) => {
+    (this.data ?? []).forEach((item) => {
       let time: UTCTimestamp = Math.floor(
         new Date(item.date).getTime() / 1000
       ) as UTCTimestamp;
       dataList.push({ time, value: item.value });
     });
+    const color = this.color || '#389BEE';
     this.areaSeries.applyOptions({
-      lineColor: this.color,
-      topColor: color2Rgba(this.color, 0.6),
+      lineColor: color,
+      topColor: color2Rgba(color, 0.6),
       bottomColor: '#fff',
       lineWidth: 2,
     });
     this.areaSeries.setData(dataList);
+    if (dataList.length > 0) this.chart.timeScale().fitContent();
   }
 }

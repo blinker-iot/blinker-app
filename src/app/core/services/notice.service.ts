@@ -458,10 +458,6 @@ export class NoticeService {
       message: '当前账号无法使用该功能',
       type: 'warn'
     },
-    'canNotBeUsed3': {
-      message: '该组件仅限专业版用户使用',
-      type: 'warn'
-    },
     'timingOffline': {
       header: '设备不在线',
       message: '请先上线设备，才能获取和设置定时任务',

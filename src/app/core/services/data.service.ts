@@ -32,10 +32,6 @@ export class DataService {
         return this._auth
     }
 
-    get isAdvancedDeveloper() {
-        return (this.user?.level ?? 0) > 0
-    }
-
     user: UserData;
 
     device: OrderData;
@@ -91,8 +87,7 @@ export class DataService {
         this.user = {
             avatar: API.USER.AVATAR + `/${data.profiles.avatar}.jpg?date = ${(new Date()).getTime()}`,
             username: data.profiles.username,
-            phone: data.profiles.phone,
-            level: data.profiles.userLevel
+            phone: data.profiles.phone
         }
         //获取brokers
         this.brokers = {

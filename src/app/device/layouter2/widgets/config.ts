@@ -39,10 +39,10 @@ export let configList = {
   "btn": { type: "btn", ico: "fal fa-power-off", mode: 0, t0: "文本1", t1: "文本2" },
   "col": { type: "col", t0: "颜色拾取", clr: "#389BEE" },
   "ran": { type: "ran", t0: "滑动条", clr: "#389BEE", max: 100, min: 0 },
-  "cha": { type: "cha", sty: 'line', clr: '#389BEE', sty1: 'line', clr1: '#389BEE', sty2: 'line', clr2: '#389BEE' },
+  "cha": { type: "cha", sty: 'line', clr: '#389BEE', sty1: 'line', clr1: '#389BEE', sty2: 'line', clr2: '#389BEE', lstyle: 0 },
   "map": { type: "map" },
   "joy": { type: "joy" },
-  "deb": { type: "deb", mode: 0 },
+  "deb": { type: "deb", mode: 0, lstyle: 0 },
   "vid": { type: "vid" },
   "tab": { type: "tab" },
   "inp": { type: "inp" },
@@ -87,11 +87,9 @@ export let styleList = {
     { cols: 4, rows: 4 },
   ],
   "deb": [
-    { cols: 8, rows: 3 },
     { cols: 8, rows: 4 },
   ],
   "cha": [
-    { cols: 8, rows: 3 },
     { cols: 8, rows: 4 },
   ],
   "map": [
