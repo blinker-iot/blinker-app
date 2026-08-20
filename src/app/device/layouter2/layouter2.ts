@@ -264,7 +264,6 @@ export class Layouter2Component implements DeviceComponent {
   private oldLayouterData = '';
 
   public hasDebug = false;
-  public hasTiming = false;
   public hasVideo = false;
 
   oldState;
@@ -442,9 +441,6 @@ export class Layouter2Component implements DeviceComponent {
         if (component['type'] == 'deb') {
           this.hasDebug = true;
         }
-        if (component['type'] == 'tim') {
-          this.hasTiming = true;
-        }
         if (component['type'] == 'vid') {
           this.hasVideo = true;
         }
@@ -471,7 +467,6 @@ export class Layouter2Component implements DeviceComponent {
     this.dashboard = [];
     this.hasDebug = false;
     this.hasVideo = false;
-    this.hasTiming = false;
   }
 
   unlock(): void {
@@ -520,18 +515,10 @@ export class Layouter2Component implements DeviceComponent {
     if (item.type == 'deb') {
       this.hasDebug = false;
     }
-    if (item.type == 'tim') {
-      this.hasTiming = false;
-    }
   }
 
   //添加组件
   addWidget(type) {
-    // 蓝牙模式，禁用定时
-    // if (type == 'tim' && this.device.config.mode == "ble") {
-    //   this.noticeService.showToast('canNotBeUsed');
-    //   return;
-    // }
     let component = Object.assign({}, configList[type], styleList[type][0]);
     component['key'] = component.type + '-' + randomString();
     if (type == 'deb') {
@@ -540,9 +527,6 @@ export class Layouter2Component implements DeviceComponent {
     } else if (type == 'vid') {
       this.hasVideo = true;
       component['key'] = 'video';
-    } else if (type == 'tim') {
-      this.hasTiming = true;
-      component['key'] = 'timing';
     }
     this.dashboard = [...this.dashboard, component];
     this.scheduleDashboardRefresh();
@@ -574,9 +558,6 @@ export class Layouter2Component implements DeviceComponent {
           this.noticeService.showToast('notPlaced');
           if (GridsterItem.type == 'deb') {
             this.hasDebug = false;
-          }
-          if (GridsterItem.type == 'tim') {
-            this.hasTiming = false;
           }
           if (GridsterItem.type == 'vid') {
             this.hasVideo = false;

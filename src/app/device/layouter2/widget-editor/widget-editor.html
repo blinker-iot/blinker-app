@@ -46,17 +46,15 @@
         <div>参数设置</div>
         <div class="h-line"></div>
       </div>
-      @if (widget.type === 'tim' || widget.type === 'wea' || widget.type === 'air') {
+      @if (widget.type === 'wea' || widget.type === 'air') {
       <div setting-item>
         @if (widget.type === 'wea') {
         <div>天气数据来自设备位置与第三方服务设置</div>
-        } @else if (widget.type === 'air') {
-        <div>空气质量数据来自设备位置与第三方天气服务设置</div>
         } @else {
-        <div>该组件没有提供可设置的参数</div>
+        <div>空气质量数据来自设备位置与第三方天气服务设置</div>
         }
       </div>
-      } @if (!(widget.type=='deb'|| widget.type=='vid' || widget.type=='tim' || widget.type === 'wea' || widget.type === 'air')) {
+      } @if (!(widget.type=='deb'|| widget.type=='vid' || widget.type === 'wea' || widget.type === 'air')) {
       <div setting-item>
         <div item-name>组件键名</div>
         <div input-box>

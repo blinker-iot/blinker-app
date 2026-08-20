@@ -16,7 +16,6 @@ export let widgetList = [
   { name: '滑块', icon: 'fa-light fa-sliders', type: 'ran' },
   { name: '颜色', icon: 'fa-light fa-palette', type: 'col' },
   { name: '摇杆', icon: 'fal fa-gamepad', type: 'joy' },
-  { name: '定时', icon: 'fa-light fa-stopwatch', type: 'tim' },
   { name: '调试', icon: 'fa-light fa-terminal', type: 'deb' },
   { name: '图表', icon: 'fa-light fa-chart-line', type: 'cha' },
   { name: '地图', icon: 'fa-light fa-map-location-dot', type: 'map' },
@@ -38,7 +37,6 @@ export let configList = {
   "map": { type: "map" },
   "joy": { type: "joy" },
   "deb": { type: "deb", mode: 0 },
-  "tim": { type: "tim" },
   "vid": { type: "vid" },
   "tab": { type: "tab" },
   "inp": { type: "inp" },
@@ -101,10 +99,6 @@ export let styleList = {
   "map": [
     { cols: 8, rows: 4 },
     { cols: 8, rows: 6 },
-  ],
-  "tim": [
-    { cols: 2, rows: 2 },
-    { cols: 1, rows: 1 },
   ],
   "vid": [
     { cols: 8, rows: 5 },
