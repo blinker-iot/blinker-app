@@ -1,10 +1,43 @@
 .joyout {
     position: absolute;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    top: 50%;
+    left: 50%;
     height: 85%;
     width: 85%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+
+.direction {
+    position: absolute;
+    width: clamp(10px, 9%, 16px);
+    aspect-ratio: 1;
+    background: rgba(var(--ion-color-primary-rgb), 0.72);
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.direction-up {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.direction-right {
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%) rotate(90deg);
+}
+
+.direction-down {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) rotate(180deg);
+}
+
+.direction-left {
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%) rotate(-90deg);
 }
 
 .stick {
