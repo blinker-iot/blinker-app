@@ -1,9 +1,16 @@
-.tip-box {
+.notice-stack {
+    position: absolute;
+    bottom: calc(16px + var(--ion-safe-area-bottom, 0px));
+    left: 50%;
     z-index: 99999;
-}
-
-.toast-box {
-    z-index: 99999;
+    width: calc(100% - 32px);
+    max-width: 480px;
+    max-height: calc(100% - 32px - var(--ion-safe-area-top, 0px) - var(--ion-safe-area-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transform: translateX(-50%);
+    pointer-events: none;
 }
 
 .app-container {
@@ -34,13 +41,6 @@
             position: relative;
             background-color: var(--blinker-bg);
             border: 1px solid var(--blinker-border);
-        }
-        
-        .tip-box, .toast-box {
-            position: fixed;
-            z-index: 99999;
-            left: 50%;
-            transform: translateX(-50%);
         }
         
         audio {

@@ -4,8 +4,8 @@
 }
 
 .bar {
-  width: calc(100% - 16px);
-  margin: 0 8px 8px;
+  width: calc(100% - 32px);
+  margin: 0 16px 8px;
   padding: 9px 7px 8px;
   overflow-x: auto;
   border: 1px solid var(--blinker-border);
@@ -27,7 +27,6 @@
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
-  gap: 4px;
 
   .btn {
     flex: 0 0 64px;
@@ -43,8 +42,8 @@
       justify-content: center;
 
       .block {
-        width: 46px;
-        height: 46px;
+        width: 48px;
+        height: 48px;
         border: 1px solid var(--blinker-border);
         border-radius: 14px;
         color: var(--ion-color-primary);
@@ -73,7 +72,7 @@
       .name {
         overflow: hidden;
         width: 100%;
-        margin-top: 5px;
+        margin-top: 3px;
         color: var(--blinker-text-secondary);
         font-size: 10px;
         font-weight: 550;

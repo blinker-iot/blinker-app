@@ -42,12 +42,12 @@ describe('GeocodingService', () => {
     service.geocode('北京大学', { limit: 8 }).subscribe();
 
     const request = httpTesting.expectOne(
-      (item) => item.url === 'https://api.tianditu.gov.cn/v2/search',
+      (item) => item.url === 'https://api.tianditu.gov.cn/v2/search'
     );
     expect(request.request.params.get('tk')).toBe('test-key');
     expect(request.request.params.get('type')).toBe('query');
     expect(
-      JSON.parse(request.request.params.get('postStr') ?? '{}'),
+      JSON.parse(request.request.params.get('postStr') ?? '{}')
     ).toMatchObject({ keyWord: '北京大学', count: 8 });
     request.flush({ pois: [] });
   });
@@ -58,7 +58,7 @@ describe('GeocodingService', () => {
     service.geocode('上海', { language: 'zh', limit: 3 }).subscribe();
 
     const request = httpTesting.expectOne(
-      'https://api.geoapify.com/v1/geocode/search?text=%E4%B8%8A%E6%B5%B7&format=json&limit=3&apiKey=test-key&lang=zh',
+      'https://api.geoapify.com/v1/geocode/search?text=%E4%B8%8A%E6%B5%B7&format=json&limit=3&apiKey=test-key&lang=zh'
     );
     request.flush({ results: [] });
   });
@@ -69,25 +69,14 @@ describe('GeocodingService', () => {
     service.geocode('Shanghai').subscribe();
 
     const request = httpTesting.expectOne(
-      'https://us1.locationiq.com/v1/search?key=test-key&q=Shanghai&format=json&limit=5&addressdetails=1&normalizeaddress=1',
+      'https://us1.locationiq.com/v1/search?key=test-key&q=Shanghai&format=json&limit=5&addressdetails=1&normalizeaddress=1'
     );
     request.flush([]);
   });
 
-  it('uses the selected Google Maps key', () => {
-    selectProvider('googleMaps');
-
-    service.geocode('Shanghai').subscribe();
-
-    const request = httpTesting.expectOne(
-      'https://maps.googleapis.com/maps/api/geocode/json?address=Shanghai&key=test-key',
-    );
-    request.flush({ results: [], status: 'OK' });
-  });
-
   it('fails before making a request when the selected key is empty', () => {
     config.saveGeolocationServiceConfig({
-      selectedProvider: 'googleMaps',
+      selectedProvider: 'tianditu',
       keys: {
         ...EMPTY_GEOLOCATION_SERVICE_KEYS,
         geoapify: 'unused-key',
@@ -104,33 +93,36 @@ describe('GeocodingService', () => {
   });
 
   it('validates a successful geocoding response', () => {
-    selectProvider('googleMaps');
+    selectProvider('geoapify');
 
     let isValid: boolean | undefined;
-    service
-      .validateCurrentService()
-      .subscribe((result) => (isValid = result));
+    service.validateCurrentService().subscribe((result) => (isValid = result));
 
     const request = httpTesting.expectOne(
-      'https://maps.googleapis.com/maps/api/geocode/json?address=%E5%8C%97%E4%BA%AC%E5%B8%82&key=test-key',
+      (item) =>
+        item.url === 'https://api.geoapify.com/v1/geocode/search' &&
+        item.params.get('text') === '北京市'
     );
-    request.flush({ results: [], status: 'OK' });
+    request.flush({ results: [] });
 
     expect(isValid).toBe(true);
   });
 
   it('reports validation failure for a rejected geocoding key', () => {
-    selectProvider('googleMaps');
+    selectProvider('geoapify');
 
     let isValid: boolean | undefined;
-    service
-      .validateCurrentService()
-      .subscribe((result) => (isValid = result));
+    service.validateCurrentService().subscribe((result) => (isValid = result));
 
     const request = httpTesting.expectOne(
-      'https://maps.googleapis.com/maps/api/geocode/json?address=%E5%8C%97%E4%BA%AC%E5%B8%82&key=test-key',
+      (item) =>
+        item.url === 'https://api.geoapify.com/v1/geocode/search' &&
+        item.params.get('text') === '北京市'
     );
-    request.flush({ results: [], status: 'REQUEST_DENIED' });
+    request.flush(
+      { message: 'invalid API key' },
+      { status: 401, statusText: 'Unauthorized' }
+    );
 
     expect(isValid).toBe(false);
   });

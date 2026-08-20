@@ -33,6 +33,7 @@
               "node_modules/cropperjs/dist/cropper.css",
               "node_modules/pickerjs/dist/picker.css",
               "node_modules/animate.css/animate.min.css",
+              "node_modules/leaflet/dist/leaflet.css",
               "node_modules/loaders.css/loaders.min.css"
             ],
             "scripts": ["node_modules/hammerjs/hammer.min.js"],
@@ -40,6 +41,7 @@
               "pickerjs",
               "coordtransform",
               "crypto-js",
+              "leaflet",
               "text-encoding",
               "cropperjs",
               "pulltorefreshjs"

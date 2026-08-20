@@ -58,13 +58,15 @@ ion-content {
   transition: filter 180ms ease;
 
   ::ng-deep [device-box] {
-    height: 100%;
+    min-height: 100%;
+    height: auto;
   }
 }
 
 .device-view {
   box-sizing: border-box;
   height: 100%;
+  padding-top: var(--transparent-page-content-top);
 
   ::ng-deep > * {
     position: relative;

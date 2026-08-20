@@ -24,19 +24,19 @@ export class GeocodingService {
 
   constructor(
     httpBackend: HttpBackend,
-    private readonly serviceConfig: ThirdPartyServicesService,
+    private readonly serviceConfig: ThirdPartyServicesService
   ) {
     this.http = new HttpClient(httpBackend);
   }
 
   geocode<T = unknown>(
     address: string,
-    options: GeocodingRequestOptions = {},
+    options: GeocodingRequestOptions = {}
   ): Observable<GeocodingServiceResponse<T>> {
     const activeService = this.serviceConfig.getActiveGeolocationService();
     if (!activeService) {
       return throwError(
-        () => new Error('当前地理信息服务未配置有效的 API Key'),
+        () => new Error('当前地理信息服务未配置有效的 API Key')
       );
     }
 
@@ -64,10 +64,10 @@ export class GeocodingService {
                 queryType: 1,
                 start: 0,
                 count: limit,
-              }),
+              })
             )
             .set('type', 'query')
-            .set('tk', key),
+            .set('tk', key)
         );
 
       case 'geoapify': {
@@ -80,7 +80,7 @@ export class GeocodingService {
         return this.request<T>(
           provider,
           'https://api.geoapify.com/v1/geocode/search',
-          params,
+          params
         );
       }
 
@@ -98,17 +98,7 @@ export class GeocodingService {
         return this.request<T>(
           provider,
           'https://us1.locationiq.com/v1/search',
-          params,
-        );
-      }
-
-      case 'googleMaps': {
-        let params = new HttpParams().set('address', query).set('key', key);
-        if (language) params = params.set('language', language);
-        return this.request<T>(
-          provider,
-          'https://maps.googleapis.com/maps/api/geocode/json',
-          params,
+          params
         );
       }
     }
@@ -117,16 +107,16 @@ export class GeocodingService {
   validateCurrentService(): Observable<boolean> {
     return this.geocode<unknown>('北京市', { limit: 1 }).pipe(
       map(({ provider, data }) =>
-        this.isValidationResponseSuccessful(provider, data),
+        this.isValidationResponseSuccessful(provider, data)
       ),
-      catchError(() => of(false)),
+      catchError(() => of(false))
     );
   }
 
   private request<T>(
     provider: GeolocationServiceProvider,
     url: string,
-    params: HttpParams,
+    params: HttpParams
   ): Observable<GeocodingServiceResponse<T>> {
     return this.http
       .get<T>(url, { params })
@@ -140,7 +130,7 @@ export class GeocodingService {
 
   private isValidationResponseSuccessful(
     provider: GeolocationServiceProvider,
-    data: unknown,
+    data: unknown
   ): boolean {
     switch (provider) {
       case 'tianditu': {
@@ -159,11 +149,6 @@ export class GeocodingService {
         return this.isRecord(data) && Array.isArray(data['results']);
       case 'locationIq':
         return Array.isArray(data);
-      case 'googleMaps':
-        return (
-          this.isRecord(data) &&
-          (data['status'] === 'OK' || data['status'] === 'ZERO_RESULTS')
-        );
     }
   }
 

@@ -31,8 +31,9 @@ export class BDeviceImgComponent implements OnChanges {
 
   readonly unknownUrl =
     'devices/home-living/unknown-device-light.webp';
-  lightUrl = this.unknownUrl;
-  darkUrl = 'devices/home-living/unknown-device-dark.webp';
+  url = this.unknownUrl;
+
+  private resolvedVariant: DeviceImageVariant = 'light';
 
   constructor(
     private readonly imageService: ImageService,
@@ -52,10 +53,10 @@ export class BDeviceImgComponent implements OnChanges {
     this.process();
   }
 
-  useFallback(event: Event, variant: DeviceImageVariant): void {
+  useFallback(event: Event): void {
     const image = event.currentTarget as HTMLImageElement;
     const fallback =
-      variant === 'dark'
+      this.resolvedVariant === 'dark'
         ? 'devices/home-living/unknown-device-dark.webp'
         : this.unknownUrl;
     if (!image.src.endsWith(fallback)) image.src = fallback;
@@ -64,8 +65,16 @@ export class BDeviceImgComponent implements OnChanges {
   private process(): void {
     const reference = this.getReference();
     const source = this.imageService.resolveDeviceImage(reference);
-    this.lightUrl = source.light;
-    this.darkUrl = source.dark;
+    this.resolvedVariant = this.resolveVariant(reference);
+    this.url = source[this.resolvedVariant];
+  }
+
+  private resolveVariant(reference?: string): DeviceImageVariant {
+    if (this.variant !== 'auto') return this.variant;
+
+    return reference && /-dark\.webp(?:[?#]|$)/i.test(reference)
+      ? 'dark'
+      : 'light';
   }
 
   private getReference(): string | undefined {

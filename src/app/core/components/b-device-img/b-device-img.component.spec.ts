@@ -17,7 +17,7 @@ describe('BDeviceImgComponent', () => {
         ? `devices/${reference.replace('-light.webp', '-dark.webp')}`
         : 'devices/home-living/unknown-device-dark.webp',
       light: reference
-        ? `devices/${reference}`
+        ? `devices/${reference.replace('-dark.webp', '-light.webp')}`
         : 'devices/home-living/unknown-device-light.webp',
     }));
 
@@ -35,7 +35,7 @@ describe('BDeviceImgComponent', () => {
     fixture = TestBed.createComponent(BDeviceImgComponent);
   });
 
-  it('resolves both theme images and releases its loader subscription', () => {
+  it('renders only the image stored in the user configuration', () => {
     fixture.componentRef.setInput(
       'filename',
       'home-living/smart-bulb-light.webp',
@@ -43,20 +43,25 @@ describe('BDeviceImgComponent', () => {
     fixture.detectChanges();
 
     expect(loader.observers).toHaveLength(1);
-    expect(fixture.componentInstance.lightUrl).toBe(
+    expect(fixture.componentInstance.url).toBe(
       'devices/home-living/smart-bulb-light.webp',
     );
-    expect(fixture.componentInstance.darkUrl).toBe(
-      'devices/home-living/smart-bulb-dark.webp',
+    expect(fixture.nativeElement.querySelectorAll('img')).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('img').getAttribute('src')).toBe(
+      'devices/home-living/smart-bulb-light.webp',
     );
 
     fixture.componentRef.setInput(
       'filename',
-      'home-living/smart-plug-light.webp',
+      'home-living/smart-plug-dark.webp',
     );
     fixture.detectChanges();
 
     expect(loader.observers).toHaveLength(1);
+    expect(fixture.componentInstance.url).toBe(
+      'devices/home-living/smart-plug-dark.webp',
+    );
+    expect(fixture.nativeElement.querySelectorAll('img')).toHaveLength(1);
     const callsBeforeDestroy = resolveDeviceImage.mock.calls.length;
     fixture.destroy();
     loader.next(true);

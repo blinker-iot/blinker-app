@@ -165,7 +165,7 @@ ion-content {
 
 .inbox-hint,
 .empty-message {
-  min-height: 245px;
+  min-height: 60px;
   color: var(--blinker-text-secondary);
   display: flex;
   flex-direction: column;
@@ -173,7 +173,7 @@ ion-content {
   justify-content: center;
 
   strong {
-    margin-top: 17px;
+    margin-top: 0;
     color: var(--blinker-text-secondary);
     font-size: 12px;
     font-weight: 500;
@@ -188,39 +188,4 @@ ion-content {
 
 .empty-message {
   min-height: 430px;
-}
-
-.bubble-illustration {
-  position: relative;
-  width: 82px;
-  height: 57px;
-  border: 1px solid rgba(255, 255, 255, 0.23);
-  border-radius: 31px 31px 31px 13px;
-  background:
-    radial-gradient(circle at 38% 25%, rgba(255, 255, 255, 0.35), transparent 16%),
-    linear-gradient(150deg, rgba(128, 156, 190, 0.78), rgba(26, 43, 66, 0.78));
-  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.17);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-
-  &::after {
-    content: '';
-    position: absolute;
-    right: 2px;
-    bottom: -6px;
-    width: 19px;
-    height: 18px;
-    background: inherit;
-    clip-path: polygon(0 0, 100% 0, 100% 100%);
-  }
-
-  span {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #7db4ff;
-    box-shadow: 0 0 10px rgba(89, 155, 255, 0.75);
-  }
 }

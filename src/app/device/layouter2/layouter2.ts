@@ -3,7 +3,6 @@ import {
   ChangeDetectorRef,
   Component,
   ViewChild,
-  Renderer2,
   ElementRef,
   Input,
   EventEmitter,
@@ -17,7 +16,6 @@ import {
   GridsterItemConfig,
   GridType,
 } from 'angular-gridster2';
-import { NgClass } from '@angular/common';
 import { Observable, of } from 'rxjs';
 
 import { widgetList, configList, styleList } from './widgets/config';
@@ -40,11 +38,10 @@ import { WidgetListbarComponent } from './widget-listbar/widget-listbar.componen
 
 @Component({
   standalone: true,
-  selector: 'layouter2',
+  selector: 'app-layouter2',
   templateUrl: 'layouter2.html',
   styleUrls: ['layouter2.scss'],
   imports: [
-    NgClass,
     IonicModule,
     Gridster,
     GridsterItem,
@@ -52,7 +49,7 @@ import { WidgetListbarComponent } from './widget-listbar/widget-listbar.componen
     WidgetListbarComponent,
   ],
 })
-export class Layouter2 implements DeviceComponent {
+export class Layouter2Component implements DeviceComponent {
   static deviceType = 'Layouter2';
 
   id;
@@ -90,7 +87,6 @@ export class Layouter2 implements DeviceComponent {
       t0: '点我开关灯',
       clr: '#389BEE',
       t1: '文本2',
-      bg: 0,
       cols: 2,
       rows: 2,
       key: 'btn-abc',
@@ -102,7 +98,6 @@ export class Layouter2 implements DeviceComponent {
       type: 'tex',
       t0: 'blinker入门示例',
       t1: '文本2',
-      bg: 2,
       ico: '',
       cols: 4,
       rows: 1,
@@ -120,7 +115,6 @@ export class Layouter2 implements DeviceComponent {
       min: 0,
       max: 100,
       uni: '次',
-      bg: 0,
       cols: 4,
       rows: 2,
       key: 'num-abc',
@@ -134,7 +128,6 @@ export class Layouter2 implements DeviceComponent {
       mode: 0,
       t0: '点我计数',
       t1: '文本2',
-      bg: 0,
       cols: 2,
       rows: 2,
       key: 'btn-123',
@@ -143,7 +136,7 @@ export class Layouter2 implements DeviceComponent {
       lstyle: 0,
       clr: '#389BEE',
     },
-    { type: 'deb', mode: 0, bg: 0, cols: 8, rows: 3, key: 'debug', x: 0, y: 3 },
+    { type: 'deb', mode: 0, cols: 8, rows: 3, key: 'debug', x: 0, y: 3 },
   ];
 
   demoActions = [
@@ -195,15 +188,18 @@ export class Layouter2 implements DeviceComponent {
   margin = 5;
 
   options: GridsterConfig = {
-    margin: this.margin,
+    margin: 8,
     outerMargin: true,
-    scale: 1,
     // gridType: GridType.Fixed,
     gridType: GridType.ScrollVertical,
+    // ScrollVertical needs Gridster to publish the content height.
+    // Its generated width is overridden in the component stylesheet.
+    setGridSize: true,
     displayGrid: DisplayGrid.None,
     mobileBreakpoint: 0,
-    outerMarginLeft: 13,
-    outerMarginRight: 13,
+    outerMarginTop: 0,
+    outerMarginLeft: 16,
+    outerMarginRight: 16,
     minCols: 8,
     maxCols: 8,
     minRows: 14,
@@ -298,7 +294,6 @@ export class Layouter2 implements DeviceComponent {
 
   constructor(
     private activatedRoute: ActivatedRoute,
-    private render: Renderer2,
     private modalCtrl: ModalController,
     private deviceService: DeviceService,
     private nativeService: NativeService,
@@ -391,30 +386,6 @@ export class Layouter2 implements DeviceComponent {
 
   initGrid() {
     this.changedOptions();
-  }
-
-  public scaling;
-  scale() {
-    const height = this.gridsterBox.nativeElement.clientHeight;
-    const nextScale = height > 75 ? (height - 75) / height : 1;
-    this.scaling = Number.isFinite(nextScale) && nextScale > 0 ? nextScale : 1;
-    this.options = {
-      ...this.options,
-      scale: this.scaling,
-    };
-    this.render.setStyle(
-      this.gridsterBox.nativeElement,
-      'transform',
-      `scale(${this.scaling},${this.scaling})`
-    );
-  }
-
-  rescale() {
-    this.options = {
-      ...this.options,
-      scale: 1,
-    };
-    this.render.setStyle(this.gridsterBox.nativeElement, 'transform', `none`);
   }
 
   //显示使用向导
@@ -615,14 +586,12 @@ export class Layouter2 implements DeviceComponent {
   }
 
   DefaultMode() {
-    this.rescale();
     this.disableDrag();
     // 重新加载实时数据
     this.loadRealtimeData();
   }
 
   EditMode() {
-    this.scale();
     this.enableDrag();
   }
 

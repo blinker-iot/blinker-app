@@ -48,7 +48,7 @@ describe('ThirdPartyServicesService', () => {
     });
 
     expect(service.getWeatherServiceConfig()?.keys.seniverse).toBe(
-      'seniverse-key',
+      'seniverse-key'
     );
     expect(service.getActiveWeatherService()).toBeNull();
   });
@@ -83,10 +83,10 @@ describe('ThirdPartyServicesService', () => {
       keys: { ...EMPTY_WEATHER_SERVICE_KEYS },
     });
     service.saveGeolocationServiceConfig({
-      selectedProvider: 'googleMaps',
+      selectedProvider: 'locationIq',
       keys: {
         ...EMPTY_GEOLOCATION_SERVICE_KEYS,
-        googleMaps: 'google-maps-key',
+        locationIq: 'location-iq-key',
       },
     });
 
@@ -94,27 +94,27 @@ describe('ThirdPartyServicesService', () => {
 
     expect(service.getWeatherServiceConfig()).toBeNull();
     expect(service.getActiveGeolocationService()).toEqual({
-      provider: 'googleMaps',
-      key: 'google-maps-key',
+      provider: 'locationIq',
+      key: 'location-iq-key',
     });
   });
 
   it('migrates legacy flat key data and selects its first configured provider', () => {
     localStorage.setItem(
       WEATHER_SERVICE_KEYS_STORAGE_KEY,
-      JSON.stringify({ weatherApi: 'legacy-weather-key' }),
+      JSON.stringify({ weatherApi: 'legacy-weather-key' })
     );
     localStorage.setItem(
       GEOLOCATION_SERVICE_KEYS_STORAGE_KEY,
-      JSON.stringify({ geoapify: 'legacy-geo-key' }),
+      JSON.stringify({ geoapify: 'legacy-geo-key' })
     );
 
     expect(service.getWeatherServiceConfig()?.selectedProvider).toBe(
-      'weatherApi',
+      'weatherApi'
     );
     expect(service.getActiveWeatherService()?.key).toBe('legacy-weather-key');
     expect(service.getGeolocationServiceConfig()?.selectedProvider).toBe(
-      'geoapify',
+      'geoapify'
     );
     expect(service.getActiveGeolocationService()?.key).toBe('legacy-geo-key');
   });
