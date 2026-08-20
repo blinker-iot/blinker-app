@@ -10,10 +10,8 @@
   overflow-x: auto;
   border: 1px solid var(--blinker-border);
   border-radius: 20px;
-  background: color-mix(in srgb, var(--blinker-surface) 92%, transparent);
+  background: var(--blinker-surface);
   box-shadow: var(--blinker-shadow);
-  backdrop-filter: var(--blinker-nav-blur);
-  -webkit-backdrop-filter: var(--blinker-nav-blur);
   scrollbar-width: none;
 
   &::-webkit-scrollbar {

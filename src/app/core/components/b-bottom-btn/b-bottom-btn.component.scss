@@ -10,10 +10,8 @@
   border: 1px solid color-mix(in srgb, currentColor 24%, var(--blinker-border));
   border-radius: 16px;
   color: var(--ion-color-primary);
-  background: color-mix(in srgb, var(--blinker-surface) 94%, transparent);
+  background: var(--blinker-surface);
   box-shadow: var(--blinker-shadow);
-  backdrop-filter: var(--blinker-nav-blur);
-  -webkit-backdrop-filter: var(--blinker-nav-blur);
   font-size: 14px;
   font-weight: 650;
   display: flex;

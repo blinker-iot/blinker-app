@@ -25,8 +25,6 @@ ion-header:not(.main-tab-header):not(.opaque-page-header) {
   overflow: visible !important;
   background: transparent !important;
   box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
 
   // The header surface remains transparent. This visual layer sits above
   // scrolling content and below the toolbar controls.
@@ -72,8 +70,6 @@ ion-header:not(.main-tab-header):not(.opaque-page-header) {
     min-height: var(--transparent-page-header-height) !important;
     background: transparent !important;
     box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
   }
 }
 

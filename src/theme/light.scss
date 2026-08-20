@@ -78,9 +78,9 @@ body.light {
   --ion-card-background: #ffffff;
   --ion-card-color: #10213a;
   --ion-item-background: #ffffff;
-  --ion-toolbar-background: rgba(247, 249, 252, 0.92);
+  --ion-toolbar-background: #f7f9fc;
   --ion-toolbar-color: #10213a;
-  --ion-tab-bar-background: rgba(255, 255, 255, 0.94);
+  --ion-tab-bar-background: #ffffff;
   --ion-tab-bar-color: #6b7280;
   --ion-tab-bar-color-selected: #087eff;
   --ion-border-color: #d9e1ec;
@@ -97,7 +97,6 @@ body.light {
   --blinker-divider: #e8edf4;
   --blinker-shadow: 0 10px 32px rgba(17, 24, 39, 0.07);
   --blinker-shadow-soft: 0 4px 18px rgba(17, 24, 39, 0.05);
-  --blinker-nav-blur: blur(18px) saturate(1.35);
   --blinker-radius-card: 16px;
   --blinker-radius-control: 12px;
 }

@@ -39,10 +39,8 @@ ion-content {
   padding: 15px;
   border: 1px solid var(--blinker-border);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--blinker-surface) 94%, transparent);
+  background: var(--blinker-surface);
   box-shadow: var(--blinker-shadow-soft);
-  backdrop-filter: var(--blinker-nav-blur);
-  -webkit-backdrop-filter: var(--blinker-nav-blur);
 }
 
 .style-copy {

@@ -18,8 +18,7 @@
   z-index: 5;
   padding: 10px 12px 8px;
   border-bottom: 1px solid var(--blinker-divider);
-  background: color-mix(in srgb, var(--blinker-bg) 94%, transparent);
-  backdrop-filter: blur(18px);
+  background: var(--blinker-bg);
 }
 
 .search-theme-row {

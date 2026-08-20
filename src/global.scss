@@ -85,8 +85,6 @@ ion-action-sheet {
 
 ion-header ion-toolbar {
   --border-color: var(--blinker-divider);
-  backdrop-filter: var(--blinker-nav-blur);
-  -webkit-backdrop-filter: var(--blinker-nav-blur);
 }
 
 // Ionic limits desktop modals to 500/600px by default. The widget editor is a
@@ -119,8 +117,6 @@ ion-header.main-tab-header {
       max(8px, var(--ion-safe-area-right, 0px))
       0
       max(8px, var(--ion-safe-area-left, 0px));
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
 
   ion-title {
@@ -166,8 +162,6 @@ ion-header.main-tab-header {
 
 ion-tab-bar {
   --border: 1px solid var(--blinker-divider);
-  backdrop-filter: var(--blinker-nav-blur);
-  -webkit-backdrop-filter: var(--blinker-nav-blur);
 }
 
 @media (prefers-reduced-motion: reduce) {
