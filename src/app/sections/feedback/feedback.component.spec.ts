@@ -96,4 +96,44 @@ describe('FeedbackPage', () => {
       expect(fixture.nativeElement.textContent).not.toContain('正在提交');
     });
   });
+
+  it('submits email separately from the original feedback content', async () => {
+    feedbackService.newFeedback.mockResolvedValue({
+      status: 'complete',
+      feedbackId: 3,
+    });
+    page.email = 'user@example.com';
+    page.selectType('feature');
+
+    await page.submit();
+
+    const request = feedbackService.newFeedback.mock.calls[0]?.[0];
+    expect(request).toEqual({
+      title: '设备控制异常',
+      content: '设备控制后一直没有任何响应',
+      label: 'feature',
+      email: 'user@example.com',
+    });
+    expect(request.content).not.toContain('user@example.com');
+    expect(request.content).not.toContain('联系邮箱');
+  });
+
+  it('submits an empty email as undefined without changing content', async () => {
+    feedbackService.newFeedback.mockResolvedValue({
+      status: 'complete',
+      feedbackId: 3,
+    });
+    page.email = '   ';
+
+    await page.submit();
+
+    const request = feedbackService.newFeedback.mock.calls[0]?.[0];
+    expect(request).toEqual({
+      title: '设备控制异常',
+      content: '设备控制后一直没有任何响应',
+      label: 'bug',
+      email: undefined,
+    });
+    expect(request.content).not.toContain('联系邮箱');
+  });
 });

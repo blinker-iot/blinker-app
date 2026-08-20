@@ -37,6 +37,7 @@ describe('FeedbackService', () => {
     const pending = service.newFeedback({
       title: '[设备问题] 控制异常',
       content: '设备控制后没有响应',
+      label: 'bug',
       userAgent: 'test-agent',
       email: 'user@example.com',
     });
@@ -46,7 +47,7 @@ describe('FeedbackService', () => {
     expect(request.request.body).toEqual({
       title: '[设备问题] 控制异常',
       content: '设备控制后没有响应',
-      label: 'other',
+      label: 'bug',
       userAgent: 'test-agent',
       email: 'user@example.com',
     });
@@ -80,6 +81,7 @@ describe('FeedbackService', () => {
     });
 
     const request = httpTesting.expectOne(API.FEEDBACK.SUBMIT);
+    expect(request.request.body.label).toBe('other');
     request.flush(
       {
         code: 'GITHUB_FEEDBACK_UNAVAILABLE',
