@@ -3,6 +3,7 @@
   [widget]="widget"
   [lstyle]="effectiveLstyle"
   [device]="device"
+  [isDemo]="isDemo"
 ></widget-text>
 } @if (widget.type=='num') {
 <widget-number
@@ -18,6 +19,7 @@
   [widget]="widget"
   [lstyle]="effectiveLstyle"
   [device]="device"
+  [isDemo]="isDemo"
 ></widget-button>
 } @if (widget.type=='ran') {
 <widget-range
@@ -25,6 +27,7 @@
   [widget]="widget"
   [lstyle]="effectiveLstyle"
   [device]="device"
+  [isDemo]="isDemo"
 >
 </widget-range>
 } @if (widget.type=='col') {
@@ -32,6 +35,7 @@
   [widget]="widget"
   [lstyle]="effectiveLstyle"
   [device]="device"
+  [isDemo]="isDemo"
 ></widget-color>
 } @if (widget.type=='deb') {
 <widget-debug
@@ -71,6 +75,7 @@
   [widget]="widget"
   [lstyle]="effectiveLstyle"
   [device]="device"
+  [isDemo]="isDemo"
 ></widget-input>
 } @if (widget.type=='vid') {
 <widget-video
@@ -78,12 +83,14 @@
   [widget]="widget"
   [lstyle]="effectiveLstyle"
   [device]="device"
+  [isDemo]="isDemo"
 ></widget-video>
 } @if (widget.type=='img') {
 <widget-image
   [widget]="widget"
   [lstyle]="effectiveLstyle"
   [device]="device"
+  [isDemo]="isDemo"
 ></widget-image>
 } @if (widget.type === 'wea') {
 <widget-weather

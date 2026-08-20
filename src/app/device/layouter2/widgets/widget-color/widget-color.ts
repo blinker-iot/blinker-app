@@ -14,6 +14,7 @@ import { BRangeComponent } from '../../../../core/components/b-range/b-range';
 export class WidgetColorComponent implements Layouter2Widget {
   @Input() device;
   @Input() widget;
+  @Input() isDemo = false;
 
   get key() {
     return this.widget.key;
@@ -48,6 +49,12 @@ export class WidgetColorComponent implements Layouter2Widget {
   }
 
   getValue(valueKey) {
+    if (
+      this.isDemo &&
+      typeof this.widget[valueKey] != 'undefined'
+    )
+      return this.widget[valueKey];
+
     if (typeof this.device.data[this.key] != 'undefined')
       if (typeof this.device.data[this.key][valueKey] != 'undefined')
         return this.device.data[this.key][valueKey];

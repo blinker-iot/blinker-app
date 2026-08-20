@@ -39,7 +39,7 @@ describe('Layouter2 widget updates', () => {
 
   it('replaces only the changed dashboard item reference', () => {
     const unchangedWidget = { type: 'btn', lstyle: 0, cols: 2, rows: 2 };
-    const changedWidget = { type: 'tex', lstyle: 3, cols: 4, rows: 2 };
+    const changedWidget = { type: 'tex', lstyle: 1, cols: 4, rows: 1 };
     const dashboard = [unchangedWidget, changedWidget];
 
     const updatedDashboard = replaceDashboardWidget(
@@ -56,7 +56,7 @@ describe('Layouter2 widget updates', () => {
 
   it('publishes the changed widget through LayouterService', () => {
     const service = new LayouterService();
-    const widget = { type: 'tex', lstyle: 3, cols: 4, rows: 2 };
+    const widget = { type: 'tex', lstyle: 1, cols: 4, rows: 1 };
     const actions: any[] = [];
     const subscription = service.action.subscribe((action) =>
       actions.push(action)

@@ -1,3 +1,9 @@
+import {
+  TEXT_WIDGET_DEFAULT_ALIGNMENT,
+  TEXT_WIDGET_DEFAULT_FONT_SIZE,
+  TEXT_WIDGET_STYLES,
+} from './widget-text/widget-text-layout';
+
 export interface Layouter2Widget {
   device;
   widget;
@@ -28,7 +34,7 @@ export let widgetList = [
 ]
 
 export let configList = {
-  "tex": { type: "tex", t0: "文本1", t1: "文本2", size: 14, ico: "fal fa-font" },
+  "tex": { type: "tex", t0: "文本", size: TEXT_WIDGET_DEFAULT_FONT_SIZE, align: TEXT_WIDGET_DEFAULT_ALIGNMENT, lstyle: 0 },
   "num": { type: "num", t0: "文本1", ico: "fal fa-question", clr: "#389BEE", min: 0, max: 100, uni: "单位" },
   "btn": { type: "btn", ico: "fal fa-power-off", mode: 0, t0: "文本1", t1: "文本2" },
   "col": { type: "col", t0: "颜色拾取", clr: "#389BEE" },
@@ -46,15 +52,7 @@ export let configList = {
 }
 
 export let styleList = {
-  'tex': [
-    { cols: 2, rows: 1 },
-    { cols: 4, rows: 1 },
-    { cols: 2, rows: 2 },
-    { cols: 4, rows: 2 },
-    { cols: 2, rows: 2 },
-    { cols: 8, rows: 1 },
-    { cols: 8, rows: 2 },
-  ],
+  'tex': TEXT_WIDGET_STYLES,
   "num": [
     { cols: 2, rows: 2 },
     { cols: 4, rows: 2 },

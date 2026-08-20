@@ -92,7 +92,9 @@ export class ParentDynamicComponent {
         },
       });
       const didDismiss = modal.onDidDismiss();
-      void didDismiss.then(() => {
+      void didDismiss.then((result) => {
+        if (result.role === 'delete') return;
+
         const refresh = this.widgetComponent?.refresh;
         if (typeof refresh === 'function') {
           refresh.call(this.widgetComponent);

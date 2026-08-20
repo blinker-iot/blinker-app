@@ -36,6 +36,7 @@ ion-content {
   border-radius: var(--blinker-radius-card);
   background: var(--blinker-surface);
   box-shadow: var(--blinker-shadow-soft);
+  gap:12px;
 }
 
 .setting-box {
@@ -212,10 +213,13 @@ ion-content {
   width: 10vw;
 }
 
-[setting-item] {
+[setting-box] {
+  gap: 12px;
+}
+
+.setting-item {
   width: 100%;
   min-height: 50px;
-  padding: 7px 0;
   border-bottom: 1px solid var(--blinker-divider);
   display: flex;
   justify-content: space-between;
@@ -274,7 +278,7 @@ ion-content {
     justify-content: flex-start;
     gap: 6px;
 
-    > div {
+    >div {
       min-height: 34px;
       padding: 0 10px;
       border: 1px solid var(--blinker-border);
@@ -306,6 +310,32 @@ ion-content {
 
   .btnmode {
     font-size: 11px;
+  }
+
+  [item-item].text-align-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+
+    > button {
+      min-width: 0;
+      min-height: 34px;
+      padding: 0 6px;
+      border: 1px solid var(--blinker-border);
+      border-radius: 10px;
+      color: var(--blinker-text-secondary);
+      background: var(--blinker-surface-muted);
+      font: inherit;
+      font-size: 17px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    > button.selected {
+      border-color: color-mix(in srgb, var(--ion-color-primary) 36%, var(--blinker-border));
+      color: var(--ion-color-primary);
+      background: var(--blinker-surface-active);
+    }
   }
 
   .icon-box {
@@ -385,6 +415,7 @@ ion-content {
 }
 
 @media (max-width: 380px) {
+
   .setting-box0,
   .setting-box {
     width: calc(100% - 24px);
@@ -392,7 +423,7 @@ ion-content {
     margin-left: 12px;
   }
 
-  [setting-item] {
+  .setting-item {
     gap: 8px;
 
     [item-name] {

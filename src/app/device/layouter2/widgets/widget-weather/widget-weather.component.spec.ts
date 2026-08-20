@@ -1,4 +1,5 @@
 import { ChangeDetectorRef, NgZone } from '@angular/core';
+import { NavController } from '@ionic/angular/standalone';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { WeatherService } from 'src/app/core/services/weather.service';
 import {
@@ -8,12 +9,17 @@ import {
 import { WidgetWeatherComponent } from './widget-weather.component';
 import { WeatherForecastHour } from './weather-outlook.adapter';
 
+vi.mock('@ionic/angular/standalone', () => ({
+  NavController: class {},
+}));
+
 describe('WidgetWeatherComponent', () => {
   const components: WidgetWeatherComponent[] = [];
 
   afterEach(() => {
     components.forEach((component) => component.ngOnDestroy());
     components.length = 0;
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -69,11 +75,15 @@ describe('WidgetWeatherComponent', () => {
     } as unknown as NgZone;
     const markForCheck = vi.fn();
     const changeDetectorRef = { markForCheck } as unknown as ChangeDetectorRef;
+    const navController = {
+      navigateForward: vi.fn().mockResolvedValue(true),
+    } as unknown as NavController;
     const component = new WidgetWeatherComponent(
       weatherService,
       thirdPartyServices,
       ngZone,
-      changeDetectorRef
+      changeDetectorRef,
+      navController
     );
     component.device = {
       config: {
@@ -125,12 +135,13 @@ describe('WidgetWeatherComponent', () => {
     expect(component.snapshot?.location).toBe('杭州');
     expect(component.forecastState).toBe('ready');
     expect(component.forecastHours).toHaveLength(3);
-    const forecastPage = component.displayPages.find(
+    const forecastPages = component.displayPages.filter(
       (page) => page.kind === 'forecast'
     );
     expect(
-      forecastPage?.kind === 'forecast' ? forecastPage.hours : []
+      forecastPages.flatMap((page) => page.kind === 'forecast' ? page.hours : [])
     ).toHaveLength(3);
+    expect(forecastPages).toHaveLength(1);
     expect(component.alertsState).toBe('ready');
     expect(component.providerName).toBe('OpenWeather');
     expect(markForCheck).toHaveBeenCalled();
@@ -209,7 +220,7 @@ describe('WidgetWeatherComponent', () => {
     component.ngOnInit();
     await vi.waitFor(() => expect(component.alertsState).toBe('ready'));
 
-    expect(component.metricPages[0].length).toBeLessThanOrEqual(8);
+    expect(component.metricPages[0].length).toBeLessThanOrEqual(6);
     expect(component.forecastHours).toHaveLength(3);
     expect(
       component.displayPages.filter((page) => page.kind === 'forecast')
@@ -307,12 +318,13 @@ describe('WidgetWeatherComponent', () => {
     expect(component.forecastHours).toHaveLength(3);
     expect(actualTimes.every((time) => time > requestedAt)).toBe(true);
     expect(actualTimes).toEqual(expectedTimes);
-    const forecastPage = component.displayPages.find(
+    const forecastPages = component.displayPages.filter(
       (page) => page.kind === 'forecast'
     );
     expect(
-      forecastPage?.kind === 'forecast' ? forecastPage.hours : []
+      forecastPages.flatMap((page) => page.kind === 'forecast' ? page.hours : [])
     ).toHaveLength(3);
+    expect(forecastPages).toHaveLength(1);
   });
 
   it('formats hourly forecast values for display', () => {
@@ -336,7 +348,8 @@ describe('WidgetWeatherComponent', () => {
     expect(component.forecastCondition(hour)).toBe('小雨');
     expect(component.forecastDetailLines(hour)).toEqual([
       '体感 27.1° · 降水 65%',
-      '湿度 74% · 东风 12.6 km/h',
+      '湿度 74%',
+      '东风 12.6 km/h',
     ]);
     expect(component.forecastDetail(hour)).toBe(
       '体感 27.1° · 降水 65% · 湿度 74% · 东风 12.6 km/h'
@@ -386,6 +399,27 @@ describe('WidgetWeatherComponent', () => {
     component.nextPage();
     expect(component.pageIndex).toBe(1);
     component.previousPage();
+    expect(component.pageIndex).toBe(0);
+  });
+
+  it('waits 15 seconds and resets the countdown after manual navigation', () => {
+    vi.useFakeTimers();
+    const { component } = createComponent();
+    component.displayPages = [
+      { id: 'current-0', section: 'current', kind: 'metrics', metrics: [] },
+      { id: 'current-1', section: 'current', kind: 'metrics', metrics: [] },
+    ];
+
+    component['restartCarousel']();
+    vi.advanceTimersByTime(14_999);
+    expect(component.pageIndex).toBe(0);
+
+    component.nextPage();
+    expect(component.pageIndex).toBe(1);
+    vi.advanceTimersByTime(14_999);
+    expect(component.pageIndex).toBe(1);
+
+    vi.advanceTimersByTime(1);
     expect(component.pageIndex).toBe(0);
   });
 });

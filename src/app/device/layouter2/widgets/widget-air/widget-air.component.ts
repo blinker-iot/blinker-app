@@ -6,7 +6,7 @@ import {
   OnDestroy,
   OnInit,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { NavController } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import {
   WeatherCoordinates,
@@ -37,7 +37,7 @@ interface ResolvedAirLocation {
 
 interface PollutantPage {
   id: string;
-  particles: PollutantDisplay[];
+  featured: PollutantDisplay[];
   pollutants: AirPollutant[];
 }
 
@@ -46,7 +46,7 @@ type PollutantDisplay = Pick<
   'id' | 'label' | 'displayValue' | 'unit'
 >;
 
-interface ParticleSlot {
+interface FeaturedPollutantSlot {
   id: string;
   key: string;
   label: string;
@@ -69,11 +69,13 @@ const AIR_LANGUAGE: Partial<Record<WeatherServiceProvider, string>> = {
 const AIR_REFRESH_INTERVAL = 60 * 60 * 1000;
 const AIR_RETRY_INTERVAL = 3 * 60 * 1000;
 const CAROUSEL_INTERVAL = 6000;
-const PARTICLE_SLOTS: readonly ParticleSlot[] = [
+const DETAIL_POLLUTANTS_PER_PAGE = 3;
+const FEATURED_POLLUTANT_SLOTS: readonly FeaturedPollutantSlot[] = [
   { id: 'pm2.5', key: 'pm25', label: 'PM2.5', unit: 'μg/m³' },
   { id: 'pm10', key: 'pm10', label: 'PM10', unit: 'μg/m³' },
+  { id: 'o3', key: 'o3', label: 'O₃', unit: 'μg/m³' },
 ];
-const DETAIL_POLLUTANT_ORDER = ['o3', 'no2', 'so2', 'co'] as const;
+const DETAIL_POLLUTANT_ORDER = ['no2', 'so2', 'co'] as const;
 const POLLUTANT_ICONS: Readonly<Record<string, string>> = {
   pm25: 'fa-light fa-smog',
   pm10: 'fa-light fa-sun-dust',
@@ -116,7 +118,6 @@ const AIR_DEMO: AirQualitySnapshot = {
   selector: 'widget-air',
   templateUrl: './widget-air.component.html',
   styleUrls: ['./widget-air.component.scss'],
-  imports: [RouterLink],
 })
 export class WidgetAirComponent implements Layouter2Widget, OnInit, OnDestroy {
   @Input() device;
@@ -125,7 +126,7 @@ export class WidgetAirComponent implements Layouter2Widget, OnInit, OnDestroy {
 
   airState: AirState = 'loading';
   snapshot: AirQualitySnapshot | null = null;
-  particlePollutants: PollutantDisplay[] = [];
+  featuredPollutants: PollutantDisplay[] = [];
   pollutantPages: AirPollutant[][] = [];
   displayPages: PollutantPage[] = [];
   providerName = '';
@@ -178,8 +179,13 @@ export class WidgetAirComponent implements Layouter2Widget, OnInit, OnDestroy {
     private readonly weatherService: WeatherService,
     private readonly thirdPartyServices: ThirdPartyServicesService,
     private readonly ngZone: NgZone,
-    private readonly changeDetectorRef: ChangeDetectorRef
+    private readonly changeDetectorRef: ChangeDetectorRef,
+    private readonly navController: NavController
   ) {}
+
+  openThirdPartyServices(): void {
+    void this.navController.navigateForward('/third-party-services');
+  }
 
   ngOnInit(): void {
     if (this.isDemo) {
@@ -457,7 +463,7 @@ export class WidgetAirComponent implements Layouter2Widget, OnInit, OnDestroy {
     const activePage = this.displayPages[this.pageIndex];
     const activeId = activePage?.id;
     if (!this.snapshot) {
-      this.particlePollutants = [];
+      this.featuredPollutants = [];
       this.pollutantPages = [];
       this.displayPages = [];
       this.pageIndex = 0;
@@ -467,7 +473,7 @@ export class WidgetAirComponent implements Layouter2Widget, OnInit, OnDestroy {
 
     const pages: PollutantPage[] = [];
     const pollutants = this.snapshot.pollutants;
-    this.particlePollutants = PARTICLE_SLOTS.map((slot) =>
+    this.featuredPollutants = FEATURED_POLLUTANT_SLOTS.map((slot) =>
       pollutants.find((pollutant) =>
         this.matchesPollutant(pollutant, slot.key)
       ) ?? {
@@ -478,17 +484,20 @@ export class WidgetAirComponent implements Layouter2Widget, OnInit, OnDestroy {
       }
     );
     const detailPollutants = pollutants
-      .filter((pollutant) => !this.isParticlePollutant(pollutant))
+      .filter((pollutant) => !this.isFeaturedPollutant(pollutant))
       .sort(
         (left, right) =>
           this.detailPollutantRank(left) - this.detailPollutantRank(right)
       );
-    this.pollutantPages = this.chunk(detailPollutants, 4);
+    this.pollutantPages = this.chunk(
+      detailPollutants,
+      DETAIL_POLLUTANTS_PER_PAGE
+    );
     if (!this.pollutantPages.length) this.pollutantPages = [[]];
     this.pollutantPages.forEach((pollutants, index) => {
       pages.push({
         id: `current-${index}`,
-        particles: this.particlePollutants,
+        featured: this.featuredPollutants,
         pollutants,
       });
     });
@@ -580,7 +589,7 @@ export class WidgetAirComponent implements Layouter2Widget, OnInit, OnDestroy {
 
   private clearAirData(): void {
     this.snapshot = null;
-    this.particlePollutants = [];
+    this.featuredPollutants = [];
     this.pollutantPages = [];
     this.displayPages = [];
     this.pageIndex = 0;
@@ -594,10 +603,9 @@ export class WidgetAirComponent implements Layouter2Widget, OnInit, OnDestroy {
     return chunks;
   }
 
-  private isParticlePollutant(pollutant: AirPollutant): boolean {
-    return (
-      this.matchesPollutant(pollutant, 'pm25') ||
-      this.matchesPollutant(pollutant, 'pm10')
+  private isFeaturedPollutant(pollutant: AirPollutant): boolean {
+    return FEATURED_POLLUTANT_SLOTS.some((slot) =>
+      this.matchesPollutant(pollutant, slot.key)
     );
   }
 

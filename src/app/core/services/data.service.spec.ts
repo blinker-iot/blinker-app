@@ -27,13 +27,13 @@ describe('DataService guest device preview', () => {
     ).dashboard as Array<Record<string, unknown>>;
     expect(previewDashboard.find((widget) => widget['type'] === 'wea')).toMatchObject({
       key: 'weather',
-      lstyle: 1,
+      lstyle: 0,
       cols: 8,
       rows: 3,
     });
     expect(previewDashboard.find((widget) => widget['type'] === 'air')).toMatchObject({
       key: 'air',
-      lstyle: 1,
+      lstyle: 0,
       cols: 8,
       rows: 3,
     });
