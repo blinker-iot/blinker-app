@@ -7,7 +7,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API } from 'src/app/configs/api.config';
 import { BlinkerDevice } from '../model/device.model';
-import { GatewayDevice } from '../model/response.model';
+import { DeviceKeyContext, GatewayDevice } from '../model/response.model';
 import { DeviceService } from './device.service';
 
 describe('DeviceService Gateway HTTP API', () => {
@@ -24,6 +24,22 @@ describe('DeviceService Gateway HTTP API', () => {
     createdAt: 1,
     updatedAt: 2,
   };
+  const deviceKeyContext: DeviceKeyContext = {
+    logicalDeviceId: 'device/a b',
+    credentialVersion: 1,
+    locator: 'AQIDBAUGBwgJCgsMDQ4PEA',
+  };
+  const deviceKeyDevice = {
+    ...deviceKeyContext,
+    tenantId: 'tenant-1',
+    name: gatewayDevice.name,
+    deviceType: 'diy',
+    state: 'active',
+    createdAt: 1,
+    updatedAt: 2,
+  };
+  const syntheticDeviceKey =
+    'AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA';
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -92,6 +108,227 @@ describe('DeviceService Gateway HTTP API', () => {
     request.flush(response, { status: 201, statusText: 'Created' });
 
     await expect(resultPromise).resolves.toEqual(response);
+  });
+
+  it('creates a DeviceKey V2 logical device without returning a credential', async () => {
+    const response = {
+      status: 201,
+      data: { device: deviceKeyDevice, replayed: false },
+    };
+    const resultPromise = service.createDeviceKeyV2(
+      '  ' + gatewayDevice.name + '  ',
+      '  device-key-create-1  ',
+    );
+
+    const request = httpTesting.expectOne(API.DEVICE_V2.CREATE);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      name: gatewayDevice.name,
+      deviceType: 'diy',
+    });
+    expect(request.request.headers.get('Content-Type')).toBe('application/json');
+    expect(request.request.headers.get('Idempotency-Key')).toBe(
+      'device-key-create-1',
+    );
+    expect(request.request.params.keys()).toEqual([]);
+    request.flush(response, { status: 201, statusText: 'Created' });
+
+    await expect(resultPromise).resolves.toEqual(response);
+    expect(JSON.stringify(response)).not.toContain('authKey');
+    expect(JSON.stringify(response)).not.toContain('deviceKey');
+    httpTesting.expectNone(API.DEVICE.CREATE);
+  });
+
+  it('retries an unknown V2 create result with the same key and body', async () => {
+    const create = () =>
+      service.createDeviceKeyV2(gatewayDevice.name, 'device-key-create-retry');
+
+    const firstResult = create();
+    const firstRequest = httpTesting.expectOne(API.DEVICE_V2.CREATE);
+    const firstBody = firstRequest.request.body;
+    const firstKey = firstRequest.request.headers.get('Idempotency-Key');
+    firstRequest.error(new ProgressEvent('error'));
+    await expect(firstResult).rejects.toMatchObject({ status: 0 });
+
+    const replay = {
+      status: 200,
+      data: { device: deviceKeyDevice, replayed: true },
+    };
+    const replayResult = create();
+    const replayRequest = httpTesting.expectOne(API.DEVICE_V2.CREATE);
+    expect(replayRequest.request.body).toEqual(firstBody);
+    expect(replayRequest.request.headers.get('Idempotency-Key')).toBe(firstKey);
+    replayRequest.flush(replay);
+
+    await expect(replayResult).resolves.toEqual(replay);
+    httpTesting.expectNone(API.DEVICE.CREATE);
+  });
+
+  it('propagates a V2 idempotency conflict without falling back to V1', async () => {
+    const resultPromise = service.createDeviceKeyV2(
+      'Changed name',
+      'device-key-create-1',
+    );
+    httpTesting.expectOne(API.DEVICE_V2.CREATE).flush(
+      {
+        status: 409,
+        errorCode: 'IDEMPOTENCY_CONFLICT',
+        errorMessage: 'The idempotency key is already bound.',
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    await expect(resultPromise).rejects.toMatchObject({ status: 409 });
+    httpTesting.expectNone(API.DEVICE.CREATE);
+  });
+
+  it('rejects a V2 create response containing any credential field', async () => {
+    const resultPromise = service.createDeviceKeyV2(
+      gatewayDevice.name,
+      'device-key-create-secret',
+    );
+    httpTesting.expectOne(API.DEVICE_V2.CREATE).flush(
+      {
+        status: 201,
+        data: {
+          device: deviceKeyDevice,
+          replayed: false,
+          deviceKey: syntheticDeviceKey,
+        },
+      },
+      { status: 201, statusText: 'Created' },
+    );
+
+    await expect(resultPromise).rejects.toMatchObject({
+      code: 'DEVICE_KEY_V2_INVALID_RESPONSE',
+    });
+  });
+
+  it('reveals a DeviceKey with an encoded id and no idempotency header', async () => {
+    const response = {
+      status: 200,
+      data: { ...deviceKeyContext, deviceKey: syntheticDeviceKey },
+    };
+    const resultPromise = service.revealDeviceKeyV2(deviceKeyContext);
+
+    const request = httpTesting.expectOne(
+      API.DEVICE_V2.REVEAL(deviceKeyContext.logicalDeviceId),
+    );
+    expect(request.request.url).toContain('device%2Fa%20b');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    expect(request.request.headers.has('Idempotency-Key')).toBe(false);
+    request.flush(response, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
+
+    await expect(resultPromise).resolves.toEqual(response);
+    httpTesting.expectNone(API.DEVICE.CREATE);
+  });
+
+  it('rejects a reveal whose context does not match the create response', async () => {
+    const resultPromise = service.revealDeviceKeyV2(deviceKeyContext);
+    httpTesting.expectOne(
+      API.DEVICE_V2.REVEAL(deviceKeyContext.logicalDeviceId),
+    ).flush(
+      {
+        status: 200,
+        data: {
+          ...deviceKeyContext,
+          credentialVersion: 2,
+          deviceKey: syntheticDeviceKey,
+        },
+      },
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
+
+    await expect(resultPromise).rejects.toMatchObject({
+      code: 'DEVICE_KEY_V2_INVALID_RESPONSE',
+    });
+  });
+
+  it('rejects an invalid, zero, or cacheable revealed DeviceKey', async () => {
+    const invalidKeys = [
+      syntheticDeviceKey.slice(0, -1),
+      'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      syntheticDeviceKey,
+    ];
+
+    for (const [index, deviceKey] of invalidKeys.entries()) {
+      const resultPromise = service.revealDeviceKeyV2(deviceKeyContext);
+      httpTesting.expectOne(
+        API.DEVICE_V2.REVEAL(deviceKeyContext.logicalDeviceId),
+      ).flush(
+        { status: 200, data: { ...deviceKeyContext, deviceKey } },
+        index === invalidKeys.length - 1
+          ? {}
+          : { headers: { 'Cache-Control': 'no-store' } },
+      );
+      await expect(resultPromise).rejects.toMatchObject({
+        code: 'DEVICE_KEY_V2_INVALID_RESPONSE',
+      });
+    }
+  });
+
+  it('rotates with a stable key and accepts only credential version N plus one', async () => {
+    const rotatedContext = {
+      ...deviceKeyContext,
+      credentialVersion: 2,
+      locator: 'ERITFBUWFxgZGhscHR4fIA',
+    };
+    const response = {
+      status: 200,
+      data: { ...rotatedContext, deviceKey: syntheticDeviceKey },
+    };
+    const rotate = () =>
+      service.rotateDeviceKeyV2(deviceKeyContext, 'device-key-rotate-1');
+
+    const firstResult = rotate();
+    const firstRequest = httpTesting.expectOne(
+      API.DEVICE_V2.ROTATE(deviceKeyContext.logicalDeviceId),
+    );
+    expect(firstRequest.request.method).toBe('POST');
+    expect(firstRequest.request.body).toEqual({});
+    expect(firstRequest.request.headers.get('Idempotency-Key')).toBe(
+      'device-key-rotate-1',
+    );
+    firstRequest.flush(
+      {
+        status: 503,
+        errorCode: 'DEVICE_KEY_DISCONNECT_PENDING',
+        errorMessage: 'Credential disconnect is pending.',
+      },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+    await expect(firstResult).rejects.toMatchObject({ status: 503 });
+
+    const retryResult = rotate();
+    const retryRequest = httpTesting.expectOne(
+      API.DEVICE_V2.ROTATE(deviceKeyContext.logicalDeviceId),
+    );
+    expect(retryRequest.request.headers.get('Idempotency-Key')).toBe(
+      'device-key-rotate-1',
+    );
+    retryRequest.flush(response, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
+
+    await expect(retryResult).resolves.toEqual(response);
+
+    const invalidVersionResult = rotate();
+    httpTesting.expectOne(
+      API.DEVICE_V2.ROTATE(deviceKeyContext.logicalDeviceId),
+    ).flush(
+      {
+        status: 200,
+        data: { ...deviceKeyContext, deviceKey: syntheticDeviceKey },
+      },
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
+    await expect(invalidVersionResult).rejects.toMatchObject({
+      code: 'DEVICE_KEY_V2_INVALID_RESPONSE',
+    });
+    httpTesting.expectNone(API.DEVICE.CREATE);
   });
 
   it('uses the detail, status, data, and connection resource paths', async () => {

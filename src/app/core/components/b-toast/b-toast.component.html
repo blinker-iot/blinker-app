@@ -1,11 +1,19 @@
-<div class="blinke-toast animate__animated animate__faster"
-  [ngClass]="{'animate__fadeInUp': !hide,'animate__fadeOutDown':hide}">
-  <b-device-img [deviceId]="toast.device.id"></b-device-img>
-  <div text-box>
-    <div name>{{toast.device.config.customName}}</div>
-    <div mess>{{toast.message}}</div>
+<article
+  class="blinker-notice blinker-toast"
+  [class.is-leaving]="hide"
+  role="status"
+  aria-live="polite"
+>
+  <div class="notice-leading device-image" aria-hidden="true">
+    <b-device-img [deviceId]="toast.device?.id"></b-device-img>
   </div>
-  <div close-btn (click)="close()">
-    <i class="fal fa-times"></i>
+
+  <div class="notice-copy">
+    <p class="notice-title">{{ toast.device?.config?.customName || '设备通知' }}</p>
+    <p class="notice-message">{{ toast.message }}</p>
   </div>
-</div>
+
+  <button class="notice-close" type="button" aria-label="关闭通知" (click)="close()">
+    <i class="fal fa-times" aria-hidden="true"></i>
+  </button>
+</article>

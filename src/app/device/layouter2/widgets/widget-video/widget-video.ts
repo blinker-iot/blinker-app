@@ -35,6 +35,12 @@ export class WidgetVideoComponent implements Layouter2Widget {
   }
 
   getValue(valueKey) {
+    if (
+      this.isDemo &&
+      typeof this.widget[valueKey] != 'undefined'
+    )
+      return this.widget[valueKey];
+
     if (typeof this.device.data[this.key] != 'undefined')
       if (typeof this.device.data[this.key][valueKey] != 'undefined')
         return this.device.data[this.key][valueKey];

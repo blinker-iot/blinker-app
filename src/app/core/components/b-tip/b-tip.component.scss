@@ -1,63 +1,27 @@
-.blinke-tip {
-    position: fixed;
-    bottom: 15px;
-    left: 15px;
-    height: 60px;
-    width: calc(100% - 30px);
-    box-shadow: 0 0 5px #ccc;
-    background: #fff;
-    border-radius: 10px;
-    padding: 10px;
-    display: flex;
-    align-items: center;
+.blinker-tip {
+  &.tip-error {
+    --notice-accent: var(--ion-color-danger);
+  }
 
-    b-device-img {
-        width: 40px;
-        height: 40px;
-        ::ng-deep {
-            img {
-                width: 40px;
-            }
-        }
-    }
+  &.tip-warn {
+    --notice-accent: var(--ion-color-warning);
+  }
 
-    [text-box] {
-        font-size: 12px;
-        margin-left: 10px;
-        margin-top: -2px;
-        width: calc(100% - 90px);
-        display: flex;
-        align-items: center;
-        [mess] {
-            margin-top: 3px;
-            // white-space: nowrap;
-            // overflow: hidden;
-            // text-overflow: ellipsis;
-        }
-    }
+  &.tip-success {
+    --notice-accent: var(--ion-color-success);
+  }
 
-    [close-btn] {
-        position: absolute;
-        right: 10px;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+  &.tip-info {
+    --notice-accent: var(--ion-color-primary);
+  }
+
+  .notice-message {
+    color: var(--blinker-text-primary);
+    font-size: 13px;
+    font-weight: 560;
+  }
 }
 
-i {
-    margin-right: 10px;
-    margin-top: 2px;
-    font-size: 18px;
-    &.error {
-        color: rgb(190, 37, 37);
-    }
-    &.done {
-        color: rgb(47, 145, 28);
-    }
-    &.warn {
-        color: rgb(216, 130, 0);
-    }
+.tip-icon i {
+  font-size: 19px;
 }

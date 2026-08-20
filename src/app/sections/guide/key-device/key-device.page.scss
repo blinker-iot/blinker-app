@@ -171,6 +171,62 @@ app-hero-card {
   }
 }
 
+.flow-status {
+  min-height: calc(100vh - 220px - var(--ion-safe-area-top, 0px));
+  padding: 30px 17px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  h1 {
+    margin: 18px 0 8px;
+    color: var(--blinker-text-primary);
+    font-size: 21px;
+    font-weight: 680;
+  }
+
+  p {
+    max-width: 340px;
+    margin: 0;
+    color: var(--blinker-text-secondary);
+    font-size: 11px;
+    line-height: 1.65;
+  }
+
+  .primary-action {
+    max-width: 340px;
+  }
+
+  small {
+    max-width: 340px;
+    margin-top: 11px;
+    color: var(--blinker-text-tertiary);
+    font-size: 9px;
+    line-height: 1.5;
+  }
+}
+
+.status-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 21px;
+}
+
+.warning-icon {
+  background: rgba(var(--ion-color-warning-rgb), 0.14);
+  color: var(--ion-color-warning);
+}
+
+.blocked-icon {
+  background: rgba(var(--ion-color-danger-rgb), 0.12);
+  color: var(--ion-color-danger);
+}
+
 .key-result {
   min-height: calc(100vh - 100px - var(--ion-safe-area-top, 0px));
   padding-top: 21px;

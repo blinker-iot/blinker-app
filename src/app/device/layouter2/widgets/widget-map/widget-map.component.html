@@ -1,8 +1,33 @@
-<div widget>
+<div widget class="widget-map-shell">
   <div class="mapbox" #widgetmap></div>
+  @if (mapState !== 'ready') {
+  <div class="map-status" [class.map-status-error]="mapState === 'error'">
+    @if (mapState === 'loading') {
+    <i class="fa-light fa-circle-notch fa-spin" aria-hidden="true"></i>
+    <strong>正在加载{{ mapProviderName }}</strong>
+    } @else if (mapState === 'missing-key') {
+    <i class="fa-light fa-map-location-dot" aria-hidden="true"></i>
+    <strong>未配置地图 API Key</strong>
+    <small>请先在第三方服务中选择地图服务并保存对应的 Key</small>
+    <button
+      type="button"
+      class="api-key-settings-button"
+      (click)="openThirdPartyServices()"
+      aria-label="配置地图 API Key"
+      title="配置地图 API Key"
+    >
+      <i class="fa-light fa-gear" aria-hidden="true"></i>
+    </button>
+    } @else {
+    <i class="fa-light fa-triangle-exclamation" aria-hidden="true"></i>
+    <strong>{{ mapProviderName }}加载失败</strong>
+    <small>{{ mapErrorMessage }}</small>
+    }
+  </div>
+  }
   <div class="bottom-box">
     <div class="address">
-      {{address}}
+      {{ address }}
     </div>
     <i class="fal fa-location-circle" (click)="gotoNav()"></i>
   </div>

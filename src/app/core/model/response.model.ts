@@ -32,18 +32,29 @@ export interface AuthTokenResponseData {
   token_type?: string;
 }
 
+export interface GatewaySubscriptionPlan {
+  name: string;
+  display_name: string;
+  service_tier: string;
+  subscription_id: string | null;
+  status: string;
+  end_date: string | null;
+  [key: string]: unknown;
+}
+
+export type GatewayEntitlements = Record<string, boolean | number>;
+
 export interface CurrentUser {
   id: string;
+  nickname: string | null;
   email: string;
-  subscription_plan?: {
-    name?: string;
-    display_name?: string;
-    service_tier?: string;
-    status?: string;
-    end_date?: string | null;
-  } | null;
+  phone: string | null;
+  avatar: string | null;
+  subscription_plan: GatewaySubscriptionPlan | null;
+  permissions: string[];
+  rbac_permissions: string[];
   entitlement_revision?: number;
-  entitlements?: Record<string, unknown>;
+  entitlements: GatewayEntitlements;
   [key: string]: unknown;
 }
 
@@ -68,6 +79,47 @@ export interface DeviceResponse {
 export interface DeviceCreateResponse extends DeviceResponse {
   authKey?: string;
   replayed: boolean;
+}
+
+export interface DeviceKeyContext {
+  logicalDeviceId: string;
+  credentialVersion: number;
+  locator: string;
+}
+
+export interface DeviceKeyLogicalDevice extends DeviceKeyContext {
+  tenantId: string;
+  name: string;
+  deviceType: string;
+  state: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DeviceKeyCreateResponse {
+  status: number;
+  data: {
+    device: DeviceKeyLogicalDevice;
+    replayed: boolean;
+  };
+}
+
+export interface DeviceKeyRevealData extends DeviceKeyContext {
+  deviceKey: string;
+}
+
+export interface DeviceKeyRevealResponse {
+  status: number;
+  data: DeviceKeyRevealData;
+}
+
+export interface DeviceKeyRotateData extends DeviceKeyContext {
+  deviceKey: string;
+}
+
+export interface DeviceKeyRotateResponse {
+  status: number;
+  data: DeviceKeyRotateData;
 }
 
 export interface DeviceConnectionStatus {

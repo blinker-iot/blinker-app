@@ -18,7 +18,7 @@ $text-muted: var(--blinker-text-tertiary);
   --login-page-background:
     radial-gradient(circle at 50% 26%, rgba(8, 126, 255, 0.07), transparent 36%),
     linear-gradient(180deg, #fbfcfe 0%, #f7f9fc 100%);
-  --login-surface: rgba(255, 255, 255, 0.76);
+  --login-surface: #ffffff;
   --login-border: rgba(137, 154, 178, 0.28);
   --login-header-offset: calc(var(--ion-safe-area-top, 0px) + 44px);
 
@@ -39,7 +39,7 @@ $text-muted: var(--blinker-text-tertiary);
   --login-page-background:
     radial-gradient(circle at 50% 27%, rgba(10, 132, 255, 0.15), transparent 38%),
     linear-gradient(180deg, #092139 0%, #071b2e 54%, #061827 100%);
-  --login-surface: rgba(16, 43, 67, 0.78);
+  --login-surface: #102b43;
   --login-border: rgba(132, 160, 188, 0.28);
 
   .logo-box .logo {
@@ -270,7 +270,6 @@ i {
       color: $text-primary;
       cursor: pointer;
       transition: all 0.25s;
-      backdrop-filter: blur(10px);
 
       &:active {
         transform: scale(0.94);

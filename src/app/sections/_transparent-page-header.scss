@@ -1,3 +1,5 @@
+@use './section-main' as section-main;
+
 // Global shell for routed pages such as sections/room, sections/scene and
 // sections/self-hosted-server. Main tab pages keep their existing header and
 // fixed scroll-mask implementation.
@@ -23,8 +25,6 @@ ion-header:not(.main-tab-header):not(.opaque-page-header) {
   overflow: visible !important;
   background: transparent !important;
   box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
 
   // The header surface remains transparent. This visual layer sits above
   // scrolling content and below the toolbar controls.
@@ -41,16 +41,16 @@ ion-header:not(.main-tab-header):not(.opaque-page-header) {
     // mask colors in engines that support it.
     background: linear-gradient(
       to bottom,
-      rgba(var(--ion-background-color-rgb), 0.44) 0%,
-      rgba(var(--ion-background-color-rgb), 0.24) 55%,
-      rgba(var(--ion-background-color-rgb), 0.08) 78%,
+      rgba(var(--ion-background-color-rgb), 0.58) 0%,
+      rgba(var(--ion-background-color-rgb), 0.34) 55%,
+      rgba(var(--ion-background-color-rgb), 0.12) 78%,
       transparent 100%
     );
     background: linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--transparent-page-mask-color) 44%, transparent) 0%,
-      color-mix(in srgb, var(--transparent-page-mask-color) 24%, transparent) 55%,
-      color-mix(in srgb, var(--transparent-page-mask-color) 8%, transparent) 78%,
+      color-mix(in srgb, var(--transparent-page-mask-color) 58%, transparent) 0%,
+      color-mix(in srgb, var(--transparent-page-mask-color) 34%, transparent) 55%,
+      color-mix(in srgb, var(--transparent-page-mask-color) 12%, transparent) 78%,
       transparent 100%
     );
   }
@@ -70,8 +70,6 @@ ion-header:not(.main-tab-header):not(.opaque-page-header) {
     min-height: var(--transparent-page-header-height) !important;
     background: transparent !important;
     box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
   }
 }
 
@@ -83,45 +81,20 @@ ion-header:not(.main-tab-header):not(.opaque-page-header) ~ ion-content {
   --padding-top: 0px !important;
 
   > main {
-    box-sizing: border-box;
-    width: 100%;
-    max-width: var(--section-main-max-width, 720px);
-    min-height: 100%;
-    margin: 0 auto;
-    padding:
-      0
-      max(var(--section-main-padding-inline, 16px), var(--ion-safe-area-right, 0px))
-      calc(
-        var(--section-main-padding-bottom, 34px) +
-        var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px))
-      )
-      max(var(--section-main-padding-inline, 16px), var(--ion-safe-area-left, 0px));
-    padding-top: 0 !important;
-    display: var(--section-main-display, block);
-    flex-direction: var(--section-main-direction, column);
-    background:
-      radial-gradient(
-        circle at 100% 0%,
-        rgba(
-          var(--section-main-accent-rgb, var(--ion-color-primary-rgb)),
-          var(--section-main-accent-opacity, 0.11)
-        ),
-        transparent 28%
-      ),
-      var(--section-main-background, var(--blinker-bg));
+    @include section-main.layout;
   }
 
-  > :first-child::before {
-    content: '';
-    display: block;
-    width: 100%;
-    height: var(--transparent-page-content-top);
-    pointer-events: none;
+  > .content-under-header {
+    @include section-main.page-background;
+  }
+
+  > :first-child:not(.content-under-header)::before {
+    @include section-main.content-offset;
   }
 }
 
 @media (max-width: 380px) {
   ion-header:not(.main-tab-header):not(.opaque-page-header) ~ ion-content > main {
-    --section-main-padding-inline: 13px;
+    @include section-main.compact;
   }
 }

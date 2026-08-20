@@ -1,16 +1,11 @@
 <ion-header class="editor-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button class="editor-action" (click)="close()">
+      <ion-button aria-label="关闭" (click)="close()">
         <i class="fa-light fa-xmark"></i>
       </ion-button>
     </ion-buttons>
     <ion-title>组件编辑</ion-title>
-    <ion-buttons slot="end">
-      <ion-button class="editor-action primary" (click)="save()">
-        <i class="fa-light fa-check"></i>
-      </ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 <ion-content>
@@ -21,7 +16,7 @@
         <div>样式设置</div>
         <div class="h-line"></div>
       </div>
-      <div class="scrollHeight">
+      <div class="scrollHeight" appHorizontalDragScroll>
         <div
           class="widgetitem-box"
           [ngClass]="{'scale07': widget.type!='tex','scale04': widget.type=='vid','scale03':widget.type=='img'||widget.type=='col'}"
@@ -32,7 +27,6 @@
             #widgetItem
             (click)="changeStyle(i)"
             [ngStyle]="{'box-shadow':widget.lstyle==i?'0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.3)':''}"
-            [ngClass]="{'default':widget.bg==0,'translucent':widget.bg==1,'transparent':widget.bg==2,'round':widget.bg==3}"
           >
             <widget-dynamic
               [widget]="widget"
@@ -52,23 +46,28 @@
         <div>参数设置</div>
         <div class="h-line"></div>
       </div>
-      @if (widget.type=='tim') {
-      <div setting-item>
-        <div>该组件没有提供可设置的参数</div>
+      @if (widget.type === 'wea' || widget.type === 'air') {
+      <div class="setting-item">
+        @if (widget.type === 'wea') {
+        <div>天气数据来自设备位置与第三方服务设置</div>
+        } @else {
+        <div>空气质量数据来自设备位置与第三方天气服务设置</div>
+        }
       </div>
-      } @if (!(widget.type=='deb'|| widget.type=='vid' || widget.type=='tim')) {
-      <div setting-item>
+      } @if (!(widget.type=='deb'|| widget.type=='vid' || widget.type === 'wea' || widget.type === 'air')) {
+      <div class="setting-item">
         <div item-name>组件键名</div>
         <div input-box>
           <input
             type="text"
             placeholder="{{widget.key}}"
-            [(ngModel)]="widget.key"
+            [ngModel]="widget.key"
+            (ngModelChange)="updateWidgetParameter('key', $event)"
           />
         </div>
       </div>
       } @if (widget.type=='btn') {
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>按键类型</div>
         <div item-item class="btnmode">
           <div
@@ -104,86 +103,118 @@
         </div>
       </div>
       } @if (widget.type=='btn'&&widget.mode==2) {
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>承载内容</div>
         <div input-box>
           <input
             type="text"
             placeholder="{{widget.cus}}"
-            [(ngModel)]="widget.cus"
+            [ngModel]="widget.cus"
+            (ngModelChange)="updateWidgetParameter('cus', $event)"
           />
         </div>
       </div>
       } @if
       (widget.type=='tex'||widget.type=='btn'||widget.type=='ran'||widget.type=='col'||
       widget.type=='num') {
-      <div setting-item>
-        <div item-name>显示文本1</div>
+      <div class="setting-item">
+        <div item-name>{{ widget.type == 'tex' ? '显示文本' : '显示文本1' }}</div>
         <div input-box>
           <input
             type="text"
             placeholder="{{widget.t0}}"
-            [(ngModel)]="widget.t0"
+            [ngModel]="widget.t0"
+            (ngModelChange)="updateWidgetParameter('t0', $event)"
           />
         </div>
       </div>
       } @if (widget.type=='tex') {
-      <div setting-item>
-        <div item-name>文本1字号</div>
+      <div class="setting-item">
+        <div item-name>文本字号</div>
         <div input-box>
           <input
-            type="text"
+            type="number"
+            min="10"
+            max="24"
+            step="1"
             placeholder="{{widget.size}}"
-            [(ngModel)]="widget.size"
+            [ngModel]="widget.size"
+            (ngModelChange)="updateTextSize($event)"
           />
         </div>
       </div>
-      } @if (widget.type=='tex') {
-      <div setting-item>
-        <div item-name>显示文本2</div>
-        <div input-box>
-          <input
-            type="text"
-            placeholder="{{widget.t1}}"
-            [(ngModel)]="widget.t1"
-          />
+      <div class="setting-item">
+        <div item-name>文本位置</div>
+        <div item-item class="text-align-options">
+          <button
+            type="button"
+            aria-label="靠左"
+            title="靠左"
+            [class.selected]="widget.align == 'left'"
+            (click)="updateTextAlignment('left')"
+          >
+            <i class="fa-solid fa-align-left" aria-hidden="true"></i>
+          </button>
+          <button
+            type="button"
+            aria-label="居中"
+            title="居中"
+            [class.selected]="widget.align == 'center'"
+            (click)="updateTextAlignment('center')"
+          >
+            <i class="fa-solid fa-align-center" aria-hidden="true"></i>
+          </button>
+          <button
+            type="button"
+            aria-label="靠右"
+            title="靠右"
+            [class.selected]="widget.align == 'right'"
+            (click)="updateTextAlignment('right')"
+          >
+            <i class="fa-solid fa-align-right" aria-hidden="true"></i>
+          </button>
         </div>
       </div>
       } @if (widget.type=='num') {
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>数据单位</div>
         <div input-box>
           <input
             type="text"
             placeholder="{{widget.uni}}"
-            [(ngModel)]="widget.uni"
+            [ngModel]="widget.uni"
+            (ngModelChange)="updateWidgetParameter('uni', $event)"
           />
         </div>
       </div>
       } @if (widget.type=='ran') {
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>最小值</div>
         <div input-box>
           <input
             type="number"
             placeholder="{{widget.min}}"
-            [(ngModel)]="widget.min"
+            [ngModel]="widget.min"
+            (ngModelChange)="updateWidgetParameter('min', $event)"
           />
         </div>
       </div>
       } @if (widget.type=='ran'||widget.type=='num') {
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>最大值</div>
         <div input-box>
           <input
             type="number"
             placeholder="{{widget.max}}"
-            [(ngModel)]="widget.max"
+            [ngModel]="widget.max"
+            (ngModelChange)="updateWidgetParameter('max', $event)"
           />
         </div>
       </div>
-      } @if (widget.type=='ran'||widget.type=='num') {
-      <div setting-item>
+      }
+      <!-- 实时数据配置项暂时停用。
+      @if (widget.type=='ran'||widget.type=='num') {
+      <div class="setting-item">
         <div item-name>实时数据</div>
         <div item-item class="btnmode">
           <div [ngClass]="{'selected':widget.rt}" (click)="turnRealtime()">
@@ -193,118 +224,139 @@
             <i class="fal fa-square"></i>
             } 启用
           </div>
-          <!-- <div>更新频率</div>
+          <div>更新频率</div>
             <div input-box style="width: 100px;">
               <input type="text" placeholder={{widget.key0}} [(ngModel)]="widget.key0">
-            </div> -->
+            </div>
         </div>
       </div>
-      } @if (widget.type=='tex' || widget.type=='btn' || widget.type=='num') {
-      <div setting-item>
+      }
+      -->
+      @if (widget.type=='btn' || widget.type=='num') {
+      <div class="setting-item">
         <div item-name>显示图标</div>
         <div class="icon-box">
           <div class="btn" (click)="changeIcon()">修改图标</div>
         </div>
       </div>
-      } @if (widget.type=='tex' || widget.type=='btn'||widget.type=='ran'||
-      widget.type=='num') {
-      <div setting-item>
-        @if (widget.type=='tex') {
-        <div item-name>文本1颜色</div>
-        } @if (widget.type=='btn'|| widget.type=='num') {
+      } @if (widget.type=='btn'||widget.type=='ran'||widget.type=='num') {
+      <div class="setting-item">
+        @if (widget.type=='btn'|| widget.type=='num') {
         <div item-name>颜色</div>
         } @if (widget.type=='ran') {
         <div item-name>滑动条颜色</div>
         }
         <div class="color-btn-box">
-          <b-colorpicker-btns [(selected)]="widget.clr"> </b-colorpicker-btns>
+          <b-colorpicker-btns
+            [selected]="widget.clr"
+            (selectedChange)="updateWidgetParameter('clr', $event)"
+          >
+          </b-colorpicker-btns>
         </div>
       </div>
       }
       <!-- 图表配置项 begin -->
       @if (widget.type=='cha') {
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>存储键名0</div>
         <div input-box>
           <input
             type="text"
             placeholder="{{widget.key0}}"
-            [(ngModel)]="widget.key0"
+            [ngModel]="widget.key0"
+            (ngModelChange)="updateWidgetParameter('key0', $event)"
           />
         </div>
       </div>
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>显示文本0</div>
         <div input-box>
           <input
             type="text"
             placeholder="{{widget.t0}}"
-            [(ngModel)]="widget.t0"
+            [ngModel]="widget.t0"
+            (ngModelChange)="updateWidgetParameter('t0', $event)"
           />
         </div>
       </div>
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>数据颜色0</div>
         <div class="color-btn-box">
-          <b-colorpicker-btns [(selected)]="widget.clr"> </b-colorpicker-btns>
+          <b-colorpicker-btns
+            [selected]="widget.clr"
+            (selectedChange)="updateWidgetParameter('clr', $event)"
+          >
+          </b-colorpicker-btns>
         </div>
       </div>
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>存储键名1</div>
         <div input-box>
           <input
             type="text"
             placeholder="{{widget.key1}}"
-            [(ngModel)]="widget.key1"
+            [ngModel]="widget.key1"
+            (ngModelChange)="updateWidgetParameter('key1', $event)"
           />
         </div>
       </div>
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>显示文本1</div>
         <div input-box>
           <input
             type="text"
             placeholder="{{widget.t1}}"
-            [(ngModel)]="widget.t1"
+            [ngModel]="widget.t1"
+            (ngModelChange)="updateWidgetParameter('t1', $event)"
           />
         </div>
       </div>
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>数据颜色1</div>
         <div class="color-btn-box">
-          <b-colorpicker-btns [(selected)]="widget.clr1"> </b-colorpicker-btns>
+          <b-colorpicker-btns
+            [selected]="widget.clr1"
+            (selectedChange)="updateWidgetParameter('clr1', $event)"
+          >
+          </b-colorpicker-btns>
         </div>
       </div>
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>存储键名2</div>
         <div input-box>
           <input
             type="text"
             placeholder="{{widget.key2}}"
-            [(ngModel)]="widget.key2"
+            [ngModel]="widget.key2"
+            (ngModelChange)="updateWidgetParameter('key2', $event)"
           />
         </div>
       </div>
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>显示文本2</div>
         <div input-box>
           <input
             type="text"
             placeholder="{{widget.t2}}"
-            [(ngModel)]="widget.t2"
+            [ngModel]="widget.t2"
+            (ngModelChange)="updateWidgetParameter('t2', $event)"
           />
         </div>
       </div>
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>数据颜色2</div>
         <div class="color-btn-box">
-          <b-colorpicker-btns [(selected)]="widget.clr2"> </b-colorpicker-btns>
+          <b-colorpicker-btns
+            [selected]="widget.clr2"
+            (selectedChange)="updateWidgetParameter('clr2', $event)"
+          >
+          </b-colorpicker-btns>
         </div>
       </div>
       }
       <!-- 调试配置项 end -->
       @if (widget.type=='deb') {
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>显示内容</div>
         <div item-item class="btnmode">
           <div
@@ -332,17 +384,18 @@
       }
       <!-- 视频配置项 -->
       @if (widget.type=='vid') {
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>URL</div>
         <div input-box>
           <input
             type="text"
             placeholder="{{widget.url}}"
-            [(ngModel)]="widget.url"
+            [ngModel]="widget.url"
+            (ngModelChange)="updateWidgetParameter('url', $event)"
           />
         </div>
       </div>
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>视频流</div>
         <div item-item class="btnmode player">
           <div
@@ -369,7 +422,7 @@
         </div>
       </div>
       @if (widget.str=='hls') {
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>自动播放</div>
         <div item-item class="btnmode player">
           <div
@@ -399,50 +452,31 @@
       <!-- 图片配置项 -->
       @if (widget.type=='img') { @for (item of widget.list; track item; let i =
       $index) {
-      <div setting-item>
+      <div class="setting-item">
         <div item-name>图片{{i}}</div>
         <div input-box>
-          <input type="text" [(ngModel)]="item.url" />
+          <input
+            type="text"
+            [ngModel]="item.url"
+            (ngModelChange)="updateImageUrl(i, $event)"
+          />
         </div>
       </div>
-      } } @if (widget.type!='deb') {
-      <div setting-item>
-        <div item-name>背景设置</div>
-        <div item-item class="btnmode">
-          <div [ngClass]="{'selected':widget.bg==0}" (click)="choseBgMode(0)">
-            @if (widget.bg==0) {
-            <i class="fal fa-check-square"></i>
-            } @if (widget.bg!=0) {
-            <i class="fal fa-square"></i>
-            } 正常
-          </div>
-          <div [ngClass]="{'selected':widget.bg==1}" (click)="choseBgMode(1)">
-            @if (widget.bg==1) {
-            <i class="fal fa-check-square"></i>
-            } @if (widget.bg!=1) {
-            <i class="fal fa-square"></i>
-            } 半透明
-          </div>
-          <div [ngClass]="{'selected':widget.bg==2}" (click)="choseBgMode(2)">
-            @if (widget.bg==2) {
-            <i class="fal fa-check-square"></i>
-            } @if (widget.bg!=2) {
-            <i class="fal fa-square"></i>
-            } 透明
-          </div>
-          @if (widget.type=='btn'||widget.type=='tim') {
-          <div [ngClass]="{'selected':widget.bg==3}" (click)="choseBgMode(3)">
-            @if (widget.bg==3) {
-            <i class="fal fa-check-square"></i>
-            } @if (widget.bg!=3) {
-            <i class="fal fa-square"></i>
-            } 圆形
-          </div>
-          }
-        </div>
-      </div>
-      }
+      } }
     </div>
   </div>
 </ion-content>
-<b-bottom-btn (click)="delete()"> 删除组件 </b-bottom-btn>
+<div class="editor-bottom-actions">
+  <button type="button" class="save-action" (click)="save()">
+    <span>保存</span>
+  </button>
+  <button
+    type="button"
+    class="delete-action"
+    aria-label="删除组件"
+    title="删除组件"
+    (click)="delete()"
+  >
+    <i class="fa-light fa-trash-can"></i>
+  </button>
+</div>

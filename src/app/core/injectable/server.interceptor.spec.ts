@@ -90,6 +90,105 @@ describe('ServerInterceptor', () => {
     request.flush({ status: 200, data: {} });
   });
 
+  it('adds App auth only to exact DeviceKey V2 management endpoints', () => {
+    const context = {
+      logicalDeviceId: 'device/a b',
+      credentialVersion: 1,
+      locator: 'AQIDBAUGBwgJCgsMDQ4PEA',
+    };
+    const managementUrls = [
+      API.DEVICE_V2.CREATE,
+      API.DEVICE_V2.REVEAL(context.logicalDeviceId),
+      API.DEVICE_V2.ROTATE(context.logicalDeviceId),
+    ];
+    const deviceUrls = [
+      API.BASE_URL + '/api/v2/device-auth/challenges',
+      API.BASE_URL + '/api/v2/device-sessions',
+      API.BASE_URL + '/api/v2/devices/device-only-detail',
+    ];
+
+    for (const url of managementUrls) {
+      http.post(url, {}).subscribe();
+      const request = httpTesting.expectOne(url);
+      expect(request.request.headers.get('Authorization')).toBe(
+        'Bearer old-access',
+      );
+      expect(request.request.headers.has('X-Request-ID')).toBe(true);
+      request.flush({ status: 200, data: {} });
+    }
+
+    for (const url of deviceUrls) {
+      http.post(url, new ArrayBuffer(0)).subscribe();
+      const request = httpTesting.expectOne(url);
+      expect(request.request.headers.has('Authorization')).toBe(false);
+      expect(request.request.headers.has('X-Request-ID')).toBe(false);
+      request.flush({});
+    }
+  });
+
+  it('preserves V2 create body and idempotency key across one 401 replay', async () => {
+    const body = { name: 'Kitchen sensor', deviceType: 'diy' };
+    let response: unknown;
+    http.post(
+      API.DEVICE_V2.CREATE,
+      body,
+      { headers: { 'Idempotency-Key': 'v2-create-operation-1' } },
+    ).subscribe((value) => (response = value));
+
+    const initial = httpTesting.expectOne(API.DEVICE_V2.CREATE);
+    expect(initial.request.body).toEqual(body);
+    expect(initial.request.headers.get('Idempotency-Key')).toBe(
+      'v2-create-operation-1',
+    );
+    initial.flush(
+      { errorCode: 'AUTH_TOKEN_EXPIRED' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+
+    httpTesting.expectOne(API.AUTH.REFRESH).flush({
+      status: 200,
+      data: {
+        access_token: 'new-access',
+        refresh_token: 'new-refresh',
+        token_type: 'bearer',
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const replay = httpTesting.expectOne(API.DEVICE_V2.CREATE);
+    expect(replay.request.body).toEqual(body);
+    expect(replay.request.headers.get('Idempotency-Key')).toBe(
+      'v2-create-operation-1',
+    );
+    expect(replay.request.headers.get('Authorization')).toBe(
+      'Bearer new-access',
+    );
+    replay.flush({ status: 201, data: { replayed: false } });
+
+    expect(response).toEqual({ status: 201, data: { replayed: false } });
+  });
+
+  it('does not refresh or retry a blocked V2 reveal', () => {
+    let received: unknown;
+    const url = API.DEVICE_V2.REVEAL('device-1');
+    http.post(url, {}).subscribe({ error: (error) => (received = error) });
+    httpTesting.expectOne(url).flush(
+      {
+        status: 503,
+        errorCode: 'DEVICE_KEY_STEP_UP_UNAVAILABLE',
+        errorMessage: 'Verified step-up is unavailable.',
+      },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+
+    expect(received).toBeInstanceOf(GatewayHttpError);
+    expect(received).toMatchObject({
+      httpStatus: 503,
+      code: 'DEVICE_KEY_STEP_UP_UNAVAILABLE',
+    });
+    httpTesting.expectNone(API.AUTH.REFRESH);
+  });
+
   it('preserves multipart feedback uploads and lets the browser set the boundary', () => {
     const formData = new FormData();
     formData.append('file', new Blob(['image'], { type: 'image/png' }));

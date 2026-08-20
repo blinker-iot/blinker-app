@@ -1,0 +1,185 @@
+b-tip,
+b-toast {
+    display: block;
+    width: 100%;
+    pointer-events: auto;
+}
+
+b-tip.notice-collapsed,
+b-toast.notice-collapsed {
+    display: none;
+}
+
+  .blinker-notice {
+    --notice-accent: var(--ion-color-primary);
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 68px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 9px 11px 12px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--notice-accent) 18%, var(--blinker-border));
+    border-radius: var(--blinker-radius-card);
+    background: var(--blinker-surface);
+    box-shadow: var(--blinker-shadow);
+    color: var(--blinker-text-primary);
+    animation: notice-enter 280ms cubic-bezier(.2, .8, .2, 1) both;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      bottom: 14px;
+      left: 0;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--notice-accent);
+    }
+
+    &.is-leaving {
+      pointer-events: none;
+      animation: notice-leave 220ms cubic-bezier(.4, 0, 1, 1) both;
+    }
+  }
+
+  .notice-leading {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--notice-accent) 11%, var(--blinker-surface-muted));
+    color: var(--notice-accent);
+  }
+
+  .notice-copy {
+    min-width: 0;
+  }
+
+  .notice-title {
+    margin: 0 0 3px;
+    overflow: hidden;
+    color: var(--blinker-text-primary);
+    font-size: 12px;
+    font-weight: 680;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .notice-message {
+    margin: 0;
+    overflow: hidden;
+    color: var(--blinker-text-secondary);
+    font-size: 12px;
+    font-weight: 450;
+    line-height: 1.5;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .notice-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .notice-action,
+  .notice-close {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--blinker-text-tertiary);
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+      transform 120ms cubic-bezier(.2, 0, 0, 1),
+      color 160ms cubic-bezier(.2, 0, 0, 1),
+      background-color 160ms cubic-bezier(.2, 0, 0, 1);
+
+    i {
+      font-size: 16px;
+    }
+
+    &:active {
+      transform: scale(.92);
+      background: var(--blinker-surface-muted);
+      color: var(--blinker-text-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--notice-accent);
+      outline-offset: 1px;
+    }
+  }
+
+  .notice-action {
+    color: var(--notice-accent);
+  }
+
+  @keyframes notice-enter {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes notice-leave {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(8px) scale(.98);
+    }
+  }
+
+  @media (max-width: 360px) {
+    .blinker-notice {
+      gap: 10px;
+      padding-left: 10px;
+    }
+
+    .notice-leading {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+    }
+
+    .notice-action,
+    .notice-close {
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blinker-notice,
+    .blinker-notice.is-leaving {
+      animation-duration: 1ms;
+    }
+
+    .notice-action,
+    .notice-close {
+      transition: none;
+    }
+  }

@@ -3,7 +3,6 @@ import {
   ChangeDetectorRef,
   Component,
   ViewChild,
-  Renderer2,
   ElementRef,
   Input,
   EventEmitter,
@@ -17,7 +16,6 @@ import {
   GridsterItemConfig,
   GridType,
 } from 'angular-gridster2';
-import { NgClass } from '@angular/common';
 import { Observable, of } from 'rxjs';
 
 import { widgetList, configList, styleList } from './widgets/config';
@@ -37,14 +35,15 @@ import { ViewService } from 'src/app/core/services/view.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { ParentDynamicComponent } from './widgets/parentDynamic.component';
 import { WidgetListbarComponent } from './widget-listbar/widget-listbar.component';
+import { replaceDashboardWidget } from './widget-update';
+import { normalizeTextWidget } from './widgets/widget-text/widget-text-layout';
 
 @Component({
   standalone: true,
-  selector: 'layouter2',
+  selector: 'app-layouter2',
   templateUrl: 'layouter2.html',
   styleUrls: ['layouter2.scss'],
   imports: [
-    NgClass,
     IonicModule,
     Gridster,
     GridsterItem,
@@ -52,7 +51,7 @@ import { WidgetListbarComponent } from './widget-listbar/widget-listbar.componen
     WidgetListbarComponent,
   ],
 })
-export class Layouter2 implements DeviceComponent {
+export class Layouter2Component implements DeviceComponent {
   static deviceType = 'Layouter2';
 
   id;
@@ -90,7 +89,6 @@ export class Layouter2 implements DeviceComponent {
       t0: '点我开关灯',
       clr: '#389BEE',
       t1: '文本2',
-      bg: 0,
       cols: 2,
       rows: 2,
       key: 'btn-abc',
@@ -101,16 +99,14 @@ export class Layouter2 implements DeviceComponent {
     {
       type: 'tex',
       t0: 'blinker入门示例',
-      t1: '文本2',
-      bg: 2,
-      ico: '',
+      size: 14,
+      align: 'left',
       cols: 4,
       rows: 1,
       key: 'tex-272',
       x: 0,
       y: 0,
       lstyle: 1,
-      clr: '#FFF',
     },
     {
       type: 'num',
@@ -120,7 +116,6 @@ export class Layouter2 implements DeviceComponent {
       min: 0,
       max: 100,
       uni: '次',
-      bg: 0,
       cols: 4,
       rows: 2,
       key: 'num-abc',
@@ -134,7 +129,6 @@ export class Layouter2 implements DeviceComponent {
       mode: 0,
       t0: '点我计数',
       t1: '文本2',
-      bg: 0,
       cols: 2,
       rows: 2,
       key: 'btn-123',
@@ -143,7 +137,7 @@ export class Layouter2 implements DeviceComponent {
       lstyle: 0,
       clr: '#389BEE',
     },
-    { type: 'deb', mode: 0, bg: 0, cols: 8, rows: 3, key: 'debug', x: 0, y: 3 },
+    { type: 'deb', mode: 0, cols: 8, rows: 3, key: 'debug', x: 0, y: 3 },
   ];
 
   demoActions = [
@@ -195,19 +189,22 @@ export class Layouter2 implements DeviceComponent {
   margin = 5;
 
   options: GridsterConfig = {
-    margin: this.margin,
+    margin: 8,
     outerMargin: true,
-    scale: 1,
     // gridType: GridType.Fixed,
     gridType: GridType.ScrollVertical,
+    // ScrollVertical needs Gridster to publish the content height.
+    // Its generated width is overridden in the component stylesheet.
+    setGridSize: true,
     displayGrid: DisplayGrid.None,
     mobileBreakpoint: 0,
-    outerMarginLeft: 13,
-    outerMarginRight: 13,
+    outerMarginTop: 0,
+    outerMarginLeft: 16,
+    outerMarginRight: 16,
     minCols: 8,
     maxCols: 8,
     minRows: 14,
-    maxRows: 20,
+    maxRows: 50,
     maxItemCols: 8,
     minItemCols: 1,
     maxItemRows: 8,
@@ -237,7 +234,7 @@ export class Layouter2 implements DeviceComponent {
     },
     swap: true,
     swapWhileDragging: true,
-    pushItems: false,
+    pushItems: true,
     disableWindowResize: false,
     disableWarnings: false,
     scrollToNewItems: false,
@@ -267,7 +264,6 @@ export class Layouter2 implements DeviceComponent {
   private oldLayouterData = '';
 
   public hasDebug = false;
-  public hasTiming = false;
   public hasVideo = false;
 
   oldState;
@@ -298,7 +294,6 @@ export class Layouter2 implements DeviceComponent {
 
   constructor(
     private activatedRoute: ActivatedRoute,
-    private render: Renderer2,
     private modalCtrl: ModalController,
     private deviceService: DeviceService,
     private nativeService: NativeService,
@@ -346,7 +341,7 @@ export class Layouter2 implements DeviceComponent {
     this.actionSubject = this.LayouterService.action.subscribe(async (act) => {
       if (act.name == 'addWidget') this.addWidget(act.data);
       else if (act.name == 'delWidget') this.delWidget(act.data);
-      else if (act.name == 'changeWidget') this.changedOptions();
+      else if (act.name == 'changeWidget') this.changedOptions(act.data);
       else if (act.name == 'showGuide') {
         this.showGuide();
       } else if (act.name == 'send') {
@@ -391,30 +386,6 @@ export class Layouter2 implements DeviceComponent {
 
   initGrid() {
     this.changedOptions();
-  }
-
-  public scaling;
-  scale() {
-    const height = this.gridsterBox.nativeElement.clientHeight;
-    const nextScale = height > 75 ? (height - 75) / height : 1;
-    this.scaling = Number.isFinite(nextScale) && nextScale > 0 ? nextScale : 1;
-    this.options = {
-      ...this.options,
-      scale: this.scaling,
-    };
-    this.render.setStyle(
-      this.gridsterBox.nativeElement,
-      'transform',
-      `scale(${this.scaling},${this.scaling})`
-    );
-  }
-
-  rescale() {
-    this.options = {
-      ...this.options,
-      scale: 1,
-    };
-    this.render.setStyle(this.gridsterBox.nativeElement, 'transform', `none`);
   }
 
   //显示使用向导
@@ -464,14 +435,15 @@ export class Layouter2 implements DeviceComponent {
       this.device.data['layouterData'] = JSON.parse(this.layouterData);
     }
 
+    this.dashboard = (this.dashboard ?? []).map((widget) =>
+      normalizeTextWidget(widget)
+    );
+
     if (this.dashboard.length == 0) this.showGuide();
     else {
       for (let component of this.dashboard) {
         if (component['type'] == 'deb') {
           this.hasDebug = true;
-        }
-        if (component['type'] == 'tim') {
-          this.hasTiming = true;
         }
         if (component['type'] == 'vid') {
           this.hasVideo = true;
@@ -499,7 +471,6 @@ export class Layouter2 implements DeviceComponent {
     this.dashboard = [];
     this.hasDebug = false;
     this.hasVideo = false;
-    this.hasTiming = false;
   }
 
   unlock(): void {
@@ -544,22 +515,21 @@ export class Layouter2 implements DeviceComponent {
 
   //删除组件
   delWidget(item) {
-    this.dashboard.splice(this.dashboard.indexOf(item), 1);
+    const itemIndex = this.dashboard.indexOf(item);
+    if (itemIndex === -1) return;
+
+    this.dashboard = this.dashboard.filter((_, index) => index !== itemIndex);
     if (item.type == 'deb') {
       this.hasDebug = false;
     }
-    if (item.type == 'tim') {
-      this.hasTiming = false;
+    if (item.type == 'vid') {
+      this.hasVideo = false;
     }
+    this.scheduleDashboardRefresh();
   }
 
   //添加组件
   addWidget(type) {
-    // 蓝牙模式，禁用定时
-    // if (type == 'tim' && this.device.config.mode == "ble") {
-    //   this.noticeService.showToast('canNotBeUsed');
-    //   return;
-    // }
     let component = Object.assign({}, configList[type], styleList[type][0]);
     component['key'] = component.type + '-' + randomString();
     if (type == 'deb') {
@@ -568,9 +538,6 @@ export class Layouter2 implements DeviceComponent {
     } else if (type == 'vid') {
       this.hasVideo = true;
       component['key'] = 'video';
-    } else if (type == 'tim') {
-      this.hasTiming = true;
-      component['key'] = 'timing';
     }
     this.dashboard = [...this.dashboard, component];
     this.scheduleDashboardRefresh();
@@ -603,9 +570,6 @@ export class Layouter2 implements DeviceComponent {
           if (GridsterItem.type == 'deb') {
             this.hasDebug = false;
           }
-          if (GridsterItem.type == 'tim') {
-            this.hasTiming = false;
-          }
           if (GridsterItem.type == 'vid') {
             this.hasVideo = false;
           }
@@ -615,14 +579,12 @@ export class Layouter2 implements DeviceComponent {
   }
 
   DefaultMode() {
-    this.rescale();
     this.disableDrag();
     // 重新加载实时数据
     this.loadRealtimeData();
   }
 
   EditMode() {
-    this.scale();
     this.enableDrag();
   }
 
@@ -677,10 +639,23 @@ export class Layouter2 implements DeviceComponent {
     });
   }
 
-  changedOptions() {
+  changedOptions(changedWidget?) {
     // Gridster v22 observes the options input by reference. The legacy
     // optionsChanged() API no longer exists, so publish a fresh object.
     this.options = { ...this.options };
+
+    if (typeof changedWidget === 'undefined') return;
+
+    const updatedDashboard = replaceDashboardWidget(
+      this.dashboard,
+      changedWidget
+    );
+    if (typeof updatedDashboard === 'undefined') return;
+
+    // Gridster v22 caches item dimensions by input identity. Publish a new
+    // item reference so changed rows/cols are observed and rendered.
+    this.dashboard = updatedDashboard;
+    this.scheduleDashboardRefresh();
   }
 
   get isChanged() {

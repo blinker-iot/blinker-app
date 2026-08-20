@@ -30,6 +30,7 @@ export function getFeedbackImageValidationError(file: Blob): string {
 export interface GatewayFeedbackRequest {
   title: string;
   content: string;
+  label?: string;
   userAgent?: string;
   email?: string;
 }
@@ -63,10 +64,10 @@ export class FeedbackService {
         this.http.post<FeedbackSubmitResponse>(API.FEEDBACK.SUBMIT, {
           title,
           content,
-          label: 'other',
+          label: 'label' in feedback ? feedback.label ?? 'other' : 'other',
           userAgent: 'userAgent' in feedback ? feedback.userAgent : undefined,
           email: 'email' in feedback ? feedback.email : undefined,
-        }, { observe: 'response' })
+        })
       );
 
       if (response.status !== 201) {
@@ -75,7 +76,7 @@ export class FeedbackService {
         );
       }
 
-      return this.toResult('complete', response.body?.data);
+      return this.toResult('complete', response.data);
     } catch (error) {
       const data = this.readErrorData(error);
       if (this.hasFeedbackId(data?.feedbackId)) {

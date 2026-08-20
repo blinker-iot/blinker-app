@@ -1,7 +1,9 @@
 import {
   Component,
   OnInit,
+  OnDestroy,
   Input,
+  HostBinding,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -16,22 +18,30 @@ import { BDeviceImgComponent } from '../b-device-img/b-device-img.component';
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./b-toast.component.scss'],
 })
-export class BToastComponent implements OnInit {
+export class BToastComponent implements OnInit, OnDestroy {
   @Input() toast: toastOptions;
 
-  hide = false;
+  @HostBinding('class.notice-collapsed') collapsed = false;
 
-  constructor() {}
+  hide = false;
+  private closeTimer?: number;
+  private collapseTimer?: number;
 
   ngOnInit() {
-    setTimeout(() => {
-      setTimeout(() => {
-        this.close();
-      }, this.toast.delay);
-    }, 100);
+    const delay = Math.max(0, this.toast.delay ?? 5000);
+    this.closeTimer = window.setTimeout(() => this.close(), delay + 100);
+  }
+
+  ngOnDestroy() {
+    window.clearTimeout(this.closeTimer);
+    window.clearTimeout(this.collapseTimer);
   }
 
   close() {
+    if (this.hide) return;
     this.hide = true;
+    this.collapseTimer = window.setTimeout(() => {
+      this.collapsed = true;
+    }, 220);
   }
 }

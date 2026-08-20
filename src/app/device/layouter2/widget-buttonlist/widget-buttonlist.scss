@@ -8,28 +8,9 @@
     .widgetitem {
         margin: auto 10px;
         position: relative;
-    }
-
-    .default {
         background-color: #fff;
         box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
         border-radius: 5px;
-    }
-
-    .translucent {
-        background-color: rgba(255, 255, 255, 0.5);
-        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
-        border-radius: 6px;
-    }
-
-    .transparent {
-        background: none;
-    }
-
-    .round {
-        background-color: #fff;
-        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
-        border-radius: 50%;
     }
 }
 

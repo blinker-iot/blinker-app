@@ -1,3 +1,9 @@
+import {
+  TEXT_WIDGET_DEFAULT_ALIGNMENT,
+  TEXT_WIDGET_DEFAULT_FONT_SIZE,
+  TEXT_WIDGET_STYLES,
+} from './widget-text/widget-text-layout';
+
 export interface Layouter2Widget {
   device;
   widget;
@@ -16,7 +22,6 @@ export let widgetList = [
   { name: '滑块', icon: 'fa-light fa-sliders', type: 'ran' },
   { name: '颜色', icon: 'fa-light fa-palette', type: 'col' },
   { name: '摇杆', icon: 'fal fa-gamepad', type: 'joy' },
-  { name: '定时', icon: 'fa-light fa-stopwatch', type: 'tim' },
   { name: '调试', icon: 'fa-light fa-terminal', type: 'deb' },
   { name: '图表', icon: 'fa-light fa-chart-line', type: 'cha' },
   { name: '地图', icon: 'fa-light fa-map-location-dot', type: 'map' },
@@ -24,35 +29,30 @@ export let widgetList = [
   { name: '视频', icon: 'fal fa-camera-retro', type: 'vid' },
   { name: '输入框', icon: 'fal fa-keyboard', type: 'inp' },
   { name: '图片', icon: 'fal fa-images', type: 'img' },
+  { name: '天气', icon: 'fa-light fa-cloud-sun', type: 'wea' },
+  { name: '空气', icon: 'fa-light fa-lungs', type: 'air' },
 ]
 
 export let configList = {
-  "tex": { type: "tex", t0: "文本1", t1: "文本2", size: 14,bg: 0, ico: "fal fa-font" },
-  "num": { type: "num", t0: "文本1", ico: "fal fa-question", clr: "#389BEE", min: 0, max: 100, uni: "单位", bg: 0 },
-  "btn": { type: "btn", ico: "fal fa-power-off", mode: 0, t0: "文本1", t1: "文本2", bg: 0 },
-  "col": { type: "col", t0: "颜色拾取", clr: "#389BEE", bg: 0 },
-  "ran": { type: "ran", t0: "滑动条", clr: "#389BEE", max: 100, min: 0, bg: 0 },
-  "cha": { type: "cha", bg: 0, sty: 'line', clr: '#389BEE', sty1: 'line', clr1: '#389BEE', sty2: 'line', clr2: '#389BEE' },
-  "map": { type: "map", bg: 0 },
-  "joy": { type: "joy", bg: 0 },
-  "deb": { type: "deb", mode: 0, bg: 0 },
-  "tim": { type: "tim", bg: 0 },
-  "vid": { type: "vid", bg: 0 },
-  "tab": { type: "tab", bg: 0 },
-  "inp": { type: "inp", bg: 0 },
-  "img": { type: "img", bg: 0, list: [{ url: '' }, { url: '' }, { url: '' }, { url: '' }, { url: '' }], img: 0 },
+  "tex": { type: "tex", t0: "文本", size: TEXT_WIDGET_DEFAULT_FONT_SIZE, align: TEXT_WIDGET_DEFAULT_ALIGNMENT, lstyle: 0 },
+  "num": { type: "num", t0: "文本1", ico: "fal fa-question", clr: "#389BEE", min: 0, max: 100, uni: "单位" },
+  "btn": { type: "btn", ico: "fal fa-power-off", mode: 0, t0: "文本1", t1: "文本2" },
+  "col": { type: "col", t0: "颜色拾取", clr: "#389BEE" },
+  "ran": { type: "ran", t0: "滑动条", clr: "#389BEE", max: 100, min: 0 },
+  "cha": { type: "cha", sty: 'line', clr: '#389BEE', sty1: 'line', clr1: '#389BEE', sty2: 'line', clr2: '#389BEE' },
+  "map": { type: "map" },
+  "joy": { type: "joy" },
+  "deb": { type: "deb", mode: 0 },
+  "vid": { type: "vid" },
+  "tab": { type: "tab" },
+  "inp": { type: "inp" },
+  "img": { type: "img", list: [{ url: '' }, { url: '' }, { url: '' }, { url: '' }, { url: '' }], img: 0 },
+  "wea": { type: "wea", lstyle: 0 },
+  "air": { type: "air", lstyle: 0 },
 }
 
 export let styleList = {
-  'tex': [
-    { cols: 2, rows: 1 },
-    { cols: 4, rows: 1 },
-    { cols: 2, rows: 2 },
-    { cols: 4, rows: 2 },
-    { cols: 2, rows: 2 },
-    { cols: 8, rows: 1 },
-    { cols: 8, rows: 2 },
-  ],
+  'tex': TEXT_WIDGET_STYLES,
   "num": [
     { cols: 2, rows: 2 },
     { cols: 4, rows: 2 },
@@ -98,10 +98,6 @@ export let styleList = {
     { cols: 8, rows: 4 },
     { cols: 8, rows: 6 },
   ],
-  "tim": [
-    { cols: 2, rows: 2 },
-    { cols: 1, rows: 1 },
-  ],
   "vid": [
     { cols: 8, rows: 5 },
   ],
@@ -111,6 +107,12 @@ export let styleList = {
   "inp": [
     // { cols: 4, rows: 2 },
     { cols: 8, rows: 2 },
+  ],
+  "wea": [
+    { cols: 8, rows: 3 },
+  ],
+  "air": [
+    { cols: 8, rows: 3 },
   ],
   "img": [
     { cols: 2, rows: 2 },

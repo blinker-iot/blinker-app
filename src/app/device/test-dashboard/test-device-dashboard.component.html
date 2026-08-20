@@ -1,36 +1,23 @@
 <main class="device-detail-page">
-  <section class="device-hero" [class.offline]="!isOnline">
-    <div class="device-image">
-      <b-device-img
-        [filename]="device.config.image"
-        [deviceId]="device.id || device.deviceName"
-        [alt]="device.config.customName"
-      />
-    </div>
-    <div class="device-heading">
-      <div class="device-status" [class.online]="isOnline">
-        <span></span>{{ statusText }}
+  <app-hero-card class="device-hero" [class.offline]="!isOnline">
+    <div class="device-hero-content">
+      <b-device-img [filename]="device.config.image" [deviceId]="device.id || device.deviceName"
+        [alt]="device.config.customName" />
+      <div class="device-heading">
+        <div class="device-status" [class.online]="isOnline">
+          <span></span>{{ statusText }}
+        </div>
+        <h1>{{ device.config.customName }}</h1>
+        <p>设备</p>
       </div>
-      <h1>{{ device.config.customName }}</h1>
-      <p>设备</p>
+      <button class="power-button" type="button" [class.on]="switchOn" [class.waiting]="switchWaiting"
+        [disabled]="!isOnline || switchWaiting" [attr.aria-pressed]="switchOn" (click)="toggleSwitch()">
+        <i class="fa-light fa-power-off"></i>
+        <small>{{ switchWaiting ? '等待中' : (switchOn ? '已开启' : '已关闭') }}</small>
+      </button>
     </div>
-    @if (hasSwitch) {
-    <button
-      class="power-button"
-      type="button"
-      [class.on]="switchOn"
-      [class.waiting]="switchWaiting"
-      [disabled]="!isOnline || switchWaiting"
-      [attr.aria-pressed]="switchOn"
-      (click)="toggleSwitch()"
-    >
-      <i class="fa-light fa-power-off"></i>
-      <small>{{ switchWaiting ? '等待中' : (switchOn ? '已开启' : '已关闭') }}</small>
-    </button>
-    }
-  </section>
+  </app-hero-card>
 
-  @if (metrics.length > 0) {
   <section class="detail-section">
     <div class="section-title">
       <div>
@@ -50,7 +37,6 @@
       }
     </div>
   </section>
-  }
 
   <section class="detail-section">
     <div class="section-title"><span>设备信息</span></div>

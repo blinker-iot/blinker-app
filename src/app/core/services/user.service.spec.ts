@@ -54,8 +54,21 @@ describe('UserService API contracts', () => {
       status: 200,
       data: {
         id: 'user-1',
+        nickname: 'Person',
         email: 'person@example.com',
-        subscription_plan: { name: 'pro' },
+        phone: null,
+        avatar: null,
+        subscription_plan: {
+          name: 'pro',
+          display_name: 'Pro',
+          service_tier: 'shared',
+          subscription_id: null,
+          status: 'active',
+          end_date: null,
+        },
+        permissions: [],
+        rbac_permissions: [],
+        entitlements: {},
       },
     });
     httpTesting.expectOne(API.DEVICE.LIST).flush({

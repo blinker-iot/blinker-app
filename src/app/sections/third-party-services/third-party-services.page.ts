@@ -43,7 +43,11 @@ export class ThirdPartyServicesPage {
       name: 'OpenWeather',
       placeholder: '输入 OpenWeather API Key',
     },
-    { id: 'weatherApi', name: 'WeatherAPI', placeholder: '输入 WeatherAPI Key' },
+    {
+      id: 'weatherApi',
+      name: 'WeatherAPI',
+      placeholder: '输入 WeatherAPI Key',
+    },
     {
       id: 'visualCrossing',
       name: 'Visual Crossing',
@@ -60,11 +64,6 @@ export class ThirdPartyServicesPage {
       id: 'locationIq',
       name: 'LocationIQ',
       placeholder: '输入 LocationIQ Access Token',
-    },
-    {
-      id: 'googleMaps',
-      name: 'Google Maps',
-      placeholder: '输入 Google Maps API Key',
     },
   ];
 
@@ -91,7 +90,7 @@ export class ThirdPartyServicesPage {
     private readonly geocodingService: GeocodingService,
     private readonly alertController: AlertController,
     private readonly changeDetectorRef: ChangeDetectorRef,
-    private readonly destroyRef: DestroyRef,
+    private readonly destroyRef: DestroyRef
   ) {
     const weatherConfig = this.services.getWeatherServiceConfig();
     if (weatherConfig) {
@@ -220,8 +219,7 @@ export class ThirdPartyServicesPage {
   private clearGeolocationServices(): void {
     this.services.clearGeolocationServiceConfig();
     this.geolocationKeys = { ...EMPTY_GEOLOCATION_SERVICE_KEYS };
-    this.selectedGeolocationProvider =
-      DEFAULT_GEOLOCATION_SERVICE_PROVIDER;
+    this.selectedGeolocationProvider = DEFAULT_GEOLOCATION_SERVICE_PROVIDER;
     this.geolocationValidationRun += 1;
     this.geolocationValidationStatus = 'idle';
     this.hasSavedGeolocationKeys = false;

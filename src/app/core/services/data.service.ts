@@ -350,17 +350,17 @@ export class DataService {
     }
     this.user = {
       id: currentUser.id,
+      nickname: currentUser.nickname,
       email: currentUser.email,
-      username: currentUser.email?.split('@')[0] || 'Blinker User',
-      avatar: '',
-      phone: '',
+      username: currentUser.nickname?.trim() || currentUser.email,
+      avatar: currentUser.avatar ?? '',
+      phone: currentUser.phone ?? '',
       level: 0,
-      subscriptionPlan:
-        currentUser.subscription_plan?.display_name ||
-        currentUser.subscription_plan?.name ||
-        currentUser.subscription_plan?.service_tier ||
-        '',
-      entitlements: currentUser.entitlements || {},
+      subscriptionPlan: currentUser.subscription_plan,
+      permissions: currentUser.permissions,
+      rbacPermissions: currentUser.rbac_permissions,
+      entitlementRevision: currentUser.entitlement_revision,
+      entitlements: currentUser.entitlements,
     };
     this.userDataLoader.next(true);
   }

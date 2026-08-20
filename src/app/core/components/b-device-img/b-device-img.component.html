@@ -1,22 +1,7 @@
-@if (variant === 'light') {
-<img loading="lazy" decoding="async" [src]="lightUrl" [alt]="alt" (error)="useFallback($event, 'light')" />
-} @else if (variant === 'dark') {
-<img loading="lazy" decoding="async" [src]="darkUrl" [alt]="alt" (error)="useFallback($event, 'dark')" />
-} @else {
 <img
-  class="theme-image light-image"
   loading="lazy"
   decoding="async"
-  [src]="lightUrl"
+  [src]="url"
   [alt]="alt"
-  (error)="useFallback($event, 'light')"
+  (error)="useFallback($event)"
 />
-<img
-  class="theme-image dark-image"
-  loading="lazy"
-  decoding="async"
-  [src]="darkUrl"
-  [alt]="alt"
-  (error)="useFallback($event, 'dark')"
-/>
-}

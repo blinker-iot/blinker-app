@@ -18,8 +18,8 @@ export class LayouterService {
 
   }
 
-  changeWidget() {
-    this.action.next({ name: 'changeWidget' })
+  changeWidget(widget) {
+    this.action.next({ name: 'changeWidget', data: widget })
   }
 
   delWidget(widget) {
