@@ -28,6 +28,9 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
       createDeviceKeyV2: vi.fn(),
       revealDeviceKeyV2: vi.fn(),
     };
+    const userService = {
+      getAllInfo: vi.fn().mockResolvedValue(true),
+    };
     const navController = {
       navigateRoot: vi.fn().mockResolvedValue(true),
     };
@@ -46,6 +49,7 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
     const page = new KeyDeviceGuidePage(
       dataService as any,
       deviceService as any,
+      userService as any,
       navController as any,
       toastController as any,
       translate as any,
@@ -56,6 +60,7 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
       page,
       dataService,
       deviceService,
+      userService,
       navController,
       toastController,
       authDataChanged,
@@ -117,7 +122,7 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
   });
 
   it('creates once and reveals with the locked non-secret context', async () => {
-    const { page, deviceService } = createHarness();
+    const { page, deviceService, userService } = createHarness();
     deviceService.createDeviceKeyV2.mockResolvedValue(createResponse());
     deviceService.revealDeviceKeyV2.mockResolvedValue(revealResponse());
     page.deviceName = '  Desk sensor  ';
@@ -137,6 +142,7 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
     expect(deviceService.createDevice).not.toHaveBeenCalled();
     expect(page.phase).toBe('revealed');
     expect(page.secretKey).toBe(deviceKey);
+    expect(userService.getAllInfo).toHaveBeenCalledTimes(1);
   });
 
   it('retries only reveal with the original logical device context', async () => {
@@ -247,6 +253,56 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
       firstIdempotencyKey
     );
     expect(deviceService.revealDeviceKeyV2).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries pending Broker allocation with the same create identity', async () => {
+    const { page, deviceService } = createHarness();
+    const wait = vi.spyOn(page as any, 'wait').mockResolvedValue(undefined);
+    const pending = new GatewayHttpError({
+      httpStatus: 503,
+      code: 'BROKER_ALLOCATION_PENDING',
+      message: 'pending',
+    });
+    deviceService.createDeviceKeyV2
+      .mockRejectedValueOnce(pending)
+      .mockRejectedValueOnce(pending)
+      .mockResolvedValueOnce(createResponse());
+    deviceService.revealDeviceKeyV2.mockResolvedValue(revealResponse());
+
+    await page.createKeyDevice();
+
+    const createCalls = deviceService.createDeviceKeyV2.mock.calls;
+    expect(createCalls).toHaveLength(3);
+    expect(createCalls[1][1]).toBe(createCalls[0][1]);
+    expect(createCalls[2][1]).toBe(createCalls[0][1]);
+    expect(wait).toHaveBeenNthCalledWith(1, 1000);
+    expect(wait).toHaveBeenNthCalledWith(2, 2000);
+    expect(page.phase).toBe('revealed');
+  });
+
+  it('cancels a pending Broker allocation retry after leaving the page', async () => {
+    const { page, deviceService } = createHarness();
+    const retryDelay = deferred<void>();
+    const wait = vi
+      .spyOn(page as any, 'wait')
+      .mockReturnValue(retryDelay.promise);
+    deviceService.createDeviceKeyV2.mockRejectedValue(
+      new GatewayHttpError({
+        httpStatus: 503,
+        code: 'BROKER_ALLOCATION_PENDING',
+        message: 'pending',
+      })
+    );
+
+    const operation = page.createKeyDevice();
+    await vi.waitFor(() => expect(wait).toHaveBeenCalledTimes(1));
+    page.ionViewWillLeave();
+    retryDelay.resolve();
+    await operation;
+
+    expect(deviceService.createDeviceKeyV2).toHaveBeenCalledTimes(1);
+    expect(deviceService.revealDeviceKeyV2).not.toHaveBeenCalled();
+    expect(page.phase).toBe('idle');
   });
 
   it('stops a terminal create conflict without submitting create again', async () => {
