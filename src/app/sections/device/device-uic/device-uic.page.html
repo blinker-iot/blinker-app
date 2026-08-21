@@ -1,0 +1,46 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="backHref" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>界面配置</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true">
+  <main>
+    <section class="uic-hero" aria-labelledby="uic-heading">
+      <div class="hero-copy">
+        <span class="eyebrow">设备界面配置</span>
+        <h1 id="uic-heading">选择界面配置方式</h1>
+        <p>根据使用场景，选择适合你的方式来创建或调整设备控制界面。</p>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <span class="method-icon method-icon--ai">
+          <i class="fa-light fa-wand-magic-sparkles"></i>
+        </span>
+        <span class="method-icon method-icon--classic">
+          <i class="fa-light fa-grid-4"></i>
+        </span>
+        <span class="method-icon method-icon--debug">
+          <i class="fa-light fa-terminal"></i>
+        </span>
+        <span class="interface-orbit"></span>
+        <span class="interface-hub">
+          <i class="fa-light fa-mobile-screen-button"></i>
+        </span>
+      </div>
+    </section>
+
+    <section class="methods-section" aria-labelledby="methods-heading">
+      <h2 id="methods-heading" class="section-label">选择配置方式</h2>
+
+      <app-menu-list
+        [items]="methodItems"
+        [detailed]="true"
+        (itemSelected)="selectMethod($event)"
+      ></app-menu-list>
+    </section>
+  </main>
+</ion-content>

@@ -3,14 +3,25 @@
   "version": "3.0.0",
   "author": "Ionic Framework",
   "homepage": "https://ionicframework.com/",
+  "workspaces": [
+    "device-template"
+  ],
   "scripts": {
     "ng": "ng",
+    "prestart": "npm run device-template:build",
     "start": "ng serve",
+    "prebuild": "npm run device-template:build",
     "build": "ng build",
+    "prewatch": "npm run device-template:build",
     "watch": "ng build --watch --configuration development",
+    "pretest": "npm run device-template:test",
     "test": "ng test",
     "lint": "ng lint",
-    "sync": "npm run build && npx cap sync android"
+    "sync": "npm run build && npx cap sync android",
+    "device-template:build": "npm run build --workspace=device-template",
+    "device-template:dev": "npm run dev --workspace=device-template",
+    "device-template:test": "npm run test:embedded --workspace=device-template",
+    "device-template:lint": "npm run lint --workspace=device-template"
   },
   "private": true,
   "engines": {
@@ -60,6 +71,7 @@
     "mqtt": "^5.15.2",
     "ngx-colors": "^4.0.0",
     "ngx-markdown": "^22.0.0",
+    "penpal": "^7.0.6",
     "pickerjs": "^1.2.1",
     "pulltorefreshjs": "^0.1.22",
     "rxjs": "~7.8.0",

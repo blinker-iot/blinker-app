@@ -140,6 +140,10 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/device/device-update/device-update').then(m => m.DeviceUpdatePage),
   },
   {
+    path: 'device-manager/:id/uic',
+    loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+  },
+  {
     path: 'device-manager/:id',
     loadComponent: () => import('./sections/device/device-settings/device-settings').then(m => m.DeviceSettingsPage),
   },

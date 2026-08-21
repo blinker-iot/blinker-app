@@ -44,4 +44,12 @@ describe('Angular test environment', () => {
     expect(timerRoute?.loadComponent).toBeTypeOf('function');
     expect(timerEditRoute?.loadComponent).toBeTypeOf('function');
   });
+
+  it('registers the device interface configuration route', () => {
+    const deviceUicRoute = routes.find(
+      (route) => route.path === 'device-manager/:id/uic',
+    );
+
+    expect(deviceUicRoute?.loadComponent).toBeTypeOf('function');
+  });
 });

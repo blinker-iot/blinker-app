@@ -53,6 +53,7 @@ export class DevicePage implements OnInit, OnDestroy {
   private deviceSubject?: Subscription;
   private deviceComponentRef?: ComponentRef<unknown>;
   private deviceViewContainer?: ViewContainerRef;
+  private loadedComponentConfig = '';
   private heartbeatTimer?: number;
 
   @ViewChild('deviceView', { read: ViewContainerRef })
@@ -110,6 +111,16 @@ export class DevicePage implements OnInit, OnDestroy {
     }
   }
 
+  ionViewWillEnter(): void {
+    if (
+      this.device &&
+      this.deviceViewContainer &&
+      this.getComponentConfig() !== this.loadedComponentConfig
+    ) {
+      this.loadDevice();
+    }
+  }
+
   connectDevice(): Promise<void> {
     if (!this.device || this.isPreview) return Promise.resolve();
     return this.startDeviceSession();
@@ -139,6 +150,7 @@ export class DevicePage implements OnInit, OnDestroy {
       this.deviceSubject?.unsubscribe();
       this.disconnectDevice();
       this.deviceHeaderActions = null;
+      this.loadedComponentConfig = '';
       this.device = undefined;
       this.loaded = true;
       this.cd.detectChanges();
@@ -146,7 +158,13 @@ export class DevicePage implements OnInit, OnDestroy {
     }
 
     if (this.device === nextDevice) {
-      if (this.deviceViewContainer && !this.deviceComponentRef) this.loadDevice();
+      if (
+        this.deviceViewContainer &&
+        (!this.deviceComponentRef ||
+          this.getComponentConfig() !== this.loadedComponentConfig)
+      ) {
+        this.loadDevice();
+      }
       return;
     }
 
@@ -155,9 +173,11 @@ export class DevicePage implements OnInit, OnDestroy {
     this.deviceHeaderActions = null;
     this.deviceComponentRef?.destroy();
     this.deviceComponentRef = undefined;
+    this.loadedComponentConfig = '';
     this.device = nextDevice;
     this.loaded = true;
-    this.deviceSubject = nextDevice.subject.subscribe(() => {
+    this.deviceSubject = nextDevice.subject.subscribe((event) => {
+      if (event?.key === 'component') this.loadDevice();
       this.cd.detectChanges();
     });
     this.loadDevice();
@@ -168,7 +188,8 @@ export class DevicePage implements OnInit, OnDestroy {
   private loadDevice(): void {
     if (!this.device || !this.deviceViewContainer) return;
 
-    let componentName = this.device.config.component || 'Layouter2';
+    const componentConfig = this.getComponentConfig();
+    let componentName = componentConfig;
     let customizerUrl = '';
 
     if (componentName.startsWith('Customizer?')) {
@@ -176,15 +197,16 @@ export class DevicePage implements OnInit, OnDestroy {
       componentName = 'Customizer';
     }
 
-    const componentType =
-      deviceComponentDict[componentName] || deviceComponentDict['Layouter2'];
-    this.deviceComponent = deviceComponentDict[componentName]
+    const componentExists = !!deviceComponentDict[componentName];
+    this.deviceComponent = componentExists
       ? componentName
-      : 'Layouter2';
+      : 'Layouter2Component';
+    const componentType = deviceComponentDict[this.deviceComponent];
     this.deviceHeaderActions = null;
     this.deviceViewContainer.clear();
     this.deviceComponentRef =
       this.deviceViewContainer.createComponent(componentType);
+    this.loadedComponentConfig = componentConfig;
     this.deviceComponentRef.setInput('device', this.device);
 
     if (this.deviceComponent === 'Customizer') {
@@ -205,6 +227,10 @@ export class DevicePage implements OnInit, OnDestroy {
       this.deviceHeaderActions = headerActions;
       this.cd.detectChanges();
     });
+  }
+
+  private getComponentConfig(): string {
+    return this.device?.config.component || 'Layouter2Component';
   }
 
   private async startDeviceSession(): Promise<void> {

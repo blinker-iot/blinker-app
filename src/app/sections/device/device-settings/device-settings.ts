@@ -68,7 +68,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       },
       {
         id: 'location',
-        title: '设备位置设置',
+        title: '设备位置',
         description: '查看并更新设备所在位置',
         icon: 'fa-location-dot',
         route: `/device-manager/${this.id}/location`,
@@ -118,10 +118,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         icon: 'fa-screwdriver-wrench',
       },
       {
-        id: 'layouter',
+        id: 'uic',
         title: '界面配置',
         description: '配置该设备的界面',
         icon: 'fa-grid-4',
+        route: `/device-manager/${this.id}/uic`,
       },
     ];
     if (!this.isSharedDevice) {
