@@ -80,6 +80,128 @@ describe('ServerInterceptor', () => {
     request.flush({ status: 200, data: { id: 'user-1' } });
   });
 
+  it('preserves exact account-deletion bodies with Bearer and JSON headers', () => {
+    http.post(API.ACCOUNT.DELETION_CODE, {}).subscribe();
+    const codeRequest = httpTesting.expectOne(API.ACCOUNT.DELETION_CODE);
+    expect(codeRequest.request.method).toBe('POST');
+    expect(codeRequest.request.body).toEqual({});
+    expect(codeRequest.request.headers.get('Authorization')).toBe(
+      'Bearer old-access',
+    );
+    expect(codeRequest.request.headers.get('Content-Type')).toBe(
+      'application/json',
+    );
+    codeRequest.flush({ status: 200, data: {} });
+
+    http.delete(API.ACCOUNT.ROOT, {
+      body: { code: 'D-123456' },
+    }).subscribe();
+    const deleteRequest = httpTesting.expectOne(API.ACCOUNT.ROOT);
+    expect(deleteRequest.request.method).toBe('DELETE');
+    expect(deleteRequest.request.body).toEqual({ code: 'D-123456' });
+    expect(deleteRequest.request.headers.get('Authorization')).toBe(
+      'Bearer old-access',
+    );
+    expect(deleteRequest.request.headers.get('Content-Type')).toBe(
+      'application/json',
+    );
+    deleteRequest.flush({ account: { status: 'deleted' } });
+  });
+
+  it('normalizes Retry-After without exposing response headers wholesale', () => {
+    let received: unknown;
+    http.post(API.ACCOUNT.DELETION_CODE, {}).subscribe({
+      error: (error) => (received = error),
+    });
+    httpTesting.expectOne(API.ACCOUNT.DELETION_CODE).flush(
+      {
+        errorCode: 'ACCOUNT_DELETION_CODE_RATE_LIMITED',
+        errorMessage: 'upstream internal diagnostic',
+      },
+      {
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: { 'Retry-After': '37' },
+      },
+    );
+
+    expect(received).toBeInstanceOf(GatewayHttpError);
+    expect(received).toMatchObject({
+      code: 'ACCOUNT_DELETION_CODE_RATE_LIMITED',
+      retryAfterSeconds: 37,
+    });
+  });
+
+  it('does not clear or refresh the session for deletion AUTH_TOKEN_MISSING', () => {
+    let received: unknown;
+    http.delete(API.ACCOUNT.ROOT, {
+      body: { code: 'D-123456' },
+    }).subscribe({ error: (error) => (received = error) });
+    httpTesting.expectOne(API.ACCOUNT.ROOT).flush(
+      { errorCode: 'AUTH_TOKEN_MISSING' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+
+    httpTesting.expectNone(API.AUTH.REFRESH);
+    expect(received).toMatchObject({ code: 'AUTH_TOKEN_MISSING' });
+    expect(dataService.auth?.accessToken).toBe('old-access');
+    expect(navigateRoot).not.toHaveBeenCalled();
+  });
+
+  it('preserves the refreshed session when deletion replay lacks a token', async () => {
+    let received: unknown;
+    http.delete(API.ACCOUNT.ROOT, {
+      body: { code: 'D-123456' },
+    }).subscribe({ error: (error) => (received = error) });
+    httpTesting.expectOne(API.ACCOUNT.ROOT).flush(
+      { errorCode: 'AUTH_TOKEN_EXPIRED' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+    httpTesting.expectOne(API.AUTH.REFRESH).flush({
+      status: 200,
+      data: {
+        access_token: 'new-access',
+        refresh_token: 'new-refresh',
+        token_type: 'bearer',
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const replay = httpTesting.expectOne(API.ACCOUNT.ROOT);
+    expect(replay.request.body).toEqual({ code: 'D-123456' });
+    expect(replay.request.headers.get('Authorization')).toBe(
+      'Bearer new-access',
+    );
+    replay.flush(
+      { errorCode: 'AUTH_TOKEN_MISSING' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+
+    expect(received).toMatchObject({ code: 'AUTH_TOKEN_MISSING' });
+    expect(dataService.auth?.accessToken).toBe('new-access');
+    expect(navigateRoot).not.toHaveBeenCalled();
+  });
+
+  it('does not clear the session when deletion token refresh fails', async () => {
+    let received: unknown;
+    http.post(API.ACCOUNT.DELETION_CODE, {}).subscribe({
+      error: (error) => (received = error),
+    });
+    httpTesting.expectOne(API.ACCOUNT.DELETION_CODE).flush(
+      { errorCode: 'AUTH_TOKEN_EXPIRED' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+    httpTesting.expectOne(API.AUTH.REFRESH).flush(
+      { errorCode: 'AUTH_REFRESH_TOKEN_EXPIRED' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(received).toMatchObject({ code: 'AUTH_REFRESH_TOKEN_EXPIRED' });
+    expect(dataService.auth?.accessToken).toBe('old-access');
+    expect(navigateRoot).not.toHaveBeenCalled();
+  });
+
   it('does not attach Bearer to public authentication calls', () => {
     http.post(API.AUTH.EMAIL_LOGIN, { email: 'person@example.com' }).subscribe();
     const request = httpTesting.expectOne(API.AUTH.EMAIL_LOGIN);

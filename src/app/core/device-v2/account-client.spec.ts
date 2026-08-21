@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   Bbp2FrameFlag,
@@ -93,6 +93,8 @@ function credential(): AccountConnectionResponse {
 }
 
 describe('DeviceV2AccountClient', () => {
+  afterEach(() => vi.useRealTimers());
+
   it('shares one account session, coalesces start, and rebuilds after transport loss', async () => {
     const credentials = vi.fn(async () => credential());
     const channels: HelloChannel[] = [];
@@ -122,15 +124,102 @@ describe('DeviceV2AccountClient', () => {
     expect(channels[1]!.closed).toBe(true);
   });
 
-  it('rejects a credential that is not explicitly BBP/2 over WebSocket', async () => {
+  it('blocks a deterministic credential error without reconnecting or reacquiring it', async () => {
+    vi.useFakeTimers();
     const invalid = credential();
     invalid.transport = 'tcp';
+    const credentials = vi.fn(async () => invalid);
+    const factory = vi.fn(async () => new HelloChannel());
     const client = new DeviceV2AccountClient(
-      async () => invalid,
-      async () => new HelloChannel(),
-      { reconnectBaseMs: 60_000, reconnectMaximumMs: 60_000 },
+      credentials,
+      factory,
+      { reconnectBaseMs: 1, reconnectMaximumMs: 2 },
     );
     await expect(client.start()).rejects.toThrow(/credential contract/);
+    expect(client.state).toBe('stopped');
+    await expect(client.start()).rejects.toThrow(/credential contract/);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(credentials).toHaveBeenCalledOnce();
+    expect(factory).not.toHaveBeenCalled();
+    await client.stop();
+  });
+
+  it('closes the active endpoint when credential refresh returns invalid transport', async () => {
+    vi.useFakeTimers();
+    const first = credential();
+    first.mqtt.expiresIn = 1;
+    const invalid = credential();
+    invalid.transport = 'tcp';
+    const credentials = vi.fn()
+      .mockResolvedValueOnce(first)
+      .mockResolvedValue(invalid);
+    const channels: HelloChannel[] = [];
+    const factory = vi.fn(async () => {
+      const channel = new HelloChannel();
+      channels.push(channel);
+      return channel;
+    });
+    const client = new DeviceV2AccountClient(credentials, factory, {
+      reconnectBaseMs: 1,
+      reconnectMaximumMs: 2,
+    });
+
+    await client.start();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(credentials).toHaveBeenCalledTimes(2);
+    expect(factory).toHaveBeenCalledOnce();
+    expect(channels[0]!.closed).toBe(true);
+    expect(client.state).toBe('stopped');
+    await expect(client.start()).rejects.toThrow(/credential contract/);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(credentials).toHaveBeenCalledTimes(2);
+
+    await client.stop();
+  });
+
+  it('replaces endpoint A with B and ignores a late failure from A', async () => {
+    vi.useFakeTimers();
+    const first = credential();
+    first.mqtt.url = 'wss://mqtt-a.example.test/mqtt';
+    first.mqtt.expiresIn = 1;
+    const second = credential();
+    second.mqtt.url = 'wss://mqtt-b.example.test/mqtt';
+    const credentials = vi.fn()
+      .mockResolvedValueOnce(first)
+      .mockResolvedValue(second);
+    const channels: HelloChannel[] = [];
+    const openedUrls: string[] = [];
+    const factory = vi.fn(async (response: AccountConnectionResponse) => {
+      if (channels.length > 0) expect(channels[0]!.closed).toBe(true);
+      const channel = new HelloChannel();
+      channels.push(channel);
+      openedUrls.push(response.mqtt.url!);
+      return channel;
+    });
+    const client = new DeviceV2AccountClient(credentials, factory, {
+      reconnectBaseMs: 1,
+      reconnectMaximumMs: 2,
+    });
+
+    await client.start();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(openedUrls).toEqual([
+      'wss://mqtt-a.example.test/mqtt',
+      'wss://mqtt-b.example.test/mqtt',
+    ]);
+    expect(credentials).toHaveBeenCalledTimes(2);
+    expect(channels[0]!.closed).toBe(true);
+    expect(channels[1]!.closed).toBe(false);
+    expect(client.state).toBe('ready');
+
+    channels[0]!.fail();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(credentials).toHaveBeenCalledTimes(2);
+    expect(channels[1]!.closed).toBe(false);
+    expect(client.state).toBe('ready');
+
     await client.stop();
   });
 

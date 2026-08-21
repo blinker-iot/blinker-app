@@ -111,6 +111,7 @@ export class ServerInterceptor implements HttpInterceptor {
           error instanceof HttpErrorResponse &&
           error.status === 401 &&
           this.isProtected(prepared.url) &&
+          !this.isAccountDeletionTokenMissing(prepared.url, error) &&
           !prepared.context.get(REQUEST_RETRIED) &&
           !!this.dataService.auth?.refreshToken
         ) {
@@ -120,6 +121,9 @@ export class ServerInterceptor implements HttpInterceptor {
           }
           return recovery.pipe(
             catchError((refreshError: unknown) => {
+              if (this.isAccountDeletionUrl(prepared.url)) {
+                return throwError(() => this.normalizeError(refreshError));
+              }
               if (this.requestMatchesCurrentSession(prepared)) {
                 return this.expireSessionAndThrow(refreshError);
               }
@@ -147,6 +151,9 @@ export class ServerInterceptor implements HttpInterceptor {
                     replayError instanceof HttpErrorResponse &&
                     replayError.status === 401
                   ) {
+                    if (this.isAccountDeletionUrl(replay.url)) {
+                      return throwError(() => this.normalizeError(replayError));
+                    }
                     if (
                       !this.tokensMatchCurrentSession(tokens) ||
                       this.refreshInFlightFor(tokens)
@@ -439,6 +446,9 @@ export class ServerInterceptor implements HttpInterceptor {
         error.headers?.get('X-Request-ID') ||
         (typeof body['requestId'] === 'string' ? body['requestId'] : undefined),
       data: body['data'],
+      retryAfterSeconds: this.parseRetryAfter(
+        error.headers?.get('Retry-After'),
+      ),
     };
     return new GatewayHttpError(normalized);
   }
@@ -463,7 +473,7 @@ export class ServerInterceptor implements HttpInterceptor {
     request: HttpRequest<unknown>,
     body: unknown,
   ): boolean {
-    return ['POST', 'PUT', 'PATCH'].includes(request.method) &&
+    return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method) &&
       body !== null &&
       body !== undefined &&
       !(body instanceof FormData) &&
@@ -497,6 +507,33 @@ export class ServerInterceptor implements HttpInterceptor {
 
   private isRecord(value: unknown): value is Record<string, unknown> {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  private isAccountDeletionTokenMissing(
+    url: string,
+    error: HttpErrorResponse,
+  ): boolean {
+    if (!this.isAccountDeletionUrl(url)) return false;
+    const body = this.isRecord(error.error) ? error.error : {};
+    return body['errorCode'] === 'AUTH_TOKEN_MISSING'
+      || body['code'] === 'AUTH_TOKEN_MISSING';
+  }
+
+  private isAccountDeletionUrl(url: string): boolean {
+    return url === API.ACCOUNT.ROOT || url === API.ACCOUNT.DELETION_CODE;
+  }
+
+  private parseRetryAfter(value: string | null | undefined): number | undefined {
+    const normalized = value?.trim();
+    if (!normalized) return undefined;
+    if (/^\d+$/.test(normalized)) {
+      const seconds = Number(normalized);
+      return Number.isSafeInteger(seconds) ? seconds : undefined;
+    }
+
+    const retryAt = Date.parse(normalized);
+    if (!Number.isFinite(retryAt)) return undefined;
+    return Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
   }
 
   private gatewayTimeoutMs(url: string): number {

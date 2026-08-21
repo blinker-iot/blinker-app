@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IClientOptions, MqttClient } from 'mqtt';
+import { Capacitor } from '@capacitor/core';
 
 import { MqttConnection } from '../model/response.model';
 import { openMqttDeviceV2Channel } from './mqtt-channel';
@@ -42,18 +43,30 @@ const connection: MqttConnection = {
 };
 
 describe('MqttDeviceV2Channel', () => {
-  it('uses one strict MQTT 3.1.1 WebSocket connection and exact account topics', async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('passes the exact wss URL to one MQTT 3.1.1 connection and keeps account topics', async () => {
+    vi.stubGlobal('location', new URL('https://app.example.test/devices'));
     const mqttClient = new FakeMqttClient();
     const connect = vi.fn((url: string, options: IClientOptions) => {
       queueMicrotask(() => mqttClient.emit('connect'));
       return mqttClient as unknown as MqttClient;
     });
-    const channel = await openMqttDeviceV2Channel(connection, connect);
+    const exactUrl = 'wss://MQTT.example.test:443/mqtt';
+    const channel = await openMqttDeviceV2Channel({
+      ...connection,
+      url: exactUrl,
+    }, connect);
 
-    expect(connect).toHaveBeenCalledWith('wss://mqtt.example.test/mqtt', expect.objectContaining({
+    expect(connect).toHaveBeenCalledWith(exactUrl, expect.objectContaining({
       clientId: connection.clientId,
       username: connection.username,
       password: connection.password,
+      keepalive: connection.keepalive,
+      clean: true,
       protocolVersion: 4,
       reconnectPeriod: 0,
       resubscribe: false,
@@ -82,6 +95,50 @@ describe('MqttDeviceV2Channel', () => {
     expect(mqttClient.end).toHaveBeenCalledOnce();
   });
 
+  it('rejects ws on an HTTPS page before MQTT.js is called', async () => {
+    vi.stubGlobal('location', new URL('https://app.example.test/devices'));
+    const connect = vi.fn();
+
+    await expect(openMqttDeviceV2Channel({
+      ...connection,
+      protocol: 'ws',
+      url: 'ws://mqtt.example.test/mqtt',
+    }, connect)).rejects.toThrow(/must use wss/);
+    expect(connect).not.toHaveBeenCalled();
+  });
+
+  it('allows ws for a localhost web development page', async () => {
+    vi.stubGlobal('location', new URL('https://localhost:8100/devices'));
+    const mqttClient = new FakeMqttClient();
+    const connect = vi.fn((url: string) => {
+      queueMicrotask(() => mqttClient.emit('connect'));
+      return mqttClient as unknown as MqttClient;
+    });
+    const url = 'ws://localhost:1884/mqtt';
+
+    const channel = await openMqttDeviceV2Channel({
+      ...connection,
+      protocol: 'ws',
+      url,
+    }, connect);
+
+    expect(connect).toHaveBeenCalledWith(url, expect.any(Object));
+    await channel.close();
+  });
+
+  it('rejects ws in a native WebView even when its origin is localhost', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    vi.stubGlobal('location', new URL('https://localhost/devices'));
+    const connect = vi.fn();
+
+    await expect(openMqttDeviceV2Channel({
+      ...connection,
+      protocol: 'ws',
+      url: 'ws://mqtt.example.test/mqtt',
+    }, connect)).rejects.toThrow(/must use wss/);
+    expect(connect).not.toHaveBeenCalled();
+  });
+
   it('rejects TCP credentials instead of silently constructing an unusable browser URL', async () => {
     await expect(openMqttDeviceV2Channel({
       ...connection,
@@ -96,6 +153,18 @@ describe('MqttDeviceV2Channel', () => {
       url: 'wss://mqtt.example.test/other',
     }, vi.fn())).rejects.toThrow(/WebSocket URL/);
   });
+
+  it.each([undefined, 'not a URL'] as const)(
+    'rejects a missing or malformed URL before MQTT.js is called: %s',
+    async url => {
+      const connect = vi.fn();
+      await expect(openMqttDeviceV2Channel({
+        ...connection,
+        url,
+      }, connect)).rejects.toThrow(/WebSocket/);
+      expect(connect).not.toHaveBeenCalled();
+    },
+  );
 
   it('reports a post-CONNACK error once and still releases the MQTT client', async () => {
     const mqttClient = new FakeMqttClient();

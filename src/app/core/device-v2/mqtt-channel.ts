@@ -1,8 +1,10 @@
 import mqtt, { IClientOptions, MqttClient } from 'mqtt';
 import type { Buffer } from 'buffer';
+import { Capacitor } from '@capacitor/core';
 
 import { MqttConnection } from '../model/response.model';
 import { DeviceV2Channel } from '../protocol/device-v2';
+import { DeviceV2TransportConfigError } from './transport-config.error';
 
 export type DeviceV2MqttConnect = (url: string, options: IClientOptions) => MqttClient;
 
@@ -15,6 +17,22 @@ function validTopic(value: string): boolean {
     && !value.includes('\0')
     && !value.includes('+')
     && !value.includes('#');
+}
+
+function isLocalhost(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  return normalized === 'localhost'
+    || normalized.endsWith('.localhost')
+    || normalized === '127.0.0.1'
+    || normalized === '[::1]';
+}
+
+function requiresSecureWebSocket(): boolean {
+  const native = Capacitor.isNativePlatform();
+  if (typeof location === 'undefined') return native;
+  if (location.protocol === 'http:') return false;
+  if (!native && isLocalhost(location.hostname)) return false;
+  return true;
 }
 
 function waitForConnect(client: MqttClient, timeoutMs: number): Promise<void> {
@@ -134,20 +152,38 @@ export async function openMqttDeviceV2Channel(
   connection: MqttConnection,
   connect: DeviceV2MqttConnect = mqtt.connect.bind(mqtt),
 ): Promise<MqttDeviceV2Channel> {
-  if ((connection.protocol !== 'ws' && connection.protocol !== 'wss')
-    || !connection.url || connection.clean !== true
+  if (!connection || (connection.protocol !== 'ws' && connection.protocol !== 'wss')
+    || typeof connection.url !== 'string' || !connection.url.trim()
+    || connection.url.trim() !== connection.url || connection.clean !== true
     || !connection.clientId || !connection.username || !connection.password
     || !validTopic(connection.publishTopic) || !validTopic(connection.subscribeTopic)
     || !Number.isInteger(connection.keepalive) || connection.keepalive < 1) {
-    throw new Error('Device V2 MQTT WebSocket credential is invalid');
+    throw new DeviceV2TransportConfigError(
+      'Device V2 MQTT WebSocket credential is invalid',
+    );
   }
-  const url = new URL(connection.url);
+  let url: URL;
+  try {
+    url = new URL(connection.url);
+  } catch {
+    throw new DeviceV2TransportConfigError(
+      'Device V2 MQTT WebSocket URL is invalid',
+    );
+  }
   if (url.protocol !== `${connection.protocol}:`
+    || !url.hostname
     || url.username || url.password || url.search || url.hash
     || (connection.path !== undefined && connection.path !== url.pathname)) {
-    throw new Error('Device V2 MQTT WebSocket URL is invalid');
+    throw new DeviceV2TransportConfigError(
+      'Device V2 MQTT WebSocket URL is invalid',
+    );
   }
-  const client = connect(url.toString(), {
+  if (url.protocol === 'ws:' && requiresSecureWebSocket()) {
+    throw new DeviceV2TransportConfigError(
+      'Device V2 MQTT WebSocket URL must use wss in this context',
+    );
+  }
+  const client = connect(connection.url, {
     clientId: connection.clientId,
     username: connection.username,
     password: connection.password,

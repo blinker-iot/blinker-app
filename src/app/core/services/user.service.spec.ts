@@ -197,11 +197,42 @@ describe('UserService API contracts', () => {
     await expect(cancellation).resolves.toBe(true);
   });
 
-  it('exposes managed account deletion only through cancelBlinkerAccount()', async () => {
-    const cancellation = service.cancelBlinkerAccount();
+  it('requests an account-deletion code with an exact empty body', async () => {
+    const codeInfo = service.requestAccountDeletionCode();
+    const request = httpTesting.expectOne(API.ACCOUNT.DELETION_CODE);
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    expect(Object.keys(request.request.body)).toEqual([]);
+    httpTesting.expectNone(API.AUTH.EMAIL_CODE);
+    httpTesting.expectNone(API.AUTH.EMAIL_LOGIN);
+    request.flush({
+      status: 200,
+      errorCode: null,
+      errorMessage: null,
+      data: {
+        purpose: 'account_deletion',
+        expiresIn: 125,
+        maskedEmail: 'p***@example.com',
+      },
+    });
+
+    await expect(codeInfo).resolves.toEqual({
+      purpose: 'account_deletion',
+      expiresIn: 125,
+      maskedEmail: 'p***@example.com',
+    });
+  });
+
+  it('sends the complete D-code and leaves local cleanup to logout after 200', async () => {
+    const clearData = vi.spyOn(dataService, 'clearBlinkerData');
+    const expireAuth = vi.spyOn(dataService.authDataExpire, 'next');
+    const cancellation = service.cancelBlinkerAccount('D-123456');
     const request = httpTesting.expectOne(API.ACCOUNT.ROOT);
 
     expect(request.request.method).toBe('DELETE');
+    expect(request.request.body).toEqual({ code: 'D-123456' });
+    httpTesting.expectNone(API.AUTH.EMAIL_LOGIN);
     request.flush({
       account: {
         accountId: 'user-1',
@@ -211,6 +242,78 @@ describe('UserService API contracts', () => {
       },
     });
 
-    await expect(cancellation).resolves.toBe(true);
+    await expect(cancellation).resolves.toEqual({
+      account: {
+        accountId: 'user-1',
+        tenantId: 'tenant-1',
+        status: 'deleted',
+        deletedAt: 3,
+      },
+    });
+    expect(clearData).not.toHaveBeenCalled();
+    expect(expireAuth).not.toHaveBeenCalled();
+    expect(dataService.auth?.accessToken).toBe('access-token');
+  });
+
+  it('rejects a login-style six-digit code without sending a DELETE', async () => {
+    await expect(service.cancelBlinkerAccount('123456')).rejects.toMatchObject({
+      code: 'ACCOUNT_DELETION_CODE_INVALID',
+    });
+    httpTesting.expectNone(API.ACCOUNT.ROOT);
+  });
+
+  it('does not accept a deleted body from a non-200 DELETE response', async () => {
+    const cancellation = service.cancelBlinkerAccount('D-123456');
+    httpTesting.expectOne(API.ACCOUNT.ROOT).flush(
+      {
+        account: {
+          accountId: 'user-1',
+          tenantId: 'tenant-1',
+          status: 'deleted',
+          deletedAt: 3,
+        },
+      },
+      { status: 202, statusText: 'Accepted' },
+    );
+
+    await expect(cancellation).rejects.toMatchObject({
+      code: 'ACCOUNT_DELETION_RESPONSE_INVALID',
+    });
+    expect(dataService.auth?.accessToken).toBe('access-token');
+  });
+
+  it('preserves the session and permits retrying the same DELETE after failure', async () => {
+    const clearData = vi.spyOn(dataService, 'clearBlinkerData');
+    const expireAuth = vi.spyOn(dataService.authDataExpire, 'next');
+    const firstAttempt = service.cancelBlinkerAccount('D-654321');
+    httpTesting.expectOne(API.ACCOUNT.ROOT).flush(
+      {
+        status: 409,
+        errorCode: 'ACCOUNT_DELETION_IN_PROGRESS',
+        errorMessage: 'internal cleanup detail',
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    await expect(firstAttempt).rejects.toMatchObject({ status: 409 });
+    expect(clearData).not.toHaveBeenCalled();
+    expect(expireAuth).not.toHaveBeenCalled();
+    expect(dataService.auth?.accessToken).toBe('access-token');
+
+    const retry = service.cancelBlinkerAccount('D-654321');
+    const retryRequest = httpTesting.expectOne(API.ACCOUNT.ROOT);
+    expect(retryRequest.request.body).toEqual({ code: 'D-654321' });
+    retryRequest.flush({
+      account: {
+        accountId: 'user-1',
+        tenantId: 'tenant-1',
+        status: 'deleted',
+        deletedAt: 4,
+      },
+    });
+
+    await expect(retry).resolves.toMatchObject({
+      account: { status: 'deleted' },
+    });
   });
 });

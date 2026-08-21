@@ -6,6 +6,7 @@ import {
   DeviceV2Store,
   DeviceV2TargetSnapshot,
 } from '../protocol/device-v2';
+import { DeviceV2TransportConfigError } from './transport-config.error';
 
 export type DeviceV2AccountState = 'idle' | 'connecting' | 'ready' | 'retrying' | 'stopped';
 export type DeviceV2CredentialProvider = () => Promise<AccountConnectionResponse>;
@@ -29,6 +30,7 @@ export class DeviceV2AccountClient {
   private session?: DeviceV2Session;
   private refreshTimer?: ReturnType<typeof setTimeout>;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private transportConfigError?: DeviceV2TransportConfigError;
   private readonly listeners = new Set<(state: DeviceV2AccountState) => void>();
   private readonly reconnectBaseMs: number;
   private readonly reconnectMaximumMs: number;
@@ -57,6 +59,7 @@ export class DeviceV2AccountClient {
   }
 
   start(): Promise<void> {
+    if (this.transportConfigError) return Promise.reject(this.transportConfigError);
     this.desired = true;
     if (this.session?.state === 'ready') return Promise.resolve();
     return this.connect();
@@ -67,7 +70,9 @@ export class DeviceV2AccountClient {
     this.desired = false;
     this.generation += 1;
     clearTimeout(this.refreshTimer);
+    this.refreshTimer = undefined;
     clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
     const connecting = this.connecting;
     if (connecting) await connecting.catch(() => undefined);
     try {
@@ -81,6 +86,8 @@ export class DeviceV2AccountClient {
     try {
       await this.stop();
     } finally {
+      this.transportConfigError = undefined;
+      this.reconnectAttempt = 0;
       this.store.clear();
     }
   }
@@ -100,13 +107,21 @@ export class DeviceV2AccountClient {
   }
 
   private connect(force = false): Promise<void> {
+    if (this.transportConfigError) return Promise.reject(this.transportConfigError);
     if (!this.desired) return Promise.reject(new Error('Device V2 account client is stopped'));
     if (!force && this.session?.state === 'ready') return Promise.resolve();
     if (this.connecting) return this.connecting;
     clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
     const generation = ++this.generation;
-    const task = this.open(generation).catch(error => {
-      if (this.desired && generation === this.generation) this.scheduleReconnect();
+    const task = this.open(generation).catch(async error => {
+      if (this.desired && generation === this.generation) {
+        if (error instanceof DeviceV2TransportConfigError) {
+          await this.blockTransport(error);
+        } else {
+          this.scheduleReconnect();
+        }
+      }
       throw error;
     }).finally(() => {
       if (this.connecting === task) this.connecting = undefined;
@@ -118,8 +133,8 @@ export class DeviceV2AccountClient {
   private async open(generation: number): Promise<void> {
     this.setState('connecting');
     const response = await this.credentials();
-    this.validateCredential(response);
     if (!this.desired || generation !== this.generation) return;
+    this.validateCredential(response);
     await this.closeSession();
     const channel = await this.channels(response);
     if (!this.desired || generation !== this.generation) {
@@ -143,9 +158,12 @@ export class DeviceV2AccountClient {
       return;
     }
     this.reconnectAttempt = 0;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
     this.setState('ready');
     const refreshSeconds = Math.max(1, Math.floor(response.mqtt.expiresIn * 0.8));
     this.refreshTimer = setTimeout(() => {
+      this.refreshTimer = undefined;
       void this.connect(true).catch(() => undefined);
     }, refreshSeconds * 1000);
   }
@@ -153,6 +171,7 @@ export class DeviceV2AccountClient {
   private scheduleReconnect(): void {
     if (!this.desired || this.reconnectTimer) return;
     clearTimeout(this.refreshTimer);
+    this.refreshTimer = undefined;
     this.setState('retrying');
     const delay = Math.min(
       this.reconnectMaximumMs,
@@ -167,17 +186,32 @@ export class DeviceV2AccountClient {
 
   private async closeSession(): Promise<void> {
     clearTimeout(this.refreshTimer);
+    this.refreshTimer = undefined;
     const session = this.session;
     this.session = undefined;
     if (session) await session.close();
   }
 
   private validateCredential(response: AccountConnectionResponse): void {
-    if (response.wire !== 'bbp2' || response.protocolVersion !== 2
+    if (!response || response.wire !== 'bbp2' || response.protocolVersion !== 2
       || response.transport !== 'websocket'
+      || !response.mqtt
       || !Number.isInteger(response.mqtt.expiresIn) || response.mqtt.expiresIn < 1) {
-      throw new Error('Device V2 account credential contract is invalid');
+      throw new DeviceV2TransportConfigError(
+        'Device V2 account credential contract is invalid',
+      );
     }
+  }
+
+  private async blockTransport(error: DeviceV2TransportConfigError): Promise<void> {
+    this.desired = false;
+    this.generation += 1;
+    this.transportConfigError = error;
+    this.reconnectAttempt = 0;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
+    await this.closeSession().catch(() => undefined);
+    this.setState('stopped');
   }
 
   private requireSession(): DeviceV2Session {

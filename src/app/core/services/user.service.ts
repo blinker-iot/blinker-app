@@ -5,6 +5,7 @@ import { API } from 'src/app/configs/api.config';
 import { sha256 } from '../functions/func';
 import { BlinkerDevice } from '../model/device.model';
 import {
+  AccountDeletionCodeData,
   AilyResponse,
   BlinkerResponse,
   CurrentUser,
@@ -199,9 +200,54 @@ export class UserService {
       .catch(this.handleError);
   }
 
-  async cancelBlinkerAccount(): Promise<boolean> {
-    const session = this.captureSession();
-    return session ? this.deleteBlinkerAccount(session) : false;
+  async cancelBlinkerAccount(code: string): Promise<DeletedAccountResponse> {
+    const session = this.requireSession();
+    if (!/^D-\d{6}$/.test(code)) {
+      throw new GatewayHttpError({
+        httpStatus: 400,
+        code: 'ACCOUNT_DELETION_CODE_INVALID',
+        message: 'The account-deletion code format is invalid.',
+      });
+    }
+    const response = await firstValueFrom(
+      this.http.delete<DeletedAccountResponse>(API.ACCOUNT.ROOT, {
+        body: { code },
+        observe: 'response',
+      }),
+    );
+    this.assertSessionMatches(session);
+    if (
+      response.status !== 200
+      || response.body?.account?.status !== 'deleted'
+    ) {
+      throw this.invalidAccountDeletionResponse();
+    }
+    return response.body;
+  }
+
+  async requestAccountDeletionCode(): Promise<AccountDeletionCodeData> {
+    const session = this.requireSession();
+    const response = await firstValueFrom(
+      this.http.post<AilyResponse<AccountDeletionCodeData>>(
+        API.ACCOUNT.DELETION_CODE,
+        {},
+        { observe: 'response' },
+      ),
+    );
+    this.assertSessionMatches(session);
+    const body = response.body;
+    const data = body?.data;
+    if (
+      response.status !== 200
+      || body?.status !== 200
+      || data?.purpose !== 'account_deletion'
+      || !Number.isFinite(data.expiresIn)
+      || data.expiresIn <= 0
+      || !data.maskedEmail?.trim()
+    ) {
+      throw this.invalidAccountDeletionResponse();
+    }
+    return data;
   }
 
   cancelAccount(password): Promise<boolean> {
@@ -223,29 +269,6 @@ export class UserService {
     return false;
   }
 
-  private async deleteBlinkerAccount(session: SessionFence): Promise<boolean> {
-    const retryDelays = [250, 750];
-    for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
-      if (!this.sessionMatches(session)) return false;
-      try {
-        const response = await firstValueFrom(
-          this.http.delete<DeletedAccountResponse>(API.ACCOUNT.ROOT),
-        );
-        if (!this.sessionMatches(session)) return false;
-        if (response?.account?.status !== 'deleted') return false;
-        this.dataService.authDataExpire.next(true);
-        this.dataService.clearBlinkerData();
-        return true;
-      } catch (error) {
-        if (!this.sessionMatches(session)) return false;
-        const retryable = this.isRetryableDeletionError(error);
-        if (!retryable || attempt >= retryDelays.length) return false;
-        await this.delay(retryDelays[attempt]);
-      }
-    }
-    return false;
-  }
-
   private captureSession(): SessionFence | null {
     const auth = this.dataService.auth;
     return auth
@@ -256,6 +279,35 @@ export class UserService {
   private sessionMatches(session: SessionFence): boolean {
     const auth = this.dataService.auth;
     return !!auth && this.dataService.sessionEpoch === session.epoch;
+  }
+
+  private requireSession(): SessionFence {
+    const session = this.captureSession();
+    if (!session) {
+      throw new GatewayHttpError({
+        httpStatus: 401,
+        code: 'AUTH_TOKEN_MISSING',
+        message: 'An authenticated session is required.',
+      });
+    }
+    return session;
+  }
+
+  private assertSessionMatches(session: SessionFence): void {
+    if (this.sessionMatches(session)) return;
+    throw new GatewayHttpError({
+      httpStatus: 401,
+      code: 'AUTH_SESSION_CHANGED',
+      message: 'The authenticated session changed during the request.',
+    });
+  }
+
+  private invalidAccountDeletionResponse(): GatewayHttpError {
+    return new GatewayHttpError({
+      httpStatus: 502,
+      code: 'ACCOUNT_DELETION_RESPONSE_INVALID',
+      message: 'The account-deletion response is invalid.',
+    });
   }
 
   private isServiceAccountDeletedError(error: unknown): boolean {
@@ -276,17 +328,4 @@ export class UserService {
     );
   }
 
-  private isRetryableDeletionError(error: unknown): boolean {
-    const status =
-      error instanceof GatewayHttpError
-        ? error.httpStatus
-        : error instanceof HttpErrorResponse
-          ? error.status
-          : 0;
-    return status === 0 || status === 409 || status >= 500;
-  }
-
-  private delay(milliseconds: number): Promise<void> {
-    return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
-  }
 }
