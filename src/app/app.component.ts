@@ -17,6 +17,7 @@ import { NoticeService } from './core/services/notice.service';
 import { PusherService } from './core/services/pusher.service';
 import { UpdateService } from './core/services/update.service';
 import { DataService } from './core/services/data.service';
+import { DeviceService } from './core/services/device.service';
 import { AuthService } from './core/services/auth.service';
 import { NetworkService } from './core/services/network.service';
 import { ImageService } from './core/services/image.service';
@@ -75,6 +76,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     private updateService: UpdateService,
     private networkService: NetworkService,
     private navCtrl: NavController,
+    private deviceService: DeviceService,
     // private screenOrientation: ScreenOrientation,
     private imageService: ImageService,
     private toastService: ToastService,
@@ -124,6 +126,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     await this.dataService.init();
     this.checkLoginStatus();
     this.authService.init();
+    this.deviceService.init();
     this.noticeService.init();
     this.imageService.init();
     this.translationService.init();

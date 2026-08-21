@@ -66,14 +66,16 @@ ion-content {
 .device-view {
   box-sizing: border-box;
   height: 100%;
-  padding-top: var(--transparent-page-content-top);
 
   ::ng-deep > * {
+    // Keep the component host full-height. Flow content respects this inset;
+    // full-screen iframe components apply the reported header height inside.
     position: relative;
     display: block;
     box-sizing: border-box;
     width: 100%;
     height: 100%;
+    padding-top: var(--transparent-page-content-top);
   }
 }
 

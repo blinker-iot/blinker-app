@@ -19,21 +19,33 @@
     margin-top: 2%;
 }
 
-.btnbox {
+.controls {
     position: absolute;
     top: 10px;
     left: 10px;
-    width: 100%;
+    right: 10px;
+    z-index: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 100px;
+    gap: 12px;
+}
+
+.btnbox {
+    min-width: 0;
     display: flex;
     align-items: center;
     flex-direction: row;
+    gap: 8px;
 
     .item {
+        box-sizing: border-box;
+        min-width: 0;
+        width: auto;
+        flex: 1 1 0;
         border: 1px solid var(--blinker-border);
         border-radius: 9px;
-        width: 16vw;
         height: 22px;
-        margin-right: 3vw;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -56,20 +68,16 @@
 }
 
 select {
-    position: absolute;
-    top: 10px;
-    right: 10px;
+    box-sizing: border-box;
+    min-width: 0;
     height: 22px;
-    width: 100px;
+    width: 100%;
     border: 1px solid var(--blinker-border);
     border-radius: 9px;
     color: var(--blinker-text-primary);
     font-size: 13px;
     line-height: 13px;
-    background-color: transparent;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    background-color: var(--blinker-surface);
     padding: 0 0 0 5px;
 }
 

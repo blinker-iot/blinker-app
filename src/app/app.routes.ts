@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { LayouterGuard } from './device/layouter2/layouter.guard';
 import { asHomeTabId } from './home/home-tab-state';
 
 export const routes: Routes = [
@@ -90,8 +91,57 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/room/room-edit/room-edit').then(m => m.RoomEditPage),
   },
   {
+    path: 'scene-manager',
+    loadComponent: () => import('./sections/scene/scene-manager/scene-manager').then(m => m.SceneManager),
+  },
+  {
+    path: 'scene-manager/:scene',
+    loadComponent: () => import('./sections/scene/scene-editor/scene-edit').then(m => m.SceneEditor),
+  },
+  {
+    path: 'share-manager',
+    loadComponent: () => import('./sections/device/share-manager/share-manager.page').then(m => m.ShareManagerPage),
+  },
+  {
+    path: 'share-manager/:id',
+    loadComponent: () => import('./sections/device/device-share/device-share').then(m => m.DeviceSharePage),
+  },
+  {
     path: 'device/:id',
     loadComponent: () => import('./device/device.page').then(m => m.DevicePage),
+    canDeactivate: [LayouterGuard],
+  },
+  {
+    path: 'device-manager/:id/timer',
+    loadComponent: () => import('./sections/device/device-timer/device-timer.page').then(m => m.DeviceTimerPage),
+  },
+  {
+    path: 'device-manager/:id/timer/:taskid',
+    loadComponent: () => import('./sections/device/device-timer/timing-edit/timing-edit').then(m => m.TimingEditPage),
+  },
+  {
+    path: 'device-manager/:id/location',
+    loadComponent: () => import('./sections/device/device-location/device-location.page').then(m => m.DeviceLocationPage),
+  },
+  {
+    path: 'device-manager/:id/logs',
+    loadComponent: () => import('./sections/device/device-log/device-log.component').then(m => m.DeviceLogComponent),
+  },
+  {
+    path: 'device-manager/:id/storage',
+    loadComponent: () => import('./sections/device/device-storage/device-storage.page').then(m => m.DeviceStoragePage),
+  },
+  {
+    path: 'device-manager/:id/update',
+    loadComponent: () => import('./sections/device/device-update/device-update').then(m => m.DeviceUpdatePage),
+  },
+  {
+    path: 'device-manager/:id/uic',
+    loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+  },
+  {
+    path: 'device-manager/:id',
+    loadComponent: () => import('./sections/device/device-settings/device-settings').then(m => m.DeviceSettingsPage),
   },
   {
     path: 'tools/esp32-provision',

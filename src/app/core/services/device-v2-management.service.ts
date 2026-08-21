@@ -60,6 +60,12 @@ export class DeviceV2ManagementService {
     return this.body(response.body, response.status);
   }
 
+  async deleteDeviceV2(logicalDeviceId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(API.DEVICE_V2.DETAIL(this.deviceId(logicalDeviceId))),
+    );
+  }
+
   private body<T extends { status: number; data: unknown }>(body: T | null, status: number): T {
     if (!body?.data || body.status !== status) throw new Error('设备管理响应无效');
     return body;
@@ -74,6 +80,12 @@ export class DeviceV2ManagementService {
     ) {
       throw new Error('设备密钥上下文无效');
     }
+  }
+
+  private deviceId(value: string): string {
+    const normalized = value?.trim();
+    if (!normalized || normalized.includes('\0')) throw new Error('设备标识无效');
+    return normalized;
   }
 
   private idempotencyKey(value: string): string {

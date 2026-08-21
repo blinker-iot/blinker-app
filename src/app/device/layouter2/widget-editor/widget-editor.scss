@@ -46,7 +46,7 @@ ion-content {
 .scrollHeight {
   position: relative;
   z-index: 0;
-  height: 20vh;
+  height: 160px;
   min-height: 132px;
   margin: 0 -15px;
   overflow-x: auto;
@@ -126,91 +126,6 @@ ion-content {
 
 .showkeyboard {
   top: 0;
-}
-
-.devicebox {
-  position: absolute;
-  display: flex;
-  flex-flow: row;
-
-  .selected {
-    opacity: 1;
-    box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.3) !important;
-  }
-
-  .unselected {
-    opacity: 0.58;
-  }
-
-  .actionblock {
-    width: 23vw;
-    height: 23vw;
-    margin: 3px 0 0 3px;
-    border: 1px solid var(--blinker-border);
-    border-radius: var(--blinker-radius-control);
-    box-shadow: var(--blinker-shadow-soft);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-.range-box {
-  position: relative;
-
-  .range {
-    transform: scale(0.5);
-  }
-
-  .range1 {
-    transform-origin: 15vw;
-  }
-
-  .range2 {
-    transform-origin: -15vw;
-  }
-}
-
-.color-box {
-  position: absolute;
-
-  .color {
-    transform: scale(0.6);
-    transform-origin: left;
-  }
-}
-
-.joystick-box {
-  position: relative;
-  justify-content: center;
-
-  .joystick {
-    transform: scale(0.6);
-  }
-}
-
-.debug-box {
-  position: absolute;
-  width: 100%;
-
-  .debug {
-    transform: scale(0.45);
-  }
-
-  .debug1 {
-    position: absolute;
-    transform-origin: left;
-  }
-
-  .debug2 {
-    position: absolute;
-    right: 15px;
-    transform-origin: right;
-  }
-}
-
-.bc {
-  width: 10vw;
 }
 
 [setting-box] {

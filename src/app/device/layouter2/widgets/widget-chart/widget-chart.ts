@@ -1,4 +1,4 @@
-import { Component, Input, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { Layouter2Widget } from '../config';
 import { CloudStorageService } from 'src/app/core/services/cloudStorage.service';
 import { LayouterService } from '../../../layouter.service';
@@ -24,7 +24,6 @@ export class WidgetChartComponent implements Layouter2Widget {
   // chart;
 
   showNoData = false;
-  showChart = false;
 
   get isHidden() {
     if (this.quickCode == 'rt') return this.data.length == 0;
@@ -156,11 +155,6 @@ export class WidgetChartComponent implements Layouter2Widget {
     return 0;
   }
 
-  @ViewChild('chartCanvas', { read: ElementRef, static: true })
-  chartCanvas: ElementRef;
-  @ViewChild('chartbox', { read: ElementRef, static: true })
-  chartBox: ElementRef;
-
   constructor(
     private cloudStorageService: CloudStorageService,
     private LayouterService: LayouterService
@@ -175,9 +169,6 @@ export class WidgetChartComponent implements Layouter2Widget {
       this.quickCode =
         localStorage.getItem(`${this.device.deviceName}:${this.key}`) ?? '1h';
     }
-    setTimeout(() => {
-      this.showChart = true;
-    }, 500);
   }
 
   ngOnDestroy(): void {

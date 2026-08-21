@@ -55,6 +55,7 @@ function emptySnapshot(): DeviceUiSnapshot {
 })
 export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   @Input({ required: true }) device!: BlinkerDevice;
+  @Input() embedded = false;
 
   accountState: DeviceUiConnectionState = 'idle';
   snapshot = emptySnapshot();

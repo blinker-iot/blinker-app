@@ -25,6 +25,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*",
+                "input": "device-template/dist",
+                "output": "device-template"
               }
             ],
             "styles": [
@@ -140,6 +145,7 @@
             "buildTarget": ":build:testing",
             "runner": "vitest",
             "runnerConfig": "vitest.config.ts",
+            "isolate": true,
             "setupFiles": ["src/test-setup.ts"]
           },
           "configurations": {

@@ -60,6 +60,13 @@ export const API = {
     RECEIVED_SHARE: (logicalDeviceId: string) =>
       API_V2_URL + '/shares/received/' + encodeURIComponent(logicalDeviceId),
   },
+  DEVICE: {
+    NEW_VERSION: API_V1_URL + '/user/device/ota/get',
+    OTA_STATE: API_V1_URL + '/user/device/ota/upgrade_status',
+    TIME_SERIES_DATA: API_V1_URL + '/user/device/pull_cloudStorage/',
+    LOAD_CONFIG: API_V1_URL + '/user/device/config/load',
+    SAVE_CONFIG: API_V1_URL + '/user/device/config/save',
+  },
   FEEDBACK: {
     SUBMIT: API_V1_URL + '/feedback/submit',
     UPLOAD_IMAGE: API_V1_URL + '/feedback/upload-image',
@@ -72,6 +79,7 @@ export const API = {
     UPLOAD_AVATAR: '',
     CHANGE_PASSWORD: API_V1_URL + '/user/password/change',
     CHANGE_PROFILE: API_V1_URL + '/user/profile/modify',
+    DEL_DEVICE: API_V1_URL + '/user/device/remove',
     CANCEL_ACCOUNT: API_V1_URL + '/user/cancel',
   },
   MESSAGE: API_V1_URL + '/user/message',

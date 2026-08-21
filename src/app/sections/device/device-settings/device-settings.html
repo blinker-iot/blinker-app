@@ -44,17 +44,17 @@
         </span>
       </div>
     </section>
-    @if (device.config.authKey && !isSharedDevice) {
+    @if (canRevealAuthKey && !isSharedDevice) {
     <section class="info-card">
       <div class="info-row">
         <span class="info-icon secret"><i class="fa-light fa-key"></i></span>
         <span class="info-copy">
           <small>{{ 'DEVICE.SECRET' | translate }}</small>
           <strong class="secret-value" [class.revealed]="showKey">
-            {{ showKey ? device.config.authKey : '••••••••••••' }}
+            {{ showKey ? displayedAuthKey : '••••••••••••' }}
           </strong>
         </span>
-        <button type="button" class="reveal-button" (click)="showAuthKey()" [disabled]="showKey">
+        <button type="button" class="reveal-button" (click)="showAuthKey()" [disabled]="showKey || revealingKey">
           <i class="fa-light" [class.fa-eye]="!showKey" [class.fa-eye-slash]="showKey"></i>
         </button>
       </div>
@@ -63,7 +63,7 @@
     <div class="section-label menu-section-label">设备功能</div>
     <app-menu-list [detailed]="true" [items]="deviceMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
     <div class="section-label danger-section-label">设备管理</div>
-    <app-menu-list [detailed]="true" [items]="dangerMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
+    <app-menu-list [detailed]="true" [items]="managementMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
   </main>
 </ion-content>
 }
