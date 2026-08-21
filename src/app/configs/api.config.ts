@@ -34,6 +34,7 @@ export const API = {
   },
   ACCOUNT: {
     ROOT: API_V1_URL + '/account',
+    DELETION_CODE: API_V1_URL + '/account/deletion-code',
     CONNECTION: API_V2_URL + '/account/connection',
   },
   DEVICE_V2: {
