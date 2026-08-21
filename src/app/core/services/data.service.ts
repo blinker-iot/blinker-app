@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { BehaviorSubject, Subject } from 'rxjs';
+import { createGuestDevicePreview } from '../data/guest-device-preview.data';
 import { AuthData, OrderData, ShareDate, UserData } from '../model/data.model';
 import { BlinkerDevice } from '../model/device.model';
 import {
@@ -61,6 +62,14 @@ export class DataService {
 
   get sessionEpoch(): number {
     return this._sessionEpoch;
+  }
+
+  loadGuestDevicePreview(force = false): void {
+    if (!force && this.auth?.uuid && this.auth?.token) return;
+
+    const preview = createGuestDevicePreview();
+    this.device = preview.device;
+    this.room = preview.room;
   }
 
   async init(): Promise<void> {

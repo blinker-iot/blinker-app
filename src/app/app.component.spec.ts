@@ -5,6 +5,7 @@ import { AppComponent } from './app.component';
 import { AudioService } from './core/services/audio.service';
 import { AuthService } from './core/services/auth.service';
 import { DataService } from './core/services/data.service';
+import { DeviceService } from './core/services/device.service';
 import { ImageService } from './core/services/image.service';
 import { NetworkService } from './core/services/network.service';
 import { NoticeService } from './core/services/notice.service';
@@ -19,6 +20,7 @@ import { ViewService } from './core/services/view.service';
 describe('AppComponent authentication startup', () => {
   it('restores auth before redirecting an unauthenticated development build', async () => {
     const restoreAuth = vi.fn().mockResolvedValue(undefined);
+    const initDevice = vi.fn();
     const isLogin = vi.fn().mockReturnValue(false);
     const navigateRoot = vi.fn();
     const userService = { getAllInfo: vi.fn() };
@@ -34,6 +36,7 @@ describe('AppComponent authentication startup', () => {
       { init: vi.fn() } as unknown as UpdateService,
       { init: vi.fn() } as unknown as NetworkService,
       { navigateRoot } as unknown as NavController,
+      { init: initDevice } as unknown as DeviceService,
       { init: vi.fn() } as unknown as ImageService,
       { list: [] } as unknown as ToastService,
       { list: [] } as unknown as TipService,
@@ -50,6 +53,7 @@ describe('AppComponent authentication startup', () => {
     expect(restoreAuth.mock.invocationCallOrder[0]).toBeLessThan(
       isLogin.mock.invocationCallOrder[0],
     );
+    expect(initDevice).toHaveBeenCalledOnce();
     expect(userService.getAllInfo).not.toHaveBeenCalled();
     expect(navigateRoot).toHaveBeenCalledWith('/login');
   });

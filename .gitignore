@@ -25,6 +25,7 @@ log.txt
 
 # Compiled output
 /dist
+/device-template/dist
 /tmp
 /out-tsc
 /bazel-out

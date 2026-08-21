@@ -39,6 +39,7 @@ export interface BlinkerDevice {
         public?: any,
         showSwitch?: boolean
         card?: DeviceCardConfig,
+        authKey?: string,
         component?: string,
         headerStyle?: 'dark' | 'light'
     },

@@ -33,8 +33,24 @@ describe('Angular test environment', () => {
       .toBe(true);
   });
 
-  it('does not register Legacy JSON device routes', () => {
-    expect(routes.some(route => route.path?.startsWith('device-manager'))).toBe(false);
-    expect(routes.some(route => route.path === 'old-device')).toBe(false);
+  it('registers the 3.0 device timer routes and omits the retired old-device guide', () => {
+    const timerRoute = routes.find(
+      (route) => route.path === 'device-manager/:id/timer',
+    );
+    const timerEditRoute = routes.find(
+      (route) => route.path === 'device-manager/:id/timer/:taskid',
+    );
+
+    expect(timerRoute?.loadComponent).toBeTypeOf('function');
+    expect(timerEditRoute?.loadComponent).toBeTypeOf('function');
+    expect(routes.some((route) => route.path === 'old-device')).toBe(false);
+  });
+
+  it('registers the device interface configuration route', () => {
+    const deviceUicRoute = routes.find(
+      (route) => route.path === 'device-manager/:id/uic',
+    );
+
+    expect(deviceUicRoute?.loadComponent).toBeTypeOf('function');
   });
 });

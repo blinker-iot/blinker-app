@@ -11,12 +11,14 @@ import { ActivatedRoute } from '@angular/router';
 import { DeviceIconPage } from '../../../core/pages/device-icon/device-icon';
 import { DataService } from 'src/app/core/services/data.service';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
+import { DeviceKeyContext } from 'src/app/core/model/response.model';
 import { TranslatePipe } from '@ngx-translate/core';
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { DeviceShortcutService } from 'src/app/core/services/device-shortcut.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
 import { DeviceV2SharingService } from 'src/app/core/services/device-v2-sharing.service';
+import { DeviceV2ManagementService } from 'src/app/core/services/device-v2-management.service';
 import {
   MenuListComponent,
   MenuListItem,
@@ -34,6 +36,8 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   device: BlinkerDevice;
 
   showKey = false;
+  revealingKey = false;
+  private revealedAuthKey = '';
 
   confirm;
 
@@ -41,6 +45,14 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   get isSharedDevice() {
     return Boolean(this.device?.config?.isShared);
+  }
+
+  get canRevealAuthKey(): boolean {
+    return !!this.device?.config?.authKey || this.deviceKeyContext !== null;
+  }
+
+  get displayedAuthKey(): string {
+    return this.revealedAuthKey || this.device?.config?.authKey || '';
   }
 
   get hasTimerTask() {
@@ -57,7 +69,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   get deviceMenuItems(): readonly MenuListItem[] {
-    return [
+    const items: MenuListItem[] = [
       {
         id: 'timer',
         title: '定时任务',
@@ -68,7 +80,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       },
       {
         id: 'location',
-        title: '设备位置设置',
+        title: '设备位置',
         description: '查看并更新设备所在位置',
         icon: 'fa-location-dot',
         route: `/device-manager/${this.id}/location`,
@@ -87,6 +99,22 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         icon: 'fa-database',
         route: `/device-manager/${this.id}/storage`,
       },
+    ];
+
+    if (this.deviceShortcutService.isAvailable) {
+      items.push({
+        id: 'shortcut',
+        title: '添加桌面快捷方式',
+        description: '使用设备图片创建直达该设备的桌面图标',
+        icon: 'fa-grid-2-plus',
+      });
+    }
+
+    return items;
+  }
+
+  get managementMenuItems(): readonly MenuListItem[] {
+    const items: MenuListItem[] = [
       {
         id: 'update',
         title: '固件更新',
@@ -102,16 +130,13 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         icon: 'fa-screwdriver-wrench',
       },
       {
-        id: 'layouter',
+        id: 'uic',
         title: '界面配置',
         description: '配置该设备的界面',
         icon: 'fa-grid-4',
+        route: `/device-manager/${this.id}/uic`,
       },
     ];
-  }
-
-  get dangerMenuItems(): readonly MenuListItem[] {
-    const items: MenuListItem[] = [];
     if (!this.isSharedDevice) {
       items.push({
         id: 'sharing',
@@ -119,15 +144,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         description: '邀请其他用户共同控制这台设备',
         icon: 'fa-user-group',
         route: `/share-manager/${this.id}?from=device-settings`,
-      });
-    }
-
-    if (this.deviceShortcutService.isAvailable) {
-      items.push({
-        id: 'shortcut',
-        title: '添加桌面快捷方式',
-        description: '使用设备图片创建直达该设备的桌面图标',
-        icon: 'fa-grid-2-plus',
       });
     }
 
@@ -163,6 +179,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private navCtrl: NavController,
     private modalCtrl: ModalController,
     private sharing: DeviceV2SharingService,
+    private management: DeviceV2ManagementService,
     private deviceShortcutService: DeviceShortcutService,
     private noticeService: NoticeService
   ) { }
@@ -194,8 +211,44 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     this.showChangeNameConfirm();
   }
 
-  showAuthKey() {
-    this.showKey = true;
+  private get deviceKeyContext(): DeviceKeyContext | null {
+    if (!this.device || this.device.config.mode !== 'bbp2') return null;
+    const managed = this.device as BlinkerDevice & Partial<DeviceKeyContext>;
+    const logicalDeviceId = managed.id || managed.deviceName;
+    if (
+      !logicalDeviceId ||
+      !Number.isSafeInteger(managed.credentialVersion) ||
+      (managed.credentialVersion ?? 0) < 1 ||
+      !managed.locator
+    ) {
+      return null;
+    }
+    return {
+      logicalDeviceId,
+      credentialVersion: managed.credentialVersion!,
+      locator: managed.locator,
+    };
+  }
+
+  async showAuthKey(): Promise<void> {
+    if (this.device.config.authKey) {
+      this.showKey = true;
+      return;
+    }
+    const context = this.deviceKeyContext;
+    if (!context || this.revealingKey) return;
+
+    this.revealingKey = true;
+    try {
+      const response = await this.management.revealDeviceKeyV2(context);
+      this.revealedAuthKey = response.data.deviceKey;
+      this.showKey = true;
+    } catch (error) {
+      console.error('Failed to reveal Device V2 key', error);
+      await this.noticeService.showToast('设备密钥读取失败，请稍后重试');
+    } finally {
+      this.revealingKey = false;
+    }
   }
 
   async showChangeNameConfirm() {
@@ -281,7 +334,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
                 console.error('Failed to leave Device V2 share', error);
               }
               this.userService.getAllInfo();
-            } else if (await this.userService.delDevice(this.device)) {
+            } else if (await this.removeOwnedDevice()) {
               this.navCtrl.navigateRoot('/');
               this.userService.getAllInfo();
             }
@@ -290,6 +343,22 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       ],
     });
     this.confirm.present();
+  }
+
+  private async removeOwnedDevice(): Promise<boolean> {
+    try {
+      if (this.device.config.mode === 'bbp2') {
+        const id = this.device.id || this.device.deviceName;
+        if (!id) throw new Error('设备标识无效');
+        await this.management.deleteDeviceV2(id);
+        return true;
+      }
+      return await this.userService.delDevice(this.device);
+    } catch (error) {
+      console.error('Failed to remove device', error);
+      await this.noticeService.showToast('设备解绑失败，请稍后重试');
+      return false;
+    }
   }
 
   async addShortcut() {
