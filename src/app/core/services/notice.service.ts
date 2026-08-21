@@ -114,6 +114,9 @@ export class NoticeService {
     "login": {
       message: `登录中...`
     },
+    "cancelAccount": {
+      message: `正在验证并注销账号...`
+    },
     "load": {
       message: `加载中...`
     },
