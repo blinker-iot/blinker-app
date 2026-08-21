@@ -57,7 +57,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   get deviceMenuItems(): readonly MenuListItem[] {
-    return [
+    const items: MenuListItem[] = [
       {
         id: 'timer',
         title: '定时任务',
@@ -87,6 +87,22 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         icon: 'fa-database',
         route: `/device-manager/${this.id}/storage`,
       },
+    ];
+
+    if (this.deviceShortcutService.isAvailable) {
+      items.push({
+        id: 'shortcut',
+        title: '添加桌面快捷方式',
+        description: '使用设备图片创建直达该设备的桌面图标',
+        icon: 'fa-grid-2-plus',
+      });
+    }
+
+    return items;
+  }
+
+  get managementMenuItems(): readonly MenuListItem[] {
+    const items: MenuListItem[] = [
       {
         id: 'update',
         title: '固件更新',
@@ -108,10 +124,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         icon: 'fa-grid-4',
       },
     ];
-  }
-
-  get dangerMenuItems(): readonly MenuListItem[] {
-    const items: MenuListItem[] = [];
     if (!this.isSharedDevice) {
       items.push({
         id: 'sharing',
@@ -119,15 +131,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         description: '邀请其他用户共同控制这台设备',
         icon: 'fa-user-group',
         route: `/share-manager/${this.id}?from=device-settings`,
-      });
-    }
-
-    if (this.deviceShortcutService.isAvailable) {
-      items.push({
-        id: 'shortcut',
-        title: '添加桌面快捷方式',
-        description: '使用设备图片创建直达该设备的桌面图标',
-        icon: 'fa-grid-2-plus',
       });
     }
 
