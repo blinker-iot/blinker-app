@@ -40,8 +40,7 @@ export interface BlinkerDevice {
         showSwitch?: boolean
         card?: DeviceCardConfig,
         component?: string,
-        headerStyle?: 'dark' | 'light',
-        authKey?: string
+        headerStyle?: 'dark' | 'light'
     },
     data: any,
     storage: any,

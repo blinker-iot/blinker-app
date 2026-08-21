@@ -10,98 +10,75 @@
 <ion-content fullscreen="true">
   <main>
     <section class="device-hero">
-      <span class="hero-icon" aria-hidden="true">
-        <i class="fa-light fa-share-nodes"></i>
-      </span>
+      <span class="hero-icon" aria-hidden="true"><i class="fa-light fa-share-nodes"></i></span>
       <div>
         <span class="eyebrow">当前设备</span>
         <h1>{{ device?.config?.customName || '设备' }}</h1>
-        <p>邀请其他用户共同控制这台设备。</p>
+        <p>通过单次邀请码共享查看或控制权限。</p>
       </div>
-      <span class="member-count">{{ sharedUserCount }} 人</span>
+      <span class="member-count">{{ sharedUserCount }} 项</span>
     </section>
 
-    <div class="section-label">共享成员</div>
-
+    <div class="section-label">共享成员与待领取邀请</div>
     @if (sharedUserCount) {
     <section class="member-card">
-      @for (item of pendingShares; track item; let i = $index) {
+      @for (item of pendingShares; track item.invitationId) {
       <article class="member-row">
-        <span class="avatar-box">
-          <img
-            class="avatar"
-            [src]="AVATAR_API + item.userId + '.jpg'"
-            alt=""
-          />
+        <span class="avatar-box placeholder-avatar">
+          <i class="fa-light fa-ticket" aria-hidden="true"></i>
           <span class="status-dot pending" aria-hidden="true"></span>
         </span>
         <span class="member-copy">
-          <strong>{{ item.username }}</strong>
-          <small>等待对方接受</small>
+          <strong>待领取邀请 · {{ roleLabel(item.role) }}</strong>
+          <small>{{ item.expiresAt | msToDate }} 到期</small>
         </span>
-        <span class="member-status pending-status">待接受</span>
-        <button
-          type="button"
-          class="remove-action"
-          [disabled]="share0Selected === i"
-          (click)="cancel0(item.uuid, i)"
-        >
-          撤销
-        </button>
+        <span class="member-status pending-status">待领取</span>
+        <button type="button" class="remove-action"
+          [disabled]="busyId === item.invitationId"
+          (click)="cancelInvitation(item.invitationId)">撤销</button>
       </article>
-      } @for (item of activeShares; track item; let i = $index) {
+      }
+      @for (item of activeShares; track item.shareId) {
       <article class="member-row">
-        <span class="avatar-box">
-          <img
-            class="avatar"
-            [src]="AVATAR_API + item.userId + '.jpg'"
-            alt=""
-          />
+        <span class="avatar-box placeholder-avatar">
+          <i class="fa-light fa-user-shield" aria-hidden="true"></i>
           <span class="status-dot active" aria-hidden="true"></span>
         </span>
         <span class="member-copy">
-          <strong>{{ item.username }}</strong>
-          <small>{{ item.date | msToDate }} 开始共享</small>
+          <strong>成员 {{ item.memberRef || item.shareId }}</strong>
+          <small>{{ item.createdAt | msToDate }} 开始共享</small>
         </span>
-        <span class="member-status active-status">已共享</span>
-        <button
-          type="button"
-          class="remove-action"
-          [disabled]="shareSelected === i"
-          (click)="cancel(item.uuid, i)"
-        >
-          移除
-        </button>
+        <button type="button" class="member-status active-status role-action"
+          [disabled]="busyId === item.shareId"
+          (click)="toggleRole(item.shareId, item.role)">{{ roleLabel(item.role) }}</button>
+        <button type="button" class="remove-action"
+          [disabled]="busyId === item.shareId"
+          (click)="removeShare(item.shareId)">移除</button>
       </article>
       }
     </section>
-    } @if (!sharedUserCount) {
+    } @else {
     <section class="empty-state">
-      <span class="empty-icon" aria-hidden="true"
-        ><i class="fa-light fa-user-plus"></i
-      ></span>
+      <span class="empty-icon" aria-hidden="true"><i class="fa-light fa-user-plus"></i></span>
       <strong>还没有共享成员</strong>
-      <p>点击下方按钮，通过手机号邀请一位用户。</p>
+      <p>生成一次性邀请码，由另一个账号在 App 内领取。</p>
     </section>
     }
 
     <aside class="security-tip">
       <i class="fa-light fa-shield-check" aria-hidden="true"></i>
-      <p>
-        <strong>共享建议</strong
-        ><span>仅向你信任的用户共享设备，你可以随时撤销权限。</span>
-      </p>
+      <p><strong>权限随时生效</strong><span>点击角色可切换权限；移除后旧会话会失效。</span></p>
     </aside>
   </main>
 </ion-content>
 
-@if (device) {
+@if (device && !device.config.isShared) {
 <ion-footer class="share-detail-footer ion-no-border">
   <ion-toolbar>
     <div class="footer-shell">
       <button type="button" class="primary-action" (click)="addShare()">
-        <i class="fa-light fa-user-plus" aria-hidden="true"></i>
-        <span>添加共享成员</span>
+        <i class="fa-light fa-ticket" aria-hidden="true"></i>
+        <span>生成共享邀请码</span>
       </button>
     </div>
   </ion-toolbar>

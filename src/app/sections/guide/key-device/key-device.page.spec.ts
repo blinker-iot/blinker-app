@@ -1,11 +1,10 @@
-import { Clipboard } from '@capacitor/clipboard';
 import { Subject } from 'rxjs';
 
 import { GatewayHttpError } from '../../../core/model/response.model';
 import { KeyDeviceGuidePage } from './key-device.page';
 
 describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
-  const diagnosticKey = 'A'.repeat(43);
+  const deviceKey = 'A'.repeat(43);
 
   function deferred<T>() {
     let resolve!: (value: T) => void;
@@ -90,7 +89,7 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
         logicalDeviceId: 'logical/device #1',
         credentialVersion: 1,
         locator: 'A'.repeat(22),
-        deviceKey: diagnosticKey,
+        deviceKey,
       },
     };
   }
@@ -137,7 +136,7 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
     });
     expect(deviceService.createDevice).not.toHaveBeenCalled();
     expect(page.phase).toBe('revealed');
-    expect(page.secretKey).toBe(diagnosticKey);
+    expect(page.secretKey).toBe(deviceKey);
   });
 
   it('retries only reveal with the original logical device context', async () => {
@@ -381,7 +380,7 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
     deviceService.createDeviceKeyV2.mockResolvedValue(createResponse());
     deviceService.revealDeviceKeyV2.mockResolvedValue(revealResponse());
     await page.createKeyDevice();
-    expect(page.secretKey).toBe(diagnosticKey);
+    expect(page.secretKey).toBe(deviceKey);
 
     dataService.sessionEpoch += 1;
     dataService.auth = { accessToken: 'second-session-token' };
@@ -392,26 +391,52 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
     expect(navController.navigateRoot).not.toHaveBeenCalledWith('/login');
   });
 
-  it('does not write to Clipboard when diagnostic display is disabled', async () => {
+  it('copies a revealed DeviceKey without persisting it', async () => {
     const { page, toastController } = createHarness();
-    const clipboardWrite = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(Clipboard, 'write', {
-      configurable: true,
-      value: clipboardWrite,
-    });
-    Object.defineProperty(page, 'diagnosticKeyDisplayEnabled', {
-      value: false,
-    });
+    const clipboardWrite = vi
+      .spyOn(page as any, 'writeClipboard')
+      .mockResolvedValue(undefined);
     page.phase = 'revealed';
-    page.secretKey = diagnosticKey;
+    page.secretKey = deviceKey;
 
     try {
       await page.copyKey();
 
-      expect(clipboardWrite).not.toHaveBeenCalled();
-      expect(toastController.create).not.toHaveBeenCalled();
+      expect(clipboardWrite).toHaveBeenCalledWith(deviceKey);
+      expect(toastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'DEVICE_GUIDE.KEY_COPIED' })
+      );
     } finally {
-      Reflect.deleteProperty(Clipboard, 'write');
+      clipboardWrite.mockRestore();
+    }
+  });
+
+  it('keeps the Arduino example aligned with the public Wi-Fi facade', () => {
+    const { page } = createHarness();
+
+    expect(page.arduinoExample).toContain('#include <BlinkerWiFi.h>');
+    expect(page.arduinoExample).toContain('Blinker.begin(');
+    expect(page.arduinoExample).toContain('REPLACE_WITH_DEVICE_KEY');
+    expect(page.arduinoExample).not.toContain(deviceKey);
+  });
+
+  it('reports a Clipboard failure without clearing the visible key', async () => {
+    const { page, toastController } = createHarness();
+    const clipboardWrite = vi
+      .spyOn(page as any, 'writeClipboard')
+      .mockRejectedValue(new Error('denied'));
+    page.phase = 'revealed';
+    page.secretKey = deviceKey;
+
+    try {
+      await page.copyKey();
+
+      expect(page.secretKey).toBe(deviceKey);
+      expect(toastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'DEVICE_GUIDE.KEY_COPY_FAILED' })
+      );
+    } finally {
+      clipboardWrite.mockRestore();
     }
   });
 });

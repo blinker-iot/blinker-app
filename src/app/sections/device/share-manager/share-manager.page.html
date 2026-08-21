@@ -1,138 +1,75 @@
 <ion-header class="share-header">
   <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button
-        text=""
-        defaultHref="/home/profile"
-      ></ion-back-button>
-    </ion-buttons>
+    <ion-buttons slot="start"><ion-back-button text="" defaultHref="/home/profile"></ion-back-button></ion-buttons>
     <ion-title>{{ 'MENU.DEVICE_SHARING' | translate }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content fullscreen="true">
   <main>
-    <app-hero-card
-      iconClass="fa-light fa-user-group"
-      eyebrow="DEVICE SHARING"
-      heading="与信任的人共享设备"
-      description="管理你发出和接收的设备共享。"
-      [meta]="sharedByMeCount"
-    />
+    <app-hero-card iconClass="fa-light fa-user-group" eyebrow="DEVICE SHARING"
+      heading="与信任的人共享设备" description="通过单次邀请码管理查看和控制权限。"
+      [meta]="sharedByMeCount" />
 
-    <app-tab-selector
-      ariaLabel="设备共享分类"
-      [options]="shareTabs"
-      [value]="tab"
-      (valueChange)="changeTab($event)"
-    />
+    <app-tab-selector ariaLabel="设备共享分类" [options]="shareTabs" [value]="tab"
+      (valueChange)="changeTab($event)" />
 
-    @if (loaded) { @if (tab === 'sharing') {
-    <div class="section-label">可共享设备</div>
-    @if (shareableDeviceList.length) {
-    <section class="device-card">
-      @for (deviceId of shareableDeviceList; track deviceId) {
-      <button
-        type="button"
-        class="device-row"
-        [routerLink]="['/share-manager', deviceId]"
-      >
-        <span class="device-image">
-          <b-device-img [deviceId]="deviceId"></b-device-img>
-        </span>
-        <span class="device-copy">
-          <strong>{{ deviceDataDict[deviceId]?.config?.customName }}</strong>
-          @if (!shareData.share[deviceId]?.length) {
-          <small>尚未共享</small>
-          } @if (shareData.share[deviceId]?.length) {
-          <small>
-            已与 {{ shareData.share[deviceId].length }} 位用户共享
-          </small>
-          }
-        </span>
-        <span
-          class="row-status"
-          [class.active]="shareData.share[deviceId]?.length"
-        >
-          {{ shareData.share[deviceId]?.length ? '共享中' : '可共享' }}
-        </span>
-        <i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i>
-      </button>
-      }
-    </section>
-    } @if (!shareableDeviceList.length) {
-    <section class="empty-state">
-      <span class="empty-icon" aria-hidden="true"
-        ><i class="fa-light fa-box-open"></i
-      ></span>
-      <strong>暂无可共享设备</strong>
-      <p>添加并绑定设备后，即可邀请其他用户共同使用。</p>
-    </section>
-    } } @if (tab === 'received') {
-    <div class="section-label">接收列表</div>
-    @if (shareData.shared.length || shareData.shared0.length) {
-    <section class="device-card received-card">
-      @for (item of shareData.shared0; track item; let i = $index) {
-      <article class="device-row received-row">
-        <span class="device-image">
-          <b-device-img [filename]="item.image"></b-device-img>
-        </span>
-        <span class="device-copy">
-          <strong>{{ item.customName }}</strong>
-          <small>来自 {{ item.master }} 的邀请</small>
-        </span>
-        <span class="row-actions">
-          <button
-            type="button"
-            class="accept"
-            [disabled]="pendingAcceptSelected === i || pendingRefuseSelected === i"
-            (click)="accept(item.taskId, i)"
-          >
-            接受
-          </button>
-          <button
-            type="button"
-            class="refuse"
-            [disabled]="pendingAcceptSelected === i || pendingRefuseSelected === i"
-            (click)="refuse(item.taskId, i)"
-          >
-            拒绝
-          </button>
-        </span>
-      </article>
-      } @for (item of shareData.shared; track item; let i = $index) {
-      <article class="device-row received-row">
-        <span class="device-image">
-          <b-device-img [filename]="item.image"></b-device-img>
-        </span>
-        <span class="device-copy">
-          <strong>{{ item.customName }}</strong>
-          <small>由 {{ item.master }} 共享</small>
-        </span>
-        <button
-          type="button"
-          class="cancel-action"
-          [disabled]="sharedSelected === i"
-          (click)="cancel(item.deviceName, i)"
-        >
-          退出
+    @if (loaded) {
+      @if (tab === 'sharing') {
+      <div class="section-label">可共享设备</div>
+      @if (shareableDeviceList.length) {
+      <section class="device-card">
+        @for (deviceId of shareableDeviceList; track deviceId) {
+        <button type="button" class="device-row" [routerLink]="['/share-manager', deviceId]">
+          <span class="device-image"><b-device-img [deviceId]="deviceId"></b-device-img></span>
+          <span class="device-copy">
+            <strong>{{ deviceDataDict[deviceId]?.config?.customName }}</strong>
+            <small>{{ activeShareCount(deviceId) ? '已共享给 ' + activeShareCount(deviceId) + ' 位成员' : '尚未共享' }}</small>
+          </span>
+          <span class="row-status" [class.active]="activeShareCount(deviceId)">
+            {{ activeShareCount(deviceId) ? '共享中' : '可共享' }}
+          </span>
+          <i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i>
         </button>
-      </article>
+        }
+      </section>
+      } @else {
+      <section class="empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="fa-light fa-box-open"></i></span>
+        <strong>暂无可共享设备</strong><p>添加并绑定设备后，即可生成共享邀请码。</p>
+      </section>
       }
-    </section>
-    } @if (shareData.shared.length === 0 && shareData.shared0.length === 0) {
-    <section class="empty-state">
-      <span class="empty-icon received-empty-icon" aria-hidden="true">
-        <i class="fa-light fa-inbox"></i>
-      </span>
-      <strong>暂无接收的设备</strong>
-      <p>其他用户发出共享邀请后，会在这里显示。</p>
-    </section>
-    } } } @else {
-    <section class="loading-state">
-      <ion-spinner name="crescent"></ion-spinner>
-      <span>正在加载共享信息…</span>
-    </section>
+      } @else {
+      <div class="received-heading">
+        <div class="section-label">接收列表</div>
+        <button type="button" class="accept-code-action" (click)="showAcceptInvitation()">
+          <i class="fa-light fa-ticket" aria-hidden="true"></i> 输入邀请码
+        </button>
+      </div>
+      @if (receivedDevices.length) {
+      <section class="device-card received-card">
+        @for (item of receivedDevices; track item.logicalDeviceId) {
+        <article class="device-row received-row">
+          <span class="device-image"><b-device-img [deviceId]="item.logicalDeviceId"></b-device-img></span>
+          <a class="device-copy received-link" [routerLink]="['/device', item.logicalDeviceId]">
+            <strong>{{ item.name }}</strong>
+            <small>{{ roleLabel(item.share.role) }}</small>
+          </a>
+          <button type="button" class="cancel-action"
+            [disabled]="busyDeviceId === item.logicalDeviceId"
+            (click)="leaveShare(item.logicalDeviceId)">退出</button>
+        </article>
+        }
+      </section>
+      } @else {
+      <section class="empty-state">
+        <span class="empty-icon received-empty-icon" aria-hidden="true"><i class="fa-light fa-inbox"></i></span>
+        <strong>暂无接收的设备</strong><p>输入设备所有者发给你的单次邀请码。</p>
+      </section>
+      }
+      }
+    } @else {
+    <section class="loading-state"><ion-spinner name="crescent"></ion-spinner><span>正在加载共享信息…</span></section>
     }
   </main>
 </ion-content>

@@ -90,7 +90,7 @@ describe('ServerInterceptor', () => {
     request.flush({ status: 200, data: {} });
   });
 
-  it('adds App auth only to exact DeviceKey V2 management endpoints', () => {
+  it('adds App auth only to Device V2 management endpoints', () => {
     const context = {
       logicalDeviceId: 'device/a b',
       credentialVersion: 1,
@@ -98,13 +98,19 @@ describe('ServerInterceptor', () => {
     };
     const managementUrls = [
       API.DEVICE_V2.CREATE,
+      API.DEVICE_V2.DETAIL(context.logicalDeviceId),
       API.DEVICE_V2.REVEAL(context.logicalDeviceId),
       API.DEVICE_V2.ROTATE(context.logicalDeviceId),
+      API.DEVICE_V2.SHARES(context.logicalDeviceId),
+      API.DEVICE_V2.SHARE_INVITATIONS(context.logicalDeviceId),
+      API.DEVICE_V2.SHARE(context.logicalDeviceId, 'share-1'),
+      API.DEVICE_V2.ACCEPT_SHARE,
+      API.DEVICE_V2.RECEIVED_SHARES,
+      API.DEVICE_V2.RECEIVED_SHARE(context.logicalDeviceId),
     ];
     const deviceUrls = [
       API.BASE_URL + '/api/v2/device-auth/challenges',
       API.BASE_URL + '/api/v2/device-sessions',
-      API.BASE_URL + '/api/v2/devices/device-only-detail',
     ];
 
     for (const url of managementUrls) {
@@ -203,8 +209,8 @@ describe('ServerInterceptor', () => {
 
   it('normalizes errors and never refreshes a 403', () => {
     let received: unknown;
-    http.get(API.DEVICE.LIST).subscribe({ error: (error) => (received = error) });
-    const request = httpTesting.expectOne(API.DEVICE.LIST);
+    http.get(API.DEVICE_V2.LIST).subscribe({ error: (error) => (received = error) });
+    const request = httpTesting.expectOne(API.DEVICE_V2.LIST);
     request.flush(
       {
         errorCode: 'DEVICE_ENTITLEMENT_INVALID',
@@ -378,7 +384,7 @@ describe('ServerInterceptor', () => {
     http.get<{ value: string }>(API.AUTH.ME).subscribe((body) => {
       results.push(body.value);
     });
-    http.get<{ value: string }>(API.DEVICE.LIST).subscribe((body) => {
+    http.get<{ value: string }>(API.DEVICE_V2.LIST).subscribe((body) => {
       results.push(body.value);
     });
 
@@ -386,7 +392,7 @@ describe('ServerInterceptor', () => {
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
       { status: 401, statusText: 'Unauthorized' },
     );
-    httpTesting.expectOne(API.DEVICE.LIST).flush(
+    httpTesting.expectOne(API.DEVICE_V2.LIST).flush(
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
       { status: 401, statusText: 'Unauthorized' },
     );
@@ -408,7 +414,7 @@ describe('ServerInterceptor', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     const replayMe = httpTesting.expectOne(API.AUTH.ME);
-    const replayDevices = httpTesting.expectOne(API.DEVICE.LIST);
+    const replayDevices = httpTesting.expectOne(API.DEVICE_V2.LIST);
     expect(replayMe.request.headers.get('Authorization')).toBe('Bearer new-access');
     expect(replayDevices.request.headers.get('Authorization')).toBe(
       'Bearer new-access',
@@ -441,12 +447,12 @@ describe('ServerInterceptor', () => {
     http.get<{ value: string }>(API.AUTH.ME).subscribe((body) => {
       results.push(body.value);
     });
-    http.get<{ value: string }>(API.DEVICE.LIST).subscribe((body) => {
+    http.get<{ value: string }>(API.DEVICE_V2.LIST).subscribe((body) => {
       results.push(body.value);
     });
 
     const first = httpTesting.expectOne(API.AUTH.ME);
-    const late = httpTesting.expectOne(API.DEVICE.LIST);
+    const late = httpTesting.expectOne(API.DEVICE_V2.LIST);
     first.flush(
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
       { status: 401, statusText: 'Unauthorized' },
@@ -468,7 +474,7 @@ describe('ServerInterceptor', () => {
     releaseStorage();
     await new Promise((resolve) => setTimeout(resolve, 0));
     const replayMe = httpTesting.expectOne(API.AUTH.ME);
-    const replayDevices = httpTesting.expectOne(API.DEVICE.LIST);
+    const replayDevices = httpTesting.expectOne(API.DEVICE_V2.LIST);
     replayMe.flush({ value: 'me' });
     replayDevices.flush({ value: 'devices' });
 
@@ -480,12 +486,12 @@ describe('ServerInterceptor', () => {
     http.get<{ value: string }>(API.AUTH.ME).subscribe((body) => {
       results.push(body.value);
     });
-    http.get<{ value: string }>(API.DEVICE.LIST).subscribe((body) => {
+    http.get<{ value: string }>(API.DEVICE_V2.LIST).subscribe((body) => {
       results.push(body.value);
     });
 
     const first = httpTesting.expectOne(API.AUTH.ME);
-    const late = httpTesting.expectOne(API.DEVICE.LIST);
+    const late = httpTesting.expectOne(API.DEVICE_V2.LIST);
     first.flush(
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
       { status: 401, statusText: 'Unauthorized' },
@@ -511,7 +517,7 @@ describe('ServerInterceptor', () => {
       { status: 401, statusText: 'Unauthorized' },
     );
     httpTesting.expectNone(API.AUTH.REFRESH);
-    const replayLate = httpTesting.expectOne(API.DEVICE.LIST);
+    const replayLate = httpTesting.expectOne(API.DEVICE_V2.LIST);
     expect(replayLate.request.headers.get('Authorization')).toBe(
       'Bearer new-access',
     );
@@ -522,9 +528,9 @@ describe('ServerInterceptor', () => {
 
   it('waits for a second refresh before replaying a two-generation stale request', async () => {
     http.get(API.AUTH.ME).subscribe();
-    http.get(API.DEVICE.LIST).subscribe();
+    http.get(API.DEVICE_V2.LIST).subscribe();
     const firstA = httpTesting.expectOne(API.AUTH.ME);
-    const lateA = httpTesting.expectOne(API.DEVICE.LIST);
+    const lateA = httpTesting.expectOne(API.DEVICE_V2.LIST);
     firstA.flush(
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
       { status: 401, statusText: 'Unauthorized' },
@@ -550,7 +556,7 @@ describe('ServerInterceptor', () => {
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
       { status: 401, statusText: 'Unauthorized' },
     );
-    httpTesting.expectNone(API.DEVICE.LIST);
+    httpTesting.expectNone(API.DEVICE_V2.LIST);
 
     refreshToC.flush({
       status: 200,
@@ -562,7 +568,7 @@ describe('ServerInterceptor', () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
     const replayCurrent = httpTesting.expectOne(API.ACCOUNT.CONNECTION);
-    const replayStale = httpTesting.expectOne(API.DEVICE.LIST);
+    const replayStale = httpTesting.expectOne(API.DEVICE_V2.LIST);
     expect(replayCurrent.request.headers.get('Authorization')).toBe(
       'Bearer token-c',
     );
@@ -579,11 +585,11 @@ describe('ServerInterceptor', () => {
   it('does not clear the session when an old replay fails during its token refresh', async () => {
     let staleError: unknown;
     http.get(API.AUTH.ME).subscribe();
-    http.get(API.DEVICE.LIST).subscribe({
+    http.get(API.DEVICE_V2.LIST).subscribe({
       error: (error) => (staleError = error),
     });
     const firstA = httpTesting.expectOne(API.AUTH.ME);
-    const lateA = httpTesting.expectOne(API.DEVICE.LIST);
+    const lateA = httpTesting.expectOne(API.DEVICE_V2.LIST);
     firstA.flush(
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
       { status: 401, statusText: 'Unauthorized' },
@@ -603,7 +609,7 @@ describe('ServerInterceptor', () => {
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
       { status: 401, statusText: 'Unauthorized' },
     );
-    const replayStale = httpTesting.expectOne(API.DEVICE.LIST);
+    const replayStale = httpTesting.expectOne(API.DEVICE_V2.LIST);
     http.get(API.ACCOUNT.CONNECTION).subscribe();
     httpTesting.expectOne(API.ACCOUNT.CONNECTION).flush(
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
@@ -674,11 +680,11 @@ describe('ServerInterceptor', () => {
       refreshToken: 'other-account-refresh',
       tokenType: 'bearer',
     });
-    http.get(API.DEVICE.LIST).subscribe({
+    http.get(API.DEVICE_V2.LIST).subscribe({
       next: (value) => (newValue = value),
       error: (error) => (newError = error),
     });
-    httpTesting.expectOne(API.DEVICE.LIST).flush(
+    httpTesting.expectOne(API.DEVICE_V2.LIST).flush(
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
       { status: 401, statusText: 'Unauthorized' },
     );
@@ -695,7 +701,7 @@ describe('ServerInterceptor', () => {
       },
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
-    const replayNew = httpTesting.expectOne(API.DEVICE.LIST);
+    const replayNew = httpTesting.expectOne(API.DEVICE_V2.LIST);
     expect(replayNew.request.headers.get('Authorization')).toBe(
       'Bearer other-account-new-access',
     );

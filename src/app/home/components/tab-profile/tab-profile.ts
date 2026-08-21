@@ -73,7 +73,7 @@ export class TabProfileComponent {
   }
 
   get sharedDeviceNum() {
-    return this.dataService.share?.shared?.length || 3;
+    return this.dataService.share?.received?.length ?? 0;
   }
 
   get showNewVersion() {

@@ -187,7 +187,7 @@ describe('DataService', () => {
     expect(service.auth?.accessToken).toBe('new-login-access');
   });
 
-  it('maps Gateway DTOs onto the existing device model without clearing other domains', async () => {
+  it('maps V2 inventory onto the app device model without clearing other domains', async () => {
     await service.setAuthData({
       accessToken: 'access',
       refreshToken: 'refresh',
@@ -211,10 +211,8 @@ describe('DataService', () => {
     const room = { dict: { Bedroom: [deviceId] }, list: ['Bedroom'] };
     const scene = { dict: { Night: {} }, list: ['Night'] };
     const share = {
-      share: {},
-      share0: {},
-      shared: [{ deviceName: deviceId }],
-      shared0: [],
+      byDevice: {},
+      received: [],
     };
     const brokers = { dict: { blinker: { connected: true } }, list: ['blinker'] };
     service.room = room;
@@ -244,54 +242,17 @@ describe('DataService', () => {
       },
       [
         {
-          deviceId,
+          logicalDeviceId: deviceId,
           tenantId: 'tenant-1',
           name: 'Temperature sensor',
           deviceType: 'diy',
-          status: 'disabled',
+          state: 'active',
+          credentialVersion: 1,
+          locator: 'AQIDBA',
           createdAt: 1,
           updatedAt: 2,
         },
       ],
-      {
-        configs: {
-          [deviceId]: {
-            config: {
-              customName: 'Bedroom sensor',
-              image: { invalid: true },
-              broker: 'custom-broker',
-              mode: 'mqtt',
-              disabled: false,
-              showSwitch: 'invalid',
-              card: { layout: 'wide', metrics: 'invalid', actions: [] },
-              layouter: {
-                dashboard: [null, { type: 'tex' }],
-                actions: [],
-                triggers: [],
-              },
-              authKey: 'do-not-expose',
-              auth_key: 'legacy-auth-key',
-              isPreview: true,
-              previewNearby: true,
-              isShared: true,
-            },
-          },
-        },
-        statuses: {
-          [deviceId]: { status: { mqttOnline: true } } as any,
-        },
-        snapshots: {
-          [deviceId]: {
-            data: {
-              data: {
-                temperature: 23.5,
-                state: 'offline',
-                enable: false,
-              },
-            },
-          } as any,
-        },
-      },
     );
 
     const device = service.device.dict[deviceId];
@@ -299,32 +260,16 @@ describe('DataService', () => {
     expect(device.id).toBe(deviceId);
     expect(device.deviceName).toBe(deviceId);
     expect(device.config).toMatchObject({
-      customName: 'Bedroom sensor',
+      customName: 'Previous name',
       image: 'diyarduino.png',
-      broker: 'custom-broker',
-      mode: 'mqtt',
+      broker: 'blinker',
+      mode: 'bbp2',
       disabled: false,
-      card: { layout: 'wide', metrics: 'invalid', actions: [] },
-    });
-    expect(device.config.showSwitch).toBe('invalid');
-    expect(device.config.authKey).toBeUndefined();
-    expect(device.config['auth_key']).toBeUndefined();
-    expect(device.config.isPreview).toBe(true);
-    expect(device.config.previewNearby).toBe(true);
-    expect(device.config.isShared).toBe(true);
-    expect(device.config.configWriteSupported).toBeUndefined();
-    expect(device.config.realtimeControlSupported).toBeUndefined();
-    expect(device.config.gatewayMqttOnline).toBeUndefined();
-    expect(JSON.parse(device.config.layouter || '')).toEqual({
-      dashboard: [null, { type: 'tex' }],
-      actions: [],
-      triggers: [],
     });
     expect(device.data).toMatchObject({
       humidity: 45,
-      temperature: 23.5,
-      state: 'online',
-      enable: true,
+      state: 'waiting',
+      enable: false,
     });
     expect(device.storage).toBe(storage);
     expect(device.subject).toBe(subject);

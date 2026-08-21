@@ -331,6 +331,26 @@ app-hero-card {
   text-align: left;
 }
 
+.setup-example {
+  > div {
+    min-width: 0;
+    flex: 1;
+  }
+
+  pre {
+    max-width: 100%;
+    margin: 10px 0 0;
+    padding: 11px;
+    overflow-x: auto;
+    border-radius: 9px;
+    background: var(--blinker-bg-elevated);
+    color: var(--blinker-text-primary);
+    font-size: 9px;
+    line-height: 1.55;
+    white-space: pre;
+  }
+}
+
 .complete-action {
   margin-top: auto;
 }

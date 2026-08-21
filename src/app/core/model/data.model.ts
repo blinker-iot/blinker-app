@@ -1,4 +1,6 @@
 import type {
+    DeviceV2OwnerShares,
+    DeviceV2ReceivedDevice,
     GatewayEntitlements,
     GatewaySubscriptionPlan,
 } from './response.model';
@@ -32,8 +34,6 @@ export interface OrderData {
 }
 
 export interface ShareDate {
-    share: any,
-    share0: any,
-    shared: any[],
-    shared0: any[]
+    byDevice: Record<string, DeviceV2OwnerShares>;
+    received: DeviceV2ReceivedDevice[];
 }

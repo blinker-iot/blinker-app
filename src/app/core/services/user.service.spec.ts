@@ -46,7 +46,7 @@ describe('UserService API contracts', () => {
     vi.restoreAllMocks();
   });
 
-  it('hydrates the app model from /auth/me, /devices and the device subresources', async () => {
+  it('loads the V2 device inventory without Legacy JSON subresource requests', async () => {
     const deviceId = 'device_1234567890abcdef';
     const loading = service.getAllInfo();
 
@@ -71,42 +71,46 @@ describe('UserService API contracts', () => {
         entitlements: {},
       },
     });
-    httpTesting.expectOne(API.DEVICE.LIST).flush({
-      devices: [
+    httpTesting.expectOne(API.DEVICE_V2.LIST).flush({
+      status: 200,
+      data: { devices: [
         {
-          deviceId,
+          logicalDeviceId: deviceId,
           tenantId: 'tenant-1',
           name: 'Sensor',
           deviceType: 'diy',
-          status: 'active',
+          state: 'active',
+          credentialVersion: 1,
+          locator: 'AQIDBA',
           createdAt: 1,
           updatedAt: 2,
         },
-      ],
+      ] },
     });
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    httpTesting.expectOne(API.DEVICE.CONFIG(deviceId)).flush({
-      config: { customName: 'Bedroom sensor' },
-    });
-    httpTesting.expectOne(API.DEVICE.STATUS(deviceId)).flush({
-      device: { deviceId, status: 'active' },
-      status: { mqttOnline: true },
-      brokerStatus: 'online',
-    });
-    httpTesting.expectOne(API.DEVICE.DATA(deviceId)).flush({
-      device: { deviceId },
-      data: {
-        protocol: 'json',
-        receivedAt: 3,
-        sourceClientId: deviceId,
-        data: { temperature: 22.5 },
-      },
+    httpTesting.expectOne(API.DEVICE_V2.RECEIVED_SHARES).flush({
+      status: 200,
+      data: { devices: [{
+        logicalDeviceId: 'device_shared',
+        name: 'Shared lamp',
+        deviceType: 'diy',
+        share: {
+          shareId: 'share-1',
+          role: 'viewer',
+          commandEndpointKeys: null,
+          version: 1,
+          state: 'active',
+          createdAt: 1,
+          updatedAt: 1,
+          revokedAt: null,
+        },
+      }] },
     });
 
     await expect(loading).resolves.toBe(true);
     expect(dataService.user.id).toBe('user-1');
-    expect(dataService.device.list).toEqual([deviceId]);
+    expect(dataService.device.list).toEqual([deviceId, 'device_shared']);
+    expect(dataService.device.dict['device_shared'].config.isShared).toBe(true);
+    expect(dataService.device.dict['device_shared'].data.canCommand).toBe(false);
   });
 
   it('saves the existing user configuration through the legacy API', async () => {
@@ -171,17 +175,6 @@ describe('UserService API contracts', () => {
     expect(body.get('token')).toBe('legacy-token');
     request.flush({ message: 1000, detail: null });
     await expect(uploading).resolves.toBe(true);
-  });
-
-  it('deletes a device through the managed device endpoint', async () => {
-    const deviceId = 'device_1234567890abcdef';
-    const deletion = service.delDevice({ id: deviceId });
-    const request = httpTesting.expectOne(API.DEVICE.DETAIL(deviceId));
-
-    expect(request.request.method).toBe('DELETE');
-    request.flush({ device: { deviceId } });
-
-    await expect(deletion).resolves.toBe(true);
   });
 
   it('keeps cancelAccount(password) on the legacy endpoint', async () => {
