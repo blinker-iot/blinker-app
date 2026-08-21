@@ -43,10 +43,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     return Boolean(this.device?.config?.isShared);
   }
 
-  get isAdvancedDeveloper() {
-    return this.dataService.isAdvancedDeveloper;
-  }
-
   get hasTimerTask() {
     if (typeof this.device?.data?.timer != 'undefined') {
       if (this.device.data.timer != '000') {

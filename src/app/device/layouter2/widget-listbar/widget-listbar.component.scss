@@ -12,7 +12,20 @@
   border-radius: 20px;
   background: var(--blinker-surface);
   box-shadow: var(--blinker-shadow);
+  cursor: grab;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+
+  &.is-drag-scrolling {
+    cursor: grabbing;
+    user-select: none;
+
+    * {
+      cursor: grabbing !important;
+    }
+  }
 
   &::-webkit-scrollbar {
     display: none;

@@ -339,7 +339,6 @@ describe('DataService', () => {
       username: 'Person',
       avatar: 'https://example.com/avatar.png',
       phone: '+8613800008888',
-      level: 0,
       subscriptionPlan: {
         name: 'pro',
         display_name: 'Pro',
@@ -385,7 +384,6 @@ describe('DataService', () => {
       username: 'fallback@example.com',
       avatar: '',
       phone: '',
-      level: 0,
       subscriptionPlan: null,
       permissions: [],
       rbacPermissions: [],

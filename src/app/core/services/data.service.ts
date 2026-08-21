@@ -72,10 +72,6 @@ export class DataService {
     return this._sessionEpoch;
   }
 
-  get isAdvancedDeveloper(): boolean {
-    return (this.user?.level ?? 0) > 0;
-  }
-
   async init(): Promise<void> {
     this.removeLegacyAuthData();
     await this.loadAuthData();
@@ -355,7 +351,6 @@ export class DataService {
       username: currentUser.nickname?.trim() || currentUser.email,
       avatar: currentUser.avatar ?? '',
       phone: currentUser.phone ?? '',
-      level: 0,
       subscriptionPlan: currentUser.subscription_plan,
       permissions: currentUser.permissions,
       rbacPermissions: currentUser.rbac_permissions,
@@ -529,6 +524,6 @@ export class DataService {
   }
 
   private emptyUser(): UserData {
-    return { username: '', avatar: '', phone: '', level: 0 };
+    return { username: '', avatar: '', phone: '' };
   }
 }

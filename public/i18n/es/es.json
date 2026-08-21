@@ -100,7 +100,6 @@
   "PROFILE": {
     "TITLE": "Perfil",
     "USER_AVATAR": "Avatar del usuario",
-    "PRO_PLAN_EXPIRY": "Plan Pro (vence el {{date}})",
     "VERSION": "Versión {{version}}",
     "DEFAULT_USER_NAME": "Usuario de blinker",
     "REGION_MANAGEMENT": "Gestión de áreas",
@@ -152,12 +151,10 @@
     "CONTACT_US": "Contacto"
   },
   "DEV": {
-    "TEXT": "Only for Pro Licence",
     "MORE": "Learn more",
     "CERT_NAME": "Certification",
     "LICENCE": "Licence",
     "GROUP0": "Free",
-    "GROUP1": "Pro",
     "GROUP2": "Edu",
     "DEVICE": "Device",
     "EXPIRE": "Expire",
@@ -231,7 +228,6 @@
     "LIST": "User List",
     "INFO": "User info",
     "GROUP0": "User",
-    "GROUP1": "Professional",
     "GROUP2": "Education",
     "PHONE": "Phone",
     "DEVICE_NUM": "Device",

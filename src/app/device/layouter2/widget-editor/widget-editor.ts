@@ -29,9 +29,9 @@ import { HorizontalDragScrollDirective } from '../horizontal-drag-scroll.directi
 import { cloneWidgetDraft, commitWidgetDraft } from '../widget-update';
 import {
   TextWidgetAlignment,
-  normalizeTextWidget,
   normalizeTextWidgetFontSize,
 } from '../widgets/widget-text/widget-text-layout';
+import { normalizeWidgetLayout } from '../widgets/widget-layout';
 
 @Component({
   standalone: true,
@@ -79,7 +79,7 @@ export class WidgetEditor {
     if (typeof this.widget === 'undefined') return;
 
     this.sourceWidget = this.widget;
-    this.widget = normalizeTextWidget(cloneWidgetDraft(this.widget));
+    this.widget = normalizeWidgetLayout(cloneWidgetDraft(this.widget));
   }
 
   ngAfterViewInit() {
@@ -140,7 +140,7 @@ export class WidgetEditor {
 
   async save() {
     const sourceWidget = this.sourceWidget ?? this.widget;
-    const updatedWidget = normalizeTextWidget(this.widget);
+    const updatedWidget = normalizeWidgetLayout(this.widget);
     const modal = await this.modalCtrl.getTop();
     await modal.dismiss();
 

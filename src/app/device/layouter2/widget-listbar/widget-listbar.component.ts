@@ -4,12 +4,13 @@ import { ActivatedRoute } from '@angular/router';
 import { DataService } from 'src/app/core/services/data.service';
 import { LayouterService } from '../../layouter.service';
 import { NgClass } from '@angular/common';
+import { HorizontalDragScrollDirective } from '../horizontal-drag-scroll.directive';
 
 @Component({
   selector: 'widget-listbar',
   templateUrl: './widget-listbar.component.html',
   styleUrls: ['./widget-listbar.component.scss'],
-  imports: [NgClass],
+  imports: [NgClass, HorizontalDragScrollDirective],
 })
 export class WidgetListbarComponent implements OnInit {
   id;
