@@ -147,6 +147,81 @@ app-hero-card.device-hero.offline {
   font-size: 10px;
 }
 
+.interface-section {
+  margin-top: 20px;
+}
+
+.interface-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.interface-action {
+  min-width: 0;
+  min-height: 86px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--blinker-radius-card);
+  background: var(--card-background);
+  color: var(--text-primary);
+  text-align: left;
+  box-shadow: var(--blinker-shadow-soft);
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+
+.interface-action:active:not(:disabled) {
+  transform: scale(0.98);
+  border-color: color-mix(
+    in srgb,
+    var(--ion-color-primary) 30%,
+    var(--border-color)
+  );
+}
+
+.interface-action:disabled {
+  opacity: 0.55;
+}
+
+.interface-action-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--blinker-surface-active);
+  color: var(--ion-color-primary);
+  font-size: 16px;
+}
+
+.interface-action-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.interface-action-copy strong {
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.interface-action-copy small {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.interface-action-arrow {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -298,5 +373,9 @@ app-hero-card.device-hero.offline {
 @media (max-width: 380px) {
   .device-detail-page {
     @include section-main.compact;
+  }
+
+  .interface-actions {
+    grid-template-columns: 1fr;
   }
 }

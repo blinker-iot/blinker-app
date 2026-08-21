@@ -18,6 +18,31 @@
     </div>
   </app-hero-card>
 
+  <section class="detail-section interface-section">
+    <div class="section-title"><span>界面配置</span></div>
+    <div class="interface-actions">
+      @for (action of interfaceActions; track action.id) {
+      <button
+        class="interface-action"
+        type="button"
+        [disabled]="!!switchingComponent"
+        (click)="selectInterface(action)"
+      >
+        <span class="interface-action-icon" aria-hidden="true">
+          <i [class]="'fa-light ' + action.icon"></i>
+        </span>
+        <span class="interface-action-copy">
+          <strong>
+            {{ switchingComponent === action.componentName ? '切换中…' : action.title }}
+          </strong>
+          <small>{{ action.description }}</small>
+        </span>
+        <i class="fa-light fa-chevron-right interface-action-arrow" aria-hidden="true"></i>
+      </button>
+      }
+    </div>
+  </section>
+
   <section class="detail-section">
     <div class="section-title">
       <div>
