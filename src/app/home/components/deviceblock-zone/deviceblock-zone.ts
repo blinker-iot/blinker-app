@@ -18,7 +18,6 @@ import { UserService } from 'src/app/core/services/user.service';
 import { DataService } from 'src/app/core/services/data.service';
 import PullToRefresh from 'pulltorefreshjs';
 import { DeviceblockListComponent } from '../deviceblock-list/deviceblock-list';
-import { DeviceService } from 'src/app/core/services/device.service';
 
 interface RoomSlide {
   roomId: number;
@@ -91,7 +90,6 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   deviceZone: ElementRef<HTMLElement>;
 
   constructor(
-    private deviceService: DeviceService,
     public userService: UserService,
     private dataService: DataService,
     private cd: ChangeDetectorRef,
@@ -485,7 +483,6 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   async refresh() {
     if (!this.dataService.auth) return;
     await this.userService.getAllInfo();
-    this.deviceService.searchLocalDevice();
   }
 
   destroyRefresh() {

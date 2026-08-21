@@ -6,23 +6,14 @@ import { AuthData, OrderData, ShareDate, UserData } from '../model/data.model';
 import { BlinkerDevice } from '../model/device.model';
 import {
   CurrentUser,
-  DeviceConfigResponse,
-  DeviceDataResponse,
-  DeviceStatusResponse,
-  GatewayDevice,
+  DeviceKeyLogicalDevice,
+  DeviceV2ReceivedDevice,
 } from '../model/response.model';
-import { createGuestDevicePreview } from '../data/guest-device-preview.data';
 
 const AUTH_STORAGE_KEY = 'session';
 export const AUTH_INVALIDATED_STORAGE_KEY = 'blinker-auth-invalidated';
 const INSTALLATION_ID_KEY = 'blinker-installation-id';
 const FEEDBACK_DRAFT_STORAGE_KEY = 'blinker_feedback_draft';
-
-export interface GatewayDeviceHydration {
-  configs?: Record<string, DeviceConfigResponse | undefined>;
-  statuses?: Record<string, DeviceStatusResponse | undefined>;
-  snapshots?: Record<string, DeviceDataResponse | undefined>;
-}
 
 @Injectable({ providedIn: 'root' })
 export class DataService {
@@ -241,71 +232,65 @@ export class DataService {
     return generated;
   }
 
-  loadGuestDevicePreview(force = false): void {
-    if (!force && this.auth) return;
-    const preview = createGuestDevicePreview();
-    this.device = preview.device;
-    this.room = preview.room;
-  }
-
   loadGatewayData(
     currentUser: CurrentUser,
-    devices: GatewayDevice[],
-    hydration: GatewayDeviceHydration = {},
+    devices: DeviceKeyLogicalDevice[],
+    received: DeviceV2ReceivedDevice[] = [],
   ): void {
     this.loadGatewayUser(currentUser);
     const previousDevices = this.device?.dict || {};
     const deviceDict: Record<string, BlinkerDevice> = {};
+    const ownedIds = new Set(devices.map((device) => device.logicalDeviceId));
+    const inventory = [
+      ...devices.map((device) => ({
+        device,
+        shared: false,
+        state: device.state,
+        access: null,
+      })),
+      ...received
+        .filter((device) => !ownedIds.has(device.logicalDeviceId))
+        .map((device) => ({
+          device,
+          shared: true,
+          state: 'active',
+          access: device.share,
+        })),
+    ];
 
-    for (const gatewayDevice of devices || []) {
-      const id = gatewayDevice.deviceId;
+    for (const item of inventory) {
+      const gatewayDevice = item.device;
+      const id = gatewayDevice.logicalDeviceId;
       if (!id) continue;
-
-      const hydratedConfig = hydration.configs?.[id]?.config;
-      const hasHydratedConfig =
-        Object.prototype.hasOwnProperty.call(hydration.configs || {}, id) &&
-        this.isRecord(hydratedConfig);
       const previousConfig = this.isRecord(previousDevices[id]?.config)
         ? previousDevices[id].config
         : {};
-      const rawConfig = hasHydratedConfig ? hydratedConfig : previousConfig;
-      const safeConfig = { ...rawConfig };
-      delete safeConfig['authKey'];
-      delete safeConfig['auth_key'];
-
-      const hasHydratedStatus = Object.prototype.hasOwnProperty.call(
-        hydration.statuses || {},
-        id,
-      );
-      const status = hydration.statuses?.[id]?.status;
-      const snapshot = hydration.snapshots?.[id]?.data;
       const previousData = this.isRecord(previousDevices[id]?.data)
         ? previousDevices[id].data
         : {};
-      const snapshotData = this.isRecord(snapshot?.data) ? snapshot.data : {};
       const data: Record<string, unknown> = {
-        switch: '',
         ...previousData,
-        ...snapshotData,
+        state: item.state === 'active'
+          ? 'waiting'
+          : 'offline',
+        enable: false,
+        ...(item.access ? {
+          accessRole: item.access.role,
+          shareId: item.access.shareId,
+          canCommand: item.access.role === 'operator',
+        } : {}),
       };
-      if (hasHydratedStatus) {
-        const online = status?.mqttOnline === true;
-        data['state'] = online ? 'online' : 'offline';
-        data['enable'] = online;
-      }
 
-      const customName = this.nonEmptyString(safeConfig['customName']) ||
-        this.nonEmptyString(safeConfig['displayName']) || gatewayDevice.name || id;
+      const customName = this.nonEmptyString(previousConfig['customName']) ||
+        gatewayDevice.name || id;
       const config = {
-        ...safeConfig,
+        ...previousConfig,
         customName,
-        image: this.nonEmptyString(safeConfig['image']) || 'diyarduino.png',
-        broker: this.nonEmptyString(safeConfig['broker']) || 'blinker',
-        mode: this.nonEmptyString(safeConfig['mode']) || 'mqtt',
-        disabled: typeof safeConfig['disabled'] === 'boolean'
-          ? safeConfig['disabled']
-          : gatewayDevice.status !== 'active',
-        layouter: this.normalizeLayouterConfig(safeConfig['layouter']),
+        image: this.nonEmptyString(previousConfig['image']) || 'diyarduino.png',
+        broker: 'blinker',
+        mode: 'bbp2',
+        disabled: item.state !== 'active',
+        isShared: item.shared,
       } as BlinkerDevice['config'];
 
       deviceDict[id] = {
@@ -333,6 +318,10 @@ export class DataService {
       ),
     ];
     this.device = { dict: deviceDict, list: deviceList };
+    this.share.byDevice = Object.fromEntries(
+      Object.entries(this.share.byDevice).filter(([deviceId]) => ownedIds.has(deviceId)),
+    );
+    this.share.received = [...received];
     this.deviceDataLoader.next(true);
     if (this.firstBoot) {
       this.initCompleted.next(true);
@@ -525,7 +514,7 @@ export class DataService {
   }
 
   private emptyShare(): ShareDate {
-    return { share: {}, share0: {}, shared: [], shared0: [] };
+    return { byDevice: {}, received: [] };
   }
 
   private emptyUser(): UserData {

@@ -18,7 +18,6 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { RoomListComponent } from '../room-list/room-list';
 import { DeviceblockZone } from '../deviceblock-zone/deviceblock-zone';
 import { DataService } from '../../../core/services/data.service';
-import { DeviceService } from '../../../core/services/device.service';
 
 @Component({
   selector: 'tab-device',
@@ -61,7 +60,6 @@ export class TabDeviceComponent implements OnInit {
 
   constructor(
     private dataService: DataService,
-    private deviceService: DeviceService,
     private navController: NavController,
     private toastController: ToastController,
     private translate: TranslateService,
@@ -79,7 +77,6 @@ export class TabDeviceComponent implements OnInit {
     this.dataService.userDataLoader
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((state) => {
-        if (state) this.deviceService.queryDevices();
         this.cd.markForCheck();
       });
   }

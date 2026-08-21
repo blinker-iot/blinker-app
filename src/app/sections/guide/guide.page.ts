@@ -29,10 +29,9 @@ export class GuidePage {
     this.isReconfiguration =
       route.snapshot.queryParamMap.get('mode') === 'reconfigure';
     const deviceId = route.snapshot.queryParamMap.get('deviceId');
-    this.backHref =
-      this.isReconfiguration && deviceId
-        ? `/device-manager/${deviceId}`
-        : '/home/device';
+    this.backHref = this.isReconfiguration && deviceId
+      ? `/device/${deviceId}`
+      : '/home/device';
   }
 
   get titleKey(): string {
@@ -68,6 +67,16 @@ export class GuidePage {
   get methodItems(): readonly MenuListItem[] {
     return [
       {
+        id: 'key',
+        icon: 'fa-key',
+        iconColor: 'var(--ion-color-warning)',
+        title: this.translate.instant('DEVICE_GUIDE.KEY_METHOD_TITLE'),
+        description: this.translate.instant(
+          'DEVICE_GUIDE.KEY_METHOD_DESCRIPTION'
+        ),
+        route: '/guide/key',
+      },
+      {
         id: 'wifi',
         icon: 'fa-wifi',
         iconColor: 'var(--ion-color-primary)',
@@ -83,16 +92,6 @@ export class GuidePage {
         description: this.translate.instant('DEVICE_GUIDE.BLE_DESCRIPTION'),
         route: '/guide/ble',
       },
-      {
-        id: 'key',
-        icon: 'fa-key',
-        iconColor: 'var(--ion-color-warning)',
-        title: this.translate.instant('DEVICE_GUIDE.KEY_METHOD_TITLE'),
-        description: this.translate.instant(
-          'DEVICE_GUIDE.KEY_METHOD_DESCRIPTION'
-        ),
-        route: '/guide/key',
-      },
     ];
   }
 
@@ -101,18 +100,5 @@ export class GuidePage {
     await this.navController.navigateForward(method.route);
   }
 
-  get migrationItems(): readonly MenuListItem[] {
-    return [
-      {
-        id: 'old-device',
-        icon: 'fa-arrow-down-arrow-up',
-        iconColor: 'var(--ion-color-primary)',
-        title: this.translate.instant('DEVICE_GUIDE.OLD_DEVICE_ENTRY_TITLE'),
-        description: this.translate.instant(
-          'DEVICE_GUIDE.OLD_DEVICE_ENTRY_DESCRIPTION'
-        ),
-        route: '/old-device',
-      },
-    ];
-  }
+  readonly migrationItems: readonly MenuListItem[] = [];
 }

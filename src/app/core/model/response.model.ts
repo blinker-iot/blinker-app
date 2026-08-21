@@ -58,29 +58,6 @@ export interface CurrentUser {
   [key: string]: unknown;
 }
 
-export interface GatewayDevice {
-  deviceId: string;
-  tenantId: string;
-  name: string;
-  deviceType: string;
-  status: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface DeviceListResponse {
-  devices: GatewayDevice[];
-}
-
-export interface DeviceResponse {
-  device: GatewayDevice;
-}
-
-export interface DeviceCreateResponse extends DeviceResponse {
-  authKey?: string;
-  replayed: boolean;
-}
-
 export interface DeviceKeyContext {
   logicalDeviceId: string;
   credentialVersion: number;
@@ -122,51 +99,19 @@ export interface DeviceKeyRotateResponse {
   data: DeviceKeyRotateData;
 }
 
-export interface DeviceConnectionStatus {
-  status: 0 | 1;
-  mode: 'mqtt' | 'http' | null;
-  lastActiveAt: string | null;
-  updatedAt: string | null;
-  httpAuthed: boolean;
-  httpAuthFresh: boolean;
-  httpAuthAt: string | null;
-  mqttOnline: boolean;
-  mqttConnectedAt: string | null;
-  mqttLastSeenAt: string | null;
-}
-
-export interface DeviceStatusResponse {
-  device: Pick<GatewayDevice, 'deviceId' | 'status'>;
-  status: DeviceConnectionStatus;
-  brokerStatus: string;
-}
-
-export interface DeviceSnapshot {
-  protocol: string;
-  receivedAt: number;
-  sourceClientId: string;
-  data: unknown;
-  [key: string]: unknown;
-}
-
-export interface DeviceDataResponse {
-  device: Pick<GatewayDevice, 'deviceId'>;
-  data: DeviceSnapshot | null;
-}
-
-export interface DeviceConfigResponse {
-  config: Record<string, unknown>;
-}
-
 export interface MqttConnection {
   host: string;
   port: number;
-  protocol: 'mqtt' | 'mqtts';
+  protocol: 'mqtt' | 'mqtts' | 'ws' | 'wss';
+  url?: string;
+  path?: string;
   clientId: string;
   username: string;
   password: string;
   expiresIn: number;
   credentialProfile?: string;
+  publishTopic: string;
+  subscribeTopic: string;
   keepalive: number;
   clean: boolean;
 }
@@ -174,7 +119,57 @@ export interface MqttConnection {
 export interface AccountConnectionResponse {
   account: { accountId: string; tenantId: string };
   mqtt: MqttConnection;
+  wire: 'bbp2';
+  protocolVersion: 2;
+  transport: 'tcp' | 'websocket';
   shard: { shard_id: number; route_version: number };
+}
+
+export interface DeviceKeyListResponse {
+  status: number;
+  data: { devices: DeviceKeyLogicalDevice[] };
+}
+
+export type DeviceV2ShareRole = 'viewer' | 'operator';
+
+export interface DeviceV2ShareGrant {
+  shareId: string;
+  role: DeviceV2ShareRole;
+  commandEndpointKeys: string[] | null;
+  version: number;
+  state: 'active' | 'revoked';
+  createdAt: number;
+  updatedAt: number;
+  revokedAt: number | null;
+  memberRef?: string;
+}
+
+export interface DeviceV2ShareInvitation {
+  invitationId: string;
+  invitationCode?: string;
+  role: DeviceV2ShareRole;
+  commandEndpointKeys: string[] | null;
+  state: 'pending' | 'accepted' | 'revoked' | 'expired';
+  expiresAt: number;
+  replayed?: boolean;
+}
+
+export interface DeviceV2OwnerShares {
+  logicalDeviceId: string;
+  shares: DeviceV2ShareGrant[];
+  invitations: DeviceV2ShareInvitation[];
+}
+
+export interface DeviceV2ReceivedDevice {
+  logicalDeviceId: string;
+  name: string;
+  deviceType: string;
+  share: DeviceV2ShareGrant;
+}
+
+export interface DeviceV2ReceivedSharesResponse {
+  status: number;
+  data: { devices: DeviceV2ReceivedDevice[] };
 }
 
 export interface FeedbackSubmitData {

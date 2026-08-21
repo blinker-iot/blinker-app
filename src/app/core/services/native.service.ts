@@ -1,5 +1,4 @@
 import { Injectable } from "@angular/core";
-import { DeviceService } from "./device.service";
 import { NoticeService } from "./notice.service";
 import { Platform } from "@ionic/angular/standalone";
 import { Haptics } from "@capacitor/haptics";
@@ -9,7 +8,6 @@ import { Haptics } from "@capacitor/haptics";
 })
 export class NativeService {
   constructor(
-    // private deviceService: DeviceService,
     // private geolocation: Geolocation,
     private noticeService: NoticeService,
     private platform: Platform,
@@ -43,7 +41,6 @@ export class NativeService {
       let ahrsData = `{"ahrs":[${e.alpha.toFixed(0)},${e.beta.toFixed(0)},${
         e.gamma.toFixed(0)
       }]}\n`;
-      // this.deviceService.sendData(device, ahrsData);
     }
   };
 
@@ -55,7 +52,6 @@ export class NativeService {
     //   let longitude = resp.coords.longitude.toString();
     //   let gps = `{"gps":[${longitude},${latitude}]}\n`;
     //   // console.log(gps);
-    //   // this.deviceService.sendData(device, gps);
     // }).catch((error) => {
     //   this.noticeService.showAlert('openLocation');
     //   console.log('Error getting location2', error);

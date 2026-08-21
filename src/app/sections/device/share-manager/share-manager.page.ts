@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import { AlertController, IonicModule } from '@ionic/angular';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 
@@ -12,8 +12,9 @@ import {
 } from 'src/app/core/components/tab-selector/tab-selector.component';
 import { ShareDate } from 'src/app/core/model/data.model';
 import { DataService } from 'src/app/core/services/data.service';
+import { DeviceV2SharingService } from 'src/app/core/services/device-v2-sharing.service';
+import { NoticeService } from 'src/app/core/services/notice.service';
 import { UserService } from 'src/app/core/services/user.service';
-import { ShareService } from '../device-share/share.service';
 
 @Component({
   selector: 'app-share-manager',
@@ -32,133 +33,141 @@ import { ShareService } from '../device-share/share.service';
 export class ShareManagerPage implements OnInit, OnDestroy {
   loaded = false;
   tab: 'sharing' | 'received' = 'sharing';
-  sharedSelected = -1;
-  pendingAcceptSelected = -1;
-  pendingRefuseSelected = -1;
+  busyDeviceId = '';
 
-  private userDataSubscription?: Subscription;
+  private deviceSubscription?: Subscription;
 
   get deviceDataDict() {
     return this.dataService.device?.dict ?? {};
   }
 
-  get deviceDataList(): string[] {
-    return this.dataService.device?.list ?? [];
-  }
-
   get shareData(): ShareDate {
-    return this.ensureShareData();
+    return this.dataService.share;
   }
 
   get shareableDeviceList(): string[] {
-    return this.deviceDataList.filter(
-      (deviceId) => !this.isReceivedDevice(deviceId)
+    return (this.dataService.device?.list ?? []).filter(
+      (deviceId) => !this.deviceDataDict[deviceId]?.config?.isShared,
     );
   }
 
+  get receivedDevices() {
+    return this.shareData.received;
+  }
+
   get sharedByMeCount(): number {
-    return new Set([
-      ...Object.keys(this.shareData.share),
-      ...Object.keys(this.shareData.share0),
-    ]).size;
+    return Object.values(this.shareData.byDevice).reduce(
+      (total, access) => total + access.shares.filter(
+        (share) => share.state === 'active',
+      ).length,
+      0,
+    );
   }
 
   get shareTabs(): readonly TabSelectorOption[] {
     return [
-      {
-        value: 'sharing',
-        label: '我的共享',
-        icon: 'fa-light fa-share-nodes',
-      },
+      { value: 'sharing', label: '我的共享', icon: 'fa-light fa-share-nodes' },
       {
         value: 'received',
         label: '接收的设备',
         icon: 'fa-light fa-inbox-in',
-        badge: this.shareData.shared0.length || null,
+        badge: this.receivedDevices.length || null,
       },
     ];
   }
 
   constructor(
-    private readonly shareService: ShareService,
+    private readonly sharing: DeviceV2SharingService,
     private readonly dataService: DataService,
-    private readonly userService: UserService
+    private readonly userService: UserService,
+    private readonly alerts: AlertController,
+    private readonly notices: NoticeService,
   ) {}
 
   ngOnInit(): void {
-    this.ensureShareData();
-    this.loaded = Boolean(this.dataService.device);
-
-    this.userDataSubscription = this.dataService.userDataLoader.subscribe(
-      (loaded) => {
-        if (loaded) void this.loadShareList();
-      }
-    );
+    this.deviceSubscription = this.dataService.deviceDataLoader.subscribe((loaded) => {
+      if (loaded) void this.loadShares();
+    });
   }
 
   ngOnDestroy(): void {
-    this.userDataSubscription?.unsubscribe();
+    this.deviceSubscription?.unsubscribe();
   }
 
   changeTab(tab: string): void {
     if (tab === 'sharing' || tab === 'received') this.tab = tab;
   }
 
-  isReceivedDevice(deviceId: string): boolean {
-    return this.shareData.shared.some((item) => item.deviceName === deviceId);
+  activeShareCount(deviceId: string): number {
+    return this.shareData.byDevice[deviceId]?.shares.filter(
+      (share) => share.state === 'active',
+    ).length ?? 0;
   }
 
-  async accept(taskId: string, index: number): Promise<void> {
-    this.pendingAcceptSelected = index;
+  roleLabel(role: 'viewer' | 'operator'): string {
+    return role === 'operator' ? '可控制' : '仅查看';
+  }
+
+  async showAcceptInvitation(): Promise<void> {
+    const alert = await this.alerts.create({
+      header: '领取共享设备',
+      message: '输入设备所有者发给你的 43 位单次邀请码。',
+      inputs: [{ name: 'code', type: 'text', placeholder: '共享邀请码' }],
+      buttons: [
+        { text: '取消', role: 'cancel' },
+        {
+          text: '领取',
+          handler: (data: { code?: string }) => {
+            void this.acceptInvitation(data.code ?? '');
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  async leaveShare(logicalDeviceId: string): Promise<void> {
+    if (this.busyDeviceId) return;
+    this.busyDeviceId = logicalDeviceId;
     try {
-      if (await this.shareService.acceptSharedDevice(taskId)) {
-        await this.userService.getAllInfo();
-      }
+      await this.sharing.leaveShare(logicalDeviceId);
+      await this.userService.getAllInfo();
+    } catch (error) {
+      console.error('Failed to leave Device V2 share', error);
+      await this.notices.showToast('退出设备共享失败，请稍后重试');
     } finally {
-      this.pendingAcceptSelected = -1;
+      this.busyDeviceId = '';
     }
   }
 
-  async refuse(taskId: string, index: number): Promise<void> {
-    this.pendingRefuseSelected = index;
+  private async acceptInvitation(code: string): Promise<void> {
     try {
-      await this.shareService.refuseSharedDevice(taskId);
-    } finally {
-      this.pendingRefuseSelected = -1;
+      await this.sharing.acceptInvitation(code.trim());
+      await this.userService.getAllInfo();
+      this.tab = 'received';
+      await this.notices.showToast('共享设备已添加');
+    } catch (error) {
+      console.error('Failed to accept Device V2 invitation', error);
+      await this.notices.showToast('邀请码无效、已过期或已被领取');
     }
   }
 
-  async cancel(deviceName: string, index: number): Promise<void> {
-    this.sharedSelected = index;
+  private async loadShares(): Promise<void> {
     try {
-      await this.shareService.deleteSharedDevice(deviceName);
-    } finally {
-      this.sharedSelected = -1;
-    }
-  }
-
-  private async loadShareList(): Promise<void> {
-    try {
-      if (this.dataService.auth?.accessToken) {
-        await this.shareService.getShareList();
-      }
-      if (this.shareData.shared0.length > 0) {
-        this.tab = 'received';
-      }
+      const [received, ...ownerShares] = await Promise.all([
+        this.sharing.listReceived(),
+        ...this.shareableDeviceList.map((deviceId) => this.sharing.listDevice(deviceId)),
+      ]);
+      this.dataService.share = {
+        received,
+        byDevice: Object.fromEntries(
+          ownerShares.map((access) => [access.logicalDeviceId, access]),
+        ),
+      };
+    } catch (error) {
+      console.error('Failed to load Device V2 share inventory', error);
     } finally {
       this.loaded = true;
     }
-  }
-
-  private ensureShareData(): ShareDate {
-    if (!this.dataService.share) {
-      this.dataService.share = {
-        share: {},
-        share0: {},
-        shared: [],
-        shared0: [],
-      };
-    }
-    return this.dataService.share;
   }
 }

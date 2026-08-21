@@ -1,0 +1,166 @@
+:host {
+  display: flex;
+  min-height: 0;
+  height: 100%;
+  flex-direction: column;
+  color: var(--blinker-text-primary);
+  background: var(--blinker-bg);
+}
+
+ion-title {
+  .name {
+    font-size: 15px;
+  }
+
+  .state {
+    color: var(--blinker-text-secondary);
+    font-size: 10px;
+  }
+}
+
+ion-content {
+  min-height: 0;
+  flex: 1 1 0;
+  --background: var(--blinker-bg);
+}
+
+.v2-content {
+  box-sizing: border-box;
+  max-width: 720px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: calc(var(--transparent-page-content-top) + 16px) 16px 32px;
+}
+
+.notice,
+.summary,
+.field,
+.event {
+  border: 1px solid var(--blinker-border);
+  border-radius: var(--blinker-radius-control);
+  background: var(--blinker-surface);
+}
+
+.notice,
+.summary,
+.event {
+  margin-bottom: 12px;
+  padding: 12px;
+}
+
+.notice,
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notice.error,
+.field-error {
+  color: var(--ion-color-danger);
+}
+
+.summary {
+  color: var(--blinker-text-secondary);
+  font-size: 12px;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-auto-rows: minmax(52px, auto);
+  gap: 10px;
+}
+
+.field {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.field.compact {
+  padding: 8px 12px;
+}
+
+.field.emphasized {
+  border-color: var(--ion-color-primary);
+}
+
+.field-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  strong {
+    overflow: hidden;
+    font-size: 14px;
+    text-overflow: ellipsis;
+  }
+
+  span {
+    color: var(--blinker-text-secondary);
+    font-size: 12px;
+  }
+}
+
+.editor {
+  width: min(260px, 42vw);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  ion-input {
+    min-height: 36px;
+    border-bottom: 1px solid var(--blinker-border);
+  }
+}
+
+.slider {
+  width: min(280px, 45vw);
+}
+
+.field-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 11px;
+}
+
+.empty {
+  min-height: 42vh;
+  color: var(--blinker-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.event {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--blinker-text-secondary);
+  font-size: 11px;
+
+  span {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 480px) {
+  .field {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor {
+    width: 100%;
+  }
+
+  .slider {
+    width: 100%;
+  }
+}

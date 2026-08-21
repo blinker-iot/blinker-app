@@ -15,7 +15,6 @@ import {
 } from '@angular/common/http';
 import { EVENT_MANAGER_PLUGINS } from '@angular/platform-browser';
 
-import { DeviceService } from 'src/app/core/services/device.service';
 import { UserService } from 'src/app/core/services/user.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { PermissionService } from 'src/app/core/services/permission.service';
@@ -58,7 +57,6 @@ export const appConfig: ApplicationConfig = {
     AuthService,
     DataService,
     UserService,
-    DeviceService,
     NetworkService,
     NoticeService,
     ViewService,

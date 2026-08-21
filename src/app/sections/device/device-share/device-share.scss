@@ -123,6 +123,16 @@ ion-content {
   }
 }
 
+.placeholder-avatar {
+  border-radius: 50%;
+  color: var(--ion-color-primary);
+  background: var(--blinker-surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+
 .status-dot {
   position: absolute;
   right: 0;
@@ -177,6 +187,13 @@ ion-content {
 .active-status {
   color: var(--ion-color-success);
   background: rgba(34, 197, 94, 0.1);
+}
+
+.role-action {
+  border: 0;
+  font: inherit;
+
+  &:disabled { opacity: 0.5; }
 }
 
 .remove-action {
