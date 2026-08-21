@@ -24,10 +24,20 @@ import { Subscription } from 'rxjs';
 import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
 import {
   DeviceKeyContext,
+  DeviceKeyCreateResponse,
   GatewayHttpError,
 } from '../../../core/model/response.model';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceV2ManagementService } from '../../../core/services/device-v2-management.service';
+import { UserService } from '../../../core/services/user.service';
+
+const BROKER_ALLOCATION_RETRY_DELAYS_MS = [
+  1000,
+  2000,
+  4000,
+  8000,
+  16000,
+] as const;
 
 type KeyDevicePhase =
   | 'idle'
@@ -92,6 +102,7 @@ void loop() {
   constructor(
     private dataService: DataService,
     private deviceService: DeviceV2ManagementService,
+    private userService: UserService,
     private navController: NavController,
     private toastController: ToastController,
     private translate: TranslateService,
@@ -160,11 +171,13 @@ void loop() {
     this.cd.markForCheck();
 
     try {
-      const response = await this.deviceService.createDeviceKeyV2(
+      const response = await this.createDeviceWithAllocationRetry(
         customName,
         this.idempotencyKey,
-        'diy'
+        operationGeneration,
+        sessionEpoch
       );
+      if (!response) return;
       if (!this.isOperationActive(operationGeneration, sessionEpoch)) return;
       const device = response.data.device;
       this.revealContext = {
@@ -189,6 +202,34 @@ void loop() {
     }
 
     await this.revealDeviceKey(operationGeneration, sessionEpoch);
+  }
+
+  private async createDeviceWithAllocationRetry(
+    name: string,
+    idempotencyKey: string,
+    operationGeneration: number,
+    sessionEpoch: number
+  ): Promise<DeviceKeyCreateResponse | null> {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await this.deviceService.createDeviceKeyV2(
+          name,
+          idempotencyKey,
+          'diy'
+        );
+      } catch (error) {
+        if (
+          !this.isErrorCode(error, 'BROKER_ALLOCATION_PENDING') ||
+          attempt >= BROKER_ALLOCATION_RETRY_DELAYS_MS.length
+        ) {
+          throw error;
+        }
+        await this.wait(BROKER_ALLOCATION_RETRY_DELAYS_MS[attempt]);
+        if (!this.isOperationActive(operationGeneration, sessionEpoch)) {
+          return null;
+        }
+      }
+    }
   }
 
   async retryReveal(): Promise<void> {
@@ -252,6 +293,7 @@ void loop() {
       this.secretKey = response.data.deviceKey;
       this.keyVisible = false;
       this.phase = 'revealed';
+      void this.userService.getAllInfo().catch(() => false);
     } catch (error) {
       if (!this.isOperationActive(operationGeneration, sessionEpoch)) return;
       this.clearSecretKey();
@@ -319,6 +361,10 @@ void loop() {
       position: 'bottom',
     });
     await toast.present();
+  }
+
+  private wait(delayMs: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 
   private async writeClipboard(value: string): Promise<void> {
