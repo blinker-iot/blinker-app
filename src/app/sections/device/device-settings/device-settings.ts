@@ -16,7 +16,7 @@ import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-devi
 import { DeviceShortcutService } from 'src/app/core/services/device-shortcut.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
-import { ShareService } from '../device-share/share.service';
+import { DeviceV2SharingService } from 'src/app/core/services/device-v2-sharing.service';
 import {
   MenuListComponent,
   MenuListItem,
@@ -41,10 +41,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   get isSharedDevice() {
     return Boolean(this.device?.config?.isShared);
-  }
-
-  get isAdvancedDeveloper() {
-    return this.dataService.isAdvancedDeveloper;
   }
 
   get hasTimerTask() {
@@ -166,7 +162,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private alertCtrl: AlertController,
     private navCtrl: NavController,
     private modalCtrl: ModalController,
-    private shareService: ShareService,
+    private sharing: DeviceV2SharingService,
     private deviceShortcutService: DeviceShortcutService,
     private noticeService: NoticeService
   ) { }
@@ -278,8 +274,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
           text: '确认解除',
           handler: async () => {
             if (this.isSharedDevice) {
-              if (await this.shareService.deleteSharedDevice(this.device.id)) {
+              try {
+                await this.sharing.leaveShare(this.device.id);
                 this.navCtrl.navigateRoot('/');
+              } catch (error) {
+                console.error('Failed to leave Device V2 share', error);
               }
               this.userService.getAllInfo();
             } else if (await this.userService.delDevice(this.device)) {

@@ -3,7 +3,6 @@
 import { Injectable } from '@angular/core';
 // import { Network } from '@awesome-cordova-plugins/network/ngx';
 import { Platform } from '@ionic/angular/standalone';
-import { DeviceService } from './device.service';
 import { BehaviorSubject } from 'rxjs';
 import { DataService } from './data.service';
 import { NoticeService } from './notice.service';
@@ -22,7 +21,6 @@ export class NetworkService {
   constructor(
     // private network: Network,
     private platform: Platform,
-    private deviceService: DeviceService,
     private dataService: DataService,
     private noticeService: NoticeService
   ) { }
@@ -47,9 +45,6 @@ export class NetworkService {
     //   window.clearTimeout(this.watchNetworkTimer)
     //   this.watchNetworkTimer = window.setTimeout(() => {
     //     if (this.network.type != 'none') {
-    //       // this.deviceService.disconnectMqttBrokers();
-    //       // this.deviceService.connectMqttBrokers();
-    //       this.deviceService.scanMdnsDevice();
     //       // this.noticeService.showToast('connected');
     //       this.stateWatcher.next(this.network.type);
     //     }

@@ -40,6 +40,31 @@ app-tab-selector {
   letter-spacing: 0.02em;
 }
 
+.received-heading {
+  margin-bottom: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .section-label { margin-bottom: 0; }
+}
+
+.accept-code-action {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--ion-color-primary);
+  font: inherit;
+  font-size: 11px;
+}
+
+.received-link {
+  color: inherit;
+  text-decoration: none;
+}
+
 .device-card {
   overflow: hidden;
   border: 1px solid var(--blinker-border);

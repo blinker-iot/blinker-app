@@ -92,14 +92,6 @@
       <h1>{{ 'DEVICE_GUIDE.KEY_REVEAL_BLOCKED_TITLE' | translate }}</h1>
       <p>{{ keyError }}</p>
     </section>
-    } @else if (phase === 'production-blocked') {
-    <section class="flow-status blocked-state" role="alert">
-      <span class="status-icon blocked-icon" aria-hidden="true">
-        <i class="fa-light fa-shield-exclamation"></i>
-      </span>
-      <h1>{{ 'DEVICE_GUIDE.KEY_PRODUCTION_BLOCKED_TITLE' | translate }}</h1>
-      <p>{{ keyError || ('DEVICE_GUIDE.KEY_PRODUCTION_BLOCKED_DESCRIPTION' | translate) }}</p>
-    </section>
     } @else if (phase === 'create-blocked') {
     <section class="flow-status blocked-state" role="alert">
       <span class="status-icon blocked-icon" aria-hidden="true">
@@ -108,7 +100,7 @@
       <h1>{{ 'DEVICE_GUIDE.KEY_CREATE_BLOCKED_TITLE' | translate }}</h1>
       <p>{{ keyError }}</p>
     </section>
-    } @else if (phase === 'revealed' && diagnosticKeyDisplayEnabled) {
+    } @else if (phase === 'revealed') {
     <section class="key-result" aria-live="polite">
       <span class="success-icon" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
       <h1>{{ 'DEVICE_GUIDE.KEY_RESULT_TITLE' | translate }}</h1>
@@ -134,15 +126,16 @@
         </div>
         <button type="button" class="copy-action" (click)="copyKey()">
           <i class="fa-light fa-copy" aria-hidden="true"></i>
-          {{ 'DEVICE_GUIDE.KEY_DIAGNOSTIC_COPY' | translate }}
+          {{ 'DEVICE_GUIDE.KEY_COPY' | translate }}
         </button>
       </div>
 
-      <aside class="security-card result-security">
-        <i class="fa-light fa-flask" aria-hidden="true"></i>
+      <aside class="security-card result-security setup-example">
+        <i class="fa-light fa-code" aria-hidden="true"></i>
         <div>
-          <strong>{{ 'DEVICE_GUIDE.KEY_DIAGNOSTIC_TITLE' | translate }}</strong>
-          <p>{{ 'DEVICE_GUIDE.KEY_DIAGNOSTIC_DESCRIPTION' | translate }}</p>
+          <strong>{{ 'DEVICE_GUIDE.KEY_USAGE_TITLE' | translate }}</strong>
+          <p>{{ 'DEVICE_GUIDE.KEY_USAGE_DESCRIPTION' | translate }}</p>
+          <pre><code>{{ arduinoExample }}</code></pre>
         </div>
       </aside>
 

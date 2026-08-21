@@ -8,15 +8,13 @@ import {
   BlinkerResponse,
   CurrentUser,
   DeletedAccountResponse,
-  DeviceConfigResponse,
-  DeviceDataResponse,
-  DeviceListResponse,
-  DeviceResponse,
-  DeviceStatusResponse,
-  GatewayDevice,
+  DeviceKeyListResponse,
+  DeviceKeyLogicalDevice,
+  DeviceV2ReceivedDevice,
+  DeviceV2ReceivedSharesResponse,
   GatewayHttpError,
 } from '../model/response.model';
-import { DataService, GatewayDeviceHydration } from './data.service';
+import { DataService } from './data.service';
 import { NoticeService } from './notice.service';
 
 interface SessionFence {
@@ -50,9 +48,12 @@ export class UserService {
     this.dataService.deviceLoadError.next(null);
     this.dataService.configLoadError.next(null);
 
-    const [userResult, deviceResult] = await Promise.allSettled([
+    const [userResult, deviceResult, receivedResult] = await Promise.allSettled([
       firstValueFrom(this.http.get<AilyResponse<CurrentUser>>(API.AUTH.ME)),
-      firstValueFrom(this.http.get<DeviceListResponse>(API.DEVICE.LIST)),
+      firstValueFrom(this.http.get<DeviceKeyListResponse>(API.DEVICE_V2.LIST)),
+      firstValueFrom(this.http.get<DeviceV2ReceivedSharesResponse>(
+        API.DEVICE_V2.RECEIVED_SHARES,
+      )),
     ]);
     if (!this.sessionMatches(session)) return false;
 
@@ -63,6 +64,9 @@ export class UserService {
         : deviceResult.status === 'rejected' &&
             this.isServiceAccountDeletedError(deviceResult.reason)
           ? deviceResult.reason
+          : receivedResult.status === 'rejected' &&
+              this.isServiceAccountDeletedError(receivedResult.reason)
+            ? receivedResult.reason
           : null;
     if (deletedAccountError) {
       this.dataService.userLoadError.next(deletedAccountError);
@@ -80,9 +84,12 @@ export class UserService {
       return false;
     }
 
-    let devices: GatewayDevice[];
-    if (deviceResult.status === 'fulfilled' && Array.isArray(deviceResult.value?.devices)) {
-      devices = deviceResult.value.devices;
+    let devices: DeviceKeyLogicalDevice[];
+    if (
+      deviceResult.status === 'fulfilled'
+      && Array.isArray(deviceResult.value?.data?.devices)
+    ) {
+      devices = deviceResult.value.data.devices;
     } else {
       this.dataService.deviceLoadError.next(
         deviceResult.status === 'rejected'
@@ -95,21 +102,20 @@ export class UserService {
       return true;
     }
 
-    let hydration: GatewayDeviceHydration;
-    try {
-      hydration = await this.loadDeviceHydration(devices);
-    } catch (error) {
-      if (!this.sessionMatches(session)) return false;
-      if (this.isServiceAccountDeletedError(error)) {
-        this.dataService.userLoadError.next(error);
-      } else {
-        this.dataService.deviceLoadError.next(error);
-      }
-      await this.noticeService.hideLoading();
-      return false;
+    let received: DeviceV2ReceivedDevice[] = [];
+    if (receivedResult.status === 'fulfilled'
+      && Array.isArray(receivedResult.value?.data?.devices)) {
+      received = receivedResult.value.data.devices;
+    } else {
+      this.dataService.configLoadError.next(
+        receivedResult.status === 'rejected'
+          ? receivedResult.reason
+          : new Error('The received-share response is invalid.'),
+      );
     }
+
     if (!this.sessionMatches(session)) return false;
-    this.dataService.loadGatewayData(userResult.value.data, devices, hydration);
+    this.dataService.loadGatewayData(userResult.value.data, devices, received);
     await this.noticeService.hideLoading();
     return true;
   }
@@ -132,27 +138,6 @@ export class UserService {
     )
       .then((response) => response.message === 1000)
       .catch(this.handleError);
-  }
-
-  async delDevice(device: { id?: string; deviceId?: string; deviceName?: string }): Promise<boolean> {
-    const deviceId = device?.deviceId || device?.id || device?.deviceName;
-    if (!deviceId) return false;
-    try {
-      await firstValueFrom(
-        this.http.delete<DeviceResponse>(API.DEVICE.DETAIL(deviceId)),
-      );
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  unbindDevice(device): void {
-    void this.delDevice(device);
-  }
-
-  bindDevice(_device): Promise<boolean> {
-    return this.getDeviceInfo();
   }
 
   changePassword(oldPassword, newPassword): Promise<boolean> {
@@ -284,68 +269,6 @@ export class UserService {
           ? error.status
           : 0;
     return status === 0 || status === 409 || status >= 500;
-  }
-
-  private async loadDeviceHydration(
-    devices: GatewayDevice[],
-  ): Promise<GatewayDeviceHydration> {
-    const hydration: GatewayDeviceHydration = {
-      configs: {},
-      statuses: {},
-      snapshots: {},
-    };
-
-    await Promise.all(
-      devices.map(async (device) => {
-        const id = device.deviceId;
-        const [config, status, snapshot] = await Promise.allSettled([
-          firstValueFrom(
-            this.http.get<DeviceConfigResponse>(API.DEVICE.CONFIG(id)),
-          ),
-          firstValueFrom(
-            this.http.get<DeviceStatusResponse>(API.DEVICE.STATUS(id)),
-          ),
-          firstValueFrom(
-            this.http.get<DeviceDataResponse>(API.DEVICE.DATA(id)),
-          ),
-        ]);
-        for (const result of [config, status, snapshot]) {
-          if (
-            result.status === 'rejected' &&
-            this.isServiceAccountDeletedError(result.reason)
-          ) {
-            throw result.reason;
-          }
-        }
-
-        if (
-          config.status === 'fulfilled' &&
-          config.value &&
-          config.value.config !== null &&
-          typeof config.value.config === 'object' &&
-          !Array.isArray(config.value.config)
-        ) {
-          hydration.configs[id] = config.value;
-        } else {
-          this.dataService.configLoadError.next(
-            config.status === 'rejected'
-              ? config.reason
-              : new Error('The device-config response is invalid.'),
-          );
-        }
-        if (status.status === 'fulfilled') {
-          hydration.statuses[id] = status.value;
-        } else {
-          this.dataService.deviceLoadError.next(status.reason);
-        }
-        if (snapshot.status === 'fulfilled') {
-          hydration.snapshots[id] = snapshot.value;
-        } else {
-          this.dataService.deviceLoadError.next(snapshot.reason);
-        }
-      }),
-    );
-    return hydration;
   }
 
   private delay(milliseconds: number): Promise<void> {

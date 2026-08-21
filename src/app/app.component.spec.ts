@@ -5,7 +5,6 @@ import { AppComponent } from './app.component';
 import { AudioService } from './core/services/audio.service';
 import { AuthService } from './core/services/auth.service';
 import { DataService } from './core/services/data.service';
-import { DeviceService } from './core/services/device.service';
 import { ImageService } from './core/services/image.service';
 import { NetworkService } from './core/services/network.service';
 import { NoticeService } from './core/services/notice.service';
@@ -30,13 +29,11 @@ describe('AppComponent authentication startup', () => {
       userService as unknown as UserService,
       {
         init: restoreAuth,
-        loadGuestDevicePreview: vi.fn(),
       } as unknown as DataService,
       { init: vi.fn() } as unknown as NoticeService,
       { init: vi.fn() } as unknown as UpdateService,
       { init: vi.fn() } as unknown as NetworkService,
       { navigateRoot } as unknown as NavController,
-      { init: vi.fn() } as unknown as DeviceService,
       { init: vi.fn() } as unknown as ImageService,
       { list: [] } as unknown as ToastService,
       { list: [] } as unknown as TipService,

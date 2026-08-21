@@ -21,14 +21,13 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 
-import { environment } from '../../../../environments/environment';
 import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
 import {
   DeviceKeyContext,
   GatewayHttpError,
 } from '../../../core/model/response.model';
 import { DataService } from '../../../core/services/data.service';
-import { DeviceService } from '../../../core/services/device.service';
+import { DeviceV2ManagementService } from '../../../core/services/device-v2-management.service';
 
 type KeyDevicePhase =
   | 'idle'
@@ -39,8 +38,7 @@ type KeyDevicePhase =
   | 'reveal-failed'
   | 'reveal-blocked'
   | 'step-up-blocked'
-  | 'revealed'
-  | 'production-blocked';
+  | 'revealed';
 
 @Component({
   selector: 'app-key-device-guide',
@@ -62,15 +60,27 @@ type KeyDevicePhase =
   ],
 })
 export class KeyDeviceGuidePage implements OnDestroy {
-  readonly diagnosticKeyDisplayEnabled = !environment.production;
+  readonly arduinoExample = `#include <BlinkerWiFi.h>
+
+BLINKER_PROPERTY(power, bool, blinker::readWrite());
+
+void setup() {
+  Blinker.begin(
+      "REPLACE_WITH_DEVICE_KEY",
+      "YOUR_WIFI_SSID",
+      "YOUR_WIFI_PASSWORD",
+      power);
+}
+
+void loop() {
+  Blinker.run();
+}`;
 
   deviceName = '';
   secretKey = '';
   keyVisible = false;
   keyError = '';
-  phase: KeyDevicePhase = environment.production
-    ? 'production-blocked'
-    : 'idle';
+  phase: KeyDevicePhase = 'idle';
 
   private idempotencyKey = '';
   private idempotencyName = '';
@@ -81,7 +91,7 @@ export class KeyDeviceGuidePage implements OnDestroy {
 
   constructor(
     private dataService: DataService,
-    private deviceService: DeviceService,
+    private deviceService: DeviceV2ManagementService,
     private navController: NavController,
     private toastController: ToastController,
     private translate: TranslateService,
@@ -128,14 +138,6 @@ export class KeyDeviceGuidePage implements OnDestroy {
     if (!this.dataService.auth?.accessToken) {
       this.resetProvisioningState();
       await this.navController.navigateRoot('/login');
-      return;
-    }
-    if (environment.production) {
-      this.phase = 'production-blocked';
-      this.keyError = this.translate.instant(
-        'DEVICE_GUIDE.KEY_PRODUCTION_BLOCKED_DESCRIPTION'
-      );
-      this.cd.markForCheck();
       return;
     }
     if (this.phase !== 'idle' && this.phase !== 'create-failed') return;
@@ -199,19 +201,17 @@ export class KeyDeviceGuidePage implements OnDestroy {
   }
 
   async copyKey(): Promise<void> {
-    if (
-      !this.diagnosticKeyDisplayEnabled ||
-      this.phase !== 'revealed' ||
-      !this.secretKey
-    ) {
-      return;
+    if (this.phase !== 'revealed' || !this.secretKey) return;
+    try {
+      await this.writeClipboard(this.secretKey);
+      await this.showToast('DEVICE_GUIDE.KEY_COPIED');
+    } catch {
+      await this.showToast('DEVICE_GUIDE.KEY_COPY_FAILED');
     }
-    await Clipboard.write({ string: this.secretKey });
-    await this.showToast('DEVICE_GUIDE.KEY_DIAGNOSTIC_COPIED');
   }
 
   toggleKeyVisibility(): void {
-    if (!this.diagnosticKeyDisplayEnabled || !this.secretKey) return;
+    if (!this.secretKey) return;
     this.keyVisible = !this.keyVisible;
   }
 
@@ -249,12 +249,6 @@ export class KeyDeviceGuidePage implements OnDestroy {
     try {
       const response = await this.deviceService.revealDeviceKeyV2(context);
       if (!this.isOperationActive(operationGeneration, sessionEpoch)) return;
-      if (!this.diagnosticKeyDisplayEnabled) {
-        this.clearSecretKey();
-        this.phase = 'production-blocked';
-        this.revealContext = null;
-        return;
-      }
       this.secretKey = response.data.deviceKey;
       this.keyVisible = false;
       this.phase = 'revealed';
@@ -288,7 +282,7 @@ export class KeyDeviceGuidePage implements OnDestroy {
     this.idempotencyKey = '';
     this.idempotencyName = '';
     this.keyError = '';
-    this.phase = environment.production ? 'production-blocked' : 'idle';
+    this.phase = 'idle';
   }
 
   private clearSecretKey(): void {
@@ -325,6 +319,10 @@ export class KeyDeviceGuidePage implements OnDestroy {
       position: 'bottom',
     });
     await toast.present();
+  }
+
+  private async writeClipboard(value: string): Promise<void> {
+    await Clipboard.write({ string: value });
   }
 
   private createIdempotencyKey(): string {
