@@ -3,7 +3,6 @@ import { environment } from '../../environments/environment';
 const GATEWAY_BASE_URL = environment.gatewayBaseUrl.replace(/\/$/, '');
 const API_V1_URL = GATEWAY_BASE_URL + '/api/v1';
 const API_V2_URL = GATEWAY_BASE_URL + '/api/v2';
-export const BROKER_HOST = 'wss://broker.diandeng.tech:1886';
 
 const deviceKeyV2Url = (logicalDeviceId: string) =>
   API_V2_URL + '/devices/' + encodeURIComponent(logicalDeviceId);
