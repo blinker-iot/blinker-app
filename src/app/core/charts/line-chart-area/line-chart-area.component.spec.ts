@@ -56,7 +56,7 @@ describe('LineChartAreaComponent', () => {
 
     expect(chartMock.createChart).toHaveBeenCalledWith(
       component.chartContainer.nativeElement,
-      expect.objectContaining({ width: 320, height: 180 })
+      expect.objectContaining({ width: 320, height: 180, autoSize: true })
     );
     expect(chartMock.setData).toHaveBeenLastCalledWith([
       { time: 1787184000, value: 24.8 },

@@ -54,6 +54,7 @@ export class LineChartAreaComponent {
     this.chart = createChart(this.chartContainer.nativeElement, {
       width: this.chartContainer.nativeElement.offsetWidth,
       height: this.chartContainer.nativeElement.offsetHeight,
+      autoSize: true,
       layout: {
         textColor: 'rgba(0, 0, 0, 0.45)',
         fontSize: 10,

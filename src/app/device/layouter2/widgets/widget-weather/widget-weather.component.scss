@@ -21,6 +21,8 @@
   background:
     radial-gradient(circle at 8% 12%, rgba(var(--ion-color-primary-rgb), 0.14), transparent 32%),
     linear-gradient(135deg, color-mix(in srgb, var(--blinker-surface) 96%, var(--ion-color-primary)), var(--blinker-surface));
+  // Keep responsive type tied to the Gridster item, not the desktop viewport.
+  container-type: inline-size;
   touch-action: pan-y;
 }
 
@@ -160,7 +162,8 @@
 .temperature {
   overflow: hidden;
   color: var(--blinker-text-primary);
-  font-size: clamp(25px, 8vw, 32px);
+  font-size: 32px;
+  font-size: clamp(25px, 8cqw, 32px);
   font-weight: 720;
   line-height: 0.9;
   letter-spacing: -1.5px;
@@ -647,7 +650,8 @@
   }
 
   .temperature {
-    font-size: clamp(32px, 10vw, 42px);
+    font-size: 42px;
+    font-size: clamp(32px, 10cqw, 42px);
 
     small {
       font-size: 16px;
