@@ -19,6 +19,7 @@ import {
   DeviceUiEvent,
   DeviceUiPort,
   DeviceUiSnapshot,
+  DeviceUiTelemetryLease,
   DeviceUiValue,
 } from '../../core/device-v2/device-ui.port';
 import {
@@ -63,6 +64,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   layoutUpdating = false;
   lastEvent?: DeviceUiEvent;
   error = '';
+  telemetryError = '';
+  telemetryActive = false;
+  telemetryIntervalMs = 0;
   pending = new Set<string>();
 
   private initialized = false;
@@ -73,6 +77,14 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private layoutLoadKey = '';
   private layoutEpoch = 0;
   private storedLayout?: DeviceV2PageLayoutRecord;
+  private appActive = true;
+  private pageVisible = true;
+  private telemetry?: DeviceUiTelemetryLease;
+  private telemetryDetach?: () => void;
+  private telemetryKey = '';
+  private telemetryEpoch = 0;
+  private telemetryOpening = false;
+  private telemetryValues = new Map<string, DeviceUiValue | undefined>();
   private readonly drafts = new Map<string, string>();
   private readonly fieldErrors = new Map<string, string>();
   private endpointsByKey = new Map<string, DeviceUiEndpoint>();
@@ -87,10 +99,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   ngOnInit(): void {
     this.initialized = true;
-    this.subscriptions.add(this.deviceUi.connectionState.subscribe((state) => {
-      this.accountState = state;
-      this.requestRender();
-      if (state === 'ready') void this.synchronize();
+    this.subscriptions.add(this.deviceUi.appActive.subscribe(active => {
+      this.appActive = active;
+      this.refreshTelemetry();
     }));
     this.bindDevice();
   }
@@ -101,8 +112,23 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.releaseTelemetry();
+    void this.deviceUi.disconnect(this.logicalDeviceId).catch(() => undefined);
     this.subscriptions.unsubscribe();
     this.deviceSubscriptions.unsubscribe();
+  }
+
+  ionViewDidEnter(): void {
+    if (this.destroyed) return;
+    this.pageVisible = true;
+    void this.synchronize();
+    this.refreshTelemetry();
+  }
+
+  ionViewDidLeave(): void {
+    this.pageVisible = false;
+    this.refreshTelemetry();
+    void this.deviceUi.disconnect(this.logicalDeviceId).catch(() => undefined);
   }
 
   get widgets(): PageLayoutWidget[] {
@@ -129,7 +155,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   value(field: DeviceUiEndpoint): DeviceUiValue | undefined {
-    return field.value;
+    return this.telemetryValues.has(field.key)
+      ? this.telemetryValues.get(field.key)
+      : field.value;
   }
 
   display(field: DeviceUiEndpoint): string {
@@ -244,7 +272,11 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private bindDevice(): void {
     const nextId = this.device?.deviceName || this.device?.id || '';
     if (nextId === this.logicalDeviceId) return;
+    const previousId = this.logicalDeviceId;
+    this.releaseTelemetry();
+    if (previousId) void this.deviceUi.disconnect(previousId).catch(() => undefined);
     this.logicalDeviceId = nextId;
+    this.accountState = 'idle';
     this.snapshot = emptySnapshot();
     this.layout = undefined;
     this.layoutStale = undefined;
@@ -255,6 +287,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.endpointsByKey.clear();
     this.lastEvent = undefined;
     this.error = '';
+    this.telemetryError = '';
     this.pending = new Set<string>();
     this.drafts.clear();
     this.fieldErrors.clear();
@@ -262,6 +295,16 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.deviceSubscriptions = new Subscription();
     if (!nextId) return;
     try {
+      this.deviceSubscriptions.add(this.deviceUi.watchConnection(nextId).subscribe(state => {
+        this.accountState = state;
+        this.requestRender();
+        if (state === 'ready') {
+          void this.synchronize();
+          this.refreshTelemetry();
+        } else if (this.telemetry || this.telemetryOpening) {
+          this.releaseTelemetry();
+        }
+      }));
       this.deviceSubscriptions.add(this.deviceUi.watchState(nextId).subscribe({
         next: snapshot => this.applySnapshot(snapshot),
         error: error => {
@@ -290,6 +333,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.layout = undefined;
       this.layoutStale = undefined;
       this.layoutLoadKey = '';
+      this.refreshTelemetry();
       return;
     }
     try {
@@ -310,6 +354,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       const epoch = ++this.layoutEpoch;
       void this.loadLayout(this.logicalDeviceId, snapshot, loadKey, epoch);
     }
+    this.refreshTelemetry();
   }
 
   private async loadLayout(
@@ -356,6 +401,103 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.layoutStale = diffPageLayout(record.layout, snapshot.endpoints);
       this.layout = migratePageLayout(record.layout, snapshot);
     }
+    this.refreshTelemetry();
+    this.requestRender();
+  }
+
+  private refreshTelemetry(): void {
+    if (this.accountState !== 'ready') {
+      if (this.telemetry || this.telemetryOpening) this.releaseTelemetry();
+      return;
+    }
+    const configuration = this.telemetryConfiguration();
+    if (!configuration) {
+      this.releaseTelemetry();
+      return;
+    }
+    const key = `${this.logicalDeviceId}\0${this.snapshot.manifestFingerprint}\0`
+      + `${configuration.intervalMs}\0${configuration.endpointKeys.join('\0')}`;
+    if (key !== this.telemetryKey) {
+      this.releaseTelemetry();
+      this.telemetryKey = key;
+    }
+    if (this.telemetry) {
+      void this.telemetry.setVisible(this.pageVisible && this.appActive).catch(error => {
+        if (this.telemetryKey === key) this.setTelemetryError(error);
+      });
+      return;
+    }
+    if (!this.pageVisible || !this.appActive || this.telemetryOpening) return;
+    const epoch = this.telemetryEpoch;
+    this.telemetryOpening = true;
+    void this.deviceUi.openTelemetry(
+      this.logicalDeviceId,
+      configuration.endpointKeys,
+      configuration.intervalMs,
+    ).then(lease => {
+      if (this.destroyed || !this.pageVisible || !this.appActive || this.telemetryEpoch !== epoch
+        || this.telemetryKey !== key) {
+        if (this.telemetryEpoch === epoch && this.telemetryKey === key) {
+          this.telemetryOpening = false;
+        }
+        void lease.close().catch(() => undefined);
+        return;
+      }
+      this.telemetryOpening = false;
+      this.telemetry = lease;
+      this.telemetryDetach = lease.subscribe(snapshot => {
+        this.telemetryActive = snapshot.active;
+        this.telemetryIntervalMs = snapshot.effectiveIntervalMs;
+        this.telemetryValues = new Map(Object.entries(snapshot.values));
+        this.telemetryError = '';
+        this.requestRender();
+      });
+    }).catch(error => {
+      if (this.telemetryEpoch === epoch && this.telemetryKey === key) {
+        this.telemetryOpening = false;
+        this.setTelemetryError(error);
+      }
+    });
+  }
+
+  private telemetryConfiguration(): { endpointKeys: string[]; intervalMs: number } | undefined {
+    if (!this.logicalDeviceId || !this.snapshot.manifestAccepted || !this.layout) return undefined;
+    const fields = new Map<string, DeviceUiEndpoint>();
+    for (const widget of this.layout.widgets) {
+      const field = this.endpointsByKey.get(widget.endpointKey);
+      if (field?.role === 'property' && field.readable && !field.writable
+        && field.telemetryMinimumIntervalMs) {
+        fields.set(field.key, field);
+      }
+    }
+    if (!fields.size) return undefined;
+    return {
+      endpointKeys: [...fields.keys()],
+      intervalMs: Math.max(
+        1000,
+        ...[...fields.values()].map(field => field.telemetryMinimumIntervalMs!),
+      ),
+    };
+  }
+
+  private releaseTelemetry(): void {
+    this.telemetryEpoch += 1;
+    this.telemetryOpening = false;
+    this.telemetryKey = '';
+    this.telemetryDetach?.();
+    this.telemetryDetach = undefined;
+    const lease = this.telemetry;
+    this.telemetry = undefined;
+    this.telemetryActive = false;
+    this.telemetryIntervalMs = 0;
+    this.telemetryValues.clear();
+    if (lease) void lease.close().catch(() => undefined);
+  }
+
+  private setTelemetryError(error: unknown): void {
+    this.telemetryError = this.messageOf(error, '实时数据暂不可用');
+    this.telemetryActive = false;
+    this.telemetryValues.clear();
     this.requestRender();
   }
 

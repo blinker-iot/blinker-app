@@ -1,4 +1,4 @@
-import { bytesToHex, encodeCanonicalManifestPrefix } from './codec';
+import { bytesToHex, encodeCanonicalManifestPrefix, isLogicalDeviceId } from './codec';
 import {
   DeviceV2Event,
   DeviceV2EventBody,
@@ -304,9 +304,7 @@ export class DeviceV2Store {
   }
 
   private target(logicalDeviceId: string): TargetState {
-    if (!/^device_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
-      logicalDeviceId,
-    )) {
+    if (!isLogicalDeviceId(logicalDeviceId)) {
       throw new Error('logical device identity is invalid');
     }
     let target = this.targets.get(logicalDeviceId);

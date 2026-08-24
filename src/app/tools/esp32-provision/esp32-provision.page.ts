@@ -17,7 +17,6 @@ import {
   ProvisioningDevice,
   WifiNetwork,
   WiFiProv,
-  WiFiProvSecurity,
   WiFiProvTransport,
 } from 'capacitor-wifiprov';
 
@@ -48,11 +47,9 @@ interface SavedNetwork {
 })
 export class Esp32ProvisionPage implements OnInit, OnDestroy {
   transport: WiFiProvTransport = 'ble';
-  security: WiFiProvSecurity = 1;
-  devicePrefix = 'PROV_';
-  deviceName = 'PROV_';
-  proofOfPossession = '';
-  username = '';
+  readonly security = 1;
+  devicePrefix = 'BLINKER_';
+  deviceName = 'BLINKER_';
   softApPassword = '';
 
   devices: BleDevice[] = [];
@@ -182,11 +179,6 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
 
   async selectBleDevice(device: BleDevice): Promise<void> {
     if (this.isConnecting) return;
-    const authError = this.validateSecurity();
-    if (authError) {
-      await this.showToast(authError);
-      return;
-    }
 
     await this.stopBleScan();
     this.phase = 'selecting';
@@ -195,8 +187,6 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
       this.selectedDevice = await WiFiProv.selectDevice({
         id: device.id,
         security: this.security,
-        pop: this.proofOfPossession.trim() || undefined,
-        username: this.security === 2 ? this.username.trim() : undefined,
       });
       await this.connectSession();
     } catch (error) {
@@ -209,12 +199,6 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
       await this.showToast('请输入 ESP32 临时热点名称');
       return;
     }
-    const authError = this.validateSecurity();
-    if (authError) {
-      await this.showToast(authError);
-      return;
-    }
-
     try {
       await this.ensurePermissions();
       this.phase = 'selecting';
@@ -223,8 +207,6 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
         name: this.deviceName.trim(),
         transport: 'softap',
         security: this.security,
-        pop: this.proofOfPossession.trim() || undefined,
-        username: this.security === 2 ? this.username.trim() : undefined,
         softApPassword: this.softApPassword || undefined,
       });
       await this.connectSession();
@@ -273,7 +255,7 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
       if (result.success) {
         this.phase = 'success';
         this.progress = 100;
-        this.statusMessage = 'ESP32 已成功连接 Wi-Fi';
+        this.statusMessage = 'Wi-Fi 已连接；Blinker 设备身份尚未写入';
       } else {
         this.setError('设备未能连接到目标 Wi-Fi，请检查密码后重试');
       }
@@ -317,8 +299,6 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     this.phase = 'connecting';
     this.statusMessage = '正在建立安全配网会话…';
     this.selectedDevice = await WiFiProv.connect({
-      pop: this.proofOfPossession.trim() || undefined,
-      username: this.security === 2 ? this.username.trim() : undefined,
       softApPassword:
         this.transport === 'softap'
           ? this.softApPassword || undefined
@@ -338,18 +318,6 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     );
     if (denied)
       throw new Error('配网权限被拒绝，请在系统设置中允许蓝牙与附近设备权限');
-  }
-
-  private validateSecurity(): string | null {
-    if (this.security === 2 && !this.username.trim())
-      return 'Security 2 需要填写用户名';
-    if (
-      (this.security === 1 || this.security === 2) &&
-      !this.proofOfPossession.trim()
-    ) {
-      return '当前安全模式需要填写设备 PoP';
-    }
-    return null;
   }
 
   private async bindPluginEvents(): Promise<void> {

@@ -5,6 +5,7 @@ import {
   DeviceV2EndpointKind,
   DeviceV2Event,
   DeviceV2TargetSnapshot,
+  DeviceV2TelemetrySnapshot,
   DeviceV2ValueType,
 } from '../protocol/device-v2';
 import { DeviceUiPort } from './device-ui.port';
@@ -62,8 +63,47 @@ describe('DeviceUiPort', () => {
       },
       ensureReady: vi.fn().mockResolvedValue(undefined),
       command: vi.fn().mockResolvedValue({ acknowledgedSequence: 1 }),
+      openTelemetry: vi.fn().mockResolvedValue({
+        snapshot: {
+          active: true,
+          visible: true,
+          streamId: 1,
+          epoch: 2,
+          effectiveIntervalMs: 1000,
+          values: {
+            temperature: {
+              type: DeviceV2ValueType.Float32,
+              value: 21.5,
+              cbor: new Uint8Array([0xfa, 0x41, 0xac, 0x00, 0x00]),
+            },
+          },
+        },
+        subscribe: vi.fn(function (listener: (snapshot: DeviceV2TelemetrySnapshot) => void) {
+          listener(this.snapshot);
+          return () => undefined;
+        }),
+        setVisible: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
+      }),
     };
-    const port = new DeviceUiPort(service as any);
+    const ble = {
+      state: new BehaviorSubject('idle'),
+      snapshot: vi.fn(() => rawSnapshot()),
+      subscribe: vi.fn(() => () => undefined),
+      subscribeEvents: vi.fn(() => () => undefined),
+      ensureReady: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      command: vi.fn().mockResolvedValue(undefined),
+    };
+    const appActive = new BehaviorSubject(true);
+    const port = new DeviceUiPort(
+      service as any,
+      ble as any,
+      { run: (callback: () => void) => callback() } as any,
+      { active: appActive } as any,
+    );
+
+    expect(await firstValueFrom(port.appActive.pipe(take(1)))).toBe(true);
 
     const snapshot = await firstValueFrom(port.watchState(logicalDeviceId).pipe(take(1)));
     expect(snapshot).toEqual({
@@ -87,6 +127,7 @@ describe('DeviceUiPort', () => {
         maxLength: undefined,
         unit: '%',
         choices: undefined,
+        telemetryMinimumIntervalMs: undefined,
       }],
     });
     expect(stateListener).toBeUndefined();
@@ -107,5 +148,29 @@ describe('DeviceUiPort', () => {
     await port.sendCommand(logicalDeviceId, 'level', 30);
     expect(service.ensureReady).toHaveBeenCalledWith(logicalDeviceId);
     expect(service.command).toHaveBeenCalledWith(logicalDeviceId, 'level', 30);
+
+    const telemetry = await port.openTelemetry(logicalDeviceId, ['temperature'], 1000);
+    expect(telemetry.snapshot).toEqual({
+      active: true,
+      effectiveIntervalMs: 1000,
+      values: { temperature: 21.5 },
+    });
+    await telemetry.setVisible(false);
+    await telemetry.close();
+    expect(service.openTelemetry).toHaveBeenCalledWith(
+      logicalDeviceId,
+      ['temperature'],
+      1000,
+    );
+
+    const directId = 'ble_0123456789abcdefghijkl';
+    await port.connect(directId);
+    await port.sendCommand(directId, 'level', 35);
+    await port.disconnect(directId);
+    expect(ble.ensureReady).toHaveBeenCalledWith(directId);
+    expect(ble.command).toHaveBeenCalledWith(directId, 'level', 35);
+    expect(ble.disconnect).toHaveBeenCalledWith(directId);
+    await expect(port.openTelemetry(directId, ['temperature'], 1000))
+      .rejects.toThrow('BLE_DIRECT_TELEMETRY_NOT_ENABLED');
   });
 });

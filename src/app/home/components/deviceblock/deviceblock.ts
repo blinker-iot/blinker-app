@@ -2,13 +2,11 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, Inpu
 import { IonicModule } from '@ionic/angular';
 
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
-import { BlinkerDevice } from 'src/app/core/model/device.model';
 import {
-  DeviceV2EndpointAccess,
-  DeviceV2TargetSnapshot,
-  DeviceV2ValueType,
-} from 'src/app/core/protocol/device-v2';
-import { DeviceV2Service } from 'src/app/core/services/device-v2.service';
+  DeviceUiPort,
+  DeviceUiSnapshot,
+} from 'src/app/core/device-v2/device-ui.port';
+import { BlinkerDevice } from 'src/app/core/model/device.model';
 
 interface CardMetric {
   key: string;
@@ -25,7 +23,7 @@ interface CardMetric {
 })
 export class Deviceblock {
   private current?: BlinkerDevice;
-  private snapshot?: DeviceV2TargetSnapshot;
+  private snapshot?: DeviceUiSnapshot;
   private unsubscribe?: () => void;
   switchWaiting = false;
 
@@ -36,12 +34,14 @@ export class Deviceblock {
     this.unsubscribe?.();
     const id = device?.deviceName;
     if (!id) return;
-    this.unsubscribe = this.deviceV2.store.subscribe((logicalDeviceId, snapshot) => {
-      if (logicalDeviceId !== id) return;
+    const subscription = this.deviceUi.watchState(id).subscribe(snapshot => {
       this.snapshot = snapshot;
       this.cd.markForCheck();
     });
-    void this.deviceV2.ensureReady(id).catch(() => this.cd.markForCheck());
+    this.unsubscribe = () => subscription.unsubscribe();
+    if (!this.deviceUi.isBleDirect(id)) {
+      void this.deviceUi.connect(id).catch(() => this.cd.markForCheck());
+    }
   }
 
   get device(): BlinkerDevice {
@@ -59,35 +59,33 @@ export class Deviceblock {
   }
 
   get showSwitch(): boolean {
-    return !!this.snapshot?.manifest?.fields.some(field => (
+    return !!this.snapshot?.endpoints.some(field => (
       field.key === 'switch'
-      && field.type === DeviceV2ValueType.Boolean
-      && (field.access & DeviceV2EndpointAccess.Write) !== 0
+      && field.valueType === 'boolean'
+      && field.writable
     ));
   }
 
   get switchOn(): boolean {
-    return this.snapshot?.values['switch']?.value === true;
+    return this.snapshot?.endpoints.find(field => field.key === 'switch')?.value === true;
   }
 
   get metrics(): CardMetric[] {
-    const fields = this.snapshot?.manifest?.fields ?? [];
-    const values = this.snapshot?.values ?? {};
-    return fields.flatMap(field => {
-      const value = values[field.key]?.value;
+    return (this.snapshot?.endpoints ?? []).flatMap(field => {
+      const value = field.value;
       if (typeof value !== 'number' && typeof value !== 'string' && typeof value !== 'bigint') {
         return [];
       }
       return [{
         key: field.key,
         value: typeof value === 'bigint' ? value.toString() : value,
-        unit: field.constraints?.unit ?? '',
+        unit: field.unit ?? '',
       }];
     }).slice(0, this.wide ? 6 : 1);
   }
 
   constructor(
-    private readonly deviceV2: DeviceV2Service,
+    private readonly deviceUi: DeviceUiPort,
     private readonly cd: ChangeDetectorRef,
     destroyRef: DestroyRef,
   ) {
@@ -101,7 +99,7 @@ export class Deviceblock {
     this.switchWaiting = true;
     this.cd.markForCheck();
     try {
-      await this.deviceV2.command(logicalDeviceId, 'switch', !this.switchOn);
+      await this.deviceUi.sendCommand(logicalDeviceId, 'switch', !this.switchOn);
     } finally {
       this.switchWaiting = false;
       this.cd.markForCheck();

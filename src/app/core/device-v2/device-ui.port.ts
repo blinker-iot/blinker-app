@@ -7,6 +7,8 @@ import {
   DeviceV2Event,
   DeviceV2ManifestField,
   DeviceV2TargetSnapshot,
+  DeviceV2TelemetryLease,
+  DeviceV2TelemetrySnapshot,
   DeviceV2Value,
   DeviceV2ValueType,
 } from '../protocol/device-v2';
@@ -14,6 +16,8 @@ import {
   DeviceV2AccountState,
   DeviceV2Service,
 } from '../services/device-v2.service';
+import { DeviceV2BleService } from '../services/device-v2-ble.service';
+import { AppVisibilityService } from '../services/app-visibility.service';
 
 export type DeviceUiConnectionState = DeviceV2AccountState;
 export type DeviceUiEndpointRole = 'property' | 'action' | 'event';
@@ -43,6 +47,7 @@ export interface DeviceUiEndpoint {
   maxLength?: number;
   unit?: string;
   choices?: string[];
+  telemetryMinimumIntervalMs?: number;
 }
 
 export interface DeviceUiSnapshot {
@@ -59,23 +64,100 @@ export interface DeviceUiEvent {
   values: Readonly<Record<string, DeviceUiValue | undefined>>;
 }
 
+export interface DeviceUiTelemetrySnapshot {
+  active: boolean;
+  effectiveIntervalMs: number;
+  values: Readonly<Record<string, DeviceUiValue | undefined>>;
+}
+
+export interface DeviceUiTelemetryLease {
+  readonly snapshot: DeviceUiTelemetrySnapshot;
+  subscribe(listener: (snapshot: DeviceUiTelemetrySnapshot) => void): () => void;
+  setVisible(visible: boolean): Promise<void>;
+  close(): Promise<void>;
+}
+
+function cloneUiValue(value: DeviceV2Value['value']): DeviceUiValue | undefined {
+  return value instanceof Uint8Array ? new Uint8Array(value) : value;
+}
+
+function mapTelemetrySnapshot(snapshot: DeviceV2TelemetrySnapshot): DeviceUiTelemetrySnapshot {
+  return {
+    active: snapshot.active,
+    effectiveIntervalMs: snapshot.effectiveIntervalMs,
+    values: Object.fromEntries(Object.entries(snapshot.values).map(
+      ([key, value]) => [key, cloneUiValue(value.value)],
+    )),
+  };
+}
+
+class DeviceUiTelemetryLeaseAdapter implements DeviceUiTelemetryLease {
+  constructor(
+    private readonly lease: DeviceV2TelemetryLease,
+    private readonly zone: NgZone,
+  ) {}
+
+  get snapshot(): DeviceUiTelemetrySnapshot {
+    return mapTelemetrySnapshot(this.lease.snapshot);
+  }
+
+  subscribe(listener: (snapshot: DeviceUiTelemetrySnapshot) => void): () => void {
+    return this.lease.subscribe(snapshot => {
+      this.zone.run(() => listener(mapTelemetrySnapshot(snapshot)));
+    });
+  }
+
+  setVisible(visible: boolean): Promise<void> {
+    return this.lease.setVisible(visible);
+  }
+
+  close(): Promise<void> {
+    return this.lease.close();
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class DeviceUiPort {
-  readonly connectionState = this.deviceV2.state.asObservable();
+  readonly appActive: Observable<boolean>;
 
   constructor(
     private readonly deviceV2: DeviceV2Service,
-    private readonly zone: NgZone = { run: callback => callback() } as NgZone,
-  ) {}
+    private readonly ble: DeviceV2BleService,
+    private readonly zone: NgZone,
+    appVisibility: AppVisibilityService,
+  ) {
+    this.appActive = appVisibility.active.asObservable();
+  }
 
   connect(logicalDeviceId: string): Promise<void> {
-    return this.deviceV2.ensureReady(logicalDeviceId);
+    return this.isBleDirect(logicalDeviceId)
+      ? this.ble.ensureReady(logicalDeviceId)
+      : this.deviceV2.ensureReady(logicalDeviceId);
+  }
+
+  disconnect(logicalDeviceId: string): Promise<void> {
+    return this.isBleDirect(logicalDeviceId)
+      ? this.ble.disconnect(logicalDeviceId)
+      : Promise.resolve();
+  }
+
+  watchConnection(logicalDeviceId: string): Observable<DeviceUiConnectionState> {
+    const source = this.isBleDirect(logicalDeviceId) ? this.ble.state : this.deviceV2.state;
+    return new Observable(subscriber => source.subscribe(state => {
+      this.zone.run(() => subscriber.next(state));
+    }));
   }
 
   watchState(logicalDeviceId: string): Observable<DeviceUiSnapshot> {
     return new Observable(subscriber => {
-      subscriber.next(this.mapSnapshot(this.deviceV2.snapshot(logicalDeviceId)));
-      return this.deviceV2.store.subscribe((changedId, snapshot) => {
+      const direct = this.isBleDirect(logicalDeviceId);
+      subscriber.next(this.mapSnapshot(
+        direct ? this.ble.snapshot(logicalDeviceId) : this.deviceV2.snapshot(logicalDeviceId),
+      ));
+      const subscribe = direct
+        ? this.ble.subscribe.bind(this.ble)
+        : this.deviceV2.store.subscribe.bind(this.deviceV2.store);
+      return subscribe((changedId, snapshot) => {
         if (changedId === logicalDeviceId) {
           this.zone.run(() => subscriber.next(this.mapSnapshot(snapshot)));
         }
@@ -84,7 +166,10 @@ export class DeviceUiPort {
   }
 
   watchEvents(logicalDeviceId: string): Observable<DeviceUiEvent> {
-    return new Observable(subscriber => this.deviceV2.store.subscribeEvents(event => {
+    const subscribe = this.isBleDirect(logicalDeviceId)
+      ? this.ble.subscribeEvents.bind(this.ble)
+      : this.deviceV2.store.subscribeEvents.bind(this.deviceV2.store);
+    return new Observable(subscriber => subscribe(event => {
       if (event.logicalDeviceId === logicalDeviceId) {
         this.zone.run(() => subscriber.next(this.mapEvent(event)));
       }
@@ -92,7 +177,27 @@ export class DeviceUiPort {
   }
 
   async sendCommand(logicalDeviceId: string, endpointKey: string, value: unknown): Promise<void> {
-    await this.deviceV2.command(logicalDeviceId, endpointKey, value);
+    if (this.isBleDirect(logicalDeviceId)) {
+      await this.ble.command(logicalDeviceId, endpointKey, value);
+    } else {
+      await this.deviceV2.command(logicalDeviceId, endpointKey, value);
+    }
+  }
+
+  async openTelemetry(
+    logicalDeviceId: string,
+    endpointKeys: string[],
+    intervalMs: number,
+  ): Promise<DeviceUiTelemetryLease> {
+    if (this.isBleDirect(logicalDeviceId)) {
+      throw new Error('BLE_DIRECT_TELEMETRY_NOT_ENABLED');
+    }
+    const lease = await this.deviceV2.openTelemetry(logicalDeviceId, endpointKeys, intervalMs);
+    return new DeviceUiTelemetryLeaseAdapter(lease, this.zone);
+  }
+
+  isBleDirect(logicalDeviceId: string): boolean {
+    return /^ble_[A-Za-z0-9_-]{22}$/.test(logicalDeviceId);
   }
 
   private mapSnapshot(snapshot: DeviceV2TargetSnapshot): DeviceUiSnapshot {
@@ -124,6 +229,7 @@ export class DeviceUiPort {
       maxLength: constraints?.maxLength,
       unit: constraints?.unit,
       choices: constraints?.enumValues ? [...constraints.enumValues] : undefined,
+      telemetryMinimumIntervalMs: field.telemetryMinimumIntervalMs,
     };
   }
 
@@ -137,7 +243,7 @@ export class DeviceUiPort {
   }
 
   private cloneValue(value: DeviceV2Value['value']): DeviceUiValue | undefined {
-    return value instanceof Uint8Array ? new Uint8Array(value) : value;
+    return cloneUiValue(value);
   }
 
   private mapRole(kind: DeviceV2EndpointKind): DeviceUiEndpointRole {

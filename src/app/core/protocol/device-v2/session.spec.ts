@@ -21,7 +21,7 @@ const logicalDeviceId = 'device_01234567-89ab-cdef-0123-456789abcdef';
 const manifestPage = hexToBytes(
   'a600010158204c765bdde27719d7beac22883b160c8b592b22d94844cd90911d3ec6c66a9dbf0200030204020582a50065706f7765720100020003030401a50065616c61726d0102020003080402',
 );
-const serverHello = hexToBytes('a60002018102021904c303190200041902000904');
+const serverHello = hexToBytes('a6000201810202190cc303190200041902000904');
 
 function concat(...parts: Uint8Array[]): Uint8Array {
   const output = new Uint8Array(parts.reduce((size, part) => size + part.length, 0));
@@ -98,7 +98,11 @@ function requestIds(): () => Uint8Array {
 
 function installServer(
   channel: FakeChannel,
-  options: { dropFirstManifest?: boolean; rejectCommands?: boolean } = {},
+  options: {
+    dropFirstManifest?: boolean;
+    commandError?: Bbp2ErrorCode;
+    topLevelCommandError?: boolean;
+  } = {},
 ): { stateBody: (body: Uint8Array) => void } {
   let serverSequence = 100;
   let manifestRequests = 0;
@@ -154,13 +158,22 @@ function installServer(
         state,
       );
     } else if (request.messageKind === Bbp2MessageKind.Command) {
-      if (options.rejectCommands) {
-        respond(
-          request,
-          Bbp2MessageKind.Error,
-          Bbp2FrameFlag.IsResponse,
-          errorBody(Bbp2ErrorCode.CommandRejected, frame.sequence),
-        );
+      if (options.commandError !== undefined) {
+        if (options.topLevelCommandError) {
+          channel.emit(encodeFrame({
+            kind: Bbp2MessageKind.Error,
+            flags: Bbp2FrameFlag.IsResponse,
+            sequence: ++serverSequence,
+            body: errorBody(options.commandError, frame.sequence),
+          }));
+        } else {
+          respond(
+            request,
+            Bbp2MessageKind.Error,
+            Bbp2FrameFlag.IsResponse,
+            errorBody(options.commandError, frame.sequence),
+          );
+        }
       } else {
         respond(request, Bbp2MessageKind.Ack, Bbp2FrameFlag.IsResponse, ackBody(frame.sequence));
       }
@@ -241,16 +254,80 @@ describe('DeviceV2Session', () => {
     await session.close();
   });
 
-  it('exposes a typed wire error without retrying a rejected command', async () => {
+  it.each([Bbp2ErrorCode.CommandRejected, Bbp2ErrorCode.RateLimited])(
+    'exposes typed wire error %s without retrying a rejected command',
+    async code => {
+      const channel = new FakeChannel();
+      installServer(channel, { commandError: code });
+      const session = new DeviceV2Session(channel, undefined, { requestId: requestIds() });
+      await session.start();
+      await session.ensureReady(logicalDeviceId);
+
+      const error = await session.command(logicalDeviceId, 'power', true).catch(reason => reason);
+      expect(error).toBeInstanceOf(DeviceV2RouteError);
+      expect((error as DeviceV2RouteError).code).toBe(code);
+      await session.close();
+    },
+  );
+
+  it('rejects only the pending Route for a top-level Error and keeps the session ready', async () => {
     const channel = new FakeChannel();
-    installServer(channel, { rejectCommands: true });
-    const session = new DeviceV2Session(channel, undefined, { requestId: requestIds() });
+    installServer(channel, {
+      commandError: Bbp2ErrorCode.RateLimited,
+      topLevelCommandError: true,
+    });
+    const session = new DeviceV2Session(channel, undefined, {
+      requestId: requestIds(),
+      requestTimeoutMs: 5,
+      routeRetries: 1,
+    });
     await session.start();
     await session.ensureReady(logicalDeviceId);
 
     const error = await session.command(logicalDeviceId, 'power', true).catch(reason => reason);
     expect(error).toBeInstanceOf(DeviceV2RouteError);
-    expect((error as DeviceV2RouteError).code).toBe(Bbp2ErrorCode.CommandRejected);
+    expect((error as DeviceV2RouteError).code).toBe(Bbp2ErrorCode.RateLimited);
+    expect(session.state).toBe('ready');
+
+    const commands = channel.published.filter(payload => {
+      const frame = decodeFrame(payload);
+      return frame.kind === Bbp2MessageKind.Route
+        && decodeDeliveryBody(frame.body).messageKind === Bbp2MessageKind.Command;
+    });
+    expect(commands).toHaveLength(1);
     await session.close();
+  });
+
+  it('ignores a late top-level Error without a pending Route', async () => {
+    const channel = new FakeChannel();
+    installServer(channel);
+    const session = new DeviceV2Session(channel, undefined, { requestId: requestIds() });
+    await session.start();
+
+    channel.emit(encodeFrame({
+      kind: Bbp2MessageKind.Error,
+      flags: Bbp2FrameFlag.IsResponse,
+      sequence: 201,
+      body: errorBody(Bbp2ErrorCode.RateLimited, 0x7fff),
+    }));
+
+    expect(session.state).toBe('ready');
+    await session.close();
+  });
+
+  it('closes the session for invalid top-level Error metadata', async () => {
+    const channel = new FakeChannel();
+    installServer(channel);
+    const session = new DeviceV2Session(channel, undefined, { requestId: requestIds() });
+    await session.start();
+
+    channel.emit(encodeFrame({
+      kind: Bbp2MessageKind.Error,
+      flags: 0,
+      sequence: 201,
+      body: errorBody(Bbp2ErrorCode.RateLimited, 1),
+    }));
+
+    expect(session.state).toBe('closed');
   });
 });

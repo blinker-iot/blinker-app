@@ -59,6 +59,11 @@ export const API = {
     RECEIVED_SHARES: API_V2_URL + '/shares/received',
     RECEIVED_SHARE: (logicalDeviceId: string) =>
       API_V2_URL + '/shares/received/' + encodeURIComponent(logicalDeviceId),
+    BLE_ENROLLMENT_INTENTS: API_V2_URL + '/ble-enrollment/intents',
+    BLE_ENROLLMENT_COMMIT: (intentId: string) =>
+      API_V2_URL + '/ble-enrollment/intents/' + encodeURIComponent(intentId) + '/commit',
+    BLE_ENROLLMENT_CANCEL: (intentId: string) =>
+      API_V2_URL + '/ble-enrollment/intents/' + encodeURIComponent(intentId) + '/cancel',
   },
   FEEDBACK: {
     SUBMIT: API_V1_URL + '/feedback/submit',
@@ -86,6 +91,8 @@ export function isGatewayUrl(url: string): boolean {
     || url === API.DEVICE_V2.ACCEPT_SHARE
     || url === API.DEVICE_V2.RECEIVED_SHARES
     || url.startsWith(API.DEVICE_V2.RECEIVED_SHARES + '/')
+    || url === API.DEVICE_V2.BLE_ENROLLMENT_INTENTS
+    || url.startsWith(API.DEVICE_V2.BLE_ENROLLMENT_INTENTS + '/')
     || isDeviceKeyManagementUrl(url);
 }
 

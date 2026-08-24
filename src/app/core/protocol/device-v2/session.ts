@@ -9,6 +9,8 @@ import {
   decodePatchBody,
   decodeServerHelloBody,
   decodeStatePageBody,
+  decodeTelemetryDataBody,
+  decodeTelemetryStatusBody,
   encodeAppHelloBody,
   encodeCommandBody,
   encodeFrame,
@@ -16,11 +18,18 @@ import {
   encodeManifestRequestBody,
   encodeRouteBody,
   encodeStateRequestBody,
+  encodeTelemetryControlBody,
   hexToBytes,
   logicalDevicePeerId,
   peerIdToLogicalDevice,
 } from './codec';
 import { DeviceV2Store } from './store';
+import {
+  DeviceV2TelemetryLease,
+  DeviceV2TelemetryManager,
+  DeviceV2TelemetryOptions,
+  validateDeviceV2TelemetryFields,
+} from './telemetry';
 import {
   Bbp2Delivery,
   Bbp2ErrorCode,
@@ -29,6 +38,8 @@ import {
   Bbp2RoutePeerKind,
   DeviceV2Ack,
   DeviceV2ManifestField,
+  DeviceV2TelemetryControl,
+  DeviceV2TelemetryStatus,
 } from './types';
 
 export interface DeviceV2Channel {
@@ -93,6 +104,7 @@ function randomRequestId(): Uint8Array {
 
 export class DeviceV2Session {
   readonly store: DeviceV2Store;
+  readonly telemetry: DeviceV2TelemetryManager;
 
   private stateValue: DeviceV2SessionState = 'idle';
   private sequence = 0;
@@ -122,6 +134,16 @@ export class DeviceV2Session {
     options: DeviceV2SessionOptions = {},
   ) {
     this.store = store;
+    this.telemetry = new DeviceV2TelemetryManager(
+      async (logicalDeviceId, endpointKeys) => {
+        await this.ensureReady(logicalDeviceId);
+        const manifest = this.store.snapshot(logicalDeviceId).manifest;
+        if (!manifest) throw new Error('verified Manifest is missing');
+        return validateDeviceV2TelemetryFields(manifest.fields, endpointKeys);
+      },
+      (logicalDeviceId, control) => this.telemetryControl(logicalDeviceId, control),
+      error => this.emitError(error),
+    );
     this.maxFrameSize = options.maxFrameSize ?? 512;
     this.reliableWindow = options.reliableWindow ?? 4;
     this.requestTimeoutMs = options.requestTimeoutMs ?? 6000;
@@ -228,6 +250,15 @@ export class DeviceV2Session {
     throw new Error('Device V2 command retry exhausted');
   }
 
+  openTelemetry(
+    logicalDeviceId: string,
+    endpointKeys: string[],
+    intervalMs: number,
+    options?: DeviceV2TelemetryOptions,
+  ): Promise<DeviceV2TelemetryLease> {
+    return this.telemetry.open(logicalDeviceId, endpointKeys, intervalMs, options);
+  }
+
   async close(): Promise<void> {
     if (!this.closePromise) {
       if (this.stateValue !== 'closed') {
@@ -332,6 +363,24 @@ export class DeviceV2Session {
     }
   }
 
+  private async telemetryControl(
+    logicalDeviceId: string,
+    control: DeviceV2TelemetryControl,
+  ): Promise<DeviceV2TelemetryStatus> {
+    const result = await this.route(
+      logicalDeviceId,
+      Bbp2MessageKind.TelemetryControl,
+      Bbp2FrameFlag.IdMode,
+      encodeTelemetryControlBody(control),
+    );
+    this.expectDelivery(
+      result.delivery,
+      Bbp2MessageKind.TelemetryStatus,
+      Bbp2FrameFlag.IsResponse | Bbp2FrameFlag.IdMode,
+    );
+    return decodeTelemetryStatusBody(result.delivery.messageBody);
+  }
+
   private route(
     logicalDeviceId: string,
     messageKind: Bbp2MessageKind,
@@ -421,6 +470,13 @@ export class DeviceV2Session {
         this.completeHello();
         return;
       }
+      if (frame.kind === Bbp2MessageKind.Error && this.stateValue === 'ready') {
+        if (frame.flags !== Bbp2FrameFlag.IsResponse || frame.sequence === 0) {
+          throw new Error('top-level Error metadata is invalid');
+        }
+        this.topLevelError(decodeErrorBody(frame.body));
+        return;
+      }
       if (this.stateValue !== 'ready' || frame.kind !== Bbp2MessageKind.Delivery
         || frame.flags !== Bbp2FrameFlag.IsResponse || frame.sequence === 0) {
         throw new Error('unexpected Device V2 session frame');
@@ -428,6 +484,14 @@ export class DeviceV2Session {
       this.delivery(decodeDeliveryBody(frame.body));
     } catch (error) {
       this.fail(asError(error, 'Device V2 inbound frame is invalid'));
+    }
+  }
+
+  private topLevelError(error: ReturnType<typeof decodeErrorBody>): void {
+    for (const [requestKey, pending] of this.pending) {
+      if (pending.sequence !== error.relatedSequence) continue;
+      this.rejectPending(requestKey, pending, this.routeError(error));
+      return;
     }
   }
 
@@ -445,11 +509,7 @@ export class DeviceV2Session {
           pending.reject(new Error('Route Error does not match the request'));
           return;
         }
-        pending.reject(new DeviceV2RouteError(
-          error.errorCode as Bbp2ErrorCode,
-          error.relatedSequence,
-          error.stateRevision,
-        ));
+        pending.reject(this.routeError(error));
         return;
       }
       if (delivery.peerKind !== Bbp2RoutePeerKind.LogicalDevice
@@ -481,6 +541,16 @@ export class DeviceV2Session {
       this.store.applyEvent(
         logicalDeviceId,
         decodeEventBody(delivery.messageBody, snapshot.manifest.fields),
+      );
+    } else if (delivery.messageKind === Bbp2MessageKind.TelemetryData) {
+      this.telemetry.receiveData(
+        logicalDeviceId,
+        decodeTelemetryDataBody(delivery.messageBody, snapshot.manifest.fields),
+      );
+    } else if (delivery.messageKind === Bbp2MessageKind.TelemetryStatus) {
+      this.telemetry.receiveStatus(
+        logicalDeviceId,
+        decodeTelemetryStatusBody(delivery.messageBody),
       );
     } else {
       throw new Error('unsolicited Delivery kind is invalid');
@@ -533,6 +603,14 @@ export class DeviceV2Session {
     pending.reject(error);
   }
 
+  private routeError(error: ReturnType<typeof decodeErrorBody>): DeviceV2RouteError {
+    return new DeviceV2RouteError(
+      error.errorCode as Bbp2ErrorCode,
+      error.relatedSequence,
+      error.stateRevision,
+    );
+  }
+
   private assertReady(): void {
     if (this.stateValue !== 'ready') throw new Error('Device V2 session is not ready');
   }
@@ -548,6 +626,7 @@ export class DeviceV2Session {
       this.rejectPending(requestKey, pending, error);
     }
     this.synchronizing.clear();
+    this.telemetry.reset();
     this.store.resetSession();
     this.setState('closed');
     this.rejectStart?.(error);
