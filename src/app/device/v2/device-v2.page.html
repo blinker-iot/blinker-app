@@ -21,6 +21,12 @@
       </section>
     }
 
+    @if (telemetryError) {
+      <section class="notice">
+        <span>实时数据已降级：{{ telemetryError }}</span>
+      </section>
+    }
+
     @if (layoutStale) {
       <section class="notice">
         <span>{{ layoutStaleText }}</span>
@@ -43,6 +49,9 @@
         <span>Manifest {{ snapshot.manifestRevision }}</span>
         <span>Layout {{ layout.revision }}</span>
         <span>State {{ snapshot.stateRevision ?? '—' }}</span>
+        @if (telemetryActive) {
+          <span>Realtime {{ telemetryIntervalMs }} ms</span>
+        }
       </section>
 
       <section class="fields">

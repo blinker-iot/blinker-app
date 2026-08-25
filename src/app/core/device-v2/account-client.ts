@@ -5,6 +5,8 @@ import {
   DeviceV2Session,
   DeviceV2Store,
   DeviceV2TargetSnapshot,
+  DeviceV2TelemetryLease,
+  DeviceV2TelemetryOptions,
 } from '../protocol/device-v2';
 import { DeviceV2TransportConfigError } from './transport-config.error';
 
@@ -100,6 +102,16 @@ export class DeviceV2AccountClient {
   async command(logicalDeviceId: string, endpointKey: string, value: unknown): Promise<DeviceV2Ack> {
     await this.start();
     return this.requireSession().command(logicalDeviceId, endpointKey, value);
+  }
+
+  async openTelemetry(
+    logicalDeviceId: string,
+    endpointKeys: string[],
+    intervalMs: number,
+    options?: DeviceV2TelemetryOptions,
+  ): Promise<DeviceV2TelemetryLease> {
+    await this.start();
+    return this.requireSession().openTelemetry(logicalDeviceId, endpointKeys, intervalMs, options);
   }
 
   snapshot(logicalDeviceId: string): DeviceV2TargetSnapshot {

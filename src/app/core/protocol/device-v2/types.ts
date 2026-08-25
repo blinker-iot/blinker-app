@@ -1,13 +1,21 @@
 export const BBP2_HEADER_BYTES = 10;
+export const BBP2_MAX_FRAME_BYTES = 512;
 export const BBP2_MAX_MANIFEST_FIELDS = 256;
 export const BBP2_MAX_PAGE_VALUES = 32;
 export const BBP2_FINGERPRINT_BYTES = 32;
 export const BBP2_ROUTE_IDENTITY_BYTES = 16;
+export const BBP2_MAX_TELEMETRY_FIELDS = 32;
+export const BBP2_TELEMETRY_MINIMUM_LEASE_MS = 5000;
+export const BBP2_TELEMETRY_MAXIMUM_LEASE_MS = 60000;
+export const BBP2_TELEMETRY_MINIMUM_INTERVAL_MS = 100;
+export const BBP2_TELEMETRY_MAXIMUM_INTERVAL_MS = 60000;
 
 export enum Bbp2MessageKind {
   Hello = 0x01,
   ManifestRequest = 0x02,
   Manifest = 0x03,
+  Authenticate = 0x04,
+  AuthResult = 0x05,
   ManifestAccept = 0x06,
   Route = 0x09,
   Delivery = 0x0a,
@@ -18,6 +26,9 @@ export enum Bbp2MessageKind {
   Ack = 0x14,
   Error = 0x15,
   StatePage = 0x16,
+  TelemetryControl = 0x17,
+  TelemetryStatus = 0x18,
+  TelemetryData = 0x19,
 }
 
 export enum Bbp2FrameFlag {
@@ -35,6 +46,8 @@ export enum Bbp2RoutePeerKind {
 }
 
 export enum Bbp2ErrorCode {
+  MalformedMessage = 1,
+  AuthenticationRequired = 2,
   NegotiationRequired = 3,
   UnsupportedMessage = 4,
   UnknownEndpoint = 5,
@@ -44,6 +57,7 @@ export enum Bbp2ErrorCode {
   SequenceConflict = 9,
   StateConflict = 10,
   ManifestConflict = 11,
+  RateLimited = 12,
 }
 
 export enum DeviceV2EndpointKind {
@@ -113,6 +127,7 @@ export interface DeviceV2ManifestField {
   type: DeviceV2ValueType;
   access: number;
   id: number;
+  telemetryMinimumIntervalMs?: number;
   constraints?: DeviceV2ManifestConstraints;
 }
 
@@ -155,6 +170,52 @@ export interface DeviceV2Patch {
 }
 
 export interface DeviceV2EventBody {
+  values: Record<string, DeviceV2Value>;
+}
+
+export enum DeviceV2TelemetryOperation {
+  Open = 0,
+  Renew = 1,
+  Close = 2,
+}
+
+export enum DeviceV2TelemetryStatusCode {
+  Opened = 0,
+  Renewed = 1,
+  Closed = 2,
+  Expired = 3,
+}
+
+export type DeviceV2TelemetryControl = {
+  operation: DeviceV2TelemetryOperation.Open;
+  streamId: number;
+  leaseMs: number;
+  intervalMs: number;
+  fieldIds: number[];
+} | {
+  operation: DeviceV2TelemetryOperation.Renew;
+  streamId: number;
+  epoch: number;
+  leaseMs: number;
+} | {
+  operation: DeviceV2TelemetryOperation.Close;
+  streamId: number;
+  epoch: number;
+};
+
+export interface DeviceV2TelemetryStatus {
+  streamId: number;
+  epoch: number;
+  status: DeviceV2TelemetryStatusCode;
+  effectiveIntervalMs: number;
+  leaseMs: number;
+}
+
+export interface DeviceV2TelemetryData {
+  streamId: number;
+  epoch: number;
+  sampleSequence: number;
+  monotonicMs: number;
   values: Record<string, DeviceV2Value>;
 }
 

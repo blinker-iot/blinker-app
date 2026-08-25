@@ -27,7 +27,7 @@ class HelloChannel implements DeviceV2Channel {
       kind: Bbp2MessageKind.Hello,
       flags: Bbp2FrameFlag.IsResponse,
       sequence: frame.sequence,
-      body: hexToBytes('a60002018102021904c303190200041902000904'),
+      body: hexToBytes('a6000201810202190cc303190200041902000904'),
     }));
     this.emit(encodeFrame({
       kind: Bbp2MessageKind.Ack,

@@ -120,6 +120,96 @@ app-hero-card {
   }
 }
 
+.device-name {
+  display: block;
+  margin-top: 14px;
+
+  span {
+    display: block;
+    margin: 0 3px 7px;
+    color: var(--blinker-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  input {
+    width: 100%;
+    height: 46px;
+    padding: 0 14px;
+    border: 1px solid var(--blinker-border);
+    border-radius: var(--blinker-radius-control);
+    outline: none;
+    background: var(--blinker-surface);
+    color: var(--blinker-text-primary);
+    font: inherit;
+
+    &:focus {
+      border-color: var(--method-color);
+    }
+  }
+}
+
+.enrollment-result {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--blinker-border);
+  border-radius: var(--blinker-radius-card);
+  background: var(--blinker-surface);
+
+  > i {
+    color: var(--method-color);
+    font-size: 28px;
+  }
+
+  h2 {
+    margin: 10px 0 5px;
+    font-size: 16px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--blinker-text-secondary);
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  dl {
+    margin: 14px 0 0;
+  }
+
+  dl > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid var(--blinker-divider);
+    font-size: 11px;
+  }
+
+  dt {
+    color: var(--blinker-text-secondary);
+  }
+
+  dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+    text-align: right;
+  }
+
+  &.error {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    border-color: var(--ion-color-danger);
+
+    > i {
+      color: var(--ion-color-danger);
+      font-size: 18px;
+    }
+  }
+}
+
 .primary-action {
   width: 100%;
   height: 49px;
@@ -136,6 +226,11 @@ app-hero-card {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.65;
+  }
 
   &:active {
     transform: scale(0.99);

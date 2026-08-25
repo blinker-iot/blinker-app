@@ -16,6 +16,7 @@
       [description]="'DEVICE_GUIDE.BLE_PAGE_DESCRIPTION' | translate"
     />
 
+    @if (phase !== 'ready') {
     <section class="setup-card" aria-labelledby="ble-prepare-heading">
       <h2 id="ble-prepare-heading">{{ 'DEVICE_GUIDE.PREPARE_TITLE' | translate }}</h2>
       <ol class="setup-steps">
@@ -43,14 +44,53 @@
       </ol>
     </section>
 
+    <label class="device-name">
+      <span>{{ 'DEVICE_GUIDE.KEY_DEVICE_NAME' | translate }}</span>
+      <input
+        type="text"
+        maxlength="128"
+        [disabled]="busy"
+        [placeholder]="'DEVICE_GUIDE.KEY_DEVICE_NAME_PLACEHOLDER' | translate"
+        [(ngModel)]="deviceName"
+      />
+    </label>
+
     <aside class="method-tip">
       <i class="fa-light fa-circle-info" aria-hidden="true"></i>
       <p>{{ 'DEVICE_GUIDE.BLE_PAGE_TIP' | translate }}</p>
     </aside>
 
-    <button type="button" class="primary-action" (click)="startDiscovery()">
-      <i class="fa-light fa-radar" aria-hidden="true"></i>
-      {{ 'DEVICE_GUIDE.BLE_START' | translate }}
+    @if (error) {
+      <aside class="enrollment-result error" role="alert">
+        <i class="fa-light fa-circle-exclamation" aria-hidden="true"></i>
+        <p>{{ error }}</p>
+      </aside>
+    }
+
+    <button type="button" class="primary-action" [disabled]="busy" (click)="startDiscovery()">
+      <i [class]="busy ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-radar'" aria-hidden="true"></i>
+      {{ actionKey | translate }}
     </button>
+    } @else {
+      <section class="enrollment-result ready" aria-live="polite">
+        <i class="fa-light fa-circle-check" aria-hidden="true"></i>
+        <h2>{{ 'DEVICE_GUIDE.BLE_READY_TITLE' | translate }}</h2>
+        <p>{{ 'DEVICE_GUIDE.BLE_READY_DESCRIPTION' | translate }}</p>
+        <dl>
+          <div>
+            <dt>{{ 'DEVICE_GUIDE.BLE_DEVICE_ID' | translate }}</dt>
+            <dd>{{ logicalDeviceId }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'DEVICE_GUIDE.BLE_ENDPOINT_COUNT' | translate }}</dt>
+            <dd>{{ endpointCount }}</dd>
+          </div>
+        </dl>
+      </section>
+      <button type="button" class="primary-action" (click)="finish()">
+        <i class="fa-light fa-check" aria-hidden="true"></i>
+        {{ 'DEVICE_GUIDE.COMPLETE' | translate }}
+      </button>
+    }
   </main>
 </ion-content>

@@ -7,6 +7,8 @@ import {
   Bbp2RoutePeerKind,
   DeviceV2EndpointKind,
   DeviceV2Store,
+  DeviceV2TelemetryOperation,
+  DeviceV2TelemetryStatusCode,
   DeviceV2ValueType,
   bytesToHex,
   decodeDeliveryBody,
@@ -16,6 +18,8 @@ import {
   decodePatchBody,
   decodeServerHelloBody,
   decodeStatePageBody,
+  decodeTelemetryDataBody,
+  decodeTelemetryStatusBody,
   encodeDeliveryBody,
   encodeAppHelloBody,
   encodeCommandBody,
@@ -24,12 +28,14 @@ import {
   encodeManifestRequestBody,
   encodeRouteBody,
   encodeStateRequestBody,
+  encodeTelemetryControlBody,
   hexToBytes,
   logicalDevicePeerId,
   peerIdToLogicalDevice,
 } from './index';
 
 const logicalDeviceId = 'device_01234567-89ab-cdef-0123-456789abcdef';
+const bleLogicalDeviceId = 'ble_AAECAwQFBgcICQoLDA0ODw';
 const fingerprintHex = '4c765bdde27719d7beac22883b160c8b592b22d94844cd90911d3ec6c66a9dbf';
 const manifestPageHex = 'a600010158204c765bdde27719d7beac22883b160c8b592b22d94844cd90911d3ec6c66a9dbf0200030204020582a50065706f7765720100020003030401a50065616c61726d0102020003080402';
 
@@ -40,8 +46,8 @@ function bytes(value: string): Uint8Array {
 describe('Device V2 App codec', () => {
   it('matches the server App HELLO and frame golden bytes', () => {
     const hello = encodeAppHelloBody();
-    expect(bytesToHex(hello)).toBe('a60001018102021904c303190200041902000904');
-    expect(APP_FEATURES).toBe(0x4c3);
+    expect(bytesToHex(hello)).toBe('a6000101810202190cc303190200041902000904');
+    expect(APP_FEATURES).toBe(0xcc3);
 
     const frame = encodeFrame({
       kind: Bbp2MessageKind.Hello,
@@ -57,8 +63,16 @@ describe('Device V2 App codec', () => {
     });
     expect(() => decodeFrame(frame.subarray(0, frame.length - 1))).toThrow(/length|header/);
 
+    const extended = new Uint8Array(frame.length + 2);
+    extended.set(frame.subarray(0, 10));
+    extended[5] = 12;
+    extended.set([0xaa, 0x55], 10);
+    extended.set(frame.subarray(10), 12);
+    expect(decodeFrame(extended).body).toEqual(hello);
+    expect(() => decodeFrame(new Uint8Array(513))).toThrow(/header/);
+
     expect(decodeServerHelloBody(bytes(
-      'a60002018102021904c303190200041902000904',
+      'a6000201810202190cc303190200041902000904',
     ))).toEqual({
       role: 2,
       versions: [2],
@@ -72,10 +86,59 @@ describe('Device V2 App codec', () => {
     ))).toThrow(/negotiation/);
   });
 
-  it('encodes Route metadata and converts only exact logical device UUIDs', () => {
+  it('matches the frozen telemetry control/status/data bytes', () => {
+    expect(bytesToHex(encodeTelemetryControlBody({
+      operation: DeviceV2TelemetryOperation.Open,
+      streamId: 1,
+      leaseMs: 30000,
+      intervalMs: 100,
+      fieldIds: [1, 2],
+    }))).toBe('a5000001010319753004186405820102');
+    expect(() => encodeTelemetryControlBody({
+      operation: DeviceV2TelemetryOperation.Open,
+      streamId: 1,
+      leaseMs: 30000,
+      intervalMs: 100,
+      fieldIds: [2, 1],
+    })).toThrow(/field IDs/);
+
+    expect(decodeTelemetryStatusBody(bytes('a500010102020003186404197530'))).toEqual({
+      streamId: 1,
+      epoch: 2,
+      status: DeviceV2TelemetryStatusCode.Opened,
+      effectiveIntervalMs: 100,
+      leaseMs: 30000,
+    });
+    const fields = [{
+      key: 'power',
+      kind: DeviceV2EndpointKind.Property,
+      type: DeviceV2ValueType.Boolean,
+      access: 5,
+      id: 1,
+      telemetryMinimumIntervalMs: 1000,
+    }];
+    expect(decodeTelemetryDataBody(
+      bytes('a5000101010201030004a101f5'),
+      fields,
+    )).toEqual({
+      streamId: 1,
+      epoch: 1,
+      sampleSequence: 1,
+      monotonicMs: 0,
+      values: {
+        power: { type: DeviceV2ValueType.Boolean, value: true, cbor: bytes('f5') },
+      },
+    });
+  });
+
+  it('encodes Route metadata and converts canonical logical device identities', () => {
     const peerId = logicalDevicePeerId(logicalDeviceId);
     expect(bytesToHex(peerId)).toBe('0123456789abcdef0123456789abcdef');
     expect(peerIdToLogicalDevice(peerId)).toBe(logicalDeviceId);
+    expect(logicalDevicePeerId(bleLogicalDeviceId)).toEqual(Uint8Array.from(
+      { length: 16 }, (_, index) => index,
+    ));
+    expect(() => logicalDevicePeerId('ble_AAECAwQFBgcICQoLDA0ODx')).toThrow(/identity/);
 
     const route = encodeRouteBody({
       peerKind: Bbp2RoutePeerKind.LogicalDevice,
@@ -89,6 +152,14 @@ describe('Device V2 App codec', () => {
       'a6000001500123456789abcdef0123456789abcdef02501112131415161718191a1b1c1d1e1f200312040505a101f5',
     );
     expect(() => logicalDevicePeerId('not-a-device')).toThrow(/identity/);
+  });
+
+  it('uses the shared store for canonical BLE logical identities', () => {
+    const store = new DeviceV2Store();
+    expect(store.snapshot(bleLogicalDeviceId)).toMatchObject({
+      manifest: null,
+      stateFresh: false,
+    });
   });
 
   it('decodes unsolicited Event Delivery without requestId', () => {
@@ -126,6 +197,16 @@ describe('Device V2 App codec', () => {
     const event = decodeEventBody(bytes('a102f5'), manifest.fields);
     expect(event.values['alarm']?.value).toBe(true);
     expect(() => decodeEventBody(bytes('a101f5'), manifest.fields)).toThrow(/manifest/);
+  });
+
+  it('parses realtime capability and advertises the completed telemetry lane', () => {
+    const pageHex = `a60001015820${'00'.repeat(32)}`
+      + '0200030104010581a6006b74656d706572617475726501000203030504010b1903e8';
+    const page = decodeManifestPageBody(bytes(pageHex));
+    expect(page.fields[0]?.telemetryMinimumIntervalMs).toBe(1000);
+    expect(APP_FEATURES & (1 << 11)).toBe(1 << 11);
+    expect(() => decodeManifestPageBody(bytes(pageHex.replace('030504', '030704'))))
+      .toThrow(/telemetry/);
   });
 
   it('encodes request bodies and typed command values without JSON', () => {
