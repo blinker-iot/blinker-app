@@ -65,8 +65,6 @@
   button.active { background: var(--blinker-surface); color: var(--tool-accent); box-shadow: var(--blinker-shadow-soft); }
 }
 
-.field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-
 .field-group {
   margin-bottom: 14px;
   > label {
@@ -92,16 +90,9 @@
   transition: border-color 160ms ease, box-shadow 160ms ease;
   &:focus-within { border-color: var(--tool-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tool-accent) 12%, transparent); }
   > i { width: 17px; color: var(--tool-accent); font-size: 15px; text-align: center; }
-  input,
-  select { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--blinker-text-primary); font: inherit; font-size: 13px; }
+  input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--blinker-text-primary); font: inherit; font-size: 13px; }
   input::placeholder { color: var(--blinker-text-tertiary); }
-  input:disabled,
-  select:disabled { opacity: .65; }
-}
-
-.select-shell {
-  select { appearance: none; }
-  > i:last-child { width: auto; color: var(--blinker-text-tertiary); font-size: 10px; }
+  input:disabled { opacity: .65; }
 }
 
 .inline-action { padding: 6px; color: var(--blinker-text-secondary); font-size: 15px; }

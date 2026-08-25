@@ -6,7 +6,13 @@ import { API } from '../../configs/api.config';
 import { DeviceV2AccountClient, DeviceV2AccountState } from '../device-v2/account-client';
 import { openMqttDeviceV2Channel } from '../device-v2/mqtt-channel';
 import { AccountConnectionResponse } from '../model/response.model';
-import { DeviceV2Ack, DeviceV2Store, DeviceV2TargetSnapshot } from '../protocol/device-v2';
+import {
+  DeviceV2Ack,
+  DeviceV2Store,
+  DeviceV2TargetSnapshot,
+  DeviceV2TelemetryLease,
+  DeviceV2TelemetryOptions,
+} from '../protocol/device-v2';
 import { DataService } from './data.service';
 
 export type { DeviceV2AccountState } from '../device-v2/account-client';
@@ -51,6 +57,15 @@ export class DeviceV2Service {
 
   command(logicalDeviceId: string, endpointKey: string, value: unknown): Promise<DeviceV2Ack> {
     return this.client.command(logicalDeviceId, endpointKey, value);
+  }
+
+  openTelemetry(
+    logicalDeviceId: string,
+    endpointKeys: string[],
+    intervalMs: number,
+    options?: DeviceV2TelemetryOptions,
+  ): Promise<DeviceV2TelemetryLease> {
+    return this.client.openTelemetry(logicalDeviceId, endpointKeys, intervalMs, options);
   }
 
   snapshot(logicalDeviceId: string): DeviceV2TargetSnapshot {

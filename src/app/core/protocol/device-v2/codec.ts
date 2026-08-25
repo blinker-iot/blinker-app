@@ -1,9 +1,15 @@
 import {
   BBP2_FINGERPRINT_BYTES,
   BBP2_HEADER_BYTES,
+  BBP2_MAX_FRAME_BYTES,
   BBP2_MAX_MANIFEST_FIELDS,
   BBP2_MAX_PAGE_VALUES,
+  BBP2_MAX_TELEMETRY_FIELDS,
   BBP2_ROUTE_IDENTITY_BYTES,
+  BBP2_TELEMETRY_MAXIMUM_INTERVAL_MS,
+  BBP2_TELEMETRY_MAXIMUM_LEASE_MS,
+  BBP2_TELEMETRY_MINIMUM_INTERVAL_MS,
+  BBP2_TELEMETRY_MINIMUM_LEASE_MS,
   Bbp2Delivery,
   Bbp2Frame,
   Bbp2FrameFlag,
@@ -11,6 +17,7 @@ import {
   Bbp2RoutePeerKind,
   Bbp2ServerHello,
   DeviceV2Ack,
+  DeviceV2EndpointAccess,
   DeviceV2EndpointKind,
   DeviceV2ErrorBody,
   DeviceV2EventBody,
@@ -18,6 +25,11 @@ import {
   DeviceV2ManifestPage,
   DeviceV2Patch,
   DeviceV2StatePage,
+  DeviceV2TelemetryControl,
+  DeviceV2TelemetryData,
+  DeviceV2TelemetryOperation,
+  DeviceV2TelemetryStatus,
+  DeviceV2TelemetryStatusCode,
   DeviceV2Value,
   DeviceV2ValueType,
 } from './types';
@@ -31,14 +43,15 @@ const MAX_ITEMS = 32;
 const MAX_DEPTH = 6;
 const MAX_HELLO_VERSIONS = 4;
 const MAX_RELIABLE_RECEIVE_WINDOW = 16;
-const KNOWN_FEATURES = 0x6ff;
+const KNOWN_FEATURES = 0xeff;
 const FEATURE_MANIFEST = 1 << 0;
 const FEATURE_ENDPOINT_IDS = 1 << 1;
 const FEATURE_RELIABLE_DELIVERY = 1 << 6;
 const FEATURE_STATE_REVISION = 1 << 7;
 const FEATURE_ROUTING = 1 << 10;
+const FEATURE_TELEMETRY = 1 << 11;
 export const APP_FEATURES = FEATURE_MANIFEST | FEATURE_ENDPOINT_IDS
-  | FEATURE_RELIABLE_DELIVERY | FEATURE_STATE_REVISION | FEATURE_ROUTING;
+  | FEATURE_RELIABLE_DELIVERY | FEATURE_STATE_REVISION | FEATURE_ROUTING | FEATURE_TELEMETRY;
 const MESSAGE_KINDS = new Set<number>(Object.values(Bbp2MessageKind)
   .filter((value): value is number => typeof value === 'number'));
 const ROUTED_KINDS = new Set<number>([
@@ -52,6 +65,9 @@ const ROUTED_KINDS = new Set<number>([
   Bbp2MessageKind.Ack,
   Bbp2MessageKind.Error,
   Bbp2MessageKind.StatePage,
+  Bbp2MessageKind.TelemetryControl,
+  Bbp2MessageKind.TelemetryStatus,
+  Bbp2MessageKind.TelemetryData,
 ]);
 
 const textEncoder = new TextEncoder();
@@ -128,7 +144,7 @@ function encodeUnsignedMap(entries: Array<[number, Uint8Array]>): Uint8Array {
   return concat(...encoded);
 }
 
-class CborReader {
+export class CborReader {
   private offset = 0;
 
   constructor(private readonly input: Uint8Array) {}
@@ -139,6 +155,10 @@ class CborReader {
 
   get finished(): boolean {
     return this.offset === this.input.length;
+  }
+
+  finish(): void {
+    if (!this.finished) throw new Error('trailing canonical CBOR data');
   }
 
   private byte(): number {
@@ -349,6 +369,29 @@ class CborReader {
   }
 }
 
+export function encodeCanonicalUnsigned(value: number | bigint): Uint8Array {
+  return encodeUnsigned(value);
+}
+
+export function encodeCanonicalByteString(value: Uint8Array): Uint8Array {
+  return encodeBytes(value);
+}
+
+export function encodeCanonicalTextString(value: string): Uint8Array {
+  return encodeText(value);
+}
+
+export function encodeCanonicalArray(values: Uint8Array[]): Uint8Array {
+  if (values.length > MAX_ITEMS) throw new Error('CBOR array exceeds the item limit');
+  return concat(encodeHead(4, values.length), ...values);
+}
+
+export function encodeCanonicalMap(
+  entries: Array<[number, Uint8Array]>,
+): Uint8Array {
+  return encodeUnsignedMap(entries);
+}
+
 function bytesEqual(left: Uint8Array, right: Uint8Array): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
@@ -366,8 +409,35 @@ export function logicalDevicePeerId(logicalDeviceId: string): Uint8Array {
   const match = /^device_([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})$/.exec(
     logicalDeviceId,
   );
-  if (!match) throw new Error('logical device identity is invalid');
-  return hexToBytes(match.slice(1).join(''));
+  if (match) return hexToBytes(match.slice(1).join(''));
+  const direct = /^ble_([A-Za-z0-9_-]{22})$/.exec(logicalDeviceId);
+  if (direct) {
+    const encoded = direct[1].replace(/-/g, '+').replace(/_/g, '/') + '==';
+    try {
+      const peerId = Uint8Array.from(atob(encoded), value => value.charCodeAt(0));
+      if (peerId.length === BBP2_ROUTE_IDENTITY_BYTES
+        && peerId.some(byte => byte !== 0)
+        && base64Url(peerId) === direct[1]) return peerId;
+    } catch {
+      // Fall through to the single public validation error below.
+    }
+  }
+  throw new Error('logical device identity is invalid');
+}
+
+export function isLogicalDeviceId(logicalDeviceId: string): boolean {
+  try {
+    logicalDevicePeerId(logicalDeviceId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function base64Url(value: Uint8Array): string {
+  let binary = '';
+  for (const byte of value) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export function peerIdToLogicalDevice(peerId: Uint8Array): string {
@@ -383,7 +453,7 @@ export function encodeFrame(frame: Bbp2Frame): Uint8Array {
   if (!MESSAGE_KINDS.has(frame.kind)
     || (frame.flags & ~0x07) !== 0
     || !Number.isInteger(frame.sequence) || frame.sequence < 0 || frame.sequence > 0xffff
-    || frame.body.length > 0xffff) {
+    || BBP2_HEADER_BYTES + frame.body.length > BBP2_MAX_FRAME_BYTES) {
     throw new Error('BBP/2 frame metadata is invalid');
   }
   const output = new Uint8Array(BBP2_HEADER_BYTES + frame.body.length);
@@ -396,22 +466,24 @@ export function encodeFrame(frame: Bbp2Frame): Uint8Array {
 }
 
 export function decodeFrame(payload: Uint8Array): Bbp2Frame {
-  if (payload.length < BBP2_HEADER_BYTES || payload[0] !== MAGIC_0 || payload[1] !== MAGIC_1
-    || payload[2] !== VERSION || payload[5] !== BBP2_HEADER_BYTES) {
+  if (payload.length < BBP2_HEADER_BYTES || payload.length > BBP2_MAX_FRAME_BYTES
+    || payload[0] !== MAGIC_0 || payload[1] !== MAGIC_1 || payload[2] !== VERSION
+    || payload[5]! < BBP2_HEADER_BYTES) {
     throw new Error('BBP/2 frame header is invalid');
   }
   const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
   const flags = payload[4]!;
+  const headerLength = payload[5]!;
   const bodyLength = view.getUint16(8);
   if (!MESSAGE_KINDS.has(payload[3]!) || (flags & ~0x07) !== 0
-    || payload.length !== BBP2_HEADER_BYTES + bodyLength) {
+    || payload.length !== headerLength + bodyLength) {
     throw new Error('BBP/2 frame length or flags are invalid');
   }
   return {
     kind: payload[3]! as Bbp2MessageKind,
     flags,
     sequence: view.getUint16(6),
-    body: copy(payload.subarray(BBP2_HEADER_BYTES)),
+    body: copy(payload.subarray(headerLength)),
   };
 }
 
@@ -473,6 +545,11 @@ export function decodeServerHelloBody(body: Uint8Array): Bbp2ServerHello {
     || maxFrameSize < BBP2_HEADER_BYTES || maxReassemblySize < maxFrameSize
     || reliableReceiveWindow === undefined || reliableReceiveWindow === 0) {
     throw new Error('Server HELLO negotiation is invalid');
+  }
+  if ((features & FEATURE_TELEMETRY) !== 0
+    && (features & (FEATURE_MANIFEST | FEATURE_ENDPOINT_IDS))
+      !== (FEATURE_MANIFEST | FEATURE_ENDPOINT_IDS)) {
+    throw new Error('Server HELLO telemetry dependencies are invalid');
   }
   return {
     role: 2,
@@ -608,6 +685,15 @@ function validateManifestField(field: DeviceV2ManifestField): void {
   } else {
     throw new Error('manifest endpoint kind is invalid');
   }
+  if (field.telemetryMinimumIntervalMs !== undefined
+    && (field.kind !== DeviceV2EndpointKind.Property
+      || (field.access & DeviceV2EndpointAccess.Read) === 0
+      || (field.access & DeviceV2EndpointAccess.Write) !== 0
+      || !Number.isInteger(field.telemetryMinimumIntervalMs)
+      || field.telemetryMinimumIntervalMs < 100
+      || field.telemetryMinimumIntervalMs > 60000)) {
+    throw new Error('manifest telemetry interval is invalid');
+  }
   const constraints = field.constraints;
   if (!constraints) return;
   const numeric = field.type >= DeviceV2ValueType.SignedInteger
@@ -639,13 +725,13 @@ function validateManifestField(field: DeviceV2ManifestField): void {
 }
 
 function decodeManifestField(reader: CborReader, expectedId: number): DeviceV2ManifestField {
-  const count = reader.readMapSize(11);
+  const count = reader.readMapSize(12);
   let previous = -1;
   const field: Partial<DeviceV2ManifestField> = {};
   const constraints: NonNullable<DeviceV2ManifestField['constraints']> = {};
   let constraintCount = 0;
   for (let index = 0; index < count; index += 1) {
-    const key = reader.readUnsigned(10);
+    const key = reader.readUnsigned(11);
     if (key <= previous) throw new Error('manifest field keys are not canonical');
     previous = key;
     if (key === 0) field.key = reader.readText(64);
@@ -665,7 +751,7 @@ function decodeManifestField(reader: CborReader, expectedId: number): DeviceV2Ma
         constraints.enumValues.push(reader.readText(64));
       }
       constraintCount += 1;
-    }
+    } else if (key === 11) field.telemetryMinimumIntervalMs = reader.readUnsigned(60000);
   }
   if (field.key === undefined || field.kind === undefined || field.type === undefined
     || field.access === undefined || field.id !== expectedId) {
@@ -869,6 +955,106 @@ export function decodePatchBody(
   return { mode, revision, values };
 }
 
+function telemetryUnsigned(value: number, label: string, allowZero = false): Uint8Array {
+  if (!Number.isInteger(value) || value < (allowZero ? 0 : 1) || value > 0xffffffff) {
+    throw new Error(`${label} is invalid`);
+  }
+  return encodeUnsigned(value);
+}
+
+export function encodeTelemetryControlBody(input: DeviceV2TelemetryControl): Uint8Array {
+  const entries: Array<[number, Uint8Array]> = [
+    [0, telemetryUnsigned(input.operation, 'telemetry operation', true)],
+    [1, telemetryUnsigned(input.streamId, 'telemetry stream identity')],
+  ];
+  if (input.operation !== DeviceV2TelemetryOperation.Open) {
+    entries.push([2, telemetryUnsigned(input.epoch, 'telemetry stream epoch')]);
+  }
+  if (input.operation !== DeviceV2TelemetryOperation.Close) {
+    entries.push([3, telemetryUnsigned(input.leaseMs, 'telemetry lease')]);
+  }
+  if (input.operation === DeviceV2TelemetryOperation.Open) {
+    if (input.leaseMs < BBP2_TELEMETRY_MINIMUM_LEASE_MS
+      || input.leaseMs > BBP2_TELEMETRY_MAXIMUM_LEASE_MS
+      || !Number.isInteger(input.intervalMs)
+      || input.intervalMs < BBP2_TELEMETRY_MINIMUM_INTERVAL_MS
+      || input.intervalMs > BBP2_TELEMETRY_MAXIMUM_INTERVAL_MS
+      || input.fieldIds.length === 0 || input.fieldIds.length > BBP2_MAX_TELEMETRY_FIELDS) {
+      throw new Error('telemetry open limits are invalid');
+    }
+    let previous = 0;
+    const fields: Uint8Array[] = [encodeHead(4, input.fieldIds.length)];
+    for (const id of input.fieldIds) {
+      if (!Number.isInteger(id) || id <= previous || id > 0xffff) {
+        throw new Error('telemetry field IDs are invalid');
+      }
+      previous = id;
+      fields.push(encodeUnsigned(id));
+    }
+    entries.push([4, encodeUnsigned(input.intervalMs)], [5, concat(...fields)]);
+  } else if (input.operation === DeviceV2TelemetryOperation.Renew
+    && (input.leaseMs < BBP2_TELEMETRY_MINIMUM_LEASE_MS
+      || input.leaseMs > BBP2_TELEMETRY_MAXIMUM_LEASE_MS)) {
+    throw new Error('telemetry renew lease is invalid');
+  }
+  return encodeUnsignedMap(entries);
+}
+
+export function decodeTelemetryStatusBody(body: Uint8Array): DeviceV2TelemetryStatus {
+  const reader = new CborReader(body);
+  if (reader.readMapSize(5) !== 5) throw new Error('telemetry status field count is invalid');
+  const value = (key: number, maximum = 0xffffffff): number => {
+    if (reader.readUnsigned(4) !== key) throw new Error('telemetry status keys are not canonical');
+    return reader.readUnsigned(maximum);
+  };
+  const result: DeviceV2TelemetryStatus = {
+    streamId: value(0),
+    epoch: value(1),
+    status: value(2, DeviceV2TelemetryStatusCode.Expired) as DeviceV2TelemetryStatusCode,
+    effectiveIntervalMs: value(3, BBP2_TELEMETRY_MAXIMUM_INTERVAL_MS),
+    leaseMs: value(4, BBP2_TELEMETRY_MAXIMUM_LEASE_MS),
+  };
+  const terminal = result.status === DeviceV2TelemetryStatusCode.Closed
+    || result.status === DeviceV2TelemetryStatusCode.Expired;
+  if (!reader.finished || result.streamId === 0 || result.epoch === 0
+    || result.effectiveIntervalMs < BBP2_TELEMETRY_MINIMUM_INTERVAL_MS
+    || terminal !== (result.leaseMs === 0)
+    || (!terminal && result.leaseMs < BBP2_TELEMETRY_MINIMUM_LEASE_MS)) {
+    throw new Error('telemetry status is invalid');
+  }
+  return result;
+}
+
+export function decodeTelemetryDataBody(
+  body: Uint8Array,
+  fields: DeviceV2ManifestField[],
+): DeviceV2TelemetryData {
+  const reader = new CborReader(body);
+  if (reader.readMapSize(5) !== 5) throw new Error('telemetry data field count is invalid');
+  const value = (key: number): number => {
+    if (reader.readUnsigned(4) !== key) throw new Error('telemetry data keys are not canonical');
+    return reader.readUnsigned();
+  };
+  const streamId = value(0);
+  const epoch = value(1);
+  const sampleSequence = value(2);
+  const monotonicMs = value(3);
+  if (reader.readUnsigned(4) !== 4) throw new Error('telemetry data keys are not canonical');
+  const values = decodeEndpointValues(
+    reader,
+    fields,
+    true,
+    0,
+    fields.length,
+    DeviceV2EndpointKind.Property,
+  );
+  if (!reader.finished || streamId === 0 || epoch === 0 || sampleSequence === 0
+    || Object.keys(values).length === 0) {
+    throw new Error('telemetry data is invalid');
+  }
+  return { streamId, epoch, sampleSequence, monotonicMs, values };
+}
+
 export function decodeEventBody(
   body: Uint8Array,
   fields: DeviceV2ManifestField[],
@@ -899,6 +1085,27 @@ export function decodeAckBody(body: Uint8Array): DeviceV2Ack {
   }
   if (!reader.finished || acknowledgedSequence === 0) throw new Error('Ack body is invalid');
   return stateRevision === undefined ? { acknowledgedSequence } : { acknowledgedSequence, stateRevision };
+}
+
+export function encodeAckBody(
+  acknowledgedSequence: number,
+  stateRevision?: number,
+): Uint8Array {
+  if (!Number.isInteger(acknowledgedSequence)
+    || acknowledgedSequence < 1 || acknowledgedSequence > 0xffff
+    || (stateRevision !== undefined && (!Number.isInteger(stateRevision)
+      || stateRevision < 0 || stateRevision > 0xffffffff))) {
+    throw new Error('Ack body is invalid');
+  }
+  return stateRevision === undefined
+    ? concat(encodeHead(5, 1), encodeUnsigned(0), encodeUnsigned(acknowledgedSequence))
+    : concat(
+      encodeHead(5, 2),
+      encodeUnsigned(0),
+      encodeUnsigned(acknowledgedSequence),
+      encodeUnsigned(1),
+      encodeUnsigned(stateRevision),
+    );
 }
 
 export function decodeErrorBody(body: Uint8Array): DeviceV2ErrorBody {
