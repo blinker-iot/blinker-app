@@ -26,6 +26,8 @@ ion-content {
 
 .v2-content {
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   max-width: 720px;
   min-height: 100%;
   margin: 0 auto;
@@ -56,9 +58,24 @@ ion-content {
   gap: 12px;
 }
 
+.notice {
+  > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  ion-button {
+    flex: 0 0 auto;
+  }
+}
+
 .notice.error,
 .field-error {
   color: var(--ion-color-danger);
+}
+
+.notice.error {
+  margin-top: auto;
 }
 
 .summary {

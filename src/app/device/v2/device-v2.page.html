@@ -14,13 +14,6 @@
 
 <ion-content [fullscreen]="true">
   <main class="v2-content content-under-header">
-    @if (error) {
-      <section class="notice error">
-        <span>{{ error }}</span>
-        <ion-button size="small" fill="clear" (click)="retry()">重试</ion-button>
-      </section>
-    }
-
     @if (telemetryError) {
       <section class="notice">
         <span>实时数据已降级：{{ telemetryError }}</span>
@@ -126,6 +119,13 @@
           <span>{{ lastEventText }}</span>
         </section>
       }
+    }
+
+    @if (error) {
+      <section class="notice error" role="alert" aria-live="assertive">
+        <span>{{ error }}</span>
+        <ion-button size="small" fill="clear" (click)="retry()">重试</ion-button>
+      </section>
     }
   </main>
 </ion-content>
