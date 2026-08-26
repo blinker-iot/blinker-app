@@ -22,6 +22,7 @@ import {
   DeviceUiTelemetryLease,
   DeviceUiValue,
 } from '../../core/device-v2/device-ui.port';
+import { deviceV2ErrorMessage } from '../../core/device-v2/device-v2-error';
 import {
   diffPageLayout,
   generateDefaultPageLayout,
@@ -568,7 +569,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private messageOf(error: unknown, fallback: string): string {
-    return error instanceof Error && error.message ? error.message : fallback;
+    return deviceV2ErrorMessage(error, fallback);
   }
 
   private errorCode(error: unknown): string {
