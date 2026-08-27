@@ -1,5 +1,6 @@
 import {
   bytesToHex,
+  BBP2_FEATURE_PRESENCE,
   decodeAckBody,
   decodeDeliveryBody,
   decodeErrorBody,
@@ -7,6 +8,7 @@ import {
   decodeFrame,
   decodeManifestPageBody,
   decodePatchBody,
+  decodePresenceBody,
   decodeServerHelloBody,
   decodeStatePageBody,
   decodeTelemetryDataBody,
@@ -16,6 +18,7 @@ import {
   encodeFrame,
   encodeManifestAcceptBody,
   encodeManifestRequestBody,
+  encodePresenceControlBody,
   encodeRouteBody,
   encodeStateRequestBody,
   encodeTelemetryControlBody,
@@ -38,6 +41,7 @@ import {
   Bbp2RoutePeerKind,
   DeviceV2Ack,
   DeviceV2ManifestField,
+  DeviceV2PresenceOperation,
   DeviceV2TelemetryControl,
   DeviceV2TelemetryStatus,
 } from './types';
@@ -111,6 +115,8 @@ export class DeviceV2Session {
   private helloSequence = 0;
   private helloResponse = false;
   private helloAck = false;
+  private negotiatedFeatures = 0;
+  private readonly presenceTargets = new Set<string>();
   private helloTimer?: ReturnType<typeof setTimeout>;
   private startPromise?: Promise<void>;
   private closePromise?: Promise<void>;
@@ -257,6 +263,25 @@ export class DeviceV2Session {
     options?: DeviceV2TelemetryOptions,
   ): Promise<DeviceV2TelemetryLease> {
     return this.telemetry.open(logicalDeviceId, endpointKeys, intervalMs, options);
+  }
+
+  async subscribePresence(logicalDeviceId: string): Promise<boolean> {
+    this.assertReady();
+    if ((this.negotiatedFeatures & BBP2_FEATURE_PRESENCE) === 0) return false;
+    if (this.presenceTargets.has(logicalDeviceId)) return true;
+    const result = await this.route(
+      logicalDeviceId,
+      Bbp2MessageKind.PresenceControl,
+      0,
+      encodePresenceControlBody(DeviceV2PresenceOperation.Subscribe),
+    );
+    this.expectDelivery(result.delivery, Bbp2MessageKind.Presence, Bbp2FrameFlag.IsResponse);
+    this.store.applyPresence(
+      logicalDeviceId,
+      decodePresenceBody(result.delivery.messageBody),
+    );
+    this.presenceTargets.add(logicalDeviceId);
+    return true;
   }
 
   async close(): Promise<void> {
@@ -456,7 +481,7 @@ export class DeviceV2Session {
           || frame.sequence !== this.helloSequence) {
           throw new Error('Server HELLO does not match this session');
         }
-        decodeServerHelloBody(frame.body);
+        this.negotiatedFeatures = decodeServerHelloBody(frame.body).features;
         this.helloResponse = true;
         this.completeHello();
         return;
@@ -524,11 +549,21 @@ export class DeviceV2Session {
   }
 
   private notification(delivery: Bbp2Delivery): void {
-    if (delivery.peerKind !== Bbp2RoutePeerKind.LogicalDevice
-      || delivery.messageFlags !== Bbp2FrameFlag.IdMode) {
+    if (delivery.peerKind !== Bbp2RoutePeerKind.LogicalDevice) {
       throw new Error('unsolicited Delivery metadata is invalid');
     }
     const logicalDeviceId = peerIdToLogicalDevice(delivery.peerId);
+    if (delivery.messageKind === Bbp2MessageKind.Presence) {
+      if (delivery.messageFlags !== 0
+        || (this.negotiatedFeatures & BBP2_FEATURE_PRESENCE) === 0) {
+        throw new Error('unsolicited Presence metadata is invalid');
+      }
+      this.store.applyPresence(logicalDeviceId, decodePresenceBody(delivery.messageBody));
+      return;
+    }
+    if (delivery.messageFlags !== Bbp2FrameFlag.IdMode) {
+      throw new Error('unsolicited Delivery field mode is invalid');
+    }
     const snapshot = this.store.snapshot(logicalDeviceId);
     if (!snapshot.manifestAccepted || !snapshot.manifest) return;
     if (delivery.messageKind === Bbp2MessageKind.Patch) {
@@ -626,6 +661,7 @@ export class DeviceV2Session {
       this.rejectPending(requestKey, pending, error);
     }
     this.synchronizing.clear();
+    this.presenceTargets.clear();
     this.telemetry.reset();
     this.store.resetSession();
     this.setState('closed');

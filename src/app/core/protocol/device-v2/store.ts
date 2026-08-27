@@ -6,6 +6,7 @@ import {
   DeviceV2ManifestField,
   DeviceV2ManifestPage,
   DeviceV2Patch,
+  DeviceV2Presence,
   DeviceV2StatePage,
   DeviceV2TargetSnapshot,
   DeviceV2Value,
@@ -38,6 +39,8 @@ interface TargetState {
   stateFresh: boolean;
   values: Record<string, DeviceV2Value>;
   eventInterrupted: boolean;
+  cloudReachable: boolean | null;
+  cloudLastSeenAt: number | null;
   manifestTransfer?: ManifestTransfer;
   stateTransfer?: StateTransfer;
 }
@@ -260,11 +263,38 @@ export class DeviceV2Store {
     return true;
   }
 
+  applyPresence(logicalDeviceId: string, presence: DeviceV2Presence): boolean {
+    if (typeof presence.cloudReachable !== 'boolean'
+      || (presence.cloudLastSeenAt !== null
+        && (!Number.isSafeInteger(presence.cloudLastSeenAt) || presence.cloudLastSeenAt < 0))
+      || (presence.cloudReachable && presence.cloudLastSeenAt === null)) {
+      throw new Error('Device presence is invalid');
+    }
+    const target = this.target(logicalDeviceId);
+    const current = target.cloudLastSeenAt;
+    if (current !== null && presence.cloudLastSeenAt === null) return false;
+    if (current !== null && presence.cloudLastSeenAt !== null) {
+      if (presence.cloudLastSeenAt < current) return false;
+      if (presence.cloudLastSeenAt === current
+        && target.cloudReachable !== null
+        && presence.cloudReachable !== target.cloudReachable) {
+        throw new Error('Device presence conflicts at the same timestamp');
+      }
+    }
+    if (presence.cloudReachable === target.cloudReachable
+      && presence.cloudLastSeenAt === target.cloudLastSeenAt) return false;
+    target.cloudReachable = presence.cloudReachable;
+    target.cloudLastSeenAt = presence.cloudLastSeenAt;
+    this.notify(logicalDeviceId, target);
+    return true;
+  }
+
   resetSession(): void {
     for (const [logicalDeviceId, target] of this.targets) {
       target.manifestAccepted = false;
       target.stateFresh = false;
       target.eventInterrupted = true;
+      target.cloudReachable = null;
       target.manifestTransfer = undefined;
       target.stateTransfer = undefined;
       this.notify(logicalDeviceId, target);
@@ -282,6 +312,8 @@ export class DeviceV2Store {
         stateFresh: false,
         values: Object.create(null),
         eventInterrupted: true,
+        cloudReachable: null,
+        cloudLastSeenAt: null,
       });
       for (const listener of this.stateListeners) listener(logicalDeviceId, snapshot);
     }
@@ -317,6 +349,8 @@ export class DeviceV2Store {
       stateFresh: false,
       values: Object.create(null),
       eventInterrupted: true,
+      cloudReachable: null,
+      cloudLastSeenAt: null,
     };
     this.targets.set(logicalDeviceId, target);
     return target;
@@ -337,6 +371,8 @@ export class DeviceV2Store {
       stateFresh: target.stateFresh,
       values: cloneValues(target.values),
       eventInterrupted: target.eventInterrupted,
+      cloudReachable: target.cloudReachable,
+      cloudLastSeenAt: target.cloudLastSeenAt,
     };
   }
 

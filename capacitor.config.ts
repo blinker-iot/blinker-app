@@ -4,6 +4,11 @@ const config: CapacitorConfig = {
   appId: 'iot.diandeng.tech',
   appName: '点灯·blinker',
   webDir: 'www',
+  // Capacitor's debug bridge logs complete plugin arguments and return values.
+  // SecureStorage carries DeviceKey/controller credentials, so bridge logging
+  // must stay disabled even in debug builds. Blinker diagnostics use explicit,
+  // redacted application/device loggers instead.
+  loggingBehavior: 'none',
   server: {
     androidScheme: 'https'
   },

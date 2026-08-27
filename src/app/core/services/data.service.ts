@@ -279,6 +279,11 @@ export class DataService {
           ? 'waiting'
           : 'offline',
         enable: false,
+        cloudReachable: gatewayDevice.cloudReachable ?? null,
+        cloudLastSeenAt: gatewayDevice.cloudLastSeenAt ?? null,
+        manifestRevision: gatewayDevice.manifestRevision ?? null,
+        manifestFingerprint: gatewayDevice.manifestFingerprint ?? null,
+        manifestUpdatedAt: gatewayDevice.manifestUpdatedAt ?? null,
         ...(item.access ? {
           accessRole: item.access.role,
           shareId: item.access.shareId,
@@ -332,6 +337,21 @@ export class DataService {
       this.initCompleted.next(true);
       this.firstBoot = false;
     }
+  }
+
+  updateDeviceV2Presence(
+    logicalDeviceId: string,
+    cloudReachable: boolean | null,
+    cloudLastSeenAt: number | null,
+  ): void {
+    const device = this.device?.dict?.[logicalDeviceId];
+    if (!device) return;
+    device.data = {
+      ...(this.isRecord(device.data) ? device.data : {}),
+      cloudReachable,
+      cloudLastSeenAt,
+    };
+    device.subject?.next({ cloudReachable, cloudLastSeenAt });
   }
 
   loadGatewayUser(currentUser: CurrentUser): void {

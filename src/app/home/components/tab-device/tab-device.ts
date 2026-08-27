@@ -13,11 +13,13 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
-import { RouterModule } from '@angular/router';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { filter } from 'rxjs';
 import { RoomListComponent } from '../room-list/room-list';
 import { DeviceblockZone } from '../deviceblock-zone/deviceblock-zone';
 import { DataService } from '../../../core/services/data.service';
+import { DeviceUiPort } from '../../../core/device-v2/device-ui.port';
 
 @Component({
   selector: 'tab-device',
@@ -60,9 +62,11 @@ export class TabDeviceComponent implements OnInit {
 
   constructor(
     private dataService: DataService,
+    private router: Router,
     private navController: NavController,
     private toastController: ToastController,
     private translate: TranslateService,
+    private deviceUi: DeviceUiPort,
     private cd: ChangeDetectorRef,
     private destroyRef: DestroyRef
   ) {
@@ -78,6 +82,17 @@ export class TabDeviceComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((state) => {
         this.cd.markForCheck();
+      });
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((event) => {
+        if (event.urlAfterRedirects.split(/[?#]/, 1)[0] !== '/home/device') return;
+        void this.deviceUi.refreshBlePresence(
+          this.dataService.device?.list ?? [],
+        ).catch(() => undefined);
       });
   }
 

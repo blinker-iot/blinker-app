@@ -27,25 +27,31 @@
   flex-direction: column;
 }
 
-.device-state-dot {
+.device-state-icon {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 10px;
+  left: 10px;
   z-index: 2;
-  width: 9px;
-  height: 9px;
-  border: 2px solid var(--blinker-surface);
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #a8b2bf;
+  background: var(--blinker-surface);
   box-shadow: 0 1px 4px rgba(14, 30, 48, 0.18);
+  color: #a8b2bf;
+  display: grid;
+  place-items: center;
+
+  i {
+    font-size: 12px;
+  }
 }
 
-.device-card.online .device-state-dot {
-  background: #22c55e;
+.device-card.status-reachable .device-state-icon {
+  color: #1689ff;
 }
 
-.device-card.nearby-ble .device-state-dot {
-  background: #1689ff;
+.device-card.status-ready .device-state-icon {
+  color: #22c55e;
 }
 
 .device-visual {
@@ -170,11 +176,6 @@
     color: var(--blinker-text-tertiary);
     font-size: 8px;
   }
-}
-
-.metric-empty {
-  color: var(--blinker-text-tertiary);
-  font-size: 13px;
 }
 
 .device-card.wide {
