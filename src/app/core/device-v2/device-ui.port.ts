@@ -18,8 +18,9 @@ import {
 } from '../services/device-v2.service';
 import { DeviceV2BleService } from '../services/device-v2-ble.service';
 import { AppVisibilityService } from '../services/app-visibility.service';
+import { DeviceV2ManifestCache } from '../services/device-v2-manifest-cache.service';
 
-export type DeviceUiConnectionState = DeviceV2AccountState;
+export type DeviceUiConnectionState = DeviceV2AccountState | 'nearby';
 export type DeviceUiEndpointRole = 'property' | 'action' | 'event';
 export type DeviceUiValueType =
   | 'boolean'
@@ -125,6 +126,7 @@ export class DeviceUiPort {
     private readonly ble: DeviceV2BleService,
     private readonly zone: NgZone,
     appVisibility: AppVisibilityService,
+    private readonly manifestCache?: DeviceV2ManifestCache,
   ) {
     this.appActive = appVisibility.active.asObservable();
   }
@@ -142,24 +144,37 @@ export class DeviceUiPort {
   }
 
   watchConnection(logicalDeviceId: string): Observable<DeviceUiConnectionState> {
-    const source = this.isBleDirect(logicalDeviceId) ? this.ble.state : this.deviceV2.state;
+    const source = this.isBleDirect(logicalDeviceId)
+      ? this.ble.watchConnection(logicalDeviceId)
+      : this.deviceV2.state;
     return new Observable(subscriber => source.subscribe(state => {
       this.zone.run(() => subscriber.next(state));
     }));
   }
 
+  refreshBlePresence(logicalDeviceIds: readonly string[]): Promise<void> {
+    return this.ble.refreshPresence(logicalDeviceIds.filter(
+      logicalDeviceId => this.isBleDirect(logicalDeviceId),
+    ));
+  }
+
   watchState(logicalDeviceId: string): Observable<DeviceUiSnapshot> {
     return new Observable(subscriber => {
       const direct = this.isBleDirect(logicalDeviceId);
-      subscriber.next(this.mapSnapshot(
+      const cached = this.cachedSnapshot(logicalDeviceId);
+      const initial = this.mapSnapshot(
         direct ? this.ble.snapshot(logicalDeviceId) : this.deviceV2.snapshot(logicalDeviceId),
-      ));
+      );
+      subscriber.next(initial.manifestAccepted ? initial : cached ?? initial);
       const subscribe = direct
         ? this.ble.subscribe.bind(this.ble)
         : this.deviceV2.store.subscribe.bind(this.deviceV2.store);
       return subscribe((changedId, snapshot) => {
         if (changedId === logicalDeviceId) {
-          this.zone.run(() => subscriber.next(this.mapSnapshot(snapshot)));
+          const mapped = this.mapSnapshot(snapshot);
+          this.zone.run(() => subscriber.next(
+            mapped.manifestAccepted ? mapped : this.cachedSnapshot(logicalDeviceId) ?? mapped,
+          ));
         }
       });
     });
@@ -210,6 +225,20 @@ export class DeviceUiPort {
       stateFresh: snapshot.stateFresh,
       endpoints: fields.map(field => this.mapEndpoint(field, snapshot.values[field.key])),
     };
+  }
+
+  private cachedSnapshot(logicalDeviceId: string): DeviceUiSnapshot | undefined {
+    const manifest = this.manifestCache?.load(logicalDeviceId);
+    return manifest ? this.mapSnapshot({
+      manifest,
+      manifestAccepted: true,
+      stateRevision: null,
+      stateFresh: false,
+      values: Object.create(null),
+      eventInterrupted: true,
+      cloudReachable: null,
+      cloudLastSeenAt: null,
+    }) : undefined;
   }
 
   private mapEndpoint(field: DeviceV2ManifestField, value?: DeviceV2Value): DeviceUiEndpoint {

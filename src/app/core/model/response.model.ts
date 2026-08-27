@@ -64,7 +64,15 @@ export interface DeviceKeyContext {
   locator: string;
 }
 
-export interface DeviceKeyLogicalDevice extends DeviceKeyContext {
+export interface DeviceV2PresenceMetadata {
+  cloudReachable?: boolean | null;
+  cloudLastSeenAt?: number | null;
+  manifestRevision?: number | null;
+  manifestFingerprint?: string | null;
+  manifestUpdatedAt?: number | null;
+}
+
+export interface DeviceKeyLogicalDevice extends DeviceKeyContext, DeviceV2PresenceMetadata {
   tenantId: string;
   name: string;
   deviceType: string;
@@ -160,8 +168,9 @@ export interface DeviceV2OwnerShares {
   invitations: DeviceV2ShareInvitation[];
 }
 
-export interface DeviceV2ReceivedDevice {
+export interface DeviceV2ReceivedDevice extends DeviceV2PresenceMetadata {
   logicalDeviceId: string;
+  tenantId: string;
   name: string;
   deviceType: string;
   share: DeviceV2ShareGrant;

@@ -39,8 +39,13 @@
 
     @if (!layout) {
       <section class="empty">
-        <ion-spinner name="crescent"></ion-spinner>
-        <p>正在获取设备能力…</p>
+        @if (waitingForCapabilities) {
+          <ion-spinner name="crescent"></ion-spinner>
+          <p>正在获取设备能力…</p>
+        } @else {
+          <p>尚未缓存设备能力，首次连接后将自动生成控制页面。</p>
+          <ion-button size="small" fill="clear" (click)="retry()">重新连接</ion-button>
+        }
       </section>
     } @else {
       <section class="summary">
@@ -71,13 +76,13 @@
                 <ion-toggle
                   aria-label="设置 {{ widget.title || field.key }}"
                   [checked]="value(field) === true"
-                  [disabled]="pending.has(field.key) || !snapshot.stateFresh"
+                  [disabled]="pending.has(field.key) || !canControl"
                   (ionChange)="setBoolean(field, $event)"
                 ></ion-toggle>
               } @else if (widget.type === 'button') {
                 <ion-button
                   size="small"
-                  [disabled]="pending.has(field.key) || !snapshot.stateFresh"
+                  [disabled]="pending.has(field.key) || !canControl"
                   (click)="execute(field)"
                 >执行</ion-button>
               } @else if (widget.type === 'slider') {
@@ -88,7 +93,7 @@
                   [step]="field.step ?? 1"
                   [value]="value(field)"
                   [pin]="true"
-                  [disabled]="pending.has(field.key) || !snapshot.stateFresh"
+                  [disabled]="pending.has(field.key) || !canControl"
                   (ionChange)="setSlider(field, $event)"
                 ></ion-range>
               } @else if (widget.type === 'input') {
@@ -97,12 +102,12 @@
                     [type]="inputType(field)"
                     [value]="draft(field)"
                     [maxlength]="field.maxLength"
-                    [disabled]="pending.has(field.key) || !snapshot.stateFresh"
+                    [disabled]="pending.has(field.key) || !canControl"
                     (ionInput)="updateDraft(field, $event)"
                   ></ion-input>
                   <ion-button
                     size="small"
-                    [disabled]="pending.has(field.key) || !snapshot.stateFresh"
+                    [disabled]="pending.has(field.key) || !canControl"
                     (click)="commit(field)"
                   >发送</ion-button>
                 </div>

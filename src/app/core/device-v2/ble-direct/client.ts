@@ -50,6 +50,9 @@ import {
 
 const ADMIN_FINGERPRINT_DOMAIN = new TextEncoder()
   .encode('blinker/direct-admin/fingerprint/v1');
+// The first encrypted-characteristic write may include user-confirmed native
+// link security. Later BBP/2 records keep the transport's short write timeout.
+const LINK_SECURITY_ESTABLISHMENT_TIMEOUT_MS = 45_000;
 
 export interface BleDirectEnrollmentOptions {
   displayName: string;
@@ -97,7 +100,7 @@ export class BleDirectClient {
       const firstMessage = await noise.writeInitiator(encodeBleEnrollmentHelloRequest());
       await this.link.sendRecord(encodeLocalSecureRecord(
         LocalSecureRecordType.InitiatorHandshake, firstMessage,
-      ));
+      ), LINK_SECURITY_ESTABLISHMENT_TIMEOUT_MS);
       const responder = decodeLocalSecureRecord(
         await this.link.receiveRecord(), LocalSecureRecordType.ResponderHandshake,
       );
@@ -154,6 +157,7 @@ export class BleDirectClient {
         intentId,
         commitId,
         receipt: expectedReceipt.encoded,
+        transportDeviceId: target.device.deviceId,
       };
       await this.store.save(credential);
 
@@ -179,7 +183,11 @@ export class BleDirectClient {
       await this.link.connect(directTarget);
       directSession = await this.authenticate(intent.logicalDeviceId, credential);
       await this.commit(credential);
-      credential = { ...credential, state: 'active' };
+      credential = {
+        ...credential,
+        state: 'active',
+        transportDeviceId: directTarget.device.deviceId,
+      };
       await this.store.save(credential);
       await directSession.synchronize();
       controllerSecret.fill(0);
@@ -249,7 +257,12 @@ export class BleDirectClient {
     }
     try {
       await this.link.connect(target);
-      return await this.authenticate(credential.logicalDeviceId, credential);
+      const session = await this.authenticate(credential.logicalDeviceId, credential);
+      if (credential.transportDeviceId !== target.device.deviceId) {
+        credential.transportDeviceId = target.device.deviceId;
+        await this.store.save(credential);
+      }
+      return session;
     } catch (error) {
       await this.link.disconnect().catch(() => undefined);
       throw error;

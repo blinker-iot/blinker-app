@@ -116,7 +116,6 @@ export class BleDeviceGuidePage implements OnDestroy {
         result.logicalDeviceId,
       ).manifest?.fields.length ?? 0;
       this.phase = 'ready';
-      void this.users.getAllInfo();
     } catch (error) {
       if (operation !== this.operation) return;
       console.error('[BLE_DIRECT_ENROLLMENT]', error instanceof Error ? error.message : 'UNKNOWN');
@@ -127,8 +126,12 @@ export class BleDeviceGuidePage implements OnDestroy {
   }
 
   async finish(): Promise<void> {
+    const logicalDeviceId = this.logicalDeviceId;
+    if (logicalDeviceId) await this.users.getAllInfo();
     await this.closeSession();
-    await this.navController.navigateRoot('/home/device');
+    await this.navController.navigateRoot(
+      logicalDeviceId ? `/device/${encodeURIComponent(logicalDeviceId)}` : '/home/device',
+    );
   }
 
   ionViewWillLeave(): void {

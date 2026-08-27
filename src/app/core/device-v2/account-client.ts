@@ -7,6 +7,7 @@ import {
   DeviceV2TargetSnapshot,
   DeviceV2TelemetryLease,
   DeviceV2TelemetryOptions,
+  isLogicalDeviceId,
 } from '../protocol/device-v2';
 
 export type DeviceV2AccountState = 'idle' | 'connecting' | 'ready' | 'retrying' | 'stopped';
@@ -29,6 +30,7 @@ export class DeviceV2AccountClient {
   private reconnectAttempt = 0;
   private connecting?: Promise<void>;
   private session?: DeviceV2Session;
+  private presenceTargets = new Set<string>();
   private refreshTimer?: ReturnType<typeof setTimeout>;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
   private readonly listeners = new Set<(state: DeviceV2AccountState) => void>();
@@ -83,6 +85,7 @@ export class DeviceV2AccountClient {
     try {
       await this.stop();
     } finally {
+      this.presenceTargets.clear();
       this.store.clear();
     }
   }
@@ -105,6 +108,17 @@ export class DeviceV2AccountClient {
   ): Promise<DeviceV2TelemetryLease> {
     await this.start();
     return this.requireSession().openTelemetry(logicalDeviceId, endpointKeys, intervalMs, options);
+  }
+
+  async watchPresence(logicalDeviceIds: string[]): Promise<void> {
+    if (!Array.isArray(logicalDeviceIds) || logicalDeviceIds.length > 256
+      || logicalDeviceIds.some(id => !isLogicalDeviceId(id))) {
+      throw new Error('Device V2 presence targets are invalid');
+    }
+    this.presenceTargets = new Set(logicalDeviceIds);
+    if (!this.presenceTargets.size) return;
+    await this.start();
+    await this.subscribePresence(this.requireSession());
   }
 
   snapshot(logicalDeviceId: string): DeviceV2TargetSnapshot {
@@ -145,6 +159,7 @@ export class DeviceV2AccountClient {
     this.session = session;
     try {
       await session.start();
+      await this.subscribePresence(session);
     } catch (error) {
       if (this.session === session) this.session = undefined;
       await session.close().catch(() => undefined);
@@ -195,6 +210,17 @@ export class DeviceV2AccountClient {
   private requireSession(): DeviceV2Session {
     if (this.session?.state !== 'ready') throw new Error('Device V2 account session is not ready');
     return this.session;
+  }
+
+  private async subscribePresence(session: DeviceV2Session): Promise<void> {
+    for (const logicalDeviceId of this.presenceTargets) {
+      try {
+        await session.subscribePresence(logicalDeviceId);
+      } catch (error) {
+        if (session.state !== 'ready') throw error;
+        // Inventory and ACL can change between HTTP load and MQTT subscribe.
+      }
+    }
   }
 
   private setState(state: DeviceV2AccountState): void {

@@ -24,6 +24,8 @@ import {
   DeviceV2ManifestField,
   DeviceV2ManifestPage,
   DeviceV2Patch,
+  DeviceV2Presence,
+  DeviceV2PresenceOperation,
   DeviceV2StatePage,
   DeviceV2TelemetryControl,
   DeviceV2TelemetryData,
@@ -43,15 +45,18 @@ const MAX_ITEMS = 32;
 const MAX_DEPTH = 6;
 const MAX_HELLO_VERSIONS = 4;
 const MAX_RELIABLE_RECEIVE_WINDOW = 16;
-const KNOWN_FEATURES = 0xeff;
+const KNOWN_FEATURES = 0x1eff;
 const FEATURE_MANIFEST = 1 << 0;
 const FEATURE_ENDPOINT_IDS = 1 << 1;
 const FEATURE_RELIABLE_DELIVERY = 1 << 6;
 const FEATURE_STATE_REVISION = 1 << 7;
 const FEATURE_ROUTING = 1 << 10;
 const FEATURE_TELEMETRY = 1 << 11;
-export const APP_FEATURES = FEATURE_MANIFEST | FEATURE_ENDPOINT_IDS
-  | FEATURE_RELIABLE_DELIVERY | FEATURE_STATE_REVISION | FEATURE_ROUTING | FEATURE_TELEMETRY;
+export const BBP2_FEATURE_PRESENCE = 1 << 12;
+const REQUIRED_APP_FEATURES = FEATURE_MANIFEST | FEATURE_ENDPOINT_IDS
+  | FEATURE_RELIABLE_DELIVERY | FEATURE_STATE_REVISION | FEATURE_ROUTING;
+export const APP_FEATURES = REQUIRED_APP_FEATURES
+  | FEATURE_TELEMETRY | BBP2_FEATURE_PRESENCE;
 const MESSAGE_KINDS = new Set<number>(Object.values(Bbp2MessageKind)
   .filter((value): value is number => typeof value === 'number'));
 const ROUTED_KINDS = new Set<number>([
@@ -68,6 +73,8 @@ const ROUTED_KINDS = new Set<number>([
   Bbp2MessageKind.TelemetryControl,
   Bbp2MessageKind.TelemetryStatus,
   Bbp2MessageKind.TelemetryData,
+  Bbp2MessageKind.PresenceControl,
+  Bbp2MessageKind.Presence,
 ]);
 
 const textEncoder = new TextEncoder();
@@ -541,7 +548,8 @@ export function decodeServerHelloBody(body: Uint8Array): Bbp2ServerHello {
 
   if (!reader.finished || role !== 2 || !versions?.includes(VERSION)
     || features === undefined || maxFrameSize === undefined || maxReassemblySize === undefined
-    || (features & ~KNOWN_FEATURES) !== 0 || (features & APP_FEATURES) !== APP_FEATURES
+    || (features & ~KNOWN_FEATURES) !== 0
+    || (features & REQUIRED_APP_FEATURES) !== REQUIRED_APP_FEATURES
     || maxFrameSize < BBP2_HEADER_BYTES || maxReassemblySize < maxFrameSize
     || reliableReceiveWindow === undefined || reliableReceiveWindow === 0) {
     throw new Error('Server HELLO negotiation is invalid');
@@ -1071,6 +1079,37 @@ export function decodeEventBody(
   );
   if (!reader.finished || Object.keys(values).length === 0) throw new Error('Event body is empty');
   return { values };
+}
+
+export function encodePresenceControlBody(
+  operation: DeviceV2PresenceOperation = DeviceV2PresenceOperation.Subscribe,
+): Uint8Array {
+  if (operation !== DeviceV2PresenceOperation.Subscribe) {
+    throw new Error('Presence operation is unsupported');
+  }
+  return encodeUnsignedMap([[0, encodeUnsigned(operation)]]);
+}
+
+export function decodePresenceBody(body: Uint8Array): DeviceV2Presence {
+  const reader = new CborReader(body);
+  if (reader.readMapSize(2) !== 2 || reader.readUnsigned(0) !== 0) {
+    throw new Error('Presence body is invalid');
+  }
+  const cloudReachable = reader.readBool();
+  if (reader.readUnsigned(1) !== 1) throw new Error('Presence keys are not canonical');
+  const encodedTimestamp = reader.readEncodedValue();
+  let cloudLastSeenAt: number | null;
+  if (encodedTimestamp.length === 1 && encodedTimestamp[0] === 0xf6) {
+    cloudLastSeenAt = null;
+  } else {
+    const timestamp = new CborReader(encodedTimestamp);
+    cloudLastSeenAt = timestamp.readUnsigned(Number.MAX_SAFE_INTEGER);
+    if (!timestamp.finished) throw new Error('Presence timestamp is invalid');
+  }
+  if (!reader.finished || (cloudReachable && cloudLastSeenAt === null)) {
+    throw new Error('Presence body is invalid');
+  }
+  return { cloudReachable, cloudLastSeenAt };
 }
 
 export function decodeAckBody(body: Uint8Array): DeviceV2Ack {

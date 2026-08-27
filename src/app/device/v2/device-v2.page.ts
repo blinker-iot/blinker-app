@@ -148,10 +148,24 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   get stateLabel(): string {
-    if (this.accountState === 'ready' && this.snapshot.stateFresh) return '在线';
+    if (this.direct && this.accountState === 'ready') return '蓝牙已连接';
+    if (!this.direct && this.device?.data?.cloudReachable === true) return '云端在线';
     if (this.accountState === 'retrying') return '正在重连';
     if (this.accountState === 'connecting') return '正在连接';
+    if (!this.direct && this.device?.data?.cloudReachable === null) return '状态未知';
     return '离线';
+  }
+
+  get canControl(): boolean {
+    const reachable = this.direct
+      ? this.accountState === 'ready'
+      : this.device?.data?.cloudReachable === true;
+    return reachable && this.snapshot.stateFresh;
+  }
+
+  get waitingForCapabilities(): boolean {
+    return !this.snapshot.manifestAccepted
+      && (this.accountState === 'connecting' || this.accountState === 'retrying');
   }
 
   value(field: DeviceUiEndpoint): DeviceUiValue | undefined {
@@ -323,6 +337,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.error = this.messageOf(error, '设备标识无效');
       this.requestRender();
     }
+  }
+
+  private get direct(): boolean {
+    return this.deviceUi.isBleDirect(this.logicalDeviceId);
   }
 
   private applySnapshot(snapshot: DeviceUiSnapshot): void {
@@ -567,7 +585,12 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private messageOf(error: unknown, fallback: string): string {
-    return error instanceof Error && error.message ? error.message : fallback;
+    const message = error instanceof Error ? error.message : '';
+    if (message === 'BLE_DIRECT_SCAN_TIMEOUT' || message === 'BLE_DIRECT_SCAN_FAILED') {
+      return '未发现附近设备';
+    }
+    if (message === 'BLE_DIRECT_CREDENTIAL_NOT_FOUND') return '本机没有该设备的蓝牙授权';
+    return message || fallback;
   }
 
   private errorCode(error: unknown): string {
