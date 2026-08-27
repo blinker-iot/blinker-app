@@ -14,6 +14,7 @@ import {
   DeviceV2TelemetryOptions,
 } from '../protocol/device-v2';
 import { DataService } from './data.service';
+import { DeviceV2ManifestCache } from './device-v2-manifest-cache.service';
 
 export type { DeviceV2AccountState } from '../device-v2/account-client';
 
@@ -24,7 +25,12 @@ export class DeviceV2Service {
   private readonly client: DeviceV2AccountClient;
   private accountId?: string;
 
-  constructor(http: HttpClient, data: DataService, zone: NgZone) {
+  constructor(
+    http: HttpClient,
+    data: DataService,
+    zone: NgZone,
+    manifestCache: DeviceV2ManifestCache,
+  ) {
     this.client = new DeviceV2AccountClient(
       () => firstValueFrom(http.get<AccountConnectionResponse>(API.ACCOUNT.CONNECTION, {
         params: { wire: 'bbp2', pv: '2', transport: 'websocket' },
@@ -32,6 +38,19 @@ export class DeviceV2Service {
       response => openMqttDeviceV2Channel(response.mqtt),
     );
     this.store = this.client.store;
+    this.store.subscribe((logicalDeviceId, snapshot) => zone.run(() => {
+      if (snapshot.manifestAccepted && snapshot.manifest) {
+        manifestCache.save(logicalDeviceId, snapshot.manifest);
+      }
+      data.updateDeviceV2Presence(
+        logicalDeviceId,
+        snapshot.cloudReachable,
+        snapshot.cloudLastSeenAt,
+      );
+    }));
+    data.deviceDataLoader.subscribe(loaded => {
+      if (loaded) this.watchInventoryPresence(data);
+    });
     this.client.subscribeState(value => zone.run(() => this.state.next(value)));
     this.accountId = data.auth?.uuid;
     data.authDataChanged.subscribe(() => {
@@ -70,5 +89,26 @@ export class DeviceV2Service {
 
   snapshot(logicalDeviceId: string): DeviceV2TargetSnapshot {
     return this.client.snapshot(logicalDeviceId);
+  }
+
+  private watchInventoryPresence(data: DataService): void {
+    const logicalDeviceIds = data.device.list.filter(logicalDeviceId => {
+      const device = data.device.dict[logicalDeviceId];
+      return device?.config?.mode === 'bbp2'
+        && device.config.disabled !== true
+        && !/^ble_[A-Za-z0-9_-]{22}$/.test(logicalDeviceId);
+    });
+    for (const logicalDeviceId of logicalDeviceIds) {
+      const presence = data.device.dict[logicalDeviceId]?.data;
+      if (typeof presence?.cloudReachable === 'boolean'
+        && (presence.cloudLastSeenAt === null
+          || Number.isSafeInteger(presence.cloudLastSeenAt))) {
+        this.store.applyPresence(logicalDeviceId, {
+          cloudReachable: presence.cloudReachable,
+          cloudLastSeenAt: presence.cloudLastSeenAt,
+        });
+      }
+    }
+    void this.client.watchPresence(logicalDeviceIds).catch(() => undefined);
   }
 }

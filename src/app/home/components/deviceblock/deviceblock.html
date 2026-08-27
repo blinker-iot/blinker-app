@@ -3,9 +3,16 @@
   [class.wide]="wide"
   [class.online]="online"
   [class.offline]="!online"
+  [class.status-reachable]="status === 'reachable'"
+  [class.status-ready]="status === 'ready'"
 >
   <div class="device-primary">
-    <span class="device-state-dot" role="img" [attr.title]="statusText"></span>
+    <span
+      class="device-state-icon"
+      role="img"
+      [attr.aria-label]="statusText"
+      [attr.title]="statusText"
+    ><i [class]="transportIcon" aria-hidden="true"></i></span>
     <div class="device-visual">
       <b-device-img [filename]="device.config.image"></b-device-img>
     </div>
@@ -18,21 +25,19 @@
             class="device-switch"
             [class.checked]="switchOn"
             [class.waiting]="switchWaiting"
-            [disabled]="!online || switchWaiting"
+            [disabled]="!canControl || switchWaiting"
             [attr.aria-pressed]="switchOn"
             (click)="tapSwitch($event)"
           >
             <span></span>
           </button>
-        } @else if (!wide) {
+        } @else if (!wide && metrics.length > 0) {
           <div class="device-metrics" aria-label="设备数据">
             @for (metric of metrics; track metric.key) {
               <span class="device-metric">
                 <strong>{{ metric.value }}{{ metric.unit }}</strong>
                 <small>{{ metric.key }}</small>
               </span>
-            } @empty {
-              <span class="metric-empty">--</span>
             }
           </div>
         }

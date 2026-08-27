@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, Input } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { IonicModule } from '@ionic/angular';
 
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import {
+  DeviceUiConnectionState,
   DeviceUiPort,
   DeviceUiSnapshot,
 } from 'src/app/core/device-v2/device-ui.port';
@@ -13,6 +15,8 @@ interface CardMetric {
   value: string | number;
   unit: string;
 }
+
+type DeviceCardStatus = 'offline' | 'unknown' | 'reachable' | 'ready';
 
 @Component({
   selector: 'deviceblock',
@@ -25,6 +29,8 @@ export class Deviceblock {
   private current?: BlinkerDevice;
   private snapshot?: DeviceUiSnapshot;
   private unsubscribe?: () => void;
+  private connection?: Subscription;
+  private connectionState: DeviceUiConnectionState = 'idle';
   switchWaiting = false;
 
   @Input()
@@ -32,6 +38,8 @@ export class Deviceblock {
     this.current = device;
     this.snapshot = undefined;
     this.unsubscribe?.();
+    this.connection?.unsubscribe();
+    this.connectionState = 'idle';
     const id = device?.deviceName;
     if (!id) return;
     const subscription = this.deviceUi.watchState(id).subscribe(snapshot => {
@@ -39,9 +47,10 @@ export class Deviceblock {
       this.cd.markForCheck();
     });
     this.unsubscribe = () => subscription.unsubscribe();
-    if (!this.deviceUi.isBleDirect(id)) {
-      void this.deviceUi.connect(id).catch(() => this.cd.markForCheck());
-    }
+    this.connection = this.deviceUi.watchConnection(id).subscribe(state => {
+      this.connectionState = state;
+      this.cd.markForCheck();
+    });
   }
 
   get device(): BlinkerDevice {
@@ -51,11 +60,46 @@ export class Deviceblock {
   @Input() wide = false;
 
   get online(): boolean {
-    return this.snapshot?.stateFresh === true;
+    return this.direct
+      ? this.connectionState === 'ready'
+      : this.current?.data?.cloudReachable === true;
+  }
+
+  get canControl(): boolean {
+    return this.online
+      && this.connectionState === 'ready'
+      && this.snapshot?.stateFresh === true;
+  }
+
+  get status(): DeviceCardStatus {
+    if (this.direct) {
+      if (this.connectionState === 'ready') return 'ready';
+      return this.connectionState === 'nearby'
+        || this.connectionState === 'connecting'
+        || this.connectionState === 'retrying'
+        ? 'reachable'
+        : 'offline';
+    }
+    if (this.current?.data?.cloudReachable !== true) {
+      return this.current?.data?.cloudReachable === null ? 'unknown' : 'offline';
+    }
+    return this.canControl ? 'ready' : 'reachable';
+  }
+
+  get transportIcon(): string {
+    return this.direct ? 'fa-brands fa-bluetooth-b' : 'fa-light fa-wifi';
   }
 
   get statusText(): string {
-    return this.online ? '在线' : '离线';
+    if (this.status === 'ready') return this.direct
+      ? '蓝牙已连接'
+      : '云端已同步';
+    if (this.status === 'reachable') {
+      if (!this.direct) return '云端在线';
+      return this.connectionState === 'nearby' ? '蓝牙在附近' : '正在连接蓝牙';
+    }
+    if (this.direct) return '蓝牙未连接';
+    return this.current?.data?.cloudReachable === null ? '状态未知' : '离线';
   }
 
   get showSwitch(): boolean {
@@ -84,18 +128,25 @@ export class Deviceblock {
     }).slice(0, this.wide ? 6 : 1);
   }
 
+  private get direct(): boolean {
+    return this.deviceUi.isBleDirect(this.current?.deviceName || '');
+  }
+
   constructor(
     private readonly deviceUi: DeviceUiPort,
     private readonly cd: ChangeDetectorRef,
     destroyRef: DestroyRef,
   ) {
-    destroyRef.onDestroy(() => this.unsubscribe?.());
+    destroyRef.onDestroy(() => {
+      this.unsubscribe?.();
+      this.connection?.unsubscribe();
+    });
   }
 
   async tapSwitch(event: Event): Promise<void> {
     event.stopPropagation();
     const logicalDeviceId = this.current?.deviceName;
-    if (!logicalDeviceId || !this.online || !this.showSwitch || this.switchWaiting) return;
+    if (!logicalDeviceId || !this.canControl || !this.showSwitch || this.switchWaiting) return;
     this.switchWaiting = true;
     this.cd.markForCheck();
     try {

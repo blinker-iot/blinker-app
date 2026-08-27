@@ -29,6 +29,8 @@ export enum Bbp2MessageKind {
   TelemetryControl = 0x17,
   TelemetryStatus = 0x18,
   TelemetryData = 0x19,
+  PresenceControl = 0x1a,
+  Presence = 0x1b,
 }
 
 export enum Bbp2FrameFlag {
@@ -219,6 +221,15 @@ export interface DeviceV2TelemetryData {
   values: Record<string, DeviceV2Value>;
 }
 
+export enum DeviceV2PresenceOperation {
+  Subscribe = 0,
+}
+
+export interface DeviceV2Presence {
+  cloudReachable: boolean;
+  cloudLastSeenAt: number | null;
+}
+
 export interface DeviceV2Ack {
   acknowledgedSequence: number;
   stateRevision?: number;
@@ -238,6 +249,8 @@ export interface DeviceV2TargetSnapshot {
   stateFresh: boolean;
   values: Readonly<Record<string, DeviceV2Value>>;
   eventInterrupted: boolean;
+  cloudReachable: boolean | null;
+  cloudLastSeenAt: number | null;
 }
 
 export interface DeviceV2Event {

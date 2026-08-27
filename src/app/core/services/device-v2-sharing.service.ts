@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { API } from '../../configs/api.config';
 import {
   DeviceV2OwnerShares,
+  DeviceV2PresenceMetadata,
   DeviceV2ReceivedDevice,
   DeviceV2ReceivedSharesResponse,
   DeviceV2ShareGrant,
@@ -137,14 +138,38 @@ export class DeviceV2SharingService {
   }
 
   private receivedDevice(value: DeviceV2ReceivedDevice): DeviceV2ReceivedDevice {
-    if (!value || !value.name || !value.deviceType) {
+    if (!value || !value.tenantId || !value.name || !value.deviceType) {
       throw new Error('共享设备响应无效');
     }
     return {
       logicalDeviceId: this.deviceId(value.logicalDeviceId),
+      tenantId: this.text(value.tenantId, 128),
       name: this.text(value.name, 128),
       deviceType: this.text(value.deviceType, 64),
       share: this.grant(value.share),
+      ...this.presence(value),
+    };
+  }
+
+  private presence(value: DeviceV2PresenceMetadata): DeviceV2PresenceMetadata {
+    const integerOrNull = (input: unknown) => input === null
+      || typeof input === 'number' && Number.isSafeInteger(input) && input >= 0;
+    const fingerprintOrNull = value.manifestFingerprint === null
+      || typeof value.manifestFingerprint === 'string'
+        && /^[0-9a-f]{64}$/.test(value.manifestFingerprint);
+    if ((value.cloudReachable !== null && typeof value.cloudReachable !== 'boolean')
+      || !integerOrNull(value.cloudLastSeenAt)
+      || !integerOrNull(value.manifestRevision)
+      || !fingerprintOrNull
+      || !integerOrNull(value.manifestUpdatedAt)) {
+      throw new Error('共享设备在线状态响应无效');
+    }
+    return {
+      cloudReachable: value.cloudReachable,
+      cloudLastSeenAt: value.cloudLastSeenAt,
+      manifestRevision: value.manifestRevision,
+      manifestFingerprint: value.manifestFingerprint,
+      manifestUpdatedAt: value.manifestUpdatedAt,
     };
   }
 

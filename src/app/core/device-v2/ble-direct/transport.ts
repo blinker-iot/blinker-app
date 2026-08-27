@@ -1,10 +1,11 @@
 import {
+  BleCharacteristic,
   BleClient,
   BleDevice,
+  BleService,
   ScanMode,
   ScanResult,
 } from '@capacitor-community/bluetooth-le';
-import { Capacitor } from '@capacitor/core';
 
 import {
   BleApplicationMode,
@@ -18,18 +19,34 @@ import {
 const FRAGMENT_MAGIC = 0xb2;
 const FRAGMENT_VERSION = 1;
 const FRAGMENT_HEADER_SIZE = 4;
+const GATT_PACKET_SIZE = 20;
 const MAX_RECORD_SIZE = 1048;
-const ANDROID_BOND_TIMEOUT_MS = 45_000;
 
 export interface BleDirectTarget {
   device: BleDevice;
   profile: BleModeProfile;
 }
 
+// Family discovery is intentionally narrower than device identity. A scan
+// result is Blinker only when both the frozen service UUID and the versioned
+// service-data profile are valid. The profile never makes a Direct peripheral
+// the caller's logical device; Method 2 still proves that relationship.
+export function parseBlinkerAdvertisement(
+  result: Pick<ScanResult, 'serviceData'>,
+): BleModeProfile | undefined {
+  const data = serviceData(result);
+  if (!data) return undefined;
+  try {
+    return decodeBleModeProfile(data);
+  } catch {
+    return undefined;
+  }
+}
+
 export interface BleDirectRecordLink {
   connect(target: BleDirectTarget): Promise<void>;
   waitForMode(mode: BleApplicationMode, timeoutMs?: number): Promise<BleDirectTarget>;
-  sendRecord(record: Uint8Array): Promise<void>;
+  sendRecord(record: Uint8Array, writeTimeoutMs?: number): Promise<void>;
   receiveRecord(timeoutMs?: number): Promise<Uint8Array>;
   disconnect(): Promise<void>;
 }
@@ -44,9 +61,18 @@ export async function discoverBlinkerDevice(
   return scanFor(mode, timeoutMs, undefined, excludedDeviceIds, signal);
 }
 
+export async function discoverBlinkerDevices(
+  mode: BleApplicationMode,
+  timeoutMs = 2_500,
+  signal?: AbortSignal,
+): Promise<BleDirectTarget[]> {
+  await initializeBle();
+  return scanForAll(mode, timeoutMs, signal);
+}
+
 export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
   private target?: BleDirectTarget;
-  private packetSize = 20;
+  private readonly packetSize = GATT_PACKET_SIZE;
   private writeWithoutResponse = false;
   private frameId = 0;
   private connected = false;
@@ -74,30 +100,14 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
         () => this.onDisconnected(),
         { timeout: 15_000 },
       );
-      if (Capacitor.getPlatform() === 'android'
-        && !(await BleClient.isBonded(target.device.deviceId))) {
-        await BleClient.createBond(target.device.deviceId, {
-          timeout: ANDROID_BOND_TIMEOUT_MS,
-        });
+      let contract = findGattContract(await BleClient.getServices(target.device.deviceId));
+      if (!contract) {
+        await BleClient.discoverServices(target.device.deviceId);
+        contract = findGattContract(await BleClient.getServices(target.device.deviceId));
       }
-      const services = await BleClient.getServices(target.device.deviceId);
-      const service = services.find(item => normalizeUuid(item.uuid) === BLINKER_BLE_SERVICE_UUID);
-      const receive = service?.characteristics.find(
-        item => normalizeUuid(item.uuid) === BLINKER_BLE_RECEIVE_UUID,
-      );
-      const transmit = service?.characteristics.find(
-        item => normalizeUuid(item.uuid) === BLINKER_BLE_TRANSMIT_UUID,
-      );
-      if (!receive || (!receive.properties.write && !receive.properties.writeWithoutResponse)
-        || !transmit || (!transmit.properties.notify && !transmit.properties.indicate)) {
-        throw new Error('BLE_DIRECT_GATT_CONTRACT_INVALID');
-      }
-      this.writeWithoutResponse = !receive.properties.write
-        && receive.properties.writeWithoutResponse;
-      this.packetSize = Math.max(20, Math.min(
-        512,
-        (await BleClient.getMtu(target.device.deviceId).catch(() => 23)) - 3,
-      ));
+      if (!contract) throw new Error('BLE_DIRECT_GATT_CONTRACT_INVALID');
+      this.writeWithoutResponse = !contract.receive.properties.write
+        && contract.receive.properties.writeWithoutResponse;
       await BleClient.startNotifications(
         target.device.deviceId,
         BLINKER_BLE_SERVICE_UUID,
@@ -122,12 +132,16 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
     return scanFor(mode, timeoutMs, deviceId);
   }
 
-  async sendRecord(record: Uint8Array): Promise<void> {
+  async sendRecord(record: Uint8Array, writeTimeoutMs?: number): Promise<void> {
     if (!this.connected || !this.target || this.disconnected) {
       throw new Error('BLE_DIRECT_NOT_CONNECTED');
     }
     if (!record.length || record.length > MAX_RECORD_SIZE) {
       throw new Error('BLE_DIRECT_RECORD_SIZE');
+    }
+    if (writeTimeoutMs !== undefined
+      && (!Number.isInteger(writeTimeoutMs) || writeTimeoutMs < 1)) {
+      throw new Error('BLE_DIRECT_WRITE_TIMEOUT_INVALID');
     }
     this.frameId = this.frameId === 0xff ? 1 : this.frameId + 1;
     const capacity = this.packetSize - FRAGMENT_HEADER_SIZE;
@@ -152,6 +166,7 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
         BLINKER_BLE_SERVICE_UUID,
         BLINKER_BLE_RECEIVE_UUID,
         new DataView(fragment.buffer),
+        writeTimeoutMs === undefined ? undefined : { timeout: writeTimeoutMs },
       );
       offset += size;
       index += 1;
@@ -333,19 +348,53 @@ async function scanFor(
     }, result => {
       if (deviceId && result.device.deviceId !== deviceId) return;
       if (excludedDeviceIds.has(result.device.deviceId)) return;
-      const data = serviceData(result);
-      if (!data) return;
-      try {
-        const profile = decodeBleModeProfile(data);
-        if (profile.mode === mode) finish({ device: result.device, profile });
-      } catch {
-        // Ignore foreign or malformed advertisements; never connect to them.
-      }
+      const profile = parseBlinkerAdvertisement(result);
+      if (profile?.mode === mode) finish({ device: result.device, profile });
     }).catch(error => finish(undefined, error instanceof Error ? error : new Error(String(error))));
   });
 }
 
-function serviceData(result: ScanResult): DataView | undefined {
+async function scanForAll(
+  mode: BleApplicationMode,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<BleDirectTarget[]> {
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1) {
+    throw new Error('BLE_DIRECT_SCAN_TIMEOUT_INVALID');
+  }
+  if (signal?.aborted) throw new Error('BLE_DIRECT_SCAN_CANCELLED');
+  return new Promise<BleDirectTarget[]>((resolve, reject) => {
+    const found = new Map<string, BleDirectTarget>();
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let abort = () => undefined;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+      void BleClient.stopLEScan().catch(() => undefined).then(() => {
+        if (error) reject(error);
+        else resolve([...found.values()]);
+      });
+    };
+    abort = () => finish(new Error('BLE_DIRECT_SCAN_CANCELLED'));
+    timer = setTimeout(() => finish(), timeoutMs);
+    signal?.addEventListener('abort', abort, { once: true });
+    void BleClient.requestLEScan({
+      services: [BLINKER_BLE_SERVICE_UUID],
+      allowDuplicates: true,
+      scanMode: ScanMode.SCAN_MODE_LOW_LATENCY,
+    }, result => {
+      const profile = parseBlinkerAdvertisement(result);
+      if (profile?.mode === mode) {
+        found.set(result.device.deviceId, { device: result.device, profile });
+      }
+    }).catch(error => finish(error instanceof Error ? error : new Error(String(error))));
+  });
+}
+
+function serviceData(result: Pick<ScanResult, 'serviceData'>): DataView | undefined {
   if (!result.serviceData) return undefined;
   const match = Object.entries(result.serviceData).find(
     ([uuid]) => normalizeUuid(uuid) === BLINKER_BLE_SERVICE_UUID,
@@ -355,6 +404,23 @@ function serviceData(result: ScanResult): DataView | undefined {
 
 function normalizeUuid(value: string): string {
   return value.toLowerCase();
+}
+
+function findGattContract(services: BleService[]): {
+  receive: BleCharacteristic;
+  transmit: BleCharacteristic;
+} | undefined {
+  const service = services.find(item => normalizeUuid(item.uuid) === BLINKER_BLE_SERVICE_UUID);
+  const receive = service?.characteristics.find(
+    item => normalizeUuid(item.uuid) === BLINKER_BLE_RECEIVE_UUID,
+  );
+  const transmit = service?.characteristics.find(
+    item => normalizeUuid(item.uuid) === BLINKER_BLE_TRANSMIT_UUID,
+  );
+  return receive && (receive.properties.write || receive.properties.writeWithoutResponse)
+    && transmit && (transmit.properties.notify || transmit.properties.indicate)
+    ? { receive, transmit }
+    : undefined;
 }
 
 function validateTarget(target: BleDirectTarget): void {

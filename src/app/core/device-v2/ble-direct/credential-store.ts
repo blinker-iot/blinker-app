@@ -18,6 +18,8 @@ export interface BleControllerCredential {
   intentId: Uint8Array;
   commitId: Uint8Array;
   receipt: Uint8Array;
+  /** Native BLE address/UUID hint only; Method 2 remains authoritative. */
+  transportDeviceId?: string;
 }
 
 export interface BleControllerCredentialStore {
@@ -28,7 +30,7 @@ export interface BleControllerCredentialStore {
 }
 
 interface StoredCredential {
-  version: 1;
+  version: 1 | 2;
   state: BleControllerCredentialState;
   logicalDeviceId: string;
   deviceInstanceId: string;
@@ -40,6 +42,7 @@ interface StoredCredential {
   intentId: string;
   commitId: string;
   receipt: string;
+  transportDeviceId?: string;
 }
 
 export class CapacitorBleControllerCredentialStore implements BleControllerCredentialStore {
@@ -47,7 +50,7 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
     if (!Capacitor.isNativePlatform()) throw new Error('BLE_DIRECT_SECURE_STORAGE_REQUIRED');
     validateCredential(credential);
     const stored: StoredCredential = {
-      version: 1,
+      version: 2,
       state: credential.state,
       logicalDeviceId: credential.logicalDeviceId,
       deviceInstanceId: base64UrlEncode(credential.deviceInstanceId),
@@ -59,6 +62,7 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
       intentId: base64UrlEncode(credential.intentId),
       commitId: base64UrlEncode(credential.commitId),
       receipt: base64UrlEncode(credential.receipt),
+      transportDeviceId: credential.transportDeviceId,
     };
     await SecureStorage.setItem(key(credential.logicalDeviceId), JSON.stringify(stored));
   }
@@ -73,7 +77,8 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
     } catch {
       throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
     }
-    if (stored.version !== 1 || stored.logicalDeviceId !== logicalDeviceId) {
+    if ((stored.version !== 1 && stored.version !== 2)
+      || stored.logicalDeviceId !== logicalDeviceId) {
       throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
     }
     const credential: BleControllerCredential = {
@@ -88,6 +93,7 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
       intentId: base64UrlDecode(stored.intentId, 16),
       commitId: base64UrlDecode(stored.commitId, 16),
       receipt: base64UrlDecode(stored.receipt),
+      transportDeviceId: stored.transportDeviceId,
     };
     validateCredential(credential);
     return credential;
@@ -108,7 +114,8 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
       } catch {
         throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
       }
-      if (stored.version !== 1 || stored.logicalDeviceId !== logicalDeviceId) {
+      if ((stored.version !== 1 && stored.version !== 2)
+        || stored.logicalDeviceId !== logicalDeviceId) {
         throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
       }
       if (stored.state !== 'pending'
@@ -150,9 +157,17 @@ function validateCredential(credential: BleControllerCredential): void {
     || !exactNonZero(credential.controllerSecret, 32)
     || credential.credentialVersion !== 1 || credential.permissions !== 0x0f
     || !exactNonZero(credential.intentId, 16) || !exactNonZero(credential.commitId, 16)
-    || !credential.receipt.length || credential.receipt.length > 145) {
+    || !credential.receipt.length || credential.receipt.length > 145
+    || !validTransportDeviceId(credential.transportDeviceId)) {
     throw new Error('BLE_DIRECT_CREDENTIAL_INVALID');
   }
+}
+
+function validTransportDeviceId(value?: string): boolean {
+  return value === undefined || (value.length > 0
+    && value === value.trim()
+    && !value.includes('\0')
+    && new TextEncoder().encode(value).length <= 256);
 }
 
 function exactNonZero(value: Uint8Array, size: number): boolean {

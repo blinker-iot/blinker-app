@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 import {
   BleApplicationMode,
@@ -13,12 +13,14 @@ import {
   CapacitorBleDirectRecordLink,
   HttpBleEnrollmentApi,
   discoverBlinkerDevice,
+  discoverBlinkerDevices,
 } from '../device-v2/ble-direct';
 import { DeviceV2AccountState } from '../device-v2/account-client';
 import {
   DeviceV2Event,
   DeviceV2TargetSnapshot,
 } from '../protocol/device-v2';
+import { DeviceV2ManifestCache } from './device-v2-manifest-cache.service';
 
 function emptySnapshot(): DeviceV2TargetSnapshot {
   return {
@@ -28,6 +30,8 @@ function emptySnapshot(): DeviceV2TargetSnapshot {
     stateFresh: false,
     values: Object.create(null),
     eventInterrupted: true,
+    cloudReachable: null,
+    cloudLastSeenAt: null,
   };
 }
 
@@ -39,10 +43,10 @@ interface ActiveBleSession {
   detachErrors: () => void;
 }
 
+export type DeviceV2BleConnectionState = DeviceV2AccountState | 'nearby';
+
 @Injectable({ providedIn: 'root' })
 export class DeviceV2BleService {
-  readonly state = new BehaviorSubject<DeviceV2AccountState>('idle');
-
   private readonly credentials = new CapacitorBleControllerCredentialStore();
   private readonly api: HttpBleEnrollmentApi;
   private readonly snapshots = new Map<string, DeviceV2TargetSnapshot>();
@@ -51,6 +55,10 @@ export class DeviceV2BleService {
     snapshot: DeviceV2TargetSnapshot,
   ) => void>();
   private readonly eventListeners = new Set<(event: DeviceV2Event) => void>();
+  private readonly connectionStates = new Map<
+    string,
+    BehaviorSubject<DeviceV2BleConnectionState>
+  >();
   private active?: ActiveBleSession;
   private opening?: {
     logicalDeviceId: string;
@@ -58,8 +66,15 @@ export class DeviceV2BleService {
     abort: AbortController;
   };
   private generation = 0;
+  private presence?: {
+    promise: Promise<void>;
+    abort: AbortController;
+  };
 
-  constructor(http: HttpClient) {
+  constructor(
+    http: HttpClient,
+    private readonly manifestCache: DeviceV2ManifestCache,
+  ) {
     this.api = new HttpBleEnrollmentApi(http);
   }
 
@@ -77,11 +92,14 @@ export class DeviceV2BleService {
     );
   }
 
-  enroll(
+  async enroll(
     target: BleDirectTarget,
     options: BleDirectEnrollmentOptions,
   ): Promise<BleDirectEnrollmentResult> {
-    return this.client().enroll(target, options);
+    const result = await this.client().enroll(target, options);
+    const manifest = result.session.store.snapshot(result.logicalDeviceId).manifest;
+    if (manifest) this.manifestCache.save(result.logicalDeviceId, manifest);
+    return result;
   }
 
   connect(
@@ -91,12 +109,45 @@ export class DeviceV2BleService {
     return this.client().connect(logicalDeviceId, target);
   }
 
+  watchConnection(logicalDeviceId: string): Observable<DeviceV2BleConnectionState> {
+    return this.connectionState(logicalDeviceId).asObservable();
+  }
+
+  refreshPresence(logicalDeviceIds: readonly string[]): Promise<void> {
+    if (this.active || this.opening) return Promise.resolve();
+    if (this.presence) return this.presence.promise;
+    const ids = [...new Set(logicalDeviceIds.filter(
+      id => /^ble_[A-Za-z0-9_-]{22}$/.test(id),
+    ))];
+    if (!ids.length) return Promise.resolve();
+    const abort = new AbortController();
+    const promise = this.scanPresence(ids, abort.signal)
+      .catch(error => {
+        if (!(error instanceof Error) || error.message !== 'BLE_DIRECT_SCAN_CANCELLED') {
+          throw error;
+        }
+      })
+      .finally(() => {
+        if (this.presence?.promise === promise) this.presence = undefined;
+      });
+    this.presence = { promise, abort };
+    return promise;
+  }
+
   ensureReady(logicalDeviceId: string): Promise<void> {
     if (this.active?.logicalDeviceId === logicalDeviceId
       && this.active.session.state === 'ready') {
       return this.active.session.synchronize();
     }
     if (this.opening?.logicalDeviceId === logicalDeviceId) return this.opening.promise;
+
+    const presence = this.presence;
+    if (presence) {
+      presence.abort.abort();
+      return presence.promise.catch(() => undefined).then(
+        () => this.ensureReady(logicalDeviceId),
+      );
+    }
 
     const generation = ++this.generation;
     const abort = new AbortController();
@@ -114,7 +165,7 @@ export class DeviceV2BleService {
     this.opening?.abort.abort();
     this.opening = undefined;
     await this.closeActive();
-    this.state.next('idle');
+    this.setConnection(logicalDeviceId, 'nearby');
   }
 
   snapshot(logicalDeviceId: string): DeviceV2TargetSnapshot {
@@ -166,7 +217,7 @@ export class DeviceV2BleService {
   ): Promise<void> {
     await this.closeActive();
     if (generation !== this.generation) return;
-    this.state.next('connecting');
+    this.setConnection(logicalDeviceId, 'connecting');
     let session: BleDirectSession | undefined;
     try {
       const deadline = Date.now() + 15_000;
@@ -188,11 +239,11 @@ export class DeviceV2BleService {
         return;
       }
       this.attach(logicalDeviceId, session);
-      this.state.next('ready');
+      this.setConnection(logicalDeviceId, 'ready');
     } catch (error) {
       if (session) await session.close().catch(() => undefined);
       if (generation !== this.generation) return;
-      this.state.next('stopped');
+      this.setConnection(logicalDeviceId, 'stopped');
       throw error;
     }
   }
@@ -200,6 +251,9 @@ export class DeviceV2BleService {
   private attach(logicalDeviceId: string, session: BleDirectSession): void {
     const publish = (snapshot: DeviceV2TargetSnapshot) => {
       this.snapshots.set(logicalDeviceId, snapshot);
+      if (snapshot.manifestAccepted && snapshot.manifest) {
+        this.manifestCache.save(logicalDeviceId, snapshot.manifest);
+      }
       for (const listener of this.stateListeners) listener(logicalDeviceId, snapshot);
     };
     const active: ActiveBleSession = {
@@ -219,7 +273,7 @@ export class DeviceV2BleService {
       if (this.active !== active) return;
       this.detach(active);
       this.active = undefined;
-      this.state.next('stopped');
+      this.setConnection(logicalDeviceId, 'stopped');
     });
     this.active = active;
     publish(session.store.snapshot(logicalDeviceId));
@@ -231,6 +285,7 @@ export class DeviceV2BleService {
     this.active = undefined;
     this.detach(active);
     await active.session.close().catch(() => undefined);
+    this.setConnection(active.logicalDeviceId, 'nearby');
     const snapshot = active.session.store.snapshot(active.logicalDeviceId);
     this.snapshots.set(active.logicalDeviceId, snapshot);
     for (const listener of this.stateListeners) {
@@ -249,5 +304,53 @@ export class DeviceV2BleService {
     return code === 'BLE_DIRECT_BBP2_RESPONSE_INVALID'
       || code === 'BLE_DIRECT_DEVICE_PROOF_INVALID'
       || code.startsWith('BLE_DIRECT_AUTH_');
+  }
+
+  private connectionState(
+    logicalDeviceId: string,
+  ): BehaviorSubject<DeviceV2BleConnectionState> {
+    let state = this.connectionStates.get(logicalDeviceId);
+    if (!state) {
+      state = new BehaviorSubject<DeviceV2BleConnectionState>('idle');
+      this.connectionStates.set(logicalDeviceId, state);
+    }
+    return state;
+  }
+
+  private setConnection(logicalDeviceId: string, state: DeviceV2BleConnectionState): void {
+    const subject = this.connectionState(logicalDeviceId);
+    if (subject.value !== state) subject.next(state);
+  }
+
+  private async scanPresence(
+    logicalDeviceIds: readonly string[],
+    signal: AbortSignal,
+  ): Promise<void> {
+    const byTransportId = new Map<string, string[]>();
+    for (const logicalDeviceId of logicalDeviceIds) {
+      if (this.connectionState(logicalDeviceId).value === 'ready') continue;
+      this.setConnection(logicalDeviceId, 'idle');
+      const credential = await this.credentials.load(logicalDeviceId).catch(() => undefined);
+      if (!credential) continue;
+      try {
+        const transportDeviceId = credential.transportDeviceId?.toLowerCase();
+        if (!transportDeviceId) continue;
+        const ids = byTransportId.get(transportDeviceId) ?? [];
+        ids.push(logicalDeviceId);
+        byTransportId.set(transportDeviceId, ids);
+      } finally {
+        credential.controllerSecret.fill(0);
+      }
+    }
+    if (!byTransportId.size || signal.aborted) return;
+    const targets = await discoverBlinkerDevices(BleApplicationMode.Direct, 2_500, signal);
+    if (signal.aborted) return;
+    for (const target of targets) {
+      for (const logicalDeviceId of byTransportId.get(
+        target.device.deviceId.toLowerCase(),
+      ) ?? []) {
+        this.setConnection(logicalDeviceId, 'nearby');
+      }
+    }
   }
 }
