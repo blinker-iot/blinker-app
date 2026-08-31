@@ -4,10 +4,13 @@
     <ion-buttons slot="end">
       <ion-button
         class="header-action"
+        [attr.aria-label]="messageButtonLabel"
         (click)="goto('/message')"
       >
         <i class="fa-light fa-message-dots"></i>
-        <span class="notice-dot"></span>
+        @if (showUnreadMessageBadge) {
+        <span class="notice-badge" aria-hidden="true">{{ unreadMessageBadge }}</span>
+        }
       </ion-button>
     </ion-buttons>
   </ion-toolbar>

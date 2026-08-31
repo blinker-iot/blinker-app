@@ -1,4 +1,8 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+} from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { IonicModule, NavController } from '@ionic/angular';
@@ -6,6 +10,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { DataService } from '../../../core/services/data.service';
 import { UpdateService } from '../../../core/services/update.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { MessageService } from '../../../sections/message/message.service';
 import {
   MenuListComponent,
   MenuListItem,
@@ -25,7 +30,7 @@ import { createProfileMenuGroups } from './profile-menu.config';
     MenuListComponent,
   ],
 })
-export class TabProfileComponent {
+export class TabProfileComponent implements OnInit {
   get menuGroups() {
     return createProfileMenuGroups(
       {
@@ -84,13 +89,38 @@ export class TabProfileComponent {
     return this.updateService.currentVersion;
   }
 
+  get unreadMessageCount(): number {
+    return this.messageService.unreadTotal;
+  }
+
+  get unreadMessageBadge(): string {
+    return this.unreadMessageCount > 99
+      ? '99+'
+      : String(this.unreadMessageCount);
+  }
+
+  get showUnreadMessageBadge(): boolean {
+    return this.unreadMessageCount > 0;
+  }
+
+  get messageButtonLabel(): string {
+    return this.unreadMessageCount > 0
+      ? `消息中心，${this.unreadMessageCount}条未读`
+      : '消息中心，暂无未读消息';
+  }
+
   constructor(
     private dataService: DataService,
     private updateService: UpdateService,
     private authService: AuthService,
     private translate: TranslateService,
-    private navController: NavController
+    private navController: NavController,
+    private messageService: MessageService
   ) {}
+
+  ngOnInit(): void {
+    void this.messageService.init().catch(() => undefined);
+  }
 
   goto(page?: string) {
     if (!page) return;
