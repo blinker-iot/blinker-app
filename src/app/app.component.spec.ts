@@ -16,6 +16,7 @@ import { TranslationService } from './core/services/translation.service';
 import { UpdateService } from './core/services/update.service';
 import { UserService } from './core/services/user.service';
 import { ViewService } from './core/services/view.service';
+import { MessageService } from './sections/message/message.service';
 
 describe('AppComponent authentication startup', () => {
   it('restores auth before redirecting an unauthenticated development build', async () => {
@@ -24,6 +25,7 @@ describe('AppComponent authentication startup', () => {
     const isLogin = vi.fn().mockReturnValue(false);
     const navigateRoot = vi.fn();
     const userService = { getAllInfo: vi.fn() };
+    const initMessages = vi.fn().mockResolvedValue(undefined);
     const app = new AppComponent(
       {} as Platform,
       { swipeEnable: false } as ViewService,
@@ -43,6 +45,7 @@ describe('AppComponent authentication startup', () => {
       { init: vi.fn() } as unknown as TranslationService,
       { init: vi.fn() } as unknown as AudioService,
       { init: vi.fn().mockResolvedValue(undefined) } as unknown as NtfyService,
+      { init: initMessages } as unknown as MessageService,
       { detectChanges: vi.fn() } as unknown as ChangeDetectorRef,
     );
     app.audio = { nativeElement: {} } as ElementRef;
@@ -50,7 +53,11 @@ describe('AppComponent authentication startup', () => {
     await app.initService();
 
     expect(restoreAuth).toHaveBeenCalledOnce();
+    expect(initMessages).toHaveBeenCalledOnce();
     expect(restoreAuth.mock.invocationCallOrder[0]).toBeLessThan(
+      initMessages.mock.invocationCallOrder[0],
+    );
+    expect(initMessages.mock.invocationCallOrder[0]).toBeLessThan(
       isLogin.mock.invocationCallOrder[0],
     );
     expect(initDevice).toHaveBeenCalledOnce();

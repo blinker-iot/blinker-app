@@ -1,12 +1,14 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import {
   InfiniteScrollCustomEvent,
   IonicModule,
   RefresherCustomEvent,
 } from '@ionic/angular';
+import { Subscription } from 'rxjs';
 
+import { normalizeMessageId } from 'src/app/core/services/message-deep-link';
 import { MessageItem } from './message.model';
 import { MessageService } from './message.service';
 
@@ -17,7 +19,7 @@ import { MessageService } from './message.service';
   standalone: true,
   imports: [DatePipe, IonicModule, RouterModule],
 })
-export class MessagePage implements OnInit {
+export class MessagePage implements OnInit, OnDestroy {
   detailItem: MessageItem | null = null;
   detailLoading = false;
   detailError = '';
@@ -26,8 +28,14 @@ export class MessagePage implements OnInit {
   deletingMessageId: string | null = null;
 
   private detailRequestId = 0;
+  private routeMessageId: string | null = null;
+  private routeSubscription: Subscription | null = null;
 
-  constructor(public readonly messageService: MessageService) {}
+  constructor(
+    public readonly messageService: MessageService,
+    private readonly route: ActivatedRoute,
+    private readonly router: Router,
+  ) {}
 
   get messages(): readonly MessageItem[] {
     return this.messageService.items;
@@ -50,7 +58,23 @@ export class MessagePage implements OnInit {
   }
 
   ngOnInit(): void {
-    void this.initialize();
+    const initialization = this.initialize();
+    this.routeSubscription = this.route.queryParamMap.subscribe(params => {
+      const messageId = normalizeMessageId(params.get('messageId'));
+      if (messageId === this.routeMessageId) return;
+
+      const previousMessageId = this.routeMessageId;
+      this.routeMessageId = messageId;
+      if (!messageId) {
+        if (previousMessageId) this.resetDetail();
+        return;
+      }
+      void initialization.then(() => this.openMessageById(messageId));
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.routeSubscription?.unsubscribe();
   }
 
   private async initialize(): Promise<void> {
@@ -109,14 +133,26 @@ export class MessagePage implements OnInit {
   }
 
   async openMessage(message: MessageItem): Promise<void> {
+    await this.openMessageDetail(message.id, message);
+  }
+
+  async openMessageById(messageId: string): Promise<void> {
+    const item = this.messages.find(message => message.id === messageId) || null;
+    await this.openMessageDetail(messageId, item);
+  }
+
+  private async openMessageDetail(
+    messageId: string,
+    initialItem: MessageItem | null,
+  ): Promise<void> {
     const requestId = ++this.detailRequestId;
-    this.detailItem = message;
+    this.detailItem = initialItem;
     this.detailLoading = true;
     this.detailError = '';
     this.actionError = '';
 
     try {
-      const detail = await this.messageService.getMessage(message.id);
+      const detail = await this.messageService.getMessage(messageId);
       if (requestId !== this.detailRequestId) return;
       if (!detail) {
         this.closeDetail();
@@ -158,6 +194,20 @@ export class MessagePage implements OnInit {
   }
 
   closeDetail(): void {
+    const hadRouteMessage = this.routeMessageId !== null;
+    this.routeMessageId = null;
+    this.resetDetail();
+    if (hadRouteMessage) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { messageId: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
+  }
+
+  private resetDetail(): void {
     this.detailRequestId += 1;
     this.detailItem = null;
     this.detailLoading = false;

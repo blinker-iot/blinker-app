@@ -21,6 +21,7 @@ import {
   parseDeviceDeepLink,
   parseShortcutDeviceId,
 } from "./device-deep-link";
+import { parseMessageDeepLink } from "./message-deep-link";
 import {
   AppTheme,
   applyThemeToDocument,
@@ -203,16 +204,14 @@ export class ViewService {
     });
 
     void App.addListener("appUrlOpen", ({ url }) => {
-      const deviceId = parseDeviceDeepLink(url);
-      if (deviceId) this.openDeviceFromLink(deviceId);
+      this.openAppLink(url);
     }).catch((error) => {
       console.warn("Unable to listen for app links", error);
     });
 
     void App.getLaunchUrl()
       .then((launch) => {
-        const deviceId = parseDeviceDeepLink(launch?.url);
-        if (deviceId) this.openDeviceFromLink(deviceId);
+        this.openAppLink(launch?.url);
       })
       .catch((error) => {
         console.warn("Unable to read the app launch URL", error);
@@ -241,6 +240,24 @@ export class ViewService {
     //     this.navCtrl.navigateRoot('/');
     //   }
     // })
+  }
+
+  private openAppLink(url?: string): void {
+    const message = parseMessageDeepLink(url);
+    if (message) {
+      this.ngzone.run(() => {
+        void this.router.navigate(["/message"], {
+          queryParams: message.messageId
+            ? { messageId: message.messageId }
+            : undefined,
+          replaceUrl: true,
+        });
+      });
+      return;
+    }
+
+    const deviceId = parseDeviceDeepLink(url);
+    if (deviceId) this.openDeviceFromLink(deviceId);
   }
 
   private openDeviceFromLink(deviceId: string): void {

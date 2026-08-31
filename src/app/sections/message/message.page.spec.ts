@@ -2,12 +2,18 @@ import 'zone.js';
 
 import { provideZoneChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import {
+  ActivatedRoute,
+  convertToParamMap,
+  type ParamMap,
+  provideRouter,
+} from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 import {
   InfiniteScrollCustomEvent,
   RefresherCustomEvent,
 } from '@ionic/angular';
+import { BehaviorSubject } from 'rxjs';
 
 import { MessageItem } from './message.model';
 import { MessagePage } from './message.page';
@@ -18,9 +24,11 @@ describe('MessagePage', () => {
   let fixture: ComponentFixture<MessagePage>;
   let page: MessagePage;
   let service: ReturnType<typeof createMessageService>;
+  let queryParamMap: BehaviorSubject<ParamMap>;
 
   beforeEach(async () => {
     service = createMessageService();
+    queryParamMap = new BehaviorSubject(convertToParamMap({}));
 
     await TestBed.configureTestingModule({
       imports: [MessagePage],
@@ -28,6 +36,10 @@ describe('MessagePage', () => {
         provideZoneChangeDetection(),
         provideIonicAngular(),
         provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { queryParamMap },
+        },
         { provide: MessageService, useValue: service },
       ],
     }).compileComponents();
@@ -134,6 +146,19 @@ describe('MessagePage', () => {
       unread: false,
       readAt: 1_777_000_000_000,
     });
+  });
+
+  it('opens the pushed business message id without requiring it in the list', async () => {
+    const item = message({ id: 'pushed-message', unread: false, readAt: 100 });
+    service.getMessage.mockResolvedValue(item);
+    queryParamMap.next(convertToParamMap({ messageId: item.id }));
+    createFixture();
+
+    await vi.waitFor(() => {
+      expect(service.getMessage).toHaveBeenCalledWith(item.id);
+      expect(page.detailItem).toEqual(item);
+    });
+    expect(service.markRead).not.toHaveBeenCalled();
   });
 
   it('uses service-side snapshot semantics for mark all read', async () => {

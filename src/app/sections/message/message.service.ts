@@ -360,7 +360,7 @@ export class MessageService {
       this.lifecycleRefreshQueued = false;
       this.syncSession();
       if (!this.canRefreshInBackground()) return;
-      const refresh = this.loaded ? this.refresh() : this.refreshUnreadSummary();
+      const refresh = this.refresh();
       void refresh.catch(() => undefined);
     });
   }

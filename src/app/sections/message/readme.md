@@ -26,8 +26,9 @@ summary，再原样提交其 `beforeCursor`，避免误读快照之后到达的�
 
 ## Android 提醒
 
-Android ntfy 提醒只携带/解析消息 ID，用于触发 summary/list 刷新。提醒正文不是业务事实源；详情、已读和删除
-仍必须使用当前账号的 Bearer token 回源。提醒不可用不得阻断站内信列表。
+Android ntfy 提醒只携带/解析消息 ID，用于触发 summary/list 刷新；点击后有 ID 时打开对应详情，无 ID 时打开
+消息中心。提醒正文不是业务事实源；详情、已读和删除仍必须使用当前账号的 Bearer token 回源。退出或切换账号会同时
+清除插件历史和已展示的 ntfy 消息通知。提醒不可用不得阻断站内信列表。
 
 ## 联调前置
 

@@ -30,6 +30,7 @@ import { BTipComponent } from './core/components/b-tip/b-tip.component';
 import { BToastComponent } from './core/components/b-toast/b-toast.component';
 import { headerIconTransitionAnimation } from './core/animations/header-icon-transition.animation';
 import { NtfyService } from './core/services/ntfy.service';
+import { MessageService } from './sections/message/message.service';
 
 @Component({
   selector: 'app-root',
@@ -84,6 +85,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     private translationService: TranslationService,
     private audioService: AudioService,
     private ntfyService: NtfyService,
+    private messageService: MessageService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -124,6 +126,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   async initService() {
     console.log('init service');
     await this.dataService.init();
+    void this.messageService.init().catch(() => undefined);
     this.checkLoginStatus();
     this.authService.init();
     this.deviceService.init();

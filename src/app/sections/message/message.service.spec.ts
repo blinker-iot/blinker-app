@@ -410,6 +410,33 @@ describe('MessageService', () => {
     },
   );
 
+  it('loads list and summary when initialized before the user becomes ready', async () => {
+    dataService.auth = null;
+    dataService.userDataLoader.next(false);
+    await service.init();
+
+    dataService.sessionEpoch += 1;
+    dataService.auth = {
+      accessToken: 'access-2',
+      refreshToken: 'refresh-2',
+      tokenType: 'Bearer',
+    };
+    dataService.authDataExpire.next(true);
+    dataService.userDataLoader.next(true);
+    await settleAsync();
+
+    flushFirstPage(
+      [message('message-after-login')],
+      null,
+      { total: 1, categories: { device_sharing: 1 }, beforeCursor: 'before-1' },
+    );
+    await settleAsync();
+
+    expect(service.hasLoaded).toBe(true);
+    expect(service.items.map(item => item.id)).toEqual(['message-after-login']);
+    expect(service.unreadTotal).toBe(1);
+  });
+
   it('refreshes loaded state on foreground recovery and ntfy message ids', async () => {
     const initialized = service.init();
     flushFirstPage(

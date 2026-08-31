@@ -617,7 +617,7 @@ export class NtfyService {
       try {
         await Ntfy.clearMessages();
       } catch {
-        // Stored notification history is also cleared on the next successful stop.
+        // Any incomplete plugin cleanup is retried on the next successful stop.
       }
       this.seenMessageIds.clear();
     }
