@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpClient, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
@@ -10,6 +10,7 @@ import { API } from 'src/app/configs/api.config';
 import { sha256 } from '../functions/func';
 import { AuthService } from './auth.service';
 import { DataService } from './data.service';
+import { NtfyService } from './ntfy.service';
 
 vi.mock('altcha-lib/v1', () => ({
   solveChallenge: vi.fn(() => ({
@@ -23,27 +24,36 @@ describe('AuthService Gateway authentication', () => {
   let dataService: DataService;
   let httpTesting: HttpTestingController;
   let navigateRoot: ReturnType<typeof vi.fn>;
+  let revokeNtfy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     localStorage.clear();
     navigateRoot = vi.fn().mockResolvedValue(true);
+    revokeNtfy = vi.fn().mockResolvedValue(true);
     TestBed.configureTestingModule({
       providers: [
-        AuthService,
         DataService,
-        { provide: NavController, useValue: { navigateRoot } },
         provideHttpClient(),
         provideHttpClientTesting(),
       ],
     });
-    service = TestBed.inject(AuthService);
     dataService = TestBed.inject(DataService);
+    service = new AuthService(
+      TestBed.inject(HttpClient),
+      dataService,
+      { navigateRoot } as unknown as NavController,
+      { revoke: revokeNtfy } as unknown as NtfyService,
+    );
     httpTesting = TestBed.inject(HttpTestingController);
   });
 
   afterEach(() => {
-    httpTesting.verify();
-    vi.restoreAllMocks();
+    try {
+      httpTesting.verify();
+    } finally {
+      TestBed.resetTestingModule();
+      vi.restoreAllMocks();
+    }
   });
 
   it('solves a fresh ALTCHA and coalesces duplicate email-code requests', async () => {
@@ -206,13 +216,22 @@ describe('AuthService Gateway authentication', () => {
       refreshToken: 'refresh',
       tokenType: 'bearer',
     });
+    let finishRevocation: (value: boolean) => void = () => undefined;
+    revokeNtfy.mockReturnValue(new Promise<boolean>((resolve) => {
+      finishRevocation = resolve;
+    }));
 
     const logout = service.logout();
+    await Promise.resolve();
+    expect(httpTesting.match(API.AUTH.LOGOUT)).toHaveLength(0);
+    finishRevocation(true);
+    await Promise.resolve();
     const request = httpTesting.expectOne(API.AUTH.LOGOUT);
     expect(request.request.method).toBe('POST');
     request.flush({ status: 200, data: null });
 
     await logout;
+    expect(revokeNtfy).toHaveBeenCalledOnce();
     expect(dataService.auth).toBeNull();
     expect(navigateRoot).toHaveBeenCalledWith('/login');
   });
@@ -225,6 +244,7 @@ describe('AuthService Gateway authentication', () => {
     });
 
     const logout = service.logout();
+    await Promise.resolve();
     const request = httpTesting.expectOne(API.AUTH.LOGOUT);
     await dataService.setAuthData({
       accessToken: 'new-access',
@@ -234,6 +254,32 @@ describe('AuthService Gateway authentication', () => {
     request.flush({ status: 200, data: null });
 
     await logout;
+    expect(dataService.auth?.accessToken).toBe('new-access');
+    expect(navigateRoot).not.toHaveBeenCalled();
+  });
+
+  it('does not send server logout when the session changes during ntfy revocation', async () => {
+    await dataService.setAuthData({
+      accessToken: 'old-access',
+      refreshToken: 'old-refresh',
+      tokenType: 'bearer',
+    });
+    let finishRevocation: (value: boolean) => void = () => undefined;
+    revokeNtfy.mockReturnValue(new Promise<boolean>((resolve) => {
+      finishRevocation = resolve;
+    }));
+
+    const logout = service.logout();
+    await Promise.resolve();
+    await dataService.setAuthData({
+      accessToken: 'new-access',
+      refreshToken: 'new-refresh',
+      tokenType: 'bearer',
+    });
+    finishRevocation(true);
+    await logout;
+
+    expect(httpTesting.match(API.AUTH.LOGOUT)).toHaveLength(0);
     expect(dataService.auth?.accessToken).toBe('new-access');
     expect(navigateRoot).not.toHaveBeenCalled();
   });
