@@ -90,6 +90,10 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/room/room-edit/room-edit').then(m => m.RoomEditPage),
   },
   {
+    path: 'device/:id/settings',
+    loadComponent: () => import('./sections/device/device-settings/device-settings').then(m => m.DeviceSettingsPage),
+  },
+  {
     path: 'device/:id',
     loadComponent: () => import('./device/device.page').then(m => m.DevicePage),
   },

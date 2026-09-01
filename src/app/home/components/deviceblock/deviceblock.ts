@@ -4,7 +4,7 @@ import { IonicModule } from '@ionic/angular';
 
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import {
-  DeviceUiConnectionState,
+  DeviceUiConnectivitySnapshot,
   DeviceUiPort,
   DeviceUiSnapshot,
 } from 'src/app/core/device-v2/device-ui.port';
@@ -30,7 +30,12 @@ export class Deviceblock {
   private snapshot?: DeviceUiSnapshot;
   private unsubscribe?: () => void;
   private connection?: Subscription;
-  private connectionState: DeviceUiConnectionState = 'idle';
+  private connectivity: DeviceUiConnectivitySnapshot = {
+    activeTransport: 'cloud',
+    bleAccess: null,
+    bleState: 'idle',
+    cloudSessionState: 'idle',
+  };
   switchWaiting = false;
 
   @Input()
@@ -39,7 +44,12 @@ export class Deviceblock {
     this.snapshot = undefined;
     this.unsubscribe?.();
     this.connection?.unsubscribe();
-    this.connectionState = 'idle';
+    this.connectivity = {
+      activeTransport: this.directOnly ? 'ble' : 'cloud',
+      bleAccess: this.directOnly ? true : null,
+      bleState: 'idle',
+      cloudSessionState: 'idle',
+    };
     const id = device?.deviceName;
     if (!id) return;
     const subscription = this.deviceUi.watchState(id).subscribe(snapshot => {
@@ -47,8 +57,8 @@ export class Deviceblock {
       this.cd.markForCheck();
     });
     this.unsubscribe = () => subscription.unsubscribe();
-    this.connection = this.deviceUi.watchConnection(id).subscribe(state => {
-      this.connectionState = state;
+    this.connection = this.deviceUi.watchConnectivity(id).subscribe(state => {
+      this.connectivity = state;
       this.cd.markForCheck();
     });
   }
@@ -60,23 +70,26 @@ export class Deviceblock {
   @Input() wide = false;
 
   get online(): boolean {
-    return this.direct
-      ? this.connectionState === 'ready'
-      : this.current?.data?.cloudReachable === true;
+    return this.connectivity.bleState === 'ready'
+      || this.current?.data?.cloudReachable === true;
   }
 
   get canControl(): boolean {
-    return this.online
-      && this.connectionState === 'ready'
+    const routeReady = this.connectivity.activeTransport === 'ble'
+      ? this.connectivity.bleState === 'ready'
+      : this.current?.data?.cloudReachable === true
+        && this.connectivity.cloudSessionState === 'ready';
+    return routeReady
       && this.snapshot?.stateFresh === true;
   }
 
   get status(): DeviceCardStatus {
-    if (this.direct) {
-      if (this.connectionState === 'ready') return 'ready';
-      return this.connectionState === 'nearby'
-        || this.connectionState === 'connecting'
-        || this.connectionState === 'retrying'
+    if (this.blePrimary) {
+      if (this.connectivity.bleState === 'ready') return 'ready';
+      return this.connectivity.bleState === 'scanning'
+        || this.connectivity.bleState === 'nearby'
+        || this.connectivity.bleState === 'connecting'
+        || this.connectivity.bleState === 'retrying'
         ? 'reachable'
         : 'offline';
     }
@@ -87,18 +100,19 @@ export class Deviceblock {
   }
 
   get transportIcon(): string {
-    return this.direct ? 'fa-brands fa-bluetooth-b' : 'fa-light fa-wifi';
+    return this.blePrimary ? 'fa-brands fa-bluetooth-b' : 'fa-light fa-wifi';
   }
 
   get statusText(): string {
-    if (this.status === 'ready') return this.direct
+    if (this.status === 'ready') return this.blePrimary
       ? '蓝牙已连接'
       : '云端已同步';
     if (this.status === 'reachable') {
-      if (!this.direct) return '云端在线';
-      return this.connectionState === 'nearby' ? '蓝牙在附近' : '正在连接蓝牙';
+      if (!this.blePrimary) return '云端在线';
+      if (this.connectivity.bleState === 'nearby') return '蓝牙在附近';
+      return this.connectivity.bleState === 'scanning' ? '正在查找蓝牙' : '正在连接蓝牙';
     }
-    if (this.direct) return '蓝牙未连接';
+    if (this.blePrimary) return '蓝牙未连接';
     return this.current?.data?.cloudReachable === null ? '状态未知' : '离线';
   }
 
@@ -128,8 +142,18 @@ export class Deviceblock {
     }).slice(0, this.wide ? 6 : 1);
   }
 
-  private get direct(): boolean {
-    return this.deviceUi.isBleDirect(this.current?.deviceName || '');
+  private get directOnly(): boolean {
+    return this.current?.cloudEnabled === false;
+  }
+
+  private get blePrimary(): boolean {
+    if (this.directOnly) return true;
+    if (this.connectivity.bleAccess !== true) return false;
+    return this.connectivity.bleState === 'scanning'
+      || this.connectivity.bleState === 'nearby'
+      || this.connectivity.bleState === 'connecting'
+      || this.connectivity.bleState === 'retrying'
+      || this.connectivity.bleState === 'ready';
   }
 
   constructor(

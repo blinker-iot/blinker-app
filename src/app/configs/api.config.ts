@@ -39,6 +39,8 @@ export const API = {
   DEVICE_V2: {
     LIST: API_V2_URL + '/devices',
     CREATE: API_V2_URL + '/devices',
+    RESOLVE_INSTANCE: API_V2_URL + '/devices:resolve-instance',
+    ENABLE_CLOUD: API_V2_URL + '/devices:enable-cloud',
     DETAIL: deviceKeyV2Url,
     REVEAL: (logicalDeviceId: string) =>
       deviceKeyV2Url(logicalDeviceId) + '/device-key:reveal',
@@ -64,6 +66,19 @@ export const API = {
       API_V2_URL + '/ble-enrollment/intents/' + encodeURIComponent(intentId) + '/commit',
     BLE_ENROLLMENT_CANCEL: (intentId: string) =>
       API_V2_URL + '/ble-enrollment/intents/' + encodeURIComponent(intentId) + '/cancel',
+    EDGE_GATEWAY_ATTACHMENTS: API_V2_URL + '/edge-gateway/attachments',
+    EDGE_GATEWAY_ATTACHMENT: (operationId: string) =>
+      API_V2_URL + '/edge-gateway/attachments/' + encodeURIComponent(operationId),
+    PRESENCE_KEY: (logicalDeviceId: string) =>
+      deviceKeyV2Url(logicalDeviceId) + '/presence-key',
+    ALLOCATE_PRESENCE_KEY: (logicalDeviceId: string) =>
+      deviceKeyV2Url(logicalDeviceId) + '/presence-key:allocate',
+    ROTATE_PRESENCE_KEY: (logicalDeviceId: string) =>
+      deviceKeyV2Url(logicalDeviceId) + '/presence-key:rotate',
+    SYNC_PRESENCE_KEY: (logicalDeviceId: string) =>
+      deviceKeyV2Url(logicalDeviceId) + '/presence-key:sync',
+    CONFIRM_PRESENCE_KEY: (logicalDeviceId: string) =>
+      deviceKeyV2Url(logicalDeviceId) + '/presence-key:confirm',
   },
   FEEDBACK: {
     SUBMIT: API_V1_URL + '/feedback/submit',
@@ -93,11 +108,15 @@ export function isGatewayUrl(url: string): boolean {
     || url.startsWith(API.DEVICE_V2.RECEIVED_SHARES + '/')
     || url === API.DEVICE_V2.BLE_ENROLLMENT_INTENTS
     || url.startsWith(API.DEVICE_V2.BLE_ENROLLMENT_INTENTS + '/')
+    || url === API.DEVICE_V2.EDGE_GATEWAY_ATTACHMENTS
+    || url.startsWith(API.DEVICE_V2.EDGE_GATEWAY_ATTACHMENTS + '/')
     || isDeviceKeyManagementUrl(url);
 }
 
 function isDeviceKeyManagementUrl(url: string): boolean {
   if (url === API_V2_URL + '/devices') return true;
+  if (url === API.DEVICE_V2.RESOLVE_INSTANCE) return true;
+  if (url === API.DEVICE_V2.ENABLE_CLOUD) return true;
 
   const prefix = API_V2_URL + '/devices/';
   if (!url.startsWith(prefix)) return false;
@@ -108,6 +127,11 @@ function isDeviceKeyManagementUrl(url: string): boolean {
   if (parts.length === 2) {
     return parts[1] === 'device-key:reveal'
       || parts[1] === 'device-key:rotate'
+      || parts[1] === 'presence-key'
+      || parts[1] === 'presence-key:allocate'
+      || parts[1] === 'presence-key:rotate'
+      || parts[1] === 'presence-key:sync'
+      || parts[1] === 'presence-key:confirm'
       || parts[1] === 'page-layout'
       || parts[1] === 'share-invitations'
       || parts[1] === 'shares';

@@ -210,6 +210,51 @@ app-hero-card {
   }
 }
 
+.ble-candidates {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+
+  button {
+    width: 100%;
+    min-height: 54px;
+    padding: 10px 13px;
+    border: 1px solid var(--blinker-border);
+    border-radius: var(--blinker-radius-control);
+    background: var(--blinker-surface);
+    color: var(--blinker-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    text-align: left;
+  }
+
+  button > i {
+    color: var(--method-color);
+    font-size: 18px;
+  }
+
+  button > span {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+
+  strong {
+    font-size: 12px;
+  }
+
+  small {
+    color: var(--blinker-text-secondary);
+    font-size: 9px;
+  }
+
+  .candidate-rssi {
+    margin-left: auto;
+    white-space: nowrap;
+  }
+}
+
 .primary-action {
   width: 100%;
   height: 49px;

@@ -5,6 +5,7 @@ import { BleEnrollmentApi } from './api';
 import {
   BleControllerCredential,
   BleControllerCredentialStore,
+  clearBleControllerCredentialSecrets,
 } from './credential-store';
 import {
   BleDirectCrypto,
@@ -50,9 +51,9 @@ import {
 
 const ADMIN_FINGERPRINT_DOMAIN = new TextEncoder()
   .encode('blinker/direct-admin/fingerprint/v1');
-// The first encrypted-characteristic write may include user-confirmed native
-// link security. Later BBP/2 records keep the transport's short write timeout.
-const LINK_SECURITY_ESTABLISHMENT_TIMEOUT_MS = 45_000;
+// Allow Android's initial GATT scheduling to settle before the application
+// Noise handshake. This is not an SMP/pairing timeout.
+const INITIAL_HANDSHAKE_WRITE_TIMEOUT_MS = 45_000;
 
 export interface BleDirectEnrollmentOptions {
   displayName: string;
@@ -91,6 +92,7 @@ export class BleDirectClient {
 
     let noise: NoiseNnInitiator | undefined;
     let controllerSecret: Uint8Array | undefined;
+    let presenceKey: Uint8Array | undefined;
     let directSession: BleDirectSession | undefined;
     try {
       await this.link.connect(target);
@@ -100,12 +102,12 @@ export class BleDirectClient {
       const firstMessage = await noise.writeInitiator(encodeBleEnrollmentHelloRequest());
       await this.link.sendRecord(encodeLocalSecureRecord(
         LocalSecureRecordType.InitiatorHandshake, firstMessage,
-      ), LINK_SECURITY_ESTABLISHMENT_TIMEOUT_MS);
+      ), INITIAL_HANDSHAKE_WRITE_TIMEOUT_MS);
       const responder = decodeLocalSecureRecord(
         await this.link.receiveRecord(), LocalSecureRecordType.ResponderHandshake,
       );
       const hello = decodeBleEnrollmentHelloResponse(await noise.readResponder(responder));
-      if (!sameBytes(hello.setupSessionLocator, target.profile.setupSessionLocator)
+      if (!sameBytes(hello.setupSessionLocator, target.profile.modeLocator)
         || hello.securityProfile !== 1) {
         throw new Error('BLE_DIRECT_SETUP_CONTEXT_MISMATCH');
       }
@@ -139,9 +141,13 @@ export class BleDirectClient {
         throw new Error('BLE_DIRECT_INTENT_CONTEXT_MISMATCH');
       }
       const grant = decodeBleEnrollmentGrant(intent.grant);
+      presenceKey = intent.presenceKey;
+      const presenceKeyDigest = await this.crypto.sha256(presenceKey);
       this.validateGrant(
         grant, hello, transcriptHash, controllerId, secretDigest,
+        intent.presenceKeyVersion, presenceKeyDigest,
       );
+      presenceKeyDigest.fill(0);
       const expectedReceipt = await this.expectedReceipt(
         grant, controllerSecret, secretDigest,
       );
@@ -154,15 +160,20 @@ export class BleDirectClient {
         controllerSecret,
         credentialVersion: 1,
         permissions: grant.controllerPermissions,
+        presenceKeys: [{
+          state: 'current',
+          accessEpoch: grant.accessEpoch,
+          version: grant.presenceKeyVersion,
+          key: presenceKey,
+        }],
         intentId,
         commitId,
         receipt: expectedReceipt.encoded,
-        transportDeviceId: target.device.deviceId,
       };
       await this.store.save(credential);
 
       const encryptedRequest = await noise.encrypt(encodeBleEnrollmentRequest(
-        intent.grant, controllerSecret,
+        intent.grant, controllerSecret, presenceKey,
       ));
       await this.link.sendRecord(encodeLocalSecureRecord(
         LocalSecureRecordType.Transport, encryptedRequest,
@@ -186,12 +197,13 @@ export class BleDirectClient {
       credential = {
         ...credential,
         state: 'active',
-        transportDeviceId: directTarget.device.deviceId,
       };
       await this.store.save(credential);
       await directSession.synchronize();
       controllerSecret.fill(0);
       controllerSecret = undefined;
+      presenceKey.fill(0);
+      presenceKey = undefined;
       return {
         logicalDeviceId: intent.logicalDeviceId,
         session: directSession,
@@ -199,6 +211,7 @@ export class BleDirectClient {
     } catch (error) {
       noise?.clear();
       controllerSecret?.fill(0);
+      presenceKey?.fill(0);
       if (directSession) await directSession.close().catch(() => undefined);
       else await this.link.disconnect().catch(() => undefined);
       throw error;
@@ -216,7 +229,25 @@ export class BleDirectClient {
       await session.synchronize();
       return session;
     } finally {
-      credential.controllerSecret.fill(0);
+      clearBleControllerCredentialSecrets(credential);
+    }
+  }
+
+  async connectEphemeral(
+    logicalDeviceId: string,
+    target: BleDirectTarget,
+    credential: BleDirectAuthenticationCredential,
+  ): Promise<BleDirectSession> {
+    validateAuthenticationCredential(credential);
+    try {
+      const session = await this.connectWithCredential(
+        { ...credential, logicalDeviceId }, target,
+      );
+      await session.synchronize();
+      return session;
+    } catch (error) {
+      await this.link.disconnect().catch(() => undefined);
+      throw error;
     }
   }
 
@@ -244,12 +275,12 @@ export class BleDirectClient {
       else await this.link.disconnect().catch(() => undefined);
       throw error;
     } finally {
-      credential.controllerSecret.fill(0);
+      clearBleControllerCredentialSecrets(credential);
     }
   }
 
   private async connectWithCredential(
-    credential: BleControllerCredential,
+    credential: BleDirectAuthenticationCredential & { logicalDeviceId: string },
     target: BleDirectTarget,
   ): Promise<BleDirectSession> {
     if (target.profile.mode !== BleApplicationMode.Direct) {
@@ -258,10 +289,6 @@ export class BleDirectClient {
     try {
       await this.link.connect(target);
       const session = await this.authenticate(credential.logicalDeviceId, credential);
-      if (credential.transportDeviceId !== target.device.deviceId) {
-        credential.transportDeviceId = target.device.deviceId;
-        await this.store.save(credential);
-      }
       return session;
     } catch (error) {
       await this.link.disconnect().catch(() => undefined);
@@ -271,7 +298,7 @@ export class BleDirectClient {
 
   private async authenticate(
     logicalDeviceId: string,
-    credential: BleControllerCredential,
+    credential: BleDirectAuthenticationCredential,
   ): Promise<BleDirectSession> {
     let sequence = 1;
     await this.link.sendRecord(makeBbp2Frame(
@@ -289,7 +316,10 @@ export class BleDirectClient {
       Bbp2MessageKind.Authenticate,
       sequence,
       encodeControllerAuthInit(
-        credential.controllerId, credential.accessEpoch, clientNonce,
+        credential.controllerId,
+        credential.accessEpoch,
+        credential.credentialVersion,
+        clientNonce,
       ),
     ));
     const challengeFrame = parseBbp2Response(
@@ -370,6 +400,8 @@ export class BleDirectClient {
     transcriptHash: Uint8Array,
     controllerId: Uint8Array,
     secretDigest: Uint8Array,
+    presenceKeyVersion: number,
+    presenceKeyDigest: Uint8Array,
   ): void {
     if (!sameBytes(grant.deviceInstanceId, hello.deviceInstanceId)
       || !sameBytes(grant.setupSessionId, hello.setupSessionId)
@@ -377,6 +409,8 @@ export class BleDirectClient {
       || grant.accessEpoch !== hello.accessEpoch
       || !sameBytes(grant.controllerId, controllerId)
       || !sameBytes(grant.controllerSecretDigest, secretDigest)
+      || grant.presenceKeyVersion !== presenceKeyVersion
+      || !sameBytes(grant.presenceKeyDigest, presenceKeyDigest)
       || grant.securityProfile !== hello.securityProfile
       || grant.serverKeyId !== hello.serverKeyId
       || grant.signatureAlgorithm !== hello.signatureAlgorithm) {
@@ -405,6 +439,10 @@ export class BleDirectClient {
     );
     if (result.logicalDeviceId !== credential.logicalDeviceId
       || result.accessEpoch !== credential.accessEpoch
+      || (credential.presenceKeys !== undefined
+        && result.presenceKeyVersion !== credential.presenceKeys.find(
+          value => value.state === 'current',
+        )?.version)
       || !sameBytes(result.controllerId, credential.controllerId)
       || result.state !== 'active') {
       throw new Error('BLE_DIRECT_COMMIT_CONTEXT_MISMATCH');
@@ -425,7 +463,7 @@ export class BleDirectClient {
       }
       await this.store.remove(credential.logicalDeviceId);
     } finally {
-      credential.controllerSecret.fill(0);
+      clearBleControllerCredentialSecrets(credential);
     }
   }
 
@@ -433,5 +471,27 @@ export class BleDirectClient {
     const credential = await this.store.load(logicalDeviceId);
     if (!credential) throw new Error('BLE_DIRECT_CREDENTIAL_NOT_FOUND');
     return credential;
+  }
+}
+
+export interface BleDirectAuthenticationCredential {
+  accessEpoch: number;
+  controllerId: Uint8Array;
+  controllerSecret: Uint8Array;
+  credentialVersion: number;
+  permissions: number;
+}
+
+function validateAuthenticationCredential(value: BleDirectAuthenticationCredential): void {
+  if (!Number.isSafeInteger(value.accessEpoch) || value.accessEpoch < 1
+    || value.accessEpoch > 0xffffffff
+    || !Number.isSafeInteger(value.credentialVersion) || value.credentialVersion < 1
+    || value.credentialVersion > 0xffffffff
+    || !Number.isSafeInteger(value.permissions) || value.permissions < 1
+    || value.permissions > 0x0f
+    || value.controllerId.length !== 16 || !value.controllerId.some(byte => byte !== 0)
+    || value.controllerSecret.length !== 32
+    || !value.controllerSecret.some(byte => byte !== 0)) {
+    throw new Error('BLE_DIRECT_AUTH_CREDENTIAL_INVALID');
   }
 }

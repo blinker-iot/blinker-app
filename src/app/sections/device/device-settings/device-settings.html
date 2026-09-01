@@ -1,69 +1,77 @@
-@if (loaded) {
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text="" [defaultHref]="'/device/' + id"></ion-back-button>
+      <ion-back-button text="" [defaultHref]="'/device/' + logicalDeviceId"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{ device.config.customName }} {{ 'DEVICE.SETTING' | translate }}</ion-title>
+    <ion-title>设备接入</ion-title>
   </ion-toolbar>
 </ion-header>
-} @if (loaded) {
+
 <ion-content [fullscreen]="true">
   <main>
-    <section class="device-card">
-      <button type="button" class="device-image-button" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice"
-        (click)="selectIcon()">
+    @if (loaded && device) {
+      <section class="device-card">
         <span class="device-image-shell">
           <b-device-img [filename]="device.config.image"></b-device-img>
         </span>
-        @if (!isSharedDevice) {
-        <span class="image-edit-badge" aria-hidden="true">
-          <i class="fa-light fa-camera"></i>
-        </span>
-        }
-      </button>
-      <div class="device-summary">
-        <!-- <span class="device-kicker">
-          <i
-            class="fa-solid fa-circle"
-            [class.online]="device.data?.enable"
-            aria-hidden="true"
-          ></i>
-          {{ isSharedDevice ? '共享设备' : '我的设备' }}
-        </span> -->
-        <div class="device-name-row">
+        <div>
           <h1>{{ device.config.customName }}</h1>
-          @if (!isSharedDevice) {
-          <button type="button" class="rename-button" (click)="changeName()" aria-label="修改设备名称">
-            <i class="fa-light fa-pen"></i>
-          </button>
-          }
+          <span>{{ logicalDeviceId }}</span>
         </div>
-        <span class="info-copy">
-          <strong>ID: {{ device.id }}</strong>
-        </span>
-      </div>
-    </section>
-    @if (device.config.authKey && !isSharedDevice) {
-    <section class="info-card">
-      <div class="info-row">
-        <span class="info-icon secret"><i class="fa-light fa-key"></i></span>
-        <span class="info-copy">
-          <small>{{ 'DEVICE.SECRET' | translate }}</small>
-          <strong class="secret-value" [class.revealed]="showKey">
-            {{ showKey ? device.config.authKey : '••••••••••••' }}
-          </strong>
-        </span>
-        <button type="button" class="reveal-button" (click)="showAuthKey()" [disabled]="showKey">
-          <i class="fa-light" [class.fa-eye]="!showKey" [class.fa-eye-slash]="showKey"></i>
-        </button>
-      </div>
-    </section>
+      </section>
+
+      @if (isOwner) {
+        <section class="access-card">
+          <div class="section-heading">
+            <div>
+              <small>DEVICE KEY</small>
+              <h2>设备 Key</h2>
+            </div>
+            <span>版本 {{ device.credentialVersion }}</span>
+          </div>
+
+          <div class="key-row">
+            <code [class.revealed]="keyVisible">
+              {{ keyVisible && secretKey ? secretKey : '••••••••••••••••••••••••' }}
+            </code>
+            <div class="key-actions">
+              <button type="button" [disabled]="keyBusy" (click)="toggleKey()"
+                [attr.aria-label]="keyVisible ? '隐藏设备 Key' : '查看设备 Key'">
+                <i class="fa-light" [class.fa-eye]="!keyVisible" [class.fa-eye-slash]="keyVisible"></i>
+              </button>
+              <button type="button" [disabled]="keyBusy" (click)="copyKey()" aria-label="复制设备 Key">
+                <i class="fa-light fa-copy"></i>
+              </button>
+              <button type="button" class="refresh-key" [disabled]="keyBusy" (click)="refreshKey()"
+                aria-label="刷新设备 Key">
+                <i class="fa-light fa-rotate" [class.fa-spin]="keyOperation === 'rotate'"></i>
+              </button>
+            </div>
+          </div>
+
+          @if (keyError) {
+            <p class="error" role="alert">{{ keyError }}</p>
+          }
+          <p class="help">Key 可长期重新查看。刷新会立即吊销旧版本，不会自动修改已经烧录的 Sketch。</p>
+        </section>
+
+        @if (supportsWifiProvisioning) {
+          <section class="reconfigure-card">
+            <span class="feature-icon"><i class="fa-light fa-wifi"></i></span>
+            <div>
+              <h2>重新配网</h2>
+              <p>保留当前设备和控制页面，重新写入 DeviceKey、Direct BLE 权限与 Wi-Fi。</p>
+            </div>
+            <button type="button" [disabled]="keyBusy" (click)="startReconfigure()">
+              开始<i class="fa-light fa-chevron-right"></i>
+            </button>
+          </section>
+        }
+      } @else {
+        <section class="notice">共享成员可以控制设备，但只有设备所有者可以查看 Key 或重新配网。</section>
+      }
+    } @else {
+      <section class="notice">未找到设备，或设备信息尚未加载完成。</section>
     }
-    <div class="section-label menu-section-label">设备功能</div>
-    <app-menu-list [detailed]="true" [items]="deviceMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
-    <div class="section-label danger-section-label">设备管理</div>
-    <app-menu-list [detailed]="true" [items]="dangerMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
   </main>
 </ion-content>
-}

@@ -7,6 +7,14 @@
       <div class="name">{{ device.config.customName }}</div>
       <div class="state">{{ stateLabel }}</div>
     </ion-title>
+    @if (!device.config.isShared) {
+      <ion-buttons slot="end">
+        <ion-button
+          aria-label="设备接入设置"
+          [routerLink]="['/device', device.deviceName, 'settings']"
+        ><i class="fa-light fa-gear"></i></ion-button>
+      </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
 

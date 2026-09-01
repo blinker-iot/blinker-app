@@ -1,5 +1,5 @@
 import { Injectable, NgZone } from '@angular/core';
-import { Observable } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 import {
   DeviceV2EndpointAccess,
@@ -16,11 +16,16 @@ import {
   DeviceV2AccountState,
   DeviceV2Service,
 } from '../services/device-v2.service';
-import { DeviceV2BleService } from '../services/device-v2-ble.service';
+import {
+  DeviceV2BleConnectionState,
+  DeviceV2BleService,
+} from '../services/device-v2-ble.service';
 import { AppVisibilityService } from '../services/app-visibility.service';
 import { DeviceV2ManifestCache } from '../services/device-v2-manifest-cache.service';
+import { DataService } from '../services/data.service';
 
-export type DeviceUiConnectionState = DeviceV2AccountState | 'nearby';
+export type DeviceUiConnectionState = DeviceV2BleConnectionState;
+export type DeviceUiTransport = 'cloud' | 'ble';
 export type DeviceUiEndpointRole = 'property' | 'action' | 'event';
 export type DeviceUiValueType =
   | 'boolean'
@@ -71,6 +76,15 @@ export interface DeviceUiTelemetrySnapshot {
   values: Readonly<Record<string, DeviceUiValue | undefined>>;
 }
 
+export interface DeviceUiConnectivitySnapshot {
+  activeTransport: DeviceUiTransport;
+  bleAccess: boolean | null;
+  bleState: DeviceV2BleConnectionState;
+  cloudSessionState: DeviceV2AccountState;
+}
+
+const HYBRID_BLE_CONNECT_TIMEOUT_MS = 5_000;
+
 export interface DeviceUiTelemetryLease {
   readonly snapshot: DeviceUiTelemetrySnapshot;
   subscribe(listener: (snapshot: DeviceUiTelemetrySnapshot) => void): () => void;
@@ -120,79 +134,232 @@ class DeviceUiTelemetryLeaseAdapter implements DeviceUiTelemetryLease {
 @Injectable({ providedIn: 'root' })
 export class DeviceUiPort {
   readonly appActive: Observable<boolean>;
+  private readonly transports = new Map<string, BehaviorSubject<DeviceUiTransport>>();
 
   constructor(
     private readonly deviceV2: DeviceV2Service,
     private readonly ble: DeviceV2BleService,
     private readonly zone: NgZone,
     appVisibility: AppVisibilityService,
+    private readonly data: DataService,
     private readonly manifestCache?: DeviceV2ManifestCache,
   ) {
     this.appActive = appVisibility.active.asObservable();
   }
 
-  connect(logicalDeviceId: string): Promise<void> {
-    return this.isBleDirect(logicalDeviceId)
-      ? this.ble.ensureReady(logicalDeviceId)
-      : this.deviceV2.ensureReady(logicalDeviceId);
+  async connect(logicalDeviceId: string): Promise<void> {
+    if (!this.isCloudCapable(logicalDeviceId)) {
+      void this.syncManagedPresence(logicalDeviceId);
+      this.selectTransport(logicalDeviceId, 'ble');
+      await this.ble.ensureReady(logicalDeviceId);
+      return;
+    }
+
+    const hasDirectAccess = await this.ble.hasActiveCredential(logicalDeviceId)
+      .catch(() => false);
+    if (hasDirectAccess) {
+      void this.syncManagedPresence(logicalDeviceId);
+      this.selectTransport(logicalDeviceId, 'ble');
+      try {
+        // A background presence scan is only a discovery optimization.
+        // ensureReady cancels it and proves the selected logical device with
+        // Method 2, so an ambiguous/stale transport address cannot force Cloud.
+        await this.ble.ensureReady(logicalDeviceId, HYBRID_BLE_CONNECT_TIMEOUT_MS);
+        return;
+      } catch {
+        // No business command has been sent yet, so connection fallback is safe.
+        this.selectTransport(logicalDeviceId, 'cloud');
+      }
+    }
+    await this.deviceV2.ensureReady(logicalDeviceId);
   }
 
-  disconnect(logicalDeviceId: string): Promise<void> {
-    return this.isBleDirect(logicalDeviceId)
-      ? this.ble.disconnect(logicalDeviceId)
-      : Promise.resolve();
+  private async syncManagedPresence(logicalDeviceId: string): Promise<void> {
+    const canManage = await this.ble
+      .canManagePresenceCredential(logicalDeviceId)
+      .catch(() => false);
+    if (!canManage) return;
+    // Page entry retries both the initial v2 -> v3 installation and a durable
+    // server-side rotation request. The caller deliberately runs this in the
+    // background: a local PresenceKey can select the peripheral immediately,
+    // and an unavailable server must not delay an authenticated Direct session.
+    await this.ble.syncPresenceCredential(logicalDeviceId).catch(() => undefined);
+  }
+
+  async disconnect(logicalDeviceId: string): Promise<void> {
+    if (this.transport(logicalDeviceId).value === 'ble') {
+      await this.ble.disconnect(logicalDeviceId);
+    }
+    if (this.isCloudCapable(logicalDeviceId)) {
+      this.selectTransport(logicalDeviceId, 'cloud');
+    }
   }
 
   watchConnection(logicalDeviceId: string): Observable<DeviceUiConnectionState> {
-    const source = this.isBleDirect(logicalDeviceId)
-      ? this.ble.watchConnection(logicalDeviceId)
-      : this.deviceV2.state;
-    return new Observable(subscriber => source.subscribe(state => {
-      this.zone.run(() => subscriber.next(state));
-    }));
+    return new Observable(subscriber => {
+      let selected = this.transport(logicalDeviceId).value;
+      let cloudState: DeviceUiConnectionState = this.deviceV2.state.value;
+      let bleState: DeviceUiConnectionState = this.ble.connectionSnapshot(logicalDeviceId);
+      let last: DeviceUiConnectionState | undefined;
+      const publish = () => {
+        const next = selected === 'ble' ? bleState : cloudState;
+        if (next === last) return;
+        last = next;
+        this.zone.run(() => subscriber.next(next));
+      };
+      const transportSubscription = this.transport(logicalDeviceId).subscribe(value => {
+        selected = value;
+        publish();
+      });
+      const cloudSubscription = this.deviceV2.state.subscribe(value => {
+        cloudState = value;
+        publish();
+      });
+      const bleSubscription = this.ble.watchConnection(logicalDeviceId).subscribe(value => {
+        bleState = value;
+        if (this.isCloudCapable(logicalDeviceId) && selected === 'ble' && value === 'stopped') {
+          // Direct is preferred only while it is usable. A peripheral may
+          // retire an idle or faulted GATT session; keep the hybrid device
+          // available through its existing cloud session without replaying
+          // the command that preceded the disconnect.
+          this.selectTransport(logicalDeviceId, 'cloud');
+          // Switching the view is not enough: the account session may only
+          // have subscribed to Presence while Direct BLE supplied Manifest
+          // and State. Synchronize the same logical device before enabling
+          // cloud controls.
+          void this.deviceV2.ensureReady(logicalDeviceId).catch(() => undefined);
+          return;
+        }
+        publish();
+      });
+      return () => {
+        transportSubscription.unsubscribe();
+        cloudSubscription.unsubscribe();
+        bleSubscription.unsubscribe();
+      };
+    });
   }
 
-  refreshBlePresence(logicalDeviceIds: readonly string[]): Promise<void> {
-    return this.ble.refreshPresence(logicalDeviceIds.filter(
-      logicalDeviceId => this.isBleDirect(logicalDeviceId),
-    ));
+  watchConnectivity(logicalDeviceId: string): Observable<DeviceUiConnectivitySnapshot> {
+    return new Observable(subscriber => {
+      let activeTransport = this.transport(logicalDeviceId).value;
+      let bleAccess: boolean | null = this.isCloudCapable(logicalDeviceId) ? null : true;
+      let bleState = this.ble.connectionSnapshot(logicalDeviceId);
+      let cloudSessionState = this.deviceV2.state.value;
+      let closed = false;
+      let last = '';
+      const publish = () => {
+        const snapshot: DeviceUiConnectivitySnapshot = {
+          activeTransport,
+          bleAccess,
+          bleState,
+          cloudSessionState,
+        };
+        const key = `${activeTransport}|${String(bleAccess)}|${bleState}|${cloudSessionState}`;
+        if (key === last) return;
+        last = key;
+        this.zone.run(() => subscriber.next(snapshot));
+      };
+      const transportSubscription = this.transport(logicalDeviceId).subscribe(value => {
+        activeTransport = value;
+        publish();
+      });
+      const cloudSubscription = this.deviceV2.state.subscribe(value => {
+        cloudSessionState = value;
+        publish();
+      });
+      const bleSubscription = this.ble.watchConnection(logicalDeviceId).subscribe(value => {
+        bleState = value;
+        publish();
+      });
+      if (bleAccess === null) {
+        void this.ble.hasActiveCredential(logicalDeviceId)
+          .then(value => {
+            if (closed) return;
+            bleAccess = value;
+            publish();
+          })
+          .catch(() => {
+            if (closed) return;
+            bleAccess = false;
+            publish();
+          });
+      }
+      return () => {
+        closed = true;
+        transportSubscription.unsubscribe();
+        cloudSubscription.unsubscribe();
+        bleSubscription.unsubscribe();
+      };
+    });
+  }
+
+  async refreshBlePresence(logicalDeviceIds: readonly string[]): Promise<void> {
+    const ids = [...new Set(logicalDeviceIds.filter(id => id.length > 0))];
+    await this.ble.refreshPresence(ids);
+    for (const logicalDeviceId of ids) {
+      if (!this.isCloudCapable(logicalDeviceId)) {
+        this.selectTransport(logicalDeviceId, 'ble');
+        continue;
+      }
+      const state = this.ble.connectionSnapshot(logicalDeviceId);
+      this.selectTransport(
+        logicalDeviceId,
+        state === 'nearby' || state === 'ready' ? 'ble' : 'cloud',
+      );
+    }
   }
 
   watchState(logicalDeviceId: string): Observable<DeviceUiSnapshot> {
     return new Observable(subscriber => {
-      const direct = this.isBleDirect(logicalDeviceId);
-      const cached = this.cachedSnapshot(logicalDeviceId);
-      const initial = this.mapSnapshot(
-        direct ? this.ble.snapshot(logicalDeviceId) : this.deviceV2.snapshot(logicalDeviceId),
-      );
-      subscriber.next(initial.manifestAccepted ? initial : cached ?? initial);
-      const subscribe = direct
-        ? this.ble.subscribe.bind(this.ble)
-        : this.deviceV2.store.subscribe.bind(this.deviceV2.store);
-      return subscribe((changedId, snapshot) => {
-        if (changedId === logicalDeviceId) {
-          const mapped = this.mapSnapshot(snapshot);
-          this.zone.run(() => subscriber.next(
-            mapped.manifestAccepted ? mapped : this.cachedSnapshot(logicalDeviceId) ?? mapped,
-          ));
-        }
+      let selected = this.transport(logicalDeviceId).value;
+      const publish = (snapshot: DeviceV2TargetSnapshot) => {
+        const mapped = this.mapSnapshot(snapshot);
+        this.zone.run(() => subscriber.next(
+          mapped.manifestAccepted ? mapped : this.cachedSnapshot(logicalDeviceId) ?? mapped,
+        ));
+      };
+      const publishSelected = () => publish(selected === 'ble'
+        ? this.ble.snapshot(logicalDeviceId)
+        : this.deviceV2.snapshot(logicalDeviceId));
+      const transportSubscription = this.transport(logicalDeviceId).subscribe(value => {
+        selected = value;
+        publishSelected();
       });
+      const detachCloud = this.deviceV2.store.subscribe((changedId, snapshot) => {
+        if (selected === 'cloud' && changedId === logicalDeviceId) publish(snapshot);
+      });
+      const detachBle = this.ble.subscribe((changedId, snapshot) => {
+        if (selected === 'ble' && changedId === logicalDeviceId) publish(snapshot);
+      });
+      return () => {
+        transportSubscription.unsubscribe();
+        detachCloud();
+        detachBle();
+      };
     });
   }
 
   watchEvents(logicalDeviceId: string): Observable<DeviceUiEvent> {
-    const subscribe = this.isBleDirect(logicalDeviceId)
-      ? this.ble.subscribeEvents.bind(this.ble)
-      : this.deviceV2.store.subscribeEvents.bind(this.deviceV2.store);
-    return new Observable(subscriber => subscribe(event => {
-      if (event.logicalDeviceId === logicalDeviceId) {
+    return new Observable(subscriber => {
+      const publish = (source: DeviceUiTransport, event: DeviceV2Event) => {
+        if (this.transport(logicalDeviceId).value !== source
+          || event.logicalDeviceId !== logicalDeviceId) return;
         this.zone.run(() => subscriber.next(this.mapEvent(event)));
-      }
-    }));
+      };
+      const detachCloud = this.deviceV2.store.subscribeEvents(
+        event => publish('cloud', event),
+      );
+      const detachBle = this.ble.subscribeEvents(event => publish('ble', event));
+      return () => {
+        detachCloud();
+        detachBle();
+      };
+    });
   }
 
   async sendCommand(logicalDeviceId: string, endpointKey: string, value: unknown): Promise<void> {
-    if (this.isBleDirect(logicalDeviceId)) {
+    if (this.transport(logicalDeviceId).value === 'ble') {
       await this.ble.command(logicalDeviceId, endpointKey, value);
     } else {
       await this.deviceV2.command(logicalDeviceId, endpointKey, value);
@@ -204,7 +371,7 @@ export class DeviceUiPort {
     endpointKeys: string[],
     intervalMs: number,
   ): Promise<DeviceUiTelemetryLease> {
-    if (this.isBleDirect(logicalDeviceId)) {
+    if (this.transport(logicalDeviceId).value === 'ble') {
       throw new Error('BLE_DIRECT_TELEMETRY_NOT_ENABLED');
     }
     const lease = await this.deviceV2.openTelemetry(logicalDeviceId, endpointKeys, intervalMs);
@@ -212,7 +379,27 @@ export class DeviceUiPort {
   }
 
   isBleDirect(logicalDeviceId: string): boolean {
-    return /^ble_[A-Za-z0-9_-]{22}$/.test(logicalDeviceId);
+    return this.transport(logicalDeviceId).value === 'ble';
+  }
+
+  private isCloudCapable(logicalDeviceId: string): boolean {
+    return this.data.getDevice(logicalDeviceId)?.cloudEnabled === true;
+  }
+
+  private transport(logicalDeviceId: string): BehaviorSubject<DeviceUiTransport> {
+    let transport = this.transports.get(logicalDeviceId);
+    if (!transport) {
+      transport = new BehaviorSubject<DeviceUiTransport>(
+        this.isCloudCapable(logicalDeviceId) ? 'cloud' : 'ble',
+      );
+      this.transports.set(logicalDeviceId, transport);
+    }
+    return transport;
+  }
+
+  private selectTransport(logicalDeviceId: string, value: DeviceUiTransport): void {
+    const transport = this.transport(logicalDeviceId);
+    if (transport.value !== value) transport.next(value);
   }
 
   private mapSnapshot(snapshot: DeviceV2TargetSnapshot): DeviceUiSnapshot {

@@ -5,10 +5,13 @@ import { firstValueFrom } from 'rxjs';
 import { API } from '../../configs/api.config';
 import {
   DeviceKeyContext,
+  DeviceCloudEnableResponse,
   DeviceKeyCreateResponse,
   DeviceKeyRevealResponse,
   DeviceKeyRotateResponse,
+  DeviceInstanceResolveResponse,
 } from '../model/response.model';
+import { base64UrlEncode } from '../device-v2/ble-direct';
 
 @Injectable({ providedIn: 'root' })
 export class DeviceV2ManagementService {
@@ -37,6 +40,34 @@ export class DeviceV2ManagementService {
     const response = await firstValueFrom(this.http.post<DeviceKeyRevealResponse>(
       API.DEVICE_V2.REVEAL(context.logicalDeviceId),
       {},
+      { observe: 'response' },
+    ));
+    this.noStore(response.headers.get('Cache-Control'));
+    return this.body(response.body, response.status);
+  }
+
+  async resolveDeviceInstanceV2(
+    deviceInstanceId: Uint8Array,
+  ): Promise<DeviceInstanceResolveResponse> {
+    if (!(deviceInstanceId instanceof Uint8Array) || deviceInstanceId.length !== 16
+      || !deviceInstanceId.some(byte => byte !== 0)) {
+      throw new Error('设备实例号无效');
+    }
+    const response = await firstValueFrom(this.http.post<DeviceInstanceResolveResponse>(
+      API.DEVICE_V2.RESOLVE_INSTANCE,
+      { deviceInstanceId: base64UrlEncode(deviceInstanceId) },
+      { observe: 'response' },
+    ));
+    return this.body(response.body, response.status);
+  }
+
+  async enableDeviceCloudV2(
+    deviceInstanceId: Uint8Array,
+  ): Promise<DeviceCloudEnableResponse> {
+    this.deviceInstanceId(deviceInstanceId);
+    const response = await firstValueFrom(this.http.post<DeviceCloudEnableResponse>(
+      API.DEVICE_V2.ENABLE_CLOUD,
+      { deviceInstanceId: base64UrlEncode(deviceInstanceId) },
       { observe: 'response' },
     ));
     this.noStore(response.headers.get('Cache-Control'));
@@ -73,6 +104,13 @@ export class DeviceV2ManagementService {
       || !value.locator
     ) {
       throw new Error('设备密钥上下文无效');
+    }
+  }
+
+  private deviceInstanceId(value: Uint8Array): void {
+    if (!(value instanceof Uint8Array) || value.length !== 16
+      || !value.some(byte => byte !== 0)) {
+      throw new Error('设备实例号无效');
     }
   }
 

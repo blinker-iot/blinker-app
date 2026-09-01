@@ -72,7 +72,11 @@ export interface DeviceV2PresenceMetadata {
   manifestUpdatedAt?: number | null;
 }
 
-export interface DeviceKeyLogicalDevice extends DeviceKeyContext, DeviceV2PresenceMetadata {
+export interface DeviceKeyLogicalDevice extends DeviceV2PresenceMetadata {
+  logicalDeviceId: string;
+  cloudEnabled: boolean;
+  credentialVersion: number | null;
+  locator: string | null;
   tenantId: string;
   name: string;
   deviceType: string;
@@ -84,7 +88,7 @@ export interface DeviceKeyLogicalDevice extends DeviceKeyContext, DeviceV2Presen
 export interface DeviceKeyCreateResponse {
   status: number;
   data: {
-    device: DeviceKeyLogicalDevice;
+    device: DeviceKeyLogicalDevice & DeviceKeyContext;
     replayed: boolean;
   };
 }
@@ -133,6 +137,16 @@ export interface AccountConnectionResponse {
   shard: { shard_id: number; route_version: number };
 }
 
+export interface DeviceInstanceResolveResponse {
+  status: number;
+  data: { device: DeviceKeyLogicalDevice | null };
+}
+
+export interface DeviceCloudEnableResponse {
+  status: number;
+  data: DeviceKeyRevealData & { replayed: boolean };
+}
+
 export interface DeviceKeyListResponse {
   status: number;
   data: { devices: DeviceKeyLogicalDevice[] };
@@ -170,6 +184,7 @@ export interface DeviceV2OwnerShares {
 
 export interface DeviceV2ReceivedDevice extends DeviceV2PresenceMetadata {
   logicalDeviceId: string;
+  cloudEnabled: boolean;
   tenantId: string;
   name: string;
   deviceType: string;

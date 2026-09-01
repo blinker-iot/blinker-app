@@ -96,7 +96,7 @@ export class DeviceV2Service {
       const device = data.device.dict[logicalDeviceId];
       return device?.config?.mode === 'bbp2'
         && device.config.disabled !== true
-        && !/^ble_[A-Za-z0-9_-]{22}$/.test(logicalDeviceId);
+        && device.cloudEnabled === true;
     });
     for (const logicalDeviceId of logicalDeviceIds) {
       const presence = data.device.dict[logicalDeviceId]?.data;

@@ -7,6 +7,7 @@ import { MsToDatePipe } from 'src/app/core/pipes/ms-to-date';
 import { DeviceV2ShareRole } from 'src/app/core/model/response.model';
 import { DataService } from 'src/app/core/services/data.service';
 import { DeviceV2SharingService } from 'src/app/core/services/device-v2-sharing.service';
+import { DeviceV2BleService } from 'src/app/core/services/device-v2-ble.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 
 @Component({
@@ -48,6 +49,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
     private readonly route: ActivatedRoute,
     private readonly dataService: DataService,
     private readonly sharing: DeviceV2SharingService,
+    private readonly ble: DeviceV2BleService,
     private readonly alerts: AlertController,
     private readonly notices: NoticeService,
   ) {}
@@ -107,6 +109,11 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   async removeShare(shareId: string): Promise<void> {
     await this.run(shareId, async () => {
       await this.sharing.revokeShare(this.id, shareId);
+      if (await this.ble.canManagePresenceCredential(this.id).catch(() => false)) {
+        // Cloud ACL is already committed. BLE rotation is best effort here and
+        // remains durable server-side if the peripheral is currently offline.
+        void this.ble.syncPresenceCredential(this.id).catch(() => undefined);
+      }
       await this.refresh();
     });
   }

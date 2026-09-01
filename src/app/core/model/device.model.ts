@@ -22,6 +22,7 @@ export interface DeviceCardConfig {
 export interface BlinkerDevice {
     deviceName: string,
     id?: string,
+    cloudEnabled?: boolean,
     deviceType?: string,
     config: {
         broker: string,

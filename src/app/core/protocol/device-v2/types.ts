@@ -31,6 +31,12 @@ export enum Bbp2MessageKind {
   TelemetryData = 0x19,
   PresenceControl = 0x1a,
   Presence = 0x1b,
+  ControllerControlOpen = 0x30,
+  ControllerControlChallenge = 0x31,
+  ControllerMutation = 0x32,
+  ControllerMutationReceipt = 0x33,
+  PresenceKeyMutation = 0x34,
+  PresenceKeyReceipt = 0x35,
 }
 
 export enum Bbp2FrameFlag {

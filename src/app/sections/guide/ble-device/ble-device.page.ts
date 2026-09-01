@@ -17,7 +17,10 @@ import {
 } from '@ionic/angular/standalone';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
-import { BleDirectSession } from '../../../core/device-v2/ble-direct';
+import {
+  BleDirectSession,
+  BleDirectTarget,
+} from '../../../core/device-v2/ble-direct';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceV2BleService } from '../../../core/services/device-v2-ble.service';
 import { UserService } from '../../../core/services/user.service';
@@ -25,6 +28,7 @@ import { UserService } from '../../../core/services/user.service';
 type BleEnrollmentPhase =
   | 'idle'
   | 'discovering'
+  | 'selecting'
   | 'enrolling'
   | 'ready'
   | 'failed';
@@ -53,6 +57,7 @@ export class BleDeviceGuidePage implements OnDestroy {
   error = '';
   logicalDeviceId = '';
   endpointCount = 0;
+  candidates: BleDirectTarget[] = [];
 
   private operation = 0;
   private session?: BleDirectSession;
@@ -96,32 +101,74 @@ export class BleDeviceGuidePage implements OnDestroy {
     this.changeDetector.markForCheck();
 
     try {
-      const target = await this.ble.discoverProvisioning();
+      const candidates = await this.ble.discoverProvisioningDevices();
       if (operation !== this.operation) return;
-      this.phase = 'enrolling';
-      this.changeDetector.markForCheck();
-
-      const result = await this.ble.enroll(target, {
-        displayName: this.deviceName.trim()
-          || this.translate.instant('DEVICE_GUIDE.DEFAULT_DEVICE_NAME'),
-      });
-      if (operation !== this.operation) {
-        await result.session.close();
+      if (candidates.length === 0) throw new Error('BLE_DIRECT_SCAN_TIMEOUT');
+      this.candidates = candidates.sort(
+        (left, right) => (right.rssi ?? -127) - (left.rssi ?? -127),
+      );
+      if (this.candidates.length > 1) {
+        this.phase = 'selecting';
+        this.changeDetector.markForCheck();
         return;
       }
-
-      this.session = result.session;
-      this.logicalDeviceId = result.logicalDeviceId;
-      this.endpointCount = result.session.store.snapshot(
-        result.logicalDeviceId,
-      ).manifest?.fields.length ?? 0;
-      this.phase = 'ready';
+      await this.enrollTarget(this.candidates[0], operation);
     } catch (error) {
-      if (operation !== this.operation) return;
-      console.error('[BLE_DIRECT_ENROLLMENT]', error instanceof Error ? error.message : 'UNKNOWN');
-      this.phase = 'failed';
-      this.error = this.messageOf(error);
+      this.fail(operation, error);
     }
+  }
+
+  async selectCandidate(target: BleDirectTarget): Promise<void> {
+    if (this.phase !== 'selecting') return;
+    const operation = this.operation;
+    try {
+      await this.enrollTarget(target, operation);
+    } catch (error) {
+      this.fail(operation, error);
+    }
+  }
+
+  candidateName(target: BleDirectTarget): string {
+    return target.device.name?.trim() || 'Blinker';
+  }
+
+  candidateId(target: BleDirectTarget): string {
+    const id = target.device.deviceId;
+    return id.includes(':') ? id.slice(-8) : id.slice(-8).toUpperCase();
+  }
+
+  private async enrollTarget(
+    target: BleDirectTarget,
+    operation: number,
+  ): Promise<void> {
+    this.phase = 'enrolling';
+    this.changeDetector.markForCheck();
+
+    const result = await this.ble.enroll(target, {
+      displayName: this.deviceName.trim()
+        || this.translate.instant('DEVICE_GUIDE.DEFAULT_DEVICE_NAME'),
+    });
+    if (operation !== this.operation) {
+      await result.session.close();
+      return;
+    }
+
+    this.session = result.session;
+    this.logicalDeviceId = result.logicalDeviceId;
+    this.endpointCount = result.session.store.snapshot(
+      result.logicalDeviceId,
+    ).manifest?.fields.length ?? 0;
+    this.phase = 'ready';
+    this.candidates = [];
+    this.changeDetector.markForCheck();
+  }
+
+  private fail(operation: number, error: unknown): void {
+    if (operation !== this.operation) return;
+    console.error('[BLE_DIRECT_ENROLLMENT]', error instanceof Error ? error.message : 'UNKNOWN');
+    this.phase = 'failed';
+    this.candidates = [];
+    this.error = this.messageOf(error);
     this.changeDetector.markForCheck();
   }
 

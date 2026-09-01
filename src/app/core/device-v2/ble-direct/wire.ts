@@ -25,17 +25,18 @@ export enum BleApplicationMode {
 export enum BleModeCapability {
   FragmentedRecords = 1 << 0,
   NoiseNn = 1 << 1,
-  EnrollmentV1 = 1 << 2,
+  EnrollmentV2 = 1 << 2,
   WifiConfigV1 = 1 << 3,
   DirectBbp2 = 1 << 4,
   NoiseNnPsk0 = 1 << 5,
+  AuthorizedPresenceV1 = 1 << 6,
 }
 
 export interface BleModeProfile {
   mode: BleApplicationMode;
   wireVersion: number;
   capabilities: number;
-  setupSessionLocator: Uint8Array;
+  modeLocator: Uint8Array;
 }
 
 export function decodeBleModeProfile(value: DataView | Uint8Array): BleModeProfile {
@@ -47,27 +48,31 @@ export function decodeBleModeProfile(value: DataView | Uint8Array): BleModeProfi
     mode: bytes[1] as BleApplicationMode,
     wireVersion: bytes[2]!,
     capabilities: bytes[3]! | (bytes[4]! << 8),
-    setupSessionLocator: bytes.slice(5),
+    modeLocator: bytes.slice(5),
   };
-  const known = 0x3f;
+  const known = 0x7f;
   if ((profile.capabilities & ~known) !== 0) throw new Error('BLE_DIRECT_MODE_UNSUPPORTED');
-  const locatorIsZero = !profile.setupSessionLocator.some(byte => byte !== 0);
+  const locatorIsZero = !profile.modeLocator.some(byte => byte !== 0);
   if (profile.mode === BleApplicationMode.Provisioning) {
     const noise = profile.capabilities & (
       BleModeCapability.NoiseNn | BleModeCapability.NoiseNnPsk0
     );
     if (profile.wireVersion !== 1 || locatorIsZero
       || (profile.capabilities & BleModeCapability.FragmentedRecords) === 0
-      || (profile.capabilities & BleModeCapability.EnrollmentV1) === 0
+      || (profile.capabilities & BleModeCapability.EnrollmentV2) === 0
       || (profile.capabilities & BleModeCapability.DirectBbp2) !== 0
       || (noise !== BleModeCapability.NoiseNn && noise !== BleModeCapability.NoiseNnPsk0)) {
       throw new Error('BLE_DIRECT_PROVISIONING_MODE_INVALID');
     }
   } else if (profile.mode === BleApplicationMode.Direct) {
-    if (profile.wireVersion !== 2 || !locatorIsZero
-      || profile.capabilities !== (
-        BleModeCapability.FragmentedRecords | BleModeCapability.DirectBbp2
-      )) {
+    const direct = BleModeCapability.FragmentedRecords | BleModeCapability.DirectBbp2;
+    const legacy = profile.wireVersion === 2
+      && profile.capabilities === direct
+      && locatorIsZero;
+    const authorized = profile.wireVersion === 3
+      && profile.capabilities === (direct | BleModeCapability.AuthorizedPresenceV1)
+      && !locatorIsZero;
+    if (!legacy && !authorized) {
       throw new Error('BLE_DIRECT_DATA_MODE_INVALID');
     }
   } else {
@@ -145,6 +150,8 @@ export interface BleEnrollmentGrant {
   controllerId: Uint8Array;
   controllerSecretDigest: Uint8Array;
   controllerPermissions: number;
+  presenceKeyVersion: number;
+  presenceKeyDigest: Uint8Array;
   securityProfile: number;
   serverKeyId: number;
   signatureAlgorithm: number;
@@ -164,9 +171,99 @@ export interface ControllerMutationReceipt {
   proof: Uint8Array;
 }
 
+export enum ControllerMutationOperation {
+  Install = 1,
+  Rotate = 2,
+  Revoke = 3,
+}
+
+export interface ControllerGrantV2 {
+  operation: ControllerMutationOperation;
+  grantId: Uint8Array;
+  deviceInstanceId: Uint8Array;
+  accessEpoch: number;
+  controllerId: Uint8Array;
+  expectedCredentialVersion: number;
+  credentialVersion: number;
+  permissions: number;
+  secretDigest: Uint8Array;
+  controlNonce: Uint8Array;
+  serverKeyId: number;
+  signatureAlgorithm: number;
+  signature: Uint8Array;
+}
+
+export function encodeControllerControlOpenBody(): Uint8Array {
+  return encodeCanonicalArray([encodeCanonicalUnsigned(1)]);
+}
+
+export function decodeControllerControlChallengeBody(encoded: Uint8Array): Uint8Array {
+  const reader = new CborReader(encoded);
+  if (reader.readArraySize(2) !== 2) throw new Error('BLE_CONTROLLER_CHALLENGE_INVALID');
+  if (reader.readUnsigned(1) !== 1) throw new Error('BLE_CONTROLLER_CHALLENGE_UNSUPPORTED');
+  const nonce = exactBytes(reader, 16, 'control nonce');
+  reader.finish();
+  return nonce;
+}
+
+export function encodeControllerMutationBody(
+  grant: Uint8Array,
+  controllerSecret: Uint8Array,
+): Uint8Array {
+  const validSecret = controllerSecret.length === 0
+    || exactNonZero(controllerSecret, 32);
+  if (!grant.length || grant.length > 193 || !validSecret) {
+    throw new Error('BLE_CONTROLLER_MUTATION_INVALID');
+  }
+  return encodeCanonicalArray([
+    encodeCanonicalUnsigned(1),
+    encodeCanonicalByteString(grant),
+    encodeCanonicalByteString(controllerSecret),
+  ]);
+}
+
+export function decodeControllerGrantV2(encoded: Uint8Array): ControllerGrantV2 {
+  if (!encoded.length || encoded.length > 193) throw new Error('BLE_CONTROLLER_GRANT_INVALID');
+  const reader = new CborReader(encoded);
+  if (reader.readArraySize(14) !== 14) throw new Error('BLE_CONTROLLER_GRANT_INVALID');
+  if (reader.readUnsigned(2) !== 2) throw new Error('BLE_CONTROLLER_GRANT_UNSUPPORTED');
+  const operation = reader.readUnsigned(3) as ControllerMutationOperation;
+  const grantId = exactBytes(reader, 16, 'grant id');
+  const deviceInstanceId = exactBytes(reader, 16, 'device instance id');
+  const accessEpoch = reader.readUnsigned(0xffffffff);
+  const controllerId = exactBytes(reader, 16, 'controller id');
+  const expectedCredentialVersion = reader.readUnsigned(0xffffffff);
+  const credentialVersion = reader.readUnsigned(0xffffffff);
+  const permissions = reader.readUnsigned(0x0f);
+  const secretDigest = reader.readBytes(32);
+  const controlNonce = exactBytes(reader, 16, 'control nonce');
+  const serverKeyId = reader.readUnsigned(0xffffffff);
+  const signatureAlgorithm = reader.readUnsigned(2);
+  const signature = exactBytes(reader, 64, 'signature');
+  reader.finish();
+  const install = operation === ControllerMutationOperation.Install
+    && expectedCredentialVersion === 0 && credentialVersion > 0
+    && permissions > 0 && secretDigest.some(byte => byte !== 0);
+  const rotate = operation === ControllerMutationOperation.Rotate
+    && expectedCredentialVersion > 0 && credentialVersion > expectedCredentialVersion
+    && permissions > 0 && secretDigest.some(byte => byte !== 0);
+  const revoke = operation === ControllerMutationOperation.Revoke
+    && expectedCredentialVersion > 0 && credentialVersion === expectedCredentialVersion
+    && permissions === 0 && !secretDigest.some(byte => byte !== 0);
+  if (!accessEpoch || !serverKeyId || (signatureAlgorithm !== 1 && signatureAlgorithm !== 2)
+    || (!install && !rotate && !revoke)) {
+    throw new Error('BLE_CONTROLLER_GRANT_CONTEXT_INVALID');
+  }
+  return {
+    operation, grantId, deviceInstanceId, accessEpoch, controllerId,
+    expectedCredentialVersion, credentialVersion, permissions, secretDigest,
+    controlNonce, serverKeyId, signatureAlgorithm, signature,
+  };
+}
+
 export function encodeBleEnrollmentHelloRequest(requestId = 1): Uint8Array {
   return encodeCanonicalMap([
-    [0, encodeCanonicalUnsigned(1)],
+    [0, encodeCanonicalUnsigned(2)],
     [1, encodeCanonicalUnsigned(1)],
     [2, encodeCanonicalUnsigned(u32(requestId, 'requestId'))],
   ]);
@@ -175,7 +272,7 @@ export function encodeBleEnrollmentHelloRequest(requestId = 1): Uint8Array {
 export function decodeBleEnrollmentHelloResponse(encoded: Uint8Array): BleEnrollmentHello {
   const reader = new CborReader(encoded);
   exactMap(reader, 10);
-  readKey(reader, 0); exactUnsigned(reader, 1, 'enrollment version');
+  readKey(reader, 0); exactUnsigned(reader, 2, 'enrollment version');
   readKey(reader, 1); exactUnsigned(reader, 2, 'enrollment message type');
   readKey(reader, 2); const requestId = reader.readUnsigned();
   readKey(reader, 3); const deviceInstanceId = exactBytes(reader, 16, 'device instance id');
@@ -200,24 +297,27 @@ export function decodeBleEnrollmentHelloResponse(encoded: Uint8Array): BleEnroll
 export function encodeBleEnrollmentRequest(
   grant: Uint8Array,
   controllerSecret: Uint8Array,
+  presenceKey: Uint8Array,
   requestId = 2,
 ): Uint8Array {
-  if (!grant.length || grant.length > 270 || !exactNonZero(controllerSecret, 32)) {
+  if (!grant.length || grant.length > 310
+    || !exactNonZero(controllerSecret, 32) || !exactNonZero(presenceKey, 16)) {
     throw new Error('BLE_DIRECT_ENROLLMENT_REQUEST_INVALID');
   }
   return encodeCanonicalMap([
-    [0, encodeCanonicalUnsigned(1)],
+    [0, encodeCanonicalUnsigned(2)],
     [1, encodeCanonicalUnsigned(3)],
     [2, encodeCanonicalUnsigned(u32(requestId, 'requestId'))],
     [3, encodeCanonicalByteString(grant)],
     [4, encodeCanonicalByteString(controllerSecret)],
+    [5, encodeCanonicalByteString(presenceKey)],
   ]);
 }
 
 export function decodeBleEnrollmentResponse(encoded: Uint8Array): Uint8Array {
   const reader = new CborReader(encoded);
   const size = reader.readMapSize(5);
-  readKey(reader, 0); exactUnsigned(reader, 1, 'enrollment version');
+  readKey(reader, 0); exactUnsigned(reader, 2, 'enrollment version');
   readKey(reader, 1); const type = reader.readUnsigned();
   readKey(reader, 2); const requestId = reader.readUnsigned();
   if (type === 5) {
@@ -237,10 +337,10 @@ export function decodeBleEnrollmentResponse(encoded: Uint8Array): Uint8Array {
 }
 
 export function decodeBleEnrollmentGrant(encoded: Uint8Array): BleEnrollmentGrant {
-  if (!encoded.length || encoded.length > 270) throw new Error('BLE_DIRECT_GRANT_INVALID');
+  if (!encoded.length || encoded.length > 310) throw new Error('BLE_DIRECT_GRANT_INVALID');
   const reader = new CborReader(encoded);
-  exactMap(reader, 16);
-  readKey(reader, 0); exactUnsigned(reader, 2, 'grant version');
+  exactMap(reader, 18);
+  readKey(reader, 0); exactUnsigned(reader, 3, 'grant version');
   readKey(reader, 1); const grantId = exactBytes(reader, 16, 'grant id');
   readKey(reader, 2); const deviceInstanceId = exactBytes(reader, 16, 'device instance id');
   readKey(reader, 3); const setupSessionId = exactBytes(reader, 16, 'setup session id');
@@ -249,15 +349,17 @@ export function decodeBleEnrollmentGrant(encoded: Uint8Array): BleEnrollmentGran
   readKey(reader, 6); const controllerId = exactBytes(reader, 16, 'controller id');
   readKey(reader, 7); const controllerSecretDigest = exactBytes(reader, 32, 'secret digest');
   readKey(reader, 8); const controllerPermissions = reader.readUnsigned();
-  readKey(reader, 9); exactBytes(reader, 16, 'grant nonce');
-  readKey(reader, 10); const issuedAt = reader.readUnsigned();
-  readKey(reader, 11); const expiresAt = reader.readUnsigned();
-  readKey(reader, 12); const securityProfile = reader.readUnsigned();
-  readKey(reader, 13); const serverKeyId = reader.readUnsigned();
-  readKey(reader, 14); const signatureAlgorithm = reader.readUnsigned();
-  readKey(reader, 15); exactBytes(reader, 64, 'grant signature');
+  readKey(reader, 9); const presenceKeyVersion = reader.readUnsigned();
+  readKey(reader, 10); const presenceKeyDigest = exactBytes(reader, 32, 'presence key digest');
+  readKey(reader, 11); exactBytes(reader, 16, 'grant nonce');
+  readKey(reader, 12); const issuedAt = reader.readUnsigned();
+  readKey(reader, 13); const expiresAt = reader.readUnsigned();
+  readKey(reader, 14); const securityProfile = reader.readUnsigned();
+  readKey(reader, 15); const serverKeyId = reader.readUnsigned();
+  readKey(reader, 16); const signatureAlgorithm = reader.readUnsigned();
+  readKey(reader, 17); exactBytes(reader, 64, 'grant signature');
   reader.finish();
-  if (!accessEpoch || controllerPermissions !== 0x0f || !issuedAt
+  if (!accessEpoch || controllerPermissions !== 0x0f || !presenceKeyVersion || !issuedAt
     || expiresAt <= issuedAt || expiresAt - issuedAt > 900
     || (securityProfile !== 1 && securityProfile !== 2)
     || !serverKeyId || (signatureAlgorithm !== 1 && signatureAlgorithm !== 2)) {
@@ -266,7 +368,8 @@ export function decodeBleEnrollmentGrant(encoded: Uint8Array): BleEnrollmentGran
   return {
     grantId, deviceInstanceId, setupSessionId, setupTranscriptHash,
     accessEpoch, controllerId, controllerSecretDigest,
-    controllerPermissions, securityProfile, serverKeyId, signatureAlgorithm,
+    controllerPermissions, presenceKeyVersion, presenceKeyDigest,
+    securityProfile, serverKeyId, signatureAlgorithm,
   };
 }
 
@@ -282,12 +385,20 @@ export function decodeControllerMutationReceipt(encoded: Uint8Array): Controller
   readKey(reader, 5); const controllerId = exactBytes(reader, 16, 'controller id');
   readKey(reader, 6); const credentialVersion = reader.readUnsigned();
   readKey(reader, 7); const permissions = reader.readUnsigned();
-  readKey(reader, 8); const secretDigest = exactBytes(reader, 32, 'secret digest');
+  readKey(reader, 8); const secretDigest = exactBytes(reader, 32, 'secret digest', false);
   readKey(reader, 9); const proofKind = reader.readUnsigned();
-  readKey(reader, 10); const proof = exactBytes(reader, 32, 'receipt proof');
+  readKey(reader, 10); const proof = reader.readBytes(32);
   reader.finish();
-  if (operation !== 1 || !accessEpoch || credentialVersion !== 1
-    || permissions !== 0x0f || proofKind !== 1) {
+  const installOrRotate = (operation === ControllerMutationOperation.Install
+      || operation === ControllerMutationOperation.Rotate)
+    && credentialVersion > 0 && permissions > 0
+    && secretDigest.some(byte => byte !== 0)
+    && proofKind === 1 && proof.length === 32;
+  const revoke = operation === ControllerMutationOperation.Revoke
+    && credentialVersion > 0 && permissions === 0
+    && !secretDigest.some(byte => byte !== 0)
+    && proofKind === 0 && proof.length === 0;
+  if (!accessEpoch || (!installOrRotate && !revoke)) {
     throw new Error('BLE_DIRECT_RECEIPT_CONTEXT_INVALID');
   }
   return {
@@ -316,13 +427,20 @@ export function encodeControllerReceiptTranscript(receipt: ControllerMutationRec
 export function encodeControllerMutationReceipt(
   receipt: Omit<ControllerMutationReceipt, 'encoded'>,
 ): Uint8Array {
-  if (receipt.operation !== 1 || receipt.credentialVersion !== 1
-    || receipt.permissions !== 0x0f || receipt.proofKind !== 1
+  const installOrRotate = (receipt.operation === ControllerMutationOperation.Install
+      || receipt.operation === ControllerMutationOperation.Rotate)
+    && receipt.credentialVersion > 0 && receipt.permissions > 0
+    && receipt.secretDigest.some(byte => byte !== 0)
+    && receipt.proofKind === 1 && exactNonZero(receipt.proof, 32);
+  const revoke = receipt.operation === ControllerMutationOperation.Revoke
+    && receipt.credentialVersion > 0 && receipt.permissions === 0
+    && !receipt.secretDigest.some(byte => byte !== 0)
+    && receipt.proofKind === 0 && receipt.proof.length === 0;
+  if ((!installOrRotate && !revoke)
     || !exactNonZero(receipt.grantId, 16)
     || !exactNonZero(receipt.deviceInstanceId, 16)
     || !exactNonZero(receipt.controllerId, 16)
-    || !exactNonZero(receipt.secretDigest, 32)
-    || !exactNonZero(receipt.proof, 32)) {
+    || receipt.secretDigest.length !== 32) {
     throw new Error('BLE_DIRECT_RECEIPT_CONTEXT_INVALID');
   }
   return encodeCanonicalMap([
@@ -345,8 +463,11 @@ const FEATURE_ENDPOINT_IDS = 1 << 1;
 const FEATURE_AUTHENTICATION = 1 << 5;
 const FEATURE_RELIABLE = 1 << 6;
 const FEATURE_STATE_REVISION = 1 << 7;
+const FEATURE_CONTROLLER_CONTROL = 1 << 9;
+const FEATURE_PRESENCE_KEY_CONTROL = 1 << 13;
 const DIRECT_APP_FEATURES = FEATURE_MANIFEST | FEATURE_ENDPOINT_IDS
-  | FEATURE_AUTHENTICATION | FEATURE_RELIABLE | FEATURE_STATE_REVISION;
+  | FEATURE_AUTHENTICATION | FEATURE_RELIABLE | FEATURE_STATE_REVISION
+  | FEATURE_CONTROLLER_CONTROL | FEATURE_PRESENCE_KEY_CONTROL;
 
 export interface DeviceDirectHello {
   features: number;
@@ -396,7 +517,7 @@ export function decodeDirectDeviceHelloBody(body: Uint8Array): DeviceDirectHello
     else throw new Error('BLE_DIRECT_HELLO_FIELD_UNSUPPORTED');
   }
   reader.finish();
-  const knownFeatures = 0xeff;
+  const knownFeatures = 0x2eff;
   if (role !== 0 || !versions?.includes(2) || features === undefined
     || (features & ~knownFeatures) !== 0 || maxFrameSize === undefined
     || maxFrameSize < 10 || maxReassemblySize === undefined
@@ -413,6 +534,7 @@ export function decodeDirectDeviceHelloBody(body: Uint8Array): DeviceDirectHello
 export function encodeControllerAuthInit(
   controllerId: Uint8Array,
   accessEpoch: number,
+  credentialVersion: number,
   clientNonce: Uint8Array,
 ): Uint8Array {
   if (!exactNonZero(controllerId, 16) || !exactNonZero(clientNonce, 16)) {
@@ -424,7 +546,7 @@ export function encodeControllerAuthInit(
   payload[17] = 2;
   const view = new DataView(payload.buffer);
   view.setUint32(18, u32(accessEpoch, 'accessEpoch'), false);
-  view.setUint32(22, 1, false);
+  view.setUint32(22, u32(credentialVersion, 'credentialVersion'), false);
   payload.set(clientNonce, 26);
   return encodeAuthRequestBody(payload);
 }
@@ -551,9 +673,16 @@ function exactUnsigned(reader: CborReader, expected: number, name: string): void
   if (reader.readUnsigned() !== expected) throw new Error(`BLE_DIRECT_${name.toUpperCase().replace(/ /g, '_')}_INVALID`);
 }
 
-function exactBytes(reader: CborReader, size: number, name: string): Uint8Array {
+function exactBytes(
+  reader: CborReader,
+  size: number,
+  name: string,
+  requireNonZero = true,
+): Uint8Array {
   const value = reader.readBytes(size);
-  if (!exactNonZero(value, size)) throw new Error(`BLE_DIRECT_${name.toUpperCase().replace(/ /g, '_')}_INVALID`);
+  if (value.length !== size || (requireNonZero && !value.some(byte => byte !== 0))) {
+    throw new Error(`BLE_DIRECT_${name.toUpperCase().replace(/ /g, '_')}_INVALID`);
+  }
   return value;
 }
 

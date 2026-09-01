@@ -24,7 +24,6 @@ import {
   encodeTelemetryControlBody,
   hexToBytes,
   logicalDevicePeerId,
-  peerIdToLogicalDevice,
 } from './codec';
 import { DeviceV2Store } from './store';
 import {
@@ -125,6 +124,7 @@ export class DeviceV2Session {
   private detachMessage?: () => void;
   private detachClose?: () => void;
   private readonly pending = new Map<string, PendingRoute>();
+  private readonly logicalDeviceByPeer = new Map<string, string>();
   private readonly synchronizing = new Map<string, Promise<void>>();
   private readonly errorListeners = new Set<(error: Error) => void>();
   private readonly stateListeners = new Set<(state: DeviceV2SessionState) => void>();
@@ -425,6 +425,12 @@ export class DeviceV2Session {
       return Promise.reject(new Error('Device V2 request identity is duplicated'));
     }
     const targetPeerId = logicalDevicePeerId(logicalDeviceId);
+    const peerKey = bytesToHex(targetPeerId);
+    const mapped = this.logicalDeviceByPeer.get(peerKey);
+    if (mapped && mapped !== logicalDeviceId) {
+      return Promise.reject(new Error('Device V2 peer identity is ambiguous'));
+    }
+    this.logicalDeviceByPeer.set(peerKey, logicalDeviceId);
     const sequence = this.nextSequence();
     const frame = encodeFrame({
       kind: Bbp2MessageKind.Route,
@@ -552,7 +558,8 @@ export class DeviceV2Session {
     if (delivery.peerKind !== Bbp2RoutePeerKind.LogicalDevice) {
       throw new Error('unsolicited Delivery metadata is invalid');
     }
-    const logicalDeviceId = peerIdToLogicalDevice(delivery.peerId);
+    const logicalDeviceId = this.logicalDeviceByPeer.get(bytesToHex(delivery.peerId));
+    if (!logicalDeviceId) throw new Error('unsolicited Delivery peer identity is unknown');
     if (delivery.messageKind === Bbp2MessageKind.Presence) {
       if (delivery.messageFlags !== 0
         || (this.negotiatedFeatures & BBP2_FEATURE_PRESENCE) === 0) {
@@ -566,7 +573,11 @@ export class DeviceV2Session {
     }
     const snapshot = this.store.snapshot(logicalDeviceId);
     if (!snapshot.manifestAccepted || !snapshot.manifest) return;
-    if (delivery.messageKind === Bbp2MessageKind.Patch) {
+    if (delivery.messageKind === Bbp2MessageKind.StatePage) {
+      const page = decodeStatePageBody(delivery.messageBody, snapshot.manifest.fields);
+      if (page.cursor === 0) this.store.beginState(logicalDeviceId);
+      this.store.applyStatePage(logicalDeviceId, page);
+    } else if (delivery.messageKind === Bbp2MessageKind.Patch) {
       const result = this.store.applyPatch(
         logicalDeviceId,
         decodePatchBody(delivery.messageBody, snapshot.manifest.fields),

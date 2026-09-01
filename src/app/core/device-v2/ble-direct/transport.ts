@@ -21,11 +21,17 @@ const FRAGMENT_VERSION = 1;
 const FRAGMENT_HEADER_SIZE = 4;
 const GATT_PACKET_SIZE = 20;
 const MAX_RECORD_SIZE = 1048;
+const GATT_INTER_FRAGMENT_DELAY_MS = 30;
 
 export interface BleDirectTarget {
   device: BleDevice;
   profile: BleModeProfile;
+  rssi?: number;
 }
+
+export type BleDirectTargetMatcher = (
+  target: BleDirectTarget,
+) => boolean | Promise<boolean>;
 
 // Family discovery is intentionally narrower than device identity. A scan
 // result is Blinker only when both the frozen service UUID and the versioned
@@ -56,9 +62,10 @@ export async function discoverBlinkerDevice(
   timeoutMs = 15_000,
   excludedDeviceIds: ReadonlySet<string> = new Set(),
   signal?: AbortSignal,
+  matcher?: BleDirectTargetMatcher,
 ): Promise<BleDirectTarget> {
   await initializeBle();
-  return scanFor(mode, timeoutMs, undefined, excludedDeviceIds, signal);
+  return scanFor(mode, timeoutMs, undefined, excludedDeviceIds, signal, matcher);
 }
 
 export async function discoverBlinkerDevices(
@@ -92,7 +99,7 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
     this.disconnected = false;
     this.target = {
       device: { ...target.device },
-      profile: { ...target.profile, setupSessionLocator: target.profile.setupSessionLocator.slice() },
+      profile: { ...target.profile, modeLocator: target.profile.modeLocator.slice() },
     };
     try {
       await BleClient.connect(
@@ -171,6 +178,12 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
       offset += size;
       index += 1;
       if (index > 0x100) throw new Error('BLE_DIRECT_FRAGMENT_COUNT');
+      // WRITE_TYPE_DEFAULT confirms delivery to the peripheral controller,
+      // not necessarily consumption by a controller-to-host RPC bridge. Give
+      // such split-radio boards one scheduling slice before the next fragment.
+      if (offset < record.length) {
+        await new Promise(resolve => setTimeout(resolve, GATT_INTER_FRAGMENT_DELAY_MS));
+      }
     }
   }
 
@@ -320,6 +333,7 @@ async function scanFor(
   deviceId?: string,
   excludedDeviceIds: ReadonlySet<string> = new Set(),
   signal?: AbortSignal,
+  matcher?: BleDirectTargetMatcher,
 ): Promise<BleDirectTarget> {
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1) {
     throw new Error('BLE_DIRECT_SCAN_TIMEOUT_INVALID');
@@ -329,6 +343,9 @@ async function scanFor(
     let settled = false;
     let timer: ReturnType<typeof setTimeout>;
     let abort = () => undefined;
+    let matching = false;
+    const pending: BleDirectTarget[] = [];
+    const evaluated = new Set<string>();
     const finish = (target?: BleDirectTarget, error?: Error) => {
       if (settled) return;
       settled = true;
@@ -341,6 +358,24 @@ async function scanFor(
     abort = () => finish(undefined, new Error('BLE_DIRECT_SCAN_CANCELLED'));
     timer = setTimeout(() => finish(undefined, new Error('BLE_DIRECT_SCAN_TIMEOUT')), timeoutMs);
     signal?.addEventListener('abort', abort, { once: true });
+    const matchPending = async () => {
+      if (matching || settled || !matcher) return;
+      matching = true;
+      try {
+        while (!settled && pending.length) {
+          const target = pending.shift()!;
+          if (await matcher(target)) {
+            finish(target);
+            return;
+          }
+        }
+      } catch (error) {
+        finish(undefined, error instanceof Error ? error : new Error(String(error)));
+      } finally {
+        matching = false;
+        if (!settled && pending.length) void matchPending();
+      }
+    };
     void BleClient.requestLEScan({
       services: [BLINKER_BLE_SERVICE_UUID],
       allowDuplicates: true,
@@ -349,7 +384,18 @@ async function scanFor(
       if (deviceId && result.device.deviceId !== deviceId) return;
       if (excludedDeviceIds.has(result.device.deviceId)) return;
       const profile = parseBlinkerAdvertisement(result);
-      if (profile?.mode === mode) finish({ device: result.device, profile });
+      if (profile?.mode === mode) {
+        const target = { device: result.device, profile, rssi: result.rssi };
+        if (!matcher) {
+          finish(target);
+          return;
+        }
+        const key = scanIdentity(target);
+        if (evaluated.has(key)) return;
+        evaluated.add(key);
+        pending.push(target);
+        void matchPending();
+      }
     }).catch(error => finish(undefined, error instanceof Error ? error : new Error(String(error))));
   });
 }
@@ -388,10 +434,29 @@ async function scanForAll(
     }, result => {
       const profile = parseBlinkerAdvertisement(result);
       if (profile?.mode === mode) {
-        found.set(result.device.deviceId, { device: result.device, profile });
+        const target = {
+          device: result.device,
+          profile,
+          rssi: result.rssi,
+        };
+        // Android may report one physical peripheral under more than one
+        // transport address. The authenticated/provisioning locator identifies
+        // the current advertising session; a MAC address does not.
+        found.set(scanIdentity(target), target);
       }
     }).catch(error => finish(error instanceof Error ? error : new Error(String(error))));
   });
+}
+
+function scanIdentity(target: BleDirectTarget): string {
+  if (target.profile.modeLocator.some(byte => byte !== 0)) {
+    return `${target.profile.mode}:${target.profile.wireVersion}:${
+      [...target.profile.modeLocator]
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('')
+    }`;
+  }
+  return `transport:${target.device.deviceId.toLowerCase()}`;
 }
 
 function serviceData(result: Pick<ScanResult, 'serviceData'>): DataView | undefined {

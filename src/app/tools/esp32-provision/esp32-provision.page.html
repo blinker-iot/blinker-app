@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/home/tools" text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>ESP32 配网</ion-title>
+    <ion-title>{{ reconfiguring ? '设备重新配网' : 'ESP32 配网' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -12,9 +12,21 @@
     <app-hero-card
       iconClass="fa-light fa-wifi"
       eyebrow="ESPRESSIF WIFI PROVISIONING"
-      heading="安全配置 ESP32 网络"
-      description="通过 Espressif 官方协议连接设备、扫描附近 Wi-Fi 并下发网络凭据。"
+      [heading]="reconfiguring ? '保留设备并重新配置网络' : '安全配置 ESP32 网络'"
+      [description]="reconfiguring
+        ? '连接已重置的原设备，刷新 DeviceKey、Direct BLE 权限和 Wi-Fi，不创建新设备。'
+        : '通过 Espressif 官方协议连接设备、扫描附近 Wi-Fi 并下发网络凭据。'"
     />
+
+    @if (reconfiguring && phase !== 'success') {
+      <div class="notice warning">
+        <i class="fa-light fa-rotate"></i>
+        <div>
+          <strong>这是原设备重新配网</strong>
+          <span>只有检测到设备已清空 Key 和接入权限后才会刷新 Key；扫描或取消操作不会让原 Key 失效。</span>
+        </div>
+      </div>
+    }
 
     @if (!nativeSupported) {
       <div class="notice warning">
@@ -117,6 +129,14 @@
           </button>
         </div>
 
+        <div class="field-group">
+          <label for="blinker-device-name">Blinker 设备名称</label>
+          <div class="input-shell">
+            <i class="fa-light fa-microchip"></i>
+            <input id="blinker-device-name" type="text" maxlength="128" placeholder="例如 ESP32 WiFiBLE" [(ngModel)]="blinkerDeviceName" [disabled]="isProvisioning || reconfiguring" />
+          </div>
+        </div>
+
         @if (networks.length) {
           <div class="network-list">
             @for (network of networks; track network.ssid + network.bssid) {
@@ -182,8 +202,8 @@
           <div class="progress-track"><span [style.width.%]="progress"></span></div>
         }
         @if (phase === 'success' || phase === 'error') {
-          <button type="button" class="retry-button" (click)="startOver()">
-            <i class="fa-light fa-rotate-right"></i>{{ phase === 'success' ? '配置另一台设备' : '重新开始' }}
+          <button type="button" class="retry-button" (click)="phase === 'success' ? openProvisionedDevice() : startOver()">
+            <i [class]="phase === 'success' ? 'fa-light fa-arrow-right' : 'fa-light fa-rotate-right'"></i>{{ phase === 'success' ? '进入设备' : '重新开始' }}
           </button>
         }
       </section>
@@ -192,7 +212,7 @@
     <ol class="tips">
       <li>ESP32 固件需使用 Espressif network_provisioning 或 Arduino WiFiProv。</li>
       <li>Blinker 教育设备固定使用 Security 1；当前物理配网窗口不要求 PoP。</li>
-      <li>当前开发版本只验证标准 Wi-Fi 写入，完成 DeviceKey Bootstrap 后才代表 Blinker 上线。</li>
+      <li>{{ reconfiguring ? '重新配网会轮换原设备 Key，不会创建新的设备或控制页面。' : 'App 会先创建 DeviceKey 并完成 Blinker access bootstrap，再发送 Wi-Fi 凭据。' }}</li>
       <li>大多数 ESP32 仅支持连接 2.4 GHz Wi-Fi。</li>
     </ol>
   </main>

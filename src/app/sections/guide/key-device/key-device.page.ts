@@ -257,8 +257,12 @@ void loop() {
   }
 
   async finishKeySetup(): Promise<void> {
+    const logicalDeviceId = this.revealContext?.logicalDeviceId;
+    if (logicalDeviceId) await this.userService.getAllInfo().catch(() => false);
     this.resetProvisioningState();
-    await this.navController.navigateRoot('/guide');
+    await this.navController.navigateRoot(
+      logicalDeviceId ? `/device/${encodeURIComponent(logicalDeviceId)}` : '/home/device'
+    );
   }
 
   ionViewWillLeave(): void {

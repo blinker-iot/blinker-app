@@ -138,7 +138,8 @@ export class DeviceV2SharingService {
   }
 
   private receivedDevice(value: DeviceV2ReceivedDevice): DeviceV2ReceivedDevice {
-    if (!value || !value.tenantId || !value.name || !value.deviceType) {
+    if (!value || !value.tenantId || !value.name || !value.deviceType
+      || typeof value.cloudEnabled !== 'boolean') {
       throw new Error('共享设备响应无效');
     }
     return {
@@ -146,6 +147,7 @@ export class DeviceV2SharingService {
       tenantId: this.text(value.tenantId, 128),
       name: this.text(value.name, 128),
       deviceType: this.text(value.deviceType, 64),
+      cloudEnabled: value.cloudEnabled,
       share: this.grant(value.share),
       ...this.presence(value),
     };
