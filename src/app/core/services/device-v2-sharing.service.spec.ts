@@ -21,9 +21,15 @@ describe('DeviceV2SharingService', () => {
       url === API.DEVICE_V2.RECEIVED_SHARES
         ? { status: 200, data: { devices: [{
           logicalDeviceId: deviceId,
+          tenantId: 'tenant-one',
           name: 'Shared lamp',
           deviceType: 'diy',
           share: grant,
+          cloudReachable: true,
+          cloudLastSeenAt: 1000,
+          manifestRevision: 1,
+          manifestFingerprint: 'ab'.repeat(32),
+          manifestUpdatedAt: 1000,
         }] } }
         : { status: 200, data: {
           logicalDeviceId: deviceId,

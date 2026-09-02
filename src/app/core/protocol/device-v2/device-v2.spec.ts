@@ -46,8 +46,8 @@ function bytes(value: string): Uint8Array {
 describe('Device V2 App codec', () => {
   it('matches the server App HELLO and frame golden bytes', () => {
     const hello = encodeAppHelloBody();
-    expect(bytesToHex(hello)).toBe('a6000101810202190cc303190200041902000904');
-    expect(APP_FEATURES).toBe(0xcc3);
+    expect(bytesToHex(hello)).toBe('a6000101810202191cc303190200041902000904');
+    expect(APP_FEATURES).toBe(0x1cc3);
 
     const frame = encodeFrame({
       kind: Bbp2MessageKind.Hello,
@@ -76,7 +76,8 @@ describe('Device V2 App codec', () => {
     ))).toEqual({
       role: 2,
       versions: [2],
-      features: APP_FEATURES,
+      // Presence is additive: old Brokers can negotiate the 0x0cc3 subset.
+      features: 0x0cc3,
       maxFrameSize: 512,
       maxReassemblySize: 512,
       reliableReceiveWindow: 4,

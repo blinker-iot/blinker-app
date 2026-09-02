@@ -99,7 +99,7 @@ describe('BLE Direct transport', () => {
     expect(bleClient.stopLEScan).not.toHaveBeenCalled();
   });
 
-  it('connects GATT before starting Android bonding', async () => {
+  it('lets encrypted characteristic access drive Android link security', async () => {
     const link = new CapacitorBleDirectRecordLink();
     await link.connect({
       device: { deviceId: 'AA:BB:CC:DD:EE:FF' },
@@ -111,12 +111,9 @@ describe('BLE Direct transport', () => {
       },
     });
 
-    expect(bleClient.connect.mock.invocationCallOrder[0])
-      .toBeLessThan(bleClient.createBond.mock.invocationCallOrder[0]!);
-    expect(bleClient.createBond).toHaveBeenCalledWith(
-      'AA:BB:CC:DD:EE:FF',
-      { timeout: 45_000 },
-    );
+    expect(bleClient.connect).toHaveBeenCalledOnce();
+    expect(bleClient.createBond).not.toHaveBeenCalled();
+    expect(bleClient.getServices).toHaveBeenCalledWith('AA:BB:CC:DD:EE:FF');
   });
 
   it('does not retire an authenticated session merely because it is idle', async () => {

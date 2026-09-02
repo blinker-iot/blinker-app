@@ -41,6 +41,8 @@ function rawSnapshot(): DeviceV2TargetSnapshot {
       },
     },
     eventInterrupted: false,
+    cloudReachable: null,
+    cloudLastSeenAt: null,
   };
 }
 
