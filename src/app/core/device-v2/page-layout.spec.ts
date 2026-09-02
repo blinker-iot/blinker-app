@@ -5,6 +5,7 @@ import {
   migratePageLayout,
   PAGE_LAYOUT_COLUMNS,
   parsePageLayout,
+  upgradeDefaultWidgetTypes,
 } from './page-layout';
 
 function endpoint(overrides: Partial<DeviceUiEndpoint>): DeviceUiEndpoint {
@@ -122,5 +123,28 @@ describe('PageLayout v1', () => {
       expect.objectContaining({ endpointKey: 'temperature', type: 'value' }),
     ]);
     expect(parsePageLayout(migrated, next.endpoints)).toEqual(migrated);
+  });
+
+  it('upgrades every legacy writable boolean value card to a switch', () => {
+    const legacy = generateDefaultPageLayout(snapshot());
+    legacy.widgets[0] = { ...legacy.widgets[0], type: 'value' };
+
+    const repaired = upgradeDefaultWidgetTypes(
+      parsePageLayout(legacy, snapshot().endpoints),
+      snapshot().endpoints,
+    );
+    expect(repaired.widgets[0]).toEqual(expect.objectContaining({
+      endpointKey: 'power',
+      type: 'switch',
+    }));
+
+    const custom = {
+      ...legacy,
+      widgets: [{ ...legacy.widgets[0], title: 'Power status' }],
+    };
+    expect(upgradeDefaultWidgetTypes(
+      parsePageLayout(custom, snapshot().endpoints),
+      snapshot().endpoints,
+    ).widgets[0]?.type).toBe('switch');
   });
 });

@@ -74,20 +74,20 @@
                 <span>{{ display(field) }}{{ unit(field) ? ' ' + unit(field) : '' }}</span>
               </div>
 
-              @if (widget.type === 'switch') {
+              @if (widgetType(widget) === 'switch') {
                 <ion-toggle
                   aria-label="设置 {{ widget.title || field.key }}"
                   [checked]="value(field) === true"
                   [disabled]="pending.has(field.key) || !canControl"
                   (ionChange)="setBoolean(field, $event)"
                 ></ion-toggle>
-              } @else if (widget.type === 'button') {
+              } @else if (widgetType(widget) === 'button') {
                 <ion-button
                   size="small"
                   [disabled]="pending.has(field.key) || !canControl"
                   (click)="execute(field)"
                 >执行</ion-button>
-              } @else if (widget.type === 'slider') {
+              } @else if (widgetType(widget) === 'slider') {
                 <ion-range
                   class="slider"
                   [min]="field.minimum!"
@@ -98,7 +98,7 @@
                   [disabled]="pending.has(field.key) || !canControl"
                   (ionChange)="setSlider(field, $event)"
                 ></ion-range>
-              } @else if (widget.type === 'input') {
+              } @else if (widgetType(widget) === 'input') {
                 <div class="editor">
                   <ion-input
                     [type]="inputType(field)"

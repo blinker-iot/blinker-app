@@ -163,6 +163,31 @@ export function migratePageLayout(input: unknown, snapshot: DeviceUiSnapshot): P
   }, snapshot.endpoints);
 }
 
+/**
+ * Repairs layouts created before writable boolean endpoints had a switch widget.
+ * The accepted Manifest remains authoritative even when a saved layout still
+ * represents the endpoint as a read-only value card.
+ */
+export function upgradeDefaultWidgetTypes(
+  input: PageLayout,
+  endpoints: readonly DeviceUiEndpoint[],
+): PageLayout {
+  const endpointByKey = new Map(endpoints.map(endpoint => [endpoint.key, endpoint]));
+  let changed = false;
+  const widgets = input.widgets.map(widget => {
+    const endpoint = endpointByKey.get(widget.endpointKey);
+    const isLegacyBooleanCard = widget.type === 'value'
+      && endpoint?.role === 'property'
+      && endpoint.writable
+      && endpoint.valueType === 'boolean';
+    if (!isLegacyBooleanCard) return widget;
+    changed = true;
+    return { ...widget, type: 'switch' as const };
+  });
+  if (!changed) return input;
+  return parsePageLayout({ ...input, widgets }, endpoints);
+}
+
 function parseWidget(input: unknown, index: number): PageLayoutWidget {
   const label = `PageLayout widget ${index}`;
   const value = object(input, label);

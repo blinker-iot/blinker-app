@@ -29,7 +29,9 @@ import {
   PageLayout,
   PageLayoutDiff,
   PageLayoutWidget,
+  PageWidgetType,
   parsePageLayout,
+  upgradeDefaultWidgetTypes,
 } from '../../core/device-v2/page-layout';
 import {
   DeviceV2PageLayoutRecord,
@@ -146,6 +148,31 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   endpoint(widget: PageLayoutWidget): DeviceUiEndpoint | undefined {
     return this.endpointsByKey.get(widget.endpointKey);
+  }
+
+  /**
+   * The Manifest is authoritative for controls. This also protects rendering
+   * while a legacy cached layout is being upgraded in the background.
+   */
+  widgetType(widget: PageLayoutWidget): PageWidgetType {
+    const field = this.endpoint(widget);
+    if (field?.role === 'property' && field.writable && field.valueType === 'boolean') {
+      return 'switch';
+    }
+    if (field?.role === 'action' && field.writable
+      && (field.valueType === 'boolean' || field.valueType === 'null')) {
+      return 'button';
+    }
+    if (field?.role === 'property' && field.writable
+      && (field.valueType === 'integer' || field.valueType === 'number')
+      && Number.isFinite(field.minimum) && Number.isFinite(field.maximum)) {
+      return 'slider';
+    }
+    if (field?.writable && (field.valueType === 'integer'
+      || field.valueType === 'number' || field.valueType === 'text')) {
+      return 'input';
+    }
+    return widget.type;
   }
 
   get stateLabel(): string {
@@ -357,9 +384,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     }
     try {
       if (this.storedLayout) {
-        this.layout = this.storedLayout.manifestFingerprint === snapshot.manifestFingerprint
+        const parsed = this.storedLayout.manifestFingerprint === snapshot.manifestFingerprint
           ? parsePageLayout(this.storedLayout.layout, snapshot.endpoints)
           : migratePageLayout(this.storedLayout.layout, snapshot);
+        this.layout = upgradeDefaultWidgetTypes(parsed, snapshot.endpoints);
       } else if (this.layout?.manifestFingerprint !== snapshot.manifestFingerprint) {
         this.layout = generateDefaultPageLayout(snapshot);
       }
@@ -414,11 +442,17 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private applyStoredLayout(record: DeviceV2PageLayoutRecord, snapshot: DeviceUiSnapshot): void {
     this.storedLayout = record;
     if (record.manifestFingerprint === snapshot.manifestFingerprint) {
-      this.layout = parsePageLayout(record.layout, snapshot.endpoints);
+      this.layout = upgradeDefaultWidgetTypes(
+        parsePageLayout(record.layout, snapshot.endpoints),
+        snapshot.endpoints,
+      );
       this.layoutStale = undefined;
     } else {
       this.layoutStale = diffPageLayout(record.layout, snapshot.endpoints);
-      this.layout = migratePageLayout(record.layout, snapshot);
+      this.layout = upgradeDefaultWidgetTypes(
+        migratePageLayout(record.layout, snapshot),
+        snapshot.endpoints,
+      );
     }
     this.refreshTelemetry();
     this.requestRender();
