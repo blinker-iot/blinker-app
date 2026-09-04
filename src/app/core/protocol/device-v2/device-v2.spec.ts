@@ -46,8 +46,8 @@ function bytes(value: string): Uint8Array {
 describe('Device V2 App codec', () => {
   it('matches the server App HELLO and frame golden bytes', () => {
     const hello = encodeAppHelloBody();
-    expect(bytesToHex(hello)).toBe('a6000101810202190cc303190200041902000904');
-    expect(APP_FEATURES).toBe(0xcc3);
+    expect(bytesToHex(hello)).toBe('a6000101810202191cc303190200041902000904');
+    expect(APP_FEATURES).toBe(0x1cc3);
 
     const frame = encodeFrame({
       kind: Bbp2MessageKind.Hello,
@@ -72,7 +72,7 @@ describe('Device V2 App codec', () => {
     expect(() => decodeFrame(new Uint8Array(513))).toThrow(/header/);
 
     expect(decodeServerHelloBody(bytes(
-      'a6000201810202190cc303190200041902000904',
+      'a6000201810202191cc303190200041902000904',
     ))).toEqual({
       role: 2,
       versions: [2],

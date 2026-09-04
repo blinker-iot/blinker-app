@@ -1,8 +1,11 @@
 import '@angular/compiler';
 
+import { SimpleChange, SimpleChanges } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
+  DeviceUiConnectivitySnapshot,
   DeviceUiEndpoint,
   DeviceUiEvent,
   DeviceUiSnapshot,
@@ -14,6 +17,10 @@ import { generateDefaultPageLayout } from '../../core/device-v2/page-layout';
 import { DeviceV2Page } from './device-v2.page';
 
 const logicalDeviceId = 'device_11111111-1111-4111-8111-111111111111';
+
+function changed(input: string): SimpleChanges {
+  return { [input]: new SimpleChange(undefined, undefined, false) };
+}
 
 function endpoint(overrides: Partial<DeviceUiEndpoint>): DeviceUiEndpoint {
   return {
@@ -79,6 +86,7 @@ function harness(
   initial = snapshot(),
   pageLayouts?: any,
   openTelemetry?: () => Promise<DeviceUiTelemetryLease>,
+  viewActive = true,
 ) {
   const state = new BehaviorSubject(initial);
   const events = new Subject<DeviceUiEvent>();
@@ -89,8 +97,16 @@ function harness(
     values: {},
   });
   const connectionState = new BehaviorSubject<
-    'idle' | 'connecting' | 'ready' | 'retrying' | 'stopped'
+    'idle' | 'scanning' | 'nearby' | 'connecting' | 'ready' | 'retrying' | 'stopped'
   >('ready');
+  const connectivity = new BehaviorSubject<DeviceUiConnectivitySnapshot>({
+    activeTransport: 'ble',
+    directConnectAllowed: true,
+    bleAccess: true,
+    bleAdapterEnabled: true,
+    bleState: 'ready',
+    cloudSessionState: 'idle',
+  });
   const telemetryLease = {
     get snapshot(): DeviceUiTelemetrySnapshot {
       return telemetry.value;
@@ -108,6 +124,7 @@ function harness(
     appActive: appActive.asObservable(),
     connectionState,
     watchConnection: vi.fn(() => connectionState.asObservable()),
+    watchConnectivity: vi.fn(() => connectivity.asObservable()),
     watchState: vi.fn(() => state.asObservable()),
     watchEvents: vi.fn(() => events.asObservable()),
     connect: vi.fn().mockResolvedValue(undefined),
@@ -128,8 +145,9 @@ function harness(
   };
   const page = new DeviceV2Page(port as any, localPageLayouts);
   page.device = device();
+  page.viewActive = viewActive;
   page.ngOnInit();
-  return { page, port, state, events, appActive, telemetry, telemetryLease };
+  return { page, port, state, events, appActive, connectivity, telemetry, telemetryLease };
 }
 
 describe('DeviceV2Page UI port lifecycle', () => {
@@ -164,7 +182,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
     const { page, port } = harness();
     port.connect.mockRejectedValueOnce(new Error('connection lost'));
     page.device = { ...device(), deviceName: logicalDeviceId.replace(/1/g, '2') };
-    page.ngOnChanges({} as any);
+    page.ngOnChanges(changed('device'));
     await vi.waitFor(() => expect(page.error).toContain('connection lost'));
 
     port.connectionState.next('ready');
@@ -179,6 +197,151 @@ describe('DeviceV2Page UI port lifecycle', () => {
     page.ngOnDestroy();
     expect(state.observed).toBe(false);
     expect(events.observed).toBe(false);
+  });
+
+  it('retries a stopped BLE session only within the visible foreground budget', async () => {
+    vi.useFakeTimers();
+    try {
+      const { page, port, connectivity } = harness();
+      await Promise.resolve();
+      port.connect.mockClear();
+
+      connectivity.next({
+        ...connectivity.value,
+        bleState: 'stopped',
+      });
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(port.connect).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(2500);
+      expect(port.connect).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(port.connect).toHaveBeenCalledTimes(3);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(port.connect).toHaveBeenCalledTimes(3);
+
+      page.viewActive = false;
+      page.ngOnChanges(changed('viewActive'));
+      page.viewActive = true;
+      page.ngOnChanges(changed('viewActive'));
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(port.connect).toHaveBeenCalledTimes(5);
+      page.ngOnDestroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('connects a nearby BLE device within the same bounded foreground budget', async () => {
+    vi.useFakeTimers();
+    try {
+      const { page, port, connectivity } = harness();
+      await Promise.resolve();
+      port.connect.mockClear();
+
+      connectivity.next({ ...connectivity.value, bleState: 'nearby' });
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(port.connect).toHaveBeenCalledTimes(1);
+      page.ngOnDestroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('waits for gateway route release before retrying Direct BLE', async () => {
+    vi.useFakeTimers();
+    try {
+      const { page, port, connectivity } = harness();
+      await Promise.resolve();
+      port.connect.mockClear();
+
+      connectivity.next({
+        ...connectivity.value,
+        directConnectAllowed: false,
+        bleState: 'nearby',
+      });
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(port.connect).not.toHaveBeenCalled();
+
+      connectivity.next({
+        ...connectivity.value,
+        directConnectAllowed: true,
+      });
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(port.connect).toHaveBeenCalledOnce();
+      page.ngOnDestroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('starts a fresh reconnect budget when Bluetooth is enabled again', async () => {
+    vi.useFakeTimers();
+    try {
+      const { page, port, connectivity } = harness();
+      await Promise.resolve();
+      port.connect.mockClear();
+
+      connectivity.next({
+        ...connectivity.value,
+        bleAdapterEnabled: false,
+        bleState: 'stopped',
+      });
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(port.connect).not.toHaveBeenCalled();
+
+      connectivity.next({ ...connectivity.value, bleAdapterEnabled: true });
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(port.connect).toHaveBeenCalledOnce();
+      page.ngOnDestroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('cancels a pending BLE reconnect when the page leaves or the session recovers', async () => {
+    vi.useFakeTimers();
+    try {
+      const { page, port, connectivity } = harness();
+      await Promise.resolve();
+      port.connect.mockClear();
+      connectivity.next({ ...connectivity.value, bleState: 'stopped' });
+      page.viewActive = false;
+      page.ngOnChanges(changed('viewActive'));
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(port.connect).not.toHaveBeenCalled();
+
+      page.viewActive = true;
+      page.ngOnChanges(changed('viewActive'));
+      connectivity.next({ ...connectivity.value, bleState: 'ready' });
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(port.connect).toHaveBeenCalledTimes(1);
+      page.ngOnDestroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('pauses BLE reconnect while backgrounded and starts a fresh foreground budget', async () => {
+    vi.useFakeTimers();
+    try {
+      const { page, port, appActive, connectivity } = harness();
+      await Promise.resolve();
+      port.connect.mockClear();
+      connectivity.next({ ...connectivity.value, bleState: 'stopped' });
+      appActive.next(false);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(port.connect).not.toHaveBeenCalled();
+
+      appActive.next(true);
+      await Promise.resolve();
+      expect(port.connect).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(port.connect).toHaveBeenCalledTimes(2);
+      page.ngOnDestroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('opens realtime fields only while the page is visible and releases the lease', async () => {
@@ -206,7 +369,8 @@ describe('DeviceV2Page UI port lifecycle', () => {
     const field = page.snapshot.endpoints.find(candidate => candidate.key === 'temperature')!;
     expect(page.value(field)).toBe(21.5);
 
-    page.ionViewDidLeave();
+    page.viewActive = false;
+    page.ngOnChanges(changed('viewActive'));
     await vi.waitFor(() => expect(telemetryLease.setVisible).toHaveBeenCalledWith(false));
     expect(page.value(field)).toBe(20);
 
@@ -214,7 +378,8 @@ describe('DeviceV2Page UI port lifecycle', () => {
     appActive.next(true);
     expect(telemetryLease.setVisible.mock.calls.some(call => call[0] === true)).toBe(false);
 
-    page.ionViewDidEnter();
+    page.viewActive = true;
+    page.ngOnChanges(changed('viewActive'));
     await vi.waitFor(() => expect(telemetryLease.setVisible).toHaveBeenCalledWith(true));
     appActive.next(false);
     await vi.waitFor(() => expect(telemetryLease.setVisible).toHaveBeenLastCalledWith(false));
@@ -243,11 +408,13 @@ describe('DeviceV2Page UI port lifecycle', () => {
     const result = harness(realtime, undefined, () => pendingOpen);
 
     await vi.waitFor(() => expect(result.port.openTelemetry).toHaveBeenCalledOnce());
-    result.page.ionViewDidLeave();
+    result.page.viewActive = false;
+    result.page.ngOnChanges(changed('viewActive'));
     resolveOpen(result.telemetryLease);
     await vi.waitFor(() => expect(result.telemetryLease.close).toHaveBeenCalledOnce());
 
-    result.page.ionViewDidEnter();
+    result.page.viewActive = true;
+    result.page.ngOnChanges(changed('viewActive'));
     await vi.waitFor(() => expect(result.port.openTelemetry).toHaveBeenCalledTimes(2));
     result.page.ngOnDestroy();
   });

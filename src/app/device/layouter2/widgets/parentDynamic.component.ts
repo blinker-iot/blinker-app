@@ -5,7 +5,6 @@ import { WidgetTextComponent } from './widget-text/widget-text';
 import { WidgetNumberComponent } from './widget-number/widget-number';
 import { WidgetButtonComponent } from './widget-button/widget-button';
 import { WidgetRangeComponent } from './widget-range/widget-range';
-import { WidgetTimerComponent } from './widget-timer/widget-timer';
 import { WidgetColorComponent } from './widget-color/widget-color';
 import { WidgetDebugComponent } from './widget-debug/widget-debug';
 import { WidgetJoystickComponent } from './widget-joystick/widget-joystick';
@@ -15,6 +14,8 @@ import { WidgetTabComponent } from './widget-tab/widget-tab.component';
 import { WidgetInputComponent } from './widget-input/widget-input';
 import { WidgetVideoComponent } from './widget-video/widget-video';
 import { WidgetImageComponent } from './widget-image/widget-image';
+import { WidgetWeatherComponent } from './widget-weather/widget-weather.component';
+import { WidgetAirComponent } from './widget-air/widget-air.component';
 import { Layouter2EditTapDirective } from './edit-tap.directive';
 
 @Component({
@@ -26,7 +27,6 @@ import { Layouter2EditTapDirective } from './edit-tap.directive';
     WidgetNumberComponent,
     WidgetButtonComponent,
     WidgetRangeComponent,
-    WidgetTimerComponent,
     WidgetColorComponent,
     WidgetDebugComponent,
     WidgetJoystickComponent,
@@ -36,6 +36,8 @@ import { Layouter2EditTapDirective } from './edit-tap.directive';
     WidgetInputComponent,
     WidgetVideoComponent,
     WidgetImageComponent,
+    WidgetWeatherComponent,
+    WidgetAirComponent,
     Layouter2EditTapDirective,
   ],
 })
@@ -62,6 +64,11 @@ export class ParentDynamicComponent {
     return this.widget.clr;
   }
 
+  get effectiveLstyle() {
+    if (typeof this.lstyle !== 'undefined') return this.lstyle;
+    return this.widget?.lstyle ?? 0;
+  }
+
   @Input()
   lstyle;
 
@@ -85,11 +92,14 @@ export class ParentDynamicComponent {
         },
       });
       const didDismiss = modal.onDidDismiss();
-      if (typeof this.widgetComponent != 'undefined') {
-        void didDismiss.then(() => {
-          this.widgetComponent.refresh();
-        });
-      }
+      void didDismiss.then((result) => {
+        if (result.role === 'delete') return;
+
+        const refresh = this.widgetComponent?.refresh;
+        if (typeof refresh === 'function') {
+          refresh.call(this.widgetComponent);
+        }
+      });
 
       await modal.present();
       await didDismiss;

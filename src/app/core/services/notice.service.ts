@@ -114,6 +114,9 @@ export class NoticeService {
     "login": {
       message: `登录中...`
     },
+    "cancelAccount": {
+      message: `正在验证并注销账号...`
+    },
     "load": {
       message: `加载中...`
     },
@@ -456,10 +459,6 @@ export class NoticeService {
     },
     'canNotBeUsed2': {
       message: '当前账号无法使用该功能',
-      type: 'warn'
-    },
-    'canNotBeUsed3': {
-      message: '该组件仅限专业版用户使用',
       type: 'warn'
     },
     'timingOffline': {

@@ -10,6 +10,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { ActionSheetController } from '@ionic/angular';
+import { NavController } from '@ionic/angular/standalone';
 import * as L from 'leaflet';
 import {
   ActiveThirdPartyService,
@@ -94,8 +95,13 @@ export class WidgetMapComponent
     private actionSheetController: ActionSheetController,
     private thirdPartyServices: ThirdPartyServicesService,
     private ngZone: NgZone,
-    private changeDetectorRef: ChangeDetectorRef
+    private changeDetectorRef: ChangeDetectorRef,
+    private navController: NavController
   ) {}
+
+  openThirdPartyServices(): void {
+    void this.navController.navigateForward('/third-party-services');
+  }
 
   ngOnInit() {
     this.activeMapService =

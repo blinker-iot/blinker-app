@@ -1,0 +1,763 @@
+:host {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  display: block;
+}
+
+.air-shell {
+  --quality-accent: #475569;
+  --quality-surface-start: 5%;
+  --quality-surface-end: 2%;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  color: var(--blinker-text-primary);
+  background: linear-gradient(135deg,
+      color-mix(in srgb, var(--quality-accent) var(--quality-surface-start), var(--blinker-surface)),
+      color-mix(in srgb, var(--quality-accent) var(--quality-surface-end), var(--blinker-surface)));
+  touch-action: pan-y;
+}
+
+.air-shell[data-severity='good'] {
+  --quality-accent: #15803d;
+}
+
+.air-shell[data-severity='moderate'] {
+  --quality-accent: #a16207;
+  --quality-surface-start: 13%;
+  --quality-surface-end: 5%;
+}
+
+.air-shell[data-severity='unhealthy-sensitive'] {
+  --quality-accent: #c2410c;
+  --quality-surface-start: 15%;
+  --quality-surface-end: 6%;
+}
+
+.air-shell[data-severity='unhealthy'] {
+  --quality-accent: #dc2626;
+  --quality-surface-start: 17%;
+  --quality-surface-end: 7%;
+}
+
+.air-shell[data-severity='very-unhealthy'] {
+  --quality-accent: #7e22ce;
+  --quality-surface-start: 18%;
+  --quality-surface-end: 8%;
+}
+
+.air-shell[data-severity='hazardous'] {
+  --quality-accent: #881337;
+  --quality-surface-start: 20%;
+  --quality-surface-end: 9%;
+}
+
+.air-content {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  padding: 5px 8px 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.air-header {
+  min-width: 0;
+  height: 16px;
+  color: var(--blinker-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.air-location,
+.air-meta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.air-location {
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 650;
+
+  i {
+    color: var(--quality-accent);
+    font-size: 10px;
+  }
+
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    color: var(--blinker-text-tertiary);
+    font-size: 10px;
+    font-weight: 500;
+  }
+}
+
+.air-meta {
+  justify-content: flex-end;
+  gap: 2px;
+  font-size: 8px;
+  white-space: nowrap;
+
+  >span {
+    max-width: 132px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stale {
+    color: var(--ion-color-warning);
+  }
+}
+
+.refresh-button {
+  width: 22px;
+  height: 22px;
+  margin: -3px -5px -3px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  outline: 0;
+  color: var(--quality-accent);
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+
+  i {
+    font-size: 10px;
+  }
+
+  &:active {
+    background: color-mix(in srgb, var(--quality-accent) 10%, transparent);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--quality-accent) 30%, transparent);
+  }
+}
+
+.air-body {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr);
+  flex: 1 1 auto;
+}
+
+.air-summary {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 1px 8px 1px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.aqi-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.aqi-orb {
+  width: 43px;
+  height: 43px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--quality-accent) 34%, transparent);
+  border-radius: 50%;
+  color: var(--quality-accent);
+  background: color-mix(in srgb, var(--quality-accent) 10%, var(--blinker-surface));
+  box-shadow: 0 5px 13px color-mix(in srgb, var(--quality-accent) 15%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  flex: 0 0 43px;
+
+  small {
+    max-width: 34px;
+    overflow: hidden;
+    font-size: 6px;
+    font-weight: 750;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    max-width: 39px;
+    overflow: hidden;
+    font-size: 18px;
+    font-weight: 780;
+    line-height: 1.05;
+    letter-spacing: -0.8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.quality-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  strong,
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    color: var(--quality-accent);
+    font-size: 14px;
+    font-weight: 750;
+    line-height: 1.05;
+  }
+
+  small {
+    color: var(--blinker-text-tertiary);
+    font-size: 7px;
+  }
+}
+
+.primary-pollutant {
+  min-width: 0;
+  margin-top: 3px;
+  color: var(--blinker-text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 7px;
+  line-height: 1;
+
+  i {
+    color: var(--quality-accent);
+  }
+
+  span,
+  strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    color: var(--blinker-text-secondary);
+    font-weight: 700;
+  }
+}
+
+.health-advice {
+  min-width: 0;
+  max-height: 16px;
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--blinker-text-secondary);
+  font-size: 7px;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  i {
+    margin-right: 2px;
+    color: var(--quality-accent);
+  }
+}
+
+.air-details {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding-left: 7px;
+  border-left: 1px solid color-mix(in srgb, var(--blinker-divider) 78%, transparent);
+}
+
+.pages-window {
+  width: 100%;
+  height: calc(100% - 7px);
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 7px;
+  outline: 0;
+  cursor: pointer;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--quality-accent) 27%, transparent);
+  }
+}
+
+.pages-track {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.display-page {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  flex: 0 0 100%;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.pollutants-page {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  height: auto;
+  display: grid;
+  grid-template-rows: repeat(2, minmax(max-content, 1fr));
+  gap: 2px;
+}
+
+.featured-pollutants-row,
+.detail-pollutants-row {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.featured-pollutants-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.detail-pollutants-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.detail-pollutants-empty {
+  min-width: 0;
+  min-height: 0;
+  color: var(--blinker-text-tertiary);
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  text-align: center;
+}
+
+.pollutant-card {
+  min-width: 0;
+  min-height: 0;
+  padding: 1px 2px;
+  overflow: visible;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--quality-accent) 5%, transparent);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+
+  >i {
+    width: 11px;
+    color: var(--quality-accent);
+    font-size: 9px;
+    text-align: center;
+    flex: 0 0 11px;
+  }
+
+  >div {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  span,
+  strong {
+    max-width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  span {
+    color: var(--blinker-text-tertiary);
+    font-size: 7px;
+    line-height: 1;
+  }
+
+  strong {
+    margin-top: 2px;
+    color: var(--blinker-text-primary);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+
+    small {
+      margin-left: 1px;
+      color: var(--blinker-text-tertiary);
+      font-size: 5px;
+      font-weight: 500;
+    }
+  }
+}
+
+.page-dots {
+  position: absolute;
+  z-index: 2;
+  right: 2px;
+  bottom: 0;
+  left: 9px;
+  height: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+
+  button {
+    position: relative;
+    width: 12px;
+    height: 7px;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    cursor: pointer;
+
+    &::after {
+      position: absolute;
+      top: 2px;
+      left: 3px;
+      width: 4px;
+      height: 3px;
+      border-radius: 2px;
+      background: color-mix(in srgb, var(--blinker-text-tertiary) 45%, transparent);
+      content: '';
+      transition: width 180ms ease, left 180ms ease, background-color 180ms ease;
+    }
+
+    &.active::after {
+      left: 1px;
+      width: 10px;
+      background: var(--quality-accent);
+    }
+
+    &:focus-visible::after {
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--quality-accent) 30%, transparent);
+    }
+  }
+}
+
+.air-status {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  color: var(--blinker-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: left;
+
+  >i {
+    width: 28px;
+    color: var(--ion-color-primary);
+    font-size: 25px;
+    text-align: center;
+    flex: 0 0 28px;
+  }
+
+  >div {
+    min-width: 0;
+    max-width: 230px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  strong,
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  strong {
+    color: var(--blinker-text-primary);
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  small {
+    font-size: 9px;
+    line-height: 1.25;
+  }
+
+  button {
+    min-width: 54px;
+    height: 26px;
+    padding: 0 9px;
+    border: 1px solid rgba(var(--ion-color-primary-rgb), 0.28);
+    border-radius: 13px;
+    color: var(--ion-color-primary);
+    background: rgba(var(--ion-color-primary-rgb), 0.07);
+    font-size: 9px;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .api-key-settings-button {
+    position: absolute;
+    z-index: 1;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+
+    >i {
+      padding: 0;
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgba(var(--ion-color-primary-rgb), 0.32);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.air-status-error>i {
+  color: var(--ion-color-danger);
+}
+
+.air-tall {
+  .air-content {
+    padding: 7px 10px 5px;
+  }
+
+  .air-header {
+    height: 19px;
+  }
+
+  .air-location {
+    font-size: 11px;
+  }
+
+  .air-meta {
+    font-size: 9px;
+
+    >span {
+      max-width: 170px;
+    }
+  }
+
+  .air-body {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 5fr);
+  }
+
+  .air-summary {
+    padding-right: 11px;
+  }
+
+  .aqi-row {
+    gap: 9px;
+  }
+
+  .aqi-orb {
+    width: 54px;
+    height: 54px;
+    flex-basis: 54px;
+
+    small {
+      max-width: 44px;
+      font-size: 7px;
+    }
+
+    strong {
+      max-width: 49px;
+      font-size: 23px;
+    }
+  }
+
+  .quality-copy {
+    strong {
+      font-size: 17px;
+    }
+
+    small {
+      font-size: 8px;
+    }
+  }
+
+  .primary-pollutant {
+    margin-top: 5px;
+    font-size: 9px;
+  }
+
+  .health-advice {
+    max-height: 28px;
+    margin-top: 5px;
+    font-size: 9px;
+    line-height: 1.3;
+  }
+
+  .air-details {
+    padding-left: 10px;
+  }
+
+  .pages-window {
+    height: calc(100% - 9px);
+  }
+
+  .pollutants-page {
+    gap: 5px;
+  }
+
+  .featured-pollutants-row,
+  .detail-pollutants-row {
+    gap: 5px;
+  }
+
+  .pollutant-card {
+    padding: 4px;
+    gap: 5px;
+
+    >i {
+      width: 13px;
+      font-size: 11px;
+      flex-basis: 13px;
+    }
+
+    span {
+      font-size: 8px;
+    }
+
+    strong {
+      font-size: 12px;
+
+      small {
+        font-size: 6px;
+      }
+    }
+  }
+
+  .featured-pollutants-row .pollutant-card span {
+    font-size: 10px;
+  }
+
+  .detail-pollutants-row .pollutant-card {
+    display: grid;
+    grid-template-rows: repeat(2, max-content);
+    align-content: center;
+    place-items: center;
+    padding: 2px;
+    gap: 5px;
+
+    >.pollutant-card-heading {
+      width: auto;
+      max-width: 100%;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: row;
+      gap: 6px;
+
+      >i {
+        width: 9px;
+        color: var(--quality-accent);
+        font-size: 10px;
+        line-height: 1;
+        text-align: center;
+        flex: 0 0 9px;
+      }
+
+      span {
+        width: auto;
+        padding: 0;
+        font-size: 10px;
+        line-height: 1;
+      }
+    }
+
+    >strong {
+      width: 100%;
+      margin: 0;
+      align-self: center;
+      font-size: 11px;
+      line-height: 1;
+      text-align: center;
+
+      small {
+        font-size: 5px;
+      }
+    }
+  }
+
+  .page-dots {
+    height: 9px;
+  }
+
+  .air-status {
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    text-align: center;
+
+    >i {
+      font-size: 30px;
+    }
+
+    >div {
+      align-items: center;
+    }
+
+    strong {
+      font-size: 13px;
+    }
+
+    small {
+      font-size: 10px;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .pages-track,
+  .page-dots button::after {
+    transition: none;
+  }
+}

@@ -1,12 +1,8 @@
 .guide-bg {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100vh;
   color: var(--blinker-text-primary);
   background: rgba(7, 20, 35, 0.58);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 
   span {
     font-size: 13px;
@@ -78,7 +74,7 @@
 }
 
 .dialogbox.bot1 {
-  bottom: calc(9vh + env(safe-area-inset-bottom));
+  bottom: calc(9% + env(safe-area-inset-bottom));
 
   .triangle {
     position: absolute;
@@ -94,7 +90,7 @@
 
 .btn {
   position: absolute;
-  bottom: calc(21vh + env(safe-area-inset-bottom));
+  bottom: calc(21% + env(safe-area-inset-bottom));
   width: min(58%, 280px);
   height: 48px;
   padding: 0 20px;
@@ -115,7 +111,7 @@
 
 .example {
   position: absolute;
-  bottom: calc(14vh + env(safe-area-inset-bottom));
+  bottom: calc(14% + env(safe-area-inset-bottom));
   color: rgba(255, 255, 255, 0.86);
   font-size: 13px;
 }

@@ -5,7 +5,8 @@
     flex-direction: row;
 
     .tab {
-        width: 18vw;
+        min-width: 0;
+        flex: 0 1 18%;
         display: flex;
         align-items: center;
         justify-content: center;

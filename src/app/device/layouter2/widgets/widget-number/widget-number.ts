@@ -67,6 +67,13 @@ export class WidgetNumberComponent implements Layouter2Widget {
   }
 
   getValue(valueKeys: string[]): any {
+    if (this.isDemo) {
+      for (let valueKey of valueKeys) {
+        if (typeof this.widget[valueKey] != 'undefined')
+          return this.widget[valueKey];
+      }
+    }
+
     for (let valueKey of valueKeys) {
       if (typeof this.device.data[this.key] != 'undefined')
         if (typeof this.device.data[this.key][valueKey] != 'undefined')

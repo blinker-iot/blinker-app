@@ -1,20 +1,44 @@
 export interface MessageItem {
-    //显示出来的内容
-    "title": string,
-    "summary"?: string,
-    "content": string
-    "icon": string,
-    "date": number,
-    "isRead": string
-    //不直接显示的内容
-    "type": MessageType,
-    "id": string,
-    "url": string,
+  id: string;
+  type: string;
+  category: string;
+  title: string;
+  body: string;
+  createdAt: number;
+  visibleAt: number;
+  expiresAt: number | null;
+  readAt: number | null;
+  unread: boolean;
 }
 
-export enum MessageType {
-    News = 'news',//打开一个url
-    System = 'system',//打开一个app页面
-    Device = 'device',//打开设备页面
-    User = 'user',//打开用户分享页面
+export interface MessagePage {
+  items: MessageItem[];
+  nextCursor: string | null;
+}
+
+export interface UnreadSummary {
+  total: number;
+  categories: Record<string, number>;
+  beforeCursor: string | null;
+}
+
+export interface MessageReadResult {
+  id: string;
+  readAt: number;
+}
+
+export interface MessageMarkAllReadResult {
+  marked: number;
+  readAt: number;
+}
+
+export interface MessageDeleteResult {
+  id: string;
+  deletedAt: number;
+}
+
+export interface MessageListFilters {
+  category?: string;
+  unread?: boolean;
+  limit?: number;
 }

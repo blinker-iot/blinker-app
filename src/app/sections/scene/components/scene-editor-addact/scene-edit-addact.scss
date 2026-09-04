@@ -6,9 +6,7 @@
 }
 
 .action-footer {
-  background: color-mix(in srgb, var(--blinker-bg) 88%, transparent);
-  backdrop-filter: var(--blinker-nav-blur);
-  -webkit-backdrop-filter: var(--blinker-nav-blur);
+  background: var(--blinker-bg);
 
   ion-toolbar {
     --background: transparent;

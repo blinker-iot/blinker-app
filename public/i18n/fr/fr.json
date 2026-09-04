@@ -100,7 +100,6 @@
   "PROFILE": {
     "TITLE": "Profil",
     "USER_AVATAR": "Avatar utilisateur",
-    "PRO_PLAN_EXPIRY": "Forfait Pro (expire le {{date}})",
     "VERSION": "Version {{version}}",
     "DEFAULT_USER_NAME": "Utilisateur blinker",
     "REGION_MANAGEMENT": "Gestion des zones",
@@ -152,12 +151,10 @@
     "CONTACT_US": "Nous contacter"
   },
   "DEV": {
-    "TEXT": "Only for Pro Licence",
     "MORE": "Learn more",
     "CERT_NAME": "Certification",
     "LICENCE": "Licence",
     "GROUP0": "Free",
-    "GROUP1": "Pro",
     "GROUP2": "Edu",
     "DEVICE": "Device",
     "EXPIRE": "Expire",
@@ -231,7 +228,6 @@
     "LIST": "User List",
     "INFO": "User info",
     "GROUP0": "User",
-    "GROUP1": "Professional",
     "GROUP2": "Education",
     "PHONE": "Phone",
     "DEVICE_NUM": "Device",

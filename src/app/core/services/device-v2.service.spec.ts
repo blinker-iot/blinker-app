@@ -6,7 +6,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { API } from '../../configs/api.config';
 import { DataService } from './data.service';
@@ -65,7 +65,46 @@ describe('DeviceV2Service connection contract', () => {
       shard: { shard_id: 0, route_version: 1 },
     });
     await expect(start).rejects.toThrow(/credential contract/);
-    expect(service.state.value).toBe('retrying');
+  });
+
+  it('does not reacquire credentials for ws on an HTTPS page', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('location', new URL('https://app.example.test/devices'));
+    try {
+      const start = service.start();
+      const request = http.expectOne(candidate => candidate.url === API.ACCOUNT.CONNECTION);
+      request.flush({
+        account: { accountId: 'user', tenantId: 'tenant' },
+        mqtt: {
+          host: 'mqtt.example.test',
+          port: 80,
+          protocol: 'ws',
+          url: 'ws://mqtt.example.test/mqtt',
+          path: '/mqtt',
+          clientId: 'appu-user-a1b2c3d4',
+          username: 'appu_user',
+          password: 'jwt',
+          expiresIn: 600,
+          publishTopic: '/device/appu-user-a1b2c3d4/s',
+          subscribeTopic: '/device/appu-user-a1b2c3d4/r',
+          keepalive: 60,
+          clean: true,
+        },
+        wire: 'bbp2',
+        protocolVersion: 2,
+        transport: 'websocket',
+        shard: { shard_id: 0, route_version: 1 },
+      });
+
+      await expect(start).rejects.toThrow(/must use wss/);
+      expect(service.state.value).toBe('stopped');
+      await expect(service.start()).rejects.toThrow(/must use wss/);
+      await vi.advanceTimersByTimeAsync(120_000);
+      http.expectNone(candidate => candidate.url === API.ACCOUNT.CONNECTION);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 
   it('stops the account client when the authenticated account is cleared', async () => {

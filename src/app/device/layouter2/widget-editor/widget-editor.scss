@@ -36,6 +36,7 @@ ion-content {
   border-radius: var(--blinker-radius-card);
   background: var(--blinker-surface);
   box-shadow: var(--blinker-shadow-soft);
+  gap:12px;
 }
 
 .setting-box {
@@ -45,7 +46,7 @@ ion-content {
 .scrollHeight {
   position: relative;
   z-index: 0;
-  height: 20vh;
+  height: 160px;
   min-height: 132px;
   margin: 0 -15px;
   overflow-x: auto;
@@ -53,7 +54,17 @@ ion-content {
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   touch-action: pan-x;
+  cursor: grab;
   -webkit-overflow-scrolling: touch;
+
+  &.is-drag-scrolling {
+    cursor: grabbing;
+    user-select: none;
+
+    ::ng-deep * {
+      cursor: grabbing !important;
+    }
+  }
 
   &::-webkit-scrollbar {
     display: none;
@@ -117,95 +128,13 @@ ion-content {
   top: 0;
 }
 
-.devicebox {
-  position: absolute;
-  display: flex;
-  flex-flow: row;
-
-  .selected {
-    opacity: 1;
-    box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.3) !important;
-  }
-
-  .unselected {
-    opacity: 0.58;
-  }
-
-  .actionblock {
-    width: 23vw;
-    height: 23vw;
-    margin: 3px 0 0 3px;
-    border: 1px solid var(--blinker-border);
-    border-radius: var(--blinker-radius-control);
-    box-shadow: var(--blinker-shadow-soft);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+[setting-box] {
+  gap: 12px;
 }
 
-.range-box {
-  position: relative;
-
-  .range {
-    transform: scale(0.5);
-  }
-
-  .range1 {
-    transform-origin: 15vw;
-  }
-
-  .range2 {
-    transform-origin: -15vw;
-  }
-}
-
-.color-box {
-  position: absolute;
-
-  .color {
-    transform: scale(0.6);
-    transform-origin: left;
-  }
-}
-
-.joystick-box {
-  position: relative;
-  justify-content: center;
-
-  .joystick {
-    transform: scale(0.6);
-  }
-}
-
-.debug-box {
-  position: absolute;
-  width: 100%;
-
-  .debug {
-    transform: scale(0.45);
-  }
-
-  .debug1 {
-    position: absolute;
-    transform-origin: left;
-  }
-
-  .debug2 {
-    position: absolute;
-    right: 15px;
-    transform-origin: right;
-  }
-}
-
-.bc {
-  width: 10vw;
-}
-
-[setting-item] {
+.setting-item {
   width: 100%;
   min-height: 50px;
-  padding: 7px 0;
   border-bottom: 1px solid var(--blinker-divider);
   display: flex;
   justify-content: space-between;
@@ -264,7 +193,7 @@ ion-content {
     justify-content: flex-start;
     gap: 6px;
 
-    > div {
+    >div {
       min-height: 34px;
       padding: 0 10px;
       border: 1px solid var(--blinker-border);
@@ -296,6 +225,32 @@ ion-content {
 
   .btnmode {
     font-size: 11px;
+  }
+
+  [item-item].text-align-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+
+    > button {
+      min-width: 0;
+      min-height: 34px;
+      padding: 0 6px;
+      border: 1px solid var(--blinker-border);
+      border-radius: 10px;
+      color: var(--blinker-text-secondary);
+      background: var(--blinker-surface-muted);
+      font: inherit;
+      font-size: 17px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    > button.selected {
+      border-color: color-mix(in srgb, var(--ion-color-primary) 36%, var(--blinker-border));
+      color: var(--ion-color-primary);
+      background: var(--blinker-surface-active);
+    }
   }
 
   .icon-box {
@@ -375,6 +330,7 @@ ion-content {
 }
 
 @media (max-width: 380px) {
+
   .setting-box0,
   .setting-box {
     width: calc(100% - 24px);
@@ -382,7 +338,7 @@ ion-content {
     margin-left: 12px;
   }
 
-  [setting-item] {
+  .setting-item {
     gap: 8px;
 
     [item-name] {

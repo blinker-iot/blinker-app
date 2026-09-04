@@ -58,6 +58,12 @@ export interface CurrentUser {
   [key: string]: unknown;
 }
 
+export interface AccountDeletionCodeData {
+  purpose: 'account_deletion';
+  expiresIn: number;
+  maskedEmail: string;
+}
+
 export interface DeviceKeyContext {
   logicalDeviceId: string;
   credentialVersion: number;
@@ -234,6 +240,7 @@ export interface NormalizedHttpError {
   message: string;
   requestId?: string;
   data?: unknown;
+  retryAfterSeconds?: number;
 }
 
 export class GatewayHttpError extends Error implements NormalizedHttpError {
@@ -241,6 +248,7 @@ export class GatewayHttpError extends Error implements NormalizedHttpError {
   readonly code: string;
   readonly requestId?: string;
   readonly data?: unknown;
+  readonly retryAfterSeconds?: number;
 
   constructor(error: NormalizedHttpError) {
     super(error.message);
@@ -249,5 +257,6 @@ export class GatewayHttpError extends Error implements NormalizedHttpError {
     this.code = error.code;
     this.requestId = error.requestId;
     this.data = error.data;
+    this.retryAfterSeconds = error.retryAfterSeconds;
   }
 }

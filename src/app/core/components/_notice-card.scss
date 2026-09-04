@@ -24,11 +24,9 @@ b-toast.notice-collapsed {
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--notice-accent) 18%, var(--blinker-border));
     border-radius: var(--blinker-radius-card);
-    background: color-mix(in srgb, var(--blinker-surface) 94%, transparent);
+    background: var(--blinker-surface);
     box-shadow: var(--blinker-shadow);
     color: var(--blinker-text-primary);
-    backdrop-filter: var(--blinker-nav-blur);
-    -webkit-backdrop-filter: var(--blinker-nav-blur);
     animation: notice-enter 280ms cubic-bezier(.2, .8, .2, 1) both;
 
     &::before {

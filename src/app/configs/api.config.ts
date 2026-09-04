@@ -3,7 +3,6 @@ import { environment } from '../../environments/environment';
 const GATEWAY_BASE_URL = environment.gatewayBaseUrl.replace(/\/$/, '');
 const API_V1_URL = GATEWAY_BASE_URL + '/api/v1';
 const API_V2_URL = GATEWAY_BASE_URL + '/api/v2';
-export const BROKER_HOST = 'wss://broker.diandeng.tech:1886';
 
 const deviceKeyV2Url = (logicalDeviceId: string) =>
   API_V2_URL + '/devices/' + encodeURIComponent(logicalDeviceId);
@@ -34,6 +33,7 @@ export const API = {
   },
   ACCOUNT: {
     ROOT: API_V1_URL + '/account',
+    DELETION_CODE: API_V1_URL + '/account/deletion-code',
     CONNECTION: API_V2_URL + '/account/connection',
   },
   DEVICE_V2: {
@@ -83,6 +83,13 @@ export const API = {
     CONFIRM_PRESENCE_KEY: (logicalDeviceId: string) =>
       deviceKeyV2Url(logicalDeviceId) + '/presence-key:confirm',
   },
+  DEVICE: {
+    NEW_VERSION: API_V1_URL + '/user/device/ota/get',
+    OTA_STATE: API_V1_URL + '/user/device/ota/upgrade_status',
+    TIME_SERIES_DATA: API_V1_URL + '/user/device/pull_cloudStorage/',
+    LOAD_CONFIG: API_V1_URL + '/user/device/config/load',
+    SAVE_CONFIG: API_V1_URL + '/user/device/config/save',
+  },
   FEEDBACK: {
     SUBMIT: API_V1_URL + '/feedback/submit',
     UPLOAD_IMAGE: API_V1_URL + '/feedback/upload-image',
@@ -95,9 +102,24 @@ export const API = {
     UPLOAD_AVATAR: '',
     CHANGE_PASSWORD: API_V1_URL + '/user/password/change',
     CHANGE_PROFILE: API_V1_URL + '/user/profile/modify',
+    DEL_DEVICE: API_V1_URL + '/user/device/remove',
     CANCEL_ACCOUNT: API_V1_URL + '/user/cancel',
   },
-  MESSAGE: API_V1_URL + '/user/message',
+  MESSAGE: {
+    COLLECTION: API_V2_URL + '/messages',
+    UNREAD_SUMMARY: API_V2_URL + '/messages/unread-summary',
+    MARK_ALL_READ: API_V2_URL + '/messages:mark-all-read',
+    DETAIL: (messageId: string) =>
+      API_V2_URL + '/messages/' + encodeURIComponent(messageId),
+    READ: (messageId: string) =>
+      API_V2_URL + '/messages/' + encodeURIComponent(messageId) + ':read',
+  },
+  NOTIFICATION_INSTALLATIONS: {
+    COLLECTION: API_V2_URL + '/notification-installations',
+    DETAIL: (installationId: string) =>
+      API_V2_URL + '/notification-installations/'
+        + encodeURIComponent(installationId),
+  },
 } as const;
 
 export function isGatewayUrl(url: string): boolean {
@@ -115,6 +137,11 @@ export function isGatewayUrl(url: string): boolean {
     || url.startsWith(API.DEVICE_V2.EDGE_GATEWAY_ATTACHMENTS + '/')
     || url === API.DEVICE_V2.EDGE_GATEWAY_PERMIT_JOINS
     || url.startsWith(API.DEVICE_V2.EDGE_GATEWAY_PERMIT_JOINS + '/')
+    || url === API.MESSAGE.COLLECTION
+    || url.startsWith(API.MESSAGE.COLLECTION + '/')
+    || url === API.MESSAGE.MARK_ALL_READ
+    || url === API.NOTIFICATION_INSTALLATIONS.COLLECTION
+    || url.startsWith(API.NOTIFICATION_INSTALLATIONS.COLLECTION + '/')
     || isDeviceKeyManagementUrl(url);
 }
 

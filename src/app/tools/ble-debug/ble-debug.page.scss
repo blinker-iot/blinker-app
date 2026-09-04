@@ -440,9 +440,7 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     border-top: 1px solid var(--blinker-border);
-    background: color-mix(in srgb, var(--blinker-surface) 94%, transparent);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    background: var(--blinker-surface);
 
     button { margin: 0 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px solid transparent; border-radius: 10px; color: var(--blinker-text-secondary); font-size: 9px; }
     button i { font-size: 18px; }

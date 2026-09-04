@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { BehaviorSubject, Subject } from 'rxjs';
+import { createGuestDevicePreview } from '../data/guest-device-preview.data';
 import { AuthData, OrderData, ShareDate, UserData } from '../model/data.model';
 import { BlinkerDevice } from '../model/device.model';
 import {
@@ -63,8 +64,12 @@ export class DataService {
     return this._sessionEpoch;
   }
 
-  get isAdvancedDeveloper(): boolean {
-    return (this.user?.level ?? 0) > 0;
+  loadGuestDevicePreview(force = false): void {
+    if (!force && this.auth?.uuid && this.auth?.token) return;
+
+    const preview = createGuestDevicePreview();
+    this.device = preview.device;
+    this.room = preview.room;
   }
 
   async init(): Promise<void> {
@@ -364,7 +369,6 @@ export class DataService {
       username: currentUser.nickname?.trim() || currentUser.email,
       avatar: currentUser.avatar ?? '',
       phone: currentUser.phone ?? '',
-      level: 0,
       subscriptionPlan: currentUser.subscription_plan,
       permissions: currentUser.permissions,
       rbacPermissions: currentUser.rbac_permissions,
@@ -538,6 +542,6 @@ export class DataService {
   }
 
   private emptyUser(): UserData {
-    return { username: '', avatar: '', phone: '', level: 0 };
+    return { username: '', avatar: '', phone: '' };
   }
 }

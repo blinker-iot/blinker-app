@@ -13,9 +13,15 @@ import {
   BleApplicationMode,
   LocalSecureRecordType,
   base64UrlEncode,
+  ControllerMutationOperation,
   decodeBleEnrollmentGrant,
   decodeBleModeProfile,
+  decodeControllerMutationReceipt,
   decodeLocalSecureRecord,
+  encodeBleEnrollmentHelloRequest,
+  encodeBleEnrollmentRequest,
+  encodeControllerAuthInit,
+  encodeControllerMutationReceipt,
   encodeLocalSecureRecord,
   localSecureNoisePrologue,
 } from './wire';
@@ -28,6 +34,50 @@ const hexText = (value: Uint8Array): string => Array.from(
 ).join('');
 
 describe('BLE Direct production wire', () => {
+  it('round-trips a Revoke receipt with the required zero secret digest', () => {
+    const encoded = encodeControllerMutationReceipt({
+      operation: ControllerMutationOperation.Revoke,
+      grantId: new Uint8Array(16).fill(0x11),
+      deviceInstanceId: new Uint8Array(16).fill(0x12),
+      accessEpoch: 3,
+      controllerId: new Uint8Array(16).fill(0x13),
+      credentialVersion: 2,
+      permissions: 0,
+      secretDigest: new Uint8Array(32),
+      proofKind: 0,
+      proof: new Uint8Array(),
+    });
+
+    const receipt = decodeControllerMutationReceipt(encoded);
+    expect(receipt.operation).toBe(ControllerMutationOperation.Revoke);
+    expect(receipt.secretDigest).toEqual(new Uint8Array(32));
+    expect(receipt.proof).toEqual(new Uint8Array());
+  });
+
+  it('binds the current credential version into Method 2 auth init', () => {
+    expect(hexText(encodeControllerAuthInit(
+      hex('101112131415161718191a1b1c1d1e1f'),
+      0x20212223,
+      0x30313233,
+      hex('404142434445464748494a4b4c4d4e4f'),
+    ))).toBe(
+      'a2000201582a01101112131415161718191a1b1c1d1e1f02'
+      + '2021222330313233404142434445464748494a4b4c4d4e4f',
+    );
+  });
+
+  it('encodes Enrollment v2 with the raw PresenceKey only inside the Noise payload', () => {
+    expect(hexText(encodeBleEnrollmentHelloRequest())).toBe('a3000201010201');
+    const request = encodeBleEnrollmentRequest(
+      Uint8Array.of(0xaa),
+      new Uint8Array(32).fill(0xbb),
+      new Uint8Array(16).fill(0xcc),
+    );
+    expect(hexText(request)).toBe(
+      'a60002010302020341aa045820' + 'bb'.repeat(32) + '0550' + 'cc'.repeat(16),
+    );
+  });
+
   it('matches the frozen Noise NN and LocalSecureRecord vector', async () => {
     class GoldenCrypto extends BleDirectCrypto {
       override async x25519(): Promise<{
@@ -154,20 +204,22 @@ describe('BLE Direct production wire', () => {
   it('strictly decodes provisioning/direct advertisements and the signed grant shape', () => {
     const provisioning = decodeBleModeProfile(hex('01010107000102030405060708'));
     expect(provisioning.mode).toBe(BleApplicationMode.Provisioning);
-    expect(hexText(provisioning.setupSessionLocator)).toBe('0102030405060708');
+    expect(hexText(provisioning.modeLocator)).toBe('0102030405060708');
     const direct = decodeBleModeProfile(hex('01020211000000000000000000'));
     expect(direct.mode).toBe(BleApplicationMode.Direct);
     const grant = decodeBleEnrollmentGrant(hex(
-      'b000020150101112131415161718191a1b1c1d1e1f0250202122232425262728292a2b2c2d2e2f'
+      'b200030150101112131415161718191a1b1c1d1e1f0250202122232425262728292a2b2c2d2e2f'
       + '0350303132333435363738393a3b3c3d3e3f045820404142434445464748494a4b4c4d4e4f'
       + '505152535455565758595a5b5c5d5e5f051a010203040650606162636465666768696a6b6c6d6e6f'
       + '075820707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f080f'
-      + '0950909192939495969798999a9b9c9d9e9f0a1a6553f1000b1a6553f3580c010d010e01'
-      + '0f584026deb33eeeaaeb76fcf66eb6d92170cfa6f885356e765d35916ec4a792fc50852323817b'
-      + '89853777aa095d25fca6957689ec37d778410fc8822360e7446f9906',
+      + '091a050607080a5820a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9ba'
+      + 'bbbcbdbeBF0b50909192939495969798999a9b9c9d9e9f0c1a6553f1000d1a6553f3580e010f011001'
+      + '115840c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf'
+      + 'e0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff',
     ));
     expect(grant.accessEpoch).toBe(0x01020304);
     expect(grant.controllerPermissions).toBe(0x0f);
+    expect(grant.presenceKeyVersion).toBe(0x05060708);
   });
 
   it('keeps the raw controller secret outside the HTTP enrollment plane', async () => {
@@ -178,15 +230,21 @@ describe('BLE Direct production wire', () => {
         submitted = body;
         return of({
           status: 201,
-          data: {
-            intentId: base64UrlEncode(bytes(16, 1)),
-            logicalDeviceId: 'ble_AAAAAAAAAAAAAAAAAAAAAA',
-            grant: base64UrlEncode(Uint8Array.of(1)),
-            expiresAt: 1,
-            securityProfile: 1,
-            serverKeyId: 1,
-            signatureAlgorithm: 2,
-            replayed: false,
+          headers: { get: () => 'no-store' },
+          body: {
+            status: 201,
+            data: {
+              intentId: base64UrlEncode(bytes(16, 1)),
+              logicalDeviceId: 'ble_AAAAAAAAAAAAAAAAAAAAAA',
+              grant: base64UrlEncode(Uint8Array.of(1)),
+              presenceKeyVersion: 1,
+              presenceKey: base64UrlEncode(bytes(16, 8)),
+              expiresAt: 1,
+              securityProfile: 1,
+              serverKeyId: 1,
+              signatureAlgorithm: 2,
+              replayed: false,
+            },
           },
         });
       },

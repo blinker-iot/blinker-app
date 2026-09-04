@@ -152,6 +152,7 @@ export function createGuestDevicePreview(): GuestDevicePreview {
         pm25: 18,
         co2: 620,
       },
+      component: 'Customizer',
       card: {
         layout: 'wide',
         metrics: [
@@ -212,7 +213,7 @@ export function createGuestDevicePreview(): GuestDevicePreview {
 
   const deviceList = devices.map((device) => device.id as string);
   const deviceDict = Object.fromEntries(
-    devices.map((device) => [device.id, device]),
+    devices.map((device) => [device.id, device])
   );
 
   return {

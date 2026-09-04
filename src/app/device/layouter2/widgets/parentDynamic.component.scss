@@ -5,13 +5,13 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  border-radius: inherit;
   display: block;
 
   widget-text,
   widget-number,
   widget-button,
   widget-range,
-  widget-timer,
   widget-color,
   widget-debug,
   widget-joystick,
@@ -20,7 +20,8 @@
   widget-tab,
   widget-input,
   widget-video,
-  widget-image {
+  widget-image,
+  widget-weather {
     position: relative;
     width: 100%;
     height: 100%;
@@ -28,6 +29,10 @@
     min-height: 0;
     overflow: hidden;
     display: block;
+  }
+
+  widget-map {
+    border-radius: inherit;
   }
 
   ::ng-deep {
@@ -85,6 +90,10 @@
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+
+  &.demoMode {
+    touch-action: pan-x;
+  }
 
   &::after {
     content: '';

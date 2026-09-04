@@ -10,11 +10,22 @@
   overflow-x: auto;
   border: 1px solid var(--blinker-border);
   border-radius: 20px;
-  background: color-mix(in srgb, var(--blinker-surface) 92%, transparent);
+  background: var(--blinker-surface);
   box-shadow: var(--blinker-shadow);
-  backdrop-filter: var(--blinker-nav-blur);
-  -webkit-backdrop-filter: var(--blinker-nav-blur);
+  cursor: grab;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+
+  &.is-drag-scrolling {
+    cursor: grabbing;
+    user-select: none;
+
+    * {
+      cursor: grabbing !important;
+    }
+  }
 
   &::-webkit-scrollbar {
     display: none;

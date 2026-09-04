@@ -18,6 +18,7 @@ import {
 import { sha256 } from '../functions/func';
 import { AuthData } from '../model/data.model';
 import { DataService } from './data.service';
+import { NtfyService } from './ntfy.service';
 
 interface WechatStartData {
   login_id: string;
@@ -61,6 +62,7 @@ export class AuthService {
     private http: HttpClient,
     private dataService: DataService,
     private navCtrl: NavController,
+    private ntfyService: NtfyService,
   ) {}
 
   init(): void {
@@ -273,6 +275,12 @@ export class AuthService {
 
   async logout(): Promise<void> {
     const expectedEpoch = this.dataService.sessionEpoch;
+    try {
+      await this.ntfyService.revoke();
+    } catch {
+      // Server logout and local cleanup must still complete if revocation is unavailable.
+    }
+    if (this.dataService.sessionEpoch !== expectedEpoch) return;
     try {
       if (this.dataService.auth?.accessToken) {
         await firstValueFrom(this.http.post(API.AUTH.LOGOUT, {}));

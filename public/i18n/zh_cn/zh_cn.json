@@ -211,7 +211,6 @@
   "PROFILE": {
     "TITLE": "用户中心",
     "USER_AVATAR": "用户头像",
-    "PRO_PLAN_EXPIRY": "Pro Plan（{{date}} 到期）",
     "VERSION": "版本 {{version}}",
     "DEFAULT_USER_NAME": "点灯用户",
     "REGION_MANAGEMENT": "区域管理",
@@ -263,12 +262,10 @@
     "CONTACT_US": "联系我们"
   },
   "DEV": {
-    "TEXT": "仅限专业版用户使用",
     "MORE": "了解更多",
     "CERT_NAME": "认证名",
     "LICENCE": "版本",
     "GROUP0": "免费版",
-    "GROUP1": "专业版",
     "GROUP2": "教育版",
     "DEVICE": "设备",
     "EXPIRE": "失效日期",
@@ -342,7 +339,6 @@
     "LIST": "用户列表",
     "INFO": "用户信息",
     "GROUP0": "普通用户",
-    "GROUP1": "专业版",
     "GROUP2": "教育版",
     "PHONE": "手机",
     "DEVICE_NUM": "设备",

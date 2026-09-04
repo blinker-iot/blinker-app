@@ -391,7 +391,7 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
 
     expect(finishHarness.page.secretKey).toBe('');
     expect(finishHarness.navController.navigateRoot).toHaveBeenCalledWith(
-      '/guide'
+      '/device/logical%2Fdevice%20%231'
     );
 
     const logoutHarness = createHarness();
