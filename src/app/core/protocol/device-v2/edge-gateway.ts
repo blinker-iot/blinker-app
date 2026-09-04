@@ -1,6 +1,6 @@
 export enum EdgeGatewayTopologyState {
   Created = 1,
-  PendingSecretDelivery = 2,
+  PendingAccessDelivery = 2,
   PendingChildInstall = 3,
   PendingGatewayProof = 4,
   Active = 5,
@@ -28,10 +28,10 @@ export function isEdgeGatewayTopologyTransition(
     || from === to) return false;
   switch (from) {
     case EdgeGatewayTopologyState.Created:
-      return to === EdgeGatewayTopologyState.PendingSecretDelivery
+      return to === EdgeGatewayTopologyState.PendingAccessDelivery
         || to === EdgeGatewayTopologyState.Expired
         || to === EdgeGatewayTopologyState.Cancelled;
-    case EdgeGatewayTopologyState.PendingSecretDelivery:
+    case EdgeGatewayTopologyState.PendingAccessDelivery:
       return to === EdgeGatewayTopologyState.PendingChildInstall
         || to === EdgeGatewayTopologyState.Expired
         || to === EdgeGatewayTopologyState.Cancelled;

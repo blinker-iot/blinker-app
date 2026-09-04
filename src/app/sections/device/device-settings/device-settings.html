@@ -60,9 +60,22 @@
             <span class="feature-icon"><i class="fa-light fa-wifi"></i></span>
             <div>
               <h2>重新配网</h2>
-              <p>保留当前设备和控制页面，重新写入 DeviceKey、Direct BLE 权限与 Wi-Fi。</p>
+              <p>只重新写入 Wi-Fi；保留当前设备、控制页面、DeviceKey 和 Direct BLE 控制权。</p>
             </div>
             <button type="button" [disabled]="keyBusy" (click)="startReconfigure()">
+              开始<i class="fa-light fa-chevron-right"></i>
+            </button>
+          </section>
+        }
+
+        @if (supportsGatewayEnrollment) {
+          <section class="reconfigure-card">
+            <span class="feature-icon"><i class="fa-light fa-router"></i></span>
+            <div>
+              <h2>添加蓝牙子设备</h2>
+              <p>由当前 Edge Hub 扫描并安全认领附近的 Blinker 蓝牙设备。</p>
+            </div>
+            <button type="button" [disabled]="keyBusy" (click)="startGatewayEnrollment()">
               开始<i class="fa-light fa-chevron-right"></i>
             </button>
           </section>

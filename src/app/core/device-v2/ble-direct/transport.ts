@@ -51,7 +51,11 @@ export function parseBlinkerAdvertisement(
 
 export interface BleDirectRecordLink {
   connect(target: BleDirectTarget): Promise<void>;
-  waitForMode(mode: BleApplicationMode, timeoutMs?: number): Promise<BleDirectTarget>;
+  waitForMode(
+    mode: BleApplicationMode,
+    timeoutMs?: number,
+    matcher?: BleDirectTargetMatcher,
+  ): Promise<BleDirectTarget>;
   sendRecord(record: Uint8Array, writeTimeoutMs?: number): Promise<void>;
   receiveRecord(timeoutMs?: number): Promise<Uint8Array>;
   disconnect(): Promise<void>;
@@ -133,10 +137,11 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
   async waitForMode(
     mode: BleApplicationMode,
     timeoutMs = 15_000,
+    matcher?: BleDirectTargetMatcher,
   ): Promise<BleDirectTarget> {
     const deviceId = this.target?.device.deviceId;
     if (!deviceId || this.connected) throw new Error('BLE_DIRECT_DISCONNECT_REQUIRED');
-    return scanFor(mode, timeoutMs, deviceId);
+    return scanFor(mode, timeoutMs, deviceId, new Set(), undefined, matcher);
   }
 
   async sendRecord(record: Uint8Array, writeTimeoutMs?: number): Promise<void> {
@@ -151,20 +156,9 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
       throw new Error('BLE_DIRECT_WRITE_TIMEOUT_INVALID');
     }
     this.frameId = this.frameId === 0xff ? 1 : this.frameId + 1;
-    const capacity = this.packetSize - FRAGMENT_HEADER_SIZE;
-    let offset = 0;
-    let index = 0;
-    while (offset < record.length) {
-      const size = Math.min(capacity, record.length - offset);
-      const flags = (offset === 0 ? 1 : 0) | (offset + size === record.length ? 2 : 0);
-      const fragment = new Uint8Array(FRAGMENT_HEADER_SIZE + size);
-      fragment.set([
-        FRAGMENT_MAGIC,
-        (FRAGMENT_VERSION << 4) | flags,
-        this.frameId,
-        index,
-      ]);
-      fragment.set(record.subarray(offset, offset + size), FRAGMENT_HEADER_SIZE);
+    const fragments = fragmentBleRecord(record, this.packetSize, this.frameId);
+    for (let index = 0; index < fragments.length; index += 1) {
+      const fragment = fragments[index]!;
       const write = this.writeWithoutResponse
         ? BleClient.writeWithoutResponse.bind(BleClient)
         : BleClient.write.bind(BleClient);
@@ -175,13 +169,10 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
         new DataView(fragment.buffer),
         writeTimeoutMs === undefined ? undefined : { timeout: writeTimeoutMs },
       );
-      offset += size;
-      index += 1;
-      if (index > 0x100) throw new Error('BLE_DIRECT_FRAGMENT_COUNT');
       // WRITE_TYPE_DEFAULT confirms delivery to the peripheral controller,
       // not necessarily consumption by a controller-to-host RPC bridge. Give
       // such split-radio boards one scheduling slice before the next fragment.
-      if (offset < record.length) {
+      if (index + 1 < fragments.length) {
         await new Promise(resolve => setTimeout(resolve, GATT_INTER_FRAGMENT_DELAY_MS));
       }
     }
@@ -261,6 +252,38 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
       waiter.reject(new Error(reason));
     }
   }
+}
+
+export function fragmentBleRecord(
+  record: Uint8Array,
+  packetSize: number,
+  frameId: number,
+): Uint8Array[] {
+  if (!(record instanceof Uint8Array) || !record.length || record.length > MAX_RECORD_SIZE
+    || !Number.isInteger(packetSize) || packetSize <= FRAGMENT_HEADER_SIZE
+    || packetSize > GATT_PACKET_SIZE
+    || !Number.isInteger(frameId) || frameId < 1 || frameId > 0xff) {
+    throw new Error('BLE_DIRECT_FRAGMENT_INPUT_INVALID');
+  }
+  const capacity = packetSize - FRAGMENT_HEADER_SIZE;
+  const count = Math.ceil(record.length / capacity);
+  if (count > 0x100) throw new Error('BLE_DIRECT_FRAGMENT_COUNT');
+  const fragments: Uint8Array[] = [];
+  for (let index = 0, offset = 0; offset < record.length; index += 1) {
+    const size = Math.min(capacity, record.length - offset);
+    const flags = (offset === 0 ? 1 : 0) | (offset + size === record.length ? 2 : 0);
+    const fragment = new Uint8Array(FRAGMENT_HEADER_SIZE + size);
+    fragment.set([
+      FRAGMENT_MAGIC,
+      (FRAGMENT_VERSION << 4) | flags,
+      frameId,
+      index,
+    ]);
+    fragment.set(record.subarray(offset, offset + size), FRAGMENT_HEADER_SIZE);
+    fragments.push(fragment);
+    offset += size;
+  }
+  return fragments;
 }
 
 function initializeBle(): Promise<void> {

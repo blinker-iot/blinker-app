@@ -20,6 +20,7 @@ import {
   BleDirectRecordLink,
   BleDirectTarget,
 } from './transport';
+import { matchesBlePresenceLocator } from './presence';
 import { BleDirectSecureChannel } from './secure-channel';
 import { BleDirectSession } from './session';
 import {
@@ -65,6 +66,10 @@ export interface BleDirectEnrollmentResult {
   session: BleDirectSession;
 }
 
+export interface BleDirectEnrollmentObserver {
+  pendingCredentialSaved(logicalDeviceId: string): Promise<void>;
+}
+
 export class BleDirectClient {
   constructor(
     private readonly link: BleDirectRecordLink,
@@ -76,6 +81,7 @@ export class BleDirectClient {
   async enroll(
     target: BleDirectTarget,
     options: BleDirectEnrollmentOptions,
+    observer?: BleDirectEnrollmentObserver,
   ): Promise<BleDirectEnrollmentResult> {
     if (target.profile.mode !== BleApplicationMode.Provisioning) {
       throw new Error('BLE_DIRECT_PROVISIONING_MODE_REQUIRED');
@@ -171,6 +177,7 @@ export class BleDirectClient {
         receipt: expectedReceipt.encoded,
       };
       await this.store.save(credential);
+      await observer?.pendingCredentialSaved(intent.logicalDeviceId);
 
       const encryptedRequest = await noise.encrypt(encodeBleEnrollmentRequest(
         intent.grant, controllerSecret, presenceKey,
@@ -190,7 +197,16 @@ export class BleDirectClient {
       noise.clear();
       noise = undefined;
       await this.link.disconnect();
-      const directTarget = await this.link.waitForMode(BleApplicationMode.Direct);
+      const directTarget = await this.link.waitForMode(
+        BleApplicationMode.Direct,
+        undefined,
+        candidate => candidate.profile.wireVersion === 3
+          && matchesBlePresenceLocator(presenceKey!, {
+            deviceInstanceId: hello.deviceInstanceId,
+            accessEpoch: grant.accessEpoch,
+            presenceKeyVersion: grant.presenceKeyVersion,
+          }, candidate.profile.modeLocator, this.crypto),
+      );
       await this.link.connect(directTarget);
       directSession = await this.authenticate(intent.logicalDeviceId, credential);
       await this.commit(credential);

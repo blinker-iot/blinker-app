@@ -1,5 +1,8 @@
 @if (loaded && device) {
-  <app-device-v2-page [device]="device"></app-device-v2-page>
+  <app-device-v2-page
+    [device]="device"
+    [viewActive]="viewActive"
+  ></app-device-v2-page>
 } @else if (loaded) {
   <ion-content>
     <div class="device-not-found">

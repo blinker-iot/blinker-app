@@ -58,6 +58,7 @@ function emptySnapshot(): DeviceUiSnapshot {
 })
 export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   @Input({ required: true }) device!: BlinkerDevice;
+  @Input() viewActive = true;
 
   accountState: DeviceUiConnectionState = 'idle';
   snapshot = emptySnapshot();
@@ -80,8 +81,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private layoutEpoch = 0;
   private storedLayout?: DeviceV2PageLayoutRecord;
   private appActive = true;
-  private pageVisible = true;
+  private pageVisible = false;
   private bleReconnectNeeded = false;
+  private directConnectAllowed = true;
+  private bleAdapterEnabled: boolean | null = null;
   private bleReconnectAttempt = 0;
   private bleReconnectTimer?: ReturnType<typeof setTimeout>;
   private telemetry?: DeviceUiTelemetryLease;
@@ -103,6 +106,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.pageVisible = this.viewActive;
     this.initialized = true;
     this.subscriptions.add(this.deviceUi.appActive.subscribe(active => {
       const resumed = active && !this.appActive;
@@ -118,8 +122,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.bindDevice();
   }
 
-  ngOnChanges(_changes: SimpleChanges): void {
-    if (this.initialized) this.bindDevice();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['viewActive']) this.setPageVisible(this.viewActive);
+    if (this.initialized && changes['device']) this.bindDevice();
   }
 
   ngOnDestroy(): void {
@@ -129,21 +134,6 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     void this.deviceUi.disconnect(this.logicalDeviceId).catch(() => undefined);
     this.subscriptions.unsubscribe();
     this.deviceSubscriptions.unsubscribe();
-  }
-
-  ionViewDidEnter(): void {
-    if (this.destroyed) return;
-    this.pageVisible = true;
-    this.resetBleReconnect();
-    void this.synchronize();
-    this.refreshTelemetry();
-  }
-
-  ionViewDidLeave(): void {
-    this.pageVisible = false;
-    this.cancelBleReconnect();
-    this.refreshTelemetry();
-    void this.deviceUi.disconnect(this.logicalDeviceId).catch(() => undefined);
   }
 
   get widgets(): PageLayoutWidget[] {
@@ -306,6 +296,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.releaseTelemetry();
     this.cancelBleReconnect();
     this.bleReconnectNeeded = false;
+    this.directConnectAllowed = true;
+    this.bleAdapterEnabled = null;
     if (previousId) void this.deviceUi.disconnect(previousId).catch(() => undefined);
     this.logicalDeviceId = nextId;
     this.accountState = 'idle';
@@ -331,7 +323,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
         this.accountState = state;
         this.requestRender();
         if (state === 'ready') {
-          void this.synchronize();
+          if (this.pageVisible) void this.synchronize();
           this.refreshTelemetry();
         } else if (this.telemetry || this.telemetryOpening) {
           this.releaseTelemetry();
@@ -353,7 +345,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
           this.requestRender();
         },
       ));
-      void this.synchronize();
+      if (this.pageVisible) void this.synchronize();
     } catch (error) {
       this.error = this.messageOf(error, '设备标识无效');
       this.requestRender();
@@ -552,7 +544,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   private synchronize(): Promise<void> {
     const logicalDeviceId = this.logicalDeviceId;
-    if (!logicalDeviceId) return Promise.resolve();
+    if (!logicalDeviceId || this.destroyed || !this.pageVisible || !this.appActive) {
+      return Promise.resolve();
+    }
     if (this.syncing) return this.syncing;
     this.error = '';
     const task = this.deviceUi.connect(logicalDeviceId)
@@ -577,21 +571,47 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     return task;
   }
 
+  private setPageVisible(visible: boolean): void {
+    if (this.pageVisible === visible) return;
+    this.pageVisible = visible;
+    if (!this.initialized || this.destroyed) return;
+    if (visible) {
+      this.resetBleReconnect();
+      void this.synchronize();
+    } else {
+      this.cancelBleReconnect();
+      void this.deviceUi.disconnect(this.logicalDeviceId).catch(() => undefined);
+    }
+    this.refreshTelemetry();
+  }
+
   private updateBleReconnect(connectivity: DeviceUiConnectivitySnapshot): void {
+    const adapterBecameEnabled = connectivity.bleAdapterEnabled === true
+      && this.bleAdapterEnabled !== true;
+    const directBecameAllowed = connectivity.directConnectAllowed
+      && !this.directConnectAllowed;
+    this.directConnectAllowed = connectivity.directConnectAllowed;
+    this.bleAdapterEnabled = connectivity.bleAdapterEnabled;
     if (connectivity.bleState === 'ready') {
       this.bleReconnectNeeded = false;
       this.resetBleReconnect();
       return;
     }
-    this.bleReconnectNeeded = connectivity.bleAccess !== false
-      && connectivity.bleState === 'stopped';
-    if (!this.bleReconnectNeeded) this.cancelBleReconnect(false);
-    else this.scheduleBleReconnect();
+    this.bleReconnectNeeded = connectivity.directConnectAllowed
+      && connectivity.bleAccess !== false
+      && (connectivity.bleState === 'stopped' || connectivity.bleState === 'nearby');
+    if (!this.bleReconnectNeeded || connectivity.bleAdapterEnabled === false) {
+      this.cancelBleReconnect(false);
+      return;
+    }
+    if (adapterBecameEnabled || directBecameAllowed) this.cancelBleReconnect();
+    this.scheduleBleReconnect();
   }
 
   private scheduleBleReconnect(): void {
     if (!this.bleReconnectNeeded || this.destroyed || !this.pageVisible || !this.appActive
-      || !this.logicalDeviceId || this.syncing || this.bleReconnectTimer
+      || this.bleAdapterEnabled === false || !this.logicalDeviceId
+      || this.syncing || this.bleReconnectTimer
       || this.bleReconnectAttempt >= BLE_FOREGROUND_RECONNECT_DELAYS_MS.length) return;
     const delay = BLE_FOREGROUND_RECONNECT_DELAYS_MS[this.bleReconnectAttempt];
     this.bleReconnectTimer = setTimeout(() => {

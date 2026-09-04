@@ -1,0 +1,118 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        text=""
+        [defaultHref]="'/device/' + edgeHubLogicalDeviceId + '/settings'"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title>添加蓝牙子设备</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <main>
+    @if (!available) {
+      <section class="notice">只有设备所有者可以通过已激活的 Edge Hub 添加蓝牙子设备。</section>
+    } @else {
+      <section class="hub-card">
+        <span class="feature-icon"><i class="fa-light fa-router"></i></span>
+        <div>
+          <small>EDGE HUB</small>
+          <h1>{{ hub?.config?.customName }}</h1>
+          <p>扫描、连接和协议转发由该网关完成；App 不接触网关凭据。</p>
+        </div>
+      </section>
+
+      @if (recoveries.length) {
+        <section class="recovery-card">
+          <div class="section-heading">
+            <div>
+              <small>RECOVERY</small>
+              <h2>继续未完成的接入</h2>
+            </div>
+            <span>{{ recoveries.length }}</span>
+          </div>
+          @for (recovery of recoveries; track recovery.id) {
+            <button type="button" [disabled]="busy" (click)="resume(recovery)">
+              <span>
+                <strong>{{ recoveryLabel(recovery) }}</strong>
+                <small>{{ recovery.logicalDeviceId }}</small>
+              </span>
+              <i class="fa-light fa-chevron-right"></i>
+            </button>
+          }
+        </section>
+      }
+
+      @if (phase !== 'ready') {
+        <section class="enrollment-card">
+          <div class="section-heading">
+            <div>
+              <small>NEW CHILD</small>
+              <h2>认领新设备</h2>
+            </div>
+          </div>
+          <ol>
+            <li>让蓝牙设备进入 Blinker 接入模式。</li>
+            <li>保持设备靠近当前网关。</li>
+            <li>从扫描结果中明确选择目标设备。</li>
+          </ol>
+          <label>
+            <span>设备名称</span>
+            <input
+              type="text"
+              maxlength="128"
+              [disabled]="busy"
+              placeholder="例如：客厅传感器"
+              [(ngModel)]="deviceName"
+            />
+          </label>
+
+          @if (phase === 'selecting') {
+            <div class="candidates">
+              @for (target of candidates; track target.device.deviceId) {
+                <button type="button" (click)="selectCandidate(target)">
+                  <i class="fa-brands fa-bluetooth-b"></i>
+                  <span>
+                    <strong>Blinker</strong>
+                    <small>识别码 {{ candidateCode(target) }}</small>
+                  </span>
+                  <small>{{ target.rssi ?? '—' }} dBm</small>
+                </button>
+              }
+            </div>
+          } @else {
+            <button class="primary" type="button" [disabled]="busy" (click)="startDiscovery()">
+              <i [class]="busy ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-radar'"></i>
+              {{ busy ? '正在处理…' : '扫描附近设备' }}
+            </button>
+          }
+        </section>
+      }
+
+      @if (error) {
+        <section class="notice error" role="alert">
+          <span>{{ error }}</span>
+          <button type="button" [disabled]="busy" (click)="refreshRecoveries()">刷新</button>
+        </section>
+      }
+
+      @if (phase === 'waiting') {
+        <section class="result waiting">
+          <i class="fa-light fa-clock"></i>
+          <h2>设备已认领，等待网关确认</h2>
+          <p>可以稍后从本页继续，不需要重新认领设备。</p>
+          <button type="button" [disabled]="busy" (click)="continueWaiting()">继续确认</button>
+        </section>
+      } @else if (phase === 'ready') {
+        <section class="result ready">
+          <i class="fa-light fa-circle-check"></i>
+          <h2>子设备已接入</h2>
+          <p>{{ logicalDeviceId }}</p>
+          <button class="primary" type="button" (click)="finish()">进入设备页面</button>
+        </section>
+      }
+    }
+  </main>
+</ion-content>

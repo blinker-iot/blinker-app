@@ -78,12 +78,15 @@ export interface DeviceUiTelemetrySnapshot {
 
 export interface DeviceUiConnectivitySnapshot {
   activeTransport: DeviceUiTransport;
+  directConnectAllowed: boolean;
   bleAccess: boolean | null;
+  bleAdapterEnabled: boolean | null;
   bleState: DeviceV2BleConnectionState;
   cloudSessionState: DeviceV2AccountState;
 }
 
 const HYBRID_BLE_CONNECT_TIMEOUT_MS = 5_000;
+const WIFI_PROV_DIRECT_HANDOFF_TIMEOUT_MS = 15_000;
 
 export interface DeviceUiTelemetryLease {
   readonly snapshot: DeviceUiTelemetrySnapshot;
@@ -135,6 +138,7 @@ class DeviceUiTelemetryLeaseAdapter implements DeviceUiTelemetryLease {
 export class DeviceUiPort {
   readonly appActive: Observable<boolean>;
   private readonly transports = new Map<string, BehaviorSubject<DeviceUiTransport>>();
+  private readonly directHandoffs = new Map<string, Promise<void>>();
 
   constructor(
     private readonly deviceV2: DeviceV2Service,
@@ -148,10 +152,35 @@ export class DeviceUiPort {
   }
 
   async connect(logicalDeviceId: string): Promise<void> {
+    if (!this.supportsDirectBle(logicalDeviceId)) {
+      // A stored Direct credential is historical local evidence, not a
+      // product capability. Edge Hubs are BLE centrals, never Direct
+      // peripherals, so a stale credential must not delay Cloud with a scan.
+      this.selectTransport(logicalDeviceId, 'cloud');
+      await this.deviceV2.ensureReady(logicalDeviceId);
+      return;
+    }
     if (!this.isCloudCapable(logicalDeviceId)) {
       void this.syncManagedPresence(logicalDeviceId);
       this.selectTransport(logicalDeviceId, 'ble');
       await this.ble.ensureReady(logicalDeviceId);
+      return;
+    }
+
+    if (!this.directConnectAllowed(logicalDeviceId)) {
+      this.selectTransport(logicalDeviceId, 'cloud');
+      await this.ble.disconnect(logicalDeviceId).catch(() => undefined);
+      await this.deviceV2.ensureReady(logicalDeviceId);
+      return;
+    }
+
+    // WiFiProv and Direct use different native BLE owners. During the exact
+    // handoff window, keep Cloud usable while one long-lived Direct scan waits
+    // for the peripheral to replace its provisioning advertisement. Starting
+    // the ordinary 5 s page scan in parallel would only churn Android GATT.
+    if (this.directHandoffs.has(logicalDeviceId)) {
+      this.selectTransport(logicalDeviceId, 'cloud');
+      await this.deviceV2.ensureReady(logicalDeviceId);
       return;
     }
 
@@ -174,7 +203,41 @@ export class DeviceUiPort {
     await this.deviceV2.ensureReady(logicalDeviceId);
   }
 
+  startDirectHandoff(logicalDeviceId: string): Promise<void> {
+    if (!this.supportsDirectBle(logicalDeviceId)
+      || !this.isCloudCapable(logicalDeviceId)
+      || !this.directConnectAllowed(logicalDeviceId)) return Promise.resolve();
+    const active = this.directHandoffs.get(logicalDeviceId);
+    if (active) return active;
+
+    this.selectTransport(logicalDeviceId, 'cloud');
+    const task = this.openDirectHandoff(logicalDeviceId).finally(() => {
+      if (this.directHandoffs.get(logicalDeviceId) === task) {
+        this.directHandoffs.delete(logicalDeviceId);
+      }
+    });
+    this.directHandoffs.set(logicalDeviceId, task);
+    return task;
+  }
+
+  private async openDirectHandoff(logicalDeviceId: string): Promise<void> {
+    const hasDirectAccess = await this.ble.hasActiveCredential(logicalDeviceId)
+      .catch(() => false);
+    if (!hasDirectAccess) return;
+    void this.syncManagedPresence(logicalDeviceId);
+    try {
+      await this.ble.ensureReady(
+        logicalDeviceId,
+        WIFI_PROV_DIRECT_HANDOFF_TIMEOUT_MS,
+      );
+      this.selectTransport(logicalDeviceId, 'ble');
+    } catch {
+      // Cloud remains selected. The visible page owns any later retry budget.
+    }
+  }
+
   private async syncManagedPresence(logicalDeviceId: string): Promise<void> {
+    if (!this.supportsDirectBle(logicalDeviceId)) return;
     const canManage = await this.ble
       .canManagePresenceCredential(logicalDeviceId)
       .catch(() => false);
@@ -187,9 +250,10 @@ export class DeviceUiPort {
   }
 
   async disconnect(logicalDeviceId: string): Promise<void> {
-    if (this.transport(logicalDeviceId).value === 'ble') {
-      await this.ble.disconnect(logicalDeviceId);
-    }
+    // Transport selection may already have fallen back to Cloud while a
+    // bounded Direct scan is still open. Always delegate cancellation; the
+    // BLE service is a no-op unless this logical device owns a session/open.
+    await this.ble.disconnect(logicalDeviceId);
     if (this.isCloudCapable(logicalDeviceId)) {
       this.selectTransport(logicalDeviceId, 'cloud');
     }
@@ -217,6 +281,17 @@ export class DeviceUiPort {
       });
       const bleSubscription = this.ble.watchConnection(logicalDeviceId).subscribe(value => {
         bleState = value;
+        if (this.isCloudCapable(logicalDeviceId)
+          && this.directConnectAllowed(logicalDeviceId)
+          && value === 'ready' && selected !== 'ble') {
+          // A bounded Direct attempt may transiently report stopped before a
+          // later retry completes. Once Method 2 has proved the same logical
+          // device, BLE is usable and must become the hybrid foreground path
+          // again; otherwise the page remains pinned to a slower/failing Cloud
+          // session even though its Direct Manifest and State are already live.
+          this.selectTransport(logicalDeviceId, 'ble');
+          return;
+        }
         if (this.isCloudCapable(logicalDeviceId) && selected === 'ble' && value === 'stopped') {
           // Direct is preferred only while it is usable. A peripheral may
           // retire an idle or faulted GATT session; keep the hybrid device
@@ -243,7 +318,10 @@ export class DeviceUiPort {
   watchConnectivity(logicalDeviceId: string): Observable<DeviceUiConnectivitySnapshot> {
     return new Observable(subscriber => {
       let activeTransport = this.transport(logicalDeviceId).value;
-      let bleAccess: boolean | null = this.isCloudCapable(logicalDeviceId) ? null : true;
+      let bleAccess: boolean | null = !this.supportsDirectBle(logicalDeviceId)
+        ? false
+        : this.isCloudCapable(logicalDeviceId) ? null : true;
+      let bleAdapterEnabled: boolean | null = null;
       let bleState = this.ble.connectionSnapshot(logicalDeviceId);
       let cloudSessionState = this.deviceV2.state.value;
       let closed = false;
@@ -251,11 +329,14 @@ export class DeviceUiPort {
       const publish = () => {
         const snapshot: DeviceUiConnectivitySnapshot = {
           activeTransport,
+          directConnectAllowed: this.directConnectAllowed(logicalDeviceId),
           bleAccess,
+          bleAdapterEnabled,
           bleState,
           cloudSessionState,
         };
-        const key = `${activeTransport}|${String(bleAccess)}|${bleState}|${cloudSessionState}`;
+        const key = `${activeTransport}|${String(bleAccess)}|${String(bleAdapterEnabled)}`
+          + `|${bleState}|${cloudSessionState}`;
         if (key === last) return;
         last = key;
         this.zone.run(() => subscriber.next(snapshot));
@@ -270,6 +351,19 @@ export class DeviceUiPort {
       });
       const bleSubscription = this.ble.watchConnection(logicalDeviceId).subscribe(value => {
         bleState = value;
+        publish();
+      });
+      const adapterSubscription = this.supportsDirectBle(logicalDeviceId)
+        ? this.ble.watchAdapterEnabled().subscribe(value => {
+          bleAdapterEnabled = value;
+          publish();
+        })
+        : undefined;
+      const deviceSubscription = this.data.getDevice(logicalDeviceId)?.subject?.subscribe(() => {
+        if (!this.directConnectAllowed(logicalDeviceId)) {
+          this.selectTransport(logicalDeviceId, 'cloud');
+          void this.ble.disconnect(logicalDeviceId).catch(() => undefined);
+        }
         publish();
       });
       if (bleAccess === null) {
@@ -290,16 +384,27 @@ export class DeviceUiPort {
         transportSubscription.unsubscribe();
         cloudSubscription.unsubscribe();
         bleSubscription.unsubscribe();
+        adapterSubscription?.unsubscribe();
+        deviceSubscription?.unsubscribe();
       };
     });
   }
 
   async refreshBlePresence(logicalDeviceIds: readonly string[]): Promise<void> {
     const ids = [...new Set(logicalDeviceIds.filter(id => id.length > 0))];
-    await this.ble.refreshPresence(ids);
+    const directIds = ids.filter(id => this.supportsDirectBle(id));
+    if (directIds.length) await this.ble.refreshPresence(directIds);
     for (const logicalDeviceId of ids) {
+      if (!this.supportsDirectBle(logicalDeviceId)) {
+        this.selectTransport(logicalDeviceId, 'cloud');
+        continue;
+      }
       if (!this.isCloudCapable(logicalDeviceId)) {
         this.selectTransport(logicalDeviceId, 'ble');
+        continue;
+      }
+      if (!this.directConnectAllowed(logicalDeviceId)) {
+        this.selectTransport(logicalDeviceId, 'cloud');
         continue;
       }
       const state = this.ble.connectionSnapshot(logicalDeviceId);
@@ -384,6 +489,17 @@ export class DeviceUiPort {
 
   private isCloudCapable(logicalDeviceId: string): boolean {
     return this.data.getDevice(logicalDeviceId)?.cloudEnabled === true;
+  }
+
+  private supportsDirectBle(logicalDeviceId: string): boolean {
+    return this.data.getDevice(logicalDeviceId)?.deviceType !== 'edge-hub';
+  }
+
+  private directConnectAllowed(logicalDeviceId: string): boolean {
+    const device = this.data.getDevice(logicalDeviceId);
+    return device?.deviceType !== 'ble'
+      || device.cloudEnabled !== true
+      || device.data?.cloudReachable !== true;
   }
 
   private transport(logicalDeviceId: string): BehaviorSubject<DeviceUiTransport> {

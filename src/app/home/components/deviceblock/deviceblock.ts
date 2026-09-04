@@ -32,7 +32,9 @@ export class Deviceblock {
   private connection?: Subscription;
   private connectivity: DeviceUiConnectivitySnapshot = {
     activeTransport: 'cloud',
+    directConnectAllowed: true,
     bleAccess: null,
+    bleAdapterEnabled: null,
     bleState: 'idle',
     cloudSessionState: 'idle',
   };
@@ -46,7 +48,9 @@ export class Deviceblock {
     this.connection?.unsubscribe();
     this.connectivity = {
       activeTransport: this.directOnly ? 'ble' : 'cloud',
+      directConnectAllowed: true,
       bleAccess: this.directOnly ? true : null,
+      bleAdapterEnabled: null,
       bleState: 'idle',
       cloudSessionState: 'idle',
     };

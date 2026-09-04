@@ -69,6 +69,9 @@ export const API = {
     EDGE_GATEWAY_ATTACHMENTS: API_V2_URL + '/edge-gateway/attachments',
     EDGE_GATEWAY_ATTACHMENT: (operationId: string) =>
       API_V2_URL + '/edge-gateway/attachments/' + encodeURIComponent(operationId),
+    EDGE_GATEWAY_PERMIT_JOINS: API_V2_URL + '/edge-gateway/permit-joins',
+    EDGE_GATEWAY_PERMIT_JOIN: (operationId: string) =>
+      API_V2_URL + '/edge-gateway/permit-joins/' + encodeURIComponent(operationId),
     PRESENCE_KEY: (logicalDeviceId: string) =>
       deviceKeyV2Url(logicalDeviceId) + '/presence-key',
     ALLOCATE_PRESENCE_KEY: (logicalDeviceId: string) =>
@@ -110,6 +113,8 @@ export function isGatewayUrl(url: string): boolean {
     || url.startsWith(API.DEVICE_V2.BLE_ENROLLMENT_INTENTS + '/')
     || url === API.DEVICE_V2.EDGE_GATEWAY_ATTACHMENTS
     || url.startsWith(API.DEVICE_V2.EDGE_GATEWAY_ATTACHMENTS + '/')
+    || url === API.DEVICE_V2.EDGE_GATEWAY_PERMIT_JOINS
+    || url.startsWith(API.DEVICE_V2.EDGE_GATEWAY_PERMIT_JOINS + '/')
     || isDeviceKeyManagementUrl(url);
 }
 

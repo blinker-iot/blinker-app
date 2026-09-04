@@ -1,13 +1,17 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { BleClient } from '@capacitor-community/bluetooth-le';
 import { BehaviorSubject, Observable } from 'rxjs';
 
 import {
   BleApplicationMode,
+  BleControllerCredential,
   BleModeProfile,
   BleDirectClient,
   BleDirectEnrollmentOptions,
+  BleDirectEnrollmentObserver,
   BleDirectEnrollmentResult,
+  BleDirectRecordLink,
   BleDirectSession,
   BleDirectTarget,
   BleDirectTargetMatcher,
@@ -92,6 +96,19 @@ export async function matchAuthorizedBlePresence(
   return unambiguousBlePresenceCandidate(matches);
 }
 
+function authorizedPresenceCandidates(
+  logicalDeviceId: string,
+  credential: BleControllerCredential,
+): AuthorizedBlePresenceCandidate[] {
+  return (credential.presenceKeys ?? []).map(presence => ({
+    logicalDeviceId,
+    deviceInstanceId: credential.deviceInstanceId,
+    accessEpoch: presence.accessEpoch,
+    version: presence.version,
+    key: presence.key,
+  }));
+}
+
 export async function syncOrAllocateBlePresenceKey(
   api: Pick<HttpBlePresenceKeyApi, 'sync' | 'allocate'>,
   logicalDeviceId: string,
@@ -147,6 +164,8 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     abort: AbortController;
   };
   private readonly presenceSyncs = new Map<string, Promise<void>>();
+  private readonly adapterEnabled = new BehaviorSubject<boolean | null>(null);
+  private adapterMonitoring?: Promise<void>;
 
   constructor(
     http: HttpClient,
@@ -154,10 +173,6 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   ) {
     this.api = new HttpBleEnrollmentApi(http);
     this.presenceApi = new HttpBlePresenceKeyApi(http);
-  }
-
-  discoverProvisioning(timeoutMs?: number): Promise<BleDirectTarget> {
-    return discoverBlinkerDevice(BleApplicationMode.Provisioning, timeoutMs);
   }
 
   discoverProvisioningDevices(timeoutMs?: number): Promise<BleDirectTarget[]> {
@@ -179,10 +194,182 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     target: BleDirectTarget,
     options: BleDirectEnrollmentOptions,
   ): Promise<BleDirectEnrollmentResult> {
-    const result = await this.client().enroll(target, options);
+    return this.enrollUsing(new CapacitorBleDirectRecordLink(), target, options);
+  }
+
+  async enrollUsing(
+    link: BleDirectRecordLink,
+    target: BleDirectTarget,
+    options: BleDirectEnrollmentOptions,
+    observer?: BleDirectEnrollmentObserver,
+  ): Promise<BleDirectEnrollmentResult> {
+    const result = await this.client(link).enroll(target, options, observer);
     const manifest = result.session.store.snapshot(result.logicalDeviceId).manifest;
     if (manifest) this.manifestCache.save(result.logicalDeviceId, manifest);
     return result;
+  }
+
+  async credentialDeviceInstanceId(logicalDeviceId: string): Promise<Uint8Array> {
+    const credential = await this.credentials.load(logicalDeviceId);
+    if (!credential) throw new Error('BLE_DIRECT_CREDENTIAL_NOT_FOUND');
+    try {
+      return credential.deviceInstanceId.slice();
+    } finally {
+      clearBleControllerCredentialSecrets(credential);
+    }
+  }
+
+  pendingEnrollmentLogicalDeviceIds(): Promise<string[]> {
+    return this.credentials.listPending();
+  }
+
+  async enrollmentCredentialState(
+    logicalDeviceId: string,
+  ): Promise<'pending' | 'active' | undefined> {
+    const credential = await this.credentials.load(logicalDeviceId);
+    if (!credential) return undefined;
+    try {
+      return (credential.source ?? 'enrollment') === 'enrollment'
+        ? credential.state
+        : undefined;
+    } finally {
+      clearBleControllerCredentialSecrets(credential);
+    }
+  }
+
+  async resumeUsing(
+    link: BleDirectRecordLink,
+    logicalDeviceId: string,
+  ): Promise<BleDirectEnrollmentResult> {
+    const credential = await this.credentials.load(logicalDeviceId);
+    if (!credential || credential.state !== 'pending'
+      || (credential.source ?? 'enrollment') !== 'enrollment') {
+      if (credential) clearBleControllerCredentialSecrets(credential);
+      throw new Error('BLE_DIRECT_ENROLLMENT_PENDING_NOT_FOUND');
+    }
+    try {
+      const authorized = authorizedPresenceCandidates(logicalDeviceId, credential);
+      if (!authorized.length) {
+        throw new Error('BLE_DIRECT_PRESENCE_CREDENTIAL_NOT_FOUND');
+      }
+      const target = await link.waitForMode(
+        BleApplicationMode.Direct,
+        15_000,
+        candidate => matchAuthorizedBlePresence(
+          candidate.profile, authorized,
+        ).then(match => match === logicalDeviceId),
+      );
+      const result = await this.client(link).resume(logicalDeviceId, target);
+      const manifest = result.session.store.snapshot(logicalDeviceId).manifest;
+      if (manifest) this.manifestCache.save(logicalDeviceId, manifest);
+      return result;
+    } finally {
+      clearBleControllerCredentialSecrets(credential);
+    }
+  }
+
+  async connectUsing(
+    link: BleDirectRecordLink,
+    logicalDeviceId: string,
+  ): Promise<BleDirectEnrollmentResult> {
+    const credential = await this.credentials.load(logicalDeviceId);
+    if (!credential || credential.state !== 'active') {
+      if (credential) clearBleControllerCredentialSecrets(credential);
+      throw new Error('BLE_DIRECT_CREDENTIAL_NOT_FOUND');
+    }
+    try {
+      const authorized = authorizedPresenceCandidates(logicalDeviceId, credential);
+      if (!authorized.length) {
+        throw new Error('BLE_DIRECT_PRESENCE_CREDENTIAL_NOT_FOUND');
+      }
+      const target = await link.waitForMode(
+        BleApplicationMode.Direct,
+        15_000,
+        candidate => matchAuthorizedBlePresence(
+          candidate.profile, authorized,
+        ).then(match => match === logicalDeviceId),
+      );
+      return {
+        logicalDeviceId,
+        session: await this.client(link).connectEphemeral(
+          logicalDeviceId, target, credential,
+        ),
+      };
+    } finally {
+      clearBleControllerCredentialSecrets(credential);
+    }
+  }
+
+  createGatewayChildControl(
+    enrollment: BleDirectEnrollmentResult,
+    linkFactory: () => BleDirectRecordLink,
+  ): EdgeGatewayChildControl {
+    let initialSession: BleDirectSession | undefined = enrollment.session;
+    return {
+      withAdminControl: async <T>(
+        childLogicalDeviceId: string,
+        childDeviceInstanceId: Uint8Array,
+        operation: (session: EdgeGatewayAdminControlSession) => Promise<T>,
+      ): Promise<T> => {
+        if (childLogicalDeviceId !== enrollment.logicalDeviceId || !initialSession) {
+          throw new Error('EDGE_GATEWAY_ADMIN_SESSION_NOT_READY');
+        }
+        await this.requireDeviceInstance(childLogicalDeviceId, childDeviceInstanceId);
+        const session = initialSession;
+        initialSession = undefined;
+        let controlNonce: Uint8Array | undefined;
+        try {
+          await session.synchronize();
+          controlNonce = await session.openControllerControl();
+          return await operation({
+            controlNonce,
+            install: (grant, secret) => session.applyControllerMutation(grant, secret),
+            revoke: grant => session.applyControllerMutation(grant, new Uint8Array()),
+          });
+        } finally {
+          controlNonce?.fill(0);
+          await session.close().catch(() => undefined);
+        }
+      },
+      confirmGatewayCredential: async input => {
+        if (input.childLogicalDeviceId !== enrollment.logicalDeviceId) {
+          throw new Error('EDGE_GATEWAY_CHILD_INSTANCE_MISMATCH');
+        }
+        const admin = await this.credentials.load(input.childLogicalDeviceId);
+        if (!admin || !sameBytes(admin.deviceInstanceId, input.childDeviceInstanceId)) {
+          if (admin) clearBleControllerCredentialSecrets(admin);
+          throw new Error('EDGE_GATEWAY_CHILD_INSTANCE_MISMATCH');
+        }
+        let session: BleDirectSession | undefined;
+        try {
+          const authorized = authorizedPresenceCandidates(
+            input.childLogicalDeviceId, admin,
+          );
+          const link = linkFactory();
+          const target = await link.waitForMode(
+            BleApplicationMode.Direct,
+            15_000,
+            candidate => matchAuthorizedBlePresence(
+              candidate.profile, authorized,
+            ).then(match => match === input.childLogicalDeviceId),
+          );
+          session = await this.client(link).connectEphemeral(
+            input.childLogicalDeviceId,
+            target,
+            {
+              accessEpoch: input.accessEpoch,
+              controllerId: input.controllerId,
+              controllerSecret: input.gatewaySecret,
+              credentialVersion: input.credentialVersion,
+              permissions: input.permissions,
+            },
+          );
+        } finally {
+          await session?.close().catch(() => undefined);
+          clearBleControllerCredentialSecrets(admin);
+        }
+      },
+    };
   }
 
   connect(
@@ -233,13 +420,9 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     }
     let session: BleDirectSession | undefined;
     try {
-      const authorized = (admin.presenceKeys ?? []).map(presence => ({
-        logicalDeviceId: input.childLogicalDeviceId,
-        deviceInstanceId: admin.deviceInstanceId,
-        accessEpoch: presence.accessEpoch,
-        version: presence.version,
-        key: presence.key,
-      }));
+      const authorized = authorizedPresenceCandidates(
+        input.childLogicalDeviceId, admin,
+      );
       const matcher: BleDirectTargetMatcher = async target =>
         target.profile.wireVersion === 2
           || (await matchAuthorizedBlePresence(target.profile, authorized))
@@ -264,6 +447,11 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
 
   watchConnection(logicalDeviceId: string): Observable<DeviceV2BleConnectionState> {
     return this.connectionState(logicalDeviceId).asObservable();
+  }
+
+  watchAdapterEnabled(): Observable<boolean | null> {
+    void this.ensureAdapterMonitoring();
+    return this.adapterEnabled.asObservable();
   }
 
   connectionSnapshot(logicalDeviceId: string): DeviceV2BleConnectionState {
@@ -439,17 +627,26 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     await active.session.command(endpointKey, value);
   }
 
-  resumeEnrollment(
-    logicalDeviceId: string,
-    target: BleDirectTarget,
-  ): Promise<BleDirectEnrollmentResult> {
-    return this.client().resume(logicalDeviceId, target);
+  private client(
+    link: BleDirectRecordLink = new CapacitorBleDirectRecordLink(),
+  ): BleDirectClient {
+    return new BleDirectClient(
+      link, this.api, this.credentials,
+    );
   }
 
-  private client(): BleDirectClient {
-    return new BleDirectClient(
-      new CapacitorBleDirectRecordLink(), this.api, this.credentials,
-    );
+  private ensureAdapterMonitoring(): Promise<void> {
+    if (this.adapterMonitoring) return this.adapterMonitoring;
+    const monitoring = BleClient.initialize({ androidNeverForLocation: true })
+      .then(async () => {
+        await BleClient.startEnabledNotifications(enabled => {
+          this.adapterEnabled.next(enabled);
+        });
+        this.adapterEnabled.next(await BleClient.isEnabled());
+      })
+      .catch(() => this.adapterEnabled.next(false));
+    this.adapterMonitoring = monitoring;
+    return monitoring;
   }
 
   private async requireDeviceInstance(
@@ -538,13 +735,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
       this.setConnection(logicalDeviceId, 'stopped');
       throw new Error('BLE_DIRECT_CREDENTIAL_NOT_FOUND');
     }
-    const authorized = (credential.presenceKeys ?? []).map(presence => ({
-      logicalDeviceId,
-      deviceInstanceId: credential.deviceInstanceId,
-      accessEpoch: presence.accessEpoch,
-      version: presence.version,
-      key: presence.key,
-    }));
+    const authorized = authorizedPresenceCandidates(logicalDeviceId, credential);
     const matchesTarget: BleDirectTargetMatcher = async target => {
       // Direct v2 has no privacy-preserving locator and is retained only long
       // enough to install the first PresenceKey. Current v3 devices must be

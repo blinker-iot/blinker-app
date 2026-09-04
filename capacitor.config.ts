@@ -1,5 +1,10 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
+// Production keeps an HTTPS WebView origin so insecure API/MQTT endpoints are
+// rejected by the browser. Local hardware tests may opt in explicitly because
+// the development Gateway advertises an isolated ws:// LAN endpoint.
+const localCleartext = process.env['BLINKER_LOCAL_CLEARTEXT'] === '1';
+
 const config: CapacitorConfig = {
   appId: 'iot.diandeng.tech',
   appName: '点灯·blinker',
@@ -10,7 +15,8 @@ const config: CapacitorConfig = {
   // redacted application/device loggers instead.
   loggingBehavior: 'none',
   server: {
-    androidScheme: 'https'
+    androidScheme: localCleartext ? 'http' : 'https',
+    cleartext: localCleartext,
   },
   plugins: {
     SystemBars: {

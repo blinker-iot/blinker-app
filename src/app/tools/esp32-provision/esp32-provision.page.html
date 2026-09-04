@@ -14,7 +14,7 @@
       eyebrow="ESPRESSIF WIFI PROVISIONING"
       [heading]="reconfiguring ? '保留设备并重新配置网络' : '安全配置 ESP32 网络'"
       [description]="reconfiguring
-        ? '连接已重置的原设备，刷新 DeviceKey、Direct BLE 权限和 Wi-Fi，不创建新设备。'
+        ? '连接已重置网络的原设备，只更新 Wi-Fi；保留 DeviceKey、控制页面和 Direct BLE 权限。'
         : '通过 Espressif 官方协议连接设备、扫描附近 Wi-Fi 并下发网络凭据。'"
     />
 
@@ -23,7 +23,7 @@
         <i class="fa-light fa-rotate"></i>
         <div>
           <strong>这是原设备重新配网</strong>
-          <span>只有检测到设备已清空 Key 和接入权限后才会刷新 Key；扫描或取消操作不会让原 Key 失效。</span>
+          <span>App 会核对设备实例与原设备记录；不会刷新 Key，也不会创建第二个设备。</span>
         </div>
       </div>
     }
@@ -212,7 +212,7 @@
     <ol class="tips">
       <li>ESP32 固件需使用 Espressif network_provisioning 或 Arduino WiFiProv。</li>
       <li>Blinker 教育设备固定使用 Security 1；当前物理配网窗口不要求 PoP。</li>
-      <li>{{ reconfiguring ? '重新配网会轮换原设备 Key，不会创建新的设备或控制页面。' : 'App 会先创建 DeviceKey 并完成 Blinker access bootstrap，再发送 Wi-Fi 凭据。' }}</li>
+      <li>{{ reconfiguring ? '重新配网只替换 Wi-Fi；刷新 Key 是设备设置中的独立操作。' : 'App 会先创建 DeviceKey 并完成 Blinker access bootstrap，再发送 Wi-Fi 凭据。' }}</li>
       <li>大多数 ESP32 仅支持连接 2.4 GHz Wi-Fi。</li>
     </ol>
   </main>

@@ -71,6 +71,7 @@ export class BleDirectSession {
   private pending?: PendingRequest;
   private operations: Promise<void> = Promise.resolve();
   private closePromise?: Promise<void>;
+  private terminalError?: Error;
   private readonly errors = new Set<(error: Error) => void>();
   private readonly crypto = new BleDirectCrypto();
 
@@ -317,15 +318,31 @@ export class BleDirectSession {
       };
       const maximumAttempts = (flags & Bbp2FrameFlag.AckRequired) !== 0 ? 2 : 1;
       let attempts = 0;
-      const send = (): void => {
+      const send = async (): Promise<void> => {
         attempts += 1;
         const timeoutMs = attempts < maximumAttempts
           ? Math.min(BLE_DIRECT_RELIABLE_RETRY_MS, this.requestTimeoutMs)
           : this.requestTimeoutMs;
+        try {
+          // A relay transport may need more than the application retry
+          // interval to durably deliver one record. Response timeout starts
+          // only after that send completes; otherwise the retry races the
+          // still-active send and violates the transport's single-flight
+          // contract.
+          await this.channel.send(frame);
+        } catch (error) {
+          if (this.pending !== pending) return;
+          this.pending = undefined;
+          const failure = asError(error, 'BLE Direct request send failed');
+          reject(failure);
+          this.fail(failure);
+          return;
+        }
+        if (this.pending !== pending) return;
         pending.timer = setTimeout(() => {
           if (this.pending !== pending) return;
           if (attempts < maximumAttempts) {
-            send();
+            void send();
             return;
           }
           const error = new Error('BLE Direct request timed out');
@@ -333,17 +350,9 @@ export class BleDirectSession {
           reject(error);
           this.fail(error);
         }, timeoutMs);
-        void this.channel.send(frame).catch(error => {
-          if (this.pending !== pending) return;
-          if (pending.timer) clearTimeout(pending.timer);
-          this.pending = undefined;
-          const failure = asError(error, 'BLE Direct request send failed');
-          reject(failure);
-          this.fail(failure);
-        });
       };
       this.pending = pending;
-      send();
+      void send();
     });
   }
 
@@ -450,11 +459,14 @@ export class BleDirectSession {
   }
 
   private assertReady(): void {
-    if (this.stateValue !== 'ready') throw new Error('BLE Direct session is closed');
+    if (this.stateValue !== 'ready') {
+      throw this.terminalError ?? new Error('BLE Direct session is closed');
+    }
   }
 
   private fail(error: Error, notify = true): void {
     if (this.stateValue === 'closed') return;
+    this.terminalError = error;
     this.stateValue = 'closed';
     const pending = this.pending;
     if (pending) {

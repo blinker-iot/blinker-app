@@ -13,7 +13,7 @@ import { BDeviceImgComponent } from '../../../core/components/b-device-img/b-dev
 import { BlinkerDevice } from '../../../core/model/device.model';
 import {
   DeviceKeyContext,
-  DeviceV2PresenceMetadata,
+  DeviceKeyLogicalDevice,
   GatewayHttpError,
 } from '../../../core/model/response.model';
 import { DataService } from '../../../core/services/data.service';
@@ -21,7 +21,7 @@ import { DeviceV2ManagementService } from '../../../core/services/device-v2-mana
 import { UserService } from '../../../core/services/user.service';
 
 type KeyOperation = '' | 'reveal' | 'rotate';
-type ManagedDevice = BlinkerDevice & DeviceKeyContext & DeviceV2PresenceMetadata;
+type ManagedDevice = BlinkerDevice & DeviceKeyLogicalDevice & DeviceKeyContext;
 
 @Component({
   selector: 'app-device-settings',
@@ -39,6 +39,7 @@ export class DeviceSettingsPage implements OnDestroy {
   keyOperation: KeyOperation = '';
   keyError = '';
   supportsWifiProvisioning = false;
+  supportsGatewayEnrollment = false;
 
   private rotateIdempotencyKey = '';
   private readonly subscriptions = new Subscription();
@@ -158,9 +159,9 @@ export class DeviceSettingsPage implements OnDestroy {
   async startReconfigure(): Promise<void> {
     if (!this.isOwner || !this.supportsWifiProvisioning || this.keyBusy) return;
     const confirmed = await this.confirm(
-      '先重置设备接入信息',
-      '请先在设备上触发 Blinker.resetAccess()（或产品定义的接入重置操作），并确认设备开始广播 BLINKER_。继续配网时会刷新 Key，旧 Key 将失效。',
-      '我已完成重置',
+      '先重置设备网络',
+      '请先在设备上触发 Blinker.resetNetwork()（或产品定义的网络重置操作），并确认设备开始广播 BLINKER_。重新配网只更新 Wi-Fi，不会刷新 Key 或清除 BLE 控制权。',
+      '我已重置网络',
     );
     if (!confirmed) return;
     await this.nav.navigateForward('/tools/esp32-provision', {
@@ -171,14 +172,26 @@ export class DeviceSettingsPage implements OnDestroy {
     });
   }
 
+  async startGatewayEnrollment(): Promise<void> {
+    if (!this.supportsGatewayEnrollment || this.keyBusy) return;
+    await this.nav.navigateForward(
+      `/device/${encodeURIComponent(this.logicalDeviceId)}/gateway-enrollment`,
+    );
+  }
+
   private bindDevice(): void {
     const candidate = this.data.getDevice(this.logicalDeviceId) as ManagedDevice | undefined;
     this.device = candidate && this.validContext(candidate) ? candidate : undefined;
-    // lastSeen survives an offline transition and is authoritative evidence
-    // that this logical device completed DeviceKey login at least once.
+    // Reconfiguration belongs to an activated, cloud-capable logical device.
+    // Requiring a previous Cloud lastSeen would strand a valid BLE-onboarded
+    // hybrid device when its first Wi-Fi or broker connection did not finish.
     this.supportsWifiProvisioning = this.isOwner
-      && Number.isSafeInteger(this.device?.cloudLastSeenAt)
-      && (this.device?.cloudLastSeenAt ?? 0) > 0;
+      && this.device?.state === 'active'
+      && this.device.cloudEnabled === true;
+    this.supportsGatewayEnrollment = this.isOwner
+      && this.device?.deviceType === 'edge-hub'
+      && Number.isSafeInteger(this.device.cloudLastSeenAt)
+      && (this.device.cloudLastSeenAt ?? 0) > 0;
     this.cd.markForCheck();
   }
 

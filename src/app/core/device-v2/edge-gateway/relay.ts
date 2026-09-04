@@ -58,17 +58,23 @@ export class EdgeGatewayAttachRelay {
   }
 
   async resume(request: EdgeGatewayAttachRequest): Promise<EdgeGatewayAttachResult> {
-    // Reissuing create first closes the crash window between the successful
-    // HTTP mutation and the App receiving its response. Idempotency-Key keeps
-    // this a reconciliation, not a second topology operation.
-    let result = await this.api.create(request);
-    if (result.topology.topologyState === EdgeGatewayTopologyState.PendingSecretDelivery) {
-      result = await this.api.resume(request.operationId);
-    }
+    let result = await this.advanceCloud(request);
     if (result.topology.topologyState === EdgeGatewayTopologyState.PendingChildInstall) {
       result = await this.installOnChild(request, result.topology);
     }
     if (result.topology.topologyState === EdgeGatewayTopologyState.PendingGatewayProof) {
+      result = await this.api.resume(request.operationId);
+    }
+    await this.finishIfTerminal(request.operationId, result.topology);
+    return result;
+  }
+
+  async advanceCloud(request: EdgeGatewayAttachRequest): Promise<EdgeGatewayAttachResult> {
+    // Reissuing create first closes the crash window between the successful
+    // HTTP mutation and the App receiving its response. Idempotency-Key keeps
+    // this a reconciliation, not a second topology operation.
+    let result = await this.api.create(request);
+    if (result.topology.topologyState === EdgeGatewayTopologyState.PendingAccessDelivery) {
       result = await this.api.resume(request.operationId);
     }
     await this.finishIfTerminal(request.operationId, result.topology);

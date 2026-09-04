@@ -17,6 +17,7 @@ export interface BleDirectFrameChannel {
 
 export class BleDirectSecureChannel implements BleDirectFrameChannel {
   private closed = false;
+  private sendTail: Promise<void> = Promise.resolve();
 
   constructor(
     readonly logicalDeviceId: string,
@@ -31,15 +32,20 @@ export class BleDirectSecureChannel implements BleDirectFrameChannel {
     return { kind, flags, sequence: this.sequence, body };
   }
 
-  async send(frame: Bbp2Frame): Promise<void> {
+  send(frame: Bbp2Frame): Promise<void> {
     this.assertOpen();
-    try {
-      const encoded = encodeFrame(frame);
-      if (encoded.length > this.maxFrameSize) throw new Error('BLE_DIRECT_FRAME_TOO_LARGE');
-      await this.link.sendRecord(await this.secure.encrypt(encoded));
-    } catch (error) {
-      return this.fail(error);
-    }
+    const pending = this.sendTail.then(async () => {
+      this.assertOpen();
+      try {
+        const encoded = encodeFrame(frame);
+        if (encoded.length > this.maxFrameSize) throw new Error('BLE_DIRECT_FRAME_TOO_LARGE');
+        await this.link.sendRecord(await this.secure.encrypt(encoded));
+      } catch (error) {
+        return this.fail(error);
+      }
+    });
+    this.sendTail = pending.catch(() => undefined);
+    return pending;
   }
 
   async receive(): Promise<Bbp2Frame> {
@@ -56,6 +62,7 @@ export class BleDirectSecureChannel implements BleDirectFrameChannel {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    await this.sendTail.catch(() => undefined);
     this.secure.clear();
     await this.link.disconnect();
   }

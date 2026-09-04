@@ -94,6 +94,11 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/device/device-settings/device-settings').then(m => m.DeviceSettingsPage),
   },
   {
+    path: 'device/:id/gateway-enrollment',
+    loadComponent: () => import('./sections/device/edge-gateway-enrollment/edge-gateway-enrollment.page')
+      .then(m => m.EdgeGatewayEnrollmentPage),
+  },
+  {
     path: 'device/:id',
     loadComponent: () => import('./device/device.page').then(m => m.DevicePage),
   },

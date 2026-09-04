@@ -123,7 +123,7 @@ interface RecoveryJson {
 
 const TOPOLOGY_STATE_NAMES: Readonly<Record<EdgeGatewayTopologyState, string>> = {
   [EdgeGatewayTopologyState.Created]: 'Created',
-  [EdgeGatewayTopologyState.PendingSecretDelivery]: 'PendingAccessDelivery',
+  [EdgeGatewayTopologyState.PendingAccessDelivery]: 'PendingAccessDelivery',
   [EdgeGatewayTopologyState.PendingChildInstall]: 'PendingChildInstall',
   [EdgeGatewayTopologyState.PendingGatewayProof]: 'PendingGatewayProof',
   [EdgeGatewayTopologyState.Active]: 'Active',

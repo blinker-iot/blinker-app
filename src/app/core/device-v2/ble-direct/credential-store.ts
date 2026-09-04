@@ -34,6 +34,7 @@ export interface BleControllerCredentialStore {
   save(credential: BleControllerCredential): Promise<void>;
   load(logicalDeviceId: string): Promise<BleControllerCredential | undefined>;
   findPending(deviceInstanceId: Uint8Array): Promise<BleControllerCredential | undefined>;
+  listPending(): Promise<string[]>;
   replacePresenceKeys(
     logicalDeviceId: string,
     presenceKeys: readonly BlePresenceCredential[],
@@ -96,23 +97,8 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
     if (!Capacitor.isNativePlatform()) throw new Error('BLE_DIRECT_SECURE_STORAGE_REQUIRED');
     const encoded = await SecureStorage.getItem(key(logicalDeviceId));
     if (encoded === null) return undefined;
-    let stored: StoredCredential;
-    try {
-      stored = JSON.parse(encoded) as StoredCredential;
-    } catch {
-      throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
-    }
-    if ((stored.version !== 1 && stored.version !== 2
-      && stored.version !== 3 && stored.version !== 4)
-      || stored.logicalDeviceId !== logicalDeviceId) {
-      throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
-    }
-    const source = stored.version === 3 || stored.version === 4
-      ? stored.source
-      : 'enrollment';
-    if (source !== 'enrollment' && source !== 'wifiprov') {
-      throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
-    }
+    const stored = parseStoredCredential(encoded, logicalDeviceId);
+    const source = storedCredentialSource(stored);
     const credential: BleControllerCredential = {
       source,
       state: stored.state,
@@ -152,18 +138,9 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
       const logicalDeviceId = storedKey.slice(CREDENTIAL_PREFIX.length);
       const encoded = await SecureStorage.getItem(storedKey);
       if (encoded === null) continue;
-      let stored: StoredCredential;
-      try {
-        stored = JSON.parse(encoded) as StoredCredential;
-      } catch {
-        throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
-      }
-      if ((stored.version !== 1 && stored.version !== 2
-        && stored.version !== 3 && stored.version !== 4)
-        || stored.logicalDeviceId !== logicalDeviceId) {
-        throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
-      }
+      const stored = parseStoredCredential(encoded, logicalDeviceId);
       if (stored.state !== 'pending'
+        || storedCredentialSource(stored) !== 'enrollment'
         || !sameBytes(base64UrlDecode(stored.deviceInstanceId, 16), deviceInstanceId)) {
         continue;
       }
@@ -174,6 +151,23 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
       match = await this.load(logicalDeviceId);
     }
     return match;
+  }
+
+  async listPending(): Promise<string[]> {
+    if (!Capacitor.isNativePlatform()) throw new Error('BLE_DIRECT_SECURE_STORAGE_REQUIRED');
+    const output: string[] = [];
+    for (const storedKey of new Set(await SecureStorage.keys())) {
+      if (!storedKey.startsWith(CREDENTIAL_PREFIX)) continue;
+      const logicalDeviceId = storedKey.slice(CREDENTIAL_PREFIX.length);
+      const encoded = await SecureStorage.getItem(storedKey);
+      if (encoded === null) continue;
+      const stored = parseStoredCredential(encoded, logicalDeviceId);
+      if (stored.state === 'pending'
+        && storedCredentialSource(stored) === 'enrollment') {
+        output.push(logicalDeviceId);
+      }
+    }
+    return output.sort();
   }
 
   async replacePresenceKeys(
@@ -215,6 +209,35 @@ function key(logicalDeviceId: string): string {
 }
 
 const CREDENTIAL_PREFIX = 'blinker_v2_ble_credential_';
+
+function parseStoredCredential(
+  encoded: string,
+  logicalDeviceId: string,
+): StoredCredential {
+  let stored: StoredCredential;
+  try {
+    stored = JSON.parse(encoded) as StoredCredential;
+  } catch {
+    throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
+  }
+  if ((stored.version !== 1 && stored.version !== 2
+    && stored.version !== 3 && stored.version !== 4)
+    || stored.logicalDeviceId !== logicalDeviceId) {
+    throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
+  }
+  storedCredentialSource(stored);
+  return stored;
+}
+
+function storedCredentialSource(stored: StoredCredential): BleControllerCredentialSource {
+  const source = stored.version === 3 || stored.version === 4
+    ? stored.source
+    : 'enrollment';
+  if (source !== 'enrollment' && source !== 'wifiprov') {
+    throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
+  }
+  return source;
+}
 
 function validateCredential(credential: BleControllerCredential): void {
   key(credential.logicalDeviceId);
