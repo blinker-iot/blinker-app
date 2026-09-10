@@ -22,6 +22,9 @@ import {
   parseShortcutDeviceId,
 } from "./device-deep-link";
 import { parseMessageDeepLink } from "./message-deep-link";
+import { AuthService } from "./auth.service";
+import { UserService } from "./user.service";
+import { NoticeService } from "./notice.service";
 import {
   AppTheme,
   applyThemeToDocument,
@@ -59,13 +62,16 @@ export class ViewService {
     private router: Router,
     private modalCtrl: ModalController,
     private ngzone: NgZone,
+    private authService: AuthService,
+    private userService: UserService,
+    private noticeService: NoticeService,
   ) {
     this.initializeTheme();
   }
 
   async init() {
     this.listenBackButton();
-    this.checkShortcut();
+    await this.checkShortcut();
     // ScreenOrientation.lock({ type: OrientationType.Portrait });
     this.getStatusBarHeight();
   }
@@ -195,7 +201,7 @@ export class ViewService {
 
   // 从shortcut进入app
   newIntentData = new Subject<any>();
-  checkShortcut() {
+  async checkShortcut(): Promise<void> {
     void AndroidShortcuts.addListener("shortcut", (response) => {
       const deviceId = parseShortcutDeviceId(response.data, response.id);
       if (deviceId) this.openDeviceFromLink(deviceId);
@@ -203,16 +209,14 @@ export class ViewService {
       console.warn("Unable to listen for Android shortcuts", error);
     });
 
-    void App.addListener("appUrlOpen", ({ url }) => {
-      this.openAppLink(url);
+    await App.addListener("appUrlOpen", ({ url }) => {
+      void this.openAppLink(url).catch(() => undefined);
     }).catch((error) => {
       console.warn("Unable to listen for app links", error);
     });
 
-    void App.getLaunchUrl()
-      .then((launch) => {
-        this.openAppLink(launch?.url);
-      })
+    await App.getLaunchUrl()
+      .then((launch) => this.openAppLink(launch?.url))
       .catch((error) => {
         console.warn("Unable to read the app launch URL", error);
       });
@@ -242,7 +246,29 @@ export class ViewService {
     // })
   }
 
-  private openAppLink(url?: string): void {
+  private async openAppLink(url?: string): Promise<void> {
+    const githubLogin = this.authService.completeGithubLogin(url);
+    if (githubLogin) {
+      await this.ngzone.run(async () => {
+        await this.noticeService.showLoading("login");
+        try {
+          const result = await githubLogin;
+          if (result === "success") {
+            await this.userService.getAllInfo();
+            if (this.authService.isLogin()) await this.navCtrl.navigateRoot("/");
+          } else if (result === "needs_wechat_bind") {
+            await this.noticeService.showToast("githubNeedsWechat");
+          } else if (result === "failed") {
+            await this.noticeService.showToast("githubLoginFailed");
+          }
+        } catch {
+          await this.noticeService.showToast("githubLoginFailed");
+        } finally {
+          await this.noticeService.hideLoading();
+        }
+      });
+      return;
+    }
     const message = parseMessageDeepLink(url);
     if (message) {
       this.ngzone.run(() => {

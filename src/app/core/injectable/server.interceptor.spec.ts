@@ -80,6 +80,23 @@ describe('ServerInterceptor', () => {
     request.flush({ status: 200, data: { id: 'user-1' } });
   });
 
+  it.each([API.AUTH.GITHUB_START, API.AUTH.GITHUB_LOGIN])(
+    'keeps GitHub authentication public without refreshing or clearing an existing session: %s',
+    (endpoint) => {
+      let received: unknown;
+      http.post(endpoint, { code: 'test-code', state: 'test-state' }, {
+        headers: { Authorization: 'Bearer supplied-token' },
+      }).subscribe({ error: (error) => (received = error) });
+      const request = httpTesting.expectOne(endpoint);
+      expect(request.request.headers.has('Authorization')).toBe(false);
+      request.flush({ errorCode: 'AUTH_GITHUB_FAILED' }, { status: 401, statusText: 'Unauthorized' });
+      httpTesting.expectNone(API.AUTH.REFRESH);
+      expect(received).toMatchObject({ code: 'AUTH_GITHUB_FAILED' });
+      expect(dataService.auth?.accessToken).toBe('old-access');
+      expect(navigateRoot).not.toHaveBeenCalled();
+    },
+  );
+
   it('preserves exact account-deletion bodies with Bearer and JSON headers', () => {
     http.post(API.ACCOUNT.DELETION_CODE, {}).subscribe();
     const codeRequest = httpTesting.expectOne(API.ACCOUNT.DELETION_CODE);

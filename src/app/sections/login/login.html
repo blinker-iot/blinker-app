@@ -87,6 +87,8 @@
           type="button"
           class="social-btn github-btn"
           (click)="loginWithGithub()"
+          [disabled]="githubStarting"
+          aria-label="GitHub"
         >
           <i class="fa-brands fa-github"></i>
         </button>

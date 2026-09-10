@@ -127,7 +127,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     console.log('init service');
     await this.dataService.init();
     void this.messageService.init().catch(() => undefined);
-    this.checkLoginStatus();
+    await this.checkLoginStatus();
     this.authService.init();
     this.deviceService.init();
     this.noticeService.init();
@@ -138,7 +138,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     // 原生内容加载
     if (Capacitor.isNativePlatform()) {
       console.log('init native service');
-      this.viewService.init(); // 适配手机样式
+      await this.viewService.init(); // 适配手机样式并处理冷启动链接
       this.networkService.init();
       this.updateService.init();
       await this.ntfyService.init();
@@ -147,11 +147,11 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
   }
 
-  checkLoginStatus() {
+  async checkLoginStatus(): Promise<void> {
     if (this.authService.isLogin()) {
       this.userService.getAllInfo();
     } else {
-      this.navCtrl.navigateRoot('/login');
+      await this.navCtrl.navigateRoot('/login');
     }
   }
 

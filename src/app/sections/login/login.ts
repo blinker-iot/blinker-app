@@ -46,6 +46,7 @@ export class LoginPage implements OnDestroy {
   private countdownTimer: any;
 
   showPoweredBy = true;
+  githubStarting = false;
 
   USER_AGREEMENT = CONFIG.USER_AGREEMENT;
   PRIVACY_POLICY = CONFIG.PRIVACY_POLICY;
@@ -153,18 +154,20 @@ export class LoginPage implements OnDestroy {
   }
 
   async loginWithGithub() {
+    if (this.githubStarting) return;
+    if (!this.authService.githubLoginSupported) {
+      await this.noticeService.showToast('githubNativeOnly');
+      return;
+    }
+    this.githubStarting = true;
     await this.noticeService.showLoading('login');
     try {
-      if (await this.authService.loginWithGithub()) {
-        await this.userService.getAllInfo();
-        await this.noticeService.hideLoading();
-        this.navCtrl.navigateRoot('/');
-      } else {
-        await this.noticeService.hideLoading();
+      if (!await this.authService.loginWithGithub()) {
+        await this.noticeService.showToast('githubLoginFailed');
       }
-    } catch (error) {
+    } finally {
+      this.githubStarting = false;
       await this.noticeService.hideLoading();
-      this.noticeService.showToast('loginFailed');
     }
   }
 

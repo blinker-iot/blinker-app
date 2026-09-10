@@ -458,6 +458,8 @@ export class ServerInterceptor implements HttpInterceptor {
       API.AUTH.ALTCHA_CHALLENGE,
       API.AUTH.EMAIL_CODE,
       API.AUTH.EMAIL_LOGIN,
+      API.AUTH.GITHUB_START,
+      API.AUTH.GITHUB_LOGIN,
       API.AUTH.WECHAT_MOBILE_START,
       API.AUTH.WECHAT_MOBILE_LOGIN,
       API.AUTH.REFRESH,

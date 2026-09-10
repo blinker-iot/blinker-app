@@ -156,6 +156,18 @@ export class NoticeService {
   }
 
   mess = {
+    githubLoginFailed: {
+      message: 'GitHub 登录未完成，请重试',
+      type: 'error'
+    },
+    githubNeedsWechat: {
+      message: '当前账号需要先完成微信绑定，再重新登录',
+      type: 'warn'
+    },
+    githubNativeOnly: {
+      message: '请在 Android 或 iOS App 中使用 GitHub 登录',
+      type: 'warn'
+    },
     "-1": {
       message: '未知错误',
       type: 'error'

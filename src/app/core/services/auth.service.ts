@@ -1,6 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { NavController } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import { solveChallenge } from 'altcha-lib/v1';
@@ -19,6 +21,24 @@ import { sha256 } from '../functions/func';
 import { AuthData } from '../model/data.model';
 import { DataService } from './data.service';
 import { NtfyService } from './ntfy.service';
+
+const GITHUB_CALLBACK_URL = 'tech.diandeng.iot://auth/github';
+const GITHUB_PENDING_KEY = 'github-login';
+const GITHUB_LOGIN_TTL_MS = 10 * 60 * 1000;
+
+interface GithubStartData {
+  authorization_url: string;
+  state: string;
+  provider: string;
+}
+
+interface PendingGithubLogin extends Record<string, unknown> {
+  state: string;
+  codeVerifier: string;
+  expiresAt: number;
+}
+
+export type GithubLoginResult = 'success' | 'cancelled' | 'failed' | 'needs_wechat_bind' | 'ignored';
 
 interface WechatStartData {
   login_id: string;
@@ -41,6 +61,13 @@ interface PendingWechatBind {
 export class AuthService {
   private emailCodeRequest: Promise<boolean> | null = null;
   private pendingWechatBind: PendingWechatBind | null = null;
+  private githubStarting = false;
+  private githubCallbackRunning = false;
+  private githubLoginGeneration = 0;
+
+  get githubLoginSupported(): boolean {
+    return Capacitor.isNativePlatform();
+  }
 
   get accessToken(): string | null {
     return this.dataService.auth?.accessToken || null;
@@ -183,6 +210,7 @@ export class AuthService {
       );
       const tokens = this.toTokenPair(response?.data);
       if (!tokens) return false;
+      await this.clearPendingGithubLogin();
       if (!await this.dataService.setAuthData(tokens)) return false;
       await this.bindPendingWechatIfPossible();
       return true;
@@ -256,6 +284,7 @@ export class AuthService {
         );
         const tokens = this.toTokenPair(loginResponse?.data);
         if (!tokens) return false;
+        await this.clearPendingGithubLogin();
         if (!await this.dataService.setAuthData(tokens)) return false;
         this.pendingWechatBind = null;
         return true;
@@ -275,6 +304,9 @@ export class AuthService {
 
   async logout(): Promise<void> {
     const expectedEpoch = this.dataService.sessionEpoch;
+    if (this.githubLoginSupported) {
+      await this.clearPendingGithubLogin().catch(() => undefined);
+    }
     try {
       await this.ntfyService.revoke();
     } catch {
@@ -309,15 +341,149 @@ export class AuthService {
     return true;
   }
 
+  // Returns once the authorization browser opens; login completes through the app link.
   async loginWithGithub(): Promise<boolean> {
-    try {
-      const response = await firstValueFrom(
-        this.http.get<BlinkerResponse>(API.AUTH.GITHUB_LOGIN),
-      );
-      return await this.storeLegacyAuth(response);
-    } catch (error) {
-      return this.handleError(error);
+    if (!this.githubLoginSupported || this.isLogin() || this.githubStarting || this.githubCallbackRunning) {
+      return false;
     }
+    this.githubStarting = true;
+    const epoch = this.dataService.sessionEpoch;
+    const generation = this.githubLoginGeneration;
+    try {
+      await SecureStorage.setKeyPrefix('blinker_');
+      await SecureStorage.remove(GITHUB_PENDING_KEY, false);
+      const codeVerifier = this.encodeBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier));
+      const codeChallenge = this.encodeBase64Url(new Uint8Array(digest));
+      const response = await firstValueFrom(
+        this.http.post<AilyResponse<GithubStartData>>(API.AUTH.GITHUB_START, {
+          code_challenge: codeChallenge,
+          code_challenge_method: 'S256',
+        }),
+      );
+      const start = response?.data;
+      if (!start?.state || start.provider !== 'github') return false;
+      const authorization = new URL(start.authorization_url);
+      if (
+        authorization.origin !== 'https://github.com' ||
+        authorization.pathname !== '/login/oauth/authorize' ||
+        authorization.username || authorization.password ||
+        authorization.searchParams.get('state') !== start.state ||
+        authorization.searchParams.get('redirect_uri') !== GITHUB_CALLBACK_URL ||
+        authorization.searchParams.get('code_challenge') !== codeChallenge ||
+        authorization.searchParams.get('code_challenge_method') !== 'S256' ||
+        this.dataService.sessionEpoch !== epoch || this.githubLoginGeneration !== generation
+      ) return false;
+
+      const pending: PendingGithubLogin = {
+        state: start.state,
+        codeVerifier,
+        expiresAt: Date.now() + GITHUB_LOGIN_TTL_MS,
+      };
+      await SecureStorage.set(GITHUB_PENDING_KEY, pending, false);
+      if (this.dataService.sessionEpoch !== epoch || this.githubLoginGeneration !== generation) {
+        await SecureStorage.remove(GITHUB_PENDING_KEY, false);
+        return false;
+      }
+      this.githubStarting = false;
+      await Browser.open({ url: authorization.href });
+      return true;
+    } catch {
+      await SecureStorage.remove(GITHUB_PENDING_KEY, false).catch(() => undefined);
+      return false;
+    } finally {
+      this.githubStarting = false;
+    }
+  }
+
+  // A null result lets the shared app-link dispatcher ignore other links and duplicates.
+  completeGithubLogin(url?: string): Promise<GithubLoginResult> | null {
+    if (!url || !this.githubLoginSupported || this.githubCallbackRunning || this.githubStarting) return null;
+    let callback: URL;
+    try {
+      callback = new URL(url);
+    } catch {
+      return null;
+    }
+    if (
+      callback.protocol !== 'tech.diandeng.iot:' || callback.hostname !== 'auth' ||
+      callback.pathname !== '/github' || callback.port || callback.username ||
+      callback.password || callback.hash
+    ) return null;
+    this.githubCallbackRunning = true;
+    return this.completeGithubLoginOnce(callback).finally(() => {
+      this.githubCallbackRunning = false;
+    });
+  }
+
+  private async completeGithubLoginOnce(callback: URL): Promise<GithubLoginResult> {
+    const epoch = this.dataService.sessionEpoch;
+    const generation = this.githubLoginGeneration;
+    let closeBrowser = false;
+    try {
+      await SecureStorage.setKeyPrefix('blinker_');
+      const saved = await SecureStorage.get(GITHUB_PENDING_KEY, false, false);
+      if (!saved || typeof saved !== 'object' || Array.isArray(saved) || saved instanceof Date) return 'ignored';
+      if (
+        typeof saved['state'] !== 'string' ||
+        typeof saved['codeVerifier'] !== 'string' ||
+        !/^[A-Za-z0-9_-]{43}$/.test(saved['codeVerifier']) ||
+        typeof saved['expiresAt'] !== 'number' || !Number.isFinite(saved['expiresAt']) ||
+        saved['expiresAt'] <= Date.now()
+      ) {
+        await SecureStorage.remove(GITHUB_PENDING_KEY, false);
+        return 'failed';
+      }
+      const states = callback.searchParams.getAll('state');
+      if (states.length !== 1 || states[0] !== saved['state']) return 'failed';
+      closeBrowser = true;
+
+      // Consume before exchanging: a warm event and a cold launch may carry the same URL.
+      await SecureStorage.remove(GITHUB_PENDING_KEY, false);
+      if (this.dataService.sessionEpoch !== epoch || this.githubLoginGeneration !== generation || this.isLogin()) return 'ignored';
+      const errors = callback.searchParams.getAll('error');
+      if (errors.length) return errors.length === 1 && errors[0] === 'access_denied' ? 'cancelled' : 'failed';
+      const codes = callback.searchParams.getAll('code');
+      if (codes.length !== 1 || !codes[0].trim()) return 'failed';
+
+      const response = await firstValueFrom(
+        this.http.post<AilyResponse<AuthTokenResponseData | { status: string; pending_ticket: string }>>(
+          API.AUTH.GITHUB_LOGIN,
+          {
+            code: codes[0],
+            state: states[0],
+            code_verifier: saved['codeVerifier'],
+            device_id: this.dataService.getInstallationId(),
+          },
+        ),
+      );
+      if (this.dataService.sessionEpoch !== epoch || this.githubLoginGeneration !== generation) return 'ignored';
+      const data = response?.data;
+      if (!data) return 'failed';
+      if ('status' in data) {
+        return data.status === 'needs_wechat_bind' && data.pending_ticket ? 'needs_wechat_bind' : 'failed';
+      }
+      const tokens = this.toTokenPair(data);
+      if (!tokens || !await this.dataService.setAuthData(tokens)) return 'failed';
+      this.pendingWechatBind = null;
+      return 'success';
+    } catch {
+      return 'failed';
+    } finally {
+      // Native close can reject after a cold launch or when the browser is already dismissed.
+      if (closeBrowser) await Browser.close().catch(() => undefined);
+    }
+  }
+
+  private async clearPendingGithubLogin(): Promise<void> {
+    this.githubLoginGeneration += 1;
+    if (!this.githubLoginSupported) return;
+    await SecureStorage.setKeyPrefix('blinker_');
+    await SecureStorage.remove(GITHUB_PENDING_KEY, false);
+  }
+
+  private encodeBase64Url(bytes: Uint8Array): string {
+    return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
 
   private async loginWithLegacyWechat(): Promise<boolean> {
@@ -398,6 +564,7 @@ export class AuthService {
     if (response?.message !== 1000) return false;
     const auth = this.toLegacyAuth(response.detail);
     if (!auth) return false;
+    await this.clearPendingGithubLogin();
     return this.dataService.setAuthData(auth);
   }
 

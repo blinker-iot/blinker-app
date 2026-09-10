@@ -188,16 +188,7 @@ describe('AuthService Gateway authentication', () => {
     await expect(sms).resolves.toBe(true);
   });
 
-  it('retains GitHub and non-native WeChat legacy fallbacks', async () => {
-    const github = service.loginWithGithub();
-    const githubRequest = httpTesting.expectOne(API.AUTH.GITHUB_LOGIN);
-    expect(githubRequest.request.method).toBe('GET');
-    githubRequest.flush({
-      message: 1000,
-      detail: { uuid: 'github-uuid', token: 'github-token' },
-    });
-    await expect(github).resolves.toBe(true);
-
+  it('retains the non-native WeChat legacy fallback', async () => {
     vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('web');
     vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(false);
     const wechat = service.loginWithWechat();

@@ -1,4 +1,5 @@
 import { ChangeDetectorRef, ElementRef } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 import { NavController, Platform } from '@ionic/angular/standalone';
 
 import { AppComponent } from './app.component';
@@ -19,16 +20,22 @@ import { ViewService } from './core/services/view.service';
 import { MessageService } from './sections/message/message.service';
 
 describe('AppComponent authentication startup', () => {
-  it('restores auth before redirecting an unauthenticated development build', async () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each([false, true])('finishes initial navigation before processing a cold app link (native: %s)', async (native) => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(native);
     const restoreAuth = vi.fn().mockResolvedValue(undefined);
     const initDevice = vi.fn();
     const isLogin = vi.fn().mockReturnValue(false);
-    const navigateRoot = vi.fn();
+    let finishNavigation!: (value: boolean) => void;
+    const navigation = new Promise<boolean>((resolve) => { finishNavigation = resolve; });
+    const navigateRoot = vi.fn().mockReturnValueOnce(navigation).mockResolvedValue(true);
+    const initView = vi.fn(async () => { await navigateRoot('/'); });
     const userService = { getAllInfo: vi.fn() };
     const initMessages = vi.fn().mockResolvedValue(undefined);
     const app = new AppComponent(
       {} as Platform,
-      { swipeEnable: false } as ViewService,
+      { swipeEnable: false, init: initView } as unknown as ViewService,
       { init: vi.fn(), isLogin } as unknown as AuthService,
       userService as unknown as UserService,
       {
@@ -50,7 +57,13 @@ describe('AppComponent authentication startup', () => {
     );
     app.audio = { nativeElement: {} } as ElementRef;
 
-    await app.initService();
+    const startup = app.initService();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(initView).not.toHaveBeenCalled();
+    finishNavigation(true);
+    await startup;
+    expect(initView).toHaveBeenCalledTimes(native ? 1 : 0);
+    expect(navigateRoot.mock.calls).toEqual(native ? [['/login'], ['/']] : [['/login']]);
 
     expect(restoreAuth).toHaveBeenCalledOnce();
     expect(initMessages).toHaveBeenCalledOnce();
