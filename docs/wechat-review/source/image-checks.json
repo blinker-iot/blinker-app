@@ -1,0 +1,42 @@
+[
+  {
+    "file": "01-应用整体运行流程.png",
+    "format": "PNG",
+    "width": 1800,
+    "height": 2100,
+    "bytes": 524802,
+    "under_5MB": true
+  },
+  {
+    "file": "02-微信授权登录与账号关联.png",
+    "format": "PNG",
+    "width": 1800,
+    "height": 2100,
+    "bytes": 488723,
+    "under_5MB": true
+  },
+  {
+    "file": "03-设备添加与接入流程.png",
+    "format": "PNG",
+    "width": 1800,
+    "height": 2100,
+    "bytes": 615791,
+    "under_5MB": true
+  },
+  {
+    "file": "04-设备控制数据查看与定时.png",
+    "format": "PNG",
+    "width": 1800,
+    "height": 2100,
+    "bytes": 654861,
+    "under_5MB": true
+  },
+  {
+    "file": "05-设备共享与权限管理.png",
+    "format": "PNG",
+    "width": 1800,
+    "height": 2100,
+    "bytes": 500099,
+    "under_5MB": true
+  }
+]
