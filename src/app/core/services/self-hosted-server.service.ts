@@ -1,70 +1,58 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { API } from '../../configs/api.config';
+import { AilyResponse } from '../model/response.model';
 
 export interface SelfHostedServerConfig {
-  address: string;
-  key: string;
+  state: 'not_configured' | 'enabled' | 'unavailable';
+  serverUrl: string | null;
+  keyConfigured: boolean;
+  lastVerifiedAt: number | null;
+  lastErrorCode: string | null;
 }
 
-export const SELF_HOSTED_SERVER_STORAGE_KEY =
-  'blinker:self-hosted-server-config';
-
-const SUPPORTED_PROTOCOLS = new Set(['http:', 'https:', 'ws:', 'wss:']);
-
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class SelfHostedServerService {
-  getConfig(): SelfHostedServerConfig | null {
+  constructor(private readonly http: HttpClient) {
     try {
-      const saved = localStorage.getItem(SELF_HOSTED_SERVER_STORAGE_KEY);
-      if (!saved) return null;
-
-      const config = JSON.parse(saved) as Partial<SelfHostedServerConfig>;
-      const address = this.normalizeAddress(config.address ?? '');
-      if (!address || typeof config.key !== 'string' || !config.key.trim()) {
-        return null;
-      }
-
-      return { address, key: config.key };
+      localStorage.removeItem('blinker:self-hosted-server-config');
     } catch {
-      return null;
+      // Gateway configuration remains available when browser storage is disabled.
     }
   }
 
-  saveConfig(address: string, key: string): SelfHostedServerConfig {
-    const normalizedAddress = this.normalizeAddress(address);
-    if (!normalizedAddress) {
-      throw new Error('Invalid self-hosted server address');
-    }
-    if (!key.trim()) {
-      throw new Error('Self-hosted server key is required');
-    }
-
-    const config = { address: normalizedAddress, key };
-    localStorage.setItem(
-      SELF_HOSTED_SERVER_STORAGE_KEY,
-      JSON.stringify(config),
+  async getConfig(): Promise<SelfHostedServerConfig> {
+    const response = await firstValueFrom(
+      this.http.get<AilyResponse<SelfHostedServerConfig>>(API.ACCOUNT.SELF_HOSTED_SERVER),
     );
-    return config;
+    return response.data;
   }
 
-  clearConfig(): void {
-    localStorage.removeItem(SELF_HOSTED_SERVER_STORAGE_KEY);
+  async saveConfig(address: string, key?: string): Promise<SelfHostedServerConfig> {
+    const response = await firstValueFrom(
+      this.http.put<AilyResponse<SelfHostedServerConfig>>(API.ACCOUNT.SELF_HOSTED_SERVER, {
+        serverUrl: address,
+        ...(key !== undefined ? { serverKey: key } : {}),
+      }),
+    );
+    return response.data;
+  }
+
+  async clearConfig(): Promise<SelfHostedServerConfig> {
+    const response = await firstValueFrom(
+      this.http.delete<AilyResponse<SelfHostedServerConfig>>(API.ACCOUNT.SELF_HOSTED_SERVER),
+    );
+    return response.data;
   }
 
   normalizeAddress(value: string): string | null {
-    const candidate = value.trim();
-    if (!candidate) return null;
-
     try {
-      const url = new URL(candidate);
-      if (!SUPPORTED_PROTOCOLS.has(url.protocol) || !url.hostname) {
-        return null;
-      }
-
-      url.search = '';
-      url.hash = '';
-      return url.toString().replace(/\/$/, '');
+      const url = new URL(value.trim());
+      if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password
+        || url.search || url.hash || /[\\\s]/.test(value.trim())) return null;
+      if (!url.pathname.endsWith('/')) url.pathname += '/';
+      return url.toString();
     } catch {
       return null;
     }

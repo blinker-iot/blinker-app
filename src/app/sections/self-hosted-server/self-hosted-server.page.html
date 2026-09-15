@@ -13,10 +13,16 @@
       iconClass="fa-light fa-server"
       eyebrow="SELF-HOSTED SERVICE"
       heading="连接你的服务器"
-      description="保存独立的服务器地址和访问密钥，供自建服务功能使用。"
+      description="验证通过后，账户的新设备将使用此服务器。"
     />
 
-    <div class="section-label">连接配置</div>
+    <div class="section-label" role="status">连接配置 · {{ statusText }}</div>
+    @if (errorMessage) {
+    <p class="field-error" role="alert">{{ errorMessage }}</p>
+    }
+    @if (!busy && errorMessage) {
+    <button type="button" class="clear-button" (click)="ionViewWillEnter()">重新读取配置</button>
+    }
     <form class="server-form" (ngSubmit)="save()" novalidate>
       <div class="field" [class.field-invalid]="addressError">
         <label class="field-label" for="self-hosted-server-address">
@@ -31,7 +37,7 @@
             type="url"
             inputmode="url"
             autocomplete="url"
-            required
+            [disabled]="busy"
             placeholder="https://server.example.com"
             [(ngModel)]="serverAddress"
             (ngModelChange)="clearValidation('address')"
@@ -40,7 +46,7 @@
           />
         </span>
         <small id="address-help" class="field-help">
-          支持 HTTP、HTTPS、WS 和 WSS，请填写完整协议。
+          支持公网 HTTP 或 HTTPS 地址；HTTP 会明文传输密钥和数据。
         </small>
         @if (addressError) {
         <small id="address-error" class="field-error">
@@ -53,7 +59,7 @@
       <div class="field" [class.field-invalid]="keyError">
         <label class="field-label" for="self-hosted-server-key">
           <span>服务器密钥</span>
-          <small>必填</small>
+          <small>{{ hasSavedConfig ? "留空保留" : "必填" }}</small>
         </label>
         <span class="input-shell">
           <i class="fa-light fa-key" aria-hidden="true"></i>
@@ -64,7 +70,7 @@
             autocomplete="off"
             autocapitalize="none"
             spellcheck="false"
-            required
+            [disabled]="busy"
             placeholder="请输入服务器密钥"
             [(ngModel)]="serverKey"
             (ngModelChange)="clearValidation('key')"
@@ -85,7 +91,7 @@
           </button>
         </span>
         <small id="key-help" class="field-help">
-          密钥仅保存在当前设备，请勿分享给他人。
+          密钥由服务端加密保存。同一地址留空可保留原密钥。
         </small>
         @if (keyError) {
         <small id="key-error" class="field-error">
@@ -98,17 +104,17 @@
       @if (saved) {
       <div class="save-success" role="status">
         <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-        配置已保存
+        配置已验证并启用
       </div>
       }
 
-      <button type="submit" class="save-button">
+      <button type="submit" class="save-button" [disabled]="busy || !config">
         <i class="fa-light fa-floppy-disk" aria-hidden="true"></i>
-        保存配置
+        {{ saving ? "正在保存…" : "保存并验证" }}
       </button>
 
       @if (hasSavedConfig) {
-      <button type="button" class="clear-button" (click)="confirmClear()">
+      <button type="button" class="clear-button" [disabled]="busy" (click)="confirmClear()">
         清除配置
       </button>
       }
@@ -117,8 +123,8 @@
     <aside class="privacy-tip">
       <i class="fa-light fa-shield-check" aria-hidden="true"></i>
       <div>
-        <strong>独立配置</strong>
-        <p>这里的设置不会修改应用内置的 API 地址或现有账户连接。</p>
+        <strong>账户配置</strong>
+        <p>App 和设备仍通过平台连接，设备运行数据保存在你的服务器。已有设备时暂不支持切换或清除配置。</p>
       </div>
     </aside>
   </main>
