@@ -25,6 +25,8 @@ interface SessionFence {
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
+  private inventoryLoadGeneration = 0;
+
   get avatarUploadConfigured(): boolean {
     return API.USER.UPLOAD_AVATAR.trim().length > 0;
   }
@@ -44,6 +46,7 @@ export class UserService {
   ) {}
 
   async getAllInfo(): Promise<boolean> {
+    const generation = ++this.inventoryLoadGeneration;
     const session = this.captureSession();
     if (!session) return false;
     this.dataService.userLoadError.next(null);
@@ -57,7 +60,7 @@ export class UserService {
         API.DEVICE_V2.RECEIVED_SHARES,
       )),
     ]);
-    if (!this.sessionMatches(session)) return false;
+    if (!this.sessionMatches(session) || generation !== this.inventoryLoadGeneration) return false;
 
     const deletedAccountError =
       userResult.status === 'rejected' &&
@@ -116,7 +119,7 @@ export class UserService {
       );
     }
 
-    if (!this.sessionMatches(session)) return false;
+    if (!this.sessionMatches(session) || generation !== this.inventoryLoadGeneration) return false;
     this.dataService.loadGatewayData(userResult.value.data, devices, received);
     await this.noticeService.hideLoading();
     return true;

@@ -37,6 +37,7 @@ export const API = {
     DELETION_CODE: API_V1_URL + '/account/deletion-code',
     CONNECTION: API_V2_URL + '/account/connection',
     SELF_HOSTED_SERVER: API_V2_URL + '/account/self-hosted-server',
+    SELF_HOSTED_MIGRATION: API_V2_URL + '/account/self-hosted-server/migration',
   },
   DEVICE_V2: {
     LIST: API_V2_URL + '/devices',
@@ -130,6 +131,8 @@ export function isGatewayUrl(url: string): boolean {
     || url.startsWith(API_V1_URL + '/account/')
     || url === API_V2_URL + '/account/connection'
     || url === API.ACCOUNT.SELF_HOSTED_SERVER
+    || url === API.ACCOUNT.SELF_HOSTED_MIGRATION
+    || url.startsWith(API.ACCOUNT.SELF_HOSTED_MIGRATION + '/')
     || url.startsWith(API_V1_URL + '/feedback/')
     || url === API.DEVICE_V2.ACCEPT_SHARE
     || url === API.DEVICE_V2.RECEIVED_SHARES

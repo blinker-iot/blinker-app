@@ -227,3 +227,104 @@ ion-content {
     padding: 15px;
   }
 }
+
+.current-server {
+  margin: 0 4px 14px;
+  color: var(--blinker-text-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.migration-card {
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid var(--blinker-border);
+  border-radius: var(--blinker-radius-card);
+  background: var(--blinker-surface);
+
+  h2 {
+    margin: 6px 0 12px;
+    color: var(--blinker-text-primary);
+    font-size: 17px;
+    line-height: 1.4;
+  }
+
+  p {
+    margin: 10px 0;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--blinker-text-secondary);
+    overflow-wrap: anywhere;
+  }
+
+  .field-error,
+  .cleanup-warning {
+    color: var(--ion-color-danger);
+  }
+
+  .card-note {
+    font-size: 12px;
+    color: var(--blinker-text-tertiary);
+  }
+}
+
+.card-eyebrow {
+  color: var(--blinker-text-tertiary);
+  font-size: 11px;
+}
+
+.confirmation-card {
+  border-color: rgba(var(--ion-color-primary-rgb), 0.45);
+}
+
+.endpoint-list {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+
+  > div {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  dt {
+    color: var(--blinker-text-tertiary);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--blinker-text-primary);
+    overflow-wrap: anywhere;
+  }
+}
+
+.confirmation-actions {
+  display: grid;
+  grid-template-columns: minmax(64px, 1fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+
+  .clear-button {
+    margin: 0;
+  }
+}
+
+.danger-button {
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--blinker-radius-control);
+  background: var(--ion-color-danger);
+  color: var(--ion-color-danger-contrast);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

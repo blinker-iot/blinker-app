@@ -13,90 +13,166 @@
       iconClass="fa-light fa-server"
       eyebrow="SELF-HOSTED SERVICE"
       heading="连接你的服务器"
-      description="验证通过后，账户的新设备将使用此服务器。"
+      description="管理账户使用的服务器，迁移时保留设备和面板。"
     />
 
     <div class="section-label" role="status">连接配置 · {{ statusText }}</div>
+    @if (config) {
+    <p class="current-server">当前使用：{{ config.serverUrl || "平台服务器" }}</p>
+    }
     @if (errorMessage) {
     <p class="field-error" role="alert">{{ errorMessage }}</p>
     }
-    @if (!busy && errorMessage) {
+    @if (!loading && !saving && !refreshing && !migrationRunning && !startUncertain && !cleanupProcessing && !config) {
     <button type="button" class="clear-button" (click)="ionViewWillEnter()">重新读取配置</button>
     }
+
+    @if (task) {
+    <section class="migration-card" aria-labelledby="migration-heading">
+      <div class="card-eyebrow">最近迁移 · #{{ task.id }}</div>
+      <h2 id="migration-heading" role="status" aria-live="polite">{{ taskMessage }}</h2>
+      <dl class="endpoint-list">
+        <div><dt>原服务器</dt><dd>{{ endpointLabel(task.source) }}</dd></div>
+        <div><dt>目标服务器</dt><dd>{{ endpointLabel(task.target) }}</dd></div>
+      </dl>
+      @if (task.serviceState === 'paused') {
+      <p>设备数据上报和远程控制会暂时中断。离开页面后，迁移仍会继续。</p>
+      }
+      @if (taskError()) {
+      <p class="field-error">{{ taskError() }}</p>
+      }
+      @if (task.cleanup.state === 'awaiting_confirmation') {
+      <p class="card-note">{{ task.cleanup.side === 'source' ? "原服务器" : "目标服务器" }}的迁移副本已保留。</p>
+      }
+      @if (task.cleanup.state === 'processing' && !cleanupTaskId) {
+      <p role="status">已确认的副本正在清理，后台会继续处理。</p>
+      }
+    </section>
+    }
+
+    @if (progressError || startUncertain) {
+    <section class="migration-card" aria-live="polite">
+      @if (startUncertain) {
+      <h2>正在确认迁移是否已启动</h2>
+      <p>启动请求尚未得到确认，正在查询服务端任务。重试会使用同一次确认。</p>
+      <button type="button" class="clear-button" [disabled]="loading || saving || refreshing"
+        (click)="retryStart()">查询并重试本次请求</button>
+      }
+      @if (progressError) {
+      <p class="field-error" role="alert">{{ progressError }}</p>
+      <button type="button" class="clear-button" [disabled]="loading || saving || refreshing"
+        (click)="refreshProgress()">重新获取进度</button>
+      }
+    </section>
+    }
+
+    @if (refreshing || refreshError) {
+    <section class="migration-card" aria-live="polite">
+      @if (refreshing) {
+      <p role="status">正在刷新配置和设备连接…</p>
+      }
+      @if (refreshError) {
+      <p class="field-error" role="alert">{{ refreshError }}</p>
+      <button type="button" class="clear-button" [disabled]="loading || saving || refreshing"
+        (click)="retryRefresh()">重试刷新</button>
+      }
+    </section>
+    }
+
+    @if (cleanupTaskId) {
+    <section class="migration-card cleanup-card" aria-labelledby="cleanup-heading">
+      <div class="card-eyebrow">本账户 · 迁移 #{{ cleanupTaskId }}</div>
+      <h2 id="cleanup-heading">处理阻止迁入的旧副本</h2>
+      @if (cleanupTask) {
+      <dl class="endpoint-list">
+        <div><dt>原服务器</dt><dd>{{ endpointLabel(cleanupTask.source) }}</dd></div>
+        <div><dt>目标服务器</dt><dd>{{ endpointLabel(cleanupTask.target) }}</dd></div>
+      </dl>
+      }
+      @if (cleanupTask?.cleanup?.state === 'processing') {
+      <p role="status" aria-live="polite">正在清理已确认的副本，离开页面后仍会继续。</p>
+      } @else if (cleanupTask?.cleanup?.state === 'completed') {
+      <p role="status">副本已清理，请重新检查迁移条件。</p>
+      <button type="button" class="save-button" [disabled]="busy" (click)="retryMigrationPreview()">
+        重新检查迁移
+      </button>
+      } @else if (cleanupPreview) {
+      <p>将清理<strong>{{ endpointLabel(cleanupPreview.endpoint) }}</strong>上的
+        {{ cleanupPreview.side === 'source' ? "原服务器" : "目标服务器" }}迁移副本，
+        共 {{ cleanupPreview.deviceCount }} 台设备。</p>
+      <p class="cleanup-warning">删除此迁移副本不可撤销，无法保证恢复。当前生效服务器的数据不受影响。</p>
+      <div class="confirmation-actions">
+        <button type="button" class="clear-button" [disabled]="saving" (click)="cancelCleanup()">取消</button>
+        <button type="button" class="danger-button" [disabled]="busy" (click)="confirmCleanup()">确认清理此副本</button>
+      </div>
+      } @else {
+      <p>已识别为本账户的迁移副本。先检查具体服务器和副本内容，再决定是否清理。</p>
+      <button type="button" class="clear-button" [disabled]="busy" (click)="inspectCleanup()">检查待清理副本</button>
+      }
+    </section>
+    }
+
+    @if (preview) {
+    <section class="migration-card confirmation-card" aria-labelledby="confirmation-heading">
+      <div class="card-eyebrow">检查完成 · 等待确认</div>
+      <h2 id="confirmation-heading">{{ preview.action === 'migrate' ? "迁移并启用新服务器？" : "切回平台服务器？" }}</h2>
+      <dl class="endpoint-list">
+        <div><dt>目标服务器</dt><dd>{{ endpointLabel(preview.target) }}</dd></div>
+        <div><dt>设备数量</dt><dd>{{ preview.deviceCount }} 台</dd></div>
+      </dl>
+      @if (preview.action === 'migrate') {
+      <p>迁移期间设备将暂时离线，数据上报和远程控制会暂时中断，迁移完成后自动恢复，无需重新配网。请保持新旧服务器正常运行。</p>
+      } @else {
+      <p>将清除自建服务器配置，账户恢复使用平台服务器。</p>
+      }
+      <div class="confirmation-actions">
+        <button type="button" class="clear-button" [disabled]="saving" (click)="cancelPreview()">取消</button>
+        <button type="button" class="save-button" [disabled]="busy" (click)="confirmMigration()">
+          {{ preview.action === 'migrate' ? "迁移并启用" : "确认切回平台" }}
+        </button>
+      </div>
+    </section>
+    }
+
     <form class="server-form" (ngSubmit)="save()" novalidate>
       <div class="field" [class.field-invalid]="addressError">
         <label class="field-label" for="self-hosted-server-address">
-          <span>服务器地址</span>
-          <small>必填</small>
+          <span>服务器地址</span><small>必填</small>
         </label>
         <span class="input-shell">
           <i class="fa-light fa-globe" aria-hidden="true"></i>
-          <input
-            id="self-hosted-server-address"
-            name="serverAddress"
-            type="url"
-            inputmode="url"
-            autocomplete="url"
-            [disabled]="busy"
-            placeholder="https://server.example.com"
-            [(ngModel)]="serverAddress"
-            (ngModelChange)="clearValidation('address')"
-            [attr.aria-invalid]="addressError ? 'true' : 'false'"
-            aria-describedby="address-help address-error"
-          />
+          <input id="self-hosted-server-address" name="serverAddress" type="url" inputmode="url"
+            autocomplete="url" [disabled]="busy" placeholder="https://server.example.com"
+            [(ngModel)]="serverAddress" (ngModelChange)="clearValidation('address')"
+            [attr.aria-invalid]="addressError ? 'true' : 'false'" aria-describedby="address-help address-error" />
         </span>
-        <small id="address-help" class="field-help">
-          支持公网 HTTP 或 HTTPS 地址；HTTP 会明文传输密钥和数据。
-        </small>
+        <small id="address-help" class="field-help">迁移设备数据需要 HTTPS。HTTP 配置会明文传输密钥和数据。</small>
         @if (addressError) {
         <small id="address-error" class="field-error">
-          <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
-          {{ addressError }}
+          <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{ addressError }}
         </small>
         }
       </div>
 
       <div class="field" [class.field-invalid]="keyError">
         <label class="field-label" for="self-hosted-server-key">
-          <span>服务器密钥</span>
-          <small>{{ hasSavedConfig ? "留空保留" : "必填" }}</small>
+          <span>服务器密钥</span><small>{{ hasSavedConfig ? "同址留空保留" : "必填" }}</small>
         </label>
         <span class="input-shell">
           <i class="fa-light fa-key" aria-hidden="true"></i>
-          <input
-            id="self-hosted-server-key"
-            name="serverKey"
-            [type]="showKey ? 'text' : 'password'"
-            autocomplete="off"
-            autocapitalize="none"
-            spellcheck="false"
-            [disabled]="busy"
-            placeholder="请输入服务器密钥"
-            [(ngModel)]="serverKey"
-            (ngModelChange)="clearValidation('key')"
-            [attr.aria-invalid]="keyError ? 'true' : 'false'"
-            aria-describedby="key-help key-error"
-          />
-          <button
-            type="button"
-            class="key-toggle"
-            (click)="toggleKeyVisibility()"
-          >
-            <i
-              class="fa-light"
-              [class.fa-eye]="!showKey"
-              [class.fa-eye-slash]="showKey"
-              aria-hidden="true"
-            ></i>
+          <input id="self-hosted-server-key" name="serverKey" [type]="showKey ? 'text' : 'password'"
+            autocomplete="off" autocapitalize="none" spellcheck="false" [disabled]="busy"
+            placeholder="请输入服务器密钥" [(ngModel)]="serverKey" (ngModelChange)="clearValidation('key')"
+            [attr.aria-invalid]="keyError ? 'true' : 'false'" aria-describedby="key-help key-error" />
+          <button type="button" class="key-toggle" [disabled]="busy"
+            [attr.aria-label]="showKey ? '隐藏服务器密钥' : '显示服务器密钥'" (click)="toggleKeyVisibility()">
+            <i class="fa-light" [class.fa-eye]="!showKey" [class.fa-eye-slash]="showKey" aria-hidden="true"></i>
           </button>
         </span>
-        <small id="key-help" class="field-help">
-          密钥由服务端加密保存。同一地址留空可保留原密钥。
-        </small>
+        <small id="key-help" class="field-help">密钥由服务端加密保存。同一地址留空可保留原密钥。</small>
         @if (keyError) {
         <small id="key-error" class="field-error">
-          <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
-          {{ keyError }}
+          <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{ keyError }}
         </small>
         }
       </div>
@@ -104,19 +180,15 @@
       @if (saved) {
       <div class="save-success" role="status">
         <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-        配置已验证并启用
+        {{ hasSavedConfig ? "配置已验证并启用" : "已切回平台服务器" }}
       </div>
       }
-
       <button type="submit" class="save-button" [disabled]="busy || !config">
-        <i class="fa-light fa-floppy-disk" aria-hidden="true"></i>
-        {{ saving ? "正在保存…" : "保存并验证" }}
+        <i class="fa-light fa-server" aria-hidden="true"></i>
+        {{ saving ? "正在处理…" : "验证并继续" }}
       </button>
-
       @if (hasSavedConfig) {
-      <button type="button" class="clear-button" [disabled]="busy" (click)="confirmClear()">
-        清除配置
-      </button>
+      <button type="button" class="clear-button" [disabled]="busy" (click)="confirmClear()">切回平台服务器</button>
       }
     </form>
 
@@ -124,7 +196,7 @@
       <i class="fa-light fa-shield-check" aria-hidden="true"></i>
       <div>
         <strong>账户配置</strong>
-        <p>App 和设备仍通过平台连接，设备运行数据保存在你的服务器。已有设备时暂不支持切换或清除配置。</p>
+        <p>App 和设备仍通过平台连接，设备运行数据保存在选定的服务器。迁移前会检查设备数据和服务器状态，确认后才开始。</p>
       </div>
     </aside>
   </main>

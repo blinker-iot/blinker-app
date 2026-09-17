@@ -5,7 +5,7 @@ import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { API } from '../../configs/api.config';
 import { DeviceV2AccountClient, DeviceV2AccountState } from '../device-v2/account-client';
 import { openMqttDeviceV2Channel } from '../device-v2/mqtt-channel';
-import { AccountConnectionResponse } from '../model/response.model';
+import { AccountConnectionResponse, GatewayHttpError } from '../model/response.model';
 import {
   DeviceV2Ack,
   DeviceV2Store,
@@ -15,6 +15,7 @@ import {
 } from '../protocol/device-v2';
 import { DataService } from './data.service';
 import { DeviceV2ManifestCache } from './device-v2-manifest-cache.service';
+import { UserService } from './user.service';
 
 export type { DeviceV2AccountState } from '../device-v2/account-client';
 
@@ -24,12 +25,14 @@ export class DeviceV2Service {
   readonly store: DeviceV2Store;
   private readonly client: DeviceV2AccountClient;
   private accountId?: string;
+  private migrationRefresh?: { epoch: number; task: Promise<void>; presencePending: boolean };
 
   constructor(
     http: HttpClient,
-    data: DataService,
+    private readonly data: DataService,
     zone: NgZone,
     manifestCache: DeviceV2ManifestCache,
+    private readonly user: UserService,
   ) {
     this.client = new DeviceV2AccountClient(
       () => firstValueFrom(http.get<AccountConnectionResponse>(API.ACCOUNT.CONNECTION, {
@@ -49,7 +52,12 @@ export class DeviceV2Service {
       );
     }));
     data.deviceDataLoader.subscribe(loaded => {
-      if (loaded) this.watchInventoryPresence(data);
+      if (!loaded) return;
+      if (this.migrationRefresh?.epoch === data.sessionEpoch) {
+        this.migrationRefresh.presencePending = true;
+      } else {
+        void this.watchInventoryPresence(data).catch(() => undefined);
+      }
     });
     this.client.subscribeState(value => zone.run(() => this.state.next(value)));
     this.accountId = data.auth?.uuid;
@@ -68,6 +76,66 @@ export class DeviceV2Service {
 
   stop(): Promise<void> {
     return this.client.stop();
+  }
+
+  refreshAfterServerMigration(): Promise<void> {
+    const epoch = this.data.sessionEpoch;
+    if (this.migrationRefresh?.epoch === epoch) return this.migrationRefresh.task;
+    const task = this.refreshMigratedDevices(epoch).finally(() => {
+      if (this.migrationRefresh?.task !== task) return;
+      const presencePending = this.migrationRefresh.presencePending;
+      this.migrationRefresh = undefined;
+      if (presencePending && this.data.auth && this.data.sessionEpoch === epoch) {
+        void this.watchInventoryPresence(this.data).catch(() => undefined);
+      }
+    });
+    this.migrationRefresh = { epoch, task, presencePending: false };
+    return task;
+  }
+
+  private async refreshMigratedDevices(epoch: number): Promise<void> {
+    this.assertRefreshSession(epoch);
+    try {
+      await this.client.reset();
+    } finally {
+      if (this.data.auth && this.data.sessionEpoch === epoch) {
+        for (const logicalDeviceId of this.data.device.list) {
+          const device = this.data.device.dict[logicalDeviceId];
+          if (device?.config?.mode !== 'bbp2' || device.cloudEnabled !== true) continue;
+          device.data = {
+            ...device.data,
+            state: device.config.disabled ? 'offline' : 'waiting',
+            enable: false,
+            manifestRevision: null,
+            manifestFingerprint: null,
+            manifestUpdatedAt: null,
+          };
+          this.data.updateDeviceV2Presence(logicalDeviceId, null, null);
+        }
+      }
+    }
+    this.assertRefreshSession(epoch);
+    const loaded = await this.user.getAllInfo();
+    this.assertRefreshSession(epoch);
+    if (!loaded || this.data.userLoadError.value
+      || this.data.deviceLoadError.value || this.data.configLoadError.value) {
+      throw new Error('The migrated device inventory could not be refreshed.');
+    }
+    if (this.migrationRefresh?.epoch === epoch) this.migrationRefresh.presencePending = false;
+    await this.client.start();
+    this.assertRefreshSession(epoch);
+    if (this.migrationRefresh?.epoch === epoch) this.migrationRefresh.presencePending = false;
+    await this.watchInventoryPresence(this.data);
+    this.assertRefreshSession(epoch);
+  }
+
+  private assertRefreshSession(epoch: number): void {
+    if (this.data.auth && this.data.sessionEpoch === epoch) return;
+    throw new GatewayHttpError({
+      httpStatus: 401,
+      code: 'AUTH_SESSION_CHANGED',
+      message: 'The authenticated session changed during the device refresh.',
+    });
   }
 
   ensureReady(logicalDeviceId: string): Promise<void> {
@@ -91,7 +159,7 @@ export class DeviceV2Service {
     return this.client.snapshot(logicalDeviceId);
   }
 
-  private watchInventoryPresence(data: DataService): void {
+  private watchInventoryPresence(data: DataService): Promise<void> {
     const logicalDeviceIds = data.device.list.filter(logicalDeviceId => {
       const device = data.device.dict[logicalDeviceId];
       return device?.config?.mode === 'bbp2'
@@ -109,6 +177,6 @@ export class DeviceV2Service {
         });
       }
     }
-    void this.client.watchPresence(logicalDeviceIds).catch(() => undefined);
+    return this.client.watchPresence(logicalDeviceIds);
   }
 }

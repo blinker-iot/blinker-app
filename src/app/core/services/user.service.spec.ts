@@ -131,6 +131,43 @@ describe('UserService API contracts', () => {
     await expect(saving).resolves.toBe(true);
   });
 
+
+  it('ignores an older same-account inventory response after a migration refresh has loaded', async () => {
+    const deviceId = 'device_1234567890abcdef';
+    const older = service.getAllInfo();
+    const oldUser = httpTesting.expectOne(API.AUTH.ME);
+    const oldDevices = httpTesting.expectOne(API.DEVICE_V2.LIST);
+    const oldShares = httpTesting.expectOne(API.DEVICE_V2.RECEIVED_SHARES);
+    const refreshed = service.getAllInfo();
+    httpTesting.expectOne(API.AUTH.ME).flush({
+      status: 200, data: { id: 'legacy-uuid', nickname: 'Current' },
+    });
+    httpTesting.expectOne(API.DEVICE_V2.LIST).flush({
+      status: 200, data: { devices: [{
+        logicalDeviceId: deviceId, name: 'Migrated sensor', state: 'active',
+        cloudEnabled: true, cloudReachable: false, cloudLastSeenAt: 20,
+      }] },
+    });
+    httpTesting.expectOne(API.DEVICE_V2.RECEIVED_SHARES).flush({
+      status: 200, data: { devices: [] },
+    });
+    await expect(refreshed).resolves.toBe(true);
+
+    oldUser.flush({ status: 200, data: { id: 'legacy-uuid', nickname: 'Old' } });
+    oldDevices.flush({
+      status: 200, data: { devices: [{
+        logicalDeviceId: deviceId, name: 'Old sensor', state: 'active',
+        cloudEnabled: true, cloudReachable: true, cloudLastSeenAt: 10,
+      }] },
+    });
+    oldShares.flush({ status: 200, data: { devices: [] } });
+    await expect(older).resolves.toBe(false);
+    expect(dataService.user.nickname).toBe('Current');
+    expect(dataService.device.dict[deviceId].data).toMatchObject({
+      cloudReachable: false, cloudLastSeenAt: 20,
+    });
+  });
+
   it('keeps password and profile changes on their legacy endpoints', async () => {
     const passwordChange = service.changePassword('old-pass', 'new-pass');
     const passwordRequest = httpTesting.expectOne(
