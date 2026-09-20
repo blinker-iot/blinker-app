@@ -22,6 +22,7 @@
     "VERIFY_CODE": "验证码",
     "SEND_CODE": "发送验证码",
     "LOGIN_TIP": "使用未注册的邮箱将自动创建账号",
+    "WECHAT_BIND_TIP": "微信授权成功，请在本次授权有效期内使用邮箱验证码登录或注册，完成账号关联",
     "LOGIN_AGREEMENT_PREFIX": "登录即表示同意",
     "OR_LOGIN_WITH": "或使用以下方式登录"
   },

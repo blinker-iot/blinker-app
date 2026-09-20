@@ -156,6 +156,14 @@ export class NoticeService {
   }
 
   mess = {
+    wechatNeedsBinding: {
+      message: '微信授权成功，请在本次授权有效期内使用邮箱验证码登录或注册，完成账号关联',
+      type: 'warn'
+    },
+    wechatLoginFailed: {
+      message: '微信登录未完成，请重试或使用邮箱验证码登录',
+      type: 'error'
+    },
     githubLoginFailed: {
       message: 'GitHub 登录未完成，请重试',
       type: 'error'

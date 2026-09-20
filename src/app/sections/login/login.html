@@ -62,7 +62,9 @@
           }
         </button>
       </div>
-      <div class="login-tip">{{'ACCOUNT.LOGIN_TIP' | translate}}</div>
+      <div class="login-tip" role="status">
+        {{(wechatNeedsBinding ? 'ACCOUNT.WECHAT_BIND_TIP' : 'ACCOUNT.LOGIN_TIP') | translate}}
+      </div>
       <div class="login-consent">
         {{'ACCOUNT.LOGIN_AGREEMENT_PREFIX' | translate}}
         <span class="link-text" (click)="openUrl(USER_AGREEMENT,'用户协议')">
@@ -96,6 +98,7 @@
           type="button"
           class="social-btn wechat-btn"
           (click)="loginWithWechat()"
+          [disabled]="wechatStarting"
         >
           <i class="fa-brands fa-weixin"></i>
         </button>

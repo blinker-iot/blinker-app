@@ -22,6 +22,7 @@
     "VERIFY_CODE": "Código de verificación",
     "SEND_CODE": "Enviar código",
     "LOGIN_TIP": "Se creará automáticamente una cuenta para un correo no registrado",
+    "WECHAT_BIND_TIP": "La autorización de WeChat se completó. Mientras siga vigente, inicia sesión o regístrate con un código de verificación por correo para vincular tu cuenta.",
     "LOGIN_AGREEMENT_PREFIX": "Al iniciar sesión, aceptas:",
     "OR_LOGIN_WITH": "O inicia sesión con"
   },

@@ -22,6 +22,7 @@
     "VERIFY_CODE": "Code de vérification",
     "SEND_CODE": "Envoyer le code",
     "LOGIN_TIP": "Un compte sera créé automatiquement pour une adresse e-mail non inscrite",
+    "WECHAT_BIND_TIP": "L’autorisation WeChat a réussi. Tant qu’elle est valide, connectez-vous ou inscrivez-vous avec un code de vérification par e-mail pour associer votre compte.",
     "LOGIN_AGREEMENT_PREFIX": "En vous connectant, vous acceptez :",
     "OR_LOGIN_WITH": "Ou se connecter avec"
   },

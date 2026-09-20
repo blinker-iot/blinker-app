@@ -1,4 +1,4 @@
-package iot.diandeng.tech;
+package tech.diandeng.iot;
 
 import com.getcapacitor.BridgeActivity;
 

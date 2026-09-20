@@ -47,6 +47,11 @@ export class LoginPage implements OnDestroy {
 
   showPoweredBy = true;
   githubStarting = false;
+  wechatStarting = false;
+
+  get wechatNeedsBinding(): boolean {
+    return this.authService.wechatNeedsBinding;
+  }
 
   USER_AGREEMENT = CONFIG.USER_AGREEMENT;
   PRIVACY_POLICY = CONFIG.PRIVACY_POLICY;
@@ -172,18 +177,25 @@ export class LoginPage implements OnDestroy {
   }
 
   async loginWithWechat() {
-    await this.noticeService.showLoading('login');
+    if (this.wechatStarting) return;
+    this.wechatStarting = true;
     try {
+      await this.noticeService.showLoading('login');
       if (await this.authService.loginWithWechat()) {
         await this.userService.getAllInfo();
         await this.noticeService.hideLoading();
         this.navCtrl.navigateRoot('/');
       } else {
         await this.noticeService.hideLoading();
+        await this.noticeService.showToast(
+          this.wechatNeedsBinding ? 'wechatNeedsBinding' : 'wechatLoginFailed',
+        );
       }
     } catch (error) {
       await this.noticeService.hideLoading();
-      this.noticeService.showToast('loginFailed');
+      await this.noticeService.showToast('wechatLoginFailed');
+    } finally {
+      this.wechatStarting = false;
     }
   }
 }

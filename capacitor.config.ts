@@ -6,7 +6,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 const localCleartext = process.env['BLINKER_LOCAL_CLEARTEXT'] === '1';
 
 const config: CapacitorConfig = {
-  appId: 'iot.diandeng.tech',
+  appId: 'tech.diandeng.iot',
   appName: '点灯·blinker',
   webDir: 'www',
   // Capacitor's debug bridge logs complete plugin arguments and return values.
@@ -19,6 +19,9 @@ const config: CapacitorConfig = {
     cleartext: localCleartext,
   },
   plugins: {
+    Wechat: {
+      appId: 'wx8e6d58df422fff14',
+    },
     SystemBars: {
       insetsHandling: "css",
       style: "LIGHT",
