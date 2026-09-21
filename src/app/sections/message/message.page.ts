@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import {
   InfiniteScrollCustomEvent,
@@ -9,6 +9,7 @@ import {
 import { Subscription } from 'rxjs';
 
 import { normalizeMessageId } from 'src/app/core/services/message-deep-link';
+import { DeviceV2ShareInvitationService } from 'src/app/core/services/device-v2-share-invitation.service';
 import { MessageItem } from './message.model';
 import { MessageService } from './message.service';
 
@@ -17,10 +18,22 @@ import { MessageService } from './message.service';
   templateUrl: './message.page.html',
   styleUrls: ['./message.page.scss'],
   standalone: true,
+  // MessageService exposes mutable state; match the existing profile badge.
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [DatePipe, IonicModule, RouterModule],
 })
 export class MessagePage implements OnInit, OnDestroy {
-  detailItem: MessageItem | null = null;
+  private currentDetail: MessageItem | null = null;
+  private detailEpoch = -1;
+  private destroyed = false;
+  openingInvitation = false;
+  get detailItem(): MessageItem | null {
+    return this.detailEpoch === this.messageService.sessionEpoch ? this.currentDetail : null;
+  }
+  set detailItem(item: MessageItem | null) {
+    this.currentDetail = item;
+    this.detailEpoch = this.messageService.sessionEpoch;
+  }
   detailLoading = false;
   detailError = '';
   actionError = '';
@@ -35,6 +48,7 @@ export class MessagePage implements OnInit, OnDestroy {
     public readonly messageService: MessageService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
+    private readonly invitationFlow: DeviceV2ShareInvitationService,
   ) {}
 
   get messages(): readonly MessageItem[] {
@@ -74,6 +88,8 @@ export class MessagePage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
+    this.resetDetail();
     this.routeSubscription?.unsubscribe();
   }
 
@@ -145,6 +161,8 @@ export class MessagePage implements OnInit, OnDestroy {
     messageId: string,
     initialItem: MessageItem | null,
   ): Promise<void> {
+    if (this.destroyed) return;
+    const epoch = this.messageService.sessionEpoch;
     const requestId = ++this.detailRequestId;
     this.detailItem = initialItem;
     this.detailLoading = true;
@@ -153,7 +171,7 @@ export class MessagePage implements OnInit, OnDestroy {
 
     try {
       const detail = await this.messageService.getMessage(messageId);
-      if (requestId !== this.detailRequestId) return;
+      if (!this.currentRequest(requestId, epoch)) return;
       if (!detail) {
         this.closeDetail();
         this.actionError = '该消息已不可用，列表已更新';
@@ -164,7 +182,7 @@ export class MessagePage implements OnInit, OnDestroy {
       if (!detail.unread) return;
 
       const readResult = await this.messageService.markRead(detail.id);
-      if (requestId !== this.detailRequestId) return;
+      if (!this.currentRequest(requestId, epoch)) return;
       if (!readResult) {
         this.closeDetail();
         this.actionError = '该消息已不可用，列表已更新';
@@ -177,13 +195,13 @@ export class MessagePage implements OnInit, OnDestroy {
         unread: false,
       };
     } catch {
-      if (requestId === this.detailRequestId) {
+      if (this.currentRequest(requestId, epoch)) {
         this.detailError =
           this.messageService.errorMessage ||
           '消息详情加载失败，请稍后重试';
       }
     } finally {
-      if (requestId === this.detailRequestId) {
+      if (this.currentRequest(requestId, epoch)) {
         this.detailLoading = false;
       }
     }
@@ -191,6 +209,30 @@ export class MessagePage implements OnInit, OnDestroy {
 
   retryDetail(): void {
     if (this.detailItem) void this.openMessage(this.detailItem);
+  }
+
+  async openInvitation(): Promise<void> {
+    const item = this.detailItem;
+    if (this.openingInvitation || this.detailLoading || this.detailError || !item?.action || this.destroyed) return;
+    const request = this.detailRequestId, epoch = this.messageService.sessionEpoch;
+    this.openingInvitation = true;
+    try {
+      // Re-read authenticated detail: the invite may have been revoked since it
+      // appeared. The shared confirmation flow performs its own preview next.
+      const current = await this.messageService.getMessage(item.id);
+      if (!this.currentRequest(request, epoch)) return;
+      if (!current?.action || !this.invitationFlow.stageDirected(current.action.invitationId)) {
+        this.detailError = '该邀请已不可操作，请到“分享给我的”查看当前状态';
+        return;
+      }
+      await this.router.navigateByUrl('/share-invitation');
+    } catch {
+      if (this.currentRequest(request, epoch)) this.detailError = '邀请加载失败，请重试';
+    } finally { this.openingInvitation = false; }
+  }
+
+  private currentRequest(request: number, epoch: number): boolean {
+    return !this.destroyed && request === this.detailRequestId && epoch === this.messageService.sessionEpoch;
   }
 
   closeDetail(): void {

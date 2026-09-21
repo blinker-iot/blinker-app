@@ -480,7 +480,8 @@ export class DeviceService {
     if (device.config.mode === 'bbp2') {
       const id = this.logicalDeviceId(device);
       if (id) this.bindV2Device(device, id);
-      if (id) void this.deviceUi.connect(id).catch((error) => this.handleError(error));
+      // Inventory queries observe subscribed Presence; they never wake every
+      // gateway child. Explicit page/read synchronization owns connection demand.
       return;
     }
     // MQTT设备,且APP已经在该broker中注册
@@ -1053,14 +1054,14 @@ export class DeviceService {
       : data;
     if (!this.isRecord(message)) throw new Error('bbp2 指令必须是 JSON 对象');
 
-    if ('get' in message) {
-      await this.deviceUi.connect(logicalDeviceId);
-    }
     const payload = this.isRecord(message['set'])
       ? message['set']
       : message;
-    for (const [key, value] of Object.entries(payload)) {
-      if (key === 'get' || key === 'set' || key === 'rt') continue;
+    const commands = Object.entries(payload).filter(([key]) => !['get', 'set', 'rt'].includes(key));
+    // Only an explicit read may wait for connection preparation. A mixed
+    // get+set must never retain a control operation behind the ready wait.
+    if (!commands.length && 'get' in message) await this.deviceUi.connect(logicalDeviceId);
+    for (const [key, value] of commands) {
       await this.deviceUi.sendCommand(logicalDeviceId, key, value);
     }
   }

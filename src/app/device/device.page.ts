@@ -223,21 +223,9 @@ export class DevicePage implements OnInit, OnDestroy {
     if (!this.device || !this.deviceViewContainer) return;
 
     const componentConfig = this.getComponentConfig();
-    let componentName = componentConfig;
-    let customizerUrl = '';
-
-    if (componentName.startsWith('Customizer?')) {
-      customizerUrl = componentName.slice('Customizer?'.length);
-      componentName = 'Customizer';
-    }
-
-    const componentExists = !!deviceComponentDict[componentName];
-    const fallbackComponent = this.device.config.mode === 'bbp2'
-      ? 'DeviceV2'
-      : 'Layouter2Component';
-    this.deviceComponent = componentExists
-      ? componentName
-      : fallbackComponent;
+    const customizerUrl = componentConfig.startsWith('Customizer?')
+      ? componentConfig.slice('Customizer?'.length) : '';
+    this.deviceComponent = this.resolveComponentName(componentConfig);
     const componentType = deviceComponentDict[this.deviceComponent];
     this.deviceHeaderActions = null;
     this.deviceViewContainer.clear();
@@ -277,12 +265,20 @@ export class DevicePage implements OnInit, OnDestroy {
       : 'Layouter2Component';
   }
 
+  private resolveComponentName(config = this.getComponentConfig()): string {
+    const name = config.startsWith('Customizer?') ? 'Customizer' : config;
+    return deviceComponentDict[name] ? name
+      : this.device?.config.mode === 'bbp2' ? 'DeviceV2' : 'Layouter2Component';
+  }
+
   private async startDeviceSession(): Promise<void> {
     const device = this.device;
     if (!device || device.config.isPreview) return;
 
     if (device.config.mode === 'bbp2') {
-      await this.deviceService.connectDevice(device);
+      // The standard V2 child owns its persistent/cancellable page scope.
+      // A second shell read would survive navigation until BLE became ready.
+      if (this.resolveComponentName() !== 'DeviceV2') await this.deviceService.connectDevice(device);
       return;
     }
 

@@ -158,31 +158,6 @@ app-tab-selector {
   font-size: 12px;
 }
 
-.row-actions {
-  display: flex;
-  gap: 6px;
-
-  button,
-  & + button {
-    min-height: 30px;
-    padding: 0 9px;
-    border: 0;
-    border-radius: 9px;
-    font: inherit;
-    font-size: 11px;
-  }
-
-  .accept {
-    color: #fff;
-    background: var(--ion-color-primary);
-  }
-
-  .refuse {
-    color: var(--blinker-text-secondary);
-    background: var(--blinker-surface-muted);
-  }
-}
-
 .cancel-action {
   min-height: 31px;
   padding: 0 10px;
@@ -194,7 +169,6 @@ app-tab-selector {
   font-size: 11px;
 }
 
-.row-actions button:disabled,
 .cancel-action:disabled {
   opacity: 0.5;
 }

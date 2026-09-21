@@ -1,7 +1,10 @@
+import { decodeDirectDeviceHelloBody, encodeDirectAppHelloBody } from '../../protocol/device-v2/direct-hello';
 import {
   Bbp2MessageKind,
+  DeviceV2Manifest,
 } from '../../protocol/device-v2';
 import { BleEnrollmentApi } from './api';
+import { GatewayHttpError } from '../../model/response.model';
 import {
   BleControllerCredential,
   BleControllerCredentialStore,
@@ -33,7 +36,6 @@ import {
   decodeControllerAuthAuthorized,
   decodeControllerAuthChallenge,
   decodeControllerMutationReceipt,
-  decodeDirectDeviceHelloBody,
   decodeLocalSecureRecord,
   encodeBleEnrollmentHelloRequest,
   encodeBleEnrollmentRequest,
@@ -41,7 +43,6 @@ import {
   encodeControllerAuthProof,
   encodeControllerMutationReceipt,
   encodeControllerReceiptTranscript,
-  encodeDirectAppHelloBody,
   encodeLocalSecureRecord,
   localSecureNoisePrologue,
   makeBbp2Frame,
@@ -50,8 +51,6 @@ import {
   sameBytes,
 } from './wire';
 
-const ADMIN_FINGERPRINT_DOMAIN = new TextEncoder()
-  .encode('blinker/direct-admin/fingerprint/v1');
 // Allow Android's initial GATT scheduling to settle before the application
 // Noise handshake. This is not an SMP/pairing timeout.
 const INITIAL_HANDSHAKE_WRITE_TIMEOUT_MS = 45_000;
@@ -76,6 +75,7 @@ export class BleDirectClient {
     private readonly api: BleEnrollmentApi,
     private readonly store: BleControllerCredentialStore,
     private readonly crypto = new BleDirectCrypto(),
+    private readonly loadManifest?: (logicalDeviceId: string) => DeviceV2Manifest | undefined,
   ) {}
 
   async enroll(
@@ -117,14 +117,14 @@ export class BleDirectClient {
         || hello.securityProfile !== 1) {
         throw new Error('BLE_DIRECT_SETUP_CONTEXT_MISMATCH');
       }
-      await this.cancelPending(hello.deviceInstanceId);
+      await this.cancelPending(hello.deviceInstanceId, hello.accessEpoch);
 
       const controllerId = this.crypto.random(16);
       controllerSecret = this.crypto.random(32);
       const intentId = this.crypto.random(16);
       const commitId = this.crypto.random(16);
       const secretDigest = await this.crypto.sha256(controllerSecret);
-      const adminFingerprint = await this.adminFingerprint(controllerId, controllerSecret);
+      const adminFingerprint = await this.crypto.adminFingerprint(controllerId, controllerSecret);
       const transcriptHash = noise.transcriptHash();
       const intent = await this.api.issue({
         requestId: intentId,
@@ -239,11 +239,15 @@ export class BleDirectClient {
     target: BleDirectTarget,
   ): Promise<BleDirectSession> {
     const credential = await this.requireCredential(logicalDeviceId);
+    let session: BleDirectSession | undefined;
     try {
       if (credential.state !== 'active') throw new Error('BLE_DIRECT_ENROLLMENT_PENDING');
-      const session = await this.connectWithCredential(credential, target);
+      session = await this.connectWithCredential(credential, target);
       await session.synchronize();
       return session;
+    } catch (error) {
+      if (session) await session.close().catch(() => undefined);
+      throw error;
     } finally {
       clearBleControllerCredentialSecrets(credential);
     }
@@ -318,12 +322,12 @@ export class BleDirectClient {
   ): Promise<BleDirectSession> {
     let sequence = 1;
     await this.link.sendRecord(makeBbp2Frame(
-      Bbp2MessageKind.Hello, sequence, encodeDirectAppHelloBody(),
+      Bbp2MessageKind.Hello, sequence, encodeDirectAppHelloBody('controller', 512, true),
     ));
     const helloFrame = parseBbp2Response(
       await this.link.receiveRecord(), Bbp2MessageKind.Hello, sequence,
     );
-    const hello = decodeDirectDeviceHelloBody(helloFrame.body);
+    const hello = decodeDirectDeviceHelloBody(helloFrame.body, 'controller');
     const maxFrameSize = Math.min(512, hello.maxFrameSize, hello.maxReassemblySize);
 
     const clientNonce = this.crypto.random(16);
@@ -382,7 +386,10 @@ export class BleDirectClient {
       secure,
       maxFrameSize,
       sequence,
-    ));
+    ), undefined, 6000, { permissions: challenge.permissions, features: hello.features, maxFrameSize },
+    hello.manifest && this.loadManifest ? {
+      hello: hello.manifest, load: () => this.loadManifest!(logicalDeviceId),
+    } : undefined);
   }
 
   private async expectedReceipt(
@@ -434,21 +441,6 @@ export class BleDirectClient {
     }
   }
 
-  private async adminFingerprint(
-    controllerId: Uint8Array,
-    controllerSecret: Uint8Array,
-  ): Promise<Uint8Array> {
-    const version = new Uint8Array(4);
-    new DataView(version.buffer).setUint32(0, 1, false);
-    return this.crypto.sha256(
-      ADMIN_FINGERPRINT_DOMAIN,
-      Uint8Array.of(0),
-      controllerId,
-      version,
-      controllerSecret,
-    );
-  }
-
   private async commit(credential: BleControllerCredential): Promise<void> {
     const result = await this.api.commit(
       credential.intentId, credential.commitId, credential.receipt,
@@ -465,11 +457,22 @@ export class BleDirectClient {
     }
   }
 
-  private async cancelPending(deviceInstanceId: Uint8Array): Promise<void> {
+  private async cancelPending(deviceInstanceId: Uint8Array, setupEpoch: number): Promise<void> {
     const credential = await this.store.findPending(deviceInstanceId);
     if (!credential) return;
     try {
-      const result = await this.api.cancel(credential.intentId);
+      let result;
+      try {
+        result = await this.api.cancel(credential.intentId);
+      } catch (error) {
+        // Only an explicit server retirement plus a new Provisioning epoch can
+        // discard this old pending checkpoint. A commit/network failure cannot.
+        if (!(error instanceof GatewayHttpError) || error.httpStatus !== 410
+          || error.code !== 'DEVICE_V2_BLE_ENROLLMENT_DEVICE_RETIRED'
+          || setupEpoch === credential.accessEpoch) throw error;
+        await this.store.remove(credential.logicalDeviceId);
+        return;
+      }
       if (!sameBytes(result.intentId, credential.intentId)
         || result.logicalDeviceId !== credential.logicalDeviceId
         || !sameBytes(result.deviceInstanceId, credential.deviceInstanceId)

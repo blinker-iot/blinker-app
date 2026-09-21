@@ -25,6 +25,11 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 
 import { DeviceV2SharingService } from 'src/app/core/services/device-v2-sharing.service';
 import { DeviceV2ManagementService } from 'src/app/core/services/device-v2-management.service';
+import { API } from 'src/app/configs/api.config';
+import { assertDeviceV2AccountContext, captureDeviceV2AccountContext } from 'src/app/core/device-v2/account-scope';
+import { CapacitorWiFiProvAllocationStore } from 'src/app/core/device-v2/provisioning/wifiprov-allocation-store';
+import { CapacitorBleControllerCredentialStore } from 'src/app/core/device-v2/ble-direct/credential-store';
+import { WiFiProvRetirement } from 'src/app/core/device-v2/provisioning/wifiprov-retirement';
 import {
   MenuListComponent,
   MenuListItem,
@@ -60,6 +65,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   private rotateIdempotencyKey = '';
   private confirmDialog?: HTMLIonAlertElement;
   private readonly subscriptions = new Subscription();
+  private destroyed = false;
 
   get loaded(): boolean {
     return !!this.device;
@@ -246,6 +252,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.subscriptions.unsubscribe();
     this.clearSecret();
     void this.confirmDialog?.dismiss();
@@ -331,7 +338,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     if (!this.isOwner || !this.supportsWifiProvisioning || this.keyBusy) return;
     const confirmed = await this.confirmAction(
       '先重置设备网络',
-      '请先在设备上触发 Blinker.resetNetwork()（或产品定义的网络重置操作），并确认设备开始广播 BLINKER_。重新配网只更新 Wi-Fi，不会刷新 Key 或清除 BLE 控制权。',
+      '请先在设备上触发 Blinker.resetNetwork()（或产品定义的网络重置操作），并确认设备开始广播 BLINKER_。仅重置网络时保留 Key 与 BLE 控制权；若清除了全部接入信息，重新配网将刷新 Key 并重建本地权限，仍保留原设备和控制页面。',
       '我已重置网络',
     );
     if (!confirmed) return;
@@ -460,19 +467,22 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   async showUnbindConfirm() {
     this.confirmDialog = await this.alertCtrl.create({
-      header: '确认解除绑定',
-      message: '解绑后，你将无法控制这个设备，关联该设备的自动化规则也将失效',
+      header: this.isSharedDevice ? '确认退出分享' : '确认移除设备',
+      message: this.isSharedDevice ? '退出后，你将失去该设备的分享权限'
+        : '移除后，云端归属和分享权限将失效；如有设备 Key，也会失效。蓝牙或局域网设备交给他人前仍需现场重置授权，再重新添加。仅重启或移除云端记录不代表本地权限已清除。',
       buttons: [
         {
           text: '取消',
           handler: () => { },
         },
         {
-          text: '确认解除',
+          text: this.isSharedDevice ? '退出分享' : '移除设备',
           handler: async () => {
             if (this.isSharedDevice) {
               try {
-                await this.sharing.leaveShare(this.device.id);
+                const result = await this.sharing.leaveShare(this.device.id);
+                await this.noticeService.showToast(result.realtimeRefreshPending
+                  ? '已退出分享，通信权限同步中' : '已退出分享');
                 this.navCtrl.navigateRoot('/');
               } catch (error) {
                 console.error('Failed to leave Device V2 share', error);
@@ -494,13 +504,33 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       if (this.device.config.mode === 'bbp2') {
         const id = this.device.id || this.device.deviceName;
         if (!id) throw new Error('设备标识无效');
-        await this.management.deleteDeviceV2(id);
+        const expected = captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+        const current = () => {
+          if (this.destroyed || this.logicalDeviceId !== id) throw Error('DEVICE_REMOVAL_CONTEXT_CHANGED');
+          assertDeviceV2AccountContext(this.dataService, expected);
+          return expected;
+        };
+        const retirement = new WiFiProvRetirement(new CapacitorWiFiProvAllocationStore(current),
+          new CapacitorBleControllerCredentialStore(current), this.management, current);
+        const { response: result, allocationCleanupPending } = await retirement.removeOwned(id);
+        this.clearSecret();
+        await this.noticeService.showToast(allocationCleanupPending
+          ? '云端授权已撤销，本机配网记录清理未完成；重置设备后再次配网可重试清理'
+          : result.data.brokerCleanupPending || result.data.realtimeRefreshPending
+          ? '云端授权已撤销，通信清理中；本地权限尚未确认清除'
+          : '设备已从云端移除；本地权限尚未确认清除');
         return true;
       }
-      return await this.userService.delDevice(this.device);
+      await this.noticeService.showToast('当前仅支持 V2 设备移除，请先确认设备接入类型');
+      return false;
     } catch (error) {
-      console.error('Failed to remove device', error);
-      await this.noticeService.showToast('设备解绑失败，请稍后重试');
+      // No raw HTTP error bodies or secret-bearing request objects in logs.
+      const code = error instanceof GatewayHttpError ? error.code : undefined;
+      await this.noticeService.showToast(code === 'DEVICE_V2_REMOVAL_LOCAL_LIFECYCLE_REQUIRED'
+        ? '该接入类型的移除流程尚未开放，设备未被移除'
+        : code === 'DEVICE_V2_REMOVAL_ROUTE_CHANGING'
+          ? '设备通信路由正在调整，请稍后重试'
+          : '设备移除未确认，请刷新设备列表后重试');
       return false;
     }
   }

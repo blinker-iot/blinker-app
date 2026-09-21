@@ -14,7 +14,7 @@
       <div>
         <span class="eyebrow">当前设备</span>
         <h1>{{ device?.config?.customName || '设备' }}</h1>
-        <p>通过单次邀请码共享查看或控制权限。</p>
+        <p>通过邮箱邀请或分享链接共享查看或控制权限。</p>
       </div>
       <span class="member-count">{{ sharedUserCount }} 项</span>
     </section>
@@ -29,7 +29,7 @@
           <span class="status-dot pending" aria-hidden="true"></span>
         </span>
         <span class="member-copy">
-          <strong>待领取邀请 · {{ roleLabel(item.role) }}</strong>
+          <strong>{{ item.targeted ? '定向' : '链接' }}邀请 · {{ roleLabel(item.role) }}</strong>
           <small>{{ item.expiresAt | msToDate }} 到期</small>
         </span>
         <span class="member-status pending-status">待领取</span>
@@ -61,7 +61,7 @@
     <section class="empty-state">
       <span class="empty-icon" aria-hidden="true"><i class="fa-light fa-user-plus"></i></span>
       <strong>还没有共享成员</strong>
-      <p>生成一次性邀请码，由另一个账号在 App 内领取。</p>
+      <p>邀请指定邮箱的账号，或生成链接让对方在 App 内领取。</p>
     </section>
     }
 
@@ -76,9 +76,13 @@
 <ion-footer class="share-detail-footer ion-no-border">
   <ion-toolbar>
     <div class="footer-shell">
-      <button type="button" class="primary-action" (click)="addShare()">
+      <button type="button" class="primary-action" [disabled]="!!busyId" (click)="inviteAccount()">
+        <i class="fa-light fa-envelope" aria-hidden="true"></i>
+        <span>邮箱邀请</span>
+      </button>
+      <button type="button" class="primary-action" [disabled]="!!busyId" (click)="addShare()">
         <i class="fa-light fa-ticket" aria-hidden="true"></i>
-        <span>生成共享邀请码</span>
+        <span>生成分享链接</span>
       </button>
     </div>
   </ion-toolbar>

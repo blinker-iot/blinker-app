@@ -1,3 +1,18 @@
+import { parseShareInvitationId } from '../../core/device-v2/sharing/invitation-link';
+
+export interface MessageInvitationAction {
+  type: 'share_invitation';
+  invitationId: string;
+}
+
+export function parseMessageAction(input: unknown): MessageInvitationAction | null {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const action = input as Record<string, unknown>;
+  if (Object.keys(action).length !== 2 || action['type'] !== 'share_invitation') return null;
+  const invitationId = parseShareInvitationId(action['invitationId']);
+  return invitationId ? { type: 'share_invitation', invitationId } : null;
+}
+
 export interface MessageItem {
   id: string;
   type: string;
@@ -9,6 +24,8 @@ export interface MessageItem {
   expiresAt: number | null;
   readAt: number | null;
   unread: boolean;
+  // Only authenticated detail responses can carry actions; list/push text cannot.
+  action?: MessageInvitationAction | null;
 }
 
 export interface MessagePage {

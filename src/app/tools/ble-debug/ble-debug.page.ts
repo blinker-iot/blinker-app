@@ -9,6 +9,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@capacitor/clipboard';
 import { Capacitor } from '@capacitor/core';
+import { bleScanner } from '../../core/bluetooth/scan';
 import { IonicModule, ToastController } from '@ionic/angular';
 import {
   BleCharacteristic,
@@ -17,7 +18,6 @@ import {
   BleDevice,
   BleService,
   ConnectionPriority,
-  ScanMode,
   ScanResult,
   dataViewToHexString,
   dataViewToText,
@@ -161,7 +161,8 @@ export class BleDebugPage implements OnInit, OnDestroy {
   readonly isWeb = Capacitor.getPlatform() === 'web';
   readonly isAndroid = Capacitor.getPlatform() === 'android';
   private initialized = false;
-  private scanTimer?: ReturnType<typeof setTimeout>;
+  private scanAbort?: AbortController;
+  private scanWork?: Promise<void>;
   private scanElapsedTimer?: ReturnType<typeof setInterval>;
   private rssiMonitorTimer?: ReturnType<typeof setInterval>;
   private logSequence = 0;
@@ -318,8 +319,11 @@ export class BleDebugPage implements OnInit, OnDestroy {
   }
 
   async startScan(): Promise<void> {
+    if (this.scanAbort) return;
+    const abort = new AbortController(); this.scanAbort = abort;
     try {
       await this.ensureInitialized();
+      if (abort.signal.aborted) return;
       this.clearPermissionProblem();
       this.devices = [];
 
@@ -338,33 +342,33 @@ export class BleDebugPage implements OnInit, OnDestroy {
       this.screen = 'scanner';
       this.scanElapsedSeconds = 0;
       this.addLog('system', '开始扫描', '低延迟模式 · 自动停止 15 秒');
-      await BleClient.requestLEScan(
-        { allowDuplicates: true, scanMode: ScanMode.SCAN_MODE_LOW_LATENCY },
-        (result) => this.zone.run(() => this.upsertDevice(result))
-      );
-
       this.clearScanTimer();
       this.scanElapsedTimer = setInterval(() => {
         this.scanElapsedSeconds += 1;
         this.markForCheck();
       }, 1000);
-      this.scanTimer = setTimeout(() => void this.stopScan(), 15000);
+      this.scanWork = bleScanner.run([], 15000, abort.signal, result => this.zone.run(() => this.upsertDevice(result)));
+      try { await this.scanWork; }
+      catch (error) { if (!abort.signal.aborted) throw error; }
     } catch (error) {
       this.isScanning = false;
       this.capturePermissionProblem(error);
       const message = this.errorMessage(error);
       this.addLog('error', '扫描失败', message);
       await this.showToast(message);
+    } finally {
+      if (this.scanAbort === abort) { this.scanAbort = undefined; this.scanWork = undefined; this.isScanning = false; this.clearScanTimer(); }
     }
   }
 
   async stopScan(): Promise<void> {
     this.clearScanTimer();
+    this.scanAbort?.abort();
     if (!this.isScanning) return;
 
     this.isScanning = false;
     try {
-      await BleClient.stopLEScan();
+      await this.scanWork?.catch(() => undefined);
       this.addLog(
         'system',
         '扫描已停止',
@@ -1065,6 +1069,8 @@ export class BleDebugPage implements OnInit, OnDestroy {
     void this.cleanup();
   }
 
+  ionViewWillLeave(): void { void this.stopScan(); }
+
   private async ensureInitialized(): Promise<void> {
     if (!this.initialized) {
       try {
@@ -1380,9 +1386,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
   }
 
   private clearScanTimer(): void {
-    if (this.scanTimer) clearTimeout(this.scanTimer);
     if (this.scanElapsedTimer) clearInterval(this.scanElapsedTimer);
-    this.scanTimer = undefined;
     this.scanElapsedTimer = undefined;
   }
 

@@ -17,6 +17,23 @@
     />
 
     @if (phase !== 'ready') {
+    @if (pendingEnrollments.length) {
+      <section class="setup-card ble-recovery" aria-labelledby="ble-recovery-heading">
+        <h2 id="ble-recovery-heading">{{ 'DEVICE_GUIDE.BLE_RECOVERY_TITLE' | translate }}</h2>
+        <p>{{ 'DEVICE_GUIDE.BLE_RECOVERY_DESCRIPTION' | translate }}</p>
+        <div class="ble-candidates">
+        @for (id of pendingEnrollments; track id) {
+          <button type="button" [disabled]="busy" (click)="resumeEnrollment(id)">
+            <i class="fa-brands fa-bluetooth-b" aria-hidden="true"></i>
+            <span>
+              <strong>{{ 'DEVICE_GUIDE.BLE_RECOVER' | translate }}</strong>
+              <small>{{ id }}</small>
+            </span>
+          </button>
+        }
+        </div>
+      </section>
+    }
     <section class="setup-card" aria-labelledby="ble-prepare-heading">
       <h2 id="ble-prepare-heading">{{ 'DEVICE_GUIDE.PREPARE_TITLE' | translate }}</h2>
       <ol class="setup-steps">

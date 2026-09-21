@@ -3,7 +3,6 @@ import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API } from 'src/app/configs/api.config';
 import { sha256 } from '../functions/func';
-import { BlinkerDevice } from '../model/device.model';
 import {
   AccountDeletionCodeData,
   AilyResponse,
@@ -25,6 +24,7 @@ interface SessionFence {
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
+  private inventoryRequest = 0;
   get avatarUploadConfigured(): boolean {
     return API.USER.UPLOAD_AVATAR.trim().length > 0;
   }
@@ -44,6 +44,7 @@ export class UserService {
   ) {}
 
   async getAllInfo(): Promise<boolean> {
+    const request = ++this.inventoryRequest;
     const session = this.captureSession();
     if (!session) return false;
     this.dataService.userLoadError.next(null);
@@ -57,7 +58,7 @@ export class UserService {
         API.DEVICE_V2.RECEIVED_SHARES,
       )),
     ]);
-    if (!this.sessionMatches(session)) return false;
+    if (!this.sessionMatches(session) || request !== this.inventoryRequest) return false;
 
     const deletedAccountError =
       userResult.status === 'rejected' &&
@@ -116,8 +117,9 @@ export class UserService {
       );
     }
 
-    if (!this.sessionMatches(session)) return false;
-    this.dataService.loadGatewayData(userResult.value.data, devices, received);
+    if (!this.sessionMatches(session) || request !== this.inventoryRequest) return false;
+    this.dataService.loadGatewayData(userResult.value.data, devices, received,
+      receivedResult.status === 'fulfilled' && Array.isArray(receivedResult.value?.data?.devices));
     await this.noticeService.hideLoading();
     return true;
   }
@@ -136,20 +138,6 @@ export class UserService {
         uuid: this.uuid,
         token: this.token,
         userConf: JSON.stringify(userConfig),
-      }),
-    )
-      .then((response) => response.message === 1000)
-      .catch(this.handleError);
-  }
-
-  delDevice(device: BlinkerDevice): Promise<boolean> {
-    return firstValueFrom(
-      this.http.get<BlinkerResponse>(API.USER.DEL_DEVICE, {
-        params: {
-          uuid: this.uuid,
-          token: this.token,
-          deviceName: device.deviceName,
-        },
       }),
     )
       .then((response) => response.message === 1000)

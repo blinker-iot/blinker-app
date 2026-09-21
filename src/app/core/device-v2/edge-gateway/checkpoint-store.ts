@@ -2,6 +2,12 @@ import { Capacitor } from '@capacitor/core';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 
 import { base64UrlDecode, base64UrlEncode } from '../ble-direct/wire';
+import {
+  DeviceV2AccountScope,
+  DeviceV2AccountScopeProvider,
+  deviceV2AccountStoragePrefix,
+  validateDeviceV2AccountScope,
+} from '../account-scope';
 import { EdgeGatewayAttachRequest } from './api';
 
 export type EdgeGatewayAttachCheckpoint = EdgeGatewayAttachRequest;
@@ -14,7 +20,9 @@ export interface EdgeGatewayAttachCheckpointStore {
 }
 
 interface StoredCheckpoint {
-  version: 1;
+  version: 2;
+  authority: string;
+  accountId: string;
   operationId: string;
   edgeHubLogicalDeviceId: string;
   childLogicalDeviceId: string;
@@ -25,53 +33,73 @@ const PREFIX = 'blinker_v2_edge_gateway_attach_';
 
 export class CapacitorEdgeGatewayAttachCheckpointStore
 implements EdgeGatewayAttachCheckpointStore {
+  constructor(private readonly scope: DeviceV2AccountScopeProvider) {}
+
   async save(value: EdgeGatewayAttachCheckpoint): Promise<void> {
     requireNative();
+    const scope = this.currentScope();
     validateCheckpoint(value);
     const stored: StoredCheckpoint = {
-      version: 1,
+      version: 2,
+      authority: scope.authority,
+      accountId: scope.accountId,
       operationId: base64UrlEncode(value.operationId),
       edgeHubLogicalDeviceId: value.edgeHubLogicalDeviceId,
       childLogicalDeviceId: value.childLogicalDeviceId,
       childDeviceInstanceId: base64UrlEncode(value.childDeviceInstanceId),
     };
-    await SecureStorage.setItem(PREFIX + stored.operationId, JSON.stringify(stored));
+    await SecureStorage.setItem(scopedPrefix(scope) + stored.operationId, JSON.stringify(stored));
   }
 
   async load(operationId: Uint8Array): Promise<EdgeGatewayAttachCheckpoint | undefined> {
     requireNative();
+    const scope = this.currentScope();
     const encodedId = operationText(operationId);
-    const value = await SecureStorage.getItem(PREFIX + encodedId);
+    const value = await SecureStorage.getItem(scopedPrefix(scope) + encodedId);
     if (value === null) return undefined;
-    return decodeCheckpoint(value, encodedId);
+    return decodeCheckpoint(value, scope, encodedId);
   }
 
   async list(): Promise<EdgeGatewayAttachCheckpoint[]> {
     requireNative();
+    const scope = this.currentScope();
+    const prefix = scopedPrefix(scope);
     const output: EdgeGatewayAttachCheckpoint[] = [];
     for (const key of new Set(await SecureStorage.keys())) {
-      if (!key.startsWith(PREFIX)) continue;
-      const encodedId = key.slice(PREFIX.length);
+      if (!key.startsWith(prefix)) continue;
+      const encodedId = key.slice(prefix.length);
       const value = await SecureStorage.getItem(key);
-      if (value !== null) output.push(decodeCheckpoint(value, encodedId));
+      if (value !== null) output.push(decodeCheckpoint(value, scope, encodedId));
     }
     return output;
   }
 
   async remove(operationId: Uint8Array): Promise<void> {
     requireNative();
-    await SecureStorage.removeItem(PREFIX + operationText(operationId));
+    await SecureStorage.removeItem(
+      scopedPrefix(this.currentScope()) + operationText(operationId),
+    );
+  }
+
+  private currentScope(): DeviceV2AccountScope {
+    return validateDeviceV2AccountScope(this.scope());
   }
 }
 
-function decodeCheckpoint(value: string, encodedId: string): EdgeGatewayAttachCheckpoint {
+function decodeCheckpoint(
+  value: string,
+  scope: DeviceV2AccountScope,
+  encodedId: string,
+): EdgeGatewayAttachCheckpoint {
   let stored: StoredCheckpoint;
   try {
     stored = JSON.parse(value) as StoredCheckpoint;
   } catch {
     throw new Error('EDGE_GATEWAY_CHECKPOINT_CORRUPT');
   }
-  if (stored.version !== 1 || stored.operationId !== encodedId) {
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)
+    || stored.version !== 2 || stored.authority !== scope.authority
+    || stored.accountId !== scope.accountId || stored.operationId !== encodedId) {
     throw new Error('EDGE_GATEWAY_CHECKPOINT_CORRUPT');
   }
   const result = {
@@ -82,6 +110,10 @@ function decodeCheckpoint(value: string, encodedId: string): EdgeGatewayAttachCh
   };
   validateCheckpoint(result);
   return result;
+}
+
+function scopedPrefix(scope: DeviceV2AccountScope): string {
+  return deviceV2AccountStoragePrefix(PREFIX, scope);
 }
 
 function validateCheckpoint(value: EdgeGatewayAttachCheckpoint): void {

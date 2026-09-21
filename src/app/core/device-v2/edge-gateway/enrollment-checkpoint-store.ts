@@ -1,5 +1,11 @@
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { Capacitor } from '@capacitor/core';
+import {
+  DeviceV2AccountScope,
+  DeviceV2AccountScopeProvider,
+  deviceV2AccountStoragePrefix,
+  validateDeviceV2AccountScope,
+} from '../account-scope';
 
 export interface EdgeGatewayEnrollmentCheckpoint {
   edgeHubLogicalDeviceId: string;
@@ -13,28 +19,43 @@ export interface EdgeGatewayEnrollmentCheckpointStore {
 }
 
 interface StoredCheckpoint extends EdgeGatewayEnrollmentCheckpoint {
-  version: 1;
+  version: 2;
+  authority: string;
+  accountId: string;
 }
 
 const PREFIX = 'blinker_v2_edge_gateway_enrollment_';
 
 export class CapacitorEdgeGatewayEnrollmentCheckpointStore
 implements EdgeGatewayEnrollmentCheckpointStore {
+  constructor(private readonly scope: DeviceV2AccountScopeProvider) {}
+
   async save(value: EdgeGatewayEnrollmentCheckpoint): Promise<void> {
     requireNative();
+    const scope = this.currentScope();
     validate(value);
-    const stored: StoredCheckpoint = { version: 1, ...value };
-    await SecureStorage.setItem(PREFIX + value.childLogicalDeviceId, JSON.stringify(stored));
+    const stored: StoredCheckpoint = {
+      version: 2,
+      authority: scope.authority,
+      accountId: scope.accountId,
+      ...value,
+    };
+    await SecureStorage.setItem(
+      scopedPrefix(scope) + value.childLogicalDeviceId,
+      JSON.stringify(stored),
+    );
   }
 
   async list(): Promise<EdgeGatewayEnrollmentCheckpoint[]> {
     requireNative();
+    const scope = this.currentScope();
+    const prefix = scopedPrefix(scope);
     const output: EdgeGatewayEnrollmentCheckpoint[] = [];
     for (const key of new Set(await SecureStorage.keys())) {
-      if (!key.startsWith(PREFIX)) continue;
-      const childLogicalDeviceId = key.slice(PREFIX.length);
+      if (!key.startsWith(prefix)) continue;
+      const childLogicalDeviceId = key.slice(prefix.length);
       const encoded = await SecureStorage.getItem(key);
-      if (encoded !== null) output.push(decode(encoded, childLogicalDeviceId));
+      if (encoded !== null) output.push(decode(encoded, scope, childLogicalDeviceId));
     }
     return output;
   }
@@ -44,18 +65,29 @@ implements EdgeGatewayEnrollmentCheckpointStore {
     if (!boundedId(childLogicalDeviceId)) {
       throw new Error('EDGE_GATEWAY_ENROLLMENT_CHECKPOINT_INVALID');
     }
-    await SecureStorage.removeItem(PREFIX + childLogicalDeviceId);
+    await SecureStorage.removeItem(scopedPrefix(this.currentScope()) + childLogicalDeviceId);
+  }
+
+  private currentScope(): DeviceV2AccountScope {
+    return validateDeviceV2AccountScope(this.scope());
   }
 }
 
-function decode(value: string, childLogicalDeviceId: string): EdgeGatewayEnrollmentCheckpoint {
+function decode(
+  value: string,
+  scope: DeviceV2AccountScope,
+  childLogicalDeviceId: string,
+): EdgeGatewayEnrollmentCheckpoint {
   let stored: StoredCheckpoint;
   try {
     stored = JSON.parse(value) as StoredCheckpoint;
   } catch {
     throw new Error('EDGE_GATEWAY_ENROLLMENT_CHECKPOINT_CORRUPT');
   }
-  if (stored.version !== 1 || stored.childLogicalDeviceId !== childLogicalDeviceId) {
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)
+    || stored.version !== 2 || stored.authority !== scope.authority
+    || stored.accountId !== scope.accountId
+    || stored.childLogicalDeviceId !== childLogicalDeviceId) {
     throw new Error('EDGE_GATEWAY_ENROLLMENT_CHECKPOINT_CORRUPT');
   }
   validate(stored);
@@ -63,6 +95,10 @@ function decode(value: string, childLogicalDeviceId: string): EdgeGatewayEnrollm
     edgeHubLogicalDeviceId: stored.edgeHubLogicalDeviceId,
     childLogicalDeviceId: stored.childLogicalDeviceId,
   };
+}
+
+function scopedPrefix(scope: DeviceV2AccountScope): string {
+  return deviceV2AccountStoragePrefix(PREFIX, scope);
 }
 
 function validate(value: EdgeGatewayEnrollmentCheckpoint): void {

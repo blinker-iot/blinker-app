@@ -11,6 +11,7 @@ import { Subscription } from 'rxjs';
 
 import { BleDirectTarget } from '../../../core/device-v2/ble-direct';
 import { BlinkerDevice } from '../../../core/model/device.model';
+import { GatewayHttpError } from '../../../core/model/response.model';
 import { EdgeGatewayTopologyState } from '../../../core/protocol/device-v2';
 import { DataService } from '../../../core/services/data.service';
 import {
@@ -48,9 +49,11 @@ export class EdgeGatewayEnrollmentPage implements OnDestroy {
   recoveries: readonly DeviceV2GatewayRecovery[] = [];
   logicalDeviceId = '';
   error = '';
+  retirementPending = false;
 
   private workflow?: DeviceV2GatewayEnrollment;
   private generation = 0;
+  private observedSessionEpoch: number;
   private readonly subscriptions = new Subscription();
 
   constructor(
@@ -61,12 +64,30 @@ export class EdgeGatewayEnrollmentPage implements OnDestroy {
     private readonly nav: NavController,
     private readonly cd: ChangeDetectorRef,
   ) {
+    this.observedSessionEpoch = this.data.sessionEpoch;
     this.subscriptions.add(route.paramMap.subscribe(params => {
       this.edgeHubLogicalDeviceId = params.get('id') ?? '';
       this.bindHub();
     }));
     this.subscriptions.add(this.data.deviceDataLoader.subscribe(loaded => {
       if (loaded) this.bindHub();
+    }));
+    this.subscriptions.add(this.data.authDataChanged.subscribe(() => {
+      if (this.observedSessionEpoch === this.data.sessionEpoch) return;
+      this.observedSessionEpoch = this.data.sessionEpoch;
+      this.generation += 1;
+      this.phase = 'idle';
+      this.candidates = [];
+      this.recoveries = [];
+      this.logicalDeviceId = '';
+      this.error = '';
+      this.retirementPending = false;
+      this.hub = undefined;
+      void this.closeWorkflow();
+      void this.nav.navigateRoot(
+        this.data.auth?.accessToken ? '/home/device' : '/login',
+      );
+      this.cd.markForCheck();
     }));
   }
 
@@ -226,7 +247,9 @@ export class EdgeGatewayEnrollmentPage implements OnDestroy {
 
   private async accept(result: DeviceV2GatewayCompletion): Promise<void> {
     this.logicalDeviceId = result.logicalDeviceId;
-    this.phase = result.attachment.topology.topologyState === EdgeGatewayTopologyState.Active
+    this.retirementPending = result.retirementPending === true;
+    this.phase = !result.retirementPending
+      && result.attachment.topology.topologyState === EdgeGatewayTopologyState.Active
       ? 'ready' : 'waiting';
     this.candidates = [];
     await this.loadRecoveries();
@@ -247,12 +270,20 @@ export class EdgeGatewayEnrollmentPage implements OnDestroy {
   }
 
   private messageOf(error: unknown): string {
-    const code = error instanceof Error ? error.message : '';
+    const isGatewayError = error instanceof GatewayHttpError;
+    const code = isGatewayError
+      ? error.code : error instanceof Error ? error.message : '';
     if (code === 'BLE_DIRECT_SCAN_TIMEOUT' || code === 'BLE_DIRECT_SCAN_FAILED') {
       return '网关附近没有发现处于接入模式的 Blinker 蓝牙设备';
     }
+    if (code === 'EDGE_GATEWAY_PERMIT_JOIN_EXPIRED'
+      || code === 'EDGE_GATEWAY_PERMIT_JOIN_RELAY_NOT_READY') {
+      return '设备接入窗口已失效，请重新扫描';
+    }
     if (code === 'EDGE_GATEWAY_RECOVERY_NOT_FOUND') return '该恢复任务已经完成或失效';
     if (code.includes('PERMIT_JOIN_BUSY')) return '网关正在处理另一台设备，请稍后重试';
-    return code || '接入失败，请确认网关和蓝牙设备均在线';
+    if (isGatewayError) return '接入失败，请确认网关和蓝牙设备均在线';
+    return error instanceof Error && error.message
+      ? error.message : '接入失败，请确认网关和蓝牙设备均在线';
   }
 }

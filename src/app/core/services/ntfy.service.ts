@@ -13,6 +13,7 @@ import { API } from '../../configs/api.config';
 import { NTFY_CONFIG } from '../../configs/ntfy.config';
 import { GatewayHttpError } from '../model/response.model';
 import { DataService } from './data.service';
+import { normalizeMessageId } from './message-deep-link';
 
 type InstallationState =
   | 'provisioning'
@@ -94,8 +95,10 @@ export class NtfyService {
   private userDataResetEpoch: number | null;
   private readonly seenMessageIds = new Set<string>();
   private readonly messageIdSubject = new Subject<string>();
+  private readonly notificationActionSubject = new Subject<string>();
 
   readonly messageIds$ = this.messageIdSubject.asObservable();
+  readonly notificationActions$ = this.notificationActionSubject.asObservable();
 
   constructor(
     private readonly http: HttpClient,
@@ -119,6 +122,11 @@ export class NtfyService {
           this.handleMessage(message);
         }),
       );
+      this.listeners.push(await Ntfy.addListener('notificationAction', () => {
+        void this.consumeNotificationAction();
+      }));
+      // Native keeps one pending tap across WebView startup, not a second inbox.
+      await this.consumeNotificationAction();
       this.subscriptions.push(
         this.dataService.authDataChanged.subscribe(() => {
           this.handleAuthDataChanged();
@@ -565,7 +573,11 @@ export class NtfyService {
     try {
       if (!this.isCurrentSession(accountId, sessionEpoch)) return false;
       try {
-        await Ntfy.requestNotificationPermission();
+        const permission = await Ntfy.getNotificationPermission();
+        if (!this.isCurrentSession(accountId, sessionEpoch)) return false;
+        // Reconnecting an already-authorized installation must not wait for an
+        // Activity permission round-trip (for example while the phone is locked).
+        if (permission.state === 'prompt') await Ntfy.requestNotificationPermission();
       } catch {
         // A denied notification permission must not expose or replace credentials.
       }
@@ -623,11 +635,33 @@ export class NtfyService {
     }
   }
 
-  private handleMessage(message: NtfyMessage): void {
+  private currentMessageId(message: NtfyMessage): string | null {
+    const record = this.storedInstallation;
+    if (!record || record.state !== 'active' || record.ownerAccountId !== this.currentAccountId()
+      || !record.ntfy || message?.topic !== record.ntfy.topic || message.event !== 'message') return null;
     const value = message?.raw?.['sequence_id'];
-    if (typeof value !== 'string') return;
-    const messageId = value.trim();
-    if (!messageId || messageId.length > 128 || this.seenMessageIds.has(messageId)) {
+    return typeof value === 'string' ? normalizeMessageId(value) : null;
+  }
+
+  private async consumeNotificationAction(): Promise<void> {
+    const epoch = this.dataService.sessionEpoch;
+    const accountId = this.currentAccountId();
+    const installationId = this.storedInstallation?.serverInstallationId;
+    try {
+      const { message } = await Ntfy.consumeNotificationAction();
+      if (!accountId || !installationId || !this.isCurrentSession(accountId, epoch)
+        || installationId !== this.storedInstallation?.serverInstallationId || !message) return;
+      const messageId = this.currentMessageId(message);
+      if (messageId) this.notificationActionSubject.next(messageId);
+    } catch {
+      // Old native builds or evicted/retired notifications still open the app.
+      // Authenticated inbox remains available; never route from arbitrary raw/click.
+    }
+  }
+
+  private handleMessage(message: NtfyMessage): void {
+    const messageId = this.currentMessageId(message);
+    if (!messageId || this.seenMessageIds.has(messageId)) {
       return;
     }
 
@@ -785,6 +819,7 @@ export class NtfyService {
         || !!url.password
         || !!url.search
         || !!url.hash
+        || url.pathname !== '/'
       ) {
         return false;
       }
@@ -792,9 +827,10 @@ export class NtfyService {
       return false;
     }
     return !!(
-      this.text(value.username, 256)
-      && this.text(value.topic, 256)
-      && this.text(value.token, 2_048)
+      /^[A-Za-z0-9_-]{1,64}$/.test(value.username)
+      && /^[A-Za-z0-9_-]{1,64}$/.test(value.topic)
+      && typeof value.token === 'string' && value.token.length <= 2_048
+      && /^[^\s\u0000-\u001f\u007f]+$/.test(value.token)
     );
   }
 

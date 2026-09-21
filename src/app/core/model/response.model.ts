@@ -71,6 +71,8 @@ export interface DeviceKeyContext {
 }
 
 export interface DeviceV2PresenceMetadata {
+  /** Active gateway route hint; never a local authorization or Ready proof. */
+  gatewayRouted?: boolean;
   cloudReachable?: boolean | null;
   cloudLastSeenAt?: number | null;
   manifestRevision?: number | null;
@@ -89,6 +91,19 @@ export interface DeviceKeyLogicalDevice extends DeviceV2PresenceMetadata {
   state: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface DeviceRemovalResponse {
+  status: 200 | 202;
+  data: {
+    logicalDeviceId: string;
+    state: 'deleted';
+    deletedAt: number;
+    cloudAuthorization: 'revoked';
+    brokerCleanupPending: boolean;
+    realtimeRefreshPending: boolean;
+    localAccess: 'not_confirmed';
+  };
 }
 
 export interface DeviceKeyCreateResponse {
@@ -172,12 +187,21 @@ export interface DeviceV2ShareGrant {
   memberRef?: string;
 }
 
+export interface DeviceV2ShareMutation {
+  logicalDeviceId: string;
+  share: DeviceV2ShareGrant;
+  replayed: boolean;
+  realtimeRefreshPending: boolean;
+  presenceRotationRequired: boolean;
+}
+
 export interface DeviceV2ShareInvitation {
   invitationId: string;
   invitationCode?: string;
   role: DeviceV2ShareRole;
   commandEndpointKeys: string[] | null;
-  state: 'pending' | 'accepted' | 'revoked' | 'expired';
+  state: 'pending' | 'accepted' | 'revoked' | 'expired' | 'declined';
+  targeted?: boolean;
   expiresAt: number;
   replayed?: boolean;
 }
@@ -186,6 +210,26 @@ export interface DeviceV2OwnerShares {
   logicalDeviceId: string;
   shares: DeviceV2ShareGrant[];
   invitations: DeviceV2ShareInvitation[];
+}
+
+export interface DeviceV2SharePreview extends DeviceV2ShareInvitation {
+  logicalDeviceId: string;
+  deviceName: string;
+  deviceType: string;
+  currentShare: DeviceV2ShareGrant | null;
+}
+
+export interface DeviceV2PendingInvitation extends DeviceV2ShareInvitation {
+  state: 'pending';
+  targeted: true;
+  logicalDeviceId: string;
+  deviceName: string;
+  deviceType: string;
+}
+
+export interface DeviceV2InvitationInbox {
+  items: DeviceV2PendingInvitation[];
+  nextCursor: string | null;
 }
 
 export interface DeviceV2ReceivedDevice extends DeviceV2PresenceMetadata {

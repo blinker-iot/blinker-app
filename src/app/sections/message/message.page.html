@@ -80,6 +80,11 @@
           {{ detailItem.createdAt | date:'yyyy-MM-dd HH:mm' }}
         </time>
         <p>{{ detailItem.body }}</p>
+        @if (detailItem.action?.type === 'share_invitation' && !detailError) {
+        <ion-button [disabled]="openingInvitation" (click)="openInvitation()" data-testid="message-invitation-action">
+          {{ openingInvitation ? '正在核对邀请' : '查看设备分享邀请' }}
+        </ion-button>
+        }
         <div class="detail-status">
           <span [class.is-unread]="detailItem.unread">
             {{ detailItem.unread ? '未读' : '已读' }}

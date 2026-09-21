@@ -286,6 +286,8 @@ ion-content {
 }
 
 .footer-shell {
+  display: flex;
+  gap: 10px;
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
@@ -293,6 +295,7 @@ ion-content {
 }
 
 .primary-action {
+  flex: 1;
   width: 100%;
   min-height: 48px;
   border: 0;

@@ -42,6 +42,10 @@ export const API = {
     RESOLVE_INSTANCE: API_V2_URL + '/devices:resolve-instance',
     ENABLE_CLOUD: API_V2_URL + '/devices:enable-cloud',
     DETAIL: deviceKeyV2Url,
+    DIRECT_ADMIN: (logicalDeviceId: string) =>
+      deviceKeyV2Url(logicalDeviceId) + '/direct-access/admin',
+    LOCAL_ACCESS: (logicalDeviceId: string) =>
+      deviceKeyV2Url(logicalDeviceId) + '/local-access',
     REVEAL: (logicalDeviceId: string) =>
       deviceKeyV2Url(logicalDeviceId) + '/device-key:reveal',
     ROTATE: (logicalDeviceId: string) =>
@@ -58,6 +62,9 @@ export const API = {
     SHARE: (logicalDeviceId: string, shareId: string) =>
       deviceKeyV2Url(logicalDeviceId) + '/shares/' + encodeURIComponent(shareId),
     ACCEPT_SHARE: API_V2_URL + '/share-invitations:accept',
+    PREVIEW_SHARE: API_V2_URL + '/share-invitations:preview',
+    DECLINE_SHARE: API_V2_URL + '/share-invitations:decline',
+    INVITATION_INBOX: API_V2_URL + '/share-invitations/received',
     RECEIVED_SHARES: API_V2_URL + '/shares/received',
     RECEIVED_SHARE: (logicalDeviceId: string) =>
       API_V2_URL + '/shares/received/' + encodeURIComponent(logicalDeviceId),
@@ -102,7 +109,6 @@ export const API = {
     UPLOAD_AVATAR: '',
     CHANGE_PASSWORD: API_V1_URL + '/user/password/change',
     CHANGE_PROFILE: API_V1_URL + '/user/profile/modify',
-    DEL_DEVICE: API_V1_URL + '/user/device/remove',
     CANCEL_ACCOUNT: API_V1_URL + '/user/cancel',
   },
   MESSAGE: {
@@ -129,6 +135,9 @@ export function isGatewayUrl(url: string): boolean {
     || url === API_V2_URL + '/account/connection'
     || url.startsWith(API_V1_URL + '/feedback/')
     || url === API.DEVICE_V2.ACCEPT_SHARE
+    || url === API.DEVICE_V2.PREVIEW_SHARE
+    || url === API.DEVICE_V2.DECLINE_SHARE
+    || url === API.DEVICE_V2.INVITATION_INBOX
     || url === API.DEVICE_V2.RECEIVED_SHARES
     || url.startsWith(API.DEVICE_V2.RECEIVED_SHARES + '/')
     || url === API.DEVICE_V2.BLE_ENROLLMENT_INTENTS
@@ -158,6 +167,7 @@ function isDeviceKeyManagementUrl(url: string): boolean {
   if (parts.length === 1) return true;
   if (parts.length === 2) {
     return parts[1] === 'device-key:reveal'
+      || parts[1] === 'local-access'
       || parts[1] === 'device-key:rotate'
       || parts[1] === 'presence-key'
       || parts[1] === 'presence-key:allocate'
@@ -170,5 +180,6 @@ function isDeviceKeyManagementUrl(url: string): boolean {
   }
   return parts.length === 3
     && !!parts[2]
-    && (parts[1] === 'share-invitations' || parts[1] === 'shares');
+    && (parts[1] === 'share-invitations' || parts[1] === 'shares'
+      || (parts[1] === 'direct-access' && parts[2] === 'admin'));
 }

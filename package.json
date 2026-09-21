@@ -14,6 +14,7 @@
     "prebuild": "npm run device-template:build",
     "build": "ng build",
     "build:local": "ng build --configuration local",
+    "build:local-device": "ng build --configuration local,local-device",
     "prewatch": "npm run device-template:build",
     "watch": "ng build --watch --configuration development",
     "pretest": "npm run device-template:test",
