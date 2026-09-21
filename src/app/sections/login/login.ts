@@ -20,6 +20,7 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DataService } from 'src/app/core/services/data.service';
+import { DeviceV2ShareInvitationService } from 'src/app/core/services/device-v2-share-invitation.service';
 
 @Component({
   selector: 'app-login',
@@ -62,7 +63,8 @@ export class LoginPage implements OnDestroy {
     private noticeService: NoticeService,
     private navCtrl: NavController,
     private modalCtrl: ModalController,
-    private dataService: DataService
+    private dataService: DataService,
+    private shareInvitation: DeviceV2ShareInvitationService,
   ) { }
 
   ngOnDestroy(): void {
@@ -75,6 +77,10 @@ export class LoginPage implements OnDestroy {
     this.navCtrl.navigateForward('/settings', {
       queryParams: { from: 'login' },
     });
+  }
+
+  private returnAfterLogin(): void {
+    void this.navCtrl.navigateRoot(this.shareInvitation.hasPending ? '/share-invitation' : '/');
   }
 
   // 验证邮箱格式
@@ -132,7 +138,7 @@ export class LoginPage implements OnDestroy {
     if (await this.authService.loginWithEmailCode(this.email, this.code)) {
       await this.userService.getAllInfo();
       await this.noticeService.hideLoading();
-      this.navCtrl.navigateRoot('/');
+      this.returnAfterLogin();
     } else {
       await this.noticeService.hideLoading();
     }
@@ -184,7 +190,7 @@ export class LoginPage implements OnDestroy {
       if (await this.authService.loginWithWechat()) {
         await this.userService.getAllInfo();
         await this.noticeService.hideLoading();
-        this.navCtrl.navigateRoot('/');
+        this.returnAfterLogin();
       } else {
         await this.noticeService.hideLoading();
         await this.noticeService.showToast(

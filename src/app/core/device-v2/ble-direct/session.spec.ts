@@ -8,8 +8,8 @@ import {
   decodeAckBody,
   hexToBytes,
 } from '../../protocol/device-v2';
-import { BleDirectFrameChannel } from './secure-channel';
-import { BleDirectProtocolError, BleDirectSession } from './session';
+import { DirectDeviceFrameChannel, DirectDeviceProtocolError } from '../../protocol/device-v2/direct-session';
+import { BleDirectSession } from './session';
 
 const logicalDeviceId = 'device_01234567-89ab-cdef-0123-456789abcdef';
 const manifestPage = hexToBytes(
@@ -41,7 +41,7 @@ function errorBody(code: Bbp2ErrorCode, sequence: number): Uint8Array {
   return concat(Uint8Array.of(0xa2, 0x00), unsigned(code), Uint8Array.of(0x01), unsigned(sequence));
 }
 
-class FakeDirectChannel implements BleDirectFrameChannel {
+class FakeDirectChannel implements DirectDeviceFrameChannel {
   readonly logicalDeviceId = logicalDeviceId;
   readonly sent: Bbp2Frame[] = [];
   responder?: (frame: Bbp2Frame) => void;
@@ -182,8 +182,8 @@ describe('BleDirectSession', () => {
     await session.synchronize();
 
     const error = await session.command('power', true).catch(reason => reason);
-    expect(error).toBeInstanceOf(BleDirectProtocolError);
-    expect((error as BleDirectProtocolError).code).toBe(Bbp2ErrorCode.CommandRejected);
+    expect(error).toBeInstanceOf(DirectDeviceProtocolError);
+    expect((error as DirectDeviceProtocolError).code).toBe(Bbp2ErrorCode.CommandRejected);
     expect(session.state).toBe('ready');
     await session.close();
   });

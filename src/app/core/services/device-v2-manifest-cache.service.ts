@@ -1,4 +1,6 @@
 import { Injectable } from '@angular/core';
+import { API } from '../../configs/api.config';
+import { deviceV2AccountCacheScope, deviceV2AccountStoragePrefix } from '../device-v2/account-scope';
 
 import {
   DeviceV2EndpointAccess,
@@ -56,9 +58,9 @@ export class DeviceV2ManifestCache {
   }
 
   private key(logicalDeviceId: string): string | undefined {
-    const accountId = this.data.auth?.uuid || this.data.user?.id;
-    if (!accountId || !logicalDeviceId || logicalDeviceId.includes('\0')) return undefined;
-    return `${PREFIX}${encodeURIComponent(accountId)}:${encodeURIComponent(logicalDeviceId)}`;
+    const scope = deviceV2AccountCacheScope(this.data, API.BASE_URL);
+    if (!scope || !logicalDeviceId || logicalDeviceId.length > 128 || logicalDeviceId.includes('\0')) return undefined;
+    return deviceV2AccountStoragePrefix(PREFIX, scope) + encodeURIComponent(logicalDeviceId);
   }
 
   private valid(manifest: DeviceV2Manifest): boolean {

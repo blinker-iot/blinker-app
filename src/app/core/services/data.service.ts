@@ -2,6 +2,9 @@ import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { BehaviorSubject, Subject } from 'rxjs';
+import { API } from '../../configs/api.config';
+import { deviceV2AccountCacheScope } from '../device-v2/account-scope';
+import { DeviceCatalogItem, loadDeviceCatalog, removeDeviceCatalog, saveDeviceCatalog } from '../device-v2/device-catalog-cache';
 import { createGuestDevicePreview } from '../data/guest-device-preview.data';
 import { AuthData, OrderData, ShareDate, UserData } from '../model/data.model';
 import { BlinkerDevice } from '../model/device.model';
@@ -9,6 +12,7 @@ import {
   CurrentUser,
   DeviceKeyLogicalDevice,
   DeviceV2ReceivedDevice,
+  DeviceV2PresenceMetadata,
 } from '../model/response.model';
 
 const AUTH_STORAGE_KEY = 'session';
@@ -48,6 +52,7 @@ export class DataService {
 
   set auth(auth: AuthData | null) {
     this._sessionEpoch += 1;
+    this.resetBlinkerMemory();
     this._auth = auth
       ? { ...auth, token: auth.token || auth.accessToken }
       : null;
@@ -83,6 +88,7 @@ export class DataService {
     }
     const previous = this._auth ? { ...this._auth } : null;
     this._sessionEpoch += 1;
+    this.resetBlinkerMemory();
     const next = { ...auth, token: auth.token || auth.accessToken };
     this._auth = next;
     this.authDataLoader.next(true);
@@ -94,7 +100,7 @@ export class DataService {
         return false;
       }
       this.authDataExpire.next(true);
-      this.resetBlinkerMemory();
+      this.restoreDeviceCatalog();
       try {
         this.getLocalStorage()?.removeItem(FEEDBACK_DRAFT_STORAGE_KEY);
         this.getLocalStorage()?.removeItem(AUTH_INVALIDATED_STORAGE_KEY);
@@ -149,9 +155,12 @@ export class DataService {
 
   async loadAuthData(): Promise<void> {
     if (!Capacitor.isNativePlatform()) return;
+    const epoch = this._sessionEpoch;
     if (this.authIsInvalidated()) {
       const cleanupError = await this.clearPersistedAuthData();
+      if (this._sessionEpoch !== epoch) { await this.persistCurrentAuth(); return; }
       this._auth = null;
+      this.resetBlinkerMemory();
       this.authDataLoader.next(false);
       this.authDataChanged.next();
       this.authStorageCleanupError.next(cleanupError);
@@ -159,7 +168,9 @@ export class DataService {
     }
     try {
       await this.configureSecureStorage();
+      if (this._sessionEpoch !== epoch) return;
       const saved = await SecureStorage.get(AUTH_STORAGE_KEY);
+      if (this._sessionEpoch !== epoch) return;
       if (this.isValidAuth(saved)) {
         this._sessionEpoch += 1;
         this._auth = {
@@ -173,18 +184,24 @@ export class DataService {
         };
         this.authDataLoader.next(true);
         this.authDataChanged.next();
+        this.restoreDeviceCatalog();
       } else if (saved !== null) {
         await SecureStorage.remove(AUTH_STORAGE_KEY);
+        if (this._sessionEpoch !== epoch) await this.persistCurrentAuth();
       }
     } catch {
+      if (this._sessionEpoch !== epoch) return;
       this._sessionEpoch += 1;
       this._auth = null;
+      this.resetBlinkerMemory();
       this.authDataLoader.next(false);
       this.authDataChanged.next();
     }
   }
 
   async removeAuthData(): Promise<void> {
+    const scope = deviceV2AccountCacheScope(this, API.BASE_URL);
+    if (scope) removeDeviceCatalog(scope);
     this._sessionEpoch += 1;
     this._auth = null;
     this.authDataLoader.next(false);
@@ -241,10 +258,9 @@ export class DataService {
     currentUser: CurrentUser,
     devices: DeviceKeyLogicalDevice[],
     received: DeviceV2ReceivedDevice[] = [],
+    complete = true,
   ): void {
     this.loadGatewayUser(currentUser);
-    const previousDevices = this.device?.dict || {};
-    const deviceDict: Record<string, BlinkerDevice> = {};
     const ownedIds = new Set(devices.map((device) => device.logicalDeviceId));
     const inventory = [
       ...devices.map((device) => ({
@@ -254,7 +270,7 @@ export class DataService {
         access: null,
       })),
       ...received
-        .filter((device) => !ownedIds.has(device.logicalDeviceId))
+        .filter((device) => !ownedIds.has(device.logicalDeviceId) && device.share.state === 'active')
         .map((device) => ({
           device,
           shared: true,
@@ -262,6 +278,28 @@ export class DataService {
           access: device.share,
         })),
     ];
+
+    this.applyDeviceInventory(inventory);
+    this.share.byDevice = Object.fromEntries(
+      Object.entries(this.share.byDevice).filter(([deviceId]) => ownedIds.has(deviceId)),
+    );
+    this.share.received = received.filter(device => device.share.state === 'active');
+    const scope = deviceV2AccountCacheScope(this, API.BASE_URL);
+    if (scope) {
+      if (complete) saveDeviceCatalog(scope, inventory);
+      else removeDeviceCatalog(scope);
+    }
+  }
+
+  private restoreDeviceCatalog(): void {
+    const scope = deviceV2AccountCacheScope(this, API.BASE_URL);
+    const inventory = scope && loadDeviceCatalog(scope);
+    if (inventory) this.applyDeviceInventory(inventory);
+  }
+
+  private applyDeviceInventory(inventory: (DeviceCatalogItem & { device: DeviceCatalogItem['device'] & DeviceV2PresenceMetadata })[]): void {
+    const previousDevices = this.device?.dict || {};
+    const deviceDict: Record<string, BlinkerDevice> = Object.create(null);
 
     for (const item of inventory) {
       const gatewayDevice = item.device;
@@ -287,6 +325,7 @@ export class DataService {
         ...(item.access ? {
           accessRole: item.access.role,
           shareId: item.access.shareId,
+          // This is a display role only; current protocol authorization controls writes.
           canCommand: item.access.role === 'operator',
         } : {}),
       };
@@ -328,10 +367,6 @@ export class DataService {
       ),
     ];
     this.device = { dict: deviceDict, list: deviceList };
-    this.share.byDevice = Object.fromEntries(
-      Object.entries(this.share.byDevice).filter(([deviceId]) => ownedIds.has(deviceId)),
-    );
-    this.share.received = [...received];
     this.deviceDataLoader.next(true);
     if (this.firstBoot) {
       this.initCompleted.next(true);
@@ -356,11 +391,23 @@ export class DataService {
 
   loadGatewayUser(currentUser: CurrentUser): void {
     if (this._auth) {
+      const changed = this._auth.uuid !== currentUser.id;
+      if (this._auth.uuid && changed) {
+        this._sessionEpoch += 1;
+        this.resetBlinkerMemory();
+      }
       this._auth = {
         ...this._auth,
         uuid: currentUser.id,
         token: this._auth.accessToken,
       };
+      if (changed) {
+        this.authDataChanged.next();
+        const resolved = this._auth;
+        void this.persistAuthData(resolved).then(() => {
+          if (this._auth !== resolved) return this.persistCurrentAuth();
+        }).catch(() => undefined);
+      }
     }
     this.user = {
       id: currentUser.id,
@@ -525,12 +572,6 @@ export class DataService {
 
   private nonEmptyString(value: unknown): string {
     return typeof value === 'string' && value.trim() ? value.trim() : '';
-  }
-
-  private normalizeLayouterConfig(value: unknown): string {
-    if (typeof value === 'string') return value;
-    if (this.isRecord(value)) return JSON.stringify(value);
-    return '';
   }
 
   private emptyOrder(): OrderData {

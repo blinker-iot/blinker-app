@@ -116,6 +116,10 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/device/device-share/device-share').then(m => m.DeviceSharePage),
   },
   {
+    path: 'share-invitation',
+    loadComponent: () => import('./sections/device/share-invitation/share-invitation.page').then(m => m.ShareInvitationPage),
+  },
+  {
     path: 'device/:id',
     loadComponent: () => import('./device/device.page').then(m => m.DevicePage),
     canDeactivate: [LayouterGuard],

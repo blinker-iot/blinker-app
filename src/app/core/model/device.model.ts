@@ -23,6 +23,7 @@ export interface BlinkerDevice {
     deviceName: string,
     id?: string,
     cloudEnabled?: boolean,
+    gatewayRouted?: boolean,
     deviceType?: string,
     config: {
         broker: string,

@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { API } from '../../configs/api.config';
+import { parseShareInvitationId } from '../device-v2/sharing/invitation-link';
 import {
   DeviceV2OwnerShares,
   DeviceV2PresenceMetadata,
@@ -10,7 +11,11 @@ import {
   DeviceV2ReceivedSharesResponse,
   DeviceV2ShareGrant,
   DeviceV2ShareInvitation,
+  DeviceV2ShareMutation,
+  DeviceV2SharePreview,
   DeviceV2ShareRole,
+  DeviceV2InvitationInbox,
+  DeviceV2PendingInvitation,
 } from '../model/response.model';
 
 interface OwnerSharesResponse {
@@ -25,13 +30,10 @@ interface InvitationResponse {
 
 interface ShareMutationResponse {
   status: number;
-  data: {
-    logicalDeviceId: string;
-    share: DeviceV2ShareGrant;
-    replayed: boolean;
-    realtimeRefreshPending: boolean;
-  };
+  data: Omit<DeviceV2ShareMutation, 'presenceRotationRequired'> & { presenceRotationRequired?: boolean };
 }
+
+export type ShareInvitationReference = string | { invitationId: string };
 
 @Injectable({ providedIn: 'root' })
 export class DeviceV2SharingService {
@@ -61,37 +63,111 @@ export class DeviceV2SharingService {
     role: DeviceV2ShareRole,
     idempotencyKey: string,
     commandEndpointKeys?: readonly string[],
+    recipientAccount?: string,
   ): Promise<DeviceV2ShareInvitation> {
     const id = this.deviceId(logicalDeviceId);
     const access = this.access(role, commandEndpointKeys);
+    const email = recipientAccount === undefined ? undefined : this.recipientEmail(recipientAccount);
     const response = await firstValueFrom(this.http.post<InvitationResponse>(
       API.DEVICE_V2.SHARE_INVITATIONS(id),
-      access,
+      email === undefined ? access : { ...access, recipientAccount: email },
       { headers: { 'Idempotency-Key': this.text(idempotencyKey, 128) } },
     ));
-    const invitation = this.invitation(this.body(response).data, true);
-    if (!invitation.invitationCode) throw new Error('共享邀请码响应无效');
+    const invitation = this.invitation(this.body(response).data, email === undefined);
+    if (email === undefined ? (!invitation.invitationCode || invitation.targeted === true)
+      : (invitation.targeted !== true || invitation.invitationCode !== undefined)) throw new Error('共享邀请响应无效');
     return invitation;
+  }
+
+  recipientEmail(input: string): string {
+    const email = typeof input === 'string' ? input.trim().toLowerCase() : '';
+    if (new TextEncoder().encode(email).length > 254
+      || !/^[^\s@\u0000-\u001f\u007f]+@[^\s@\u0000-\u001f\u007f]+\.[^\s@\u0000-\u001f\u007f]+$/.test(email)) {
+      throw new Error('请输入对方注册使用的邮箱');
+    }
+    return email;
   }
 
   async revokeInvitation(
     logicalDeviceId: string,
     invitationId: string,
-  ): Promise<void> {
-    await firstValueFrom(this.http.delete(
+  ): Promise<DeviceV2ShareInvitation> {
+    const response = await firstValueFrom(this.http.delete<InvitationResponse>(
       API.DEVICE_V2.SHARE_INVITATION(
         this.deviceId(logicalDeviceId),
         this.text(invitationId, 64),
       ),
     ));
+    return this.invitation(this.body(response).data, false);
   }
 
-  async acceptInvitation(invitationCode: string): Promise<DeviceV2ShareGrant> {
+  async acceptInvitation(reference: ShareInvitationReference): Promise<DeviceV2ShareMutation> {
     const response = await firstValueFrom(this.http.post<ShareMutationResponse>(
       API.DEVICE_V2.ACCEPT_SHARE,
-      { invitationCode: this.invitationCode(invitationCode) },
+      this.invitationReference(reference),
     ));
-    return this.grant(this.body(response).data.share);
+    return this.mutation(this.body(response).data);
+  }
+
+  async previewInvitation(reference: ShareInvitationReference): Promise<DeviceV2SharePreview> {
+    const response = await firstValueFrom(this.http.post<{ status: number; data: DeviceV2SharePreview }>(
+      API.DEVICE_V2.PREVIEW_SHARE,
+      this.invitationReference(reference),
+    ));
+    const value = this.body(response).data;
+    if (value.state !== 'pending' && value.state !== 'accepted') throw new Error('共享邀请预览无效');
+    if (typeof reference !== 'string' && (value.invitationId !== reference.invitationId || value.targeted !== true)) {
+      throw new Error('定向邀请响应无效');
+    }
+    return {
+      ...this.invitation(value, false),
+      logicalDeviceId: this.deviceId(value.logicalDeviceId),
+      deviceName: this.text(value.deviceName, 128),
+      deviceType: this.text(value.deviceType, 64),
+      currentShare: value.currentShare === null ? null : this.grant(value.currentShare),
+    };
+  }
+
+  async declineInvitation(invitationId: string): Promise<DeviceV2ShareInvitation> {
+    const reference = this.invitationReference({ invitationId });
+    const response = await firstValueFrom(this.http.post<InvitationResponse>(API.DEVICE_V2.DECLINE_SHARE, reference));
+    const result = this.invitation(this.body(response).data, false);
+    if (result.invitationId !== invitationId || !result.targeted || !['declined', 'expired', 'revoked'].includes(result.state)) {
+      throw new Error('拒绝邀请响应无效');
+    }
+    return result;
+  }
+
+  async listPendingInvitations(before?: string): Promise<DeviceV2InvitationInbox> {
+    const params: Record<string, string> = { limit: '20' };
+    if (before !== undefined) params['before'] = this.invitationId(before);
+    const response = await firstValueFrom(this.http.get<{ status: number; data: DeviceV2InvitationInbox }>(
+      API.DEVICE_V2.INVITATION_INBOX, { params }));
+    const value = this.body(response).data;
+    if (!Array.isArray(value.items) || value.items.length > 20) throw new Error('邀请列表响应无效');
+    const items: DeviceV2PendingInvitation[] = value.items.map(item => {
+      if (item.state !== 'pending' || item.targeted !== true || item.invitationCode !== undefined) throw new Error('定向邀请响应无效');
+      return { ...this.invitation(item, false), state: 'pending', targeted: true,
+        invitationId: this.invitationId(item.invitationId), logicalDeviceId: this.deviceId(item.logicalDeviceId),
+        deviceName: this.text(item.deviceName, 128), deviceType: this.text(item.deviceType, 64) };
+    });
+    const nextCursor = value.nextCursor === null ? null : this.invitationId(value.nextCursor);
+    if (new Set(items.map(item => item.invitationId)).size !== items.length
+      || (nextCursor !== null && (nextCursor === before || nextCursor !== items.at(-1)?.invitationId))) {
+      throw new Error('邀请分页响应无效');
+    }
+    return { items, nextCursor };
+  }
+
+  private invitationId(value: string): string {
+    const id = parseShareInvitationId(value);
+    if (!id) throw new Error('邀请标识无效');
+    return id;
+  }
+
+  private invitationReference(reference: ShareInvitationReference): { invitationCode: string } | { invitationId: string } {
+    return typeof reference === 'string' ? { invitationCode: this.invitationCode(reference) }
+      : { invitationId: this.invitationId(reference?.invitationId) };
   }
 
   async updateShare(
@@ -99,30 +175,48 @@ export class DeviceV2SharingService {
     shareId: string,
     role: DeviceV2ShareRole,
     commandEndpointKeys?: readonly string[],
-  ): Promise<DeviceV2ShareGrant> {
+  ): Promise<DeviceV2ShareMutation> {
     const id = this.deviceId(logicalDeviceId);
     const response = await firstValueFrom(this.http.patch<ShareMutationResponse>(
       API.DEVICE_V2.SHARE(id, this.text(shareId, 64)),
       this.access(role, commandEndpointKeys),
     ));
-    return this.grant(this.body(response).data.share);
+    return this.mutation(this.body(response).data, id);
   }
 
   async revokeShare(
     logicalDeviceId: string,
     shareId: string,
-  ): Promise<DeviceV2ShareGrant> {
+  ): Promise<DeviceV2ShareMutation> {
     const id = this.deviceId(logicalDeviceId);
     const response = await firstValueFrom(this.http.delete<ShareMutationResponse>(
       API.DEVICE_V2.SHARE(id, this.text(shareId, 64)),
     ));
-    return this.grant(this.body(response).data.share);
+    return this.mutation(this.body(response).data, id);
   }
 
-  async leaveShare(logicalDeviceId: string): Promise<void> {
-    await firstValueFrom(this.http.delete(
-      API.DEVICE_V2.RECEIVED_SHARE(this.deviceId(logicalDeviceId)),
+  async leaveShare(logicalDeviceId: string): Promise<DeviceV2ShareMutation> {
+    const id = this.deviceId(logicalDeviceId);
+    const response = await firstValueFrom(this.http.delete<ShareMutationResponse>(
+      API.DEVICE_V2.RECEIVED_SHARE(id),
     ));
+    return this.mutation(this.body(response).data, id);
+  }
+
+  private mutation(value: ShareMutationResponse['data'], expectedId?: string): DeviceV2ShareMutation {
+    if (!value || typeof value.replayed !== 'boolean'
+      || typeof value.realtimeRefreshPending !== 'boolean'
+      || (value.presenceRotationRequired !== undefined && typeof value.presenceRotationRequired !== 'boolean')
+      || (expectedId !== undefined && value.logicalDeviceId !== expectedId)) {
+      throw new Error('共享权限同步响应无效');
+    }
+    return {
+      logicalDeviceId: this.deviceId(value.logicalDeviceId),
+      share: this.grant(value.share),
+      replayed: value.replayed,
+      realtimeRefreshPending: value.realtimeRefreshPending,
+      presenceRotationRequired: value.presenceRotationRequired === true,
+    };
   }
 
   private ownerShares(value: DeviceV2OwnerShares, id: string): DeviceV2OwnerShares {
@@ -202,7 +296,8 @@ export class DeviceV2SharingService {
     requireCode: boolean,
   ): DeviceV2ShareInvitation {
     if (!value || !Number.isSafeInteger(value.expiresAt)
-      || !['pending', 'accepted', 'revoked', 'expired'].includes(value.state)) {
+      || !['pending', 'accepted', 'revoked', 'expired', 'declined'].includes(value.state)
+      || (value.targeted !== undefined && typeof value.targeted !== 'boolean')) {
       throw new Error('共享邀请响应无效');
     }
     const role = this.role(value.role);

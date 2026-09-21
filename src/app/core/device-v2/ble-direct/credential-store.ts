@@ -2,6 +2,12 @@ import { Capacitor } from '@capacitor/core';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 
 import { logicalDevicePeerId } from '../../protocol/device-v2';
+import {
+  DeviceV2AccountScope,
+  DeviceV2AccountScopeProvider,
+  deviceV2AccountStoragePrefix,
+  validateDeviceV2AccountScope,
+} from '../account-scope';
 import { base64UrlDecode, base64UrlEncode, sameBytes } from './wire';
 
 export type BleControllerCredentialState = 'pending' | 'active';
@@ -12,6 +18,15 @@ export interface BlePresenceCredential {
   accessEpoch: number;
   version: number;
   key: Uint8Array;
+}
+
+// Non-secret recovery journal. The candidate secret stays in this one secure
+// credential record; prepared is never a usable Direct credential.
+export interface WiFiProvKeyRotation {
+  phase: 'prepared' | 'key-ready';
+  operationId: string;
+  previousContext: { credentialVersion: number; locator: string };
+  expectedAdmin?: { controllerId: string; accessEpoch: number };
 }
 
 export interface BleControllerCredential {
@@ -25,6 +40,9 @@ export interface BleControllerCredential {
   credentialVersion: number;
   permissions: number;
   presenceKeys?: BlePresenceCredential[];
+  // WiFiProv recovery metadata only; the DeviceKey is re-revealed by the owner.
+  cloudContext?: { credentialVersion: number; locator: string };
+  keyRotation?: WiFiProvKeyRotation;
   intentId: Uint8Array;
   commitId: Uint8Array;
   receipt: Uint8Array;
@@ -43,7 +61,9 @@ export interface BleControllerCredentialStore {
 }
 
 interface StoredCredential {
-  version: 1 | 2 | 3 | 4;
+  version: 5 | 6;
+  authority: string;
+  accountId: string;
   source?: BleControllerCredentialSource;
   state: BleControllerCredentialState;
   logicalDeviceId: string;
@@ -53,6 +73,8 @@ interface StoredCredential {
   controllerSecret: string;
   credentialVersion: number;
   permissions: number;
+  cloudContext?: { credentialVersion: number; locator: string };
+  keyRotation?: WiFiProvKeyRotation;
   presenceKeys?: Array<{
     state: 'current' | 'previous';
     accessEpoch: number;
@@ -65,103 +87,75 @@ interface StoredCredential {
 }
 
 export class CapacitorBleControllerCredentialStore implements BleControllerCredentialStore {
+  constructor(private readonly scope: DeviceV2AccountScopeProvider) {}
+
   async save(credential: BleControllerCredential): Promise<void> {
     if (!Capacitor.isNativePlatform()) throw new Error('BLE_DIRECT_SECURE_STORAGE_REQUIRED');
-    validateCredential(credential);
-    const source = credential.source ?? 'enrollment';
-    const stored: StoredCredential = {
-      version: 4,
-      source,
-      state: credential.state,
-      logicalDeviceId: credential.logicalDeviceId,
-      deviceInstanceId: base64UrlEncode(credential.deviceInstanceId),
-      accessEpoch: credential.accessEpoch,
-      controllerId: base64UrlEncode(credential.controllerId),
-      controllerSecret: base64UrlEncode(credential.controllerSecret),
-      credentialVersion: credential.credentialVersion,
-      permissions: credential.permissions,
-      presenceKeys: credential.presenceKeys?.map(value => ({
-        state: value.state,
-        accessEpoch: value.accessEpoch,
-        version: value.version,
-        key: base64UrlEncode(value.key),
-      })),
-      intentId: base64UrlEncode(credential.intentId),
-      commitId: base64UrlEncode(credential.commitId),
-      receipt: base64UrlEncode(credential.receipt),
-    };
-    await SecureStorage.setItem(key(credential.logicalDeviceId), JSON.stringify(stored));
+    const scope = this.currentScope();
+    await this.saveForScope(scope, credential);
   }
 
   async load(logicalDeviceId: string): Promise<BleControllerCredential | undefined> {
     if (!Capacitor.isNativePlatform()) throw new Error('BLE_DIRECT_SECURE_STORAGE_REQUIRED');
-    const encoded = await SecureStorage.getItem(key(logicalDeviceId));
-    if (encoded === null) return undefined;
-    const stored = parseStoredCredential(encoded, logicalDeviceId);
-    const source = storedCredentialSource(stored);
-    const credential: BleControllerCredential = {
-      source,
-      state: stored.state,
-      logicalDeviceId: stored.logicalDeviceId,
-      deviceInstanceId: base64UrlDecode(stored.deviceInstanceId, 16),
-      accessEpoch: stored.accessEpoch,
-      controllerId: base64UrlDecode(stored.controllerId, 16),
-      controllerSecret: base64UrlDecode(stored.controllerSecret, 32),
-      credentialVersion: stored.credentialVersion,
-      permissions: stored.permissions,
-      presenceKeys: stored.presenceKeys?.map(value => ({
-        state: value.state,
-        accessEpoch: value.accessEpoch,
-        version: value.version,
-        key: base64UrlDecode(value.key, 16),
-      })),
-      intentId: source === 'wifiprov'
-        ? new Uint8Array()
-        : base64UrlDecode(stored.intentId, 16),
-      commitId: source === 'wifiprov'
-        ? new Uint8Array()
-        : base64UrlDecode(stored.commitId, 16),
-      receipt: source === 'wifiprov'
-        ? new Uint8Array()
-        : base64UrlDecode(stored.receipt),
-    };
-    validateCredential(credential);
-    return credential;
+    const scope = this.currentScope();
+    return this.loadForScope(scope, logicalDeviceId);
   }
 
   async findPending(deviceInstanceId: Uint8Array): Promise<BleControllerCredential | undefined> {
+    return this.findByInstance(deviceInstanceId, 'enrollment');
+  }
+
+  async findWiFiProv(deviceInstanceId: Uint8Array, pendingOnly = false): Promise<BleControllerCredential | undefined> {
+    return this.findByInstance(deviceInstanceId, 'wifiprov', pendingOnly);
+  }
+
+  private async findByInstance(
+    deviceInstanceId: Uint8Array, source: BleControllerCredentialSource, pendingOnly = false,
+  ): Promise<BleControllerCredential | undefined> {
     if (!Capacitor.isNativePlatform()) throw new Error('BLE_DIRECT_SECURE_STORAGE_REQUIRED');
     if (!exactNonZero(deviceInstanceId, 16)) throw new Error('BLE_DIRECT_DEVICE_ID_INVALID');
+    const scope = this.currentScope();
+    const prefix = scopedPrefix(scope);
     let match: BleControllerCredential | undefined;
-    for (const storedKey of new Set(await SecureStorage.keys())) {
-      if (!storedKey.startsWith(CREDENTIAL_PREFIX)) continue;
-      const logicalDeviceId = storedKey.slice(CREDENTIAL_PREFIX.length);
-      const encoded = await SecureStorage.getItem(storedKey);
-      if (encoded === null) continue;
-      const stored = parseStoredCredential(encoded, logicalDeviceId);
-      if (stored.state !== 'pending'
-        || storedCredentialSource(stored) !== 'enrollment'
-        || !sameBytes(base64UrlDecode(stored.deviceInstanceId, 16), deviceInstanceId)) {
-        continue;
+    try {
+      for (const storedKey of new Set(await SecureStorage.keys())) {
+        if (!storedKey.startsWith(prefix)) continue;
+        const logicalDeviceId = storedKey.slice(prefix.length);
+        const encoded = await SecureStorage.getItem(storedKey);
+        if (encoded === null) continue;
+        const stored = parseStoredCredential(encoded, scope, logicalDeviceId);
+        const storedDeviceInstanceId = base64UrlDecode(stored.deviceInstanceId, 16);
+        try {
+          if (storedCredentialSource(stored) !== source
+            || (pendingOnly && stored.state !== 'pending')
+            || (source === 'enrollment' ? stored.state !== 'pending' : !stored.cloudContext)
+            || !sameBytes(storedDeviceInstanceId, deviceInstanceId)) {
+            continue;
+          }
+        } finally {
+          storedDeviceInstanceId.fill(0);
+        }
+        if (match) throw new Error('BLE_DIRECT_PENDING_AMBIGUOUS');
+        match = decodeStoredCredential(stored);
       }
-      if (match) {
-        clearBleControllerCredentialSecrets(match);
-        throw new Error('BLE_DIRECT_PENDING_AMBIGUOUS');
-      }
-      match = await this.load(logicalDeviceId);
+      return match;
+    } catch (error) {
+      if (match) clearBleControllerCredentialSecrets(match);
+      throw error;
     }
-    return match;
   }
 
   async listPending(): Promise<string[]> {
     if (!Capacitor.isNativePlatform()) throw new Error('BLE_DIRECT_SECURE_STORAGE_REQUIRED');
+    const scope = this.currentScope();
+    const prefix = scopedPrefix(scope);
     const output: string[] = [];
     for (const storedKey of new Set(await SecureStorage.keys())) {
-      if (!storedKey.startsWith(CREDENTIAL_PREFIX)) continue;
-      const logicalDeviceId = storedKey.slice(CREDENTIAL_PREFIX.length);
+      if (!storedKey.startsWith(prefix)) continue;
+      const logicalDeviceId = storedKey.slice(prefix.length);
       const encoded = await SecureStorage.getItem(storedKey);
       if (encoded === null) continue;
-      const stored = parseStoredCredential(encoded, logicalDeviceId);
+      const stored = parseStoredCredential(encoded, scope, logicalDeviceId);
       if (stored.state === 'pending'
         && storedCredentialSource(stored) === 'enrollment') {
         output.push(logicalDeviceId);
@@ -174,7 +168,9 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
     logicalDeviceId: string,
     presenceKeys: readonly BlePresenceCredential[],
   ): Promise<void> {
-    const credential = await this.load(logicalDeviceId);
+    if (!Capacitor.isNativePlatform()) throw new Error('BLE_DIRECT_SECURE_STORAGE_REQUIRED');
+    const scope = this.currentScope();
+    const credential = await this.loadForScope(scope, logicalDeviceId);
     if (!credential || credential.state !== 'active') {
       if (credential) clearBleControllerCredentialSecrets(credential);
       throw new Error('BLE_DIRECT_CREDENTIAL_NOT_FOUND');
@@ -186,7 +182,7 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
       key: value.key.slice(),
     }));
     try {
-      await this.save({ ...credential, presenceKeys: replacement });
+      await this.saveForScope(scope, { ...credential, presenceKeys: replacement });
     } finally {
       clearBleControllerCredentialSecrets(credential);
       for (const value of replacement) value.key.fill(0);
@@ -195,33 +191,97 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
 
   async remove(logicalDeviceId: string): Promise<void> {
     if (!Capacitor.isNativePlatform()) throw new Error('BLE_DIRECT_SECURE_STORAGE_REQUIRED');
-    await SecureStorage.removeItem(key(logicalDeviceId));
+    await SecureStorage.removeItem(key(this.currentScope(), logicalDeviceId));
+  }
+
+  private currentScope(): DeviceV2AccountScope {
+    return validateDeviceV2AccountScope(this.scope());
+  }
+
+  private async loadForScope(
+    scope: DeviceV2AccountScope,
+    logicalDeviceId: string,
+  ): Promise<BleControllerCredential | undefined> {
+    const encoded = await SecureStorage.getItem(key(scope, logicalDeviceId));
+    return encoded === null
+      ? undefined
+      : decodeStoredCredential(parseStoredCredential(encoded, scope, logicalDeviceId));
+  }
+
+  private async saveForScope(
+    scope: DeviceV2AccountScope,
+    credential: BleControllerCredential,
+  ): Promise<void> {
+    validateCredential(credential);
+    const source = credential.source ?? 'enrollment';
+    const rotation = credential.keyRotation;
+    const stored: StoredCredential = {
+      version: credential.keyRotation ? 6 : 5,
+      authority: scope.authority,
+      accountId: scope.accountId,
+      source,
+      state: credential.state,
+      logicalDeviceId: credential.logicalDeviceId,
+      deviceInstanceId: base64UrlEncode(credential.deviceInstanceId),
+      accessEpoch: credential.accessEpoch,
+      controllerId: base64UrlEncode(credential.controllerId),
+      controllerSecret: base64UrlEncode(credential.controllerSecret),
+      credentialVersion: credential.credentialVersion,
+      permissions: credential.permissions,
+      cloudContext: credential.cloudContext && { credentialVersion: credential.cloudContext.credentialVersion,
+        locator: credential.cloudContext.locator },
+      keyRotation: rotation && { phase: rotation.phase, operationId: rotation.operationId,
+        previousContext: { credentialVersion: rotation.previousContext.credentialVersion, locator: rotation.previousContext.locator },
+        expectedAdmin: rotation.expectedAdmin && { accessEpoch: rotation.expectedAdmin.accessEpoch,
+          controllerId: rotation.expectedAdmin.controllerId } },
+      presenceKeys: credential.presenceKeys?.map(value => ({
+        state: value.state,
+        accessEpoch: value.accessEpoch,
+        version: value.version,
+        key: base64UrlEncode(value.key),
+      })),
+      intentId: base64UrlEncode(credential.intentId),
+      commitId: base64UrlEncode(credential.commitId),
+      receipt: base64UrlEncode(credential.receipt),
+    };
+    await SecureStorage.setItem(key(scope, credential.logicalDeviceId), JSON.stringify(stored));
   }
 }
 
-function key(logicalDeviceId: string): string {
+function key(scope: DeviceV2AccountScope, logicalDeviceId: string): string {
   try {
     logicalDevicePeerId(logicalDeviceId);
   } catch {
     throw new Error('BLE_DIRECT_LOGICAL_DEVICE_ID_INVALID');
   }
-  return CREDENTIAL_PREFIX + logicalDeviceId;
+  return scopedPrefix(scope) + logicalDeviceId;
 }
 
 const CREDENTIAL_PREFIX = 'blinker_v2_ble_credential_';
 
+function scopedPrefix(scope: DeviceV2AccountScope): string {
+  return deviceV2AccountStoragePrefix(CREDENTIAL_PREFIX, scope);
+}
+
 function parseStoredCredential(
   encoded: string,
+  scope: DeviceV2AccountScope,
   logicalDeviceId: string,
 ): StoredCredential {
-  let stored: StoredCredential;
+  let parsed: unknown;
   try {
-    stored = JSON.parse(encoded) as StoredCredential;
+    parsed = JSON.parse(encoded);
   } catch {
     throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
   }
-  if ((stored.version !== 1 && stored.version !== 2
-    && stored.version !== 3 && stored.version !== 4)
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
+  }
+  const stored = parsed as StoredCredential;
+  if ((stored.version !== 5 && stored.version !== 6)
+    || (stored.version === 6) !== (stored.keyRotation !== undefined)
+    || stored.authority !== scope.authority
+    || stored.accountId !== scope.accountId
     || stored.logicalDeviceId !== logicalDeviceId) {
     throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
   }
@@ -230,20 +290,61 @@ function parseStoredCredential(
 }
 
 function storedCredentialSource(stored: StoredCredential): BleControllerCredentialSource {
-  const source = stored.version === 3 || stored.version === 4
-    ? stored.source
-    : 'enrollment';
+  const source = stored.source;
   if (source !== 'enrollment' && source !== 'wifiprov') {
     throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
   }
   return source;
 }
 
+function decodeStoredCredential(stored: StoredCredential): BleControllerCredential {
+  const source = storedCredentialSource(stored);
+  const credential: BleControllerCredential = {
+    source,
+    state: stored.state,
+    logicalDeviceId: stored.logicalDeviceId,
+    deviceInstanceId: base64UrlDecode(stored.deviceInstanceId, 16),
+    accessEpoch: stored.accessEpoch,
+    controllerId: base64UrlDecode(stored.controllerId, 16),
+    controllerSecret: base64UrlDecode(stored.controllerSecret, 32),
+    credentialVersion: stored.credentialVersion,
+    permissions: stored.permissions,
+    cloudContext: stored.cloudContext,
+    keyRotation: stored.keyRotation,
+    presenceKeys: stored.presenceKeys?.map(value => ({
+      state: value.state,
+      accessEpoch: value.accessEpoch,
+      version: value.version,
+      key: base64UrlDecode(value.key, 16),
+    })),
+    intentId: source === 'wifiprov'
+      ? new Uint8Array()
+      : base64UrlDecode(stored.intentId, 16),
+    commitId: source === 'wifiprov'
+      ? new Uint8Array()
+      : base64UrlDecode(stored.commitId, 16),
+    receipt: source === 'wifiprov'
+      ? new Uint8Array()
+      : base64UrlDecode(stored.receipt),
+  };
+  try {
+    validateCredential(credential);
+    return credential;
+  } catch (error) {
+    clearBleControllerCredentialSecrets(credential);
+    throw error;
+  }
+}
+
 function validateCredential(credential: BleControllerCredential): void {
-  key(credential.logicalDeviceId);
+  try {
+    logicalDevicePeerId(credential.logicalDeviceId);
+  } catch {
+    throw new Error('BLE_DIRECT_LOGICAL_DEVICE_ID_INVALID');
+  }
   const source = credential.source ?? 'enrollment';
   const validEvidence = source === 'wifiprov'
-    ? credential.state === 'active'
+    ? (credential.state === 'active' || !!credential.cloudContext)
       && credential.intentId.length === 0
       && credential.commitId.length === 0
       && credential.receipt.length === 0
@@ -259,9 +360,35 @@ function validateCredential(credential: BleControllerCredential): void {
     || !exactNonZero(credential.controllerSecret, 32)
     || credential.credentialVersion !== 1 || credential.permissions !== 0x0f
     || !validPresenceKeys(credential.presenceKeys, credential.accessEpoch)
+    || !validKeyRotation(credential)
+    || (credential.cloudContext !== undefined && (source !== 'wifiprov'
+      || !u32(credential.cloudContext.credentialVersion)
+      || !/^[A-Za-z0-9_-]{22}$/.test(credential.cloudContext.locator)
+      || base64UrlDecode(credential.cloudContext.locator, 16).every(byte => byte === 0)))
     || !validEvidence) {
     throw new Error('BLE_DIRECT_CREDENTIAL_INVALID');
   }
+}
+
+function validKeyRotation(credential: BleControllerCredential): boolean {
+  const rotation = credential.keyRotation;
+  if (rotation === undefined) return true;
+  try {
+    const previous = rotation.previousContext, expected = rotation.expectedAdmin;
+    return credential.source === 'wifiprov' && credential.state === 'pending'
+      && credential.presenceKeys === undefined && !!credential.cloudContext
+      && (rotation.phase === 'prepared' || rotation.phase === 'key-ready')
+      && base64UrlDecode(rotation.operationId, 16).some(Boolean)
+      && u32(previous.credentialVersion) && previous.credentialVersion < 0xffffffff
+      && base64UrlDecode(previous.locator, 16).some(Boolean)
+      && (expected === undefined || (u32(expected.accessEpoch) && expected.accessEpoch < 0xffffffff
+        && base64UrlDecode(expected.controllerId, 16).some(Boolean)
+        && expected.controllerId !== base64UrlEncode(credential.controllerId)))
+      && credential.accessEpoch === (expected ? expected.accessEpoch + 1 : 1)
+      && (rotation.phase === 'prepared'
+        ? credential.cloudContext.credentialVersion === previous.credentialVersion && credential.cloudContext.locator === previous.locator
+        : credential.cloudContext.credentialVersion === previous.credentialVersion + 1 && credential.cloudContext.locator !== previous.locator);
+  } catch { return false; }
 }
 
 function validPresenceKeys(

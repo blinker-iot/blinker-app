@@ -10,7 +10,11 @@ import { FormsModule } from '@angular/forms';
 import { Capacitor, PluginListenerHandle } from '@capacitor/core';
 import { AlertController, IonicModule, NavController, ToastController } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
+import { API } from 'src/app/configs/api.config';
+import { bleScanner } from 'src/app/core/bluetooth/scan';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
+import { assertDeviceV2AccountContext, captureDeviceV2AccountContext,
+  DeviceV2AccountContext } from 'src/app/core/device-v2/account-scope';
 import {
   CapacitorBleControllerCredentialStore,
   clearBleControllerCredentialSecrets,
@@ -25,6 +29,11 @@ import {
   BlinkerConfigInfo,
 } from 'src/app/core/device-v2/provisioning/esp32-wifiprov';
 import { DeviceUiPort } from 'src/app/core/device-v2/device-ui.port';
+import { WiFiProvAdmin, WiFiProvIdentity } from 'src/app/core/device-v2/provisioning/wifiprov-admin';
+import { WiFiProvAllocation } from 'src/app/core/device-v2/provisioning/wifiprov-allocation';
+import { CapacitorWiFiProvAllocationStore } from 'src/app/core/device-v2/provisioning/wifiprov-allocation-store';
+import { WiFiProvRetirement } from 'src/app/core/device-v2/provisioning/wifiprov-retirement';
+import { sameBytes } from 'src/app/core/device-v2/ble-direct/wire';
 import { DeviceV2ManagementService } from 'src/app/core/services/device-v2-management.service';
 import { DataService } from 'src/app/core/services/data.service';
 import { UserService } from 'src/app/core/services/user.service';
@@ -75,9 +84,9 @@ type CloudOnlyAllocation = AllocationBase & {
 
 type BootstrapAllocation = AllocationBase & {
   preserveAccess: false;
-  controllerId: Uint8Array;
-  controllerSecret: Uint8Array;
-  credentialStored: boolean;
+  directBootstrap: true;
+  credentialVersion: number;
+  locator: string;
 };
 
 type DeviceAllocation =
@@ -121,11 +130,15 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
   private scanTimer?: ReturnType<typeof setTimeout>;
   private destroyed = false;
   private allocation?: DeviceAllocation;
-  private allocationIdempotencyKey = '';
+  private rotationIdempotencyKey = '';
+  private accountContext?: DeviceV2AccountContext;
   private reconfigureContext?: DeviceKeyContext;
   private pluginRelease?: Promise<void>;
+  private discoveryLease?: Promise<() => void>;
+  private discoveryStarting?: Promise<void>;
   private readonly provisioningTransport = new CapacitorEsp32ProvisioningTransport();
-  private readonly controllerCredentials = new CapacitorBleControllerCredentialStore();
+  private readonly controllerCredentials: CapacitorBleControllerCredentialStore;
+  private readonly allocationStore: CapacitorWiFiProvAllocationStore;
 
   constructor(
     private zone: NgZone,
@@ -138,7 +151,14 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private navController: NavController,
     private alertController: AlertController,
-  ) {}
+  ) {
+    this.controllerCredentials = new CapacitorBleControllerCredentialStore(
+      () => captureDeviceV2AccountContext(this.dataService, API.BASE_URL),
+    );
+    this.allocationStore = new CapacitorWiFiProvAllocationStore(
+      () => captureDeviceV2AccountContext(this.dataService, API.BASE_URL),
+    );
+  }
 
   get reconfiguring(): boolean {
     return !!this.reconfigureContext;
@@ -187,7 +207,7 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
     this.clearScanTimer();
-    void this.releasePlugin();
+    void this.releasePlugin().catch(() => undefined);
     this.clearAllocation();
   }
 
@@ -211,6 +231,7 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
   }
 
   async startBleScan(): Promise<void> {
+    if (this.destroyed || this.isScanning || this.isConnecting || this.isProvisioning) return;
     if (!this.nativeSupported) {
       await this.showToast('ESP32 配网需要在 Android 或 iOS App 中使用');
       return;
@@ -218,13 +239,16 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
 
     try {
       await this.ensurePermissions();
+      await this.acquireDiscovery();
       this.devices = [];
       this.phase = 'scanning';
       this.statusMessage = '正在扫描附近的 ESP32 配网设备…';
-      await WiFiProv.startBleScan({
+      this.discoveryStarting = WiFiProv.startBleScan({
         prefix: this.devicePrefix.trim() || undefined,
         security: this.security,
-      });
+      }).then(() => undefined);
+      await this.discoveryStarting;
+      if (this.destroyed) return;
       this.clearScanTimer();
       this.scanTimer = setTimeout(() => void this.stopBleScan(), 12000);
     } catch (error) {
@@ -321,10 +345,10 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
       await this.installBlinkerIdentity();
       this.progress = 28;
       this.statusMessage = '设备身份已写入，正在发送 Wi-Fi 凭据…';
-      const result = await WiFiProv.provision({
+      const result = await this.accountStep(() => WiFiProv.provision({
         ssid: this.ssid.trim(),
         password: this.password || undefined,
-      });
+      }));
       this.result = result;
       if (result.success) {
         this.phase = 'success';
@@ -386,14 +410,89 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     await this.scanWifiNetworks();
   }
 
+  private currentAccount(): DeviceV2AccountContext {
+    if (this.destroyed) throw new Error('配网页面已关闭');
+    this.accountContext ??= captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+    assertDeviceV2AccountContext(this.dataService, this.accountContext);
+    return this.accountContext;
+  }
+
+  private checkAccount(expected: DeviceV2AccountContext): void {
+    if (this.destroyed || this.accountContext !== expected) throw new Error('配网事务已结束');
+    assertDeviceV2AccountContext(this.dataService, expected);
+  }
+
+  private async accountStep<T>(work: () => Promise<T>): Promise<T> {
+    const expected = this.currentAccount();
+    const value = await work();
+    this.checkAccount(expected);
+    return value;
+  }
+
+  private adminCoordinator(): WiFiProvAdmin {
+    const expected = this.currentAccount();
+    return new WiFiProvAdmin(this.controllerCredentials, this.deviceManagement,
+      this.provisioningTransport, () => this.checkAccount(expected));
+  }
+
   private async installBlinkerIdentity(): Promise<void> {
-    const info = decodeBlinkerConfigInfo(await this.provisioningTransport.request(
+    const admin = this.adminCoordinator();
+    const info = decodeBlinkerConfigInfo(await this.accountStep(() => this.provisioningTransport.request(
       BLINKER_CONFIG_ENDPOINT,
       encodeBlinkerConfigInfoRequest(),
-    ));
+    )));
     let allocation = this.allocation;
     if (allocation && !sameBytes(allocation.deviceInstanceId, info.deviceInstanceId)) {
       throw new Error('当前配网事务属于另一台设备，请重新开始');
+    }
+    if (!allocation && !this.reconfiguring) {
+      const expected = this.currentAccount();
+      await new WiFiProvRetirement(this.allocationStore, this.controllerCredentials,
+        this.deviceManagement, () => this.checkAccount(expected)).recoverRemoved(info, async () => {
+        const alert = await this.alertController.create({ header: '原设备已移除',
+          message: '服务器已确认原设备被移除，当前设备接入信息也已重置。是否清理本机对应配网记录并重新添加？不会恢复旧设备或旧权限。',
+          buttons: [{ text: '取消', role: 'cancel' }, { text: '清理并重新添加', role: 'confirm' }] });
+        await alert.present();
+        return (await alert.onDidDismiss()).role === 'confirm';
+      });
+    }
+    if (allocation?.deviceKey === '') {
+      if (!info.hasDeviceKey || (allocation.preserveAccess
+        && (!info.hasAccessState || allocation.accessEpoch !== info.accessEpoch))) {
+        throw new Error('设备接入根已变化，请停止当前配网事务');
+      }
+      return; // Confirmed identity: retry WiFi only, never Bootstrap again.
+    }
+    if (!allocation && info.supportsAccessBootstrap) {
+      let checkpointId = this.reconfigureContext?.logicalDeviceId;
+      const pendingId = (await this.accountStep(() => this.allocationStore.load(info.deviceInstanceId)))?.context?.logicalDeviceId;
+      if (pendingId && checkpointId && pendingId !== checkpointId) throw new Error('WIFIPROV_ALLOCATION_CONFLICT');
+      if (!checkpointId && info.hasAccessState) {
+        // One physical instance may have retired test/reset identities. A live
+        // root belongs to the current account-resolved device, not the first
+        // cached WiFiProv record sharing its instance. Empty-root pending
+        // recovery and explicit reconfiguration retain their original fences.
+        const resolved = (await this.accountStep(() => this.deviceManagement.resolveDeviceInstanceV2(
+          info.deviceInstanceId,
+        ))).data.device;
+        // Bootstrap can precede the first cloud session/instance association.
+        // A complete installed root may use the coordinator's unique native checkpoint;
+        // lookup failures, ambiguous records and root/context mismatches still fail closed.
+        if (!resolved && !info.hasDeviceKey) {
+          throw new Error('设备已有接入身份，但当前账号没有对应记录；请恢复原账号或重置设备');
+        }
+        if (resolved && pendingId && resolved.logicalDeviceId !== pendingId) throw new Error('WIFIPROV_ALLOCATION_CONFLICT');
+        checkpointId = resolved?.logicalDeviceId ?? pendingId;
+      }
+      checkpointId ??= pendingId;
+      const recovered = await admin.resume(info, checkpointId);
+      if (recovered) {
+        this.rememberIdentity(recovered, info);
+        return;
+      }
+      if (info.hasAccessState && !checkpointId) {
+        throw new Error('设备已有接入身份，但当前账号没有对应记录；请恢复原账号或重置设备');
+      }
     }
     if (!allocation && this.reconfiguring && info.hasDeviceKey) {
       this.allocation = await this.resumeExistingIdentity(info);
@@ -414,11 +513,11 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
           : '设备已有身份，请从原设备页面发起重新配网');
       } else {
         if (!this.reconfigureContext) {
-          const resolved = (await this.deviceManagement.resolveDeviceInstanceV2(
+          const resolved = (await this.accountStep(() => this.deviceManagement.resolveDeviceInstanceV2(
             info.deviceInstanceId,
-          )).data.device;
+          ))).data.device;
           if (resolved) {
-            const confirmed = await this.confirmExistingDevice(resolved.name, false);
+            const confirmed = await this.accountStep(() => this.confirmExistingDevice(resolved.name, false));
             if (!confirmed) throw new Error('已取消覆盖原设备的重新配网');
             if (!resolved.credentialVersion || !resolved.locator) {
               throw new Error('原设备尚无云凭据，请先通过原设备的 BLE 接入记录恢复');
@@ -431,12 +530,16 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
             this.blinkerDeviceName = resolved.name;
           }
         }
+        if (this.reconfigureContext && info.supportsAccessBootstrap) {
+          this.rememberIdentity(await admin.reconfigure(this.reconfigureContext, info), info);
+          return;
+        }
         const identity = this.reconfigureContext
-          ? (await this.deviceManagement.rotateDeviceKeyV2(
-              this.reconfigureContext,
-              this.allocationRequestId(),
-            )).data
-          : await this.createDeviceIdentity();
+          ? (await this.accountStep(() => this.deviceManagement.rotateDeviceKeyV2(
+              this.reconfigureContext!,
+              this.rotationRequestId(),
+            ))).data
+          : await this.createDeviceIdentity(info.deviceInstanceId);
         if (this.reconfigureContext) {
           this.reconfigureContext = {
             logicalDeviceId: identity.logicalDeviceId,
@@ -454,9 +557,9 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
         allocation = info.supportsAccessBootstrap
           ? {
               ...base,
-              controllerId: randomBytes(16),
-              controllerSecret: randomBytes(32),
-              credentialStored: false,
+              directBootstrap: true,
+              credentialVersion: identity.credentialVersion,
+              locator: identity.locator,
             }
           : {
               ...base,
@@ -466,56 +569,40 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
       }
     }
 
-    const bootstrap = isBootstrapAllocation(allocation) ? {
-      accessEpoch: allocation.accessEpoch,
-      controllerId: allocation.controllerId,
-      credentialVersion: 1,
-      controllerSecret: allocation.controllerSecret,
-    } : undefined;
-    const configured = await configureBlinkerAccess(
-      this.provisioningTransport,
-      allocation.deviceKey,
-      bootstrap,
-      info,
-    );
-    if (!isBootstrapAllocation(allocation)) {
-      // Device GetInfo is the capability authority. A Cloud-only product must
-      // not inherit a local Direct credential merely because this logical id
-      // was previously used by different firmware.
-      if (!allocation.preserveAccess
-        && configured.operation === BlinkerConfigOperation.Install) {
-        await this.controllerCredentials
-          .remove(allocation.logicalDeviceId)
-          .catch(() => undefined);
-      }
+    if (isBootstrapAllocation(allocation)) {
+      await admin.install(allocation, info);
+      this.allocation = { logicalDeviceId: allocation.logicalDeviceId, deviceKey: '',
+        deviceInstanceId: allocation.deviceInstanceId, accessEpoch: allocation.accessEpoch,
+        preserveAccess: true, credentialStored: true };
       return;
     }
-    if (allocation.credentialStored) return;
-    await this.controllerCredentials.save({
-      source: 'wifiprov',
-      state: 'active',
-      logicalDeviceId: allocation.logicalDeviceId,
-      deviceInstanceId: allocation.deviceInstanceId,
-      accessEpoch: allocation.accessEpoch,
-      controllerId: allocation.controllerId,
-      controllerSecret: allocation.controllerSecret,
-      credentialVersion: 1,
-      permissions: 0x0f,
-      intentId: new Uint8Array(),
-      commitId: new Uint8Array(),
-      receipt: new Uint8Array(),
-    });
-    allocation.credentialStored = true;
-    allocation.controllerSecret.fill(0);
+    const configured = await this.accountStep(() => configureBlinkerAccess(
+      this.provisioningTransport,
+      allocation.deviceKey,
+      undefined,
+      info,
+    ));
+    // A Cloud-only product must not inherit old local Direct credentials.
+    if (!allocation.preserveAccess && configured.operation === BlinkerConfigOperation.Install) {
+      await this.accountStep(() => this.controllerCredentials.remove(allocation.logicalDeviceId));
+    }
+  }
+
+  private rememberIdentity(identity: WiFiProvIdentity, info: BlinkerConfigInfo): void {
+    this.reconfigureContext = { logicalDeviceId: identity.logicalDeviceId,
+      credentialVersion: identity.credentialVersion, locator: identity.locator };
+    this.allocation = { logicalDeviceId: identity.logicalDeviceId, deviceKey: '',
+      deviceInstanceId: info.deviceInstanceId.slice(), accessEpoch: identity.accessEpoch,
+      preserveAccess: true, credentialStored: true };
   }
 
   private async resumeExistingIdentity(
     info: BlinkerConfigInfo,
   ): Promise<DeviceAllocation> {
     const expected = this.reconfigureContext!;
-    const resolved = (await this.deviceManagement.resolveDeviceInstanceV2(
+    const resolved = (await this.accountStep(() => this.deviceManagement.resolveDeviceInstanceV2(
       info.deviceInstanceId,
-    )).data.device;
+    ))).data.device;
     if (!resolved
       || resolved.logicalDeviceId !== expected.logicalDeviceId
       || resolved.credentialVersion !== expected.credentialVersion
@@ -524,11 +611,13 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     }
 
     if (info.hasAccessState) {
+      const account = this.currentAccount();
       const credential = await this.controllerCredentials.load(expected.logicalDeviceId);
       if (!credential) {
         throw new Error('本机缺少该设备的 BLE 控制凭据；请先恢复控制权或执行接入重置');
       }
       try {
+        this.checkAccount(account);
         if (credential.state !== 'active'
           || !sameBytes(credential.deviceInstanceId, info.deviceInstanceId)
           || credential.accessEpoch !== info.accessEpoch) {
@@ -555,17 +644,19 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
   private async enableCloudForExistingBleDevice(
     info: BlinkerConfigInfo,
   ): Promise<DeviceAllocation> {
-    const resolved = (await this.deviceManagement.resolveDeviceInstanceV2(
+    const resolved = (await this.accountStep(() => this.deviceManagement.resolveDeviceInstanceV2(
       info.deviceInstanceId,
-    )).data.device;
+    ))).data.device;
     if (!resolved) {
       throw new Error('设备已有 BLE 身份，但当前账号没有对应接入记录；请恢复原账号或重置设备');
     }
+    const account = this.currentAccount();
     const credential = await this.controllerCredentials.load(resolved.logicalDeviceId);
     if (!credential) {
       throw new Error('本机缺少该设备的 BLE 控制凭据；请先恢复控制权或重置设备');
     }
     try {
+      this.checkAccount(account);
       if (credential.state !== 'active'
         || !sameBytes(credential.deviceInstanceId, info.deviceInstanceId)
         || credential.accessEpoch !== info.accessEpoch) {
@@ -574,13 +665,13 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     } finally {
       clearBleControllerCredentialSecrets(credential);
     }
-    if (!await this.confirmExistingDevice(resolved.name, true)) {
+    if (!await this.accountStep(() => this.confirmExistingDevice(resolved.name, true))) {
       throw new Error('已取消为原 BLE 设备启用 Wi-Fi');
     }
     this.blinkerDeviceName = resolved.name;
-    const identity = (await this.deviceManagement.enableDeviceCloudV2(
+    const identity = (await this.accountStep(() => this.deviceManagement.enableDeviceCloudV2(
       info.deviceInstanceId,
-    )).data;
+    ))).data;
     return {
       logicalDeviceId: identity.logicalDeviceId,
       deviceKey: identity.deviceKey,
@@ -591,24 +682,16 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     };
   }
 
-  private async createDeviceIdentity(): Promise<DeviceKeyContext & { deviceKey: string }> {
-    const created = await this.deviceManagement.createDeviceKeyV2(
-      this.blinkerDeviceName.trim(),
-      this.allocationRequestId(),
-      'diy',
-    );
-    const context = created.data.device;
-    const revealed = await this.deviceManagement.revealDeviceKeyV2({
-      logicalDeviceId: context.logicalDeviceId,
-      credentialVersion: context.credentialVersion,
-      locator: context.locator,
-    });
-    return revealed.data;
+  private async createDeviceIdentity(instance: Uint8Array): Promise<DeviceKeyContext & { deviceKey: string }> {
+    const expected = this.currentAccount();
+    return new WiFiProvAllocation(this.allocationStore, this.deviceManagement, () => this.checkAccount(expected))
+      .create(instance, this.blinkerDeviceName);
   }
 
-  private allocationRequestId(): string {
-    this.allocationIdempotencyKey ||= `wifiprov-${hex(randomBytes(16))}`;
-    return this.allocationIdempotencyKey;
+  private rotationRequestId(): string {
+    // Cloud-only rotation is separate from the durable first-allocation journal.
+    this.rotationIdempotencyKey ||= `wifiprov-${hex(randomBytes(16))}`;
+    return this.rotationIdempotencyKey;
   }
 
   private async confirmExistingDevice(name: string, preserveAccess: boolean): Promise<boolean> {
@@ -627,11 +710,10 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
   }
 
   private clearAllocation(): void {
-    if (!this.allocation) return;
-    this.allocation.deviceKey = '';
-    if (isBootstrapAllocation(this.allocation)) this.allocation.controllerSecret.fill(0);
+    if (this.allocation) this.allocation.deviceKey = '';
     this.allocation = undefined;
-    this.allocationIdempotencyKey = '';
+    this.rotationIdempotencyKey = '';
+    this.accountContext = undefined;
   }
 
   private loadReconfigureContext(): boolean {
@@ -652,21 +734,36 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
       locator: device.locator,
     };
     this.blinkerDeviceName = device.config?.customName?.trim() || this.blinkerDeviceName;
-    this.statusMessage = '请确认设备已重置接入信息，再扫描 BLINKER_ 配网设备';
+    this.statusMessage = '请确认原设备已重置网络并进入配网模式，再扫描 BLINKER_ 配网设备';
     return true;
   }
 
   async openProvisionedDevice(): Promise<void> {
     const logicalDeviceId = this.allocation?.logicalDeviceId;
     if (!logicalDeviceId) return;
+    const expected = this.currentAccount();
     await this.releasePlugin();
     if (this.destroyed) return;
+    this.checkAccount(expected);
     const loaded = await this.userService.getAllInfo().catch(() => false);
     if (this.destroyed) return;
+    this.checkAccount(expected);
     if (!loaded && !this.dataService.getDevice(logicalDeviceId)) {
       this.statusMessage = '设备已写入 Wi-Fi；设备列表刷新失败，请稍后从设备列表进入';
       return;
     }
+    // Bootstrap precedes WiFi/cloud association. Keep the exact recovery ID
+    // until the server can resolve it; cleanup failure must not strand a configured device.
+    try {
+      const instance = this.allocation!.deviceInstanceId;
+      const pending = await this.accountStep(() => this.allocationStore.load(instance));
+      if (pending?.context?.logicalDeviceId === logicalDeviceId) {
+        const resolved = (await this.accountStep(() => this.deviceManagement.resolveDeviceInstanceV2(instance))).data.device;
+        if (resolved?.logicalDeviceId === logicalDeviceId) {
+          await this.accountStep(() => this.allocationStore.complete(instance, logicalDeviceId));
+        }
+      }
+    } catch { this.checkAccount(expected); } // Retain the journal; never replay CREATE/Bootstrap here.
     void this.deviceUi.startDirectHandoff(logicalDeviceId);
     await this.navController.navigateRoot(`/device/${encodeURIComponent(logicalDeviceId)}`);
   }
@@ -810,12 +907,27 @@ export class Esp32ProvisionPage implements OnInit, OnDestroy {
     return this.pluginRelease;
   }
 
+  private async acquireDiscovery(): Promise<void> {
+    if (this.destroyed) throw new Error('配网页面已关闭');
+    const lease = this.discoveryLease ??= bleScanner.acquireExclusive();
+    try { await lease; }
+    catch (error) { if (this.discoveryLease === lease) this.discoveryLease = undefined; throw error; }
+    if (this.destroyed) throw new Error('配网页面已关闭');
+  }
+
   private async releasePluginNow(): Promise<void> {
-    await Promise.allSettled([WiFiProv.stopBleScan(), WiFiProv.clearState()]);
+    // A late SDK start must finish before native close and lease release.
+    await this.discoveryStarting?.catch(() => undefined);
+    const results = await Promise.allSettled([WiFiProv.stopBleScan(), WiFiProv.clearState()]);
     await Promise.allSettled(
       this.listeners.map((listener) => listener.remove())
     );
     this.listeners = [];
+    const release = await this.discoveryLease?.catch(() => undefined);
+    // An uncertain native close must not let Presence/Direct start over it.
+    if (results.some(result => result.status === 'rejected')) throw new Error('BLE_SCAN_CLOSE_FAILED');
+    release?.();
+    this.discoveryLease = undefined;
   }
 
   private errorMessage(error: unknown, fallback: string): string {
@@ -845,11 +957,6 @@ function hex(value: Uint8Array): string {
   return Array.from(value, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
-  return left.length === right.length
-    && left.every((value, index) => value === right[index]);
-}
-
 function isBootstrapAllocation(value: DeviceAllocation): value is BootstrapAllocation {
-  return value.preserveAccess === false && 'controllerSecret' in value;
+  return value.preserveAccess === false && 'directBootstrap' in value;
 }

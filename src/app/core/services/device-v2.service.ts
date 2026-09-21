@@ -16,6 +16,7 @@ import {
 import { DataService } from './data.service';
 import { DeviceV2ManifestCache } from './device-v2-manifest-cache.service';
 import { UserService } from './user.service';
+import { DeviceV2DemandOwner, DeviceV2DirectOwner } from '../protocol/device-v2/connection-demand';
 
 export type { DeviceV2AccountState } from '../device-v2/account-client';
 
@@ -140,6 +141,22 @@ export class DeviceV2Service {
 
   ensureReady(logicalDeviceId: string): Promise<void> {
     return this.client.ensureReady(logicalDeviceId);
+  }
+
+  waitUntilReady(logicalDeviceId: string, signal?: AbortSignal): Promise<void> {
+    return this.client.waitUntilReady(logicalDeviceId, signal);
+  }
+
+  acquireStateInterest(logicalDeviceId: string, signal: AbortSignal): Promise<DeviceV2DemandOwner | undefined> {
+    return this.client.acquireStateInterest(logicalDeviceId, signal);
+  }
+
+  acquireConnectionDemand(logicalDeviceId: string, signal: AbortSignal): Promise<DeviceV2DemandOwner> {
+    return this.client.acquireConnectionDemand(logicalDeviceId, signal);
+  }
+
+  reserveDirectPriority(logicalDeviceId: string, signal: AbortSignal): Promise<DeviceV2DirectOwner> {
+    return this.client.reserveDirectPriority(logicalDeviceId, signal);
   }
 
   command(logicalDeviceId: string, endpointKey: string, value: unknown): Promise<DeviceV2Ack> {

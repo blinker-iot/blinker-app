@@ -14,7 +14,7 @@
       eyebrow="ESPRESSIF WIFI PROVISIONING"
       [heading]="reconfiguring ? '保留设备并重新配置网络' : '安全配置 ESP32 网络'"
       [description]="reconfiguring
-        ? '连接已重置网络的原设备，只更新 Wi-Fi；保留 DeviceKey、控制页面和 Direct BLE 权限。'
+        ? '连接原设备并重新配置 Wi-Fi，保留设备和控制页面；仅重置网络时保留 Key 与本地权限，清除接入信息后会更新 Key 并重建本地权限。'
         : '通过 Espressif 官方协议连接设备、扫描附近 Wi-Fi 并下发网络凭据。'"
     />
 
@@ -23,7 +23,7 @@
         <i class="fa-light fa-rotate"></i>
         <div>
           <strong>这是原设备重新配网</strong>
-          <span>App 会核对设备实例与原设备记录；不会刷新 Key，也不会创建第二个设备。</span>
+          <span>App 会核对设备实例与原设备记录，不创建第二个设备。若已清除接入信息，本次操作会刷新 Key，使旧云端凭据失效；原本地授权需重新获取。</span>
         </div>
       </div>
     }

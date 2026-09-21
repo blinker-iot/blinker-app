@@ -3,7 +3,6 @@ import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API } from 'src/app/configs/api.config';
 import { sha256 } from '../functions/func';
-import { BlinkerDevice } from '../model/device.model';
 import {
   AccountDeletionCodeData,
   AilyResponse,
@@ -120,7 +119,8 @@ export class UserService {
     }
 
     if (!this.sessionMatches(session) || generation !== this.inventoryLoadGeneration) return false;
-    this.dataService.loadGatewayData(userResult.value.data, devices, received);
+    this.dataService.loadGatewayData(userResult.value.data, devices, received,
+      receivedResult.status === 'fulfilled' && Array.isArray(receivedResult.value?.data?.devices));
     await this.noticeService.hideLoading();
     return true;
   }
@@ -139,20 +139,6 @@ export class UserService {
         uuid: this.uuid,
         token: this.token,
         userConf: JSON.stringify(userConfig),
-      }),
-    )
-      .then((response) => response.message === 1000)
-      .catch(this.handleError);
-  }
-
-  delDevice(device: BlinkerDevice): Promise<boolean> {
-    return firstValueFrom(
-      this.http.get<BlinkerResponse>(API.USER.DEL_DEVICE, {
-        params: {
-          uuid: this.uuid,
-          token: this.token,
-          deviceName: device.deviceName,
-        },
       }),
     )
       .then((response) => response.message === 1000)

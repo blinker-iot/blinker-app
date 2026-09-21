@@ -83,8 +83,10 @@ describe('NtfyService backend installation', () => {
     vi.mocked(SecureStorage.get).mockResolvedValue(null);
     vi.mocked(SecureStorage.set).mockResolvedValue(undefined);
     vi.mocked(SecureStorage.remove).mockResolvedValue(true);
-    vi.mocked(Ntfy.addListener).mockImplementation(async (_event, listener) => {
-      messageListener = listener as unknown as (message: NtfyMessage) => void;
+    vi.mocked(Ntfy.addListener).mockImplementation(async (event: string, listener) => {
+      if (event === 'messageReceived') {
+        messageListener = listener as unknown as (message: NtfyMessage) => void;
+      }
       return { remove: vi.fn().mockResolvedValue(undefined) } as PluginListenerHandle;
     });
     vi.mocked(Ntfy.requestNotificationPermission).mockResolvedValue({ state: 'granted' });
@@ -549,18 +551,37 @@ describe('NtfyService backend installation', () => {
     });
   });
 
-  it('emits each business sequence_id once and ignores the ntfy transport id', async () => {
-    dataService.auth = null;
-    dataService.userDataLoader.next(false);
+  it('emits each current-account business sequence_id once and ignores unrelated messages', async () => {
+    vi.mocked(SecureStorage.get).mockResolvedValue(storedActiveInstallation());
     const ids: string[] = [];
     service.messageIds$.subscribe((id) => ids.push(id));
 
-    await service.init();
+    const init = service.init();
+    await settle();
+    const request = httpTesting.expectOne(API.NOTIFICATION_INSTALLATIONS.COLLECTION);
+    request.flush(
+      installationEnvelope(
+        200,
+        'client-installation',
+        'server-installation',
+        'active',
+        credentials,
+      ),
+      noStoreResponse(200, 'OK'),
+    );
+    await init;
+
     expect(messageListener).not.toBeNull();
     messageListener?.(message('transport-1', { sequence_id: 'message-1' }));
     messageListener?.(message('transport-2', { sequence_id: 'message-1' }));
     messageListener?.(message('transport-3', { sequence_id: 'message-2' }));
     messageListener?.(message('message-3', {}));
+    messageListener?.({
+      ...message('transport-4', { sequence_id: 'message-4' }),
+      topic: 'another-account-topic',
+    });
+    dataService.auth = null;
+    messageListener?.(message('transport-5', { sequence_id: 'message-5' }));
 
     expect(ids).toEqual(['message-1', 'message-2']);
   });

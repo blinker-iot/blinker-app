@@ -37,6 +37,13 @@ export class BleDirectCrypto {
     return new Uint8Array(await this.webCrypto.subtle.digest('SHA-256', bytes(concat(...parts))));
   }
 
+  async adminFingerprint(controllerId: Uint8Array, controllerSecret: Uint8Array): Promise<Uint8Array> {
+    const version = new Uint8Array(4);
+    new DataView(version.buffer).setUint32(0, 1, false);
+    return this.sha256(text.encode('blinker/direct-admin/fingerprint/v1'), Uint8Array.of(0),
+      controllerId, version, controllerSecret);
+  }
+
   async hmac(key: Uint8Array, ...parts: Uint8Array[]): Promise<Uint8Array> {
     const imported = await this.webCrypto.subtle.importKey(
       'raw', bytes(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],

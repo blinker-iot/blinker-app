@@ -16,6 +16,7 @@ import { BlinkerDevice } from '../../core/model/device.model';
 import {
   DeviceUiConnectivitySnapshot,
   DeviceUiConnectionState,
+  DeviceUiConnection,
   DeviceUiEndpoint,
   DeviceUiEvent,
   DeviceUiPort,
@@ -58,7 +59,14 @@ function emptySnapshot(): DeviceUiSnapshot {
 })
 export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   @Input({ required: true }) device!: BlinkerDevice;
-  @Input() viewActive = true;
+  // Navigation cancellation is a lifetime boundary, not a rendering effect.
+  // ComponentRef.setInput must fence pending Ready/native work immediately.
+  private viewEnabled = true;
+  @Input() get viewActive(): boolean { return this.viewEnabled; }
+  set viewActive(active: boolean) {
+    this.viewEnabled = active;
+    this.setPageVisible(active);
+  }
   @Input() embedded = false;
 
   accountState: DeviceUiConnectionState = 'idle';
@@ -78,9 +86,13 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private renderPending = false;
   private logicalDeviceId = '';
   private syncing?: Promise<void>;
+  private syncAbort?: AbortController;
+  private connection?: DeviceUiConnection;
+  private synchronized = false;
   private layoutLoadKey = '';
   private layoutEpoch = 0;
   private storedLayout?: DeviceV2PageLayoutRecord;
+  private layoutError = '';
   private appActive = true;
   private pageVisible = false;
   private bleReconnectNeeded = false;
@@ -113,6 +125,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       const resumed = active && !this.appActive;
       this.appActive = active;
       if (!active) {
+        this.cancelSynchronization();
         this.cancelBleReconnect(false);
       } else if (resumed && this.pageVisible) {
         this.resetBleReconnect();
@@ -124,15 +137,14 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['viewActive']) this.setPageVisible(this.viewActive);
     if (this.initialized && changes['device']) this.bindDevice();
   }
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.cancelSynchronization();
     this.cancelBleReconnect();
     this.releaseTelemetry();
-    void this.deviceUi.disconnect(this.logicalDeviceId).catch(() => undefined);
     this.subscriptions.unsubscribe();
     this.deviceSubscriptions.unsubscribe();
   }
@@ -154,6 +166,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   get stateLabel(): string {
+    if (this.syncing) return '正在连接并同步';
     if (this.direct && this.accountState === 'ready') return '蓝牙已连接';
     if (!this.direct && this.device?.data?.cloudReachable === true) return '云端在线';
     if (this.accountState === 'retrying') return '正在重连';
@@ -163,10 +176,11 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   get canControl(): boolean {
-    const reachable = this.direct
-      ? this.accountState === 'ready'
-      : this.device?.data?.cloudReachable === true;
-    return reachable && this.snapshot.stateFresh;
+    // Both signals are scoped to the selected carrier by DeviceUiPort. Its
+    // fresh snapshot already fences offline/lost cloud presence and stale
+    // manifests. Inventory presence is only a hint, not LAN readiness or ACL.
+    return this.accountState === 'ready' && this.snapshot.stateFresh && this.synchronized
+      && this.connection?.signal.aborted === false && this.pageVisible && this.appActive;
   }
 
   get waitingForCapabilities(): boolean {
@@ -293,13 +307,12 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private bindDevice(): void {
     const nextId = this.device?.deviceName || this.device?.id || '';
     if (nextId === this.logicalDeviceId) return;
-    const previousId = this.logicalDeviceId;
+    this.cancelSynchronization();
     this.releaseTelemetry();
     this.cancelBleReconnect();
     this.bleReconnectNeeded = false;
     this.directConnectAllowed = true;
     this.bleAdapterEnabled = null;
-    if (previousId) void this.deviceUi.disconnect(previousId).catch(() => undefined);
     this.logicalDeviceId = nextId;
     this.accountState = 'idle';
     this.snapshot = emptySnapshot();
@@ -307,6 +320,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.layoutStale = undefined;
     this.layoutUpdating = false;
     this.storedLayout = undefined;
+    this.layoutError = '';
     this.layoutLoadKey = '';
     this.layoutEpoch += 1;
     this.endpointsByKey.clear();
@@ -376,9 +390,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       } else if (this.layout?.manifestFingerprint !== snapshot.manifestFingerprint) {
         this.layout = generateDefaultPageLayout(snapshot);
       }
+      this.clearLayoutError();
     } catch (error) {
       this.layout = undefined;
-      this.error = this.messageOf(error, '页面布局生成失败');
+      this.layoutError = this.error = this.messageOf(error, '页面布局生成失败');
     }
     const loadKey = `${this.logicalDeviceId}\0${snapshot.manifestFingerprint}`;
     if (this.layoutLoadKey !== loadKey) {
@@ -395,9 +410,12 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     loadKey: string,
     epoch: number,
   ): Promise<void> {
+    let validatingRecord = false;
     try {
       let record = await this.pageLayouts.get(logicalDeviceId);
       if (!this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
+      // The live schema may have replaced an invalid preview with the same hash.
+      snapshot = this.snapshot;
       if (!record) {
         const generated = generateDefaultPageLayout(snapshot);
         try {
@@ -414,10 +432,12 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
         }
       }
       if (!this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
-      this.applyStoredLayout(record, snapshot);
+      validatingRecord = true;
+      this.applyStoredLayout(record, this.snapshot);
     } catch (error) {
       if (this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) {
         this.error = this.messageOf(error, '页面布局同步失败');
+        if (validatingRecord) this.layoutError = this.error;
       }
     } finally {
       this.requestRender();
@@ -433,6 +453,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.layoutStale = diffPageLayout(record.layout, snapshot.endpoints);
       this.layout = migratePageLayout(record.layout, snapshot);
     }
+    this.clearLayoutError();
     this.refreshTelemetry();
     this.requestRender();
   }
@@ -549,27 +570,58 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       return Promise.resolve();
     }
     if (this.syncing) return this.syncing;
+    // Refresh through the existing connection group. The ready scope owns
+    // StateInterest until its replacement succeeds; a BLE scan must not
+    // tear down working Cloud observation or briefly disable the page.
+    if (this.connection?.signal.aborted) this.synchronized = false;
     this.error = '';
-    const task = this.deviceUi.connect(logicalDeviceId)
+    const controller = new AbortController();
+    this.syncAbort = controller;
+    const connection = this.deviceUi.openConnection(logicalDeviceId, controller.signal);
+    void connection.closed.then(() => {
+      if (this.connection !== connection) return;
+      this.synchronized = false;
+      this.requestRender();
+    });
+    const task = connection.ready
+      .then(() => {
+        if (this.syncAbort !== controller || connection.signal.aborted) return;
+        const previous = this.connection;
+        this.connection = connection;
+        this.synchronized = true;
+        previous?.close();
+      })
       .catch((error) => {
-        if (this.logicalDeviceId === logicalDeviceId) {
-          this.error = this.messageOf(error, '设备同步失败');
+        if (this.syncAbort === controller && !controller.signal.aborted
+          && !this.destroyed && this.pageVisible && this.appActive && this.logicalDeviceId === logicalDeviceId) {
+          if (!this.synchronized) this.error = this.messageOf(error, '设备同步失败');
           this.requestRender();
         }
       })
       .finally(() => {
-        if (this.syncing === task) {
-          this.syncing = undefined;
-        }
-        if (this.logicalDeviceId && this.logicalDeviceId !== logicalDeviceId) {
-          void this.synchronize();
-        } else {
-          this.scheduleBleReconnect();
-        }
+        if (this.syncAbort !== controller) return;
+        this.syncAbort = undefined;
+        this.syncing = undefined;
+        this.scheduleBleReconnect();
         this.requestRender();
       });
     this.syncing = task;
     return task;
+  }
+
+  private clearLayoutError(): void {
+    if (this.error === this.layoutError) this.error = '';
+    this.layoutError = '';
+  }
+
+  private cancelSynchronization(): void {
+    this.synchronized = false;
+    const controller = this.syncAbort;
+    this.syncAbort = undefined;
+    this.syncing = undefined;
+    controller?.abort();
+    this.connection?.close();
+    this.connection = undefined;
   }
 
   private setPageVisible(visible: boolean): void {
@@ -580,8 +632,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.resetBleReconnect();
       void this.synchronize();
     } else {
+      this.cancelSynchronization();
       this.cancelBleReconnect();
-      void this.deviceUi.disconnect(this.logicalDeviceId).catch(() => undefined);
     }
     this.refreshTelemetry();
   }
@@ -635,7 +687,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private async send(field: DeviceUiEndpoint, value: unknown): Promise<void> {
-    if (!this.logicalDeviceId || this.pending.has(field.key)) return;
+    if (!this.logicalDeviceId || !this.canControl || this.pending.has(field.key)) return;
     this.setFieldError(field.key, '');
     this.pending = new Set(this.pending).add(field.key);
     try {
@@ -665,6 +717,11 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private messageOf(error: unknown, fallback: string): string {
+    const code = this.errorCode(error);
+    if (code === 'DEVICE_V2_READY_TIMEOUT') return '设备尚未就绪，本次未发送控制指令，请确认设备在线后重试连接';
+    if (code === 'DEVICE_V2_READY_RETIRED') return '连接已变化，请重新连接设备';
+    if (code === 'DEVICE_V2_READY_CANCELLED') return '';
+    if (code === 'DEVICE_V2_COMMAND_OUTCOME_UNKNOWN') return '操作结果尚未确认，请先检查设备状态，勿重复操作';
     const message = error instanceof Error ? error.message : '';
     if (message === 'BLE_DIRECT_SCAN_TIMEOUT' || message === 'BLE_DIRECT_SCAN_FAILED') {
       return '未发现附近设备';

@@ -1,0 +1,51 @@
+<ion-header><ion-toolbar>
+  <ion-buttons slot="start"><ion-back-button text="" defaultHref="/share-manager"></ion-back-button></ion-buttons>
+  <ion-title>领取设备分享</ion-title>
+</ion-toolbar></ion-header>
+<ion-content class="ion-padding">
+  @let view = invitation.state();
+  @if (view.phase === 'login') {
+    <h2>请先登录</h2><p>登录后查看设备及权限，再决定是否接受分享。</p>
+    <ion-button expand="block" (click)="login()">登录并继续</ion-button>
+  } @else if (view.phase === 'loading') {
+    <ion-spinner></ion-spinner><p>正在核对邀请…</p>
+  } @else if (view.phase === 'preview' || view.phase === 'accepting' || view.phase === 'declining') {
+    @if (view.preview; as preview) {
+      <h2>{{ preview.deviceName }}</h2>
+      <p>有效期至 {{ preview.expiresAt | date:'yyyy-MM-dd HH:mm' }}</p>
+      @let access = preview.currentShare?.state === 'active' ? preview.currentShare! : preview;
+      <p>权限：{{ access.role === 'viewer' ? '仅查看' : '可查看和控制' }}</p>
+      @if (access.role === 'operator') {
+        <p>{{ access.commandEndpointKeys === null ? '全部业务组件（包含未来新增组件）' : '可控制：' + (access.commandEndpointKeys!.join('、') || '无') }}</p>
+      }
+      @if (preview.currentShare?.state === 'active') { <p>此设备已分享给你，重复领取不会改变现有权限。</p> }
+      @if (preview.state === 'accepted' && preview.currentShare?.state !== 'active') {
+        <p>该分享已解除，请让所有者重新邀请。</p>
+      } @else {
+        <p>分享不包含设备密钥、再次分享或设备管理权限。</p>
+        <ion-button expand="block" [disabled]="view.phase !== 'preview'" (click)="accept()">
+          {{ view.phase === 'accepting' ? '正在处理…' : preview.currentShare?.state === 'active' ? '进入共享设备' : '接受分享' }}
+        </ion-button>
+        @if (preview.targeted && preview.state === 'pending') {
+          <ion-button expand="block" fill="outline" color="medium" [disabled]="view.phase !== 'preview'" (click)="invitation.decline()">
+            {{ view.phase === 'declining' ? '正在处理…' : '拒绝此次邀请' }}
+          </ion-button>
+          <p>拒绝只关闭此次邀请，不会退出已有设备分享。</p>
+        }
+      }
+    }
+  } @else if (view.phase === 'accepted') {
+    @if (view.result?.share.state === 'active') {
+      <h2>分享已领取</h2>
+      @if (view.result?.realtimeRefreshPending) { <p>通信权限同步中，设备页面就绪后即可使用。</p> }
+      <p>{{ openError }}</p>
+      <ion-button expand="block" [disabled]="opening" (click)="openDevice()">{{ opening ? '正在进入…' : '进入设备' }}</ion-button>
+    } @else { <p>该分享已解除，请让所有者重新邀请。</p> }
+  } @else if (view.phase === 'declined') {
+    <p>{{ view.message }}</p>
+  } @else if (view.phase === 'error') {
+    <p role="alert">{{ view.message }}</p>
+    <ion-button expand="block" (click)="invitation.refresh()">重新核对邀请</ion-button>
+  } @else { <p>请从“分享给我的”粘贴分享链接。</p> }
+  <ion-button expand="block" fill="clear" [disabled]="view.phase === 'accepting' || view.phase === 'declining' || opening" (click)="cancel()">返回分享管理</ion-button>
+</ion-content>

@@ -4,6 +4,7 @@
 
 export const environment = {
   production: false,
+  deviceV2LanEnabled: false,
   gatewayBaseUrl: 'https://iot.yiyu.pro',
 };
 

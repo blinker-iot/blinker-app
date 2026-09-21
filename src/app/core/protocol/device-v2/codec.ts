@@ -1,3 +1,4 @@
+import type { DeviceV2DemandRequest, DeviceV2DemandReply, DeviceV2DirectReadyQuery, DeviceV2DirectReadyReply } from './connection-demand';
 import {
   BBP2_FINGERPRINT_BYTES,
   BBP2_HEADER_BYTES,
@@ -21,6 +22,7 @@ import {
   DeviceV2EndpointKind,
   DeviceV2ErrorBody,
   DeviceV2EventBody,
+  DeviceV2Manifest,
   DeviceV2ManifestField,
   DeviceV2ManifestPage,
   DeviceV2Patch,
@@ -45,7 +47,7 @@ const MAX_ITEMS = 32;
 const MAX_DEPTH = 6;
 const MAX_HELLO_VERSIONS = 4;
 const MAX_RELIABLE_RECEIVE_WINDOW = 16;
-const KNOWN_FEATURES = 0x3eff;
+const KNOWN_FEATURES = 0x1fb3eff;
 const FEATURE_MANIFEST = 1 << 0;
 const FEATURE_ENDPOINT_IDS = 1 << 1;
 const FEATURE_RELIABLE_DELIVERY = 1 << 6;
@@ -53,10 +55,23 @@ const FEATURE_STATE_REVISION = 1 << 7;
 const FEATURE_ROUTING = 1 << 10;
 const FEATURE_TELEMETRY = 1 << 11;
 export const BBP2_FEATURE_PRESENCE = 1 << 12;
+// Northbound ownership only; not evidence of a ready/wake-capable child route.
+export const BBP2_FEATURE_CONNECTION_DEMAND = 1 << 16;
+export const BBP2_FEATURE_DIRECT_PRIORITY = 1 << 17;
+export const BBP2_FEATURE_DIRECT_READY = 1 << 19;
+export const BBP2_FEATURE_PRESENCE_RECOVERY = 1 << 20;
+// State/Event receiving interest, never a southbound wake reservation.
+export const BBP2_FEATURE_STATE_INTEREST = 1 << 21;
+export const BBP2_FEATURE_MANIFEST_CHANGED = 1 << 22;
+export const BBP2_FEATURE_STATE_RECOVERY = 1 << 23;
+// Recognized, but not advertised by default until a responder is installed.
+export const BBP2_FEATURE_TIME_SYNC = 1 << 24;
+
 const REQUIRED_APP_FEATURES = FEATURE_MANIFEST | FEATURE_ENDPOINT_IDS
   | FEATURE_RELIABLE_DELIVERY | FEATURE_STATE_REVISION | FEATURE_ROUTING;
 export const APP_FEATURES = REQUIRED_APP_FEATURES
-  | FEATURE_TELEMETRY | BBP2_FEATURE_PRESENCE;
+  | BBP2_FEATURE_STATE_INTEREST | BBP2_FEATURE_MANIFEST_CHANGED | BBP2_FEATURE_STATE_RECOVERY
+  | FEATURE_TELEMETRY | BBP2_FEATURE_PRESENCE | BBP2_FEATURE_PRESENCE_RECOVERY | BBP2_FEATURE_CONNECTION_DEMAND | BBP2_FEATURE_DIRECT_PRIORITY | BBP2_FEATURE_DIRECT_READY;
 const MESSAGE_KINDS = new Set<number>(Object.values(Bbp2MessageKind)
   .filter((value): value is number => typeof value === 'number'));
 const ROUTED_KINDS = new Set<number>([
@@ -75,6 +90,16 @@ const ROUTED_KINDS = new Set<number>([
   Bbp2MessageKind.TelemetryData,
   Bbp2MessageKind.PresenceControl,
   Bbp2MessageKind.Presence,
+  Bbp2MessageKind.PresenceLost,
+  Bbp2MessageKind.StateInterest,
+  Bbp2MessageKind.StateInterestStatus,
+  Bbp2MessageKind.ManifestChanged,
+  Bbp2MessageKind.ConnectionDemand,
+  Bbp2MessageKind.ConnectionDemandStatus,
+  Bbp2MessageKind.DirectPriority,
+  Bbp2MessageKind.DirectPriorityStatus,
+  Bbp2MessageKind.DirectReadyQuery,
+  Bbp2MessageKind.DirectReadyStatus,
 ]);
 
 const textEncoder = new TextEncoder();
@@ -137,6 +162,67 @@ function encodeText(value: string, maximum = MAX_TEXT_BYTES): Uint8Array {
   const encoded = textEncoder.encode(value);
   if (encoded.length > maximum) throw new Error('CBOR text exceeds the limit');
   return concat(encodeHead(3, encoded.length), encoded);
+}
+
+const TIME_SYNC_NONCE_BYTES = 16;
+const TIME_SYNC_MIN_UTC_MS = 946684800000;
+const TIME_SYNC_END_UTC_MS = 4102444800000;
+const TIME_SYNC_MAX_UNCERTAINTY_MS = 60000;
+
+export interface TimeSyncResponse {
+  nonce: Uint8Array;
+  utcAtReplyMillis: number;
+  uncertaintyMillis: number;
+}
+
+function validateTimeNonce(nonce: Uint8Array): void {
+  if (nonce.length !== TIME_SYNC_NONCE_BYTES || !nonce.some(value => value !== 0)) {
+    throw new Error('Invalid TimeSync nonce');
+  }
+}
+
+function validateTimeResponse(value: TimeSyncResponse): void {
+  validateTimeNonce(value.nonce);
+  if (!Number.isSafeInteger(value.utcAtReplyMillis) || value.utcAtReplyMillis < TIME_SYNC_MIN_UTC_MS
+    || value.utcAtReplyMillis >= TIME_SYNC_END_UTC_MS
+    || !Number.isSafeInteger(value.uncertaintyMillis) || value.uncertaintyMillis < 0
+    || value.uncertaintyMillis > TIME_SYNC_MAX_UNCERTAINTY_MS) {
+    throw new Error('Invalid TimeSync sample');
+  }
+}
+
+// Codec only: the caller must correlate an authorized, negotiated peer and nonce.
+export function encodeTimeRequest(nonce: Uint8Array): Uint8Array {
+  validateTimeNonce(nonce);
+  return concat(encodeHead(4, 1), encodeBytes(nonce));
+}
+
+export function decodeTimeRequest(body: Uint8Array): Uint8Array {
+  if (body.length !== 18) throw new Error('Invalid TimeRequest size');
+  const reader = new CborReader(body);
+  if (reader.readArraySize(1) !== 1) throw new Error('Invalid TimeRequest array');
+  const nonce = reader.readBytes(TIME_SYNC_NONCE_BYTES);
+  validateTimeNonce(nonce);
+  if (!reader.finished) throw new Error('Trailing TimeRequest data');
+  return nonce;
+}
+
+export function encodeTimeResponse(value: TimeSyncResponse): Uint8Array {
+  validateTimeResponse(value);
+  return concat(encodeHead(4, 3), encodeBytes(value.nonce),
+    encodeUnsigned(value.utcAtReplyMillis), encodeUnsigned(value.uncertaintyMillis));
+}
+
+export function decodeTimeResponse(body: Uint8Array): TimeSyncResponse {
+  if (body.length > 30) throw new Error('Invalid TimeResponse size');
+  const reader = new CborReader(body);
+  if (reader.readArraySize(3) !== 3) throw new Error('Invalid TimeResponse array');
+  const value = { nonce: reader.readBytes(TIME_SYNC_NONCE_BYTES),
+    utcAtReplyMillis: reader.readUnsigned(TIME_SYNC_END_UTC_MS - 1),
+    uncertaintyMillis: reader.readUnsigned(TIME_SYNC_MAX_UNCERTAINTY_MS) };
+  validateTimeResponse(value);
+  if (!reader.finished) throw new Error('Trailing TimeResponse data');
+  return value;
 }
 
 function encodeUnsignedMap(entries: Array<[number, Uint8Array]>): Uint8Array {
@@ -393,6 +479,101 @@ export function encodeCanonicalArray(values: Uint8Array[]): Uint8Array {
   return concat(encodeHead(4, values.length), ...values);
 }
 
+const DEMAND_ACTIONS = ['acquire', 'renew', 'release'] as const;
+const DEMAND_STATUSES = ['accepted', 'released', 'stale', 'denied', 'busy', 'capacity'] as const;
+
+// Exact v1 four-uint array. Target comes only from the enclosing LogicalDevice Route.
+function decodeDemandFields(body: Uint8Array, maximumCode: number): { ownerId: number; revision: number; code: number } {
+  const reader = new CborReader(body);
+  if (reader.readArraySize(4) !== 4 || reader.readUnsigned(1) !== 1) {
+    throw new Error('Invalid connection demand version/shape');
+  }
+  const ownerId = reader.readUnsigned(0xffffffff);
+  const revision = reader.readUnsigned(0xffffffff);
+  const code = reader.readUnsigned(maximumCode);
+  if (!ownerId || !revision || !reader.finished) throw new Error('Invalid connection demand fields');
+  return { ownerId, revision, code };
+}
+
+function validateDemandFields(ownerId: number, revision: number, code: number, maximumCode: number): void {
+  if (![ownerId, revision].every(n => Number.isInteger(n) && n > 0 && n <= 0xffffffff)
+    || !Number.isInteger(code) || code < 0 || code > maximumCode) {
+    throw new Error('Invalid connection demand fields');
+  }
+}
+
+function encodeDemandFields(ownerId: number, revision: number, code: number, maximumCode: number): Uint8Array {
+  validateDemandFields(ownerId, revision, code, maximumCode);
+  return encodeCanonicalArray([1, ownerId, revision, code].map(encodeUnsigned));
+}
+
+export function encodeConnectionDemandBody(request: Omit<DeviceV2DemandRequest, 'target'>): Uint8Array {
+  if (request.purpose !== undefined) throw new Error('ConnectionDemand v1 is cloud-only');
+  return encodeDemandFields(request.ownerId, request.revision, DEMAND_ACTIONS.indexOf(request.action), 2);
+}
+
+export function decodeConnectionDemandBody(body: Uint8Array): Omit<DeviceV2DemandRequest, 'target'> {
+  const { ownerId, revision, code } = decodeDemandFields(body, 2);
+  return { ownerId, revision, action: DEMAND_ACTIONS[code]! };
+}
+
+export function encodeDirectPriorityBody(request: Omit<DeviceV2DemandRequest, 'target'>): Uint8Array {
+  if (request.purpose !== 'direct') throw new Error('DirectPriority requires direct purpose');
+  return encodeDemandFields(request.ownerId, request.revision, DEMAND_ACTIONS.indexOf(request.action), 2);
+}
+
+export function decodeDirectPriorityBody(body: Uint8Array): Omit<DeviceV2DemandRequest, 'target'> {
+  return { ...decodeConnectionDemandBody(body), purpose: 'direct' };
+}
+
+export function encodeConnectionDemandStatusBody(reply: DeviceV2DemandReply): Uint8Array {
+  return encodeDemandFields(reply.ownerId, reply.revision, DEMAND_STATUSES.indexOf(reply.status), 5);
+}
+
+export function decodeConnectionDemandStatusBody(body: Uint8Array): DeviceV2DemandReply {
+  const { ownerId, revision, code } = decodeDemandFields(body, 5);
+  return { ownerId, revision, status: DEMAND_STATUSES[code]! };
+}
+
+// accepted is a reservation, not a radio release receipt.
+export const encodeDirectPriorityStatusBody = encodeConnectionDemandStatusBody;
+export const decodeDirectPriorityStatusBody = decodeConnectionDemandStatusBody;
+
+const DIRECT_READY_STATUSES = ['pending', 'ready', 'stale', 'denied'] as const;
+
+export function encodeDirectReadyQueryBody(query: DeviceV2DirectReadyQuery): Uint8Array {
+  validateDemandFields(query.ownerId, query.revision, 0, 0);
+  const values = [1, query.ownerId, query.revision];
+  return encodeCanonicalArray(values.map(encodeUnsigned));
+}
+
+export function decodeDirectReadyQueryBody(body: Uint8Array): DeviceV2DirectReadyQuery {
+  const reader = new CborReader(body);
+  if (reader.readArraySize(3) !== 3 || reader.readUnsigned(1) !== 1) throw new Error('Invalid Direct Ready query');
+  const ownerId = reader.readUnsigned(0xffffffff), revision = reader.readUnsigned(0xffffffff);
+  if (!ownerId || !revision || !reader.finished) throw new Error('Invalid Direct Ready identity');
+  return { ownerId, revision };
+}
+
+export function encodeDirectReadyStatusBody(reply: DeviceV2DirectReadyReply): Uint8Array {
+  const code = DIRECT_READY_STATUSES.indexOf(reply.status);
+  validateDemandFields(reply.ownerId, reply.revision, code, 3);
+  if (!Number.isInteger(reply.remainingMillis) || reply.remainingMillis < 0 || reply.remainingMillis > 30000
+    || (reply.status === 'ready') !== (reply.remainingMillis > 0)) throw new Error('Invalid Direct Ready duration');
+  const values = [1, reply.ownerId, reply.revision, code, reply.remainingMillis];
+  return encodeCanonicalArray(values.map(encodeUnsigned));
+}
+
+export function decodeDirectReadyStatusBody(body: Uint8Array): DeviceV2DirectReadyReply {
+  const reader = new CborReader(body);
+  if (reader.readArraySize(5) !== 5 || reader.readUnsigned(1) !== 1) throw new Error('Invalid Direct Ready status');
+  const ownerId = reader.readUnsigned(0xffffffff), revision = reader.readUnsigned(0xffffffff);
+  const status = DIRECT_READY_STATUSES[reader.readUnsigned(3)]!, remainingMillis = reader.readUnsigned(30000);
+  if (!ownerId || !revision || !reader.finished || (status === 'ready') !== (remainingMillis > 0)) {
+    throw new Error('Invalid Direct Ready status fields');
+  }
+  return { ownerId, revision, status, remainingMillis };
+}
 export function encodeCanonicalMap(
   entries: Array<[number, Uint8Array]>,
 ): Uint8Array {
@@ -805,6 +986,36 @@ export function decodeManifestPageBody(body: Uint8Array): DeviceV2ManifestPage {
   return { revision, fingerprint, cursor, nextCursor, totalFields, fields, encodedFields };
 }
 
+// A persisted schema is only a candidate. Reconstruct its canonical bytes and
+// reuse wire validation; DeviceV2Store must still verify the SHA-256 digest.
+export function decodeCachedManifest(manifest: DeviceV2Manifest): DeviceV2ManifestPage {
+  if (!/^[0-9a-f]{64}$/.test(manifest.fingerprint) || !Array.isArray(manifest.fields)) {
+    throw new Error('cached Manifest metadata is invalid');
+  }
+  encodeCanonicalManifestPrefix(manifest.revision, manifest.fields.length);
+  const fields = manifest.fields.map(field => {
+    const entries: Array<[number, Uint8Array]> = [
+      [0, encodeText(field.key)], [1, encodeUnsigned(field.kind)],
+      [2, encodeUnsigned(field.type)], [3, encodeUnsigned(field.access)],
+      [4, encodeUnsigned(field.id)],
+    ];
+    const c = field.constraints;
+    if (c?.minimum !== undefined) entries.push([5, encodeFloat(c.minimum, false)]);
+    if (c?.maximum !== undefined) entries.push([6, encodeFloat(c.maximum, false)]);
+    if (c?.step !== undefined) entries.push([7, encodeFloat(c.step, false)]);
+    if (c?.maxLength !== undefined) entries.push([8, encodeUnsigned(c.maxLength)]);
+    if (c?.unit !== undefined) entries.push([9, encodeText(c.unit)]);
+    if (c?.enumValues !== undefined) entries.push([10, encodeCanonicalArray(c.enumValues.map(value => encodeText(value)))]);
+    if (field.telemetryMinimumIntervalMs !== undefined) entries.push([11, encodeUnsigned(field.telemetryMinimumIntervalMs)]);
+    return encodeUnsignedMap(entries);
+  });
+  return decodeManifestPageBody(encodeUnsignedMap([
+    [0, encodeUnsigned(manifest.revision)], [1, encodeBytes(hexToBytes(manifest.fingerprint))],
+    [2, encodeUnsigned(0)], [3, encodeUnsigned(fields.length)],
+    [4, encodeUnsigned(fields.length)], [5, concat(encodeHead(4, fields.length), ...fields)],
+  ]));
+}
+
 function validateNumeric(field: DeviceV2ManifestField, value: number | bigint): void {
   const constraints = field.constraints;
   if (!constraints) return;
@@ -1088,6 +1299,27 @@ export function encodePresenceControlBody(
     throw new Error('Presence operation is unsupported');
   }
   return encodeUnsignedMap([[0, encodeUnsigned(operation)]]);
+}
+
+export function decodePresenceLostBody(body: Uint8Array): Uint8Array {
+  const reader = new CborReader(body);
+  if (reader.readMapSize(1) !== 1 || reader.readUnsigned(0) !== 0) throw new Error('Invalid Presence loss body');
+  const id = reader.readBytes(16);
+  if (id.length !== 16 || !id.some(byte => byte !== 0) || !reader.finished) throw new Error('Invalid Presence subscription identity');
+  return id;
+}
+
+export function decodeManifestChangedBody(body: Uint8Array): { previous: string; fingerprint: string; revision: number } {
+  const reader = new CborReader(body);
+  if (reader.readMapSize(3) !== 3 || reader.readUnsigned(0) !== 0) throw new Error('Invalid Manifest change');
+  const previous = reader.readBytes(32);
+  if (reader.readUnsigned(1) !== 1) throw new Error('Invalid Manifest change keys');
+  const fingerprint = reader.readBytes(32);
+  if (reader.readUnsigned(2) !== 2) throw new Error('Invalid Manifest change keys');
+  const revision = reader.readUnsigned();
+  if (!reader.finished || previous.length !== 32 || fingerprint.length !== 32
+    || bytesToHex(previous) === bytesToHex(fingerprint)) throw new Error('Invalid Manifest change');
+  return { previous: bytesToHex(previous), fingerprint: bytesToHex(fingerprint), revision };
 }
 
 export function decodePresenceBody(body: Uint8Array): DeviceV2Presence {

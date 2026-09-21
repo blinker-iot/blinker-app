@@ -12,6 +12,7 @@ import {
   encodeFrame,
 } from '../../protocol/device-v2';
 import { concatBytes, constantTimeEqual, NoisePattern } from './crypto';
+export { base64UrlEncode, base64UrlDecode } from '../base64url';
 
 export const BLINKER_BLE_SERVICE_UUID = '5f6d0001-3f5b-4e4f-9f4d-626c696e6b32';
 export const BLINKER_BLE_RECEIVE_UUID = '5f6d0002-3f5b-4e4f-9f4d-626c696e6b32';
@@ -458,78 +459,6 @@ export function encodeControllerMutationReceipt(
   ]);
 }
 
-const FEATURE_MANIFEST = 1 << 0;
-const FEATURE_ENDPOINT_IDS = 1 << 1;
-const FEATURE_AUTHENTICATION = 1 << 5;
-const FEATURE_RELIABLE = 1 << 6;
-const FEATURE_STATE_REVISION = 1 << 7;
-const FEATURE_CONTROLLER_CONTROL = 1 << 9;
-const FEATURE_PRESENCE_KEY_CONTROL = 1 << 13;
-const DIRECT_APP_FEATURES = FEATURE_MANIFEST | FEATURE_ENDPOINT_IDS
-  | FEATURE_AUTHENTICATION | FEATURE_RELIABLE | FEATURE_STATE_REVISION
-  | FEATURE_CONTROLLER_CONTROL | FEATURE_PRESENCE_KEY_CONTROL;
-
-export interface DeviceDirectHello {
-  features: number;
-  maxFrameSize: number;
-  maxReassemblySize: number;
-  reliableWindow: number;
-}
-
-export function encodeDirectAppHelloBody(maxFrameSize = 512): Uint8Array {
-  return encodeCanonicalMap([
-    [0, encodeCanonicalUnsigned(1)],
-    [1, encodeCanonicalArray([encodeCanonicalUnsigned(2)])],
-    [2, encodeCanonicalUnsigned(DIRECT_APP_FEATURES)],
-    [3, encodeCanonicalUnsigned(maxFrameSize)],
-    [4, encodeCanonicalUnsigned(maxFrameSize)],
-    [8, encodeCanonicalArray([encodeCanonicalUnsigned(2)])],
-    [9, encodeCanonicalUnsigned(4)],
-  ]);
-}
-
-export function decodeDirectDeviceHelloBody(body: Uint8Array): DeviceDirectHello {
-  const reader = new CborReader(body);
-  const count = reader.readMapSize(9);
-  let role: number | undefined;
-  let versions: number[] | undefined;
-  let features: number | undefined;
-  let maxFrameSize: number | undefined;
-  let maxReassemblySize: number | undefined;
-  let manifestRevision: number | undefined;
-  let manifestFingerprint: Uint8Array | undefined;
-  let methods: number[] | undefined;
-  let reliableWindow = 0;
-  let previous = -1;
-  for (let index = 0; index < count; index += 1) {
-    const key = reader.readUnsigned(9);
-    if (key <= previous) throw new Error('BLE_DIRECT_HELLO_KEYS_INVALID');
-    previous = key;
-    if (key === 0) role = reader.readUnsigned(2);
-    else if (key === 1) versions = readUnsignedArray(reader, 4, 0xff);
-    else if (key === 2) features = reader.readUnsigned();
-    else if (key === 3) maxFrameSize = reader.readUnsigned(0xffff);
-    else if (key === 4) maxReassemblySize = reader.readUnsigned();
-    else if (key === 6) manifestRevision = reader.readUnsigned();
-    else if (key === 7) manifestFingerprint = reader.readBytes(32);
-    else if (key === 8) methods = readUnsignedArray(reader, 4, 0xffff);
-    else if (key === 9) reliableWindow = reader.readUnsigned(16);
-    else throw new Error('BLE_DIRECT_HELLO_FIELD_UNSUPPORTED');
-  }
-  reader.finish();
-  const knownFeatures = 0x2eff;
-  if (role !== 0 || !versions?.includes(2) || features === undefined
-    || (features & ~knownFeatures) !== 0 || maxFrameSize === undefined
-    || maxFrameSize < 10 || maxReassemblySize === undefined
-    || maxReassemblySize < maxFrameSize
-    || (features & FEATURE_AUTHENTICATION) === 0 || !methods?.includes(2)
-    || ((features & FEATURE_RELIABLE) !== 0) !== (reliableWindow !== 0)
-    || (manifestRevision === undefined) !== (manifestFingerprint === undefined)
-    || (manifestFingerprint && manifestFingerprint.length !== 32)) {
-    throw new Error('BLE_DIRECT_DEVICE_HELLO_INVALID');
-  }
-  return { features, maxFrameSize, maxReassemblySize, reliableWindow };
-}
 
 export function encodeControllerAuthInit(
   controllerId: Uint8Array,
@@ -611,29 +540,6 @@ export function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
   return constantTimeEqual(left, right);
 }
 
-export function base64UrlEncode(value: Uint8Array): string {
-  let binary = '';
-  for (const byte of value) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-export function base64UrlDecode(value: string, expectedSize?: number): Uint8Array {
-  if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new Error('BLE_DIRECT_BASE64URL_INVALID');
-  const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4);
-  let binary: string;
-  try {
-    binary = atob(padded);
-  } catch {
-    throw new Error('BLE_DIRECT_BASE64URL_INVALID');
-  }
-  const output = Uint8Array.from(binary, character => character.charCodeAt(0));
-  if ((expectedSize !== undefined && output.length !== expectedSize)
-    || base64UrlEncode(output) !== value || !output.some(byte => byte !== 0)) {
-    throw new Error('BLE_DIRECT_BASE64URL_INVALID');
-  }
-  return output;
-}
-
 function encodeAuthRequestBody(payload: Uint8Array): Uint8Array {
   return encodeCanonicalMap([
     [0, encodeCanonicalUnsigned(2)],
@@ -690,17 +596,6 @@ function exactNonZero(value: Uint8Array, size: number): boolean {
   return value.length === size && value.some(byte => byte !== 0);
 }
 
-function readUnsignedArray(reader: CborReader, maximum: number, valueMaximum: number): number[] {
-  const size = reader.readArraySize(maximum);
-  if (!size) throw new Error('BLE_DIRECT_CBOR_ARRAY_INVALID');
-  const output: number[] = [];
-  for (let index = 0; index < size; index += 1) {
-    const value = reader.readUnsigned(valueMaximum);
-    if (!value || output.includes(value)) throw new Error('BLE_DIRECT_CBOR_ARRAY_INVALID');
-    output.push(value);
-  }
-  return output;
-}
 
 function u32(value: number, name: string): number {
   if (!Number.isSafeInteger(value) || value < 1 || value > 0xffffffff) {

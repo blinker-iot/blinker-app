@@ -8,7 +8,6 @@ import {
 } from "@ionic/angular/standalone";
 import { PlatformLocation } from "@angular/common";
 import { Router } from "@angular/router";
-import { Subject } from "rxjs";
 import { App } from "@capacitor/app";
 import {
   SystemBars,
@@ -25,6 +24,9 @@ import { parseMessageDeepLink } from "./message-deep-link";
 import { AuthService } from "./auth.service";
 import { UserService } from "./user.service";
 import { NoticeService } from "./notice.service";
+import { parseShareInvitation } from "../device-v2/sharing/invitation-link";
+import { DeviceV2ShareInvitationService } from "./device-v2-share-invitation.service";
+import { NtfyService } from "./ntfy.service";
 import {
   AppTheme,
   applyThemeToDocument,
@@ -65,6 +67,8 @@ export class ViewService {
     private authService: AuthService,
     private userService: UserService,
     private noticeService: NoticeService,
+    private shareInvitation: DeviceV2ShareInvitationService,
+    private ntfyService: NtfyService,
   ) {
     this.initializeTheme();
   }
@@ -199,9 +203,9 @@ export class ViewService {
     await actionSheet.present();
   }
 
-  // 从shortcut进入app
-  newIntentData = new Subject<any>();
+  // Route shortcuts, app links and native notification taps through validated inputs.
   async checkShortcut(): Promise<void> {
+    this.ntfyService.notificationActions$.subscribe(messageId => this.openMessageFromLink(messageId));
     void AndroidShortcuts.addListener("shortcut", (response) => {
       const deviceId = parseShortcutDeviceId(response.data, response.id);
       if (deviceId) this.openDeviceFromLink(deviceId);
@@ -220,30 +224,6 @@ export class ViewService {
       .catch((error) => {
         console.warn("Unable to read the app launch URL", error);
       });
-
-
-    // window.plugins.Shortcuts.getIntent(intent => {
-    //   if (typeof intent.data != 'undefined') {
-    //     this.devicePageIsRoot = true;
-    //     this.navCtrl.navigateRoot(intent.data);
-    //   }
-    // })
-    // window.plugins.Shortcuts.onNewIntent(intent => {
-    //   // 设备shortcut进入
-    //   if (typeof intent.data != 'undefined') {
-    //     if (this.platformLocation.pathname.indexOf('/device/') > -1 && this.devicePageIsRoot) {
-    //       this.navCtrl.navigateRoot(intent.data);
-    //       setTimeout(() => {
-    //         this.devicePageIsRoot = true;
-    //       }, 500);
-    //     } else
-    //       this.router.navigate([intent.data]);
-    //   }
-    //   // blinker icon进入
-    //   else if (this.platformLocation.pathname.indexOf('/device/') > -1) {
-    //     this.navCtrl.navigateRoot('/');
-    //   }
-    // })
   }
 
   private async openAppLink(url?: string): Promise<void> {
@@ -255,7 +235,9 @@ export class ViewService {
           const result = await githubLogin;
           if (result === "success") {
             await this.userService.getAllInfo();
-            if (this.authService.isLogin()) await this.navCtrl.navigateRoot("/");
+            if (this.authService.isLogin()) {
+              await this.navCtrl.navigateRoot(this.shareInvitation.hasPending ? "/share-invitation" : "/");
+            }
           } else if (result === "needs_wechat_bind") {
             await this.noticeService.showToast("githubNeedsWechat");
           } else if (result === "failed") {
@@ -269,16 +251,16 @@ export class ViewService {
       });
       return;
     }
+    if (url?.startsWith('diandeng://share/') && parseShareInvitation(url)) {
+      this.ngzone.run(() => {
+        this.shareInvitation.stage(url);
+        void this.router.navigate(['/share-invitation'], { replaceUrl: true });
+      });
+      return;
+    }
     const message = parseMessageDeepLink(url);
     if (message) {
-      this.ngzone.run(() => {
-        void this.router.navigate(["/message"], {
-          queryParams: message.messageId
-            ? { messageId: message.messageId }
-            : undefined,
-          replaceUrl: true,
-        });
-      });
+      this.openMessageFromLink(message.messageId);
       return;
     }
 
@@ -290,6 +272,15 @@ export class ViewService {
     this.ngzone.run(() => {
       this.devicePageIsRoot = true;
       void this.router.navigate(["/device", deviceId], { replaceUrl: true });
+    });
+  }
+
+  private openMessageFromLink(messageId: string | null): void {
+    this.ngzone.run(() => {
+      void this.router.navigate(["/message"], {
+        queryParams: messageId ? { messageId } : undefined,
+        replaceUrl: true,
+      });
     });
   }
 

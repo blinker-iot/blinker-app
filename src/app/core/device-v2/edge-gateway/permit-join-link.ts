@@ -61,6 +61,7 @@ export class GatewayPermitJoinRecordLink implements BleDirectRecordLink {
   private upSequence = 1;
   private frameId = 0;
   private connected = false;
+  private selectedToken?: Uint8Array;
   private closing = false;
   private requestTail: Promise<void> = Promise.resolve();
   private disconnectPromise?: Promise<void>;
@@ -167,6 +168,7 @@ export class GatewayPermitJoinRecordLink implements BleDirectRecordLink {
         }
         if (result.status === EdgeGatewayPermitJoinSelectStatus.Connected) {
           this.packetSize = result.maxPacketSize;
+          this.selectedToken = reference.candidateToken.slice();
           this.connected = true;
           return;
         }
@@ -312,9 +314,9 @@ export class GatewayPermitJoinRecordLink implements BleDirectRecordLink {
           () => this.api.get(operationId), true,
         ));
       }
-      if (window.state !== 'closed' && window.state !== 'expired') {
-        throw new Error(`EDGE_GATEWAY_PERMIT_JOIN_CLOSE_${window.state.toUpperCase()}`);
-      }
+      // Rejected/busy/unsupported are also authoritative terminal windows.
+      // Cleanup must not mask the original connect/open failure or retain a
+      // dead checkpoint. A failed request still leaves recovery intact.
       terminal = true;
     } finally {
       try {
@@ -440,6 +442,25 @@ export class GatewayPermitJoinRecordLink implements BleDirectRecordLink {
     if (!this.relaySessionId) this.relaySessionId = view.relaySessionId.slice();
     this.revision = view.revision;
     this.expiresAt = Math.min(this.expiresAt, view.expiresAt);
+    // SelectResult also carries subsequent GATT connection loss. Ignoring it
+    // after connect() turns an explicit child rejection into a 45 s timeout.
+    if (this.connected && view.selectResult) {
+      const selection = decodePermitJoinSelectResult(view.selectResult);
+      this.requireOperation(selection.operationId);
+      if (!this.selectedToken || !sameBytes(selection.candidateToken, this.selectedToken)) {
+        throw new Error('EDGE_GATEWAY_PERMIT_JOIN_SELECT_MISMATCH');
+      }
+      if (selection.status !== EdgeGatewayPermitJoinSelectStatus.Connected) {
+        this.connected = false;
+        this.closing = true;
+        this.reassembler.reset();
+        this.receivedRecords.length = 0;
+        throw new Error('EDGE_GATEWAY_PERMIT_JOIN_DISCONNECTED');
+      }
+      if (selection.maxPacketSize !== this.packetSize) {
+        throw new Error('EDGE_GATEWAY_PERMIT_JOIN_SELECT_MISMATCH');
+      }
+    }
     return view;
   }
 
@@ -491,12 +512,14 @@ export class GatewayPermitJoinRecordLink implements BleDirectRecordLink {
   private clear(): void {
     this.operationId?.fill(0);
     this.relaySessionId?.fill(0);
+    this.selectedToken?.fill(0);
     for (const value of this.candidates.values()) {
       value.operationId.fill(0);
       value.candidateToken.fill(0);
     }
     this.operationId = undefined;
     this.relaySessionId = undefined;
+    this.selectedToken = undefined;
     this.expiresAt = 0;
     this.revision = 0;
     this.packetSize = 0;

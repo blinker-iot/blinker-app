@@ -101,7 +101,7 @@
       @if (phase === 'waiting') {
         <section class="result waiting">
           <i class="fa-light fa-clock"></i>
-          <h2>设备已认领，等待网关确认</h2>
+          <h2>{{ retirementPending ? '设备已认领，等待旧绑定退役' : '设备已认领，等待网关确认' }}</h2>
           <p>可以稍后从本页继续，不需要重新认领设备。</p>
           <button type="button" [disabled]="busy" (click)="continueWaiting()">继续确认</button>
         </section>

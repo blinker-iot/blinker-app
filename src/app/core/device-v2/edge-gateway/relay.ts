@@ -53,6 +53,7 @@ export class EdgeGatewayAttachRelay {
   async create(request: EdgeGatewayAttachRequest): Promise<EdgeGatewayAttachResult> {
     await this.checkpoints.save(request);
     const result = await this.api.create(request);
+    this.validateResultContext(request, result);
     await this.finishIfTerminal(request.operationId, result.topology);
     return result;
   }
@@ -61,9 +62,10 @@ export class EdgeGatewayAttachRelay {
     let result = await this.advanceCloud(request);
     if (result.topology.topologyState === EdgeGatewayTopologyState.PendingChildInstall) {
       result = await this.installOnChild(request, result.topology);
-    }
-    if (result.topology.topologyState === EdgeGatewayTopologyState.PendingGatewayProof) {
-      result = await this.api.resume(request.operationId);
+      if (result.topology.topologyState === EdgeGatewayTopologyState.PendingGatewayProof) {
+        result = await this.api.resume(request.operationId);
+        this.validateResultContext(request, result);
+      }
     }
     await this.finishIfTerminal(request.operationId, result.topology);
     return result;
@@ -74,8 +76,11 @@ export class EdgeGatewayAttachRelay {
     // HTTP mutation and the App receiving its response. Idempotency-Key keeps
     // this a reconciliation, not a second topology operation.
     let result = await this.api.create(request);
-    if (result.topology.topologyState === EdgeGatewayTopologyState.PendingAccessDelivery) {
+    this.validateResultContext(request, result);
+    if (result.topology.topologyState === EdgeGatewayTopologyState.PendingAccessDelivery
+      || result.topology.topologyState === EdgeGatewayTopologyState.PendingGatewayProof) {
       result = await this.api.resume(request.operationId);
+      this.validateResultContext(request, result);
     }
     await this.finishIfTerminal(request.operationId, result.topology);
     return result;
@@ -137,6 +142,7 @@ export class EdgeGatewayAttachRelay {
         request.childDeviceInstanceId,
         async (control) => {
           const relayResult = await this.api.resume(request.operationId, control.controlNonce);
+          this.validateResultContext(request, relayResult);
           relay = relayResult.relay;
           if (!relay) throw new Error('EDGE_GATEWAY_RELAY_MISSING');
           await this.validateRelay(request, topology, relay, control.controlNonce);
@@ -160,7 +166,9 @@ export class EdgeGatewayAttachRelay {
         permissions,
         gatewaySecret: relay.gatewaySecret,
       });
-      return await this.api.confirmReceipt(request.operationId, receipt.encoded);
+      const result = await this.api.confirmReceipt(request.operationId, receipt.encoded);
+      this.validateResultContext(request, result);
+      return result;
     } finally {
       if (relay) clearRelay(relay);
       clearReceipt(receipt);
@@ -196,6 +204,21 @@ export class EdgeGatewayAttachRelay {
     }
   }
 
+  private validateResultContext(
+    request: EdgeGatewayAttachRequest,
+    result: EdgeGatewayAttachResult,
+  ): void {
+    const topology = result.topology;
+    if (sameBytes(topology.operationId, request.operationId)
+      && topology.edgeHubLogicalDeviceId === request.edgeHubLogicalDeviceId
+      && topology.childLogicalDeviceId === request.childLogicalDeviceId
+      && sameBytes(topology.childDeviceInstanceId, request.childDeviceInstanceId)) {
+      return;
+    }
+    clearResult(result);
+    throw new Error('EDGE_GATEWAY_TOPOLOGY_CONTEXT_MISMATCH');
+  }
+
   private async validateReceipt(
     topology: EdgeGatewayTopology,
     relay: EdgeGatewayRelay,
@@ -204,7 +227,9 @@ export class EdgeGatewayAttachRelay {
     const expected = await this.crypto.hmac(
       relay.gatewaySecret, encodeControllerReceiptTranscript(receipt),
     );
+    let secretDigest: Uint8Array | undefined;
     try {
+      secretDigest = await this.crypto.sha256(relay.gatewaySecret);
       if (receipt.operation !== relay.operation
         || !sameBytes(receipt.grantId, relay.grantId)
         || !sameBytes(receipt.deviceInstanceId, topology.childDeviceInstanceId)
@@ -212,11 +237,13 @@ export class EdgeGatewayAttachRelay {
         || !sameBytes(receipt.controllerId, relay.controllerId)
         || receipt.credentialVersion !== relay.credentialVersion
         || receipt.permissions !== 3 || receipt.proofKind !== 1
+        || !constantTimeEqual(receipt.secretDigest, secretDigest)
         || !constantTimeEqual(receipt.proof, expected)) {
         throw new Error('EDGE_GATEWAY_RECEIPT_CONTEXT_MISMATCH');
       }
     } finally {
       expected.fill(0);
+      secretDigest?.fill(0);
     }
   }
 
@@ -282,6 +309,13 @@ function clearRelay(value: EdgeGatewayRelay): void {
   value.controllerId.fill(0);
   value.exactGrant.fill(0);
   value.gatewaySecret.fill(0);
+}
+function clearResult(value: EdgeGatewayAttachResult): void {
+  value.topology.operationId.fill(0);
+  value.topology.childDeviceInstanceId.fill(0);
+  value.topology.controllerId.fill(0);
+  if (value.relay) clearRelay(value.relay);
+  if (value.recovery) clearRecovery(value.recovery);
 }
 function clearRecovery(value: EdgeGatewayRevocationRecovery): void {
   value.grantId.fill(0);

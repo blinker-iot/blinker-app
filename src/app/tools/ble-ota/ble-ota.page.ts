@@ -7,13 +7,13 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Capacitor } from '@capacitor/core';
+import { bleScanner } from '../../core/bluetooth/scan';
 import { IonicModule, ToastController } from '@ionic/angular';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import {
   BleClient,
   BleDevice,
   ConnectionPriority,
-  ScanMode,
   ScanResult,
 } from '@capacitor-community/bluetooth-le';
 import {
@@ -111,7 +111,8 @@ export class BleOtaPage implements OnDestroy {
   private connectedId = '';
   private notificationsActive = false;
   private cancelRequested = false;
-  private scanTimer?: ReturnType<typeof setTimeout>;
+  private scanAbort?: AbortController;
+  private scanWork?: Promise<void>;
   private pendingCommand?: PendingAck<CommandAck> & { commandId: number };
   private pendingSector?: PendingAck<SectorAck> & { sectorIndex: number };
 
@@ -175,10 +176,12 @@ export class BleOtaPage implements OnDestroy {
   }
 
   async startScan(): Promise<void> {
-    if (this.isBusy) return;
+    if (this.isBusy || this.scanAbort) return;
+    const abort = new AbortController(); this.scanAbort = abort;
 
     try {
       await this.ensureInitialized();
+      if (abort.signal.aborted) return;
       this.devices = [];
 
       if (this.isWeb) {
@@ -194,17 +197,9 @@ export class BleOtaPage implements OnDestroy {
 
       this.isScanning = true;
       this.statusMessage = '正在扫描 BLE OTA 设备…';
-      await BleClient.requestLEScan(
-        {
-          services: [BLE_OTA_SERVICE_UUID],
-          allowDuplicates: true,
-          scanMode: ScanMode.SCAN_MODE_LOW_LATENCY,
-        },
-        (result) => this.zone.run(() => this.upsertDevice(result))
-      );
-
-      this.clearScanTimer();
-      this.scanTimer = setTimeout(() => void this.stopScan(), 12000);
+      this.scanWork = bleScanner.run([BLE_OTA_SERVICE_UUID], 12000, abort.signal, result => this.zone.run(() => this.upsertDevice(result)));
+      try { await this.scanWork; }
+      catch (error) { if (!abort.signal.aborted) throw error; }
     } catch (error) {
       this.isScanning = false;
       const message = this.errorMessage(error);
@@ -212,16 +207,18 @@ export class BleOtaPage implements OnDestroy {
       this.statusMessage = '扫描失败';
       this.statusDetail = message;
       await this.showToast(message);
+    } finally {
+      if (this.scanAbort === abort) { this.scanAbort = undefined; this.scanWork = undefined; this.isScanning = false; }
     }
   }
 
   async stopScan(): Promise<void> {
-    this.clearScanTimer();
+    this.scanAbort?.abort();
     if (!this.isScanning) return;
 
     this.isScanning = false;
     try {
-      await BleClient.stopLEScan();
+      await this.scanWork?.catch(() => undefined);
       this.statusMessage = this.devices.length
         ? `发现 ${this.devices.length} 台 OTA 设备`
         : '未发现 OTA 设备';
@@ -332,11 +329,12 @@ export class BleOtaPage implements OnDestroy {
 
   ngOnDestroy(): void {
     this.cancelRequested = true;
-    this.clearScanTimer();
     this.rejectPendingAcks(new Error('页面已关闭'));
     void this.stopScan();
     void this.disconnect();
   }
+
+  ionViewWillLeave(): void { void this.stopScan(); }
 
   private async ensureInitialized(): Promise<void> {
     if (!this.initialized) {
@@ -715,10 +713,6 @@ export class BleOtaPage implements OnDestroy {
     if (this.cancelRequested) throw new Error('升级已取消');
   }
 
-  private clearScanTimer(): void {
-    if (this.scanTimer) clearTimeout(this.scanTimer);
-    this.scanTimer = undefined;
-  }
 
   private errorAsError(error: unknown): Error {
     return error instanceof Error ? error : new Error(this.errorMessage(error));

@@ -31,6 +31,18 @@ export enum Bbp2MessageKind {
   TelemetryData = 0x19,
   PresenceControl = 0x1a,
   Presence = 0x1b,
+  ConnectionDemand = 0x1c,
+  ConnectionDemandStatus = 0x1d,
+  DirectPriority = 0x1e,
+  DirectPriorityStatus = 0x1f,
+  TimeRequest = 0x22,
+  TimeResponse = 0x23,
+  DirectReadyQuery = 0x28,
+  DirectReadyStatus = 0x29,
+  PresenceLost = 0x2a,
+  StateInterest = 0x2b,
+  StateInterestStatus = 0x2c,
+  ManifestChanged = 0x2d,
   ControllerControlOpen = 0x30,
   ControllerControlChallenge = 0x31,
   ControllerMutation = 0x32,
@@ -249,6 +261,8 @@ export interface DeviceV2ErrorBody {
 }
 
 export interface DeviceV2TargetSnapshot {
+  // Cloud watch loss is distinct from physical offline and from unsupported Presence.
+  cloudPresenceLost?: boolean;
   manifest: DeviceV2Manifest | null;
   manifestAccepted: boolean;
   stateRevision: number | null;
