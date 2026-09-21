@@ -87,6 +87,20 @@ ion-header ion-toolbar {
   --border-color: var(--blinker-divider);
 }
 
+// Ionic's iOS alert theme falls back to a fixed light surface when the
+// optional step-color palette is not present. Bind alerts to the app surface
+// so overlays follow the selected Blinker theme as well.
+ion-alert {
+  --ion-overlay-background-color: var(--blinker-surface);
+  --ion-color-step-100: var(--blinker-surface-active);
+  --ion-color-step-150: var(--blinker-border);
+  --ion-color-step-250: var(--blinker-border);
+  --ion-color-step-400: var(--blinker-text-tertiary);
+  --ion-color-step-550: var(--blinker-text-secondary);
+  --ion-color-step-600: var(--blinker-text-secondary);
+  --ion-color-step-850: var(--blinker-text-primary);
+}
+
 // Ionic limits desktop modals to 500/600px by default. The widget editor is a
 // full-height editing surface on every viewport while retaining Ionic's
 // desktop modal width.
