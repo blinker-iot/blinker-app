@@ -220,8 +220,9 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   async enroll(
     target: BleDirectTarget,
     options: BleDirectEnrollmentOptions,
+    observer?: BleDirectEnrollmentObserver,
   ): Promise<BleDirectEnrollmentResult> {
-    return this.enrollUsing(new CapacitorBleDirectRecordLink(), target, options);
+    return this.enrollUsing(new CapacitorBleDirectRecordLink(), target, options, observer);
   }
 
   async enrollUsing(
@@ -263,6 +264,25 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     } finally {
       clearBleControllerCredentialSecrets(credential);
     }
+  }
+
+  replayPendingCommit(logicalDeviceId: string): Promise<boolean> {
+    const context = this.accountContext();
+    return this.accountResult(context, this.client(undefined, context).replayPendingCommit(logicalDeviceId));
+  }
+
+  async pendingEnrollmentSources(): Promise<Array<{ logicalDeviceId: string; legacySource?: import('../model/legacy-import.model').LegacySource; ownerAccountId?: string }>> {
+    const context = this.accountContext();
+    const credentials = this.credentialStore(context);
+    const result: Array<{ logicalDeviceId: string; legacySource?: import('../model/legacy-import.model').LegacySource; ownerAccountId?: string }> = [];
+    for (const logicalDeviceId of await credentials.listPending()) {
+      const credential = await credentials.load(logicalDeviceId);
+      if (!credential) continue;
+      try { result.push({ logicalDeviceId, legacySource: credential.legacySource, ownerAccountId: context.accountId }); }
+      finally { clearBleControllerCredentialSecrets(credential); }
+    }
+    this.assertAccount(context);
+    return result;
   }
 
   pendingEnrollmentLogicalDeviceIds(): Promise<string[]> {

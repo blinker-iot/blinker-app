@@ -99,6 +99,22 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
     };
   }
 
+  it('keeps the source and original idempotency key when cloud creation is retried', async () => {
+    const { page, deviceService } = createHarness();
+    const source = { sourceCollection: 'devices' as const, sourceId: 'a'.repeat(24) };
+    page.legacySource = source;
+    page.deviceName = 'Migrated lamp';
+    deviceService.createDeviceKeyV2.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(createResponse());
+    deviceService.revealDeviceKeyV2.mockResolvedValue(revealResponse());
+    await page.createKeyDevice();
+    await page.createKeyDevice();
+    expect(deviceService.createDeviceKeyV2.mock.calls).toEqual([
+      ['Migrated lamp', expect.any(String), 'diy', source],
+      ['Migrated lamp', deviceService.createDeviceKeyV2.mock.calls[0][1], 'diy', source],
+    ]);
+    page.ngOnDestroy();
+  });
+
   it('does not create or reveal before the user submits', () => {
     const { page, deviceService } = createHarness();
 

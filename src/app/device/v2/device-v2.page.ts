@@ -37,6 +37,8 @@ import {
   DeviceV2PageLayoutRecord,
   DeviceV2PageLayoutService,
 } from '../../core/services/device-v2-page-layout.service';
+import { LegacyImportRecord, hasLegacyLayout, legacyImportPath } from '../../core/model/legacy-import.model';
+import { LegacyImportService } from '../../core/services/legacy-import.service';
 const BLE_FOREGROUND_RECONNECT_DELAYS_MS = [1000, 2500, 5000] as const;
 
 function emptySnapshot(): DeviceUiSnapshot {
@@ -69,6 +71,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
   @Input() embedded = false;
 
+  legacyRecord?: LegacyImportRecord;
+  readonly legacyPath = legacyImportPath;
   accountState: DeviceUiConnectionState = 'idle';
   snapshot = emptySnapshot();
   layout?: PageLayout;
@@ -115,6 +119,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   constructor(
     private readonly deviceUi: DeviceUiPort,
     private readonly pageLayouts: DeviceV2PageLayoutService,
+    private readonly legacyImports: LegacyImportService,
     private readonly changeDetector: ChangeDetectorRef = { detectChanges: () => undefined } as ChangeDetectorRef,
   ) {}
 
@@ -321,6 +326,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.layoutUpdating = false;
     this.storedLayout = undefined;
     this.layoutError = '';
+    this.legacyRecord = undefined;
     this.layoutLoadKey = '';
     this.layoutEpoch += 1;
     this.endpointsByKey.clear();
@@ -388,7 +394,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
           ? parsePageLayout(this.storedLayout.layout, snapshot.endpoints)
           : migratePageLayout(this.storedLayout.layout, snapshot);
       } else if (this.layout?.manifestFingerprint !== snapshot.manifestFingerprint) {
-        this.layout = generateDefaultPageLayout(snapshot);
+        this.layout = undefined;
       }
       this.clearLayoutError();
     } catch (error) {
@@ -413,9 +419,18 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     let validatingRecord = false;
     try {
       let record = await this.pageLayouts.get(logicalDeviceId);
+      const sources = await this.legacyImports.load().catch(error => {
+        if (!record) throw error;
+        return [];
+      });
       if (!this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
       // The live schema may have replaced an invalid preview with the same hash.
       snapshot = this.snapshot;
+      this.legacyRecord = sources.find(source => source.logicalDeviceId === logicalDeviceId);
+      if (!record && this.legacyRecord && hasLegacyLayout(this.legacyRecord)) {
+        this.layout = undefined;
+        return;
+      }
       if (!record) {
         const generated = generateDefaultPageLayout(snapshot);
         try {

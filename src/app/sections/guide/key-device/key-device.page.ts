@@ -3,7 +3,11 @@ import {
   ChangeDetectorRef,
   Component,
   OnDestroy,
+  Optional,
 } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { LegacySource, legacySource } from '../../../core/model/legacy-import.model';
+import { LegacyImportService } from '../../../core/services/legacy-import.service';
 import { FormsModule } from '@angular/forms';
 
 import { Clipboard } from '@capacitor/clipboard';
@@ -92,6 +96,8 @@ void loop() {
   keyError = '';
   phase: KeyDevicePhase = 'idle';
 
+  legacySource?: LegacySource;
+  sourceLoading = false;
   private idempotencyKey = '';
   private idempotencyName = '';
   private revealContext: DeviceKeyContext | null = null;
@@ -106,7 +112,9 @@ void loop() {
     private navController: NavController,
     private toastController: ToastController,
     private translate: TranslateService,
-    private cd: ChangeDetectorRef
+    private cd: ChangeDetectorRef,
+    @Optional() private route: ActivatedRoute | null = null,
+    @Optional() private legacyImports: LegacyImportService | null = null,
   ) {
     this.observedSessionEpoch = this.dataService.sessionEpoch;
     this.authChangeSubscription = this.dataService.authDataChanged.subscribe(
@@ -126,7 +134,7 @@ void loop() {
   }
 
   get isBusy(): boolean {
-    return this.phase === 'creating' || this.phase === 'revealing';
+    return this.sourceLoading || this.phase === 'creating' || this.phase === 'revealing';
   }
 
   get showsCreateForm(): boolean {
@@ -139,13 +147,37 @@ void loop() {
   }
 
   ionViewWillEnter(): void {
+    if (this.route?.snapshot.queryParamMap.has('sourceId')) void this.loadLegacySource();
     if (!this.dataService.auth?.accessToken) {
       this.resetProvisioningState();
       void this.navController.navigateRoot('/login');
     }
   }
 
+  private async loadLegacySource(): Promise<void> {
+    this.sourceLoading = true;
+    const epoch = this.dataService.sessionEpoch;
+    try {
+      const source = legacySource({
+        sourceCollection: this.route!.snapshot.queryParamMap.get('sourceCollection'),
+        sourceId: this.route!.snapshot.queryParamMap.get('sourceId'),
+      });
+      const record = await this.legacyImports!.detail(source);
+      if (epoch !== this.dataService.sessionEpoch) return;
+      if (record.snapshot.disabled) throw new Error('旧设备已禁用，请重新核对');
+      this.legacySource = source;
+      this.deviceName = record.snapshot.displayName;
+    } catch (error) {
+      this.phase = 'create-blocked';
+      this.keyError = error instanceof Error ? error.message : '来源资料读取失败';
+    } finally {
+      this.sourceLoading = false;
+      this.cd.markForCheck();
+    }
+  }
+
   async createKeyDevice(): Promise<void> {
+    if (this.sourceLoading) return;
     if (!this.dataService.auth?.accessToken) {
       this.resetProvisioningState();
       await this.navController.navigateRoot('/login');
@@ -215,7 +247,8 @@ void loop() {
         return await this.deviceService.createDeviceKeyV2(
           name,
           idempotencyKey,
-          'diy'
+          'diy',
+          ...(this.legacySource ? [this.legacySource] : []),
         );
       } catch (error) {
         if (
@@ -325,6 +358,7 @@ void loop() {
     this.operationGeneration += 1;
     this.clearSecretKey();
     this.revealContext = null;
+    this.legacySource = undefined;
     this.idempotencyKey = '';
     this.idempotencyName = '';
     this.keyError = '';

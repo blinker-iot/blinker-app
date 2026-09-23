@@ -1,0 +1,15 @@
+main { max-width: 760px; margin: auto; padding: 24px 18px 80px; }
+h1 { font-size: 24px; } h2 { font-size: 18px; }
+section, form { margin: 20px 0; padding: 18px; border: 1px solid var(--ion-color-light-shade); border-radius: 16px; }
+label, input, .source { display: block; }
+label { margin-bottom: 16px; }
+input { width: 100%; margin-top: 8px; padding: 12px; border: 1px solid var(--ion-color-medium); border-radius: 8px; background: var(--ion-background-color); color: var(--ion-text-color); }
+button { padding: 12px 16px; border-radius: 10px; color: var(--ion-color-primary-contrast); background: var(--ion-color-primary); }
+button:disabled { opacity: .5; }
+.notice { padding: 12px; background: var(--ion-color-light); border-radius: 10px; overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.source { padding: 14px 0; border-bottom: 1px solid var(--ion-color-light-shade); text-decoration: none; }
+.source span { display: block; font-size: 13px; margin-top: 6px; color: var(--ion-color-medium); }
+dd { margin: 4px 0 14px; overflow-wrap: anywhere; } dt { color: var(--ion-color-medium); }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 350px; overflow: auto; }
+details { margin: 16px 0; } p { line-height: 1.6; }

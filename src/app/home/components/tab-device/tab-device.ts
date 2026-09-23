@@ -16,6 +16,7 @@ import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { filter } from 'rxjs';
+import { LegacyImportCards } from './legacy-import-cards';
 import { RoomListComponent } from '../room-list/room-list';
 import { DeviceblockZone } from '../deviceblock-zone/deviceblock-zone';
 import { DataService } from '../../../core/services/data.service';
@@ -33,6 +34,7 @@ import { DeviceUiPort } from '../../../core/device-v2/device-ui.port';
     TranslatePipe,
     RoomListComponent,
     DeviceblockZone,
+    LegacyImportCards,
   ],
 })
 export class TabDeviceComponent implements OnInit {

@@ -1,4 +1,5 @@
 import { decodeDirectDeviceHelloBody, encodeDirectAppHelloBody } from '../../protocol/device-v2/direct-hello';
+import { LegacySource } from '../../model/legacy-import.model';
 import {
   Bbp2MessageKind,
   DeviceV2Manifest,
@@ -56,6 +57,9 @@ import {
 const INITIAL_HANDSHAKE_WRITE_TIMEOUT_MS = 45_000;
 
 export interface BleDirectEnrollmentOptions {
+  legacySource?: LegacySource;
+  ownerAccountId?: string;
+  replacePendingLogicalDeviceId?: string;
   displayName: string;
   psk?: Uint8Array;
 }
@@ -100,6 +104,7 @@ export class BleDirectClient {
     let controllerSecret: Uint8Array | undefined;
     let presenceKey: Uint8Array | undefined;
     let directSession: BleDirectSession | undefined;
+    let previousEnrollment: BleControllerCredential | undefined;
     try {
       await this.link.connect(target);
       noise = await NoiseNnInitiator.create(
@@ -117,7 +122,7 @@ export class BleDirectClient {
         || hello.securityProfile !== 1) {
         throw new Error('BLE_DIRECT_SETUP_CONTEXT_MISMATCH');
       }
-      await this.cancelPending(hello.deviceInstanceId, hello.accessEpoch);
+      previousEnrollment = await this.checkPendingEnrollment(hello.deviceInstanceId, hello.accessEpoch, options);
 
       const controllerId = this.crypto.random(16);
       controllerSecret = this.crypto.random(32);
@@ -127,6 +132,7 @@ export class BleDirectClient {
       const adminFingerprint = await this.crypto.adminFingerprint(controllerId, controllerSecret);
       const transcriptHash = noise.transcriptHash();
       const intent = await this.api.issue({
+        ...(options.legacySource ? { legacySource: options.legacySource } : {}),
         requestId: intentId,
         displayName,
         deviceInstanceId: hello.deviceInstanceId,
@@ -159,6 +165,9 @@ export class BleDirectClient {
       );
       let credential: BleControllerCredential = {
         state: 'pending',
+        previousEnrollment,
+        ownerAccountId: options.ownerAccountId,
+        ...(options.legacySource ? { legacySource: options.legacySource } : {}),
         logicalDeviceId: intent.logicalDeviceId,
         deviceInstanceId: hello.deviceInstanceId,
         accessEpoch: hello.accessEpoch,
@@ -194,6 +203,8 @@ export class BleDirectClient {
         throw new Error('BLE_DIRECT_RECEIPT_MISMATCH');
       }
 
+      credential = { ...credential, receipt: receipt.encoded };
+      await this.store.save(credential);
       noise.clear();
       noise = undefined;
       await this.link.disconnect();
@@ -209,12 +220,10 @@ export class BleDirectClient {
       );
       await this.link.connect(directTarget);
       directSession = await this.authenticate(intent.logicalDeviceId, credential);
-      await this.commit(credential);
-      credential = {
-        ...credential,
-        state: 'active',
-      };
+      credential = { ...credential, method2Confirmed: true };
       await this.store.save(credential);
+      await this.commit(credential);
+      credential = await this.activateCredential(credential);
       await directSession.synchronize();
       controllerSecret.fill(0);
       controllerSecret = undefined;
@@ -226,6 +235,7 @@ export class BleDirectClient {
       };
     } catch (error) {
       noise?.clear();
+      if (previousEnrollment) clearBleControllerCredentialSecrets(previousEnrollment);
       controllerSecret?.fill(0);
       presenceKey?.fill(0);
       if (directSession) await directSession.close().catch(() => undefined);
@@ -282,9 +292,10 @@ export class BleDirectClient {
         throw new Error('BLE_DIRECT_RECOVERY_REQUIRES_INSTALLED_DEVICE');
       }
       session = await this.connectWithCredential(credential, target);
-      await this.commit(credential);
-      credential = { ...credential, state: 'active' };
+      credential = { ...credential, method2Confirmed: true };
       await this.store.save(credential);
+      await this.commit(credential);
+      credential = await this.activateCredential(credential);
       await session.synchronize();
       return {
         logicalDeviceId,
@@ -457,33 +468,93 @@ export class BleDirectClient {
     }
   }
 
-  private async cancelPending(deviceInstanceId: Uint8Array, setupEpoch: number): Promise<void> {
-    const credential = await this.store.findPending(deviceInstanceId);
-    if (!credential) return;
+  async replayPendingCommit(logicalDeviceId: string): Promise<boolean> {
+    const credential = await this.requireCredential(logicalDeviceId);
     try {
-      let result;
-      try {
-        result = await this.api.cancel(credential.intentId);
-      } catch (error) {
-        // Only an explicit server retirement plus a new Provisioning epoch can
-        // discard this old pending checkpoint. A commit/network failure cannot.
-        if (!(error instanceof GatewayHttpError) || error.httpStatus !== 410
-          || error.code !== 'DEVICE_V2_BLE_ENROLLMENT_DEVICE_RETIRED'
-          || setupEpoch === credential.accessEpoch) throw error;
-        await this.store.remove(credential.logicalDeviceId);
-        return;
-      }
-      if (!sameBytes(result.intentId, credential.intentId)
-        || result.logicalDeviceId !== credential.logicalDeviceId
-        || !sameBytes(result.deviceInstanceId, credential.deviceInstanceId)
-        || result.accessEpoch !== credential.accessEpoch
-        || !sameBytes(result.controllerId, credential.controllerId)) {
-        throw new Error('BLE_DIRECT_CANCEL_CONTEXT_MISMATCH');
-      }
-      await this.store.remove(credential.logicalDeviceId);
+      if (credential.state === 'active') return true;
+      if (!credential.method2Confirmed) return false;
+      await this.commit(credential);
+      await this.activateCredential(credential);
+      return true;
     } finally {
       clearBleControllerCredentialSecrets(credential);
     }
+  }
+
+  private async checkPendingEnrollment(
+    deviceInstanceId: Uint8Array,
+    accessEpoch: number,
+    options: BleDirectEnrollmentOptions,
+  ): Promise<BleControllerCredential | undefined> {
+    const credential = options.replacePendingLogicalDeviceId
+      ? await this.requireCredential(options.replacePendingLogicalDeviceId)
+      : await this.store.findPending(deviceInstanceId);
+    if (!credential) return undefined;
+    try {
+      if (!options.replacePendingLogicalDeviceId) throw new Error('BLE_DIRECT_ENROLLMENT_PENDING');
+      const sameReplacementContext = sameBytes(credential.deviceInstanceId, deviceInstanceId)
+        && credential.legacySource?.sourceCollection === options.legacySource?.sourceCollection
+        && credential.legacySource?.sourceId === options.legacySource?.sourceId
+        && (credential.ownerAccountId === undefined || credential.ownerAccountId === options.ownerAccountId)
+        && (accessEpoch > credential.accessEpoch
+          || (!credential.method2Confirmed && accessEpoch === credential.accessEpoch));
+      if (!credential.method2Confirmed) {
+        if (!sameReplacementContext) throw new Error('BLE_DIRECT_REPLACEMENT_CONTEXT_MISMATCH');
+        // The explicit replacement action may terminate an uncommitted grant;
+        // cancelling never claims that the hardware has been rolled back.
+        let result;
+        try {
+          result = await this.api.cancel(credential.intentId);
+        } catch (error) {
+          if (error instanceof GatewayHttpError && error.httpStatus === 410
+            && error.code === 'DEVICE_V2_BLE_ENROLLMENT_DEVICE_RETIRED'
+            && accessEpoch > credential.accessEpoch) return credential;
+          throw error;
+        }
+        if (!sameBytes(result.intentId, credential.intentId)
+          || result.logicalDeviceId !== credential.logicalDeviceId
+          || !sameBytes(result.deviceInstanceId, credential.deviceInstanceId)
+          || result.accessEpoch !== credential.accessEpoch
+          || !sameBytes(result.controllerId, credential.controllerId)
+          || !['cancelled', 'expired'].includes(result.state)) {
+          throw new Error('BLE_DIRECT_CANCEL_CONTEXT_MISMATCH');
+        }
+        return credential;
+      }
+      try {
+        await this.commit(credential);
+        await this.activateCredential(credential);
+        throw new Error('BLE_DIRECT_REPLACEMENT_ALREADY_REGISTERED');
+      } catch (error) {
+        if (!(error instanceof GatewayHttpError)
+          || (!['DEVICE_V2_BLE_ENROLLMENT_EXPIRED', 'DEVICE_V2_BLE_ENROLLMENT_CANCELLED'].includes(error.code)
+            && !(error.httpStatus === 410 && error.code === 'DEVICE_V2_BLE_ENROLLMENT_DEVICE_RETIRED'
+              && accessEpoch > credential.accessEpoch))) {
+          throw error;
+        }
+      }
+      if (!sameReplacementContext) {
+        throw new Error('BLE_DIRECT_REPLACEMENT_CONTEXT_MISMATCH');
+      }
+      return credential;
+    } catch (error) {
+      clearBleControllerCredentialSecrets(credential);
+      throw error;
+    }
+  }
+
+  private async activateCredential(credential: BleControllerCredential): Promise<BleControllerCredential> {
+    let previous = credential.previousEnrollment;
+    while (previous) {
+      if (previous.logicalDeviceId !== credential.logicalDeviceId) {
+        await this.store.remove(previous.logicalDeviceId);
+      }
+      previous = previous.previousEnrollment;
+    }
+    const active: BleControllerCredential = { ...credential, state: 'active', previousEnrollment: undefined };
+    await this.store.save(active);
+    if (credential.previousEnrollment) clearBleControllerCredentialSecrets(credential.previousEnrollment);
+    return active;
   }
 
   private async requireCredential(logicalDeviceId: string): Promise<BleControllerCredential> {

@@ -15,6 +15,7 @@ import {
 import { BlinkerDevice } from '../../core/model/device.model';
 import { generateDefaultPageLayout } from '../../core/device-v2/page-layout';
 import { DeviceV2Page } from './device-v2.page';
+import { DeviceUiConnectionScope } from '../../core/device-v2/connection-scope';
 
 const logicalDeviceId = 'device_11111111-1111-4111-8111-111111111111';
 
@@ -87,6 +88,7 @@ function harness(
   pageLayouts?: any,
   openTelemetry?: () => Promise<DeviceUiTelemetryLease>,
   viewActive = true,
+  legacyRecords: any[] = [],
 ) {
   const state = new BehaviorSubject(initial);
   const events = new Subject<DeviceUiEvent>();
@@ -120,6 +122,7 @@ function harness(
     }),
     close: vi.fn().mockResolvedValue(undefined),
   };
+  const connect = vi.fn().mockResolvedValue(undefined);
   const port = {
     appActive: appActive.asObservable(),
     connectionState,
@@ -127,7 +130,8 @@ function harness(
     watchConnectivity: vi.fn(() => connectivity.asObservable()),
     watchState: vi.fn(() => state.asObservable()),
     watchEvents: vi.fn(() => events.asObservable()),
-    connect: vi.fn().mockResolvedValue(undefined),
+    connect,
+    openConnection: vi.fn((id: string, signal: AbortSignal) => new DeviceUiConnectionScope(() => connect(id), signal)),
     disconnect: vi.fn().mockResolvedValue(undefined),
     sendCommand: vi.fn().mockResolvedValue(undefined),
     openTelemetry: vi.fn(openTelemetry ?? (async () => telemetryLease)),
@@ -143,7 +147,7 @@ function harness(
       updatedAt: 0,
     })),
   };
-  const page = new DeviceV2Page(port as any, localPageLayouts);
+  const page = new DeviceV2Page(port as any, localPageLayouts, { load: vi.fn(async () => legacyRecords) } as any);
   page.device = device();
   page.viewActive = viewActive;
   page.ngOnInit();
@@ -151,12 +155,25 @@ function harness(
 }
 
 describe('DeviceV2Page UI port lifecycle', () => {
+  it('preserves an imported old layout instead of writing default controls', async () => {
+    const pageLayouts = { get: vi.fn(async () => null), saveCandidate: vi.fn() };
+    const source = {
+      sourceCollection: 'devices', sourceId: 'a'.repeat(24), logicalDeviceId,
+      snapshot: { deviceName: 'old', displayName: 'Lamp', layout: { format: 'layouter', data: { version: '2.0.0' } } },
+    };
+    const { page } = harness(snapshot(), pageLayouts, undefined, true, [source]);
+    await vi.waitFor(() => expect(page.legacyRecord).toEqual(source));
+    expect(page.widgets).toEqual([]);
+    expect(pageLayouts.saveCandidate).not.toHaveBeenCalled();
+    page.ngOnDestroy();
+  });
+
   it('renders UI state and sends typed commands for the basic controls', async () => {
     const { page, port, state, events } = harness();
     await Promise.resolve();
 
-    expect(port.connect).toHaveBeenCalledWith(logicalDeviceId);
-    expect(page.widgets.map(widget => widget.type)).toEqual(['switch', 'slider', 'input', 'button']);
+    expect(port.openConnection).toHaveBeenCalledWith(logicalDeviceId, expect.any(AbortSignal));
+    await vi.waitFor(() => expect(page.widgets.map(widget => widget.type)).toEqual(['switch', 'slider', 'input', 'button']));
     const fields = page.widgets.map(widget => page.endpoint(widget)!);
 
     await page.setBoolean(fields[0], { detail: { checked: true } } as CustomEvent);
@@ -187,7 +204,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
     port.connectionState.next('ready');
     await vi.waitFor(() => {
-      expect(port.connect).toHaveBeenCalledTimes(3);
+      expect(port.openConnection).toHaveBeenCalledTimes(3);
       expect(page.error).toBe('');
     });
   });
@@ -204,27 +221,27 @@ describe('DeviceV2Page UI port lifecycle', () => {
     try {
       const { page, port, connectivity } = harness();
       await Promise.resolve();
-      port.connect.mockClear();
+      port.openConnection.mockClear();
 
       connectivity.next({
         ...connectivity.value,
         bleState: 'stopped',
       });
       await vi.advanceTimersByTimeAsync(1000);
-      expect(port.connect).toHaveBeenCalledTimes(1);
+      expect(port.openConnection).toHaveBeenCalledTimes(1);
       await vi.advanceTimersByTimeAsync(2500);
-      expect(port.connect).toHaveBeenCalledTimes(2);
+      expect(port.openConnection).toHaveBeenCalledTimes(2);
       await vi.advanceTimersByTimeAsync(5000);
-      expect(port.connect).toHaveBeenCalledTimes(3);
+      expect(port.openConnection).toHaveBeenCalledTimes(3);
       await vi.advanceTimersByTimeAsync(30_000);
-      expect(port.connect).toHaveBeenCalledTimes(3);
+      expect(port.openConnection).toHaveBeenCalledTimes(3);
 
       page.viewActive = false;
       page.ngOnChanges(changed('viewActive'));
       page.viewActive = true;
       page.ngOnChanges(changed('viewActive'));
       await vi.advanceTimersByTimeAsync(1000);
-      expect(port.connect).toHaveBeenCalledTimes(5);
+      expect(port.openConnection).toHaveBeenCalledTimes(5);
       page.ngOnDestroy();
     } finally {
       vi.useRealTimers();
@@ -236,12 +253,12 @@ describe('DeviceV2Page UI port lifecycle', () => {
     try {
       const { page, port, connectivity } = harness();
       await Promise.resolve();
-      port.connect.mockClear();
+      port.openConnection.mockClear();
 
       connectivity.next({ ...connectivity.value, bleState: 'nearby' });
       await vi.advanceTimersByTimeAsync(1000);
 
-      expect(port.connect).toHaveBeenCalledTimes(1);
+      expect(port.openConnection).toHaveBeenCalledTimes(1);
       page.ngOnDestroy();
     } finally {
       vi.useRealTimers();
@@ -253,7 +270,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
     try {
       const { page, port, connectivity } = harness();
       await Promise.resolve();
-      port.connect.mockClear();
+      port.openConnection.mockClear();
 
       connectivity.next({
         ...connectivity.value,
@@ -261,14 +278,14 @@ describe('DeviceV2Page UI port lifecycle', () => {
         bleState: 'nearby',
       });
       await vi.advanceTimersByTimeAsync(30_000);
-      expect(port.connect).not.toHaveBeenCalled();
+      expect(port.openConnection).not.toHaveBeenCalled();
 
       connectivity.next({
         ...connectivity.value,
         directConnectAllowed: true,
       });
       await vi.advanceTimersByTimeAsync(1000);
-      expect(port.connect).toHaveBeenCalledOnce();
+      expect(port.openConnection).toHaveBeenCalledOnce();
       page.ngOnDestroy();
     } finally {
       vi.useRealTimers();
@@ -280,7 +297,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
     try {
       const { page, port, connectivity } = harness();
       await Promise.resolve();
-      port.connect.mockClear();
+      port.openConnection.mockClear();
 
       connectivity.next({
         ...connectivity.value,
@@ -288,11 +305,11 @@ describe('DeviceV2Page UI port lifecycle', () => {
         bleState: 'stopped',
       });
       await vi.advanceTimersByTimeAsync(30_000);
-      expect(port.connect).not.toHaveBeenCalled();
+      expect(port.openConnection).not.toHaveBeenCalled();
 
       connectivity.next({ ...connectivity.value, bleAdapterEnabled: true });
       await vi.advanceTimersByTimeAsync(1000);
-      expect(port.connect).toHaveBeenCalledOnce();
+      expect(port.openConnection).toHaveBeenCalledOnce();
       page.ngOnDestroy();
     } finally {
       vi.useRealTimers();
@@ -304,18 +321,18 @@ describe('DeviceV2Page UI port lifecycle', () => {
     try {
       const { page, port, connectivity } = harness();
       await Promise.resolve();
-      port.connect.mockClear();
+      port.openConnection.mockClear();
       connectivity.next({ ...connectivity.value, bleState: 'stopped' });
       page.viewActive = false;
       page.ngOnChanges(changed('viewActive'));
       await vi.advanceTimersByTimeAsync(10_000);
-      expect(port.connect).not.toHaveBeenCalled();
+      expect(port.openConnection).not.toHaveBeenCalled();
 
       page.viewActive = true;
       page.ngOnChanges(changed('viewActive'));
       connectivity.next({ ...connectivity.value, bleState: 'ready' });
       await vi.advanceTimersByTimeAsync(10_000);
-      expect(port.connect).toHaveBeenCalledTimes(1);
+      expect(port.openConnection).toHaveBeenCalledTimes(1);
       page.ngOnDestroy();
     } finally {
       vi.useRealTimers();
@@ -327,17 +344,17 @@ describe('DeviceV2Page UI port lifecycle', () => {
     try {
       const { page, port, appActive, connectivity } = harness();
       await Promise.resolve();
-      port.connect.mockClear();
+      port.openConnection.mockClear();
       connectivity.next({ ...connectivity.value, bleState: 'stopped' });
       appActive.next(false);
       await vi.advanceTimersByTimeAsync(10_000);
-      expect(port.connect).not.toHaveBeenCalled();
+      expect(port.openConnection).not.toHaveBeenCalled();
 
       appActive.next(true);
       await Promise.resolve();
-      expect(port.connect).toHaveBeenCalledTimes(1);
+      expect(port.openConnection).toHaveBeenCalledTimes(1);
       await vi.advanceTimersByTimeAsync(1000);
-      expect(port.connect).toHaveBeenCalledTimes(2);
+      expect(port.openConnection).toHaveBeenCalledTimes(2);
       page.ngOnDestroy();
     } finally {
       vi.useRealTimers();

@@ -16,24 +16,7 @@
       [description]="'DEVICE_GUIDE.BLE_PAGE_DESCRIPTION' | translate"
     />
 
-    @if (phase !== 'ready') {
-    @if (pendingEnrollments.length) {
-      <section class="setup-card ble-recovery" aria-labelledby="ble-recovery-heading">
-        <h2 id="ble-recovery-heading">{{ 'DEVICE_GUIDE.BLE_RECOVERY_TITLE' | translate }}</h2>
-        <p>{{ 'DEVICE_GUIDE.BLE_RECOVERY_DESCRIPTION' | translate }}</p>
-        <div class="ble-candidates">
-        @for (id of pendingEnrollments; track id) {
-          <button type="button" [disabled]="busy" (click)="resumeEnrollment(id)">
-            <i class="fa-brands fa-bluetooth-b" aria-hidden="true"></i>
-            <span>
-              <strong>{{ 'DEVICE_GUIDE.BLE_RECOVER' | translate }}</strong>
-              <small>{{ id }}</small>
-            </span>
-          </button>
-        }
-        </div>
-      </section>
-    }
+    @if (phase !== 'ready' && phase !== 'registered') {
     <section class="setup-card" aria-labelledby="ble-prepare-heading">
       <h2 id="ble-prepare-heading">{{ 'DEVICE_GUIDE.PREPARE_TITLE' | translate }}</h2>
       <ol class="setup-steps">
@@ -101,7 +84,18 @@
       </section>
     }
 
-    @if (phase !== 'selecting') {
+    @if (pendingEnrollments.length) {
+      <section class="setup-card">
+        <h2>继续未完成的注册</h2>
+        <p>硬件可能已配置，服务端注册结果尚未确认。原凭据和回执已保留，先确认原提交；不要重置或重新录入。</p>
+        @for (id of pendingEnrollments; track id) {
+          <button type="button" class="primary-action" [disabled]="busy" (click)="resumeEnrollment(id)">确认并继续 {{ id }}</button>
+          <p>若原接入无法继续：先按硬件说明将同一设备重新进入配网状态。下方操作会终止尚未完成的旧注册授权，不会回滚硬件；新注册成功前保留旧恢复材料。</p>
+          <button type="button" class="primary-action" [disabled]="busy" (click)="replacePendingEnrollment(id)">已重新进入配网，终止旧授权并恢复同一设备</button>
+        }
+      </section>
+    }
+    @if (phase !== 'selecting' && !pendingEnrollments.length) {
     <button type="button" class="primary-action" [disabled]="busy" (click)="startDiscovery()">
       <i [class]="busy ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-radar'" aria-hidden="true"></i>
       {{ actionKey | translate }}
@@ -110,8 +104,8 @@
     } @else {
       <section class="enrollment-result ready" aria-live="polite">
         <i class="fa-light fa-circle-check" aria-hidden="true"></i>
-        <h2>{{ 'DEVICE_GUIDE.BLE_READY_TITLE' | translate }}</h2>
-        <p>{{ 'DEVICE_GUIDE.BLE_READY_DESCRIPTION' | translate }}</p>
+        <h2>{{ phase === 'registered' ? '原注册结果已确认' : ('DEVICE_GUIDE.BLE_READY_TITLE' | translate) }}</h2>
+        <p>{{ phase === 'registered' ? '服务端已经完成注册。打开设备验证连接与能力；旧布局和参数恢复仍需单独适配。' : ('DEVICE_GUIDE.BLE_READY_DESCRIPTION' | translate) }}</p>
         <dl>
           <div>
             <dt>{{ 'DEVICE_GUIDE.BLE_DEVICE_ID' | translate }}</dt>

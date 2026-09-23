@@ -1,10 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
+import { LegacySource } from '../../model/legacy-import.model';
 import { API } from '../../../configs/api.config';
 import { base64UrlDecode, base64UrlEncode } from './wire';
 
 export interface BleEnrollmentIntentRequest {
+  legacySource?: LegacySource;
   requestId: Uint8Array;
   displayName: string;
   deviceInstanceId: Uint8Array;
@@ -105,6 +107,7 @@ export class HttpBleEnrollmentApi implements BleEnrollmentApi {
     const response = await firstValueFrom(this.http.post<Envelope<IntentJson>>(
       API.DEVICE_V2.BLE_ENROLLMENT_INTENTS,
       {
+        ...(request.legacySource ? { legacySource: request.legacySource } : {}),
         requestId: base64UrlEncode(request.requestId),
         displayName: request.displayName,
         deviceInstanceId: base64UrlEncode(request.deviceInstanceId),

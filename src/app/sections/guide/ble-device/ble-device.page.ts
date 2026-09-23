@@ -1,9 +1,13 @@
+import { ActivatedRoute } from '@angular/router';
+import { LegacySource, legacySource } from '../../../core/model/legacy-import.model';
+import { LegacyImportService } from '../../../core/services/legacy-import.service';
 import { FormsModule } from '@angular/forms';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   OnDestroy,
+  Optional,
 } from '@angular/core';
 
 import {
@@ -35,6 +39,7 @@ type BleEnrollmentPhase =
   | 'enrolling'
   | 'recovering'
   | 'ready'
+  | 'registered'
   | 'failed';
 
 @Component({
@@ -63,6 +68,10 @@ export class BleDeviceGuidePage implements OnDestroy {
   endpointCount = 0;
   candidates: BleDirectTarget[] = [];
   pendingEnrollments: string[] = [];
+  legacySource?: LegacySource;
+  sourceLoading = false;
+  private sourceBlocked = false;
+  private replacingPendingId = '';
 
   private operation = 0;
   private recovery?: AbortController;
@@ -77,6 +86,8 @@ export class BleDeviceGuidePage implements OnDestroy {
     private readonly navController: NavController,
     private readonly translate: TranslateService,
     private readonly changeDetector: ChangeDetectorRef,
+    @Optional() private readonly route: ActivatedRoute | null = null,
+    @Optional() private readonly legacyImports: LegacyImportService | null = null,
   ) {
     this.observedSessionEpoch = this.data.sessionEpoch;
     this.subscriptions.add(this.data.authDataChanged.subscribe(() => {
@@ -90,6 +101,10 @@ export class BleDeviceGuidePage implements OnDestroy {
       this.endpointCount = 0;
       this.candidates = [];
       this.pendingEnrollments = [];
+      this.legacySource = undefined;
+      this.replacingPendingId = '';
+      this.sourceBlocked = true;
+      this.sourceLoading = false;
       void this.closeSession();
       void this.navController.navigateRoot(
         this.data.auth?.accessToken ? '/home/device' : '/login',
@@ -99,7 +114,7 @@ export class BleDeviceGuidePage implements OnDestroy {
   }
 
   get busy(): boolean {
-    return this.phase === 'discovering' || this.phase === 'enrolling' || this.phase === 'recovering';
+    return this.sourceLoading || this.phase === 'discovering' || this.phase === 'enrolling' || this.phase === 'recovering';
   }
 
   get actionKey(): string {
@@ -115,14 +130,49 @@ export class BleDeviceGuidePage implements OnDestroy {
       void this.navController.navigateRoot('/login');
       return;
     }
-    void this.loadPending(this.operation);
+    void this.loadSourceAndPending();
+  }
+
+  private async loadSourceAndPending(): Promise<void> {
+    const operation = this.operation;
+    this.sourceLoading = true;
+    this.legacySource = undefined;
+    this.replacingPendingId = '';
+    try {
+      if (this.route?.snapshot.queryParamMap.has('sourceId')) {
+        const source = legacySource({
+          sourceCollection: this.route.snapshot.queryParamMap.get('sourceCollection'),
+          sourceId: this.route.snapshot.queryParamMap.get('sourceId'),
+        });
+        const record = await this.legacyImports!.detail(source);
+        if (operation !== this.operation) return;
+        if (record.snapshot.disabled) throw new Error('旧设备已禁用，请重新核对');
+        this.legacySource = source;
+        this.deviceName = record.snapshot.displayName;
+      }
+      await this.loadPending(operation);
+      if (operation === this.operation) this.sourceBlocked = false;
+    } catch (error) {
+      if (operation === this.operation) {
+        this.sourceBlocked = true;
+        this.error = error instanceof Error ? error.message : '接入资料读取失败';
+      }
+    } finally {
+      if (operation === this.operation) {
+        this.sourceLoading = false;
+        this.changeDetector.markForCheck();
+      }
+    }
   }
 
   private async loadPending(operation: number): Promise<void> {
     try {
-      const pending = await this.ble.pendingEnrollmentLogicalDeviceIds();
+      const pending = await this.ble.pendingEnrollmentSources();
       if (operation !== this.operation) return;
-      this.pendingEnrollments = pending;
+      this.pendingEnrollments = pending.filter(item => this.legacySource
+        ? item.legacySource?.sourceCollection === this.legacySource.sourceCollection
+          && item.legacySource?.sourceId === this.legacySource.sourceId
+        : !item.legacySource).map(item => item.logicalDeviceId);
     } catch {
       if (operation !== this.operation) return;
       this.pendingEnrollments = [];
@@ -132,7 +182,8 @@ export class BleDeviceGuidePage implements OnDestroy {
   }
 
   async resumeEnrollment(logicalDeviceId: string): Promise<void> {
-    if (this.busy || this.recovery || this.phase === 'ready' || !this.pendingEnrollments.includes(logicalDeviceId)) return;
+    if (this.busy || this.recovery || this.phase === 'ready' || this.phase === 'registered'
+      || !this.pendingEnrollments.includes(logicalDeviceId)) return;
     if (!this.data.auth?.accessToken) return;
     const operation = ++this.operation;
     const recovery = this.recovery = new AbortController();
@@ -141,16 +192,32 @@ export class BleDeviceGuidePage implements OnDestroy {
     this.error = '';
     this.changeDetector.markForCheck();
     try {
-      await this.acceptEnrollment(await this.ble.resume(logicalDeviceId, recovery.signal), operation);
+      const committed = await this.ble.replayPendingCommit(logicalDeviceId);
+      if (operation !== this.operation || recovery.signal.aborted) return;
+      if (committed) {
+        this.logicalDeviceId = logicalDeviceId;
+        this.phase = 'registered';
+        this.pendingEnrollments = this.pendingEnrollments.filter(id => id !== logicalDeviceId);
+      } else {
+        await this.acceptEnrollment(await this.ble.resume(logicalDeviceId, recovery.signal), operation);
+      }
     } catch (error) {
       this.fail(operation, error);
     } finally {
       if (this.recovery === recovery) this.recovery = undefined;
+      this.changeDetector.markForCheck();
     }
   }
 
+  async replacePendingEnrollment(logicalDeviceId: string): Promise<void> {
+    if (this.busy || !this.pendingEnrollments.includes(logicalDeviceId)) return;
+    this.replacingPendingId = logicalDeviceId;
+    await this.startDiscovery();
+  }
+
   async startDiscovery(): Promise<void> {
-    if (this.busy || this.recovery || this.phase === 'ready') return;
+    if (this.sourceBlocked || (this.pendingEnrollments.length && !this.replacingPendingId)) return;
+    if (this.busy || this.recovery || this.phase === 'ready' || this.phase === 'registered') return;
     if (!this.data.auth?.accessToken) {
       await this.navController.navigateRoot('/login');
       return;
@@ -205,9 +272,19 @@ export class BleDeviceGuidePage implements OnDestroy {
     this.phase = 'enrolling';
     this.changeDetector.markForCheck();
 
+    const sessionEpoch = this.data.sessionEpoch;
     const result = await this.ble.enroll(target, {
+      ownerAccountId: this.data.auth?.uuid,
+      ...(this.legacySource ? { legacySource: this.legacySource } : {}),
+      ...(this.replacingPendingId ? { replacePendingLogicalDeviceId: this.replacingPendingId } : {}),
       displayName: this.deviceName.trim()
         || this.translate.instant('DEVICE_GUIDE.DEFAULT_DEVICE_NAME'),
+    }, {
+      pendingCredentialSaved: async () => {
+        if (operation !== this.operation || sessionEpoch !== this.data.sessionEpoch || !this.data.auth?.accessToken) {
+          throw new Error('登录账号已改变，尚未写入硬件');
+        }
+      },
     });
     await this.acceptEnrollment(result, operation);
   }
@@ -256,6 +333,9 @@ export class BleDeviceGuidePage implements OnDestroy {
     this.operation += 1;
     this.recovery?.abort();
     this.pendingEnrollments = [];
+    this.legacySource = undefined;
+    this.replacingPendingId = '';
+    this.sourceLoading = false;
     // Ionic can retain this page. Re-entry must not leave an aborted operation
     // displayed as busy or a closed session displayed as ready.
     this.phase = 'idle';
@@ -291,7 +371,14 @@ export class BleDeviceGuidePage implements OnDestroy {
         return this.translate.instant('DEVICE_GUIDE.BLE_OWNER_INACTIVE');
       }
     }
-    const code = error instanceof Error ? error.message : '';
+    const code = error instanceof GatewayHttpError ? error.code : error instanceof Error ? error.message : '';
+    if (/DEVICE_V2_BLE_ENROLLMENT_(EXPIRED|CANCELLED|SUPERSEDED)/.test(code)) {
+      return '服务器确认原注册授权已失效。恢复材料已保留，请将同一硬件重新进入 setup 后办理恢复；不要直接重试旧授权或清除本地凭据。';
+    }
+    if (code === 'BLE_DIRECT_REPLACEMENT_CONTEXT_MISMATCH') return '不是原设备、来源不一致或硬件尚未进入新的配网状态；旧恢复材料已保留。';
+    if (code === 'BLE_DIRECT_REPLACEMENT_ALREADY_REGISTERED') return '原注册已成功，请打开已注册设备；没有创建替代注册。';
+    if (code === 'BLE_DIRECT_ENROLLMENT_PENDING') return '这台硬件有尚未完成的注册，请先使用下方恢复入口确认原提交结果。';
+    if (error instanceof GatewayHttpError) return '注册尚未完成：' + error.message + '。恢复材料已保留，可处理原因后重试。';
     if (/permission|denied/i.test(code)) {
       return this.translate.instant('DEVICE_GUIDE.BLE_PERMISSION_FAILED');
     }

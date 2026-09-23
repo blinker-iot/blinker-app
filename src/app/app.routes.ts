@@ -49,6 +49,8 @@ export const routes: Routes = [
     ],
   },
   { path: 'login', loadComponent: () => import('./sections/login/login').then(m => m.LoginPage) },
+  { path: 'legacy-device-migration', loadComponent: () => import('./sections/legacy-device-migration/legacy-device-migration.page').then(m => m.LegacyDeviceMigrationPage) },
+  { path: 'legacy-device-migration/:collection/:sourceId', loadComponent: () => import('./sections/legacy-device-migration/legacy-device-migration.page').then(m => m.LegacyDeviceMigrationPage) },
   { path: 'settings', loadComponent: () => import('./sections/settings/settings.page').then(m => m.SettingsPage) },
   {
     path: 'self-hosted-server',

@@ -1,0 +1,104 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start"><ion-back-button defaultHref="/home/device" text=""></ion-back-button></ion-buttons>
+    <ion-title>旧设备迁入</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content fullscreen="true">
+  <main>
+    @if (error) { <p class="notice" role="alert">{{ error }}</p> }
+    @if (detail) {
+      @if (selected; as record) {
+        <h1>{{ record.snapshot.displayName || record.snapshot.deviceName }}</h1>
+        <p>资料已同步 · {{ record.logicalDeviceId ? '已注册，接入状态请查看设备' : '待接入' }}</p>
+        <p class="notice">配置恢复：待固件适配。已保存的旧布局和参数不会自动覆盖新设备。</p>
+        <section>
+          <h2>设备资料</h2>
+          <dl>
+            <dt>旧设备标识</dt><dd>{{ record.snapshot.deviceName }}</dd>
+            <dt>旧设备类型 / 固件</dt><dd>{{ record.snapshot.deviceType || '—' }} / {{ record.snapshot.otaVersion || '—' }}</dd>
+            <dt>接入提示</dt><dd>{{ record.snapshot.mode || '—' }}</dd>
+            @if (record.snapshot.deviceMac) { <dt>硬件标识</dt><dd>{{ record.snapshot.deviceMac }}</dd> }
+          </dl>
+          @if (record.snapshot.disabled) { <p class="notice">旧设备已禁用，解除后重新验证并同步以核对状态。</p> }
+          @for (issue of record.snapshot.issues || []; track $index) { <p class="notice">{{ issueText(issue) }}</p> }
+        </section>
+        <section>
+          <h2>接入设备</h2>
+          <p>先为这台硬件安装对应的 V2 固件，再选择固件支持的接入方式。只改服务器地址无法升级旧协议。</p>
+          @if (record.logicalDeviceId) {
+            <a [routerLink]="['/device', record.logicalDeviceId]">打开已注册设备</a>
+            <p>已删除或撤销的目标不能重新创建；云开通未完成可继续原接入流程。</p>
+          }
+          <div class="actions">
+            <button type="button" [disabled]="record.snapshot.disabled" (click)="connect('key')">云接入 / 继续开通</button>
+            <button type="button" [disabled]="record.snapshot.disabled" (click)="connect('ble')">蓝牙接入 / 恢复注册</button>
+          </div>
+        </section>
+        <section>
+          <h2>已保存配置</h2>
+          @for (entry of record.snapshot.display || {} | keyvalue; track entry.key) {
+            <p>{{ entry.key }}：{{ entry.value | json }}</p>
+          }
+          <details><summary>旧布局 · 待适配</summary><pre>{{ record.snapshot.layout | json }}</pre></details>
+          <details><summary>设备参数 · 待适配</summary><pre>{{ record.snapshot.parameters | json }}</pre></details>
+          <details><summary>恢复结果</summary><pre>{{ record.recoveryResult | json }}</pre></details>
+          <p>低功耗 freq 表示旧端在线有效期，不等同于新版上报周期。参数来源不明的内容不会展示或下发。</p>
+        </section>
+        <a routerLink="/legacy-device-migration">重新验证并补齐资料</a>
+      } @else { <button type="button" (click)="refresh()">重新读取资料</button> }
+    } @else {
+      <h1>同步旧账号的全部自有设备</h1>
+      <p>先同步资料，再按需逐台升级或配网。资料同步不占设备额度。</p>
+      <form (ngSubmit)="beginPreview()">
+        <label>旧手机号<input name="phone" type="tel" autocomplete="off" [(ngModel)]="phone" [disabled]="busy" required /></label>
+        <label>旧密码<input name="password" type="password" autocomplete="off" [(ngModel)]="password" [disabled]="busy" required /></label>
+        <button type="submit" [disabled]="busy || !phone || !password">验证并预览全部设备</button>
+      </form>
+      @if (busy) { <p role="status"><ion-spinner name="dots"></ion-spinner>正在处理，请保持页面打开…</p> }
+      @if (preview; as view) {
+        <section>
+          <h2>{{ view.previewComplete ? '全部设备预览' : '预览尚未完成' }}</h2>
+          <p>已读取 {{ view.items.length }} 台{{ view.previewComplete ? '，本轮总数 ' + view.total : '' }}。</p>
+          @if (expired) { <p class="notice">本次授权已过期，请重新验证、预览并确认；已保存资料仍然保留。</p> }
+          @for (item of view.items; track path(item)) {
+            <p>{{ item.snapshot.displayName || item.snapshot.deviceName }}
+              @if (item.snapshot.disabled) { <span> · 已禁用，暂缓接入</span> }
+              @if (item.snapshot.issues?.length) { <span> · {{ item.snapshot.issues!.length }} 项需核对</span> }
+            </p>
+          }
+          @for (issue of view.issues; track $index) { <p class="notice">{{ issueText(issue) }}</p> }
+          @if (!view.previewComplete) {
+            <button type="button" [disabled]="busy || expired" (click)="continuePreview()">继续读取全部设备</button>
+          } @else {
+            <button type="button" [disabled]="!canConfirm" (click)="confirmSync()">{{ confirmed ? '继续补齐已确认的资料' : '确认一次：同步全部设备' }}</button>
+          }
+        </section>
+      }
+      @if (syncResult; as sync) {
+        <section aria-live="polite">
+          <h2>{{ sync.summary.complete ? '全部资料同步完成' : '资料部分完成' }}</h2>
+          <p>已处理 {{ sync.summary.processed }} / {{ sync.summary.total }}，已保存 {{ sync.summary.saved }}，失败 {{ sync.summary.failed }}，未完整 {{ sync.summary.incomplete }}。</p>
+          <p>设备接入和配置恢复需分别完成；资料已保存不表示设备可控制。</p>
+          @for (result of sync.results; track $index) {
+            @if (result.code || result.incomplete || result.issues?.length) {
+              <p class="notice">{{ result.sourceId || '无法识别的来源记录' }}：{{ result.code || result.status }}
+                @for (issue of result.record?.snapshot?.issues || result.issues || []; track $index) { <span>{{ issueText(issue) }} </span> }
+              </p>
+            }
+          }
+        </section>
+      }
+      <section>
+        <h2>已同步资料</h2>
+        <button type="button" [disabled]="busy" (click)="refresh()">刷新列表</button>
+        @for (record of imports.records | async; track path(record)) {
+          <a class="source" [routerLink]="path(record)">
+            <strong>{{ record.snapshot.displayName || record.snapshot.deviceName }}</strong>
+            <span>{{ record.logicalDeviceId ? '已注册 · 查看接入与恢复' : '已同步，待接入' }}</span>
+          </a>
+        }
+      </section>
+    }
+  </main>
+</ion-content>

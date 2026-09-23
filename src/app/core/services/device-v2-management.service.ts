@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
+import { LegacySource, legacySource } from '../model/legacy-import.model';
 import { API } from '../../configs/api.config';
 import {
   DeviceKeyContext,
@@ -109,6 +110,7 @@ export class DeviceV2ManagementService {
     name: string,
     idempotencyKey: string,
     deviceType = 'diy',
+    source?: LegacySource,
   ): Promise<DeviceKeyCreateResponse> {
     const normalizedName = name.trim();
     const normalizedType = deviceType.trim();
@@ -117,7 +119,7 @@ export class DeviceV2ManagementService {
 
     const response = await firstValueFrom(this.http.post<DeviceKeyCreateResponse>(
       API.DEVICE_V2.CREATE,
-      { name: normalizedName, deviceType: normalizedType },
+      { name: normalizedName, deviceType: normalizedType, ...(source ? { legacySource: legacySource(source) } : {}) },
       { headers: { 'Idempotency-Key': normalizedKey }, observe: 'response' },
     ));
     return this.body(response.body, response.status);

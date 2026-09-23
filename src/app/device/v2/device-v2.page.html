@@ -47,9 +47,18 @@
       </section>
     }
 
+    @if (legacyRecord; as source) {
+      <section class="notice">
+        <span>旧设备资料已保存；布局和参数恢复待适配，不自动覆盖当前配置。</span>
+        <a [routerLink]="legacyPath(source)">查看旧配置与未完成项</a>
+      </section>
+    }
+
     @if (!layout) {
       <section class="empty">
-        @if (waitingForCapabilities) {
+        @if (legacyRecord) {
+          <p>旧布局尚待适配，已保留来源配置。</p>
+        } @else if (waitingForCapabilities) {
           <ion-spinner name="crescent"></ion-spinner>
           <p>正在获取设备能力…</p>
         } @else {

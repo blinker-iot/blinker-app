@@ -1,3 +1,4 @@
+import { LegacySource, legacySource } from '../../model/legacy-import.model';
 import { Capacitor } from '@capacitor/core';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 
@@ -30,6 +31,10 @@ export interface WiFiProvKeyRotation {
 }
 
 export interface BleControllerCredential {
+  previousEnrollment?: BleControllerCredential;
+  ownerAccountId?: string;
+  legacySource?: LegacySource;
+  method2Confirmed?: boolean;
   source?: BleControllerCredentialSource;
   state: BleControllerCredentialState;
   logicalDeviceId: string;
@@ -61,6 +66,10 @@ export interface BleControllerCredentialStore {
 }
 
 interface StoredCredential {
+  previousEnrollment?: StoredCredential;
+  ownerAccountId?: string;
+  legacySource?: LegacySource;
+  method2Confirmed?: boolean;
   version: 5 | 6;
   authority: string;
   accountId: string;
@@ -150,18 +159,24 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
     const scope = this.currentScope();
     const prefix = scopedPrefix(scope);
     const output: string[] = [];
+    const replaced = new Set<string>();
     for (const storedKey of new Set(await SecureStorage.keys())) {
       if (!storedKey.startsWith(prefix)) continue;
       const logicalDeviceId = storedKey.slice(prefix.length);
       const encoded = await SecureStorage.getItem(storedKey);
       if (encoded === null) continue;
       const stored = parseStoredCredential(encoded, scope, logicalDeviceId);
+      let previous = stored.previousEnrollment;
+      while (previous) {
+        if (previous.logicalDeviceId !== logicalDeviceId) replaced.add(previous.logicalDeviceId);
+        previous = previous.previousEnrollment;
+      }
       if (stored.state === 'pending'
         && storedCredentialSource(stored) === 'enrollment') {
         output.push(logicalDeviceId);
       }
     }
-    return output.sort();
+    return output.filter(id => !replaced.has(id)).sort();
   }
 
   async replacePresenceKeys(
@@ -212,40 +227,49 @@ export class CapacitorBleControllerCredentialStore implements BleControllerCrede
     scope: DeviceV2AccountScope,
     credential: BleControllerCredential,
   ): Promise<void> {
-    validateCredential(credential);
-    const source = credential.source ?? 'enrollment';
-    const rotation = credential.keyRotation;
-    const stored: StoredCredential = {
-      version: credential.keyRotation ? 6 : 5,
-      authority: scope.authority,
-      accountId: scope.accountId,
-      source,
-      state: credential.state,
-      logicalDeviceId: credential.logicalDeviceId,
-      deviceInstanceId: base64UrlEncode(credential.deviceInstanceId),
-      accessEpoch: credential.accessEpoch,
-      controllerId: base64UrlEncode(credential.controllerId),
-      controllerSecret: base64UrlEncode(credential.controllerSecret),
-      credentialVersion: credential.credentialVersion,
-      permissions: credential.permissions,
-      cloudContext: credential.cloudContext && { credentialVersion: credential.cloudContext.credentialVersion,
-        locator: credential.cloudContext.locator },
-      keyRotation: rotation && { phase: rotation.phase, operationId: rotation.operationId,
-        previousContext: { credentialVersion: rotation.previousContext.credentialVersion, locator: rotation.previousContext.locator },
-        expectedAdmin: rotation.expectedAdmin && { accessEpoch: rotation.expectedAdmin.accessEpoch,
-          controllerId: rotation.expectedAdmin.controllerId } },
-      presenceKeys: credential.presenceKeys?.map(value => ({
-        state: value.state,
-        accessEpoch: value.accessEpoch,
-        version: value.version,
-        key: base64UrlEncode(value.key),
-      })),
-      intentId: base64UrlEncode(credential.intentId),
-      commitId: base64UrlEncode(credential.commitId),
-      receipt: base64UrlEncode(credential.receipt),
-    };
+    const stored = encodeStoredCredential(scope, credential);
     await SecureStorage.setItem(key(scope, credential.logicalDeviceId), JSON.stringify(stored));
   }
+}
+
+function encodeStoredCredential(scope: DeviceV2AccountScope, credential: BleControllerCredential): StoredCredential {
+  validateCredential(credential);
+  const source = credential.source ?? 'enrollment';
+  const rotation = credential.keyRotation;
+  const stored: StoredCredential = {
+    previousEnrollment: credential.previousEnrollment && encodeStoredCredential(scope, credential.previousEnrollment),
+    ownerAccountId: credential.ownerAccountId,
+    legacySource: credential.legacySource,
+    method2Confirmed: credential.method2Confirmed,
+    version: credential.keyRotation ? 6 : 5,
+    authority: scope.authority,
+    accountId: scope.accountId,
+    source,
+    state: credential.state,
+    logicalDeviceId: credential.logicalDeviceId,
+    deviceInstanceId: base64UrlEncode(credential.deviceInstanceId),
+    accessEpoch: credential.accessEpoch,
+    controllerId: base64UrlEncode(credential.controllerId),
+    controllerSecret: base64UrlEncode(credential.controllerSecret),
+    credentialVersion: credential.credentialVersion,
+    permissions: credential.permissions,
+    cloudContext: credential.cloudContext && { credentialVersion: credential.cloudContext.credentialVersion,
+      locator: credential.cloudContext.locator },
+    keyRotation: rotation && { phase: rotation.phase, operationId: rotation.operationId,
+      previousContext: { credentialVersion: rotation.previousContext.credentialVersion, locator: rotation.previousContext.locator },
+      expectedAdmin: rotation.expectedAdmin && { accessEpoch: rotation.expectedAdmin.accessEpoch,
+        controllerId: rotation.expectedAdmin.controllerId } },
+    presenceKeys: credential.presenceKeys?.map(value => ({
+      state: value.state,
+      accessEpoch: value.accessEpoch,
+      version: value.version,
+      key: base64UrlEncode(value.key),
+    })),
+    intentId: base64UrlEncode(credential.intentId),
+    commitId: base64UrlEncode(credential.commitId),
+    receipt: base64UrlEncode(credential.receipt),
+  };
+  return stored;
 }
 
 function key(scope: DeviceV2AccountScope, logicalDeviceId: string): string {
@@ -278,6 +302,12 @@ function parseStoredCredential(
     throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
   }
   const stored = parsed as StoredCredential;
+  validateStoredScope(stored, scope, logicalDeviceId);
+  return stored;
+}
+
+function validateStoredScope(stored: StoredCredential, scope: DeviceV2AccountScope, logicalDeviceId: string): void {
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
   if ((stored.version !== 5 && stored.version !== 6)
     || (stored.version === 6) !== (stored.keyRotation !== undefined)
     || stored.authority !== scope.authority
@@ -286,7 +316,9 @@ function parseStoredCredential(
     throw new Error('BLE_DIRECT_CREDENTIAL_CORRUPT');
   }
   storedCredentialSource(stored);
-  return stored;
+  if (stored.previousEnrollment !== undefined) {
+    validateStoredScope(stored.previousEnrollment, scope, stored.previousEnrollment?.logicalDeviceId);
+  }
 }
 
 function storedCredentialSource(stored: StoredCredential): BleControllerCredentialSource {
@@ -300,6 +332,10 @@ function storedCredentialSource(stored: StoredCredential): BleControllerCredenti
 function decodeStoredCredential(stored: StoredCredential): BleControllerCredential {
   const source = storedCredentialSource(stored);
   const credential: BleControllerCredential = {
+    previousEnrollment: stored.previousEnrollment && decodeStoredCredential(stored.previousEnrollment),
+    ownerAccountId: stored.ownerAccountId,
+    legacySource: stored.legacySource,
+    method2Confirmed: stored.method2Confirmed,
     source,
     state: stored.state,
     logicalDeviceId: stored.logicalDeviceId,
@@ -341,6 +377,15 @@ function validateCredential(credential: BleControllerCredential): void {
     logicalDevicePeerId(credential.logicalDeviceId);
   } catch {
     throw new Error('BLE_DIRECT_LOGICAL_DEVICE_ID_INVALID');
+  }
+  if (credential.previousEnrollment) validateCredential(credential.previousEnrollment);
+  if (credential.ownerAccountId !== undefined && (typeof credential.ownerAccountId !== 'string'
+    || !credential.ownerAccountId || credential.ownerAccountId.length > 128)) {
+    throw new Error('BLE_DIRECT_CREDENTIAL_INVALID');
+  }
+  if (credential.legacySource) legacySource(credential.legacySource);
+  if (credential.method2Confirmed !== undefined && typeof credential.method2Confirmed !== 'boolean') {
+    throw new Error('BLE_DIRECT_CREDENTIAL_INVALID');
   }
   const source = credential.source ?? 'enrollment';
   const validEvidence = source === 'wifiprov'
@@ -412,6 +457,7 @@ function validPresenceKeys(
 export function clearBleControllerCredentialSecrets(
   credential: BleControllerCredential,
 ): void {
+  if (credential.previousEnrollment) clearBleControllerCredentialSecrets(credential.previousEnrollment);
   credential.controllerSecret.fill(0);
   for (const presence of credential.presenceKeys ?? []) presence.key.fill(0);
 }

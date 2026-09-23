@@ -48,6 +48,13 @@ export function createProfileMenuGroups(
           route: '/share-manager',
         },
         {
+          id: 'legacy-import',
+          title: '旧设备迁入',
+          icon: 'fa-file-import',
+          value: '同步旧账号设备资料',
+          route: '/legacy-device-migration',
+        },
+        {
           id: 'selfhost',
           title: translate('PROFILE.SELF_HOSTED_SERVER'),
           icon: 'fa-server',
