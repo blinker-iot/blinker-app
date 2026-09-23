@@ -32,6 +32,7 @@ const startData = {
   scope: 'snsapi_userinfo', expires_in: 300,
 };
 const tokens = { access_token: 'access', refresh_token: 'refresh' };
+const pendingEmail = { status: 'needs_wechat_bind', pending_ticket: 'pending-email', expires_in: 300 };
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('WeChat native login', () => {
@@ -42,6 +43,8 @@ describe('WeChat native login', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(Wechat.isInstalled).mockResolvedValue({ value: true });
+    vi.mocked(Wechat.login).mockResolvedValue({ code: 'wechat-code', state: 'wechat-state' });
     localStorage.clear();
     vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
     vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('android');
@@ -93,22 +96,31 @@ describe('WeChat native login', () => {
     expect(SecureStorage.set).not.toHaveBeenCalled();
   }
 
-  it('retains an unbound 409 transaction and binds the same login after email authentication', async () => {
+  async function verifyEmail(): Promise<void> {
+    const login = service.loginWithEmailCode('person@example.com', '654321');
+    http.expectOne(API.AUTH.EMAIL_LOGIN).flush({ status: 200, data: pendingEmail });
+    await expect(login).resolves.toBe(false);
+    expect(service.emailNeedsWechatBinding).toBe(true);
+    expect(data.auth).toBeNull();
+    expect(SecureStorage.set).not.toHaveBeenCalled();
+  }
+
+  it('reuses an unbound WeChat authorization after email verification without saving a partial session', async () => {
     await attemptUnboundLogin();
-
-    const emailLogin = service.loginWithEmailCode('person@example.com', '654321');
-    http.expectOne(API.AUTH.EMAIL_LOGIN).flush({ status: 200, data: tokens });
-    await settle();
+    await verifyEmail();
+    const binding = service.bindWechatForLogin();
     const bind = http.expectOne(API.AUTH.WECHAT_MOBILE_BIND);
-    expect(data.auth).toMatchObject({ accessToken: 'access', refreshToken: 'refresh' });
-    expect(bind.request.method).toBe('POST');
-    expect(bind.request.body).toEqual({ login_id: startData.login_id });
-    expect(service.wechatNeedsBinding).toBe(true);
-    bind.flush({ status: 200, data: { bound: true } });
+    expect(bind.request.body).toEqual({
+      login_id: startData.login_id, pending_ticket: pendingEmail.pending_ticket, device_id: 'installation-1',
+    });
+    expect(data.auth).toBeNull();
+    bind.flush({ status: 200, data: tokens });
 
-    await expect(emailLogin).resolves.toBe(true);
+    await expect(binding).resolves.toBe('success');
+    expect(data.auth).toMatchObject({ accessToken: 'access', refreshToken: 'refresh' });
+    expect(service.emailNeedsWechatBinding).toBe(false);
     expect(service.wechatNeedsBinding).toBe(false);
-    expect(Wechat.login).toHaveBeenCalledExactlyOnceWith({ scope: startData.scope, state: startData.state });
+    expect(Wechat.login).toHaveBeenCalledOnce();
   });
 
   it('stores a normal WeChat login token pair without requesting a bind', async () => {
@@ -128,16 +140,101 @@ describe('WeChat native login', () => {
     http.expectNone(API.AUTH.WECHAT_MOBILE_BIND);
   });
 
-  it('does not bind an expired WeChat transaction after a successful email login', async () => {
+  it('authorizes again when a previous WeChat transaction expired, and rejects duplicate binding starts', async () => {
     await attemptUnboundLogin();
     vi.mocked(Date.now).mockReturnValue(1_000_000 + startData.expires_in * 1000);
+    await verifyEmail();
+    const binding = service.bindWechatForLogin();
+    await expect(service.bindWechatForLogin()).resolves.toBe('failed');
+    await settle();
+    http.expectOne(API.AUTH.WECHAT_MOBILE_START).flush({ status: 200, data: startData });
+    await settle();
+    const bind = http.expectOne(API.AUTH.WECHAT_MOBILE_BIND);
+    expect(bind.request.body).toEqual({
+      login_id: startData.login_id, code: 'wechat-code', state: startData.state,
+      pending_ticket: pendingEmail.pending_ticket, device_id: 'installation-1',
+    });
+    http.expectNone(API.AUTH.WECHAT_MOBILE_LOGIN);
+    bind.flush({ status: 200, data: tokens });
+    await expect(binding).resolves.toBe('success');
+    expect(Wechat.login).toHaveBeenCalledTimes(2);
+  });
 
-    const emailLogin = service.loginWithEmailCode('person@example.com', '654321');
-    http.expectOne(API.AUTH.EMAIL_LOGIN).flush({ status: 200, data: tokens });
-
-    await expect(emailLogin).resolves.toBe(true);
-    expect(service.wechatNeedsBinding).toBe(false);
-    expect(data.auth).toMatchObject({ accessToken: 'access', refreshToken: 'refresh' });
+  it('keeps email verification after cancellation and retries with fresh WeChat authorization', async () => {
+    await verifyEmail();
+    vi.mocked(Wechat.login).mockRejectedValueOnce({ code: 'WECHAT_USER_CANCELLED' });
+    const cancelled = service.bindWechatForLogin();
+    await settle();
+    http.expectOne(API.AUTH.WECHAT_MOBILE_START).flush({ status: 200, data: startData });
+    await expect(cancelled).resolves.toBe('cancelled');
+    expect(service.emailNeedsWechatBinding).toBe(true);
+    expect(data.auth).toBeNull();
     http.expectNone(API.AUTH.WECHAT_MOBILE_BIND);
+
+    const retry = service.bindWechatForLogin();
+    await settle();
+    http.expectOne(API.AUTH.WECHAT_MOBILE_START).flush({ status: 200, data: startData });
+    await settle();
+    http.expectOne(API.AUTH.WECHAT_MOBILE_BIND).flush({ status: 200, data: tokens });
+    await expect(retry).resolves.toBe('success');
+  });
+
+  it('expires email verification without authorizing WeChat or creating a session', async () => {
+    await verifyEmail();
+    vi.mocked(Date.now).mockReturnValue(1_300_000);
+    await expect(service.bindWechatForLogin()).resolves.toBe('expired');
+    expect(service.emailNeedsWechatBinding).toBe(false);
+    expect(data.auth).toBeNull();
+    expect(Wechat.login).not.toHaveBeenCalled();
+    http.expectNone(API.AUTH.WECHAT_MOBILE_START);
+  });
+
+  it.each([
+    ['AUTH_WECHAT_PENDING_LOGIN_EXPIRED', 'expired', false],
+    ['AUTH_WECHAT_ALREADY_BOUND', 'conflict', true],
+    ['NETWORK_ERROR', 'failed', true],
+  ])('handles %s without accepting a login session', async (code, result, remainsPending) => {
+    await attemptUnboundLogin();
+    await verifyEmail();
+    vi.spyOn(client, 'post').mockReturnValueOnce(throwError(() => new GatewayHttpError({
+      httpStatus: 409, code: code as string, message: 'Binding failed',
+    })));
+    await expect(service.bindWechatForLogin()).resolves.toBe(result);
+    expect(service.emailNeedsWechatBinding).toBe(remainsPending);
+    expect(data.auth).toBeNull();
+    expect(SecureStorage.set).not.toHaveBeenCalled();
+  });
+
+  it('does not complete a binding response after the user returns to email login', async () => {
+    await attemptUnboundLogin();
+    await verifyEmail();
+    const binding = service.bindWechatForLogin();
+    const bind = http.expectOne(API.AUTH.WECHAT_MOBILE_BIND);
+    service.cancelEmailWechatBinding();
+    bind.flush({ status: 200, data: tokens });
+    await expect(binding).resolves.toBe('failed');
+    expect(data.auth).toBeNull();
+    expect(service.emailNeedsWechatBinding).toBe(false);
+  });
+
+  it('does not accept a bound-only response in place of complete login tokens', async () => {
+    await attemptUnboundLogin();
+    await verifyEmail();
+    const binding = service.bindWechatForLogin();
+    http.expectOne(API.AUTH.WECHAT_MOBILE_BIND).flush({ status: 200, data: { bound: true } });
+    await expect(binding).resolves.toBe('failed');
+    expect(data.auth).toBeNull();
+    expect(service.emailNeedsWechatBinding).toBe(true);
+  });
+
+  it('explains unavailable WeChat without discarding the verified email', async () => {
+    await verifyEmail();
+    vi.mocked(Wechat.isInstalled).mockResolvedValue({ value: false });
+    await expect(service.bindWechatForLogin()).resolves.toBe('not_installed');
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+    await expect(service.bindWechatForLogin()).resolves.toBe('unsupported');
+    expect(service.emailNeedsWechatBinding).toBe(true);
+    expect(data.auth).toBeNull();
+    http.expectNone(API.AUTH.WECHAT_MOBILE_START);
   });
 });

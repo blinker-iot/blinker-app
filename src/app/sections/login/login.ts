@@ -49,6 +49,16 @@ export class LoginPage implements OnDestroy {
   showPoweredBy = true;
   githubStarting = false;
   wechatStarting = false;
+  emailStarting = false;
+  sendingCode = false;
+
+  get loginBusy(): boolean {
+    return this.githubStarting || this.wechatStarting || this.emailStarting || this.sendingCode;
+  }
+
+  get emailNeedsWechatBinding(): boolean {
+    return this.authService.emailNeedsWechatBinding;
+  }
 
   get wechatNeedsBinding(): boolean {
     return this.authService.wechatNeedsBinding;
@@ -92,22 +102,27 @@ export class LoginPage implements OnDestroy {
   // 发送验证码
   async sendCode(event: Event) {
     event.preventDefault();
+    if (this.loginBusy || this.countdown > 0 || this.emailNeedsWechatBinding) return;
 
     if (!this.email || !this.isValidEmail(this.email)) {
       this.noticeService.showToast('needValidEmail');
       return;
     }
 
-    await this.noticeService.showLoading('sendingCode');
-
-    const success = await this.authService.sendEmailCode(this.email);
-    await this.noticeService.hideLoading();
-
-    if (success) {
-      this.noticeService.showToast('codeSent');
-      this.startCountdown();
-    } else {
-      this.noticeService.showToast('sendCodeFailed');
+    this.sendingCode = true;
+    try {
+      await this.noticeService.showLoading('sendingCode');
+      if (await this.authService.sendEmailCode(this.email)) {
+        await this.noticeService.showToast('codeSent');
+        this.startCountdown();
+      } else {
+        await this.noticeService.showToast('sendCodeFailed');
+      }
+    } catch {
+      await this.noticeService.showToast('sendCodeFailed');
+    } finally {
+      this.sendingCode = false;
+      await this.noticeService.hideLoading();
     }
   }
 
@@ -123,6 +138,7 @@ export class LoginPage implements OnDestroy {
   }
 
   async login() {
+    if (this.loginBusy || this.emailNeedsWechatBinding) return;
     if (!this.email || !this.isValidEmail(this.email)) {
       this.noticeService.showToast('needValidEmail');
       return;
@@ -132,16 +148,61 @@ export class LoginPage implements OnDestroy {
       return;
     }
 
-    await this.noticeService.showLoading('login');
-
-    // 使用邮箱+验证码登录，如果账号不存在会自动创建
-    if (await this.authService.loginWithEmailCode(this.email, this.code)) {
-      await this.userService.getAllInfo();
-      await this.noticeService.hideLoading();
-      this.returnAfterLogin();
-    } else {
+    this.emailStarting = true;
+    try {
+      await this.noticeService.showLoading('login');
+      if (await this.authService.loginWithEmailCode(this.email, this.code)) {
+        await this.userService.getAllInfo();
+        this.returnAfterLogin();
+      } else if (this.emailNeedsWechatBinding) {
+        this.code = '';
+      } else {
+        await this.noticeService.showToast('emailLoginFailed');
+      }
+    } catch {
+      await this.noticeService.showToast('emailLoginFailed');
+    } finally {
+      this.emailStarting = false;
       await this.noticeService.hideLoading();
     }
+  }
+
+  async bindWechatForLogin() {
+    if (this.loginBusy || !this.emailNeedsWechatBinding) return;
+    this.wechatStarting = true;
+    try {
+      await this.noticeService.showLoading('wechatBinding');
+      const result = await this.authService.bindWechatForLogin();
+      if (result === 'success') {
+        await this.userService.getAllInfo();
+        this.returnAfterLogin();
+        return;
+      }
+      if (result === 'expired') {
+        this.authService.cancelEmailWechatBinding();
+        this.code = '';
+      }
+      const messages = {
+        cancelled: 'wechatBindingCancelled',
+        not_installed: 'wechatNotInstalled',
+        unsupported: 'wechatNativeOnly',
+        expired: 'emailBindingExpired',
+        conflict: 'wechatBindingConflict',
+        failed: 'wechatBindingFailed',
+      };
+      await this.noticeService.showToast(messages[result]);
+    } catch {
+      await this.noticeService.showToast('wechatBindingFailed');
+    } finally {
+      this.wechatStarting = false;
+      await this.noticeService.hideLoading();
+    }
+  }
+
+  cancelEmailWechatBinding(): void {
+    if (this.loginBusy) return;
+    this.authService.cancelEmailWechatBinding();
+    this.code = '';
   }
 
   onFocus() {
@@ -165,17 +226,19 @@ export class LoginPage implements OnDestroy {
   }
 
   async loginWithGithub() {
-    if (this.githubStarting) return;
+    if (this.loginBusy || this.emailNeedsWechatBinding) return;
     if (!this.authService.githubLoginSupported) {
       await this.noticeService.showToast('githubNativeOnly');
       return;
     }
     this.githubStarting = true;
-    await this.noticeService.showLoading('login');
     try {
+      await this.noticeService.showLoading('login');
       if (!await this.authService.loginWithGithub()) {
         await this.noticeService.showToast('githubLoginFailed');
       }
+    } catch {
+      await this.noticeService.showToast('githubLoginFailed');
     } finally {
       this.githubStarting = false;
       await this.noticeService.hideLoading();
@@ -183,25 +246,23 @@ export class LoginPage implements OnDestroy {
   }
 
   async loginWithWechat() {
-    if (this.wechatStarting) return;
+    if (this.loginBusy || this.emailNeedsWechatBinding) return;
     this.wechatStarting = true;
     try {
       await this.noticeService.showLoading('login');
       if (await this.authService.loginWithWechat()) {
         await this.userService.getAllInfo();
-        await this.noticeService.hideLoading();
         this.returnAfterLogin();
       } else {
-        await this.noticeService.hideLoading();
         await this.noticeService.showToast(
           this.wechatNeedsBinding ? 'wechatNeedsBinding' : 'wechatLoginFailed',
         );
       }
-    } catch (error) {
-      await this.noticeService.hideLoading();
+    } catch {
       await this.noticeService.showToast('wechatLoginFailed');
     } finally {
       this.wechatStarting = false;
+      await this.noticeService.hideLoading();
     }
   }
 }

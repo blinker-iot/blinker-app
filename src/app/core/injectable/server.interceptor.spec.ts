@@ -229,6 +229,24 @@ describe('ServerInterceptor', () => {
     request.flush({ status: 200, data: {} });
   });
 
+  it('binds a pending login anonymously without refreshing an existing session on expiry', () => {
+    let received: unknown;
+    http.post(API.AUTH.WECHAT_MOBILE_BIND, { login_id: 'wechat-1', pending_ticket: 'pending-1' }).subscribe({
+      error: error => received = error,
+    });
+    const request = httpTesting.expectOne(API.AUTH.WECHAT_MOBILE_BIND);
+    expect(request.request.headers.has('Authorization')).toBe(false);
+    request.flush({ errorCode: 'AUTH_WECHAT_PENDING_LOGIN_EXPIRED' }, { status: 401, statusText: 'Unauthorized' });
+    httpTesting.expectNone(API.AUTH.REFRESH);
+    expect(received).toMatchObject({ code: 'AUTH_WECHAT_PENDING_LOGIN_EXPIRED' });
+    expect(dataService.auth?.accessToken).toBe('old-access');
+
+    http.post(API.AUTH.WECHAT_MOBILE_BIND, { login_id: 'wechat-2' }).subscribe();
+    const authenticated = httpTesting.expectOne(API.AUTH.WECHAT_MOBILE_BIND);
+    expect(authenticated.request.headers.get('Authorization')).toBe('Bearer old-access');
+    authenticated.flush({ status: 200, data: { bound: true } });
+  });
+
   it('adds App auth only to Device V2 management endpoints', () => {
     const context = {
       logicalDeviceId: 'device/a b',

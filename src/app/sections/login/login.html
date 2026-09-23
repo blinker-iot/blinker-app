@@ -22,6 +22,29 @@
       <h2 class="welcome-title">{{'ACCOUNT.LOGIN' | translate}}</h2>
     </div>
 
+    @if (emailNeedsWechatBinding) {
+    <div class="form-box wechat-binding">
+      <div class="login-tip" role="status">
+        {{'ACCOUNT.EMAIL_WECHAT_BIND_TIP' | translate}}
+      </div>
+      <button
+        type="button"
+        class="login-btn"
+        [disabled]="loginBusy"
+        (click)="bindWechatForLogin()"
+      >
+        {{'ACCOUNT.BIND_WECHAT_AND_LOGIN' | translate}}
+      </button>
+      <button
+        type="button"
+        class="back-to-email-btn"
+        [disabled]="loginBusy"
+        (click)="cancelEmailWechatBinding()"
+      >
+        {{'ACCOUNT.BACK_TO_EMAIL' | translate}}
+      </button>
+    </div>
+    } @else {
     <form class="form-box" (ngSubmit)="login()" #formBox="ngForm">
       <div class="input-box">
         <div class="item-img">
@@ -31,6 +54,7 @@
           type="email"
           [(ngModel)]="email"
           name="email"
+          [disabled]="loginBusy"
           placeholder="{{'ACCOUNT.EMAIL' | translate}}"
           (focus)="onFocus()"
           (blur)="onBlur()"
@@ -44,6 +68,7 @@
           type="text"
           [(ngModel)]="code"
           name="code"
+          [disabled]="loginBusy"
           placeholder="{{'ACCOUNT.VERIFY_CODE' | translate}}"
           maxlength="6"
           (focus)="onFocus()"
@@ -52,7 +77,7 @@
         <button
           type="button"
           class="send-code-btn"
-          [disabled]="countdown > 0"
+          [disabled]="countdown > 0 || loginBusy"
           (click)="sendCode($event)"
         >
           @if (countdown === 0) {
@@ -75,7 +100,7 @@
           {{'ACCOUNT.PRIVACY_POLICY' | translate}}
         </span>
       </div>
-      <button type="submit" class="login-btn">
+      <button type="submit" class="login-btn" [disabled]="loginBusy">
         {{'ACCOUNT.LOGIN' | translate}}
       </button>
     </form>
@@ -89,7 +114,7 @@
           type="button"
           class="social-btn github-btn"
           (click)="loginWithGithub()"
-          [disabled]="githubStarting"
+          [disabled]="loginBusy"
           aria-label="GitHub"
         >
           <i class="fa-brands fa-github"></i>
@@ -98,12 +123,12 @@
           type="button"
           class="social-btn wechat-btn"
           (click)="loginWithWechat()"
-          [disabled]="wechatStarting"
+          [disabled]="loginBusy"
         >
           <i class="fa-brands fa-weixin"></i>
         </button>
       </div>
     </div>
-
+    }
   </div>
 </ion-content>

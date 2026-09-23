@@ -23,6 +23,9 @@
     "SEND_CODE": "コードを送信",
     "LOGIN_TIP": "未登録のメールアドレスではアカウントが自動的に作成されます",
     "WECHAT_BIND_TIP": "WeChat の認証が完了しました。この認証の有効期限内に、メールの確認コードでログインまたは登録して、アカウントを連携してください。",
+    "EMAIL_WECHAT_BIND_TIP": "メールの確認が完了しました。WeChat を連携してログインを完了してください。",
+    "BIND_WECHAT_AND_LOGIN": "WeChat を連携してログイン",
+    "BACK_TO_EMAIL": "メールの確認に戻る",
     "LOGIN_AGREEMENT_PREFIX": "ログインすると、以下に同意したものとみなされます：",
     "OR_LOGIN_WITH": "または以下でログイン"
   },

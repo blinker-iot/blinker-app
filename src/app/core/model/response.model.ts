@@ -32,6 +32,12 @@ export interface AuthTokenResponseData {
   token_type?: string;
 }
 
+export interface WechatBindingRequiredData {
+  status: 'needs_wechat_bind';
+  pending_ticket: string;
+  expires_in: number;
+}
+
 export interface GatewaySubscriptionPlan {
   name: string;
   display_name: string;

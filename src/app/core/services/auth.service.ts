@@ -16,6 +16,7 @@ import {
   BlinkerResponse,
   CurrentUser,
   GatewayHttpError,
+  WechatBindingRequiredData,
 } from '../model/response.model';
 import { sha256 } from '../functions/func';
 import { AuthData } from '../model/data.model';
@@ -48,8 +49,11 @@ interface WechatStartData {
   expires_in: number;
 }
 
-interface WechatBindData {
-  bound: boolean;
+export type WechatBindingResult = 'success' | 'cancelled' | 'not_installed' | 'unsupported' | 'expired' | 'conflict' | 'failed';
+
+interface PendingEmailWechatBind {
+  ticket: string;
+  expiresAt: number;
 }
 
 interface PendingWechatBind {
@@ -61,6 +65,8 @@ interface PendingWechatBind {
 export class AuthService {
   private emailCodeRequest: Promise<boolean> | null = null;
   private pendingWechatBind: PendingWechatBind | null = null;
+  private pendingEmailWechatBind: PendingEmailWechatBind | null = null;
+  private wechatBindingRunning = false;
   private githubStarting = false;
   private githubCallbackRunning = false;
   private githubLoginGeneration = 0;
@@ -83,6 +89,15 @@ export class AuthService {
 
   get wechatNeedsBinding(): boolean {
     return !!this.getPendingWechatBind();
+  }
+
+  get emailNeedsWechatBinding(): boolean {
+    return this.pendingEmailWechatBind !== null;
+  }
+
+  cancelEmailWechatBinding(): void {
+    this.pendingEmailWechatBind = null;
+    this.pendingWechatBind = null;
   }
 
   constructor(
@@ -197,9 +212,12 @@ export class AuthService {
   }
 
   async loginWithEmailCode(email: string, code: string): Promise<boolean> {
+    if (this.wechatBindingRunning) return false;
+    this.pendingEmailWechatBind = null;
+    const epoch = this.dataService.sessionEpoch;
     try {
       const response = await firstValueFrom(
-        this.http.post<AilyResponse<AuthTokenResponseData>>(
+        this.http.post<AilyResponse<AuthTokenResponseData | WechatBindingRequiredData>>(
           API.AUTH.EMAIL_LOGIN,
           {
             email,
@@ -208,14 +226,101 @@ export class AuthService {
           },
         ),
       );
-      const tokens = this.toTokenPair(response?.data);
+      if (this.dataService.sessionEpoch !== epoch) return false;
+      const data = response?.data;
+      if (data && 'status' in data) {
+        if (
+          data.status !== 'needs_wechat_bind' || !data.pending_ticket?.trim() ||
+          !Number.isInteger(data.expires_in) || data.expires_in <= 0
+        ) return false;
+        await this.clearPendingGithubLogin();
+        if (this.dataService.sessionEpoch !== epoch) return false;
+        this.pendingEmailWechatBind = {
+          ticket: data.pending_ticket,
+          expiresAt: Date.now() + data.expires_in * 1000,
+        };
+        return false;
+      }
+      const tokens = data && 'access_token' in data ? this.toTokenPair(data) : null;
       if (!tokens) return false;
       await this.clearPendingGithubLogin();
+      if (this.dataService.sessionEpoch !== epoch) return false;
       if (!await this.dataService.setAuthData(tokens)) return false;
-      await this.bindPendingWechatIfPossible();
+      this.cancelEmailWechatBinding();
       return true;
     } catch {
       return false;
+    }
+  }
+
+  async bindWechatForLogin(): Promise<WechatBindingResult> {
+    if (this.wechatBindingRunning) return 'failed';
+    const pending = this.pendingEmailWechatBind;
+    if (!pending || pending.expiresAt <= Date.now()) {
+      this.cancelEmailWechatBinding();
+      return 'expired';
+    }
+    const platform = Capacitor.getPlatform();
+    if (!Capacitor.isNativePlatform() || (platform !== 'android' && platform !== 'ios')) {
+      return 'unsupported';
+    }
+    const epoch = this.dataService.sessionEpoch;
+    this.wechatBindingRunning = true;
+    try {
+      const deviceId = this.dataService.getInstallationId();
+      const verified = this.getPendingWechatBind();
+      let authorization: { login_id: string; code?: string; state?: string };
+      if (verified) {
+        authorization = { login_id: verified.loginId };
+      } else {
+        if (!(await Wechat.isInstalled()).value) return 'not_installed';
+        const response = await firstValueFrom(
+          this.http.post<AilyResponse<WechatStartData>>(API.AUTH.WECHAT_MOBILE_START, {
+            device_id: deviceId, platform,
+          }),
+        );
+        const start = response?.data;
+        if (!this.isValidWechatStart(start)) return 'failed';
+        const expiresAt = Date.now() + start.expires_in * 1000;
+        const result = await Wechat.login({ scope: start.scope, state: start.state });
+        if (!result?.code || result.state !== start.state || Date.now() >= expiresAt) return 'failed';
+        authorization = { login_id: start.login_id, code: result.code, state: result.state };
+      }
+      if (this.pendingEmailWechatBind !== pending || this.dataService.sessionEpoch !== epoch) return 'failed';
+      if (pending.expiresAt <= Date.now()) {
+        this.cancelEmailWechatBinding();
+        return 'expired';
+      }
+      const response = await firstValueFrom(
+        this.http.post<AilyResponse<AuthTokenResponseData>>(API.AUTH.WECHAT_MOBILE_BIND, {
+          ...authorization, pending_ticket: pending.ticket, device_id: deviceId,
+        }),
+      );
+      if (this.pendingEmailWechatBind !== pending || this.dataService.sessionEpoch !== epoch) return 'failed';
+      const tokens = this.toTokenPair(response?.data);
+      if (!tokens) return 'failed';
+      await this.clearPendingGithubLogin();
+      if (this.pendingEmailWechatBind !== pending || this.dataService.sessionEpoch !== epoch) return 'failed';
+      if (!await this.dataService.setAuthData(tokens)) return 'failed';
+      this.cancelEmailWechatBinding();
+      return 'success';
+    } catch (error) {
+      const code = error && typeof error === 'object' && 'code' in error ? error.code : '';
+      if (code === 'AUTH_WECHAT_PENDING_LOGIN_EXPIRED') {
+        this.cancelEmailWechatBinding();
+        return 'expired';
+      }
+      if (code === 'AUTH_WECHAT_ALREADY_BOUND' || code === 'AUTH_WECHAT_USER_ALREADY_BOUND') {
+        this.pendingWechatBind = null;
+        return 'conflict';
+      }
+      if (code === 'WECHAT_USER_CANCELLED' || code === 'WECHAT_AUTH_DENIED') return 'cancelled';
+      if (code === 'WECHAT_NOT_INSTALLED') return 'not_installed';
+      // A verified transaction can expire while the email step is open; retry with fresh authorization.
+      this.pendingWechatBind = null;
+      return 'failed';
+    } finally {
+      this.wechatBindingRunning = false;
     }
   }
 
@@ -239,6 +344,7 @@ export class AuthService {
   }
 
   async loginWithWechat(): Promise<boolean> {
+    if (this.emailNeedsWechatBinding || this.wechatBindingRunning) return false;
     const platform = Capacitor.getPlatform();
     if (
       !Capacitor.isNativePlatform() ||
@@ -328,7 +434,7 @@ export class AuthService {
     expectedEpoch = this.dataService.sessionEpoch,
   ): Promise<boolean> {
     if (this.dataService.sessionEpoch !== expectedEpoch) return false;
-    this.pendingWechatBind = null;
+    this.cancelEmailWechatBinding();
     this.dataService.authDataExpire.next(true);
     await this.dataService.removeAuthData();
     if (
@@ -524,22 +630,6 @@ export class AuthService {
       return response?.status === 200;
     } catch {
       return false;
-    }
-  }
-
-  private async bindPendingWechatIfPossible(): Promise<void> {
-    const pending = this.getPendingWechatBind();
-    if (!pending) return;
-    try {
-      const response = await firstValueFrom(
-        this.http.post<AilyResponse<WechatBindData>>(
-          API.AUTH.WECHAT_MOBILE_BIND,
-          { login_id: pending.loginId },
-        ),
-      );
-      if (response?.data?.bound === true) this.pendingWechatBind = null;
-    } catch {
-      // Email authentication remains valid even if the optional bind fails.
     }
   }
 

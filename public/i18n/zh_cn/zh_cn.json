@@ -23,6 +23,9 @@
     "SEND_CODE": "发送验证码",
     "LOGIN_TIP": "使用未注册的邮箱将自动创建账号",
     "WECHAT_BIND_TIP": "微信授权成功，请在本次授权有效期内使用邮箱验证码登录或注册，完成账号关联",
+    "EMAIL_WECHAT_BIND_TIP": "邮箱验证成功，请绑定微信后完成登录",
+    "BIND_WECHAT_AND_LOGIN": "绑定微信并登录",
+    "BACK_TO_EMAIL": "返回邮箱验证",
     "LOGIN_AGREEMENT_PREFIX": "登录即表示同意",
     "OR_LOGIN_WITH": "或使用以下方式登录"
   },

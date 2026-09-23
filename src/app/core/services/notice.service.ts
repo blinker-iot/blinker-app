@@ -80,7 +80,7 @@ export class NoticeService {
 
   async showLoading(content) {
     console.log('showLoading');
-    this.hideLoading();
+    await this.hideLoading();
     this.loading = await this.loadingCtrl.create(this.loadingMess[content])
     await this.loading.present();
     if (content == "connect" || content == "login" || content == "load")
@@ -95,6 +95,10 @@ export class NoticeService {
   }
 
   async hideLoading() {
+    if (typeof this.loadTimer != 'undefined') {
+      window.clearTimeout(this.loadTimer);
+      this.loadTimer = undefined;
+    }
     if (typeof this.loading != 'undefined')
       await this.loading.dismiss();
     return
@@ -113,6 +117,12 @@ export class NoticeService {
     },
     "login": {
       message: `登录中...`
+    },
+    "wechatBinding": {
+      message: `等待微信授权...`
+    },
+    "sendingCode": {
+      message: `正在发送验证码...`
     },
     "cancelAccount": {
       message: `正在验证并注销账号...`
@@ -156,6 +166,34 @@ export class NoticeService {
   }
 
   mess = {
+    emailLoginFailed: {
+      message: '邮箱登录失败，请检查验证码或重新获取后重试',
+      type: 'error'
+    },
+    wechatBindingCancelled: {
+      message: '已取消微信授权，请完成微信绑定后登录',
+      type: 'warn'
+    },
+    wechatNotInstalled: {
+      message: '请先安装微信，再返回完成绑定',
+      type: 'warn'
+    },
+    wechatNativeOnly: {
+      message: '请在 Android 或 iOS App 中完成微信绑定',
+      type: 'warn'
+    },
+    emailBindingExpired: {
+      message: '邮箱验证已过期，请重新获取验证码并验证邮箱',
+      type: 'warn'
+    },
+    wechatBindingConflict: {
+      message: '微信或邮箱账号已存在其他绑定，请使用原绑定账号登录，或更换账号后重试',
+      type: 'warn'
+    },
+    wechatBindingFailed: {
+      message: '微信绑定未完成，请重试',
+      type: 'error'
+    },
     wechatNeedsBinding: {
       message: '微信授权成功，请在本次授权有效期内使用邮箱验证码登录或注册，完成账号关联',
       type: 'warn'

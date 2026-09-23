@@ -23,6 +23,9 @@
     "SEND_CODE": "Send Code",
     "LOGIN_TIP": "Unregistered email will automatically create an account",
     "WECHAT_BIND_TIP": "WeChat authorization succeeded. While this authorization is valid, sign in or register with an email verification code to link your account.",
+    "EMAIL_WECHAT_BIND_TIP": "Email verified. Link WeChat to complete sign-in.",
+    "BIND_WECHAT_AND_LOGIN": "Link WeChat and sign in",
+    "BACK_TO_EMAIL": "Back to email verification",
     "LOGIN_AGREEMENT_PREFIX": "By logging in, you agree to the",
     "OR_LOGIN_WITH": "Or login with"
   },

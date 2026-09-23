@@ -110,7 +110,7 @@ export class ServerInterceptor implements HttpInterceptor {
         if (
           error instanceof HttpErrorResponse &&
           error.status === 401 &&
-          this.isProtected(prepared.url) &&
+          this.isProtected(prepared.url, prepared.body) &&
           !this.isAccountDeletionTokenMissing(prepared.url, error) &&
           !prepared.context.get(REQUEST_RETRIED) &&
           !!this.dataService.auth?.refreshToken
@@ -184,7 +184,7 @@ export class ServerInterceptor implements HttpInterceptor {
       : this.createRequestId();
     headers = headers.set('X-Request-ID', requestId);
 
-    if (this.isPublic(request.url)) {
+    if (this.isPublic(request.url, request.body)) {
       headers = headers.delete('Authorization');
     } else {
       const auth = this.dataService.auth;
@@ -453,7 +453,8 @@ export class ServerInterceptor implements HttpInterceptor {
     return new GatewayHttpError(normalized);
   }
 
-  private isPublic(url: string): boolean {
+  private isPublic(url: string, body?: unknown): boolean {
+    if (url === API.AUTH.WECHAT_MOBILE_BIND && this.isRecord(body) && body['pending_ticket']) return true;
     return [
       API.AUTH.ALTCHA_CHALLENGE,
       API.AUTH.EMAIL_CODE,
@@ -466,8 +467,8 @@ export class ServerInterceptor implements HttpInterceptor {
     ].includes(url as never);
   }
 
-  private isProtected(url: string): boolean {
-    if (this.isPublic(url)) return false;
+  private isProtected(url: string, body?: unknown): boolean {
+    if (this.isPublic(url, body)) return false;
     return url !== API.FEEDBACK.SUBMIT && url !== API.FEEDBACK.UPLOAD_IMAGE;
   }
 

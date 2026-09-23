@@ -13,10 +13,15 @@ import { LoginPage } from './login';
 
 describe('LoginPage login', () => {
   const bindTip = 'WeChat authorization succeeded. Sign in with email to link your account.';
+  const emailBindTip = 'Email verified. Link WeChat to complete sign-in.';
   let fixture: ComponentFixture<LoginPage>;
   let page: LoginPage;
   let auth: {
     wechatNeedsBinding: boolean;
+    emailNeedsWechatBinding: boolean;
+    bindWechatForLogin: ReturnType<typeof vi.fn>;
+    cancelEmailWechatBinding: ReturnType<typeof vi.fn>;
+    sendEmailCode: ReturnType<typeof vi.fn>;
     loginWithWechat: ReturnType<typeof vi.fn>;
     githubLoginSupported: boolean;
     loginWithGithub: ReturnType<typeof vi.fn>;
@@ -34,6 +39,12 @@ describe('LoginPage login', () => {
   beforeEach(async () => {
     auth = {
       wechatNeedsBinding: false,
+      emailNeedsWechatBinding: false,
+      bindWechatForLogin: vi.fn().mockResolvedValue('failed'),
+      cancelEmailWechatBinding: vi.fn().mockImplementation(() => {
+        auth.emailNeedsWechatBinding = false;
+      }),
+      sendEmailCode: vi.fn().mockResolvedValue(true),
       loginWithWechat: vi.fn().mockResolvedValue(false),
       githubLoginSupported: true,
       loginWithGithub: vi.fn().mockResolvedValue(false),
@@ -66,6 +77,9 @@ describe('LoginPage login', () => {
       ACCOUNT: {
         LOGIN_TIP: 'Unregistered email will automatically create an account.',
         WECHAT_BIND_TIP: bindTip,
+        EMAIL_WECHAT_BIND_TIP: emailBindTip,
+        BIND_WECHAT_AND_LOGIN: 'Link WeChat and sign in',
+        BACK_TO_EMAIL: 'Back to email verification',
       },
     });
     translate.use('en');
@@ -117,10 +131,21 @@ describe('LoginPage login', () => {
 
     const login = page.loginWithWechat();
     await page.loginWithWechat();
+    page.email = 'test@example.com';
+    page.code = '123456';
+    await page.login();
+    await page.loginWithGithub();
+    await page.sendCode(new Event('click'));
     await vi.waitFor(() => expect(auth.loginWithWechat).toHaveBeenCalledOnce());
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.wechat-btn').disabled).toBe(true);
+    expect(fixture.nativeElement.querySelector('.github-btn').disabled).toBe(true);
+    expect(fixture.nativeElement.querySelector('.login-btn').disabled).toBe(true);
+    expect(fixture.nativeElement.querySelector('.send-code-btn').disabled).toBe(true);
+    expect(auth.loginWithEmailCode).not.toHaveBeenCalled();
+    expect(auth.loginWithGithub).not.toHaveBeenCalled();
+    expect(auth.sendEmailCode).not.toHaveBeenCalled();
 
     finishLogin(true);
     await login;
@@ -157,5 +182,136 @@ describe('LoginPage login', () => {
     expect(auth.loginWithEmailCode).toHaveBeenCalledExactlyOnceWith('test@example.com', '123456');
     expect(getAllInfo).toHaveBeenCalledOnce();
     expect(navigateRoot).toHaveBeenCalledExactlyOnceWith('/share-invitation');
+  });
+  it('requires WeChat binding after email verification and hides other login entries', async () => {
+    auth.loginWithEmailCode.mockImplementation(async () => {
+      auth.emailNeedsWechatBinding = true;
+      return false;
+    });
+    page.email = 'test@example.com';
+    page.code = '123456';
+
+    await page.login();
+    fixture.detectChanges();
+    await page.loginWithWechat();
+    await page.loginWithGithub();
+    await page.login();
+
+    expect(fixture.nativeElement.querySelector('[role="status"]').textContent.trim()).toBe(emailBindTip);
+    expect(fixture.nativeElement.querySelector('form')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.social-login')).toBeNull();
+    expect(auth.loginWithWechat).not.toHaveBeenCalled();
+    expect(auth.loginWithGithub).not.toHaveBeenCalled();
+    expect(auth.loginWithEmailCode).toHaveBeenCalledOnce();
+    expect(page.code).toBe('');
+    expect(getAllInfo).not.toHaveBeenCalled();
+    expect(navigateRoot).not.toHaveBeenCalled();
+    expect(notice.showToast).not.toHaveBeenCalled();
+    expect(notice.hideLoading).toHaveBeenCalledOnce();
+  });
+
+  it.each(['false', 'rejected'])('reports a %s email login failure and clears loading', async (result) => {
+    if (result === 'rejected') auth.loginWithEmailCode.mockRejectedValue(new Error('Login failed'));
+    page.email = 'test@example.com';
+    page.code = '123456';
+
+    await page.login();
+
+    expect(notice.showToast).toHaveBeenCalledExactlyOnceWith('emailLoginFailed');
+    expect(notice.hideLoading).toHaveBeenCalledOnce();
+    expect(page.loginBusy).toBe(false);
+    expect(navigateRoot).not.toHaveBeenCalled();
+  });
+
+  it('finishes binding once and returns to the pending share invitation', async () => {
+    auth.emailNeedsWechatBinding = true;
+    shareInvitation.hasPending = true;
+    let finishBinding!: (value: string) => void;
+    auth.bindWechatForLogin.mockReturnValue(new Promise<string>((resolve) => {
+      finishBinding = resolve;
+    }));
+
+    const binding = page.bindWechatForLogin();
+    await page.bindWechatForLogin();
+    page.cancelEmailWechatBinding();
+    await vi.waitFor(() => expect(auth.bindWechatForLogin).toHaveBeenCalledOnce());
+    fixture.detectChanges();
+
+    expect(notice.showLoading).toHaveBeenCalledExactlyOnceWith('wechatBinding');
+    expect(fixture.nativeElement.querySelector('.wechat-binding .login-btn').disabled).toBe(true);
+    expect(fixture.nativeElement.querySelector('.back-to-email-btn').disabled).toBe(true);
+    expect(auth.cancelEmailWechatBinding).not.toHaveBeenCalled();
+    finishBinding('success');
+    await binding;
+
+    expect(getAllInfo).toHaveBeenCalledOnce();
+    expect(navigateRoot).toHaveBeenCalledExactlyOnceWith('/share-invitation');
+    expect(notice.showToast).not.toHaveBeenCalled();
+    expect(notice.hideLoading).toHaveBeenCalledOnce();
+    expect(page.loginBusy).toBe(false);
+  });
+
+  it.each([
+    ['cancelled', 'wechatBindingCancelled'],
+    ['not_installed', 'wechatNotInstalled'],
+    ['unsupported', 'wechatNativeOnly'],
+    ['conflict', 'wechatBindingConflict'],
+    ['failed', 'wechatBindingFailed'],
+  ])('keeps the binding step available after %s', async (result, message) => {
+    auth.emailNeedsWechatBinding = true;
+    auth.bindWechatForLogin.mockResolvedValue(result);
+
+    await page.bindWechatForLogin();
+    fixture.detectChanges();
+
+    expect(notice.showToast).toHaveBeenCalledExactlyOnceWith(message);
+    expect(fixture.nativeElement.querySelector('.wechat-binding')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.wechat-binding .login-btn').disabled).toBe(false);
+    expect(auth.cancelEmailWechatBinding).not.toHaveBeenCalled();
+    expect(getAllInfo).not.toHaveBeenCalled();
+    expect(navigateRoot).not.toHaveBeenCalled();
+    expect(notice.hideLoading).toHaveBeenCalledOnce();
+  });
+
+  it('returns to email verification when the binding ticket expires', async () => {
+    auth.emailNeedsWechatBinding = true;
+    auth.bindWechatForLogin.mockResolvedValue('expired');
+    page.email = 'test@example.com';
+    page.code = '123456';
+
+    await page.bindWechatForLogin();
+    fixture.detectChanges();
+
+    expect(auth.cancelEmailWechatBinding).toHaveBeenCalledOnce();
+    expect(notice.showToast).toHaveBeenCalledExactlyOnceWith('emailBindingExpired');
+    expect(page.email).toBe('test@example.com');
+    expect(page.code).toBe('');
+    expect(fixture.nativeElement.querySelector('input[type="email"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.wechat-binding')).toBeNull();
+  });
+
+  it('clears the ticket and verification code when returning to email', () => {
+    auth.emailNeedsWechatBinding = true;
+    page.code = '123456';
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('.back-to-email-btn').click();
+    fixture.detectChanges();
+
+    expect(auth.cancelEmailWechatBinding).toHaveBeenCalledOnce();
+    expect(page.code).toBe('');
+    expect(fixture.nativeElement.querySelector('form')).not.toBeNull();
+  });
+
+  it('clears loading after a send-code error', async () => {
+    auth.sendEmailCode.mockRejectedValue(new Error('Network failed'));
+    page.email = 'test@example.com';
+
+    await page.sendCode(new Event('click'));
+
+    expect(notice.showToast).toHaveBeenCalledExactlyOnceWith('sendCodeFailed');
+    expect(notice.hideLoading).toHaveBeenCalledOnce();
+    expect(page.loginBusy).toBe(false);
+    expect(page.countdown).toBe(0);
   });
 });
