@@ -24,6 +24,79 @@
       (itemSelected)="selectMenuItem($event)"
     ></app-menu-list>
 
+    @if (editingEmail) {
+    <form class="email-editor" (ngSubmit)="bindEmail()">
+      <h2>{{ emailIsVirtual ? '更换为自己的邮箱' : '更换邮箱' }}</h2>
+      @if (emailIsVirtual) {
+      <p>虚拟邮箱无法接收邮件，只需验证你填写的新邮箱，无需验证原邮箱。</p>
+      } @else if (requiresCurrentEmailVerification) {
+      <p>请验证原邮箱和新邮箱。修改新邮箱后，需要重新发送两封验证码邮件。</p>
+      } @else {
+      <p>当前账号尚未设置邮箱，只需验证你填写的新邮箱。</p>
+      }
+      <p>更换后账号、微信绑定和设备保持不变，需重新登录。</p>
+      <label for="binding-email">新邮箱</label>
+      <input
+        id="binding-email"
+        type="email"
+        name="newEmail"
+        autocomplete="email"
+        placeholder="请输入可以接收邮件的邮箱"
+        [ngModel]="newEmail"
+        (ngModelChange)="changeNewEmail($event)"
+        [disabled]="emailBusy"
+        required
+      />
+      @if (requiresCurrentEmailVerification) {
+      <label for="current-email-code">原邮箱验证码</label>
+      <p>原邮箱：{{ draftEmail }}</p>
+      <div class="email-code-row">
+        <input
+          id="current-email-code"
+          type="text"
+          name="currentEmailCode"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="6"
+          placeholder="6 位验证码"
+          [(ngModel)]="currentEmailCode"
+          [disabled]="emailBusy"
+          required
+        />
+        <button
+          type="button"
+          [disabled]="emailBusy || currentEmailCodeCountdown > 0"
+          (click)="sendEmailCode('current')"
+        >{{ currentEmailCodeCountdown > 0 ? currentEmailCodeCountdown + 's' : sendingCurrentEmailCode ? '发送中…' : '发送到原邮箱' }}</button>
+      </div>
+      }
+      <label for="binding-email-code">新邮箱验证码</label>
+      <div class="email-code-row">
+        <input
+          id="binding-email-code"
+          type="text"
+          name="emailCode"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="6"
+          placeholder="6 位验证码"
+          [(ngModel)]="emailCode"
+          [disabled]="emailBusy"
+          required
+        />
+        <button
+          type="button"
+          [disabled]="emailBusy || emailCodeCountdown > 0"
+          (click)="sendEmailCode()"
+        >{{ emailCodeCountdown > 0 ? emailCodeCountdown + 's' : sendingEmailCode ? '发送中…' : '发送到新邮箱' }}</button>
+      </div>
+      <div class="email-actions">
+        <button type="button" [disabled]="emailBusy" (click)="closeEmailEditor()">取消</button>
+        <button type="submit" class="confirm" [disabled]="emailBusy">{{ bindingEmail ? '更换中…' : '确认更换' }}</button>
+      </div>
+    </form>
+    }
+
     <div class="section-label">账户安全</div>
     <app-menu-list
       [items]="securityMenuItems"

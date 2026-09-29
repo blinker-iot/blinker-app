@@ -133,6 +133,35 @@ export class UserService {
     return this.getAllInfo();
   }
 
+  async requestEmailChangeCode(email: string, target?: 'new' | 'current'): Promise<void> {
+    const session = this.requireSession();
+    const response = await firstValueFrom(
+      this.http.post<AilyResponse<null>>(API.AUTH.EMAIL_CHANGE_CODE, {
+        new_email: email,
+        ...(target ? { target } : {}),
+      }),
+    );
+    this.assertSessionMatches(session);
+    if (response.status !== 200) {
+      throw new Error('The email-change code request failed.');
+    }
+  }
+
+  async bindEmail(email: string, code: string, currentEmailCode?: string): Promise<void> {
+    const session = this.requireSession();
+    const response = await firstValueFrom(
+      this.http.post<AilyResponse<{ email: string }>>(API.AUTH.EMAIL_CHANGE, {
+        new_email: email,
+        code,
+        ...(currentEmailCode ? { current_email_code: currentEmailCode } : {}),
+      }),
+    );
+    this.assertSessionMatches(session);
+    if (response.status !== 200 || !response.data?.email) {
+      throw new Error('The email-change response is invalid.');
+    }
+  }
+
   saveUserConfig(userConfig): Promise<boolean> {
     return firstValueFrom(
       this.http.post<BlinkerResponse>(API.USER.SAVE_CONFIG, {

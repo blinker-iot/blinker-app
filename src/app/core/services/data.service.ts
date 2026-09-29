@@ -413,6 +413,7 @@ export class DataService {
       id: currentUser.id,
       nickname: currentUser.nickname,
       email: currentUser.email,
+      emailIsVirtual: currentUser.email_is_virtual === true,
       username: currentUser.nickname?.trim() || currentUser.email,
       avatar: currentUser.avatar ?? '',
       phone: currentUser.phone ?? '',

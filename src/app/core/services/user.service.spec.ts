@@ -46,6 +46,56 @@ describe('UserService API contracts', () => {
     vi.restoreAllMocks();
   });
 
+  it('uses authenticated email-change endpoints to replace a virtual email', async () => {
+    const sending = service.requestEmailChangeCode('personal@example.com');
+    const sendRequest = httpTesting.expectOne(API.AUTH.EMAIL_CHANGE_CODE);
+    expect(sendRequest.request.method).toBe('POST');
+    expect(sendRequest.request.body).toEqual({ new_email: 'personal@example.com' });
+    sendRequest.flush({ status: 200, data: null });
+    await expect(sending).resolves.toBeUndefined();
+
+    const binding = service.bindEmail('personal@example.com', '123456');
+    const bindRequest = httpTesting.expectOne(API.AUTH.EMAIL_CHANGE);
+    expect(bindRequest.request.method).toBe('POST');
+    expect(bindRequest.request.body).toEqual({
+      new_email: 'personal@example.com',
+      code: '123456',
+    });
+    bindRequest.flush({ status: 200, data: { email: 'personal@example.com' } });
+    await expect(binding).resolves.toBeUndefined();
+    httpTesting.expectNone(API.AUTH.EMAIL_CODE);
+    httpTesting.expectNone(API.AUTH.EMAIL_LOGIN);
+  });
+
+  it('does not complete email binding after the authenticated session changes', async () => {
+    const binding = service.bindEmail('personal@example.com', '123456');
+    const request = httpTesting.expectOne(API.AUTH.EMAIL_CHANGE);
+    dataService.auth = null;
+    request.flush({ status: 200, data: { email: 'personal@example.com' } });
+    await expect(binding).rejects.toMatchObject({ code: 'AUTH_SESSION_CHANGED' });
+  });
+
+  it('requests the current-email code for the target change and submits both codes', async () => {
+    const sending = service.requestEmailChangeCode('personal@example.com', 'current');
+    const sendRequest = httpTesting.expectOne(API.AUTH.EMAIL_CHANGE_CODE);
+    expect(sendRequest.request.body).toEqual({
+      new_email: 'personal@example.com',
+      target: 'current',
+    });
+    sendRequest.flush({ status: 200, data: null });
+    await expect(sending).resolves.toBeUndefined();
+
+    const binding = service.bindEmail('personal@example.com', '123456', '654321');
+    const bindRequest = httpTesting.expectOne(API.AUTH.EMAIL_CHANGE);
+    expect(bindRequest.request.body).toEqual({
+      new_email: 'personal@example.com',
+      code: '123456',
+      current_email_code: '654321',
+    });
+    bindRequest.flush({ status: 200, data: { email: 'personal@example.com' } });
+    await expect(binding).resolves.toBeUndefined();
+  });
+
   it('loads the V2 device inventory without Legacy JSON subresource requests', async () => {
     const deviceId = 'device_1234567890abcdef';
     const loading = service.getAllInfo();

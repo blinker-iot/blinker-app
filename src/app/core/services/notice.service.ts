@@ -170,6 +170,18 @@ export class NoticeService {
       message: '邮箱登录失败，请检查验证码或重新获取后重试',
       type: 'error'
     },
+    wechatAuthorizationExpired: {
+      message: '微信授权已过期，请重新使用微信登录',
+      type: 'warn'
+    },
+    emailBindingConflict: {
+      message: '该邮箱已被其他账号使用，请更换邮箱或返回使用原账号登录',
+      type: 'warn'
+    },
+    emailBindingFailed: {
+      message: '邮箱绑定未完成，请检查验证码或重新获取后重试',
+      type: 'error'
+    },
     wechatBindingCancelled: {
       message: '已取消微信授权，请完成微信绑定后登录',
       type: 'warn'
@@ -193,10 +205,6 @@ export class NoticeService {
     wechatBindingFailed: {
       message: '微信绑定未完成，请重试',
       type: 'error'
-    },
-    wechatNeedsBinding: {
-      message: '微信授权成功，请在本次授权有效期内使用邮箱验证码登录或注册，完成账号关联',
-      type: 'warn'
     },
     wechatLoginFailed: {
       message: '微信登录未完成，请重试或使用邮箱验证码登录',

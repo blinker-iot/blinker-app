@@ -51,6 +51,7 @@ export class LoginPage implements OnDestroy {
   wechatStarting = false;
   emailStarting = false;
   sendingCode = false;
+  choosingEmail = false;
 
   get loginBusy(): boolean {
     return this.githubStarting || this.wechatStarting || this.emailStarting || this.sendingCode;
@@ -62,6 +63,12 @@ export class LoginPage implements OnDestroy {
 
   get wechatNeedsBinding(): boolean {
     return this.authService.wechatNeedsBinding;
+  }
+
+  get title(): string {
+    if (this.emailNeedsWechatBinding) return 'ACCOUNT.BIND_WECHAT';
+    if (this.wechatNeedsBinding) return 'ACCOUNT.BIND_EMAIL';
+    return 'ACCOUNT.LOGIN';
   }
 
   USER_AGREEMENT = CONFIG.USER_AGREEMENT;
@@ -139,12 +146,18 @@ export class LoginPage implements OnDestroy {
 
   async login() {
     if (this.loginBusy || this.emailNeedsWechatBinding) return;
+    if (this.wechatNeedsBinding && !this.choosingEmail) return;
     if (!this.email || !this.isValidEmail(this.email)) {
       this.noticeService.showToast('needValidEmail');
       return;
     }
     if (!this.code || this.code.length < 4) {
       this.noticeService.showToast('needVerifyCode');
+      return;
+    }
+
+    if (this.wechatNeedsBinding) {
+      await this.completeWechatLogin(false);
       return;
     }
 
@@ -205,6 +218,55 @@ export class LoginPage implements OnDestroy {
     this.code = '';
   }
 
+  chooseEmailBinding(): void {
+    if (this.loginBusy) return;
+    this.choosingEmail = true;
+    this.code = '';
+  }
+
+  backToEmailChoice(): void {
+    if (this.loginBusy) return;
+    this.choosingEmail = false;
+    this.code = '';
+  }
+
+  cancelWechatLogin(): void {
+    if (this.loginBusy) return;
+    this.authService.cancelEmailWechatBinding();
+    this.choosingEmail = false;
+    this.code = '';
+  }
+
+  async completeWechatLogin(skipEmail: boolean): Promise<void> {
+    if (this.loginBusy || !this.wechatNeedsBinding) return;
+    this.emailStarting = true;
+    try {
+      await this.noticeService.showLoading('login');
+      const result = await this.authService.completeWechatLogin(
+        skipEmail ? undefined : this.email, skipEmail ? undefined : this.code,
+      );
+      if (result === 'success') {
+        await this.userService.getAllInfo();
+        this.returnAfterLogin();
+      } else {
+        if (result === 'expired') {
+          this.choosingEmail = false;
+          this.code = '';
+        }
+        await this.noticeService.showToast({
+          expired: 'wechatAuthorizationExpired',
+          conflict: 'emailBindingConflict',
+          failed: skipEmail ? 'wechatLoginFailed' : 'emailBindingFailed',
+        }[result]);
+      }
+    } catch {
+      await this.noticeService.showToast(skipEmail ? 'wechatLoginFailed' : 'emailBindingFailed');
+    } finally {
+      this.emailStarting = false;
+      await this.noticeService.hideLoading();
+    }
+  }
+
   onFocus() {
     this.showPoweredBy = false;
   }
@@ -226,7 +288,7 @@ export class LoginPage implements OnDestroy {
   }
 
   async loginWithGithub() {
-    if (this.loginBusy || this.emailNeedsWechatBinding) return;
+    if (this.loginBusy || this.emailNeedsWechatBinding || this.wechatNeedsBinding) return;
     if (!this.authService.githubLoginSupported) {
       await this.noticeService.showToast('githubNativeOnly');
       return;
@@ -246,17 +308,18 @@ export class LoginPage implements OnDestroy {
   }
 
   async loginWithWechat() {
-    if (this.loginBusy || this.emailNeedsWechatBinding) return;
+    if (this.loginBusy || this.emailNeedsWechatBinding || this.wechatNeedsBinding) return;
     this.wechatStarting = true;
     try {
       await this.noticeService.showLoading('login');
       if (await this.authService.loginWithWechat()) {
         await this.userService.getAllInfo();
         this.returnAfterLogin();
+      } else if (this.wechatNeedsBinding) {
+        this.choosingEmail = false;
+        this.code = '';
       } else {
-        await this.noticeService.showToast(
-          this.wechatNeedsBinding ? 'wechatNeedsBinding' : 'wechatLoginFailed',
-        );
+        await this.noticeService.showToast('wechatLoginFailed');
       }
     } catch {
       await this.noticeService.showToast('wechatLoginFailed');

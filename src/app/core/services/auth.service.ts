@@ -50,6 +50,7 @@ interface WechatStartData {
 }
 
 export type WechatBindingResult = 'success' | 'cancelled' | 'not_installed' | 'unsupported' | 'expired' | 'conflict' | 'failed';
+export type WechatCompletionResult = 'success' | 'expired' | 'conflict' | 'failed';
 
 interface PendingEmailWechatBind {
   ticket: string;
@@ -88,7 +89,7 @@ export class AuthService {
   }
 
   get wechatNeedsBinding(): boolean {
-    return !!this.getPendingWechatBind();
+    return this.pendingWechatBind !== null;
   }
 
   get emailNeedsWechatBinding(): boolean {
@@ -353,6 +354,8 @@ export class AuthService {
       return this.loginWithLegacyWechat();
     }
 
+    const epoch = this.dataService.sessionEpoch;
+    this.pendingWechatBind = null;
     try {
       const installed = await Wechat.isInstalled();
       if (!installed.value) return false;
@@ -375,6 +378,7 @@ export class AuthService {
       if (!sdkResult?.code || sdkResult.state !== start.state || Date.now() >= expiresAt) {
         return false;
       }
+      if (this.dataService.sessionEpoch !== epoch) return false;
 
       try {
         const loginResponse = await firstValueFrom(
@@ -389,13 +393,17 @@ export class AuthService {
           ),
         );
         const tokens = this.toTokenPair(loginResponse?.data);
-        if (!tokens) return false;
+        if (!tokens || this.dataService.sessionEpoch !== epoch) return false;
         await this.clearPendingGithubLogin();
+        if (this.dataService.sessionEpoch !== epoch) return false;
         if (!await this.dataService.setAuthData(tokens)) return false;
         this.pendingWechatBind = null;
         return true;
       } catch (error) {
-        if (error instanceof GatewayHttpError && error.code === 'AUTH_WECHAT_NOT_BOUND') {
+        if (
+          this.dataService.sessionEpoch === epoch && error instanceof GatewayHttpError &&
+          (error.code === 'AUTH_WECHAT_NOT_BOUND' || error.code === 'AUTH_WECHAT_EMAIL_REQUIRED')
+        ) {
           this.pendingWechatBind = {
             loginId: start.login_id,
             expiresAt,
@@ -405,6 +413,43 @@ export class AuthService {
       }
     } catch {
       return false;
+    }
+  }
+
+  async completeWechatLogin(email?: string, code?: string): Promise<WechatCompletionResult> {
+    if (this.wechatBindingRunning || this.emailNeedsWechatBinding) return 'failed';
+    const pending = this.getPendingWechatBind();
+    if (!pending) return 'expired';
+    const epoch = this.dataService.sessionEpoch;
+    this.wechatBindingRunning = true;
+    try {
+      const response = await firstValueFrom(
+        this.http.post<AilyResponse<AuthTokenResponseData>>(API.AUTH.WECHAT_MOBILE_COMPLETE, {
+          login_id: pending.loginId,
+          device_id: this.dataService.getInstallationId(),
+          ...(email === undefined ? { skip_email: true } : { email, code }),
+        }),
+      );
+      if (this.pendingWechatBind !== pending || this.dataService.sessionEpoch !== epoch) return 'failed';
+      const tokens = this.toTokenPair(response?.data);
+      if (!tokens) return 'failed';
+      await this.clearPendingGithubLogin();
+      if (this.pendingWechatBind !== pending || this.dataService.sessionEpoch !== epoch) return 'failed';
+      if (!await this.dataService.setAuthData(tokens)) return 'failed';
+      this.cancelEmailWechatBinding();
+      return 'success';
+    } catch (error) {
+      if (error instanceof GatewayHttpError) {
+        if (error.code === 'AUTH_WECHAT_LOGIN_SESSION_NOT_FOUND') {
+          this.pendingWechatBind = null;
+          return 'expired';
+        }
+        if (error.code === 'AUTH_WECHAT_ALREADY_BOUND' || error.code === 'AUTH_WECHAT_USER_ALREADY_BOUND' ||
+            error.code === 'AUTH_EMAIL_ALREADY_USED') return 'conflict';
+      }
+      return 'failed';
+    } finally {
+      this.wechatBindingRunning = false;
     }
   }
 

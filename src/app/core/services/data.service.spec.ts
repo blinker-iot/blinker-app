@@ -214,6 +214,7 @@ describe('DataService', () => {
       id: 'user-1',
       nickname: 'Person',
       email: 'person@example.com',
+      emailIsVirtual: false,
       username: 'Person',
       avatar: 'https://example.com/avatar.png',
       phone: '+8613800008888',
@@ -238,14 +239,15 @@ describe('DataService', () => {
     });
   });
 
-  it('falls back to the full email when the nickname is blank', () => {
+  it('maps a virtual email and falls back to the full email when the nickname is blank', () => {
     const entitlements = { enabled: true, limit: 0 };
 
     service.loadGatewayUser(
       {
         id: 'user-2',
         nickname: '   ',
-        email: 'fallback@example.com',
+        email: 'fallback@wechat.invalid',
+        email_is_virtual: true,
         phone: null,
         avatar: null,
         subscription_plan: null,
@@ -258,8 +260,9 @@ describe('DataService', () => {
     expect(service.user).toEqual({
       id: 'user-2',
       nickname: '   ',
-      email: 'fallback@example.com',
-      username: 'fallback@example.com',
+      email: 'fallback@wechat.invalid',
+      emailIsVirtual: true,
+      username: 'fallback@wechat.invalid',
       avatar: '',
       phone: '',
       subscriptionPlan: null,

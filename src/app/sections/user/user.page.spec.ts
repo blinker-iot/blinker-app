@@ -39,6 +39,8 @@ describe('UserPage account cancellation', () => {
   let userService: {
     requestAccountDeletionCode: ReturnType<typeof vi.fn>;
     cancelBlinkerAccount: ReturnType<typeof vi.fn>;
+    requestEmailChangeCode: ReturnType<typeof vi.fn>;
+    bindEmail: ReturnType<typeof vi.fn>;
   };
   let noticeService: {
     showLoading: ReturnType<typeof vi.fn>;
@@ -50,6 +52,7 @@ describe('UserPage account cancellation', () => {
       email: string;
       nickname: string;
       avatar: null;
+      emailIsVirtual: boolean;
     };
     device: { list: string[] };
     userDataLoader: Subject<boolean>;
@@ -68,6 +71,8 @@ describe('UserPage account cancellation', () => {
         maskedEmail: 'p***@example.com',
       }),
       cancelBlinkerAccount: vi.fn().mockResolvedValue(deletedAccount),
+      requestEmailChangeCode: vi.fn().mockResolvedValue(undefined),
+      bindEmail: vi.fn().mockResolvedValue(undefined),
     };
     noticeService = {
       showLoading: vi.fn().mockResolvedValue(undefined),
@@ -79,6 +84,7 @@ describe('UserPage account cancellation', () => {
         email: 'person@example.com',
         nickname: 'Person',
         avatar: null,
+        emailIsVirtual: false,
       },
       device: { list: [] },
       userDataLoader: new Subject<boolean>(),
@@ -110,6 +116,125 @@ describe('UserPage account cancellation', () => {
   afterEach(() => {
     page.ngOnDestroy();
     vi.useRealTimers();
+  });
+
+  it('offers email changes to both personal and virtual email accounts', () => {
+    const emailItem = () => page.profileMenuItems.find((item) => item.id === 'email')!;
+    expect(emailItem().disabled).toBe(false);
+    page.selectMenuItem(emailItem());
+    expect(page.editingEmail).toBe(true);
+
+    dataService.user.emailIsVirtual = true;
+    expect(emailItem()).toMatchObject({ value: '虚拟邮箱', disabled: false, showChevron: true });
+    page.selectMenuItem(emailItem());
+    expect(page.editingEmail).toBe(true);
+  });
+
+  it.each([
+    ['a1b2c3d4e5f6@v.aily.pro', true],
+    ['', false],
+  ])('verifies only the new email when replacing %s', async (email, virtual) => {
+    dataService.user.emailIsVirtual = virtual;
+    dataService.user.email = email;
+    page.editingEmail = true;
+    page.newEmail = ' Personal@Example.com ';
+    await page.sendEmailCode('current');
+    expect(userService.requestEmailChangeCode).not.toHaveBeenCalled();
+    await page.sendEmailCode();
+    expect(userService.requestEmailChangeCode).toHaveBeenCalledWith('personal@example.com');
+    expect(noticeService.showToast).toHaveBeenLastCalledWith(
+      '验证码已发送至 personal@example.com，请在新邮箱中查收',
+    );
+    expect(page.emailCodeCountdown).toBe(60);
+    await page.sendEmailCode();
+    expect(userService.requestEmailChangeCode).toHaveBeenCalledOnce();
+
+    const binding = deferred<void>();
+    userService.bindEmail.mockReturnValue(binding.promise);
+    page.emailCode = ' 123456 ';
+    const result = page.bindEmail();
+    expect(userService.bindEmail).toHaveBeenCalledWith('personal@example.com', '123456');
+    expect(authService.logout).not.toHaveBeenCalled();
+    binding.resolve();
+    await result;
+    expect(authService.logout).toHaveBeenCalledOnce();
+    expect(page.editingEmail).toBe(false);
+    expect(noticeService.showToast).toHaveBeenLastCalledWith(
+      '邮箱更换成功，请使用新邮箱或微信重新登录',
+    );
+  });
+
+  it('rejects incomplete input and leaves failed email binding open for retry', async () => {
+    dataService.user.emailIsVirtual = true;
+    page.editingEmail = true;
+    page.newEmail = 'invalid';
+    await page.sendEmailCode();
+    expect(userService.requestEmailChangeCode).not.toHaveBeenCalled();
+    page.newEmail = 'personal@example.com';
+    page.emailCode = '123';
+    await page.bindEmail();
+    expect(userService.bindEmail).not.toHaveBeenCalled();
+
+    userService.bindEmail.mockRejectedValue(new Error('internal diagnostic'));
+    page.emailCode = '123456';
+    await page.bindEmail();
+    expect(page.editingEmail).toBe(true);
+    expect(page.emailCode).toBe('123456');
+    expect(authService.logout).not.toHaveBeenCalled();
+    expect(noticeService.showToast).toHaveBeenLastCalledWith(
+      '邮箱更换失败，请检查新邮箱验证码或更换邮箱后重试',
+    );
+  });
+
+  it('requires both email codes for a personal account and logs out only after success', async () => {
+    page.editingEmail = true;
+    page.newEmail = 'personal@example.com';
+    page.emailCode = '123456';
+    await page.bindEmail();
+    expect(userService.bindEmail).not.toHaveBeenCalled();
+    expect(noticeService.showToast).toHaveBeenLastCalledWith('请输入原邮箱收到的 6 位验证码');
+
+    page.currentEmailCode = ' 654321 ';
+    userService.bindEmail.mockRejectedValueOnce(new Error('invalid current code'));
+    await page.bindEmail();
+    expect(userService.bindEmail).toHaveBeenCalledWith('personal@example.com', '123456', '654321');
+    expect(authService.logout).not.toHaveBeenCalled();
+    expect(page.editingEmail).toBe(true);
+    expect(noticeService.showToast).toHaveBeenLastCalledWith(
+      '邮箱更换失败，请检查原邮箱和新邮箱验证码后重试',
+    );
+
+    await page.bindEmail();
+    expect(authService.logout).toHaveBeenCalledOnce();
+    expect(page.editingEmail).toBe(false);
+  });
+
+  it('counts down each recipient independently and resets codes when the target email changes', async () => {
+    vi.useFakeTimers();
+    page.newEmail = 'personal@example.com';
+    await page.sendEmailCode('current');
+    expect(userService.requestEmailChangeCode).toHaveBeenLastCalledWith('personal@example.com', 'current');
+    expect(noticeService.showToast).toHaveBeenLastCalledWith(
+      '验证码已发送至 person@example.com，请在原邮箱中查收',
+    );
+    await vi.advanceTimersByTimeAsync(1000);
+    await page.sendEmailCode();
+    expect(userService.requestEmailChangeCode).toHaveBeenLastCalledWith('personal@example.com');
+    expect(page.currentEmailCodeCountdown).toBe(59);
+    expect(page.emailCodeCountdown).toBe(60);
+    await page.sendEmailCode('current');
+    expect(userService.requestEmailChangeCode).toHaveBeenCalledTimes(2);
+
+    page.currentEmailCode = '654321';
+    page.emailCode = '123456';
+    page.changeNewEmail('another@example.com');
+    expect(page.currentEmailCode).toBe('');
+    expect(page.emailCode).toBe('');
+    expect(page.currentEmailCodeCountdown).toBe(0);
+    expect(page.emailCodeCountdown).toBe(0);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(page.currentEmailCodeCountdown).toBe(0);
+    expect(page.emailCodeCountdown).toBe(0);
   });
 
   it('uses server-derived delivery details and expiry for the countdown', async () => {

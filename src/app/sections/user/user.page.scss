@@ -68,3 +68,75 @@ app-menu-list {
   color: var(--blinker-text-secondary);
   font-size: 11px;
 }
+
+.email-editor {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid var(--blinker-border);
+  background: var(--blinker-surface);
+  color: var(--blinker-text-primary);
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 17px;
+  }
+
+  p {
+    margin: 0 0 18px;
+    color: var(--blinker-text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  label {
+    display: block;
+    margin: 14px 0 8px;
+    font-size: 13px;
+  }
+
+  input {
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid rgba(var(--ion-color-primary-rgb), 0.2);
+    border-radius: 10px;
+    background: var(--blinker-bg);
+    color: inherit;
+    font-size: 15px;
+  }
+
+  button {
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 10px;
+    background: rgba(var(--ion-color-primary-rgb), 0.1);
+    color: var(--ion-color-primary);
+    white-space: nowrap;
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+
+  .email-code-row,
+  .email-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .email-actions {
+    margin-top: 20px;
+
+    button {
+      flex: 1;
+    }
+
+    .confirm {
+      background: var(--ion-color-primary);
+      color: var(--ion-color-primary-contrast);
+    }
+  }
+}

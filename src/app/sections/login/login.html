@@ -19,11 +19,15 @@
 
     <div class="logo-box">
       <img class="logo" src="{{LOGO}}" />
-      <h2 class="welcome-title">{{'ACCOUNT.LOGIN' | translate}}</h2>
+      <h2 class="welcome-title">{{title | translate}}</h2>
     </div>
 
     @if (emailNeedsWechatBinding) {
     <div class="form-box wechat-binding">
+      <div class="binding-icon"><i class="fa-brands fa-weixin" aria-hidden="true"></i></div>
+      @if (email) {
+      <p class="verified-email"><i class="fal fa-circle-check" aria-hidden="true"></i> {{email}}</p>
+      }
       <div class="login-tip" role="status">
         {{'ACCOUNT.EMAIL_WECHAT_BIND_TIP' | translate}}
       </div>
@@ -44,6 +48,22 @@
         {{'ACCOUNT.BACK_TO_EMAIL' | translate}}
       </button>
     </div>
+    } @else if (wechatNeedsBinding && !choosingEmail) {
+    <div class="form-box email-choice">
+      <div class="binding-icon"><i class="fa-brands fa-weixin" aria-hidden="true"></i></div>
+      <p class="binding-status">{{'ACCOUNT.WECHAT_AUTHORIZED' | translate}}</p>
+      <div class="login-tip" role="status">{{'ACCOUNT.WECHAT_EMAIL_CHOICE_TIP' | translate}}</div>
+      <button type="button" class="login-btn" [disabled]="loginBusy" (click)="chooseEmailBinding()">
+        {{'ACCOUNT.BIND_EMAIL_NOW' | translate}}
+      </button>
+      <button type="button" class="skip-email-btn" [disabled]="loginBusy" (click)="completeWechatLogin(true)">
+        {{'ACCOUNT.SKIP_EMAIL' | translate}}
+      </button>
+      <p class="binding-note">{{'ACCOUNT.VIRTUAL_EMAIL_TIP' | translate}}</p>
+      <button type="button" class="back-to-email-btn" [disabled]="loginBusy" (click)="cancelWechatLogin()">
+        {{'ACCOUNT.BACK_TO_LOGIN' | translate}}
+      </button>
+    </div>
     } @else {
     <form class="form-box" (ngSubmit)="login()" #formBox="ngForm">
       <div class="input-box">
@@ -54,6 +74,8 @@
           type="email"
           [(ngModel)]="email"
           name="email"
+          autocomplete="email"
+          [attr.aria-label]="'ACCOUNT.EMAIL' | translate"
           [disabled]="loginBusy"
           placeholder="{{'ACCOUNT.EMAIL' | translate}}"
           (focus)="onFocus()"
@@ -68,6 +90,9 @@
           type="text"
           [(ngModel)]="code"
           name="code"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          [attr.aria-label]="'ACCOUNT.VERIFY_CODE' | translate"
           [disabled]="loginBusy"
           placeholder="{{'ACCOUNT.VERIFY_CODE' | translate}}"
           maxlength="6"
@@ -101,10 +126,16 @@
         </span>
       </div>
       <button type="submit" class="login-btn" [disabled]="loginBusy">
-        {{'ACCOUNT.LOGIN' | translate}}
+        {{(wechatNeedsBinding ? 'ACCOUNT.BIND_EMAIL_AND_LOGIN' : 'ACCOUNT.LOGIN') | translate}}
       </button>
+      @if (wechatNeedsBinding) {
+      <button type="button" class="back-to-email-btn" [disabled]="loginBusy" (click)="backToEmailChoice()">
+        {{'ACCOUNT.BACK_TO_EMAIL_CHOICE' | translate}}
+      </button>
+      }
     </form>
 
+    @if (!wechatNeedsBinding) {
     <div class="social-login">
       <div class="social-divider">
         <span>{{'ACCOUNT.OR_LOGIN_WITH' | translate}}</span>
@@ -122,6 +153,7 @@
         <button
           type="button"
           class="social-btn wechat-btn"
+          aria-label="WeChat"
           (click)="loginWithWechat()"
           [disabled]="loginBusy"
         >
@@ -129,6 +161,7 @@
         </button>
       </div>
     </div>
+    }
     }
   </div>
 </ion-content>

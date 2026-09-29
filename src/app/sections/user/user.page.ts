@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import {
   AlertController,
@@ -52,7 +53,7 @@ const ACCOUNT_DELETION_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   templateUrl: './user.page.html',
   styleUrls: ['./user.page.scss'],
   standalone: true,
-  imports: [IonicModule, MenuListComponent, RouterModule],
+  imports: [IonicModule, MenuListComponent, RouterModule, FormsModule],
 })
 export class UserPage implements OnInit, OnDestroy {
   private subscription?: Subscription;
@@ -64,9 +65,32 @@ export class UserPage implements OnInit, OnDestroy {
   private deletionCodeTimer?: number;
   private deletionCode = '';
   private resendAvailableAt = 0;
+  private emailCodeTimer?: number;
+  private currentEmailCodeTimer?: number;
 
   draftName = '';
   draftEmail = '';
+  editingEmail = false;
+  newEmail = '';
+  emailCode = '';
+  currentEmailCode = '';
+  sendingEmailCode = false;
+  sendingCurrentEmailCode = false;
+  bindingEmail = false;
+  emailCodeCountdown = 0;
+  currentEmailCodeCountdown = 0;
+
+  get emailIsVirtual(): boolean {
+    return this.user?.emailIsVirtual === true;
+  }
+
+  get requiresCurrentEmailVerification(): boolean {
+    return Boolean(this.user?.email?.trim()) && !this.emailIsVirtual;
+  }
+
+  get emailBusy(): boolean {
+    return this.sendingEmailCode || this.sendingCurrentEmailCode || this.bindingEmail;
+  }
 
   get user() {
     return this.dataService.user;
@@ -90,9 +114,9 @@ export class UserPage implements OnInit, OnDestroy {
         id: 'email',
         title: '邮箱',
         icon: 'fa-envelope',
-        value: this.draftEmail || '—',
-        disabled: true,
-        showChevron: false,
+        value: this.emailIsVirtual ? '虚拟邮箱' : this.draftEmail || '—',
+        disabled: false,
+        showChevron: true,
       },
     ];
   }
@@ -135,6 +159,8 @@ export class UserPage implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.subscription?.unsubscribe();
     this.clearDeletionTimer();
+    window.clearInterval(this.emailCodeTimer);
+    window.clearInterval(this.currentEmailCodeTimer);
     void this.alert?.dismiss();
   }
 
@@ -148,10 +174,106 @@ export class UserPage implements OnInit, OnDestroy {
 
   selectMenuItem(item: MenuListItem): void {
     switch (item.id) {
+      case 'email':
+        this.editingEmail = true;
+        break;
       case 'cancel-account':
         void this.showCancelAlert();
         break;
     }
+  }
+
+  closeEmailEditor(): void {
+    if (this.emailBusy) return;
+    this.editingEmail = false;
+    this.emailCode = '';
+    this.currentEmailCode = '';
+  }
+
+  changeNewEmail(value: string): void {
+    const changed = value.trim().toLowerCase() !== this.newEmail.trim().toLowerCase();
+    this.newEmail = value;
+    if (!changed) return;
+    this.emailCode = '';
+    this.currentEmailCode = '';
+    window.clearInterval(this.emailCodeTimer);
+    window.clearInterval(this.currentEmailCodeTimer);
+    this.emailCodeCountdown = 0;
+    this.currentEmailCodeCountdown = 0;
+  }
+
+  async sendEmailCode(target: 'new' | 'current' = 'new'): Promise<void> {
+    const current = target === 'current';
+    if (this.emailBusy || (current && !this.requiresCurrentEmailVerification)) return;
+    if ((current ? this.currentEmailCodeCountdown : this.emailCodeCountdown) > 0) return;
+    const email = this.newEmail.trim().toLowerCase();
+    if (!this.validEmail(email)) {
+      await this.noticeService.showToast('needValidEmail');
+      return;
+    }
+    if (current) this.sendingCurrentEmailCode = true;
+    else this.sendingEmailCode = true;
+    try {
+      if (current) {
+        await this.userService.requestEmailChangeCode(email, 'current');
+        this.currentEmailCodeCountdown = 60;
+        this.currentEmailCodeTimer = window.setInterval(() => {
+          this.currentEmailCodeCountdown--;
+          if (this.currentEmailCodeCountdown <= 0) window.clearInterval(this.currentEmailCodeTimer);
+        }, 1000);
+        await this.noticeService.showToast(`验证码已发送至 ${this.draftEmail}，请在原邮箱中查收`);
+      } else {
+        await this.userService.requestEmailChangeCode(email);
+        this.emailCodeCountdown = 60;
+        this.emailCodeTimer = window.setInterval(() => {
+          this.emailCodeCountdown--;
+          if (this.emailCodeCountdown <= 0) window.clearInterval(this.emailCodeTimer);
+        }, 1000);
+        await this.noticeService.showToast(`验证码已发送至 ${email}，请在新邮箱中查收`);
+      }
+    } catch {
+      await this.noticeService.showToast('验证码发送失败，请确认邮箱未被使用后重试');
+    } finally {
+      this.sendingEmailCode = false;
+      this.sendingCurrentEmailCode = false;
+    }
+  }
+
+  async bindEmail(): Promise<void> {
+    if (this.emailBusy) return;
+    const email = this.newEmail.trim().toLowerCase();
+    if (!this.validEmail(email)) {
+      await this.noticeService.showToast('needValidEmail');
+      return;
+    }
+    const code = this.emailCode.trim();
+    const currentCode = this.currentEmailCode.trim();
+    if (this.requiresCurrentEmailVerification && !/^\d{6}$/.test(currentCode)) {
+      await this.noticeService.showToast('请输入原邮箱收到的 6 位验证码');
+      return;
+    }
+    if (!/^\d{6}$/.test(code)) {
+      await this.noticeService.showToast('needVerifyCode');
+      return;
+    }
+    this.bindingEmail = true;
+    try {
+      if (this.requiresCurrentEmailVerification) await this.userService.bindEmail(email, code, currentCode);
+      else await this.userService.bindEmail(email, code);
+      this.editingEmail = false;
+      await this.authService.logout();
+      await this.noticeService.showToast('邮箱更换成功，请使用新邮箱或微信重新登录');
+    } catch {
+      await this.noticeService.showToast(this.requiresCurrentEmailVerification
+        ? '邮箱更换失败，请检查原邮箱和新邮箱验证码后重试'
+        : '邮箱更换失败，请检查新邮箱验证码或更换邮箱后重试');
+    } finally {
+      this.bindingEmail = false;
+    }
+  }
+
+  private validEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
   async showCancelAlert() {

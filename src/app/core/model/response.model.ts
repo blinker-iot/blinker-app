@@ -54,6 +54,7 @@ export interface CurrentUser {
   id: string;
   nickname: string | null;
   email: string;
+  email_is_virtual?: boolean;
   phone: string | null;
   avatar: string | null;
   subscription_plan: GatewaySubscriptionPlan | null;

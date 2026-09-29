@@ -59,9 +59,8 @@ $text-muted: var(--blinker-text-tertiary);
 // Background glow orbs
 .login-container {
   box-sizing: border-box;
-  height: 100%;
+  min-height: 100%;
   position: relative;
-  overflow: hidden;
   padding: var(--login-header-offset) 0 20px;
   background: transparent;
 }
@@ -230,6 +229,51 @@ i {
   font-size: 14px;
   color: $text-secondary;
   background: transparent;
+}
+
+.binding-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: rgba(7, 193, 96, 0.1);
+  font-size: 36px;
+
+  i { color: #07c160; }
+}
+
+.binding-status,
+.verified-email {
+  margin: 16px 0 0;
+  color: $text-primary;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.email-choice,
+.wechat-binding {
+  .login-tip { margin: 16px 0 20px; }
+}
+
+.skip-email-btn {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 14px;
+  border: 1px solid $border-color;
+  border-radius: 24px;
+  background: $bg-card;
+  color: $text-secondary;
+  font-size: 15px;
+}
+
+.binding-note {
+  margin: 16px 0 0;
+  color: $text-muted;
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
 }
 
 // Social login

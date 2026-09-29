@@ -219,9 +219,9 @@ describe('ServerInterceptor', () => {
     expect(navigateRoot).not.toHaveBeenCalled();
   });
 
-  it('does not attach Bearer to public authentication calls', () => {
-    http.post(API.AUTH.EMAIL_LOGIN, { email: 'person@example.com' }).subscribe();
-    const request = httpTesting.expectOne(API.AUTH.EMAIL_LOGIN);
+  it.each([API.AUTH.EMAIL_LOGIN, API.AUTH.WECHAT_MOBILE_COMPLETE])('does not attach Bearer to public authentication call %s', (url) => {
+    http.post(url, { email: 'person@example.com' }).subscribe();
+    const request = httpTesting.expectOne(url);
 
     expect(request.request.headers.has('Authorization')).toBe(false);
     expect(request.request.headers.get('Content-Type')).toBe('application/json');

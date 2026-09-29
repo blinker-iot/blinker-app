@@ -12,7 +12,7 @@ import { UserService } from 'src/app/core/services/user.service';
 import { LoginPage } from './login';
 
 describe('LoginPage login', () => {
-  const bindTip = 'WeChat authorization succeeded. Sign in with email to link your account.';
+  const bindTip = 'Link your email to also sign in with an email verification code.';
   const emailBindTip = 'Email verified. Link WeChat to complete sign-in.';
   let fixture: ComponentFixture<LoginPage>;
   let page: LoginPage;
@@ -26,6 +26,7 @@ describe('LoginPage login', () => {
     githubLoginSupported: boolean;
     loginWithGithub: ReturnType<typeof vi.fn>;
     loginWithEmailCode: ReturnType<typeof vi.fn>;
+    completeWechatLogin: ReturnType<typeof vi.fn>;
   };
   let notice: {
     showLoading: ReturnType<typeof vi.fn>;
@@ -43,12 +44,14 @@ describe('LoginPage login', () => {
       bindWechatForLogin: vi.fn().mockResolvedValue('failed'),
       cancelEmailWechatBinding: vi.fn().mockImplementation(() => {
         auth.emailNeedsWechatBinding = false;
+        auth.wechatNeedsBinding = false;
       }),
       sendEmailCode: vi.fn().mockResolvedValue(true),
       loginWithWechat: vi.fn().mockResolvedValue(false),
       githubLoginSupported: true,
       loginWithGithub: vi.fn().mockResolvedValue(false),
       loginWithEmailCode: vi.fn().mockResolvedValue(false),
+      completeWechatLogin: vi.fn().mockResolvedValue('failed'),
     };
     shareInvitation = { hasPending: false };
     notice = {
@@ -77,6 +80,7 @@ describe('LoginPage login', () => {
       ACCOUNT: {
         LOGIN_TIP: 'Unregistered email will automatically create an account.',
         WECHAT_BIND_TIP: bindTip,
+        WECHAT_EMAIL_CHOICE_TIP: bindTip,
         EMAIL_WECHAT_BIND_TIP: emailBindTip,
         BIND_WECHAT_AND_LOGIN: 'Link WeChat and sign in',
         BACK_TO_EMAIL: 'Back to email verification',
@@ -91,7 +95,7 @@ describe('LoginPage login', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
-  it('keeps email binding guidance visible after an unbound WeChat authorization', async () => {
+  it('offers email binding or skipping after an unbound WeChat authorization', async () => {
     auth.loginWithWechat.mockImplementation(async () => {
       auth.wechatNeedsBinding = true;
       return false;
@@ -100,12 +104,78 @@ describe('LoginPage login', () => {
     await page.loginWithWechat();
     fixture.detectChanges();
 
-    expect(notice.showToast).toHaveBeenCalledExactlyOnceWith('wechatNeedsBinding');
+    expect(notice.showToast).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('[role="status"]').textContent.trim()).toBe(bindTip);
-    expect(fixture.nativeElement.querySelector('input[type="email"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.email-choice')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.skip-email-btn')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('input[type="email"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.social-login')).toBeNull();
     expect(getAllInfo).not.toHaveBeenCalled();
     expect(navigateRoot).not.toHaveBeenCalled();
     expect(page.wechatStarting).toBe(false);
+  });
+
+  it('verifies an email against the current WeChat authorization', async () => {
+    auth.wechatNeedsBinding = true;
+    page.chooseEmailBinding();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('input[type="email"]')).not.toBeNull();
+    page.email = 'test@example.com';
+    page.code = '123456';
+    auth.completeWechatLogin.mockResolvedValue('success');
+
+    await page.login();
+
+    expect(auth.completeWechatLogin).toHaveBeenCalledExactlyOnceWith('test@example.com', '123456');
+    expect(auth.loginWithEmailCode).not.toHaveBeenCalled();
+    expect(getAllInfo).toHaveBeenCalledOnce();
+    expect(navigateRoot).toHaveBeenCalledExactlyOnceWith('/');
+  });
+
+  it('skips email once and completes the pending share invitation only after server success', async () => {
+    auth.wechatNeedsBinding = true;
+    shareInvitation.hasPending = true;
+    let finish!: (value: string) => void;
+    auth.completeWechatLogin.mockReturnValue(new Promise<string>(resolve => { finish = resolve; }));
+    const login = page.completeWechatLogin(true);
+    await page.completeWechatLogin(true);
+    page.cancelWechatLogin();
+    await vi.waitFor(() => expect(auth.completeWechatLogin).toHaveBeenCalledOnce());
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.skip-email-btn').disabled).toBe(true);
+    expect(auth.cancelEmailWechatBinding).not.toHaveBeenCalled();
+    expect(navigateRoot).not.toHaveBeenCalled();
+    expect(auth.completeWechatLogin).toHaveBeenCalledWith(undefined, undefined);
+    finish('success');
+    await login;
+    expect(navigateRoot).toHaveBeenCalledExactlyOnceWith('/share-invitation');
+  });
+
+  it('allows returning to the choice or cancelling without creating a session', () => {
+    auth.wechatNeedsBinding = true;
+    page.chooseEmailBinding();
+    page.code = '123456';
+    page.backToEmailChoice();
+    expect(page.choosingEmail).toBe(false);
+    expect(page.code).toBe('');
+    expect(auth.wechatNeedsBinding).toBe(true);
+    page.cancelWechatLogin();
+    expect(auth.wechatNeedsBinding).toBe(false);
+    expect(auth.completeWechatLogin).not.toHaveBeenCalled();
+    expect(navigateRoot).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['expired', 'wechatAuthorizationExpired'],
+    ['conflict', 'emailBindingConflict'],
+    ['failed', 'emailBindingFailed'],
+  ])('reports %s email completion without navigating', async (result, message) => {
+    auth.wechatNeedsBinding = true;
+    auth.completeWechatLogin.mockResolvedValue(result);
+    await page.completeWechatLogin(false);
+    expect(notice.showToast).toHaveBeenCalledExactlyOnceWith(message);
+    expect(navigateRoot).not.toHaveBeenCalled();
+    expect(page.loginBusy).toBe(false);
   });
 
   it.each(['false', 'rejected'])('shows a failure message for a %s login result', async (result) => {

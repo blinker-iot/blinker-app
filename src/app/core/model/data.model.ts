@@ -20,6 +20,7 @@ export interface UserData {
     phone: string,
     level?: number,
     email?: string,
+    emailIsVirtual?: boolean,
     id?: string,
     subscriptionPlan?: GatewaySubscriptionPlan | null,
     permissions?: string[],
