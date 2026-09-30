@@ -97,25 +97,13 @@ describe('ServerInterceptor', () => {
     },
   );
 
-  it('preserves exact account-deletion bodies with Bearer and JSON headers', () => {
-    http.post(API.ACCOUNT.DELETION_CODE, {}).subscribe();
-    const codeRequest = httpTesting.expectOne(API.ACCOUNT.DELETION_CODE);
-    expect(codeRequest.request.method).toBe('POST');
-    expect(codeRequest.request.body).toEqual({});
-    expect(codeRequest.request.headers.get('Authorization')).toBe(
-      'Bearer old-access',
-    );
-    expect(codeRequest.request.headers.get('Content-Type')).toBe(
-      'application/json',
-    );
-    codeRequest.flush({ status: 200, data: {} });
-
+  it('preserves the empty account-deletion body with Bearer and JSON headers', () => {
     http.delete(API.ACCOUNT.ROOT, {
-      body: { code: 'D-123456' },
+      body: {},
     }).subscribe();
     const deleteRequest = httpTesting.expectOne(API.ACCOUNT.ROOT);
     expect(deleteRequest.request.method).toBe('DELETE');
-    expect(deleteRequest.request.body).toEqual({ code: 'D-123456' });
+    expect(deleteRequest.request.body).toEqual({});
     expect(deleteRequest.request.headers.get('Authorization')).toBe(
       'Bearer old-access',
     );
@@ -127,12 +115,12 @@ describe('ServerInterceptor', () => {
 
   it('normalizes Retry-After without exposing response headers wholesale', () => {
     let received: unknown;
-    http.post(API.ACCOUNT.DELETION_CODE, {}).subscribe({
+    http.get(API.AUTH.ME).subscribe({
       error: (error) => (received = error),
     });
-    httpTesting.expectOne(API.ACCOUNT.DELETION_CODE).flush(
+    httpTesting.expectOne(API.AUTH.ME).flush(
       {
-        errorCode: 'ACCOUNT_DELETION_CODE_RATE_LIMITED',
+        errorCode: 'COMMON_RATE_LIMITED',
         errorMessage: 'upstream internal diagnostic',
       },
       {
@@ -144,7 +132,7 @@ describe('ServerInterceptor', () => {
 
     expect(received).toBeInstanceOf(GatewayHttpError);
     expect(received).toMatchObject({
-      code: 'ACCOUNT_DELETION_CODE_RATE_LIMITED',
+      code: 'COMMON_RATE_LIMITED',
       retryAfterSeconds: 37,
     });
   });
@@ -152,7 +140,7 @@ describe('ServerInterceptor', () => {
   it('does not clear or refresh the session for deletion AUTH_TOKEN_MISSING', () => {
     let received: unknown;
     http.delete(API.ACCOUNT.ROOT, {
-      body: { code: 'D-123456' },
+      body: {},
     }).subscribe({ error: (error) => (received = error) });
     httpTesting.expectOne(API.ACCOUNT.ROOT).flush(
       { errorCode: 'AUTH_TOKEN_MISSING' },
@@ -168,7 +156,7 @@ describe('ServerInterceptor', () => {
   it('preserves the refreshed session when deletion replay lacks a token', async () => {
     let received: unknown;
     http.delete(API.ACCOUNT.ROOT, {
-      body: { code: 'D-123456' },
+      body: {},
     }).subscribe({ error: (error) => (received = error) });
     httpTesting.expectOne(API.ACCOUNT.ROOT).flush(
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
@@ -185,7 +173,7 @@ describe('ServerInterceptor', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const replay = httpTesting.expectOne(API.ACCOUNT.ROOT);
-    expect(replay.request.body).toEqual({ code: 'D-123456' });
+    expect(replay.request.body).toEqual({});
     expect(replay.request.headers.get('Authorization')).toBe(
       'Bearer new-access',
     );
@@ -201,10 +189,10 @@ describe('ServerInterceptor', () => {
 
   it('does not clear the session when deletion token refresh fails', async () => {
     let received: unknown;
-    http.post(API.ACCOUNT.DELETION_CODE, {}).subscribe({
+    http.delete(API.ACCOUNT.ROOT, { body: {} }).subscribe({
       error: (error) => (received = error),
     });
-    httpTesting.expectOne(API.ACCOUNT.DELETION_CODE).flush(
+    httpTesting.expectOne(API.ACCOUNT.ROOT).flush(
       { errorCode: 'AUTH_TOKEN_EXPIRED' },
       { status: 401, statusText: 'Unauthorized' },
     );
@@ -799,7 +787,7 @@ describe('ServerInterceptor', () => {
 
   it('never replays an old-session write against a newly signed-in account', async () => {
     let received: unknown;
-    http.delete(API.ACCOUNT.ROOT).subscribe({
+    http.delete(API.ACCOUNT.ROOT, { body: {} }).subscribe({
       error: (error) => (received = error),
     });
     const oldDelete = httpTesting.expectOne(API.ACCOUNT.ROOT);

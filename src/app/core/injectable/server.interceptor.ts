@@ -524,7 +524,7 @@ export class ServerInterceptor implements HttpInterceptor {
   }
 
   private isAccountDeletionUrl(url: string): boolean {
-    return url === API.ACCOUNT.ROOT || url === API.ACCOUNT.DELETION_CODE;
+    return url === API.ACCOUNT.ROOT;
   }
 
   private parseRetryAfter(value: string | null | undefined): number | undefined {

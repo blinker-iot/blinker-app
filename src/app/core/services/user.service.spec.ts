@@ -284,41 +284,14 @@ describe('UserService API contracts', () => {
     await expect(cancellation).resolves.toBe(true);
   });
 
-  it('requests an account-deletion code with an exact empty body', async () => {
-    const codeInfo = service.requestAccountDeletionCode();
-    const request = httpTesting.expectOne(API.ACCOUNT.DELETION_CODE);
-
-    expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({});
-    expect(Object.keys(request.request.body)).toEqual([]);
-    httpTesting.expectNone(API.AUTH.EMAIL_CODE);
-    httpTesting.expectNone(API.AUTH.EMAIL_LOGIN);
-    request.flush({
-      status: 200,
-      errorCode: null,
-      errorMessage: null,
-      data: {
-        purpose: 'account_deletion',
-        expiresIn: 125,
-        maskedEmail: 'p***@example.com',
-      },
-    });
-
-    await expect(codeInfo).resolves.toEqual({
-      purpose: 'account_deletion',
-      expiresIn: 125,
-      maskedEmail: 'p***@example.com',
-    });
-  });
-
-  it('sends the complete D-code and leaves local cleanup to logout after 200', async () => {
+  it('deletes without an email code and leaves local cleanup to logout after 200', async () => {
     const clearData = vi.spyOn(dataService, 'clearBlinkerData');
     const expireAuth = vi.spyOn(dataService.authDataExpire, 'next');
-    const cancellation = service.cancelBlinkerAccount('D-123456');
+    const cancellation = service.cancelBlinkerAccount();
     const request = httpTesting.expectOne(API.ACCOUNT.ROOT);
 
     expect(request.request.method).toBe('DELETE');
-    expect(request.request.body).toEqual({ code: 'D-123456' });
+    expect(request.request.body).toEqual({});
     httpTesting.expectNone(API.AUTH.EMAIL_LOGIN);
     request.flush({
       account: {
@@ -342,39 +315,16 @@ describe('UserService API contracts', () => {
     expect(dataService.auth?.accessToken).toBe('access-token');
   });
 
-  it('omits the code for a virtual email without requesting a verification email', async () => {
-    dataService.user.emailIsVirtual = true;
-    const cancellation = service.cancelBlinkerAccount();
-    const request = httpTesting.expectOne(API.ACCOUNT.ROOT);
-    expect(request.request.method).toBe('DELETE');
-    expect(request.request.body).toEqual({});
-    httpTesting.expectNone(API.ACCOUNT.DELETION_CODE);
-    request.flush({
-      account: { accountId: 'user-1', tenantId: 'tenant-1', status: 'deleted', deletedAt: 3 },
-    });
-    await expect(cancellation).resolves.toMatchObject({ account: { status: 'deleted' } });
-    expect(dataService.auth?.accessToken).toBe('access-token');
-  });
-
-  it('does not omit verification for personal or unknown email types', async () => {
-    for (const emailIsVirtual of [false, undefined]) {
-      dataService.user.emailIsVirtual = emailIsVirtual;
-      await expect(service.cancelBlinkerAccount()).rejects.toMatchObject({
-        code: 'ACCOUNT_DELETION_CODE_INVALID',
-      });
-    }
-    httpTesting.expectNone(API.ACCOUNT.ROOT);
-  });
-
-  it('rejects a login-style six-digit code without sending a DELETE', async () => {
-    await expect(service.cancelBlinkerAccount('123456')).rejects.toMatchObject({
-      code: 'ACCOUNT_DELETION_CODE_INVALID',
+  it('requires an authenticated session before deleting an account', async () => {
+    dataService.auth = null;
+    await expect(service.cancelBlinkerAccount()).rejects.toMatchObject({
+      code: 'AUTH_TOKEN_MISSING',
     });
     httpTesting.expectNone(API.ACCOUNT.ROOT);
   });
 
   it('does not accept a deleted body from a non-200 DELETE response', async () => {
-    const cancellation = service.cancelBlinkerAccount('D-123456');
+    const cancellation = service.cancelBlinkerAccount();
     httpTesting.expectOne(API.ACCOUNT.ROOT).flush(
       {
         account: {
@@ -396,7 +346,7 @@ describe('UserService API contracts', () => {
   it('preserves the session and permits retrying the same DELETE after failure', async () => {
     const clearData = vi.spyOn(dataService, 'clearBlinkerData');
     const expireAuth = vi.spyOn(dataService.authDataExpire, 'next');
-    const firstAttempt = service.cancelBlinkerAccount('D-654321');
+    const firstAttempt = service.cancelBlinkerAccount();
     httpTesting.expectOne(API.ACCOUNT.ROOT).flush(
       {
         status: 409,
@@ -411,9 +361,9 @@ describe('UserService API contracts', () => {
     expect(expireAuth).not.toHaveBeenCalled();
     expect(dataService.auth?.accessToken).toBe('access-token');
 
-    const retry = service.cancelBlinkerAccount('D-654321');
+    const retry = service.cancelBlinkerAccount();
     const retryRequest = httpTesting.expectOne(API.ACCOUNT.ROOT);
-    expect(retryRequest.request.body).toEqual({ code: 'D-654321' });
+    expect(retryRequest.request.body).toEqual({});
     retryRequest.flush({
       account: {
         accountId: 'user-1',

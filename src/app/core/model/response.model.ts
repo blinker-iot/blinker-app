@@ -65,12 +65,6 @@ export interface CurrentUser {
   [key: string]: unknown;
 }
 
-export interface AccountDeletionCodeData {
-  purpose: 'account_deletion';
-  expiresIn: number;
-  maskedEmail: string;
-}
-
 export interface DeviceKeyContext {
   logicalDeviceId: string;
   credentialVersion: number;

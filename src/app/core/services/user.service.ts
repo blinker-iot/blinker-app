@@ -4,7 +4,6 @@ import { firstValueFrom } from 'rxjs';
 import { API } from 'src/app/configs/api.config';
 import { sha256 } from '../functions/func';
 import {
-  AccountDeletionCodeData,
   AilyResponse,
   BlinkerResponse,
   CurrentUser,
@@ -218,19 +217,11 @@ export class UserService {
       .catch(this.handleError);
   }
 
-  async cancelBlinkerAccount(code?: string): Promise<DeletedAccountResponse> {
+  async cancelBlinkerAccount(): Promise<DeletedAccountResponse> {
     const session = this.requireSession();
-    const skipEmailCode = code === undefined && this.dataService.user.emailIsVirtual === true;
-    if (!skipEmailCode && !/^D-\d{6}$/.test(code ?? '')) {
-      throw new GatewayHttpError({
-        httpStatus: 400,
-        code: 'ACCOUNT_DELETION_CODE_INVALID',
-        message: 'The account-deletion code format is invalid.',
-      });
-    }
     const response = await firstValueFrom(
       this.http.delete<DeletedAccountResponse>(API.ACCOUNT.ROOT, {
-        body: code === undefined ? {} : { code },
+        body: {},
         observe: 'response',
       }),
     );
@@ -242,31 +233,6 @@ export class UserService {
       throw this.invalidAccountDeletionResponse();
     }
     return response.body;
-  }
-
-  async requestAccountDeletionCode(): Promise<AccountDeletionCodeData> {
-    const session = this.requireSession();
-    const response = await firstValueFrom(
-      this.http.post<AilyResponse<AccountDeletionCodeData>>(
-        API.ACCOUNT.DELETION_CODE,
-        {},
-        { observe: 'response' },
-      ),
-    );
-    this.assertSessionMatches(session);
-    const body = response.body;
-    const data = body?.data;
-    if (
-      response.status !== 200
-      || body?.status !== 200
-      || data?.purpose !== 'account_deletion'
-      || !Number.isFinite(data.expiresIn)
-      || data.expiresIn <= 0
-      || !data.maskedEmail?.trim()
-    ) {
-      throw this.invalidAccountDeletionResponse();
-    }
-    return data;
   }
 
   cancelAccount(password): Promise<boolean> {

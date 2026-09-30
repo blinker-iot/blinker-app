@@ -37,7 +37,6 @@ export const API = {
   },
   ACCOUNT: {
     ROOT: API_V1_URL + '/account',
-    DELETION_CODE: API_V1_URL + '/account/deletion-code',
     CONNECTION: API_V2_URL + '/account/connection',
     LEGACY_IMPORTS: API_V2_URL + '/account/legacy-imports',
     SELF_HOSTED_SERVER: API_V2_URL + '/account/self-hosted-server',
