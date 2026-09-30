@@ -12,7 +12,6 @@ import { LegacyImportService } from '../../../core/services/legacy-import.servic
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <a routerLink="/legacy-device-migration">从旧账号同步设备</a>
     @if (error) { <p role="alert">{{ error }} <button type="button" (click)="refresh()">重试</button></p> }
     @for (record of imports.records | async; track path(record)) {
       @if (!record.logicalDeviceId) {
