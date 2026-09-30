@@ -295,6 +295,59 @@ describe('UserPage account cancellation', () => {
     expect(authService.logout).toHaveBeenCalledOnce();
   });
 
+  it('requires confirmation to delete a virtual account without an email code', async () => {
+    dataService.user.emailIsVirtual = true;
+    await page.showCancelAlert();
+
+    expect(alerts[0].inputs).toEqual([]);
+    expect(alerts[0].message).toBe('注销后相关数据将被永久删除且无法恢复。');
+    expect(alerts[0].options.buttons).toEqual([
+      expect.objectContaining({ text: '取消', role: 'cancel' }),
+      expect.objectContaining({ text: '确认注销', role: 'destructive' }),
+    ]);
+    await getButton(alerts[0], '取消').handler?.();
+    expect(userService.cancelBlinkerAccount).not.toHaveBeenCalled();
+
+    await page.showCancelAlert();
+    const deletion = deferred<typeof deletedAccount>();
+    userService.cancelBlinkerAccount.mockReturnValue(deletion.promise);
+    const confirm = getButton(alerts[1], '确认注销');
+    const result = confirm.handler?.() as Promise<boolean>;
+    await Promise.resolve();
+    await expect(confirm.handler?.()).resolves.toBe(false);
+
+    expect(userService.cancelBlinkerAccount).toHaveBeenCalledExactlyOnceWith();
+    expect(userService.requestAccountDeletionCode).not.toHaveBeenCalled();
+    expect(authService.logout).not.toHaveBeenCalled();
+    deletion.resolve(deletedAccount);
+    await expect(result).resolves.toBe(true);
+    expect(authService.logout).toHaveBeenCalledOnce();
+    expect(noticeService.hideLoading).toHaveBeenCalledOnce();
+  });
+
+  it('keeps virtual-account failures retryable without asking users to retain a code', async () => {
+    dataService.user.emailIsVirtual = true;
+    userService.cancelBlinkerAccount
+      .mockRejectedValueOnce(gatewayError(409, 'ACCOUNT_DELETION_IN_PROGRESS'))
+      .mockRejectedValueOnce(new Error('internal diagnostic'))
+      .mockResolvedValueOnce(deletedAccount);
+    await page.showCancelAlert();
+    const confirm = getButton(alerts[0], '确认注销');
+
+    await expect(confirm.handler?.()).resolves.toBe(false);
+    expect(authService.logout).not.toHaveBeenCalled();
+    expect(noticeService.showToast).toHaveBeenLastCalledWith('账号正在注销中，请稍后再次确认');
+    await expect(confirm.handler?.()).resolves.toBe(false);
+    expect(authService.logout).not.toHaveBeenCalled();
+    expect(noticeService.showToast).toHaveBeenLastCalledWith('账号注销暂未完成，请稍后重试');
+
+    await expect(confirm.handler?.()).resolves.toBe(true);
+    expect(userService.cancelBlinkerAccount.mock.calls).toEqual([[], [], []]);
+    expect(userService.requestAccountDeletionCode).not.toHaveBeenCalled();
+    expect(authService.logout).toHaveBeenCalledOnce();
+    expect(noticeService.hideLoading).toHaveBeenCalledTimes(3);
+  });
+
   it('keeps a failed code for retry and never requests a replacement automatically', async () => {
     userService.cancelBlinkerAccount
       .mockRejectedValueOnce(gatewayError(409, 'ACCOUNT_DELETION_IN_PROGRESS'))
@@ -446,7 +499,8 @@ describe('UserPage account cancellation', () => {
     );
   });
 
-  it('blocks cancellation while the account still has devices', async () => {
+  it.each([false, true])('blocks cancellation with devices when emailIsVirtual is %s', async (virtual) => {
+    dataService.user.emailIsVirtual = virtual;
     dataService.device.list = ['device-1'];
     await page.showCancelAlert();
 

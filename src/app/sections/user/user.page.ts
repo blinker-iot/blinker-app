@@ -289,7 +289,7 @@ export class UserPage implements OnInit, OnDestroy {
       this.alert = await this.alertCtrl.create({
         header: '注销账号',
         message: this.deletionMessage(),
-        inputs: [
+        inputs: this.emailIsVirtual ? [] : [
           {
             name: 'code',
             placeholder: 'D-123456',
@@ -307,17 +307,17 @@ export class UserPage implements OnInit, OnDestroy {
             role: 'cancel',
             handler: () => this.resetDeletionState(),
           },
-          {
+          ...(this.emailIsVirtual ? [] : [{
             text: '发送/重发验证码',
             handler: async () => {
               await this.sendCancelCode();
               return false;
             },
-          },
+          }]),
           {
             text: '确认注销',
             role: 'destructive',
-            handler: (data) => this.cancelWithEmailCode(data?.code),
+            handler: (data) => this.cancelAccount(data?.code),
           },
         ],
       });
@@ -348,12 +348,12 @@ export class UserPage implements OnInit, OnDestroy {
     }
   }
 
-  private async cancelWithEmailCode(
+  private async cancelAccount(
     value: unknown,
   ): Promise<boolean> {
     const enteredCode = String(value ?? '').trim();
     const code = enteredCode || this.deletionCode;
-    if (!/^D-\d{6}$/.test(code)) {
+    if (!this.emailIsVirtual && !/^D-\d{6}$/.test(code)) {
       await this.noticeService.showToast(ACCOUNT_DELETION_CODE_FORMAT_MESSAGE);
       return false;
     }
@@ -364,7 +364,8 @@ export class UserPage implements OnInit, OnDestroy {
     await this.noticeService.showLoading('cancelAccount');
     try {
       try {
-        await this.userService.cancelBlinkerAccount(code);
+        if (this.emailIsVirtual) await this.userService.cancelBlinkerAccount();
+        else await this.userService.cancelBlinkerAccount(code);
       } catch (error) {
         await this.showDeletionError(error, 'delete');
         return false;
@@ -394,6 +395,7 @@ export class UserPage implements OnInit, OnDestroy {
 
   private deletionMessage(): string {
     const warning = '注销后相关数据将被永久删除且无法恢复。';
+    if (this.emailIsVirtual) return warning;
     const codeRemaining = this.remainingSeconds(this.deletionCodeExpiresAt);
     const resendRemaining = this.remainingSeconds(this.resendAvailableAt);
     let verification = '请先发送注销验证码，再输入完整的 D- 前缀和 6 位数字。';
@@ -489,7 +491,9 @@ export class UserPage implements OnInit, OnDestroy {
       this.deletionCode = '';
       this.updateDeletionMessage();
     }
-    const message = code ? ACCOUNT_DELETION_ERROR_MESSAGES[code] : undefined;
+    const message = this.emailIsVirtual && code === 'ACCOUNT_DELETION_IN_PROGRESS'
+      ? '账号正在注销中，请稍后再次确认'
+      : code ? ACCOUNT_DELETION_ERROR_MESSAGES[code] : undefined;
     if (message) {
       await this.noticeService.showToast(message);
       return;
@@ -497,7 +501,7 @@ export class UserPage implements OnInit, OnDestroy {
     await this.noticeService.showToast(
       action === 'send'
         ? ACCOUNT_DELETION_SEND_FAILED_MESSAGE
-        : ACCOUNT_DELETION_FAILED_MESSAGE,
+        : this.emailIsVirtual ? '账号注销暂未完成，请稍后重试' : ACCOUNT_DELETION_FAILED_MESSAGE,
     );
   }
 }

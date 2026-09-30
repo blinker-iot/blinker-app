@@ -342,6 +342,30 @@ describe('UserService API contracts', () => {
     expect(dataService.auth?.accessToken).toBe('access-token');
   });
 
+  it('omits the code for a virtual email without requesting a verification email', async () => {
+    dataService.user.emailIsVirtual = true;
+    const cancellation = service.cancelBlinkerAccount();
+    const request = httpTesting.expectOne(API.ACCOUNT.ROOT);
+    expect(request.request.method).toBe('DELETE');
+    expect(request.request.body).toEqual({});
+    httpTesting.expectNone(API.ACCOUNT.DELETION_CODE);
+    request.flush({
+      account: { accountId: 'user-1', tenantId: 'tenant-1', status: 'deleted', deletedAt: 3 },
+    });
+    await expect(cancellation).resolves.toMatchObject({ account: { status: 'deleted' } });
+    expect(dataService.auth?.accessToken).toBe('access-token');
+  });
+
+  it('does not omit verification for personal or unknown email types', async () => {
+    for (const emailIsVirtual of [false, undefined]) {
+      dataService.user.emailIsVirtual = emailIsVirtual;
+      await expect(service.cancelBlinkerAccount()).rejects.toMatchObject({
+        code: 'ACCOUNT_DELETION_CODE_INVALID',
+      });
+    }
+    httpTesting.expectNone(API.ACCOUNT.ROOT);
+  });
+
   it('rejects a login-style six-digit code without sending a DELETE', async () => {
     await expect(service.cancelBlinkerAccount('123456')).rejects.toMatchObject({
       code: 'ACCOUNT_DELETION_CODE_INVALID',

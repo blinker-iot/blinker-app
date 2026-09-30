@@ -218,9 +218,10 @@ export class UserService {
       .catch(this.handleError);
   }
 
-  async cancelBlinkerAccount(code: string): Promise<DeletedAccountResponse> {
+  async cancelBlinkerAccount(code?: string): Promise<DeletedAccountResponse> {
     const session = this.requireSession();
-    if (!/^D-\d{6}$/.test(code)) {
+    const skipEmailCode = code === undefined && this.dataService.user.emailIsVirtual === true;
+    if (!skipEmailCode && !/^D-\d{6}$/.test(code ?? '')) {
       throw new GatewayHttpError({
         httpStatus: 400,
         code: 'ACCOUNT_DELETION_CODE_INVALID',
@@ -229,7 +230,7 @@ export class UserService {
     }
     const response = await firstValueFrom(
       this.http.delete<DeletedAccountResponse>(API.ACCOUNT.ROOT, {
-        body: { code },
+        body: code === undefined ? {} : { code },
         observe: 'response',
       }),
     );
