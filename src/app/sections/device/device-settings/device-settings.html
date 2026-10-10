@@ -11,16 +11,11 @@
 <ion-content [fullscreen]="true">
   <main>
     <section class="device-card">
-      <button type="button" class="device-image-button" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice"
+      <button type="button" class="device-image-button" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice || imageSaving"
         (click)="selectIcon()">
         <span class="device-image-shell">
           <b-device-img [filename]="device.config.image"></b-device-img>
         </span>
-        @if (!isSharedDevice) {
-        <span class="image-edit-badge" aria-hidden="true">
-          <i class="fa-light fa-camera"></i>
-        </span>
-        }
       </button>
       <div class="device-summary">
         <!-- <span class="device-kicker">
@@ -39,9 +34,10 @@
           </button>
           }
         </div>
-        <span class="info-copy">
-          <strong>ID: {{ device.id }}</strong>
-        </span>
+        <button type="button" class="device-id" (click)="copyDeviceId()"
+          [title]="device.id || device.deviceName" aria-label="复制设备 ID">
+          ID: {{ device.id || device.deviceName }}
+        </button>
       </div>
     </section>
     @if (hasDeviceKeyContext && isOwner) {
@@ -120,10 +116,14 @@
       </div>
     </section>
     }
-    <div class="section-label menu-section-label">设备功能</div>
-    <app-menu-list [detailed]="true" [items]="deviceMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
-    <div class="section-label danger-section-label">设备管理</div>
-    <app-menu-list [detailed]="true" [items]="managementMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
+    <section class="menu-group">
+      <h2 class="section-label">设备功能</h2>
+      <app-menu-list [detailed]="true" [items]="deviceMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
+    </section>
+    <section class="menu-group">
+      <h2 class="section-label">设备管理</h2>
+      <app-menu-list [detailed]="true" [items]="managementMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
+    </section>
   </main>
 </ion-content>
 }

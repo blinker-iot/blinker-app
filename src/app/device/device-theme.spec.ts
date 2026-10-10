@@ -6,10 +6,10 @@ describe('device theme preferences', () => {
 
   it('restores each device independently without changing the app theme', () => {
     localStorage.setItem('blinker-theme', 'dark');
-    expect(saveDeviceTheme('living-room', 'sand')).toBe(true);
-    saveDeviceTheme('workshop', 'graphite');
-    expect(readDeviceTheme('living-room')).toBe('sand');
-    expect(readDeviceTheme('workshop')).toBe('graphite');
+    expect(saveDeviceTheme('living-room', 'natural')).toBe(true);
+    saveDeviceTheme('workshop', 'electronic');
+    expect(readDeviceTheme('living-room')).toBe('natural');
+    expect(readDeviceTheme('workshop')).toBe('electronic');
     expect(readDeviceTheme('new-device')).toBeUndefined();
     expect(localStorage.getItem('blinker-theme')).toBe('dark');
   });
@@ -20,17 +20,17 @@ describe('device theme preferences', () => {
   });
 
   it('can restore the original layout style without changing other devices', () => {
-    saveDeviceTheme('first', 'sand');
-    saveDeviceTheme('second', 'graphite');
+    saveDeviceTheme('first', 'natural');
+    saveDeviceTheme('second', 'dark');
     expect(saveDeviceTheme('first', undefined)).toBe(true);
     expect(readDeviceTheme('first')).toBeUndefined();
-    expect(readDeviceTheme('second')).toBe('graphite');
+    expect(readDeviceTheme('second')).toBe('dark');
   });
 
   it('handles unavailable storage without blocking the device page', () => {
     vi.spyOn(localStorage, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
     vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('blocked'); });
     expect(readDeviceTheme('test')).toBeUndefined();
-    expect(saveDeviceTheme('test', 'clear')).toBe(false);
+    expect(saveDeviceTheme('test', 'natural')).toBe(false);
   });
 });

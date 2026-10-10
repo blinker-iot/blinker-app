@@ -10,14 +10,16 @@ import { DeviceService } from '../../../core/services/device.service';
 import { NoticeService } from '../../../core/services/notice.service';
 import { DeviceUiConnection, DeviceUiPort, DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
 import { DeviceV2PageLayoutService } from '../../../core/services/device-v2-page-layout.service';
-import { arrangeTiles, capabilityTiles, InterfaceDensity, InterfaceTile, toLegacyLayout, toPageLayout } from './interface-draft';
-import { InterfaceGenerationService } from './interface-generation.service';
+import { arrangeTiles, capabilityTiles, displayValue, InterfaceDensity, InterfaceTile, toLegacyLayout, toPageLayout } from './interface-draft';
+import { PageLayoutPanelComponent, type PanelCard } from '../../../device/v2/panel/page-layout-panel';
+import type { WorkflowPreview } from './interface-workflow';
+import { InterfaceGenerationService, type InterfaceGenerationOptions } from './interface-generation.service';
 
-import { INTERFACE_STYLES, InterfaceStyle } from '../../../core/device-v2/interface-style';
+import { UI_THEMES, UiTheme } from '../../../core/device-v2/ui-theme';
 
 type Method = 'automatic' | 'ai' | 'classic';
 @Component({
-  selector: 'app-device-uic', standalone: true, imports: [IonicModule, FormsModule],
+  selector: 'app-device-uic', standalone: true, imports: [IonicModule, FormsModule, PageLayoutPanelComponent],
   templateUrl: './device-uic.page.html', styleUrls: ['./device-uic.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -34,8 +36,8 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     { id: 'compact', label: '紧凑', description: '一屏看见更多信息' },
     { id: 'focus', label: '专注', description: '让核心操作更突出' },
   ];
-  readonly styles = INTERFACE_STYLES;
-  style: InterfaceStyle = 'minimal';
+  readonly styles = UI_THEMES;
+  style: UiTheme = 'natural';
   get selectedStyle() { return this.styles.find(option => option.id === this.style)!; }
   get previewStyle() { return this.selected === 'ai' ? this.style : null; }
   readonly suggestions = ['把常用开关放在最上面', '以监测数据为主，布局紧凑', '大按钮，方便家人使用'];
@@ -45,6 +47,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   sourceTiles: InterfaceTile[] = [];
   tiles: InterfaceTile[] = [];
   prompt = '';
+  adjustment = '';
   summary = '';
   error = '';
   loading = false;
@@ -52,8 +55,10 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   generated = false;
   saving = false;
   previewCount = 0;
+  progressMessage = '';
+  workflowPreview?: WorkflowPreview;
   private generationController?: AbortController;
-  private previousDraft?: { tiles: InterfaceTile[]; summary: string; generated: boolean };
+  private previousDraft?: { tiles: InterfaceTile[]; summary: string; generated: boolean; preview?: WorkflowPreview };
   snapshot?: DeviceUiSnapshot;
   private revision = 0;
   private layoutReady = false;
@@ -93,6 +98,17 @@ export class DeviceUicPage implements OnInit, OnDestroy {
       && (this.selected === 'classic' || (!!this.tiles.length && (!this.isV2 || this.layoutReady)
         && ((this.selected === 'automatic' && this.isV2) || this.generated)));
   }
+  get panelCards(): PanelCard[] {
+    if (!this.snapshot?.manifestAccepted || !this.tiles.length) return [];
+    const layout = toPageLayout(this.tiles, this.snapshot, 1, this.previewStyle || undefined);
+
+    return layout.widgets.map(widget => {
+      const field = this.snapshot!.endpoints.find(field => field.key === widget.endpointKey)!;
+      return { widget, field, value: field.value, display: displayValue(field.value),
+        draft: field.value == null ? '' : String(field.value), error: '', disabled: false };
+    });
+  }
+
   get widgetCount(): number {
     try { const widgets = JSON.parse(this.device?.config.layouter || '{}').dashboard; return Array.isArray(widgets) ? widgets.length : 0; } catch { return 0; }
   }
@@ -130,20 +146,27 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     this.error = '';
     this.summary = '';
     this.generated = false;
+    this.workflowPreview = undefined;
     this.tiles = arrangeTiles(this.sourceTiles, this.density, this.selected === 'ai' ? this.style : undefined);
     if (this.isV2 && method !== 'classic') void this.refreshCapabilities();
   }
   closeEditor(): void { if (!this.saving && !this.generating) { this.selected = null; this.error = ''; } }
   chooseDensity(density: InterfaceDensity): void {
     if (this.generating || this.saving) return;
+    if (this.isV2 && this.selected === 'ai') {
+      this.generated = false;
+      this.workflowPreview = undefined;
+      this.summary = '';
+    }
     this.density = density;
     this.tiles = arrangeTiles(this.generated ? this.tiles : this.sourceTiles, density, !this.generated && this.selected === 'ai' ? this.style : undefined);
   }
-  chooseStyle(style: InterfaceStyle): void {
+  chooseStyle(style: UiTheme): void {
     if (this.generating || this.saving || style === this.style) return;
     this.style = style;
     this.density = this.selectedStyle.density;
     this.generated = false;
+    this.workflowPreview = undefined;
     this.summary = '';
     this.error = '';
     this.tiles = arrangeTiles(this.sourceTiles, this.density, style);
@@ -188,8 +211,10 @@ export class DeviceUicPage implements OnInit, OnDestroy {
       if (version === this.refreshVersion) { this.loading = false; this.render(); }
     }
   }
-  async generate(): Promise<void> {
-    const prompt = this.prompt.trim() || this.selectedStyle.prompt;
+  async generate(refining = false): Promise<void> {
+    const prompt = refining ? this.adjustment.trim() : this.prompt.trim() || this.selectedStyle.prompt;
+    if (refining && (!this.generated || !this.isV2 || !prompt)) return;
+    const base = refining ? { tiles: this.tiles, summary: this.summary, preview: this.workflowPreview } : undefined;
     if (this.selected !== 'ai' || !this.device || this.device.config.isShared) return;
     if (this.generating || this.saving) return;
     if (!this.sourceTiles.length) {
@@ -204,35 +229,52 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     const fingerprint = this.fingerprint;
     const controller = new AbortController();
     this.generationController = controller;
-    this.previousDraft = { tiles: this.tiles, summary: this.summary, generated: this.generated };
+    this.previousDraft = { tiles: this.tiles, summary: this.summary, generated: this.generated, preview: this.workflowPreview };
     this.previewCount = 0;
+    this.progressMessage = '';
     this.generating = true;
     this.generated = false;
+    this.workflowPreview = undefined;
     this.summary = '';
     this.error = '';
     this.render();
     this.scrollToPreview();
     try {
-      const result = await this.generation.generate(prompt, this.density, this.sourceTiles, this.style, {
+      const options: InterfaceGenerationOptions = {
         signal: controller.signal,
+        base,
+        snapshot: this.isV2 ? this.snapshot : undefined,
+        onProgress: message => {
+          if (epoch !== this.epoch || this.destroyed || fingerprint !== this.fingerprint) return;
+          this.progressMessage = message;
+          this.render();
+        },
         onPreview: result => {
           if (epoch !== this.epoch || this.destroyed || fingerprint !== this.fingerprint) return;
           this.tiles = this.withLiveValues(result.tiles);
           this.previewCount = result.tiles.length;
+          this.workflowPreview = result.preview;
           this.render();
         },
-      });
+      };
+      const result = await (base && this.snapshot
+        ? this.generation.refine(prompt, this.density, this.sourceTiles, this.style, { ...options, base, snapshot: this.snapshot })
+        : this.generation.generate(prompt, this.density, this.sourceTiles, this.style, options));
       if (epoch !== this.epoch || this.destroyed) return;
       if (fingerprint !== this.fingerprint) throw new Error('设备能力已更新，请重新生成');
       this.tiles = this.withLiveValues(result.tiles);
       this.summary = result.summary;
+      this.workflowPreview = result.preview;
       this.generated = true;
+      if (refining) this.adjustment = '';
       this.previousDraft = undefined;
     } catch (error) {
       if (epoch === this.epoch) {
         this.restoreDraft();
         const code = (error as { code?: string })?.code;
+        const feedback = (error as { feedback?: string })?.feedback || '';
         this.error = code === 'INTERFACE_AI_UNAVAILABLE' ? 'AI 服务尚未配置，请联系服务管理员；也可以使用自动适配或拖拽编辑。'
+          : code === 'INTERFACE_AI_REVIEW_REJECTED' ? `界面暂未通过视觉审查。${feedback} 请调整需求后重试，上一次通过的预览已保留。`
           : code === 'INTERFACE_AI_RATE_LIMIT' ? '生成请求较多，请稍后再试。'
           : code === 'INTERFACE_AI_TIMEOUT' || code === 'GATEWAY_TIMEOUT' ? '生成超时，请重试。上一次预览已保留。'
           : '生成未完成，请稍后重试。上一次预览已保留。';
@@ -254,6 +296,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
       this.tiles = this.withLiveValues(this.previousDraft.tiles);
       this.summary = this.previousDraft.summary;
       this.generated = this.previousDraft.generated;
+      this.workflowPreview = this.previousDraft.preview;
       this.previousDraft = undefined;
     }
   }
@@ -332,6 +375,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     this.summary = '';
     this.error = '';
     this.generated = false;
+    this.workflowPreview = undefined;
     this.layoutReady = false;
     this.loading = false;
     this.generating = false;
@@ -347,7 +391,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
         this.sourceTiles = capabilityTiles(device, snapshot);
         if (changed) {
           this.cancelGeneration();
-          this.generated = false; this.summary = ''; this.layoutReady = false;
+          this.generated = false; this.summary = ''; this.workflowPreview = undefined; this.layoutReady = false;
           if (fingerprint && this.selected && this.selected !== 'classic') void this.readLayout();
         }
         if (!this.generated && !this.generating) this.tiles = arrangeTiles(this.sourceTiles, this.density, this.selected === 'ai' ? this.style : undefined);

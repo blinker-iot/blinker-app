@@ -153,6 +153,14 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
   },
   {
+    path: 'device-manager/:id/component-preview',
+    loadComponent: () => import('./sections/device/component-preview/component-preview.page').then(m => m.ComponentPreviewPage),
+  },
+  {
+    path: 'device-manager/:id/components',
+    loadComponent: () => import('./sections/device/device-components/device-components.page').then(m => m.DeviceComponentsPage),
+  },
+  {
     path: 'device-manager/:id',
     loadComponent: () => import('./sections/device/device-settings/device-settings').then(m => m.DeviceSettingsPage),
   },

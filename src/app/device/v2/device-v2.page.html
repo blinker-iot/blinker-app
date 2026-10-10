@@ -20,7 +20,7 @@
 </ion-header>
 }
 
-<ion-content [fullscreen]="true" [attr.data-interface-style]="layout?.style || null">
+<ion-content [fullscreen]="true">
   <main class="v2-content content-under-header">
     @if (error) {
       <section class="notice error">
@@ -58,80 +58,8 @@
         }
       </section>
     } @else {
-      <section class="summary">
-        <span>Manifest {{ snapshot.manifestRevision }}</span>
-        <span>Layout {{ layout.revision }}</span>
-        <span>State {{ snapshot.stateRevision ?? '—' }}</span>
-        @if (telemetryActive) {
-          <span>Realtime {{ telemetryIntervalMs }} ms</span>
-        }
-      </section>
-
-      <section class="fields">
-        @for (widget of widgets; track widget.widgetId) {
-          @if (endpoint(widget); as field) {
-            <article
-              class="field" [class.value-field]="widget.type === 'value'"
-              [class.compact]="widget.appearance === 'compact'"
-              [class.emphasized]="widget.appearance === 'emphasized'"
-              [style.grid-column]="(widget.grid.x + 1) + ' / span ' + widget.grid.width"
-              [style.grid-row]="(widget.grid.y + 1) + ' / span ' + widget.grid.height"
-            >
-              <div class="field-copy">
-                <strong>{{ widget.title || field.key }}</strong>
-                <span>{{ display(field) }}{{ unit(field) ? ' ' + unit(field) : '' }}</span>
-              </div>
-
-              @if (widget.type === 'switch') {
-                <ion-toggle
-                  aria-label="设置 {{ widget.title || field.key }}"
-                  [checked]="value(field) === true"
-                  [disabled]="pending.has(field.key) || !canControl"
-                  (ionChange)="setBoolean(field, $event)"
-                ></ion-toggle>
-              } @else if (widget.type === 'button') {
-                <ion-button
-                  size="small"
-                  [disabled]="pending.has(field.key) || !canControl"
-                  (click)="execute(field)"
-                >执行</ion-button>
-              } @else if (widget.type === 'slider') {
-                <ion-range
-                  class="slider"
-                  [min]="field.minimum!"
-                  [max]="field.maximum!"
-                  [step]="field.step ?? 1"
-                  [value]="value(field)"
-                  [pin]="true"
-                  [disabled]="pending.has(field.key) || !canControl"
-                  (ionChange)="setSlider(field, $event)"
-                ></ion-range>
-              } @else if (widget.type === 'input') {
-                <div class="editor">
-                  <ion-input
-                    [type]="inputType(field)"
-                    [value]="draft(field)"
-                    [maxlength]="field.maxLength"
-                    [disabled]="pending.has(field.key) || !canControl"
-                    (ionInput)="updateDraft(field, $event)"
-                  ></ion-input>
-                  <ion-button
-                    size="small"
-                    [disabled]="pending.has(field.key) || !canControl"
-                    (click)="commit(field)"
-                  >发送</ion-button>
-                </div>
-              }
-
-              @if (fieldError(field)) {
-                <p class="field-error">{{ fieldError(field) }}</p>
-              }
-            </article>
-          }
-        } @empty {
-          <div class="empty"><p>设备未声明可用能力。</p></div>
-        }
-      </section>
+      <app-page-layout-panel [cards]="panelCards" [interactive]="true"
+        (action)="onPanelAction($event)"></app-page-layout-panel>
 
       @if (lastEvent) {
         <section class="event">

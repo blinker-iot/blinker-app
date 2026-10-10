@@ -1,0 +1,210 @@
+@use '../widget' as w;
+
+@include w.card;
+@include w.head;
+
+:host { justify-content: flex-start; }
+
+:host(.alert) {
+  --ui-accent: var(--ui-alert);
+
+  .now { color: var(--ui-alert); }
+}
+
+.now {
+  @include w.number(24px);
+  flex: 0 0 auto;
+}
+
+.empty {
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+
+// trend: area bleeding to the bottom edge of the card
+
+:host([data-variant='trend']) { padding-bottom: 0; overflow: hidden; }
+
+.trend {
+  position: relative;
+  height: 64px;
+  margin: auto -16px 0;
+
+  svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+}
+
+.trend-area {
+  @include w.dotted;
+
+  path { fill: color-mix(in srgb, var(--ui-accent) calc(16% + (100% - var(--ui-off-fill)) * 0.5), transparent); }
+}
+
+.trend-line path {
+  fill: none;
+  stroke: var(--ui-accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: var(--ui-dash);
+  vector-effect: non-scaling-stroke;
+}
+
+// axis: start time, extremes and "now" under a plot
+
+.axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: -6px;
+  color: var(--ui-muted);
+  font-family: var(--ui-font-num);
+  font-size: 10px;
+}
+
+:host([data-variant='trend']) .axis { margin: 0 0 12px; }
+
+// bars and wave
+
+.bars,
+.wave {
+  display: flex;
+  gap: 3px;
+  height: 72px;
+  margin-top: auto;
+
+  span {
+    @include w.dotted;
+    flex: 1 1 0;
+    min-width: 2px;
+    border-radius: 3px;
+    transition: height 0.3s ease;
+  }
+}
+
+.bars {
+  align-items: flex-end;
+
+  span { background: color-mix(in srgb, var(--ui-muted) 45%, transparent); }
+  .latest { background: var(--ui-accent); }
+}
+
+.wave {
+  align-items: center;
+
+  span { background: var(--ui-accent); }
+}
+
+// line
+
+.line {
+  height: 150px;
+  margin: auto -6px 0;
+}
+
+// timeline
+
+.timeline {
+  @include w.dotted;
+  position: relative;
+  height: 26px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--ui-track);
+
+  span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+  }
+}
+
+.timeline-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: -6px;
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-width: 0;
+
+  span { display: inline-flex; align-items: center; gap: 5px; }
+  i { width: 8px; height: 8px; border-radius: 50%; }
+}
+
+.window {
+  flex: 0 0 auto;
+  font-family: var(--ui-font-num);
+}
+
+// stat
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: auto;
+}
+
+.stat {
+  @include w.well;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--ui-radius-sm);
+
+  small {
+    @include w.label-text;
+    color: var(--ui-muted);
+    font-size: 11px;
+  }
+
+  strong { @include w.number(18px); }
+}
+
+// log
+
+.log {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 7px 0;
+    border-top: 1px solid var(--ui-line);
+    font-size: 13px;
+
+    &:first-child { border-top: 0; font-weight: 600; }
+  }
+
+  time {
+    flex: 0 0 auto;
+    color: var(--ui-muted);
+    font-family: var(--ui-font-num);
+    font-size: 11px;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

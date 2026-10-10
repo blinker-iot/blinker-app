@@ -140,20 +140,20 @@ describe('interface studio workflow', () => {
     device.config.isShared = true; await select('classic'); await page.apply(); expect(page.selected).toBeNull(); expect(saveConfig).not.toHaveBeenCalled();
   });
   it('generates from a selected style without requiring a custom prompt, then saves that style', async () => {
-    await select('ai'); page.chooseStyle('technical');
+    await select('ai'); page.chooseStyle('electronic');
     expect(page.density).toBe('compact');
     expect(page.tiles[0].type).toBe('value');
     await page.generate();
-    expect(generate).toHaveBeenCalledWith(expect.stringContaining('深色科技'), 'compact', page.sourceTiles, 'technical', expect.objectContaining({ onPreview: expect.any(Function), signal: expect.any(AbortSignal) }));
+    expect(generate).toHaveBeenCalledWith(expect.stringContaining('OLED 点阵'), 'compact', page.sourceTiles, 'electronic', expect.objectContaining({ onPreview: expect.any(Function), signal: expect.any(AbortSignal) }));
     await page.apply();
-    expect(saveLayout.mock.calls[0][1].style).toBe('technical');
+    expect(saveLayout.mock.calls[0][1].style).toBe('electronic');
   });
   it('invalidates the previous AI result on style change and protects a running generation', async () => {
     await select('ai'); await page.generate();
-    page.chooseStyle('warm');
+    page.chooseStyle('dark');
     expect(page.generated).toBe(false); expect(page.canApply).toBe(false); expect(page.summary).toBe('');
     expect(page.tiles.every(tile => tile.width === 8)).toBe(true);
-    page.generating = true; page.chooseStyle('minimal'); expect(page.style).toBe('warm');
+    page.generating = true; page.chooseStyle('natural'); expect(page.style).toBe('dark');
   });
 
   it('updates the canvas during generation, preserves layout on live state updates, and blocks partial apply', async () => {

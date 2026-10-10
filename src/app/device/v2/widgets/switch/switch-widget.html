@@ -1,0 +1,107 @@
+<ng-template #head let-state="state">
+  <span class="head">
+    <span class="icon"><app-ui-icon [name]="icon" /></span>
+    <span class="titles">
+      <span class="title">{{ title }}</span>
+      <span class="caption">{{ state }}</span>
+    </span>
+  </span>
+</ng-template>
+
+@switch (variant) {
+  @case ('toggle') {
+    <div class="row">
+      <ng-container *ngTemplateOutlet="head; context: { state: options.caption || state }" />
+      <button type="button" class="toggle" role="switch" [class.on]="on" [attr.aria-checked]="on"
+        [attr.aria-label]="title" [disabled]="card.disabled" (click)="toggle()"><span class="knob"></span></button>
+    </div>
+  }
+
+  @case ('tile') {
+    <button type="button" class="tile" role="switch" [attr.aria-checked]="on" [attr.aria-label]="title"
+      [disabled]="card.disabled" (click)="toggle()">
+      <span class="icon"><app-ui-icon [name]="icon" /></span>
+      <span class="titles">
+        <span class="title">{{ title }}</span>
+        @if (armed() || options.showState !== false) {
+          <span class="caption">{{ armed() ? state : options.caption || state }}</span>
+        }
+      </span>
+      @switch (options.corner ?? 'dot') {
+        @case ('dot') { <span class="corner corner-dot" aria-hidden="true"></span> }
+        @case ('chevron') { <app-ui-icon class="corner" name="chevron" /> }
+      }
+    </button>
+  }
+
+  @case ('power') {
+    <button type="button" class="power" role="switch" [class.on]="on" [attr.aria-checked]="on"
+      [attr.aria-label]="title" [disabled]="card.disabled" (click)="toggle()">
+      <span class="power-ring"></span>
+      <app-ui-icon [name]="icon" />
+    </button>
+    <span class="titles centered">
+      <span class="title">{{ title }}</span>
+      <span class="caption">{{ armed() ? state : options.caption || state }}</span>
+    </span>
+  }
+
+  @case ('chip') {
+    <button type="button" class="chip" role="switch" [attr.aria-checked]="on" [attr.aria-label]="title"
+      [disabled]="card.disabled" (click)="toggle()">
+      <app-ui-icon [name]="icon" />
+      <span class="chip-text">{{ title }}</span>
+      <span class="chip-state">{{ state }}</span>
+    </button>
+  }
+
+  @case ('segment') {
+    <ng-container *ngTemplateOutlet="head; context: { state: options.caption || (armed() ? state : '') }" />
+    <div class="segment" role="radiogroup" [attr.aria-label]="title">
+      <button type="button" role="radio" [class.on]="!on" [attr.aria-checked]="!on" [disabled]="card.disabled"
+        (click)="toggle(false)">{{ offText }}</button>
+      <button type="button" role="radio" [class.on]="on" [attr.aria-checked]="on" [disabled]="card.disabled"
+        (click)="toggle(true)">{{ onText }}</button>
+    </div>
+  }
+
+  @case ('check') {
+    <button type="button" class="check-row" role="checkbox" [attr.aria-checked]="on" [disabled]="card.disabled"
+      (click)="toggle()">
+      <span class="check" [class.on]="on"><app-ui-icon name="check" /></span>
+      <span class="titles">
+        <span class="title">{{ title }}</span>
+        <span class="caption">{{ options.caption || state }}</span>
+      </span>
+    </button>
+  }
+
+  @case ('lock') {
+    <button type="button" class="lock" role="switch" [attr.aria-checked]="on" [attr.aria-label]="title"
+      [disabled]="card.disabled" (click)="toggle()">
+      <span class="lock-icon"><app-ui-icon [name]="icon" /></span>
+      <span class="title">{{ title }}</span>
+      <span class="caption">{{ armed() ? state : options.caption || state }}</span>
+    </button>
+  }
+
+  @case ('slide') {
+    <ng-container *ngTemplateOutlet="head; context: { state: options.caption || state }" />
+    <div class="slide" [class.on]="on" [class.disabled]="card.disabled" [style.--slide]="thumb">
+      <span class="slide-fill"></span>
+      <span class="slide-hint">{{ on ? '向左滑动 · ' + offText : '向右滑动 · ' + onText }}</span>
+      <span class="slide-thumb" role="switch" tabindex="0" [attr.aria-checked]="on" [attr.aria-label]="title"
+        (pointerdown)="slideStart($event)" (pointermove)="slideMove($event)" (pointerup)="slideEnd($event)"
+        (pointercancel)="slideEnd($event)" (keydown.enter)="toggle(!on, true)" (keydown.space)="toggle(!on, true)">
+        <app-ui-icon name="chevron" [class.flip]="on" />
+      </span>
+    </div>
+  }
+
+  @default {
+    <button type="button" class="entity" role="switch" [attr.aria-checked]="on" [attr.aria-label]="title"
+      [disabled]="card.disabled" (click)="toggle()">
+      <ng-container *ngTemplateOutlet="head; context: { state: armed() ? state : options.caption || state }" />
+    </button>
+  }
+}

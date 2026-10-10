@@ -43,6 +43,7 @@ export interface BlinkerDevice {
         card?: DeviceCardConfig,
         authKey?: string,
         component?: string,
+        hiddenEndpointKeys?: string[],
         headerStyle?: 'dark' | 'light'
     },
     data: any,

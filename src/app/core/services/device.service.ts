@@ -758,7 +758,7 @@ export class DeviceService {
   saveDeviceConfig(device, deviceConfig) {
     if (device.config.mode === 'bbp2'
       && Object.keys(deviceConfig).length > 0
-      && Object.keys(deviceConfig).every(key => ['component', 'layouter', 'customName'].includes(key))) {
+      && Object.keys(deviceConfig).every(key => ['component', 'layouter', 'customName', 'hiddenEndpointKeys', 'image'].includes(key))) {
       return this.http.patch<{ status: number }>(API.DEVICE_V2.UI_CONFIG(device.deviceName), deviceConfig)
         .toPromise().then(response => response?.status === 200).catch(() => false);
     }

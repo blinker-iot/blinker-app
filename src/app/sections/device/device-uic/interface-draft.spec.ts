@@ -1,5 +1,5 @@
 import { parsePageLayout, migratePageLayout } from '../../../core/device-v2/page-layout';
-import { INTERFACE_STYLE_IDS } from '../../../core/device-v2/interface-style';
+import { UI_THEME_IDS } from '../../../core/device-v2/ui-theme';
 import { arrangeTiles, capabilityTiles, toLegacyLayout, toPageLayout, validateProposal } from './interface-draft';
 import { BlinkerDevice } from '../../../core/model/device.model';
 import { DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
@@ -42,7 +42,7 @@ describe('interface capability and proposal boundaries', () => {
     const snapshot: DeviceUiSnapshot = { manifestAccepted: true, manifestFingerprint: 'a'.repeat(64), manifestRevision: 1, stateRevision: 1, stateFresh: true,
       endpoints: [{ id: 1, key: 'temperature', role: 'property', valueType: 'number', writable: false, readable: true, notifies: true }] };
     const tiles = capabilityTiles({ ...device, config: { ...device.config, mode: 'bbp2' } }, snapshot);
-    for (const style of INTERFACE_STYLE_IDS) {
+    for (const style of UI_THEME_IDS) {
       const layout = toPageLayout(tiles, snapshot, 1, style);
       expect(parsePageLayout(JSON.parse(JSON.stringify(layout))).style).toBe(style);
       expect(migratePageLayout(layout, { ...snapshot, manifestFingerprint: 'b'.repeat(64) }).style).toBe(style);
@@ -51,11 +51,11 @@ describe('interface capability and proposal boundaries', () => {
   });
   it('changes layout priorities without mutating bindings or dropping capabilities', () => {
     const source = capabilityTiles(device);
-    expect(arrangeTiles(source, 'compact', 'technical').map(tile => tile.type)).toEqual(['value', 'switch']);
-    expect(arrangeTiles(source, 'focus', 'warm').map(tile => tile.width)).toEqual([8, 8]);
+    expect(arrangeTiles(source, 'compact', 'electronic').map(tile => tile.type)).toEqual(['value', 'switch']);
+    expect(arrangeTiles(source, 'focus', 'dark').map(tile => tile.width)).toEqual([8, 8]);
     expect(source.map(tile => tile.type)).toEqual(['switch', 'value']);
     const config = { background: { img: 'kept', isFull: true } };
-    for (const style of INTERFACE_STYLE_IDS) {
+    for (const style of UI_THEME_IDS) {
       const result = JSON.parse(toLegacyLayout(source, JSON.stringify({ config, actions: ['keep'], triggers: ['keep'] }), style));
       expect(result.config).toEqual({ ...config, interfaceStyle: style });
       expect(result.actions).toEqual(['keep']); expect(result.triggers).toEqual(['keep']);

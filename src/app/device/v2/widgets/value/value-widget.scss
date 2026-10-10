@@ -1,0 +1,194 @@
+@use '../widget' as w;
+
+@include w.card;
+@include w.head;
+
+:host(.alert) {
+  .metric-value, .row-value, .status-text, .countdown, .caption { color: var(--ui-alert); }
+  .countdown-bar span { background: var(--ui-alert); }
+}
+
+.row-value {
+  @include w.number(22px);
+  flex: 0 0 auto;
+}
+
+// metric: big number, unit raised (sup) or on the baseline
+
+:host([data-variant='metric']) { justify-content: space-between; }
+
+.metric-value {
+  @include w.number(36px);
+  display: flex;
+  align-items: flex-start;
+  gap: 3px;
+
+  .unit { margin-top: 0.2em; font-size: 14px; }
+
+  &[data-unit='base'] {
+    align-items: baseline;
+
+    .unit { margin-top: 0; }
+  }
+}
+
+:host([data-align='center']) .metric-value { justify-content: center; }
+
+.metric-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.delta {
+  @include w.well(1px);
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-family: var(--ui-font-num);
+  font-size: 11px;
+}
+
+// chip
+
+:host([data-variant='chip']) { border-radius: 999px; }
+
+.chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  min-height: 42px;
+  padding: 0 16px;
+  white-space: nowrap;
+
+  app-ui-icon { color: var(--ui-accent); font-size: 16px; }
+}
+
+.chip-value {
+  font-family: var(--ui-font-num);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: var(--ui-tracking);
+}
+
+:host(.alert) .chip app-ui-icon, :host(.alert) .chip-value { color: var(--ui-alert); }
+
+// status: --state is the semantic colour (ok, off, warn or info)
+
+.status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--state);
+
+  &.pulse::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border: 2px solid var(--state);
+    border-radius: 50%;
+    opacity: 0;
+    animation: pulse 1.8s ease-out infinite;
+  }
+}
+
+.status-text {
+  @include w.label-text;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+:host([data-status='pill']) .status {
+  padding: 5px 12px;
+  border: 1px var(--ui-control-edge) color-mix(in srgb, var(--state) calc(100% - var(--ui-off-fill)), transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--state) calc(var(--ui-off-fill) * 0.15), transparent);
+  color: var(--state);
+
+  .status-dot { width: 7px; height: 7px; }
+}
+
+:host([data-status='banner']) {
+  border-color: color-mix(in srgb, var(--state) 30%, transparent);
+  border-style: var(--ui-control-edge);
+  background: color-mix(in srgb, var(--state) calc(var(--ui-off-fill) * 0.12), var(--ui-card));
+
+  .icon { color: var(--state); }
+  .status-text { color: var(--state); }
+}
+
+// countdown
+
+.countdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.countdown { @include w.number(44px); }
+
+.countdown-ring {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  transform: rotate(-90deg);
+
+  circle { fill: none; stroke-width: 5; stroke-linecap: round; }
+}
+
+.ring-track { stroke: var(--ui-track); stroke-dasharray: var(--ui-dash); }
+.ring-value { stroke: var(--ui-accent); }
+
+.countdown-bar {
+  @include w.dotted;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ui-track);
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--ui-accent);
+    transition: width 1s linear;
+  }
+}
+
+// matrix: an LED board in every theme
+
+.board {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  min-height: 84px;
+  padding: 14px;
+  overflow: hidden;
+  border-radius: var(--ui-radius-sm);
+  background: #070809;
+  color: var(--ui-accent);
+  font-size: calc(54px * var(--ui-num-scale, 1));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--ui-accent) 45%, transparent));
+}
+
+.board-unit { font-size: 0.4em; }
+
+:host(.alert) .board { color: var(--ui-alert); }
+
+@keyframes pulse {
+  0% { transform: scale(0.5); opacity: 0.7; }
+  100% { transform: scale(1.4); opacity: 0; }
+}

@@ -27,7 +27,8 @@ import { DebugComponent } from '../debug/debug.component';
 import { DebugService } from '../debug/debug.service';
 import { DeviceService } from '../core/services/device.service';
 import { ViewService } from '../core/services/view.service';
-import { DEVICE_THEMES, DeviceTheme, readDeviceTheme, saveDeviceTheme } from './device-theme';
+import { normalizeUiTheme, UI_THEMES, UiTheme } from '../core/device-v2/ui-theme';
+import { readDeviceTheme, saveDeviceTheme } from './device-theme';
 
 interface LoadedDeviceComponent {
   device?: BlinkerDevice;
@@ -35,6 +36,7 @@ interface LoadedDeviceComponent {
   layouterData?: string;
   headerActions?: TemplateRef<unknown>;
   stateLabel?: string;
+  layoutTheme?: UiTheme;
   canDeactivate?: () => Observable<boolean> | boolean;
 }
 
@@ -49,7 +51,9 @@ interface LoadedDeviceComponent {
   ],
   templateUrl: './device.page.html',
   styleUrls: ['./device.page.scss'],
-  host: { '[attr.data-device-theme]': 'selectedDeviceTheme ?? null' },
+  host: {
+    '[attr.data-ui-theme]': 'deviceTheme',
+  },
 })
 export class DevicePage implements OnInit, OnDestroy {
   loaded = false;
@@ -58,22 +62,21 @@ export class DevicePage implements OnInit, OnDestroy {
   viewActive = false;
   deviceComponent = '';
   deviceHeaderActions: TemplateRef<unknown> | null = null;
-  readonly deviceThemes = DEVICE_THEMES;
-  selectedDeviceTheme?: DeviceTheme;
+  readonly deviceThemes = UI_THEMES;
+  selectedDeviceTheme?: UiTheme;
   themePickerOpen = false;
-  themePickerEvent?: Event;
   themeSaved = true;
 
-  get deviceTheme(): DeviceTheme {
-    return this.selectedDeviceTheme ?? (this.viewService.theme === 'dark' ? 'graphite' : 'clear');
+  // Personal choice, then the layout's own theme, then the app's light or dark mode.
+  get deviceTheme(): UiTheme {
+    return this.selectedDeviceTheme ?? this.layoutTheme ?? (this.viewService.theme === 'dark' ? 'dark' : 'natural');
   }
 
-  openThemePicker(event: Event): void {
-    this.themePickerEvent = event;
+  openThemePicker(): void {
     this.themePickerOpen = true;
   }
 
-  selectDeviceTheme(theme: DeviceTheme): void {
+  selectDeviceTheme(theme: UiTheme): void {
     this.selectedDeviceTheme = theme;
     this.themeSaved = saveDeviceTheme(this.id, theme);
   }
@@ -120,6 +123,13 @@ export class DevicePage implements OnInit, OnDestroy {
 
   get usesV2DevicePage(): boolean {
     return this.deviceComponent === 'DeviceV2';
+  }
+
+  get layoutTheme(): UiTheme | undefined {
+    if (this.usesV2DevicePage) {
+      return (this.deviceComponentRef?.instance as LoadedDeviceComponent | undefined)?.layoutTheme;
+    }
+    return normalizeUiTheme(this.device?.data?.['layouterData']?.config?.interfaceStyle);
   }
 
   get deviceStateLabel(): string {
@@ -240,6 +250,9 @@ export class DevicePage implements OnInit, OnDestroy {
     this.device = nextDevice;
     this.loaded = true;
     this.deviceSubject = nextDevice.subject.subscribe((event) => {
+      if (event?.key === 'customName' || event?.key === 'image') {
+        nextDevice.config[event.key] = event.value;
+      }
       if (event?.key === 'component') this.loadDevice();
       this.cd.detectChanges();
     });

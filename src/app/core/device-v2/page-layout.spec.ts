@@ -65,7 +65,7 @@ describe('PageLayout v1', () => {
         expect.objectContaining({ widgetId: 'endpoint-5', endpointKey: 'uptime', type: 'value' }),
       ],
     });
-    expect(layout.widgets.map(widget => widget.grid.y)).toEqual([0, 1, 3, 4, 5]);
+    expect(layout.widgets.map(widget => widget.grid.y)).toEqual([0, 2, 3, 4, 6]);
     expect(parsePageLayout(JSON.parse(JSON.stringify(layout)), snapshot().endpoints)).toEqual(layout);
   });
 

@@ -1,8 +1,10 @@
 import type { BlinkerDevice } from '../../../core/model/device.model';
 import type { DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
-import { generateDefaultPageLayout, PageLayout, PageWidgetType, parsePageLayout } from '../../../core/device-v2/page-layout';
+import {
+  generateDefaultPageLayout, PageLayout, PageWidgetOptions, PageWidgetType, PageWidgetVariant, parsePageLayout, reflowPageWidgets,
+} from '../../../core/device-v2/page-layout';
 
-import { InterfaceStyle } from '../../../core/device-v2/interface-style';
+import { UiTheme } from '../../../core/device-v2/ui-theme';
 
 export type InterfaceDensity = 'balanced' | 'compact' | 'focus';
 export interface InterfaceTile {
@@ -13,14 +15,20 @@ export interface InterfaceTile {
   value: string;
   unit: string;
   level?: number;
-  width: 4 | 8;
+  width: 2 | 4 | 6 | 8;
+  height?: number;
   emphasized: boolean;
+  compact?: boolean;
+  // Presentation chosen by AI; absent means the type's default variant.
+  variant?: PageWidgetVariant;
+  icon?: string;
+  tone?: PageWidgetOptions['tone'];
   // Only the local capability adapter may supply bindings and command options.
   legacy?: Record<string, unknown>;
 }
 export interface InterfaceProposal {
   summary: string;
-  widgets: { id: string; title: string; width: 4 | 8; emphasized: boolean }[];
+  widgets: { id: string; title: string; width: InterfaceTile['width']; emphasized: boolean }[];
 }
 const labels: Record<string, string> = {
   switch: '电源开关', temperature: '温度', humidity: '湿度', brightness: '亮度',
@@ -43,7 +51,7 @@ export function capabilityTiles(device: BlinkerDevice, snapshot?: DeviceUiSnapsh
   if (device.config.mode === 'bbp2') {
     if (!snapshot?.manifestAccepted) return [];
     const base = generateDefaultPageLayout(snapshot);
-    return base.widgets.map(widget => {
+    return base.widgets.filter(widget => !device.config.hiddenEndpointKeys?.includes(widget.endpointKey)).map(widget => {
       const field = snapshot.endpoints.find(endpoint => endpoint.key === widget.endpointKey)!;
       return { id: widget.widgetId, key: field.key, title: labels[field.key] || field.key,
         type: widget['type'], value: displayValue(field.value), level: sliderLevel(field.value, field.minimum, field.maximum), unit: field.unit || units[field.key] || '',
@@ -77,10 +85,10 @@ export function capabilityTiles(device: BlinkerDevice, snapshot?: DeviceUiSnapsh
   }
   return tiles.slice(0, 64);
 }
-export function arrangeTiles(tiles: InterfaceTile[], density: InterfaceDensity, style?: InterfaceStyle): InterfaceTile[] {
+export function arrangeTiles(tiles: InterfaceTile[], density: InterfaceDensity, style?: UiTheme): InterfaceTile[] {
   const ordered = [...tiles];
   if (style) ordered.sort((left, right) => {
-    const rank = (tile: InterfaceTile) => style === 'technical' ? (tile.type === 'value' ? 0 : 1)
+    const rank = (tile: InterfaceTile) => style === 'electronic' ? (tile.type === 'value' ? 0 : 1)
       : tile.type === 'switch' || tile.type === 'button' ? 0 : tile.type === 'value' ? 1 : 2;
     return rank(left) - rank(right);
   });
@@ -89,7 +97,8 @@ export function arrangeTiles(tiles: InterfaceTile[], density: InterfaceDensity, 
     emphasized: (density === 'focus' || !!style) && index === 0,
   }));
 }
-export function validateProposal(input: unknown, source: InterfaceTile[]): { summary: string; tiles: InterfaceTile[] } {
+export function validateProposal(input: unknown, source: InterfaceTile[],
+  widths: readonly number[] = [4, 8]): { summary: string; tiles: InterfaceTile[] } {
   const proposal = input as InterfaceProposal;
   if (!proposal || typeof proposal.summary !== 'string' || proposal.summary.length > 400
     || !Array.isArray(proposal.widgets) || !proposal.widgets.length || proposal.widgets.length > source.length) throw new Error('生成结果格式不正确，请重新生成');
@@ -97,7 +106,7 @@ export function validateProposal(input: unknown, source: InterfaceTile[]): { sum
   const tiles = proposal.widgets.map(widget => {
     const original = source.find(tile => tile.id === widget?.id);
     if (!original || seen.has(widget.id) || typeof widget.title !== 'string'
-      || !widget.title.trim() || new TextEncoder().encode(widget.title).length > 64 || ![4, 8].includes(widget.width)
+      || !widget.title.trim() || new TextEncoder().encode(widget.title).length > 64 || !widths.includes(widget.width)
       || typeof widget.emphasized !== 'boolean') throw new Error('生成结果包含无效组件，请重新生成');
     seen.add(widget.id);
     return { ...original, title: widget.title.trim(), width: widget.width, emphasized: widget.emphasized };
@@ -114,18 +123,23 @@ function positions(tiles: InterfaceTile[]) {
     return grid;
   });
 }
-export function toPageLayout(tiles: InterfaceTile[], snapshot: DeviceUiSnapshot, revision: number, style?: InterfaceStyle): PageLayout {
-  const grids = positions(tiles);
+export function toPageLayout(tiles: InterfaceTile[], snapshot: DeviceUiSnapshot, revision: number, style?: UiTheme): PageLayout {
+  // Visual order is the tile order; the packer turns sizes into rows.
+  const grids = reflowPageWidgets(tiles.map((tile, index) => ({ widgetId: tile.id, type: tile.type, endpointKey: tile.key,
+    grid: { x: 0, y: index, width: tile.width, height: tile.height ?? 2 } }))).map(widget => widget.grid);
   return parsePageLayout({ ...generateDefaultPageLayout(snapshot), revision: Math.max(1, revision), ...(style ? { style } : {}),
     widgets: tiles.map((tile, index) => ({ widgetId: tile.id, endpointKey: tile.key, type: tile.type,
-      title: tile.title, appearance: tile.emphasized ? 'emphasized' : 'default', grid: grids[index] })) }, snapshot.endpoints);
+      title: tile.title, appearance: tile.emphasized ? 'emphasized' : tile.compact ? 'compact' : 'default',
+      ...(tile.variant ? { variant: tile.variant } : {}),
+      ...(tile.icon || tile.tone ? { options: { ...(tile.icon ? { icon: tile.icon } : {}), ...(tile.tone ? { tone: tile.tone } : {}) } } : {}),
+      grid: grids[index] })) }, snapshot.endpoints);
 }
-export function toLegacyLayout(tiles: InterfaceTile[], previous?: string, style?: InterfaceStyle): string {
+export function toLegacyLayout(tiles: InterfaceTile[], previous?: string, style?: UiTheme): string {
   let existing: Record<string, unknown> = {};
   try { const parsed = JSON.parse(previous || '{}'); if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) existing = parsed; } catch { /* Create a fresh layout if the old one is invalid. */ }
   const grids = positions(tiles);
   const config = existing['config'];
-  const accent = style === 'technical' ? '#68d6ec' : style === 'warm' ? '#ac592f' : style === 'minimal' ? '#28785e' : undefined;
+  const accent = style === 'electronic' ? '#ff3b30' : style === 'dark' ? '#3d8bff' : style === 'natural' ? '#2f7bff' : undefined;
   return JSON.stringify({ ...existing, version: '2.0.0', config: { ...(config && typeof config === 'object' && !Array.isArray(config)
     ? config : { headerColor: 'transparent', headerStyle: 'dark', background: { img: '', isFull: false } }),
     ...(style ? { interfaceStyle: style } : {}) },

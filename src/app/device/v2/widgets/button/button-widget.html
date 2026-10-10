@@ -1,0 +1,84 @@
+<ng-template #head>
+  <span class="head">
+    @if (options.icon) {
+      <span class="icon"><app-ui-icon [name]="options.icon" /></span>
+    }
+    <span class="titles">
+      <span class="title">{{ title }}</span>
+      @if (options.caption) {
+        <span class="caption">{{ options.caption }}</span>
+      }
+    </span>
+  </span>
+</ng-template>
+
+@switch (variant) {
+  @case ('tile') {
+    <button type="button" class="tile" [attr.aria-label]="title + '，' + label" [disabled]="card.disabled" (click)="press()">
+      <span class="icon"><app-ui-icon [name]="icon" /></span>
+      <span class="titles">
+        <span class="title">{{ title }}</span>
+        <span class="caption">{{ status }}</span>
+      </span>
+    </button>
+  }
+
+  @case ('icon') {
+    <button type="button" class="round" [class.on]="pulsing() || armed()" [attr.aria-label]="title + '，' + label"
+      [disabled]="card.disabled" (click)="press()"><app-ui-icon [name]="icon" /></button>
+    <span class="titles centered">
+      <span class="title">{{ title }}</span>
+      <span class="caption">{{ status }}</span>
+    </span>
+  }
+
+  @case ('hold') {
+    <button type="button" class="hold" [class.holding]="held() > 0" [attr.aria-label]="title + '，' + label"
+      [disabled]="card.disabled" (pointerdown)="holdStart($event)" (pointerup)="holdEnd()" (pointerleave)="holdEnd()"
+      (pointercancel)="holdEnd()" (keydown.enter)="holdStart($event)" (keyup.enter)="holdEnd()"
+      (contextmenu)="$event.preventDefault()">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="hold-track" cx="50" cy="50" r="46" />
+        <circle class="hold-progress" cx="50" cy="50" r="46" [attr.stroke-dasharray]="ring"
+          [attr.stroke-dashoffset]="ring * (1 - held())" />
+      </svg>
+      <app-ui-icon [name]="icon" />
+    </button>
+    <span class="titles centered">
+      <span class="title">{{ title }}</span>
+      <span class="caption">{{ status }}</span>
+    </span>
+  }
+
+  @case ('scene') {
+    <span class="titles">
+      <span class="title">{{ title }}</span>
+      <span class="caption">{{ status }}</span>
+    </span>
+    <div class="scene-foot">
+      <app-ui-icon class="scene-icon" [name]="options.icon || 'home'" />
+      <button type="button" class="scene-run" [class.on]="pulsing() || armed()" [attr.aria-label]="title + '，' + label"
+        [disabled]="card.disabled" (click)="press()">
+        @if (armed()) { <span>确认</span> } @else { <app-ui-icon name="play" /> }
+      </button>
+    </div>
+  }
+
+  @case ('keycap') {
+    <button type="button" class="keycap" [class.on]="pulsing() || armed()" [attr.aria-label]="title + '，' + label"
+      [disabled]="card.disabled" (click)="press()">
+      <span class="keycap-top">
+        @if (options.icon) { <app-ui-icon [name]="options.icon" /> }
+        <span class="keycap-label">{{ armed() ? label : options.actionText || title }}</span>
+      </span>
+    </button>
+  }
+
+  @default {
+    <div class="row">
+      <ng-container *ngTemplateOutlet="head" />
+      <button type="button" class="pill" [class.on]="pulsing() || armed()" [class.armed]="armed()"
+        [disabled]="card.disabled" (click)="press()">{{ pulsing() ? options.doneText ?? '已执行' : label }}</button>
+    </div>
+  }
+}

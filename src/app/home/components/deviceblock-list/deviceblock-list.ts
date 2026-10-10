@@ -12,7 +12,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { NavigationEnd, NavigationStart, Router } from '@angular/router';
 import Sortable from 'sortablejs';
 
 import { DataService } from 'src/app/core/services/data.service';
@@ -36,6 +36,10 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
   @Input() roomName?: string;
 
   @ViewChild('sortbox') sortbox: ElementRef<HTMLElement>;
+
+  private cardRead?: AbortController;
+  private appActive = true;
+  private viewInitialized = false;
 
   private sortable: any;
   private isSorting = false;
@@ -113,17 +117,35 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
         this.cd.markForCheck();
         this.refreshBlePresence();
       });
+    this.dataService.deviceDataLoader
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe(() => this.refreshCardStates());
+    this.deviceUi.appActive
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe(active => {
+        this.appActive = active;
+        this.refreshCardStates();
+      });
+    this.router.events
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe(event => {
+        if (event instanceof NavigationStart) this.cardRead?.abort();
+        if (event instanceof NavigationEnd) this.refreshCardStates();
+      });
   }
 
   ngAfterViewInit() {
+    this.viewInitialized = true;
     this.sortable = new Sortable(
       this.sortbox.nativeElement,
       this.sortableOptions
     );
     this.refreshBlePresence();
+    this.refreshCardStates();
   }
 
   ngOnDestroy() {
+    this.cardRead?.abort();
     this.sortable?.destroy();
     this.sortable = undefined;
   }
@@ -176,6 +198,19 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
   private setParentGesturesEnabled(enabled: boolean) {
     this.swipeEnabled.emit(enabled);
     this.refresherEnabled.emit(enabled);
+  }
+
+  private refreshCardStates(): void {
+    this.cardRead?.abort();
+    if (!this.viewInitialized || !this.appActive
+      || this.router.url.split(/[?#]/, 1)[0] !== '/home/device') return;
+
+    const controller = new AbortController();
+    this.cardRead = controller;
+    void this.deviceUi.refreshCardStates(this.deviceDataList, controller.signal)
+      .finally(() => {
+        if (this.cardRead === controller) this.cardRead = undefined;
+      });
   }
 
   private refreshBlePresence(): void {

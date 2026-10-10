@@ -1,0 +1,213 @@
+<ng-template #head let-state="state">
+  <span class="head">
+    <span class="icon"><app-ui-icon [name]="icon" /></span>
+    <span class="titles">
+      <span class="title">{{ title }}</span>
+      @if (state) {
+        <span class="caption">{{ state }}</span>
+      }
+    </span>
+  </span>
+</ng-template>
+
+<ng-template #number>
+  <app-dot-text [text]="reading.text" /><span class="unit">{{ reading.unit }}</span>
+</ng-template>
+
+<ng-template #rangeInput>
+  <input type="range" [attr.aria-label]="title" [min]="min" [max]="max" [step]="step" [value]="value"
+    [disabled]="card.disabled" (input)="preview($any($event.target).valueAsNumber)"
+    (change)="commit($any($event.target).valueAsNumber)" />
+</ng-template>
+
+@switch (variant) {
+  @case ('entity') {
+    <ng-container *ngTemplateOutlet="head; context: { state: (options.caption ? options.caption + ' · ' : '') + reading.text + reading.unit }" />
+    <div class="entity-bar" role="slider" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
+      [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" [attr.aria-valuetext]="reading.text + reading.unit"
+      [attr.aria-disabled]="card.disabled" (pointerdown)="dragStart($event)" (pointermove)="dragMove($event)"
+      (pointerup)="dragEnd($event)" (pointercancel)="dragEnd($event)" (keydown)="key($event)">
+      <span class="entity-fill" [style.width.%]="level * 100"></span>
+      <span class="entity-indicator" [style.left.%]="level * 100"></span>
+    </div>
+  }
+
+  @case ('bar') {
+    <div class="row">
+      <ng-container *ngTemplateOutlet="head; context: { state: options.caption }" />
+      <span class="value"><ng-container *ngTemplateOutlet="number" /></span>
+    </div>
+    <div class="bar">
+      <span class="bar-track"></span>
+      <span class="bar-fill" [style.width.%]="level * 100"></span>
+      <span class="bar-knob" data-knob="dot" [style.left.%]="level * 100"></span>
+      <ng-container *ngTemplateOutlet="rangeInput" />
+    </div>
+    @if (ticks.length) {
+      <div class="bar-ticks" aria-hidden="true">
+        @for (tick of ticks; track $index) { <span [class.lit]="tick <= level"></span> }
+      </div>
+    }
+  }
+
+  @case ('gradient') {
+    <div class="row">
+      <ng-container *ngTemplateOutlet="head; context: { state: options.caption }" />
+      <span class="value"><ng-container *ngTemplateOutlet="number" /></span>
+    </div>
+    <div class="bar gradient" [attr.data-track]="options.track ?? 'cct'" [attr.data-thickness]="options.trackSize ?? 'mid'">
+      <span class="bar-track"></span>
+      <span class="bar-knob" [attr.data-knob]="options.knob ?? 'ring'" [style.left.%]="level * 100"></span>
+      <span class="bar-mark" [style.left.%]="level * 100"></span>
+      <ng-container *ngTemplateOutlet="rangeInput" />
+    </div>
+    @if (ticks.length) {
+      <div class="tick-labels" aria-hidden="true">
+        @for (tick of ticks; track $index) { <span>{{ tickLabel(tick) }}</span> }
+      </div>
+    }
+  }
+
+  @case ('stepper') {
+    <ng-container *ngTemplateOutlet="head; context: { state: options.caption }" />
+    <div class="stepper" [attr.data-layout]="options.layout ?? 'inline'" role="group" [attr.aria-label]="title">
+      <span class="stepper-value" aria-live="polite">
+        <span class="stepper-number"><ng-container *ngTemplateOutlet="number" /></span>
+        @if (options.showRange) {
+          <small class="stepper-range">{{ min }} – {{ max }}{{ unit }}</small>
+        }
+      </span>
+      <button type="button" class="minus" aria-label="减小" [disabled]="card.disabled || value <= min"
+        (pointerdown)="stepStart(-1)" (pointerup)="stepEnd()" (pointerleave)="stepEnd()" (pointercancel)="stepEnd()"
+        (keydown.enter)="nudge(-1)"><app-ui-icon name="minus" /></button>
+      <button type="button" class="plus" aria-label="增大" [disabled]="card.disabled || value >= max"
+        (pointerdown)="stepStart(1)" (pointerup)="stepEnd()" (pointerleave)="stepEnd()" (pointercancel)="stepEnd()"
+        (keydown.enter)="nudge(1)"><app-ui-icon name="plus" /></button>
+    </div>
+  }
+
+  @case ('steps') {
+    <div class="row">
+      <ng-container *ngTemplateOutlet="head; context: { state: options.caption }" />
+      <span class="level-name">{{ levelText }}</span>
+    </div>
+    <div class="steps-row">
+      @if (options.showButtons) {
+        <button type="button" class="round" aria-label="降一档" [disabled]="card.disabled || levelIndex === 0"
+          (click)="chooseLevel(levelIndex - 1)"><app-ui-icon name="minus" /></button>
+      }
+      <div class="steps" role="radiogroup" [attr.aria-label]="title">
+        @for (level of levels; track $index) {
+          <button type="button" role="radio" [class.lit]="$index <= levelIndex" [class.on]="$index === levelIndex"
+            [attr.aria-checked]="$index === levelIndex" [attr.aria-label]="level + reading.unit"
+            [style.--height]="0.3 + 0.7 * ($index + 1) / levels.length" [disabled]="card.disabled"
+            (click)="chooseLevel($index)"><span></span></button>
+        }
+      </div>
+      @if (options.showButtons) {
+        <button type="button" class="round" aria-label="升一档" [disabled]="card.disabled || levelIndex === levels.length - 1"
+          (click)="chooseLevel(levelIndex + 1)"><app-ui-icon name="plus" /></button>
+      }
+    </div>
+  }
+
+  @case ('curtain') {
+    <div class="row">
+      <ng-container *ngTemplateOutlet="head; context: { state: options.caption || (level === 0 ? '已关闭' : '已打开') }" />
+      <span class="value"><ng-container *ngTemplateOutlet="number" /></span>
+    </div>
+    <div class="window" role="slider" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
+      [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" [attr.aria-disabled]="card.disabled"
+      (pointerdown)="dragStart($event, true)" (pointermove)="dragMove($event)" (pointerup)="dragEnd($event)"
+      (pointercancel)="dragEnd($event)" (keydown)="key($event)">
+      <span class="rail"></span>
+      <span class="panel left" [style.width.%]="(1 - level) * 50"></span>
+      <span class="panel right" [style.width.%]="(1 - level) * 50"></span>
+    </div>
+    <div class="curtain-actions">
+      <button type="button" [disabled]="card.disabled || value <= min" (click)="commit(min)">
+        <app-ui-icon name="minus" /> 全关</button>
+      <button type="button" [disabled]="card.disabled || value >= max" (click)="commit(max)">
+        <app-ui-icon name="plus" /> 全开</button>
+    </div>
+  }
+
+  @case ('ruler') {
+    <ng-container *ngTemplateOutlet="head; context: { state: options.caption }" />
+    <span class="ruler-value"><ng-container *ngTemplateOutlet="number" /></span>
+    <div class="ruler" role="slider" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
+      [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" [attr.aria-disabled]="card.disabled"
+      (pointerdown)="rulerStart($event)" (pointermove)="rulerMove($event)" (pointerup)="rulerEnd($event)"
+      (pointercancel)="rulerEnd($event)" (keydown)="key($event)">
+      @for (mark of marks; track mark.value) {
+        <span class="mark" [class.major]="mark.major" [style.left]="'calc(50% + ' + mark.offset + 'px)'">
+          @if (mark.major) { <small>{{ mark.value }}</small> }
+        </span>
+      }
+      <span class="needle"></span>
+    </div>
+  }
+
+  @case ('timer') {
+    <ng-container *ngTemplateOutlet="head; context: { state: options.caption }" />
+    @if (value > min) {
+      <div class="timer-run" [attr.data-style]="options.timerStyle ?? 'ring'" role="timer">
+        @if ((options.timerStyle ?? 'ring') === 'ring') {
+          <svg class="timer-ring" viewBox="0 0 64 64" aria-hidden="true">
+            <circle class="ring-track" cx="32" cy="32" r="28" />
+            <circle class="ring-value" cx="32" cy="32" r="28" pathLength="100"
+              [attr.stroke-dasharray]="timerProgress * 100 + ' 100'" />
+          </svg>
+        }
+        <span class="timer-copy">
+          <span class="timer-time"><app-dot-text [text]="remaining" /></span>
+          <span class="caption">{{ options.actionText ?? '后关闭' }}</span>
+          @if (options.timerStyle === 'bar') {
+            <span class="timer-bar"><span [style.width.%]="timerProgress * 100"></span></span>
+          }
+        </span>
+        <button type="button" class="timer-cancel" [disabled]="card.disabled" (click)="cancelTimer()">取消</button>
+      </div>
+    } @else {
+      <div class="presets" [style.--count]="presets.length">
+        @for (minutes of presets; track minutes) {
+          <button type="button" [disabled]="card.disabled" (click)="startTimer(minutes)">
+            <b>{{ minutes }}</b><small>分钟</small></button>
+        }
+      </div>
+    }
+  }
+
+  @default {
+    <div class="fill" role="slider" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
+      [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" [attr.aria-valuetext]="reading.text + reading.unit"
+      [attr.aria-orientation]="vertical ? 'vertical' : 'horizontal'" [attr.aria-disabled]="card.disabled"
+      [attr.data-fill]="options.fill ?? 'solid'"
+      (pointerdown)="dragStart($event, true, vertical)" (pointermove)="dragMove($event)" (pointerup)="dragEnd($event)"
+      (pointercancel)="dragEnd($event)" (keydown)="key($event)">
+      @for (tick of ticks; track $index) {
+        @if ($index > 0 && !$last) {
+          <span class="fill-mark" [style.--at]="tick"></span>
+        }
+      }
+      <ng-container *ngTemplateOutlet="fillLabels" />
+      <!-- The same labels, recoloured and clipped to the filled part. -->
+      <div class="fill-level" aria-hidden="true"
+        [style.clip-path]="vertical ? 'inset(' + (1 - level) * 100 + '% 0 0 0)' : 'inset(0 ' + (1 - level) * 100 + '% 0 0)'">
+        <span class="fill-paint"></span>
+        <ng-container *ngTemplateOutlet="fillLabels" />
+      </div>
+    </div>
+    <ng-template #fillLabels>
+      <div class="fill-labels">
+        <span class="icon"><app-ui-icon [name]="icon" /></span>
+        <span class="titles">
+          <span class="title">{{ title }}</span>
+          @if (options.showValue !== false) {
+            <span class="fill-value"><ng-container *ngTemplateOutlet="number" /></span>
+          }
+        </span>
+      </div>
+    </ng-template>
+  }
+}

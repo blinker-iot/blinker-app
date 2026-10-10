@@ -1,0 +1,28 @@
+<section class="panel" [attr.data-ui-theme]="theme || null" [attr.inert]="interactive ? null : ''">
+  @for (card of ordered; track card.widget.widgetId) {
+    <div
+      class="cell" [class.selected]="card.widget.widgetId === selectedId" [attr.data-widget-id]="card.widget.widgetId"
+      [style.--col]="card.widget.grid.x + 1" [style.--span]="card.widget.grid.width"
+      [style.--row]="card.widget.grid.y + 1" [style.--rows]="card.widget.grid.height"
+    >
+      @switch (familyOf(card.widget)) {
+        @case ('switch') { <app-switch-widget [card]="card" (act)="emit(card, $event)" /> }
+        @case ('button') { <app-button-widget [card]="card" (act)="emit(card, $event)" /> }
+        @case ('slider') { <app-slider-widget [card]="card" (act)="emit(card, $event)" /> }
+        @case ('dial') { <app-dial-widget [card]="card" (act)="emit(card, $event)" /> }
+        @case ('select') { <app-select-widget [card]="card" (act)="emit(card, $event)" /> }
+        @case ('input') { <app-input-widget [card]="card" (act)="emit(card, $event)" /> }
+        @case ('color') { <app-color-widget [card]="card" (act)="emit(card, $event)" /> }
+        @case ('meter') { <app-meter-widget [card]="card" /> }
+        @case ('chart') { <app-chart-widget [card]="card" /> }
+        @default { <app-value-widget [card]="card" /> }
+      }
+
+      @if (card.error) {
+        <p class="cell-error" role="alert">{{ card.error }}</p>
+      }
+    </div>
+  } @empty {
+    <div class="empty"><p>设备未声明可用能力。</p></div>
+  }
+</section>

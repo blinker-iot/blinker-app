@@ -40,7 +40,7 @@ export class LineChartAreaComponent {
     // Theme changes may come from the app, a device preference, or a saved panel.
     let ancestor: Element | null = this.chartContainer.nativeElement;
     while (ancestor) {
-      this.themeObserver.observe(ancestor, { attributes: true, attributeFilter: ['class', 'data-device-theme', 'data-interface-style'] });
+      this.themeObserver.observe(ancestor, { attributes: true, attributeFilter: ['class', 'data-ui-theme'] });
       ancestor = ancestor.parentElement;
     }
   }

@@ -74,5 +74,15 @@ export const headerIconTransitionAnimation: AnimationBuilder = (
     );
   }
 
-  return createAnimation().addAnimation(animations);
+  return createAnimation()
+    .addAnimation(animations)
+    .onFinish(step => {
+      // Ionic destroys the transforms before Angular cleans up the view stack
+      // on the next frame. Hide the inactive page before it can reappear.
+      const inactivePage = step === 1 ? options.leavingEl : options.enteringEl;
+      if (inactivePage) {
+        inactivePage.classList.add('ion-page-hidden');
+        inactivePage.setAttribute('aria-hidden', 'true');
+      }
+    });
 };

@@ -1,0 +1,241 @@
+// Shared widget chrome. Every value comes from ui-theme tokens.
+// Include `card` and `head` at the stylesheet root of a widget component.
+
+@mixin reset-button {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+
+  &:focus-visible {
+    outline: 2px solid var(--ui-accent);
+    outline-offset: 2px;
+  }
+}
+
+@mixin unit {
+  margin-left: 3px;
+  color: var(--ui-muted);
+  font-family: var(--ui-font);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: var(--ui-tracking);
+}
+
+@mixin card {
+  :host {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+    min-width: 0;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 16px;
+    border: var(--ui-card-border);
+    border-radius: var(--ui-radius);
+    background: var(--ui-card);
+    box-shadow: var(--ui-shadow);
+    color: var(--ui-ink);
+    font-family: var(--ui-font);
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.24s ease, border-color 0.24s ease, color 0.24s ease;
+  }
+
+  :host([data-appearance='compact']) { padding: 10px 14px; gap: 10px; }
+  :host([data-size='lg']) { --ui-num-scale: 1.35; }
+  :host([data-size='xl']) { --ui-num-scale: 1.85; }
+
+  :host([data-appearance='emphasized']) {
+    border-color: color-mix(in srgb, var(--ui-accent) 55%, transparent);
+    box-shadow: var(--ui-shadow), inset 0 0 0 1.5px color-mix(in srgb, var(--ui-accent) 40%, transparent);
+  }
+
+  // Vertical layout: icon above the title, centred.
+  :host([data-align='center']) {
+    text-align: center;
+
+    .head { flex-direction: column; justify-content: center; }
+    .titles { align-items: center; }
+  }
+
+  // Tiles and other full-bleed variants manage their own padding.
+  :host(.bleed) { padding: 0; }
+
+  button {
+    @include reset-button;
+
+    &:disabled { cursor: default; opacity: 0.45; }
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .unit { @include unit; }
+}
+
+// Icon, title and caption.
+@mixin head {
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  // Tinted disc on Mi themes, dotted ring on electronic. Grey while the host is .off.
+  .icon {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    box-sizing: border-box;
+    border: 1.5px var(--ui-control-edge) color-mix(in srgb, currentColor calc(100% - var(--ui-off-fill)), transparent);
+    border-radius: 50%;
+    background: color-mix(in srgb, currentColor calc(var(--ui-off-fill) * 0.14), transparent);
+    color: var(--ui-accent);
+    font-size: 17px;
+    transition: color 0.24s ease, background-color 0.24s ease;
+  }
+
+  :host(.off) .icon { color: var(--ui-muted); }
+  :host([data-hide-title]) .title { display: none; }
+  :host([data-icon-style='none']) .head .icon { display: none; }
+
+  :host([data-icon-style='plain']) .head .icon {
+    width: auto;
+    border: 0;
+    background: none;
+  }
+
+  .titles {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .title {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: var(--ui-tracking);
+    text-overflow: ellipsis;
+    text-transform: var(--ui-case);
+    white-space: nowrap;
+  }
+
+  .caption {
+    overflow: hidden;
+    color: var(--ui-muted);
+    font-size: 12px;
+    letter-spacing: var(--ui-tracking);
+    text-overflow: ellipsis;
+    text-transform: var(--ui-case);
+    white-space: nowrap;
+  }
+}
+
+// $size is the medium size; the `size` option scales it.
+@mixin number($size) {
+  font-family: var(--ui-font-num);
+  font-size: calc(#{$size} * var(--ui-num-scale, 1));
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--ui-num-weight);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+@mixin label-text {
+  font-size: 12px;
+  letter-spacing: var(--ui-tracking);
+  text-transform: var(--ui-case);
+}
+
+// Turns any solid painted shape into a dot field in the electronic theme.
+@mixin dotted {
+  -webkit-mask: var(--ui-dot-mask);
+  mask: var(--ui-dot-mask);
+}
+
+@mixin pressable {
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.16s ease, background-color 0.24s ease, border-color 0.24s ease, color 0.24s ease;
+
+  &:active:not([aria-disabled='true']):not(:disabled) { transform: scale(0.96); }
+}
+
+// Off: solid track (Mi themes) or dotted outline (electronic).
+// On: accent fill (Mi themes) or tinted dotted accent (electronic).
+@mixin control-shape($edge: 2px) {
+  border: $edge var(--ui-control-edge) var(--ui-track);
+  background: color-mix(in srgb, var(--ui-track) var(--ui-off-fill), transparent);
+
+  &.on {
+    border-color: var(--ui-accent);
+    background: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-fill), transparent);
+    color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), var(--ui-on-accent));
+  }
+}
+
+// Quiet well: grey fill (Mi themes) or dotted outline (electronic).
+@mixin well($edge: 1.5px) {
+  border: $edge var(--ui-control-edge) color-mix(in srgb, var(--ui-track) calc(100% - var(--ui-off-fill)), transparent);
+  background: color-mix(in srgb, var(--ui-well) var(--ui-off-fill), transparent);
+}
+
+// Whole-card active state used by tiles.
+@mixin tile-on {
+  border-color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), transparent);
+  background: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-fill), var(--ui-card));
+  color: var(--ui-tile-on-ink);
+
+  .icon {
+    border-color: color-mix(in srgb, currentColor calc(100% - var(--ui-off-fill)), transparent);
+    background: color-mix(in srgb, currentColor 18%, transparent);
+    color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), var(--ui-tile-on-ink));
+  }
+
+  .caption, .unit { color: inherit; opacity: 0.78; }
+}
+
+// Tile active state, by the `activeStyle` option (fill is the default).
+@mixin tile-active($host) {
+  :host(#{$host}.on:not([data-active])),
+  :host(#{$host}.on[data-active='fill']) { @include tile-on; }
+
+  :host(#{$host}.on[data-active='tint']) {
+    border-color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), transparent);
+    background: color-mix(in srgb, var(--ui-accent) calc(var(--ui-off-fill) * 0.13), var(--ui-card));
+
+    .icon {
+      background: color-mix(in srgb, var(--ui-accent) var(--ui-off-fill), transparent);
+      color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), var(--ui-on-accent));
+    }
+  }
+
+  :host(#{$host}.on[data-active='outline']) {
+    border-color: var(--ui-accent);
+    box-shadow: inset 0 0 0 1px var(--ui-accent);
+
+    .icon { color: var(--ui-accent); }
+  }
+}
+
+// Softer active state for entity cards: tinted icon and a hint of accent on the card.
+@mixin entity-on {
+  border-color: color-mix(in srgb, var(--ui-accent) calc(var(--ui-tile-on-edge) * 0.7), transparent);
+  background: color-mix(in srgb, var(--ui-accent) 7%, var(--ui-card));
+}

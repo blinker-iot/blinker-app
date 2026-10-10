@@ -14,7 +14,7 @@
   }
   }
 </ng-template>
-<div device-box #gridsterBox [attr.data-interface-style]="config.interfaceStyle || null" [class.is-editing]="mode == 'edit'">
+<div device-box #gridsterBox [class.is-editing]="mode == 'edit'">
   <gridster [options]="options">
     @for (widget of dashboard; track widget) {
     <gridster-item [item]="widget">

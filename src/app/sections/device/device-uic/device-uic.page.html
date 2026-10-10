@@ -39,8 +39,8 @@
           <div class="style-options">
             @for (option of styles; track option.id; let index = $index) {
               <button type="button" class="style-option" [class.active]="style === option.id" [attr.aria-pressed]="style === option.id" [attr.aria-label]="option.name + '，' + option.caption" [disabled]="generating || saving" (click)="chooseStyle(option.id)">
-                <span class="style-sample" [attr.data-interface-style]="option.id" aria-hidden="true">
-                  <span class="sample-top"><span>{{ option.id === 'technical' ? 'DEVICE / 01' : option.id === 'warm' ? '家的舒适，刚刚好' : '我的日常' }}</span><i></i></span>
+                <span class="style-sample" [attr.data-ui-theme]="option.id" aria-hidden="true">
+                  <span class="sample-top"><span>{{ option.id === 'electronic' ? 'DEVICE / 01' : option.id === 'dark' ? '夜间模式' : '我的日常' }}</span><i></i></span>
                   <span class="sample-tiles">
                     <span class="sample-control"><span><i class="fa-light fa-power-off"></i> 客厅电源</span><span class="sample-toggle"></span></span>
                     <span class="sample-metric"><small>室内温度</small><b>24.6<small>°C</small></b><span class="sample-spark">▁ ▂ ▂ ▄ ▃ ▅</span></span>
@@ -81,19 +81,39 @@
           }
         </section>
         <section #previewPanel class="preview-section" aria-label="界面预览" [attr.aria-busy]="generating">
-          <div class="preview-heading"><span><span class="status-dot"></span>{{ selected === 'classic' ? '编辑器一瞥' : generating ? '正在实时生成' : generated ? '生成结果' : '布局预览' }}</span><small>{{ selected === 'classic' ? '示意画布' : '预览不会发送设备指令' }}</small></div>
-          @if (generating) {
-            <div class="generation-progress" role="status" aria-live="polite">
-              <span><i class="fa-light fa-spinner-third spinning" aria-hidden="true"></i>{{ previewCount ? '已编排 ' + previewCount + ' 个组件，画布持续更新中…' : '正在构思布局，收到组件后会立即显示…' }}</span>
-              <button type="button" (click)="cancelGeneration()">取消生成</button>
-            </div>
-          }
-          <div class="preview-canvas" [attr.data-interface-style]="previewStyle" [class.classic-canvas]="selected === 'classic'" [class.is-generating]="generating">
+          <div class="preview-heading"><span><span class="status-dot"></span>{{ selected === 'classic' ? '编辑器一瞥' : generating ? '正在生成并审查' : generated ? '生成结果' : '布局预览' }}</span><small>{{ selected === 'classic' ? '示意画布' : '预览不会发送设备指令' }}</small></div>
+          <div class="preview-canvas" [attr.data-ui-theme]="previewStyle" [class.classic-canvas]="selected === 'classic'">
             <div class="preview-device"><i class="fa-light fa-microchip" aria-hidden="true"></i><strong>{{ device.config.customName || device.deviceName }}</strong><span>{{ selected === 'classic' ? '自由布局' : selected === 'ai' ? selectedStyle.name : '专属控制面板' }}</span></div>
             @if (selected === 'classic') { <div class="sample-grid" aria-hidden="true"><div><i class="fa-light fa-grip-dots-vertical"></i><i class="fa-light fa-power-off"></i><span>开关</span></div><div><i class="fa-light fa-grip-dots-vertical"></i><b>24.6<small>°C</small></b><span>数据</span></div><div><i class="fa-light fa-sliders"></i><span class="sample-range"></span></div><span class="sample-add">＋ 添加你需要的组件</span></div> }
             @else if (selected === 'automatic' && !isV2) { <div class="preview-empty"><i class="fa-light fa-grid-4"></i><strong>为经典设备自由创作</strong><p>选择 AI 生成或经典编辑器，继续设计。</p><button type="button" (click)="selectMethod('classic')">打开经典编辑器 →</button></div> }
+            @else if (isV2 && tiles.length && snapshot?.manifestAccepted) {
+              <app-page-layout-panel [cards]="panelCards" [theme]="previewStyle || undefined" />
+            }
             @else { <div class="tile-grid">@for (tile of tiles; track tile.id) { <article class="preview-tile" [class.emphasized]="tile.emphasized" [style.grid-column]="'span ' + tile.width"><span>{{ tile.title }}</span>@switch (tile.type) { @case ('switch') { <div class="tile-switch" [class.off]="tile.value === '关闭' || tile.value === '—'"><small>{{ tile.value }}</small><i></i></div> } @case ('value') { <strong class="tile-value">{{ tile.value }}<small>{{ tile.unit }}</small></strong> } @case ('slider') { <div class="tile-range"><i [style.width.%]="tile.level ?? 0"></i></div><small class="tile-range-value">{{ tile.value }}{{ tile.unit }}</small> } @case ('button') { <span class="tile-button"><i class="fa-light fa-power-off"></i> 执行</span> } @default { <span class="tile-input">{{ tile.value === '—' ? '输入内容' : tile.value }} <i class="fa-light fa-arrow-right"></i></span> } }</article> } @empty { <div class="preview-empty"><i class="fa-light fa-wave-pulse"></i><strong>{{ loading ? '正在读取设备能力…' : '你的界面将在这里出现' }}</strong><p>连接设备后，即可预览可用组件。</p></div> }</div> }
+            @if (generating) {
+              <div class="preview-loading">
+                <div class="preview-loading-status" role="status" aria-live="polite">
+                  <ion-spinner name="crescent" aria-hidden="true" />
+                  <span>{{ progressMessage || '正在准备界面…' }}</span>
+                </div>
+                <button type="button" (click)="cancelGeneration()">取消生成</button>
+              </div>
+            }
           </div>
+          @if (workflowPreview && !generating) {
+            <div class="generation-summary" role="status">
+              <p>{{ workflowPreview.review }}</p>
+              @for (issue of workflowPreview.issues; track $index) {
+                <p>{{ issue.problem }} · {{ issue.suggestion }}</p>
+              }
+            </div>
+          }
+          @if (generated && isV2 && !generating) {
+            <label class="panel-label" for="interface-adjustment">继续调整当前界面</label>
+            <div class="prompt-box"><textarea id="interface-adjustment" [(ngModel)]="adjustment" maxlength="1200" rows="3"
+              [disabled]="saving" placeholder="例如：把亮度放到开关下面，缩短数据标题…"></textarea></div>
+            <button class="generate-button" type="button" [disabled]="saving || !adjustment.trim()" (click)="generate(true)">AI 微调</button>
+          }
           @if (summary) { <p class="generation-summary" role="status"><i class="fa-light fa-sparkles" aria-hidden="true"></i>{{ summary }}</p> }
           @if (selected === 'ai' && !generated && !generating) { <p class="preview-caption">当前为所选风格的本地预览；点击“按此风格生成”，由 AI 进一步编排。</p> }
         </section>

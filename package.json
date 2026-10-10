@@ -69,6 +69,7 @@
     "crypto-js": "^4.2.0",
     "hammerjs": "^2.0.8",
     "hls.js": "^1.6.5",
+    "html-to-image": "1.11.13",
     "leaflet": "1.9.4",
     "lightweight-charts": "^5.2.0",
     "loaders.css": "^0.1.2",

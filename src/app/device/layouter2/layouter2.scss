@@ -1,4 +1,3 @@
-@use '../../../theme/interface-style' as panel;
 :host {
   position: relative;
   display: block;
@@ -87,4 +86,3 @@ gridster {
   height: 100%;
 }
 
-[device-box] { @include panel.interface-style; }

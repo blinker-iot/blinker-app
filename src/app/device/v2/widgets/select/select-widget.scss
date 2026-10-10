@@ -1,0 +1,230 @@
+@use '../widget' as w;
+
+@include w.card;
+@include w.head;
+
+.choice-label {
+  @include w.label-text;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// segment
+
+.segment {
+  @include w.well;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  overflow-x: auto;
+  border-radius: var(--ui-radius-sm);
+  scrollbar-width: none;
+
+  button {
+    @include w.pressable;
+    display: inline-flex;
+    flex: 1 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 56px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: calc(var(--ui-radius-sm) - 3px);
+    color: var(--ui-muted);
+    text-align: center;
+
+    &.on {
+      background: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-fill), var(--ui-card));
+      box-shadow: var(--ui-knob-shadow);
+      color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), var(--ui-on-accent));
+    }
+  }
+}
+
+// tiles: a round icon over each label, like a Mi Home mode grid
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+  gap: 8px;
+  align-content: center;
+
+  button {
+    @include w.pressable;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    color: var(--ui-muted);
+    font-size: 12px;
+
+    &.on { color: var(--ui-ink); }
+  }
+
+  .choice-label { max-width: 100%; font-size: 12px; font-weight: 500; }
+}
+
+.tile-disc {
+  @include w.well;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  font-size: 18px;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.on .tile-disc {
+  border-color: var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) var(--ui-off-fill), transparent);
+  color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), var(--ui-on-accent));
+}
+
+// pills
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-end;
+  gap: 8px;
+
+  button {
+    @include w.pressable;
+    @include w.well;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    color: var(--ui-muted);
+
+    &.on {
+      border-color: var(--ui-accent);
+      background: color-mix(in srgb, var(--ui-accent) var(--ui-off-fill), transparent);
+      color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), var(--ui-on-accent));
+    }
+  }
+}
+
+.choice-icon { flex: 0 0 auto; font-size: 15px; }
+
+// list
+
+.list {
+  display: flex;
+  flex-direction: column;
+
+  button {
+    @include w.pressable;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    border-top: 1px solid var(--ui-line);
+
+    &:first-child { border-top: 0; }
+  }
+}
+
+.radio {
+  @include w.control-shape(1.5px);
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  color: transparent;
+  font-size: 11px;
+}
+
+.list .on .radio {
+  border-color: var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-fill), transparent);
+  color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), var(--ui-on-accent));
+}
+
+// wheel
+
+.wheel {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-mask: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+  mask: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+
+  &:focus-visible { outline: none; }
+  &[aria-disabled='true'] { opacity: 0.45; pointer-events: none; }
+}
+
+.wheel-band {
+  @include w.well;
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 36px;
+  border-radius: var(--ui-radius-sm);
+  transform: translateY(-50%);
+}
+
+.wheel:focus-visible .wheel-band { border: 2px solid var(--ui-accent); }
+
+.wheel-row {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 36px;
+  color: var(--ui-muted);
+  font-size: calc(17px - var(--offset) * var(--offset) * 1px);
+  letter-spacing: var(--ui-tracking);
+  line-height: 36px;
+  text-align: center;
+  text-transform: var(--ui-case);
+  transform: translateY(calc(-50% + var(--offset) * 36px));
+  transition: transform 0.18s ease, color 0.18s ease;
+
+  &[aria-selected='true'] { color: var(--ui-ink); font-weight: 600; }
+}
+
+// menu
+
+.menu {
+  @include w.well;
+  position: relative;
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 60%;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border-radius: 999px;
+
+  .menu-chevron { color: var(--ui-muted); font-size: 12px; transform: rotate(90deg); }
+
+  select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  &:has(select:focus-visible) { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+  &:has(select:disabled) { opacity: 0.45; }
+}

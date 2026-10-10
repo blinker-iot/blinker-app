@@ -1,0 +1,311 @@
+@use '../widget' as w;
+
+@include w.card;
+@include w.head;
+
+// entity
+
+.entity {
+  @include w.pressable;
+  display: block;
+  width: 100%;
+}
+
+:host([data-variant='entity'].on) { @include w.entity-on; }
+
+// toggle
+
+.toggle {
+  @include w.control-shape;
+  @include w.pressable;
+  position: relative;
+  flex: 0 0 auto;
+  width: 50px;
+  height: 30px;
+  box-sizing: border-box;
+  border-radius: 999px;
+}
+
+.knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ui-knob) calc(30% + var(--ui-off-fill) * 0.7), var(--ui-track));
+  box-shadow: var(--ui-knob-shadow);
+  transition: transform 0.24s cubic-bezier(0.3, 0.7, 0.3, 1.2), background-color 0.24s ease;
+}
+
+// Electronic switches light up in ink, not in the signal red.
+.toggle.on { border-color: color-mix(in srgb, var(--ui-ink) var(--ui-switch-ink), var(--ui-accent)); }
+
+.toggle.on .knob {
+  background: var(--ui-knob);
+  transform: translateX(20px);
+}
+
+// tile and lock
+
+@include w.tile-active("[data-variant='tile']");
+@include w.tile-active("[data-variant='lock']");
+
+// Corner mark: status dot or a detail chevron.
+.corner {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: var(--ui-faint);
+}
+
+.corner-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ui-faint);
+}
+
+:host(.on) .corner-dot { background: var(--ui-accent); }
+:host(.on:not([data-active])) .corner-dot,
+:host(.on[data-active='fill']) .corner-dot {
+  background: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), var(--ui-on-accent));
+}
+
+.tile {
+  @include w.pressable;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+  height: 100%;
+  min-height: 112px;
+  box-sizing: border-box;
+  padding: 16px;
+  border-radius: inherit;
+
+  .icon { width: 42px; height: 42px; font-size: 19px; }
+}
+
+.lock {
+  @include w.pressable;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  min-height: 150px;
+  box-sizing: border-box;
+  padding: 16px;
+  border-radius: inherit;
+  text-align: center;
+}
+
+.lock-icon {
+  @include w.well;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+  border-radius: 22px;
+  font-size: 26px;
+  transition: transform 0.3s cubic-bezier(0.3, 0.7, 0.3, 1.3);
+}
+
+:host([data-variant='lock'].on) .lock-icon {
+  border-color: color-mix(in srgb, currentColor calc(100% - var(--ui-off-fill)), transparent);
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  transform: rotate(-8deg);
+}
+
+// power
+
+:host([data-variant='power']) { align-items: center; }
+
+.power {
+  @include w.pressable;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ui-well) var(--ui-off-fill), transparent);
+  color: var(--ui-muted);
+  font-size: 30px;
+
+  &.on {
+    background: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-fill), var(--ui-well));
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--ui-accent) 14%, transparent),
+      0 10px 28px color-mix(in srgb, var(--ui-accent) 30%, transparent);
+    color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), var(--ui-on-accent));
+  }
+}
+
+.power-ring {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 2px var(--ui-control-edge) color-mix(in srgb, var(--ui-track) calc(100% - var(--ui-off-fill)), transparent);
+  border-radius: 50%;
+}
+
+.power.on .power-ring { border-color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), transparent); }
+
+.centered { align-items: center; max-width: 100%; }
+
+// chip
+
+:host([data-variant='chip']) {
+  padding: 0;
+  border-radius: 999px;
+}
+
+:host([data-variant='chip'].on) { @include w.entity-on; }
+
+.chip {
+  @include w.pressable;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  border-radius: inherit;
+  white-space: nowrap;
+
+  app-ui-icon { color: var(--ui-accent); font-size: 16px; }
+}
+
+:host(.off) .chip app-ui-icon { color: var(--ui-muted); }
+
+.chip-text {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: var(--ui-tracking);
+  text-overflow: ellipsis;
+  text-transform: var(--ui-case);
+}
+
+.chip-state {
+  margin-left: auto;
+  color: var(--ui-muted);
+  font-size: 12px;
+  letter-spacing: var(--ui-tracking);
+  text-transform: var(--ui-case);
+}
+
+// segment
+
+.segment {
+  @include w.well;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--ui-radius-sm);
+
+  button {
+    @include w.pressable;
+    @include w.label-text;
+    height: 36px;
+    border-radius: calc(var(--ui-radius-sm) - 3px);
+    color: var(--ui-muted);
+    font-weight: 600;
+    text-align: center;
+
+    &.on {
+      background: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-fill), var(--ui-card));
+      box-shadow: var(--ui-knob-shadow);
+      color: color-mix(in srgb, var(--ui-accent) var(--ui-tile-on-edge), var(--ui-on-accent));
+    }
+  }
+}
+
+// check
+
+.check-row {
+  @include w.pressable;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.check {
+  @include w.control-shape;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  color: transparent;
+  font-size: 14px;
+}
+
+// slide
+
+.slide {
+  @include w.well;
+  position: relative;
+  height: 52px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 999px;
+
+  &.disabled { opacity: 0.45; pointer-events: none; }
+}
+
+.slide-fill {
+  @include w.dotted;
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(44px + 8px + (100% - 52px) * var(--slide));
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--ui-accent) 85%, transparent);
+}
+
+.slide-hint {
+  @include w.label-text;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ui-muted);
+  pointer-events: none;
+}
+
+.slide-thumb {
+  position: absolute;
+  top: 3px;
+  left: calc(3px + (100% - 52px) * var(--slide));
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--ui-knob);
+  box-shadow: var(--ui-knob-shadow);
+  color: var(--ui-accent);
+  cursor: grab;
+  touch-action: none;
+
+  &:active { cursor: grabbing; }
+
+  .flip { transform: rotate(180deg); }
+
+  &:focus-visible {
+    outline: 2px solid var(--ui-accent);
+    outline-offset: 2px;
+  }
+}

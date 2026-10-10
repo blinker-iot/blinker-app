@@ -1,0 +1,50 @@
+<div class="head">
+  @if (options.icon) {
+    <span class="icon"><app-ui-icon [name]="options.icon" /></span>
+  }
+  <span class="titles">
+    <span class="title">{{ title }}</span>
+    @if (options.caption) {
+      <span class="caption">{{ options.caption }}</span>
+    }
+  </span>
+</div>
+
+<div class="face">
+  <svg viewBox="0 0 200 200" role="slider" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
+    [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" [attr.aria-valuetext]="reading.text + reading.unit"
+    [attr.aria-disabled]="card.disabled" (pointerdown)="start($event)" (pointermove)="move($event)"
+    (pointerup)="end($event)" (pointercancel)="end($event)" (keydown)="key($event)">
+    @for (tick of ticks; track $index) {
+      <circle class="tick" [class.lit]="tick <= level + 0.0001" [attr.cx]="tickPoint(tick).x"
+        [attr.cy]="tickPoint(tick).y" [attr.r]="variant === 'knob' ? 2.4 : 1.6" />
+    }
+
+    @if (variant === 'knob') {
+      <circle class="knob-body" cx="100" cy="100" r="70" />
+      <g [attr.transform]="'rotate(' + angle + ' 100 100)'">
+        <line class="knob-notch" x1="100" y1="40" x2="100" y2="58" />
+      </g>
+    } @else {
+      <path class="arc-track" [attr.d]="track" [style.stroke-width]="options.thickness ?? null" />
+      @if (valueArc) {
+        <path class="arc-value" [attr.d]="valueArc" [style.stroke-width]="options.thickness ?? null" />
+      }
+      <circle class="arc-knob" [attr.cx]="knob.x" [attr.cy]="knob.y" r="8" />
+    }
+  </svg>
+
+  @if (variant === 'dial') {
+    <span class="center"><app-dot-text [text]="reading.text" /><span class="unit">{{ reading.unit }}</span></span>
+    @if (options.showButtons !== false) {
+    <button type="button" class="nudge minus" aria-label="减小" [disabled]="card.disabled || value <= min"
+      (click)="nudge(-1)"><app-ui-icon name="minus" /></button>
+    <button type="button" class="nudge plus" aria-label="增大" [disabled]="card.disabled || value >= max"
+      (click)="nudge(1)"><app-ui-icon name="plus" /></button>
+    }
+  }
+</div>
+
+@if (variant === 'knob') {
+  <span class="knob-value"><app-dot-text [text]="reading.text" /><span class="unit">{{ reading.unit }}</span></span>
+}

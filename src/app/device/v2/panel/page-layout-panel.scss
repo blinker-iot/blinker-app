@@ -1,0 +1,66 @@
+@use '../../../../theme/ui-theme' as theme;
+
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+.panel {
+  @include theme.ui-theme;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-auto-rows: minmax(var(--ui-row, 84px), auto);
+  gap: 12px;
+  color: var(--ui-ink);
+  font-family: var(--ui-font);
+
+  &[data-ui-theme] {
+    padding: 12px;
+    border-radius: calc(var(--ui-radius) + 6px);
+    background: var(--ui-bg);
+  }
+}
+
+.cell {
+  grid-column: var(--col) / span var(--span);
+  grid-row: var(--row) / span var(--rows);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+
+  > :first-child { flex: 1 1 auto; }
+}
+
+.cell.selected > :first-child {
+  outline: 2px var(--ui-control-edge) var(--ui-accent);
+  outline-offset: 3px;
+}
+
+.cell-error {
+  margin: 0 6px;
+  color: var(--ui-alert);
+  font-size: 11px;
+}
+
+.empty {
+  grid-column: 1 / -1;
+  color: var(--ui-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+// Phones: a quarter-width widget takes half a row, wider ones the whole row,
+// placed in layout order (as in the component library design).
+@container (max-width: 560px) {
+  .panel {
+    --ui-row: 78px;
+    grid-auto-flow: row dense;
+    gap: 10px;
+  }
+
+  .cell {
+    grid-column: span min(8, calc(var(--span) * 2));
+    grid-row: span var(--rows);
+  }
+}

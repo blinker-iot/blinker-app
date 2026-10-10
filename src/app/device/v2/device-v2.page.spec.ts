@@ -159,9 +159,9 @@ describe('DeviceV2Page UI port lifecycle', () => {
     expect(page.widgets.map(widget => widget.type)).toEqual(['switch', 'slider', 'input', 'button']);
     const fields = page.widgets.map(widget => page.endpoint(widget)!);
 
-    await page.setBoolean(fields[0], { detail: { checked: true } } as CustomEvent);
-    await page.setSlider(fields[1], { detail: { value: 42 } } as CustomEvent);
-    page.updateDraft(fields[2], { detail: { value: 'lamp' } } as CustomEvent);
+    await page.send(fields[0], true);
+    await page.send(fields[1], 42);
+    page.onPanelAction({ kind: 'draft', field: fields[2], value: 'lamp' });
     await page.commit(fields[2]);
     await page.execute(fields[3]);
 

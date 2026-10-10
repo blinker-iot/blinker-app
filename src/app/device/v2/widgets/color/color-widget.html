@@ -1,0 +1,56 @@
+<div class="row">
+  <span class="head">
+    <span class="icon"><app-ui-icon [name]="options.icon || 'palette'" /></span>
+    <span class="titles">
+      <span class="title">{{ title }}</span>
+      @if (caption) { <span class="caption">{{ caption }}</span> }
+    </span>
+  </span>
+  <span class="preview" aria-hidden="true"></span>
+</div>
+
+@switch (variant) {
+  @case ('swatches') {
+    <ng-container *ngTemplateOutlet="swatchRow" />
+  }
+
+  @case ('spectrum') {
+    <div class="channels">
+      <span class="channel hue" role="slider" tabindex="-1" aria-label="色相" [attr.aria-valuenow]="channels.hue"
+        (pointerdown)="start($event, 'hue')" (pointermove)="move($event)" (pointerup)="end($event)"
+        (pointercancel)="end($event)"><i [style.left.%]="hsv.h / 3.6"></i></span>
+      <span class="channel saturation" role="slider" tabindex="-1" aria-label="饱和度" [style.--hue]="hueCss"
+        [attr.aria-valuenow]="channels.saturation" (pointerdown)="start($event, 'saturation')" (pointermove)="move($event)"
+        (pointerup)="end($event)" (pointercancel)="end($event)"><i [style.left.%]="hsv.s * 100"></i></span>
+      <span class="channel brightness" role="slider" tabindex="-1" aria-label="亮度" [style.--hue]="hueCss"
+        [attr.aria-valuenow]="channels.brightness" (pointerdown)="start($event, 'brightness')" (pointermove)="move($event)"
+        (pointerup)="end($event)" (pointercancel)="end($event)"><i [style.left.%]="hsv.v * 100"></i></span>
+    </div>
+  }
+
+  @default {
+    <div class="wheel" role="slider" tabindex="-1" aria-label="色相" [attr.aria-valuenow]="channels.hue"
+      [style.--ring]="options.thickness ? options.thickness + 'px' : null"
+      [attr.aria-disabled]="card.disabled" (pointerdown)="start($event, 'wheel')" (pointermove)="move($event)"
+      (pointerup)="end($event)" (pointercancel)="end($event)">
+      <span class="wheel-hole"></span>
+      <i class="wheel-marker" [style.left.%]="marker.x" [style.top.%]="marker.y"></i>
+    </div>
+    <span class="channel brightness" role="slider" tabindex="-1" aria-label="亮度" [style.--hue]="hueCss"
+      [attr.aria-valuenow]="channels.brightness" (pointerdown)="start($event, 'brightness')" (pointermove)="move($event)"
+      (pointerup)="end($event)" (pointercancel)="end($event)"><i [style.left.%]="hsv.v * 100"></i></span>
+    @if (options.palette) {
+      <ng-container *ngTemplateOutlet="swatchRow" />
+    }
+  }
+}
+
+<ng-template #swatchRow>
+  <div class="swatches" role="radiogroup" [attr.aria-label]="title">
+    @for (swatch of swatches; track swatch) {
+      <button type="button" role="radio" [class.on]="swatch === current" [attr.aria-checked]="swatch === current"
+        [attr.aria-label]="hex(swatch)" [style.--swatch]="hex(swatch)" [disabled]="card.disabled"
+        (click)="pick(swatch)"></button>
+    }
+  </div>
+</ng-template>

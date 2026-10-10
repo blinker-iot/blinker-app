@@ -1,0 +1,101 @@
+@use '../widget' as w;
+
+@include w.card;
+@include w.head;
+
+:host { justify-content: flex-start; }
+
+.head .icon { color: var(--color); }
+
+.preview {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08), 0 0 0 4px color-mix(in srgb, var(--color) 22%, transparent);
+}
+
+$spectrum: #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00;
+
+[role='slider'] {
+  touch-action: none;
+  cursor: pointer;
+
+  &[aria-disabled='true'] { opacity: 0.45; pointer-events: none; }
+}
+
+// wheel
+
+.wheel {
+  @include w.dotted;
+  position: relative;
+  width: 100%;
+  max-width: 200px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient($spectrum);
+}
+
+.wheel-hole {
+  position: absolute;
+  inset: var(--ring, 22%);
+  border-radius: 50%;
+  background: var(--ui-card);
+  box-shadow: inset 0 0 0 10px var(--ui-card), inset 0 0 0 100px var(--color);
+}
+
+.wheel-marker,
+.channel i {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--color);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+// spectrum channels
+
+.channels {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.channel {
+  @include w.dotted;
+  position: relative;
+  display: block;
+  height: 14px;
+  border-radius: 999px;
+
+  i { top: 50%; }
+
+  &.hue { background: linear-gradient(90deg, $spectrum); }
+  &.saturation { background: linear-gradient(90deg, #fff, var(--hue)); }
+  &.brightness { background: linear-gradient(90deg, #000, var(--hue)); }
+}
+
+// swatches
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+
+  button {
+    @include w.pressable;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--swatch);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+
+    &.on { box-shadow: 0 0 0 2px var(--ui-card), 0 0 0 4px var(--swatch), inset 0 0 0 1px rgba(0, 0, 0, 0.08); }
+  }
+}

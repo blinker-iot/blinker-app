@@ -52,6 +52,8 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   logicalDeviceId = '';
   device!: ManagedDevice;
 
+  nameSaving = false;
+  imageSaving = false;
   secretKey = '';
   keyVisible = false;
   keyOperation: KeyOperation = '';
@@ -177,6 +179,26 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         route: `/device-manager/${this.id}/uic`,
       },
     ];
+    if (this.device?.config.mode === 'bbp2') {
+      items.push({
+        id: 'component-preview',
+        title: '组件预览',
+        description: '查看所有组件与主题效果',
+        icon: 'fa-eye',
+        route: `/device-manager/${this.id}/component-preview`,
+      });
+    }
+
+    if (this.device?.config.mode === 'bbp2' && !this.isSharedDevice) {
+      items.push({
+        id: 'components',
+        title: '组件配置中心',
+        description: '选择控制页面显示的设备字段',
+        icon: 'fa-sliders',
+        route: `/device-manager/${this.id}/components`,
+      });
+    }
+
     if (!this.isSharedDevice) {
       items.push({
         id: 'sharing',
@@ -415,55 +437,94 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       buttons: [
         {
           text: '取消',
-          handler: () => { },
+          role: 'cancel',
         },
         {
           text: '确认修改',
-          handler: (data) => {
-            this.saveName(data.customName);
-          },
+          handler: (data) => this.saveName(data.customName),
         },
       ],
     });
     await this.confirmDialog.present();
   }
 
-  async saveName(customName) {
+  async saveName(customName: unknown): Promise<boolean> {
+    if (this.nameSaving || this.isSharedDevice) return false;
     const name = typeof customName === 'string' ? customName.trim() : '';
     if (!name) {
       await this.noticeService.showToast('设备名称不能为空');
-      return;
+      return false;
     }
-    if (await this.deviceService.saveDeviceConfig(this.device, { customName: name })) {
-      this.device.config.customName = name;
-      this.device.subject.next({ key: 'customName', value: name });
-      return;
+
+    const device = this.device;
+    this.nameSaving = true;
+    try {
+      const context = device.config.isPreview ? undefined
+        : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+      if (!device.config.isPreview && !await this.deviceService.saveDeviceConfig(device, { customName: name })) {
+        throw new Error('name-save-failed');
+      }
+      if (context) assertDeviceV2AccountContext(this.dataService, context);
+      if (this.destroyed) return true;
+
+      device.config.customName = name;
+      const current = this.dataService.getDevice(device.deviceName);
+      if (current) current.config.customName = name;
+      device.subject.next({ key: 'customName', value: name });
+      this.cd.detectChanges();
+      await this.noticeService.showToast('设备名称已更新');
+      return true;
+    } catch {
+      if (!this.destroyed) await this.noticeService.showToast('保存设备名称失败，请稍后重试');
+      return false;
+    } finally {
+      this.nameSaving = false;
+      if (!this.destroyed) this.cd.markForCheck();
     }
-    await this.noticeService.showToast('保存设备名称失败，请稍后重试');
   }
 
-  async selectIcon() {
-    let modal = await this.modalCtrl.create({
-      component: DeviceIconPage,
-      componentProps: {
-        currentImage: this.device.config.image,
-      },
-    });
-    modal.onDidDismiss().then(async (image) => {
-      if (typeof image.data == 'undefined') return;
-      let newConfig = {
-        image: image.data,
-      };
-      if (this.device.config.isPreview) {
-        this.device.config.image = image.data;
-        this.device.subject.next({ key: 'image', value: image.data });
-        return;
+  async selectIcon(): Promise<void> {
+    if (this.isSharedDevice || this.imageSaving) return;
+    const device = this.device;
+    this.imageSaving = true;
+
+    try {
+      const context = device.config.isPreview ? undefined
+        : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+      const modal = await this.modalCtrl.create({
+        component: DeviceIconPage,
+        componentProps: { currentImage: device.config.image },
+      });
+      await modal.present();
+      const { data: image } = await modal.onDidDismiss<string>();
+      if (typeof image !== 'string' || image === device.config.image || this.destroyed) return;
+      if (context) assertDeviceV2AccountContext(this.dataService, context);
+
+      if (!device.config.isPreview && !await this.deviceService.saveDeviceConfig(device, { image })) {
+        throw new Error('image-save-failed');
       }
-      if (await this.deviceService.saveDeviceConfig(this.device, newConfig)) {
-        this.device.config.image = image.data;
-      }
-    });
-    modal.present();
+      if (context) assertDeviceV2AccountContext(this.dataService, context);
+      if (this.destroyed) return;
+
+      device.config.image = image;
+      device.subject.next({ key: 'image', value: image });
+      this.cd.markForCheck();
+    } catch {
+      if (!this.destroyed) await this.noticeService.showToast('保存设备图片失败，请稍后重试');
+    } finally {
+      this.imageSaving = false;
+      if (!this.destroyed) this.cd.markForCheck();
+    }
+  }
+
+  async copyDeviceId(): Promise<void> {
+    const id = this.device.id || this.device.deviceName;
+    try {
+      await this.writeClipboard(id);
+      await this.noticeService.showToast('设备 ID 已复制');
+    } catch {
+      await this.noticeService.showToast('复制失败，请重试');
+    }
   }
 
   unbind() {

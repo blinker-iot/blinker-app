@@ -1,3 +1,6 @@
+import { EndpointHistory } from '../../core/device-v2/endpoint-history';
+import { visiblePageWidgets } from '../../core/device-v2/page-layout';
+import { PageLayoutPanelComponent, type PanelCard, type PanelAction } from './panel/page-layout-panel';
 import { CommonModule } from '@angular/common';
 import {
   ChangeDetectorRef,
@@ -53,7 +56,7 @@ function emptySnapshot(): DeviceUiSnapshot {
 @Component({
   selector: 'app-device-v2-page',
   standalone: true,
-  imports: [CommonModule, IonicModule, RouterModule],
+  imports: [CommonModule, IonicModule, RouterModule, PageLayoutPanelComponent],
   templateUrl: './device-v2.page.html',
   styleUrls: ['./device-v2.page.scss'],
 })
@@ -106,6 +109,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private telemetryEpoch = 0;
   private telemetryOpening = false;
   private telemetryValues = new Map<string, DeviceUiValue | undefined>();
+  private history?: EndpointHistory;
   private readonly drafts = new Map<string, string>();
   private readonly fieldErrors = new Map<string, string>();
   private endpointsByKey = new Map<string, DeviceUiEndpoint>();
@@ -142,6 +146,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.history?.flush();
     this.cancelSynchronization();
     this.cancelBleReconnect();
     this.releaseTelemetry();
@@ -150,7 +155,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   get widgets(): PageLayoutWidget[] {
-    return this.layout?.widgets ?? [];
+    return this.layout ? visiblePageWidgets(this.layout, this.device.config.hiddenEndpointKeys) : [];
   }
 
   get layoutStaleText(): string {
@@ -163,6 +168,30 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   endpoint(widget: PageLayoutWidget): DeviceUiEndpoint | undefined {
     return this.endpointsByKey.get(widget.endpointKey);
+  }
+
+  get panelCards(): PanelCard[] {
+    return this.widgets.flatMap(widget => {
+      const field = this.endpoint(widget);
+      return field ? [{ widget, field, value: this.value(field), history: this.history?.points(field.key),
+        display: this.display(field), draft: this.draft(field), error: this.fieldError(field),
+        disabled: this.pending.has(field.key) || !this.canControl }] : [];
+    });
+  }
+
+  onPanelAction(action: PanelAction): void {
+    const { field, value } = action;
+    if (action.kind === 'invoke') void this.execute(field);
+    else if (action.kind === 'commit') void this.commit(field);
+    else if (action.kind === 'toggle' && typeof value === 'boolean') void this.send(field, value);
+    else if (action.kind === 'range' && typeof value === 'number' && Number.isFinite(value)) void this.send(field, value);
+    else if (action.kind === 'select' && typeof value === 'string') void this.send(field, value);
+    else if (action.kind === 'draft' && typeof value === 'string') this.drafts.set(field.key, value);
+  }
+
+  // Read by the hosting DevicePage, which applies the effective theme.
+  get layoutTheme() {
+    return this.layout?.style;
   }
 
   get stateLabel(): string {
@@ -179,7 +208,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     // Both signals are scoped to the selected carrier by DeviceUiPort. Its
     // fresh snapshot already fences offline/lost cloud presence and stale
     // manifests. Inventory presence is only a hint, not LAN readiness or ACL.
-    return this.accountState === 'ready' && this.snapshot.stateFresh && this.synchronized
+    return this.accountState === 'ready' && this.snapshot.manifestAccepted && this.snapshot.stateFresh && this.synchronized
       && this.connection?.signal.aborted === false && this.pageVisible && this.appActive;
   }
 
@@ -233,28 +262,16 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       : '';
   }
 
-  updateDraft(field: DeviceUiEndpoint, event: CustomEvent): void {
-    const value = event.detail?.value;
-    this.drafts.set(field.key, value === null || value === undefined ? '' : String(value));
-  }
 
   fieldError(field: DeviceUiEndpoint): string {
     return this.fieldErrors.get(field.key) ?? '';
   }
 
-  async setBoolean(field: DeviceUiEndpoint, event: CustomEvent): Promise<void> {
-    await this.send(field, event.detail?.checked === true);
-  }
 
   async execute(field: DeviceUiEndpoint): Promise<void> {
     await this.send(field, field.valueType === 'null' ? null : true);
   }
 
-  async setSlider(field: DeviceUiEndpoint, event: CustomEvent): Promise<void> {
-    const value = Number(event.detail?.value);
-    if (!Number.isFinite(value)) return;
-    await this.send(field, value);
-  }
 
   async commit(field: DeviceUiEndpoint): Promise<void> {
     const raw = this.draft(field);
@@ -314,6 +331,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.directConnectAllowed = true;
     this.bleAdapterEnabled = null;
     this.logicalDeviceId = nextId;
+    this.history?.flush();
+    this.history = nextId ? new EndpointHistory(nextId) : undefined;
     this.accountState = 'idle';
     this.snapshot = emptySnapshot();
     this.layout = undefined;
@@ -333,6 +352,16 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.deviceSubscriptions.unsubscribe();
     this.deviceSubscriptions = new Subscription();
     if (!nextId) return;
+    this.deviceSubscriptions.add(this.device.subject.subscribe(event => {
+      if (event.key === 'hiddenEndpointKeys') {
+        this.layoutLoadKey = '';
+        this.applySnapshot(this.snapshot);
+      }
+      if (event.key === 'hiddenEndpointKeys' || event.key === 'loaded') {
+        this.refreshTelemetry();
+        this.requestRender();
+      }
+    }));
     try {
       this.deviceSubscriptions.add(this.deviceUi.watchConnection(nextId).subscribe(state => {
         this.accountState = state;
@@ -372,12 +401,16 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private applySnapshot(snapshot: DeviceUiSnapshot): void {
+    if (!snapshot.manifestAccepted && this.layout) {
+      // Keep the last verified panel visible while the connection resynchronizes.
+      // Its fields remain read-only until a fresh manifest and state arrive.
+      snapshot = { ...snapshot, stateFresh: false, endpoints: this.snapshot.endpoints };
+    }
     this.snapshot = snapshot;
+    for (const endpoint of snapshot.endpoints) this.history?.record(endpoint.key, endpoint.value, true);
     this.endpointsByKey = new Map(snapshot.endpoints.map(endpoint => [endpoint.key, endpoint]));
     this.requestRender();
     if (!snapshot.manifestAccepted || !snapshot.manifestFingerprint) {
-      this.layout = undefined;
-      this.layoutStale = undefined;
       this.layoutLoadKey = '';
       this.refreshTelemetry();
       return;
@@ -387,8 +420,6 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
         this.layout = this.storedLayout.manifestFingerprint === snapshot.manifestFingerprint
           ? parsePageLayout(this.storedLayout.layout, snapshot.endpoints)
           : migratePageLayout(this.storedLayout.layout, snapshot);
-      } else if (this.layout?.manifestFingerprint !== snapshot.manifestFingerprint) {
-        this.layout = generateDefaultPageLayout(snapshot);
       }
       this.clearLayoutError();
     } catch (error) {
@@ -438,6 +469,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       if (this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) {
         this.error = this.messageOf(error, '页面布局同步失败');
         if (validatingRecord) this.layoutError = this.error;
+        else if (!this.layout && this.snapshot.manifestAccepted) this.layout = generateDefaultPageLayout(this.snapshot);
       }
     } finally {
       this.requestRender();
@@ -502,6 +534,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
         this.telemetryActive = snapshot.active;
         this.telemetryIntervalMs = snapshot.effectiveIntervalMs;
         this.telemetryValues = new Map(Object.entries(snapshot.values));
+        for (const [key, value] of this.telemetryValues) this.history?.record(key, value, false);
         this.telemetryError = '';
         this.requestRender();
       });
@@ -516,7 +549,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private telemetryConfiguration(): { endpointKeys: string[]; intervalMs: number } | undefined {
     if (!this.logicalDeviceId || !this.snapshot.manifestAccepted || !this.layout) return undefined;
     const fields = new Map<string, DeviceUiEndpoint>();
-    for (const widget of this.layout.widgets) {
+    for (const widget of this.widgets) {
       const field = this.endpointsByKey.get(widget.endpointKey);
       if (field?.role === 'property' && field.readable && !field.writable
         && field.telemetryMinimumIntervalMs) {
@@ -686,7 +719,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     if (resetAttempt) this.bleReconnectAttempt = 0;
   }
 
-  private async send(field: DeviceUiEndpoint, value: unknown): Promise<void> {
+  async send(field: DeviceUiEndpoint, value: unknown): Promise<void> {
     if (!this.logicalDeviceId || !this.canControl || this.pending.has(field.key)) return;
     this.setFieldError(field.key, '');
     this.pending = new Set(this.pending).add(field.key);
