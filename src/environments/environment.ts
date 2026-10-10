@@ -5,6 +5,7 @@
 export const environment = {
   production: false,
   deviceV2LanEnabled: false,
+  deviceV2BleBootstrapPriorityEnabled: false,
   gatewayBaseUrl: 'https://iot.yiyu.pro',
 };
 

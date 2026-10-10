@@ -116,6 +116,10 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/device/device-share/device-share').then(m => m.DeviceSharePage),
   },
   {
+    path: 'automation-manager',
+    loadComponent: () => import('./sections/scene/automation/automation.page').then(m => m.AutomationPage),
+  },
+  {
     path: 'share-invitation',
     loadComponent: () => import('./sections/device/share-invitation/share-invitation.page').then(m => m.ShareInvitationPage),
   },

@@ -9,6 +9,7 @@ import { sha256 } from '../functions/func';
 import { DataService } from './data.service';
 import { NoticeService } from './notice.service';
 import { UserService } from './user.service';
+import { loadDeviceCatalog } from '../device-v2/device-catalog-cache';
 
 describe('UserService API contracts', () => {
   let service: UserService;
@@ -44,6 +45,38 @@ describe('UserService API contracts', () => {
   afterEach(() => {
     httpTesting.verify();
     vi.restoreAllMocks();
+  });
+
+  function inventoryRequests() {
+    return { user: httpTesting.expectOne(API.AUTH.ME), owned: httpTesting.expectOne(API.DEVICE_V2.LIST),
+      shared: httpTesting.expectOne(API.DEVICE_V2.RECEIVED_SHARES) };
+  }
+  function flushInventory(requests: ReturnType<typeof inventoryRequests>, present: boolean) {
+    requests.user.flush({ data: { id: 'legacy-uuid', nickname: 'User' } });
+    requests.owned.flush({ data: { devices: present ? [{ logicalDeviceId: 'ble_one', name: 'Sensor',
+      deviceType: 'ble', cloudEnabled: true, state: 'active' }] : [] } });
+    requests.shared.flush({ data: { devices: [] } });
+  }
+
+  it.each(['logout', 'account-switch'])('does not refill a successor after a late inventory %s', async action => {
+    const loading = service.getAllInfo(), requests = inventoryRequests();
+    if (action === 'logout') await dataService.removeAuthData();
+    else dataService.auth = { ...dataService.auth!, uuid: 'next-user', accessToken: 'next-token' };
+    flushInventory(requests, true);
+    await expect(loading).resolves.toBe(false);
+    expect(dataService.device.list).toEqual([]);
+    expect(loadDeviceCatalog({ authority: API.BASE_URL, accountId: 'next-user' })).toBeUndefined();
+  });
+
+  it('an older same-session list cannot resurrect a device after a newer complete removal', async () => {
+    const old = service.getAllInfo(), oldRequests = inventoryRequests();
+    const current = service.getAllInfo(), currentRequests = inventoryRequests();
+    flushInventory(currentRequests, false);
+    await expect(current).resolves.toBe(true);
+    flushInventory(oldRequests, true);
+    await expect(old).resolves.toBe(false);
+    expect(dataService.device.list).toEqual([]);
+    expect(loadDeviceCatalog({ authority: API.BASE_URL, accountId: 'legacy-uuid' })).toEqual([]);
   });
 
   it('loads the V2 device inventory without Legacy JSON subresource requests', async () => {
@@ -91,8 +124,14 @@ describe('UserService API contracts', () => {
       status: 200,
       data: { devices: [{
         logicalDeviceId: 'device_shared',
+        tenantId: 'tenant-shared',
         name: 'Shared lamp',
         deviceType: 'diy',
+        cloudReachable: true,
+        cloudLastSeenAt: 100,
+        manifestRevision: 1,
+        manifestFingerprint: 'ab'.repeat(32),
+        manifestUpdatedAt: 90,
         share: {
           shareId: 'share-1',
           role: 'viewer',
@@ -110,6 +149,7 @@ describe('UserService API contracts', () => {
     expect(dataService.user.id).toBe('user-1');
     expect(dataService.device.list).toEqual([deviceId, 'device_shared']);
     expect(dataService.device.dict['device_shared'].config.isShared).toBe(true);
+    expect(dataService.device.dict['device_shared'].data.cloudReachable).toBe(true);
     expect(dataService.device.dict['device_shared'].data.canCommand).toBe(false);
   });
 

@@ -36,6 +36,14 @@ function createHarness() {
 }
 
 describe('DeviceService bbp2 DeviceUiPort adapter', () => {
+  it('does not queue a mixed read and Action behind connection preparation', async () => {
+    const { deviceUi, service } = createHarness();
+    deviceUi.connect.mockImplementation(() => new Promise(() => undefined));
+    service.sendData(device, { get: 'state', set: { button: null } });
+    await vi.waitFor(() => expect(deviceUi.sendCommand).toHaveBeenCalledWith(logicalDeviceId, 'button', null));
+    expect(deviceUi.connect).not.toHaveBeenCalled();
+    expect(deviceUi.sendCommand).toHaveBeenCalledOnce();
+  });
   it('maps set fields to DeviceUiPort commands', async () => {
     const { deviceUi, service } = createHarness();
 

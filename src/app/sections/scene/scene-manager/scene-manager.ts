@@ -122,6 +122,8 @@ export class SceneManager {
     this.router.navigate(['/scene-manager', sceneName]);
   }
 
+  openAutomations() { this.router.navigate(['/automation-manager']); }
+
   sceneIsExist(sceneName) {
     if (this.sceneDataList.indexOf(sceneName) > -1) return true;
     return false;

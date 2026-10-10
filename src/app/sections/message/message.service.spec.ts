@@ -59,6 +59,28 @@ describe('MessageService', () => {
     httpTesting.verify();
   });
 
+  it('only accepts typed canonical actions from matching authenticated message details', async () => {
+    const valid = { type: 'share_invitation', invitationId: 'A'.repeat(22) };
+    for (const [action, expected] of [[valid, valid], [null, null],
+      [{ ...valid, url: 'https://outside.invalid' }, null], [{ ...valid, invitationId: 'bad' }, null],
+      [{ type: 'open_url', url: 'diandeng://share/' + 'A'.repeat(43) }, null]] as const) {
+      const pending = service.getMessage('target');
+      httpTesting.expectOne(API.MESSAGE.DETAIL('target')).flush(envelope(message('target', {
+        type: 'share.invitation', category: 'device_sharing', action: action as any,
+      })));
+      expect((await pending)?.action).toEqual(expected);
+    }
+    const spoof = service.getMessage('target');
+    httpTesting.expectOne(API.MESSAGE.DETAIL('target')).flush(envelope(message('target', {
+      body: 'Invitation: ' + valid.invitationId, action: valid as any,
+    })));
+    expect((await spoof)?.action).toBeNull();
+    const mismatched = service.getMessage('target');
+    const rejection = expect(mismatched).rejects.toThrow('Message identity mismatch');
+    httpTesting.expectOne(API.MESSAGE.DETAIL('target')).flush(envelope(message('other')));
+    await rejection;
+  });
+
   it('loads the first page and summary with the V2 filter contract', async () => {
     const pending = service.loadFirst({
       category: 'device_sharing',

@@ -178,6 +178,23 @@ describe('DevicePage component switching', () => {
     );
   });
 
+  it.each([undefined, 'DeviceV2', 'RetiredDashboard'])('does not create a shell-owned one-shot connection for V2 component %s', async component => {
+    device.config.mode = 'bbp2';
+    device.config.isPreview = false;
+    device.config.component = component;
+    // Resolve ownership even before the dynamic component has loaded.
+    await page.connectDevice();
+    expect(page.deviceService.connectDevice).not.toHaveBeenCalled();
+    expect(page.deviceService.queryDevice).not.toHaveBeenCalled();
+  });
+
+  it('preserves the explicit custom bbp2 component connection entry', async () => {
+    device.config.mode = 'bbp2'; device.config.isPreview = false;
+    device.config.component = 'TestDashboard';
+    await page.connectDevice();
+    expect(page.deviceService.connectDevice).toHaveBeenCalledOnce();
+  });
+
   it('falls back to DeviceV2 when a bbp2 component is unknown', () => {
     device.config.mode = 'bbp2';
     device.config.component = 'RetiredDashboard';

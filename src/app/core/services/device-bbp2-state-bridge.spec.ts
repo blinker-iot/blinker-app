@@ -244,14 +244,13 @@ describe('DeviceService bbp2 state bridge', () => {
     expect(second.data.temperature).toBe(30);
   });
 
-  it('connects for realtime queries without sending an rt endpoint command', () => {
+  it('keeps legacy realtime inventory queries passive without waking gateway children', () => {
     const device = makeDevice();
     const { deviceUi, service } = createHarness([device]);
 
     service.queryRealtimeData(device, { rt: ['temperature'] });
 
-    expect(deviceUi.connect).toHaveBeenCalledOnce();
-    expect(deviceUi.connect).toHaveBeenCalledWith(firstId);
+    expect(deviceUi.connect).not.toHaveBeenCalled();
     expect(deviceUi.sendCommand).not.toHaveBeenCalled();
   });
 

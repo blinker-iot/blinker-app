@@ -24,6 +24,7 @@ log.txt
 /plugins
 
 # Compiled output
+/build
 /dist
 /device-template/dist
 /tmp

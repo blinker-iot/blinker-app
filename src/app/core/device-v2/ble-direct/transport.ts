@@ -3,9 +3,12 @@ import {
   BleClient,
   BleDevice,
   BleService,
+  BluetoothLe,
   ScanResult,
 } from '@capacitor-community/bluetooth-le';
+import { Capacitor } from '@capacitor/core';
 import { bleScanner } from '../../bluetooth/scan';
+import { BleBootstrapPriorityWindow, startBleBootstrapPriority } from './bootstrap-priority';
 
 import {
   BleApplicationMode,
@@ -58,6 +61,8 @@ export interface BleDirectRecordLink {
   ): Promise<BleDirectTarget>;
   sendRecord(record: Uint8Array, writeTimeoutMs?: number): Promise<void>;
   receiveRecord(timeoutMs?: number): Promise<Uint8Array>;
+  // Optional transport-local hint only; must never throw or delay readiness.
+  finishBootstrap?(): void;
   disconnect(): Promise<void>;
 }
 
@@ -112,6 +117,7 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
   private generation = 0;
   private detachAbort?: () => void;
   private disconnecting?: Promise<void>;
+  private bootstrapPriority?: BleBootstrapPriorityWindow;
   private reassembler = new FragmentReassembler();
   private readonly records: Uint8Array[] = [];
   private readonly waiters: Array<{
@@ -120,7 +126,10 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
     timer?: ReturnType<typeof setTimeout>;
   }> = [];
 
-  constructor(private readonly admission?: BleDirectConnectionAdmission) {}
+  constructor(
+    private readonly admission?: BleDirectConnectionAdmission,
+    private readonly bootstrapPriorityEnabled = false,
+  ) {}
 
   async connect(target: BleDirectTarget): Promise<void> {
     if (this.connected) throw new Error('BLE_DIRECT_ALREADY_CONNECTED');
@@ -176,6 +185,18 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
       );
       check();
       this.connected = true;
+      if (this.bootstrapPriorityEnabled && Capacitor.getPlatform() === 'android') {
+        this.bootstrapPriority = startBleBootstrapPriority(
+          // BleClient puts priority requests in the same JS queue as GATT I/O.
+          // Use the exported native plugin for this independent, nonblocking
+          // Android hint; never disable or replace the normal GATT queue.
+          priority => BluetoothLe.requestConnectionPriority({
+            deviceId: target.device.deviceId, connectionPriority: priority,
+          }),
+          () => generation === this.generation && this.connected
+            && !this.disconnected && !this.admission?.signal.aborted,
+        );
+      }
     } catch (error) {
       if (generation !== this.generation || this.admission?.signal.aborted) {
         // An SDK connect may succeed AFTER cancellation's first disconnect.
@@ -269,6 +290,7 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
   async disconnect(): Promise<void> {
     if (this.disconnecting) return this.disconnecting;
     ++this.generation;
+    this.cancelBootstrapPriority();
     this.detachAbort?.();
     this.detachAbort = undefined;
     const deviceId = this.target?.device.deviceId;
@@ -288,6 +310,16 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
       throw nativeReleaseFailure;
     });
     return this.disconnecting;
+  }
+
+  finishBootstrap(): void {
+    this.bootstrapPriority?.finish();
+    this.bootstrapPriority = undefined;
+  }
+
+  private cancelBootstrapPriority(): void {
+    this.bootstrapPriority?.cancel();
+    this.bootstrapPriority = undefined;
   }
 
   private onFragment(fragment: Uint8Array): void {
@@ -314,6 +346,7 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
 
   private onDisconnected(reason = 'BLE_DIRECT_DISCONNECTED'): void {
     ++this.generation;
+    this.cancelBootstrapPriority();
     this.connected = false;
     this.disconnected = true;
     this.reassembler.reset();

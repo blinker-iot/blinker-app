@@ -1,0 +1,78 @@
+<ion-header><ion-toolbar><ion-buttons slot="start"><ion-back-button defaultHref="/scene-manager" text="" /></ion-buttons>
+  <ion-title>设备自动化 · 试点</ion-title><ion-buttons slot="end"><ion-button [disabled]="automation.state().busy" (click)="refresh()">刷新</ion-button></ion-buttons>
+</ion-toolbar></ion-header>
+<ion-content><main>
+  <p>源属性满足一次边沿或阈值进入条件时，设置另一设备的开关属性。规则启用后由服务器执行，不依赖本页面运行。</p>
+  <p class="hint">仅限所属账号的同片普通 WiFi 设备。首次通信和重连只建立基线，不触发；满足条件时持续保持该值不会连续执行。每次动作冷却30秒，冷却内的触发消耗一次条件，不会结束后补发。不支持按钮 Action、多步骤或延时。</p>
+  @if (automation.state().busy) { <ion-progress-bar type="indeterminate" /> }
+  @if (automation.state().error) { <p role="alert">{{ automation.state().error }}</p> }
+  @if (automation.state().notice) { <p role="status">{{ automation.state().notice }}</p> }
+  @if (automation.state().pending.length) {
+    <section><h2>未确认的配置请求</h2><p>查询不会重发；请勿重新创建设备或规则来绕过未知结果。</p>
+      @for (pending of automation.state().pending; track pending.ruleId) {
+        <article><code>{{ pending.ruleId }}</code><p>{{ pending.operation === 'retire' ? '退役' : pending.body.expectedRevision === 0 ? '新建（停用）' : '修改' }} · 原版本 {{ pending.body.expectedRevision }}</p>
+          @if (pending.operation === 'put') { <p>{{ pendingCondition(pending) }}</p> }
+          <ion-button size="small" [disabled]="automation.state().busy" (click)="automation.recover(pending)">查询原请求</ion-button>
+          <ion-button size="small" fill="outline" [disabled]="automation.state().busy" (click)="retry(pending)">恢复同一请求</ion-button>
+        </article>
+      }
+    </section>
+  }
+  <div class="actions"><ion-button fill="outline" [disabled]="automation.state().busy" (click)="automation.refresh(!automation.state().retired)">
+    {{ automation.state().retired ? '查看当前规则' : '查看退役记录' }}</ion-button></div>
+  @if (automation.state().ready) {
+    <section><h2>{{ automation.state().retired ? '退役记录' : '当前规则' }}</h2>
+      @for (rule of automation.state().rules; track rule.ruleId) {
+        <article><strong>{{ rule.source.key }} → {{ rule.target.key }} = {{ rule.target.value }}</strong>
+          <p><code>{{ rule.source.deviceId }}</code> → <code>{{ rule.target.deviceId }}</code></p>
+          <p>{{ conditionText(rule.condition) }} · 源类型 {{ rule.source.valueType }}</p>
+          <p>{{ statusText[rule.status] }} · 版本 {{ rule.definitionRevision }}</p>
+          @if (rule.targetOutcomeUnknown) { <p role="status">目标仍有未知执行预约，不能通过新规则绕过。</p> }
+          <ion-button size="small" [disabled]="automation.state().busy" (click)="automation.inspect(rule.ruleId)">详情与结果</ion-button>
+          @if (rule.retiredAtMs === null) {
+            <ion-button size="small" fill="outline" [disabled]="automation.state().busy || hasPending(rule.ruleId)" (click)="automation.toggle(rule)">{{ rule.enabled ? '停用' : '启用' }}</ion-button>
+            <ion-button size="small" color="danger" fill="clear" [disabled]="automation.state().busy || hasPending(rule.ruleId)" (click)="retire(rule)">退役</ion-button>
+          }
+        </article>
+      } @empty { <p>暂无记录。</p> }
+      @if (automation.state().nextAfter) { <ion-button [disabled]="automation.state().busy" (click)="automation.more()">加载下一页</ion-button> }
+    </section>
+    @if (!automation.state().retired) {
+      <section><h2>新建规则</h2><p class="hint">属性来自已有能力缓存，仅供选择。若没有可选属性，请先进入设备控制页获取能力；保存时服务器会再次校验。</p>
+        <ion-select label="源属性" labelPlacement="stacked" [(ngModel)]="source" (ionChange)="sourceChanged()" [disabled]="automation.state().busy">
+          @for (choice of sources; track choice.id) { <ion-select-option [value]="choice.id">{{ choice.label }}</ion-select-option> }
+        </ion-select>
+        <ion-select label="触发条件" labelPlacement="stacked" [(ngModel)]="condition" [disabled]="automation.state().busy || !source">
+          @if (numericSource) {
+            <ion-select-option value="above">达到或高于阈值</ion-select-option><ion-select-option value="below">达到或低于阈值</ion-select-option>
+          } @else {
+            <ion-select-option value="rising">false → true（上升沿）</ion-select-option><ion-select-option value="falling">true → false（下降沿）</ion-select-option>
+          }
+        </ion-select>
+        @if (numericSource) {
+          <ion-input label="触发阈值" labelPlacement="stacked" type="number" inputmode="decimal" [(ngModel)]="threshold" [disabled]="automation.state().busy" />
+          <ion-input label="回差（大于0）" labelPlacement="stacked" type="number" inputmode="decimal" [(ngModel)]="hysteresis" [disabled]="automation.state().busy" />
+          <p class="hint">达到阈值只触发一次。回到另一侧回差边界后才重新布防；初始值处于触发区或回差带时不动作。浮点值按设备实际解码结果比较，不保证十进制精确采样。</p>
+          @if (conditionValue; as selected) { <p class="hint">{{ conditionText(selected) }}</p> }
+          @else { <p class="hint">请填写有限阈值与正回差；回差边界须有限且能与阈值区分。</p> }
+        }
+        <ion-select label="目标属性" labelPlacement="stacked" [(ngModel)]="target" [disabled]="automation.state().busy">
+          @for (choice of targets; track choice.id) { <ion-select-option [value]="choice.id">{{ choice.label }}</ion-select-option> }
+        </ion-select>
+        <ion-select label="目标值" [(ngModel)]="value" [disabled]="automation.state().busy"><ion-select-option [value]="true">true / 开</ion-select-option><ion-select-option [value]="false">false / 关</ion-select-option></ion-select>
+        <ion-button [disabled]="!canCreate" (click)="save()">保存为停用规则</ion-button>
+      </section>
+    }
+  }
+  @if (automation.state().detail; as detail) {
+    <section><h2>当前详情</h2><code>{{ detail.rule.ruleId }}</code><p>{{ statusText[detail.rule.status] }} · 版本 {{ detail.rule.definitionRevision }}</p>
+      <p>{{ detail.rule.source.deviceId }} / {{ detail.rule.source.key }} → {{ detail.rule.target.deviceId }} / {{ detail.rule.target.key }} = {{ detail.rule.target.value }}</p>
+      <p>{{ conditionText(detail.rule.condition) }} · 源类型 {{ detail.rule.source.valueType }}</p>
+      @if (automation.state().reviewed; as reviewed) { <ion-button [disabled]="automation.state().busy" (click)="acceptChanged(reviewed)">已核对，停止本机跟踪</ion-button> }
+      <h3>最近执行（最多16条）</h3>
+      @for (execution of detail.recentExecutions; track execution.executionId) {
+        <p>{{ execution.createdAtMs | date:'MM-dd HH:mm:ss' }} · {{ executionText[execution.state] }}</p>
+      } @empty { <p>暂无执行记录。保存或启用不等于已经触发。</p> }
+    </section>
+  }
+</main></ion-content>
