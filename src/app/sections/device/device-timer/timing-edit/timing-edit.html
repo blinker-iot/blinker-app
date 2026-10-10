@@ -1,194 +1,56 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
-    </ion-buttons>
-    <ion-title>{{ pageTitle }}</ion-title>
-  </ion-toolbar>
-</ion-header>
-
-<ion-content [fullscreen]="true">
-  @if (loaded && !taskNotFound) {
-  <main>
-    <app-hero-card
-      [iconClass]="editorIcon"
-      eyebrow="TASK EDITOR"
-      [heading]="heroTitle"
-      [description]="editorDescription"
-    />
-
-    @if (usingTestData) {
-    <p class="test-data-note">
-      <i class="fa-light fa-flask" aria-hidden="true"></i>
-      当前为预览设备，保存和删除只修改本地测试数据。
-    </p>
+<ion-header><ion-toolbar>
+  <ion-buttons slot="start"><ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button></ion-buttons>
+  <ion-title>{{ taskId === undefined ? '新建任务' : '编辑任务 #' + taskId }}</ion-title>
+</ion-toolbar></ion-header>
+<ion-content [fullscreen]="true"><main>
+  <app-hero-card iconClass="fa-light fa-calendar-clock" eyebrow="TASK EDITOR" [heading]="timer.deviceName"
+    description="只设置固件允许的属性值。保存倒计时不会自动开始；日历任务需设备有有效授时。" />
+  <app-task-status [timer]="timer" />
+  @if (error) { <p role="alert">{{ error }}</p> }
+  @if (timer.ready && !taskNotFound) {
+    <button type="button" class="primary-action" [disabled]="timer.busy" (click)="loadForm()">从当前查询重新载入（覆盖未保存编辑）</button>
+    <fieldset [disabled]="!timer.canWrite">
+      <section class="surface-card setting-card">
+        <label>任务类型<select [(ngModel)]="kind">
+          <option value="countdown">倒计时</option><option value="once">一次日期</option><option value="weekly">每周/每天</option>
+        </select></label>
+        @if (kind === 'countdown') {
+          <label>倒计时秒数<input type="number" min="0.001" max="2147483.647" step="0.001" [(ngModel)]="seconds" /></label>
+          <p>保存后请返回列表，明确点击“开始新倒计时”。重启后中止，不自动续跑。</p>
+        }
+        @if (kind === 'once') { <label>执行日期（手机当前时区）<input type="datetime-local" step="0.001" [(ngModel)]="dateTime" /></label> }
+        @if (kind === 'weekly') {
+          <label>执行时刻<input type="time" [(ngModel)]="time" /></label>
+          <div class="weekdays">@for (day of days; track $index) {
+            <label><input type="checkbox" [checked]="daySelected($index)" (change)="toggleDay($index, $any($event.target).checked)" />周{{ day }}</label>
+          }</div>
+          <label>固定 UTC 偏移（分钟）<input type="number" min="-720" max="840" step="1" [(ngModel)]="utcOffsetMinutes" /></label>
+          <p>星期一对应第一个选项；固定偏移不会自动随旅行或夏令时调整。</p>
+        }
+        <label><input type="checkbox" [(ngModel)]="enabled" />启用定义（不是开始/恢复倒计时）</label>
+      </section>
+      <div class="section-label">属性赋值</div>
+      <section class="surface-card setting-card">
+        <label>固件允许的目标<select [ngModel]="key" (ngModelChange)="selectTarget($event)">
+          <option value="" disabled>请选择属性</option>
+          @for (item of timer.targets; track item.key) { <option [value]="item.key">{{ item.key }} ({{ item.valueType }})</option> }
+        </select></label>
+        @if (target?.valueType === 'boolean') {
+          <label>属性值<select [(ngModel)]="value"><option [ngValue]="false">false</option><option [ngValue]="true">true</option></select></label>
+        } @else {
+          <label>数值<input type="text" inputmode="decimal" [(ngModel)]="value" /></label>
+        }
+        @if (target?.constraints; as hint) { <p>上次能力缓存提示：最小 {{ hint.minimum ?? '未限定' }}，最大 {{ hint.maximum ?? '未限定' }}，步进 {{ hint.step ?? '未限定' }} {{ hint.unit }}；以设备实际校验为准。</p> }
+        @if (!target) { <p>该目标不在当前固件调度目录中，不能保存。</p> }
+      </section>
+    </fieldset>
+  } @else if (taskNotFound) { <section class="not-found surface-card"><strong>找不到任务或旧任务地址已失效</strong><p>请返回列表，按设备任务 ID 重新选择。</p></section> }
+</main></ion-content>
+@if (timer.ready && !taskNotFound) {
+  <div class="editor-bottom-actions">
+    <button class="save-action" type="button" [disabled]="!canSave" (click)="save()">保存定义（不自动开始倒计时）</button>
+    @if (taskId !== undefined) {
+      <button class="delete-action" type="button" [disabled]="!timer.canWrite" aria-label="删除任务" (click)="deleteTask()"><i class="fa-light fa-trash-can"></i></button>
     }
-
-    @if (mode === 'new') {
-    <div class="section-label">选择任务类型</div>
-    <app-tab-selector
-      ariaLabel="任务类型"
-      [options]="taskTypeTabs"
-      [value]="selectedType"
-      (valueChange)="selectTaskTypeValue($event)"
-    />
-    }
-
-    @if (selectedType === 'timing') {
-    <div class="section-label">执行计划</div>
-    <section class="surface-card setting-card">
-      <button type="button" class="setting-row" (click)="openTimeModal()">
-        <span class="setting-icon timing"><i class="fa-light fa-clock"></i></span>
-        <span class="setting-copy"><small>任务时间</small><strong>{{ timeInfo }}</strong></span>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-      <button type="button" class="setting-row" (click)="openRepeatModal()">
-        <span class="setting-icon repeat"><i class="fa-light fa-repeat"></i></span>
-        <span class="setting-copy"><small>重复设置</small><strong>{{ timingData.day | days2text }}</strong></span>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-    </section>
-    }
-
-    @if (selectedType === 'countdown') {
-    <div class="section-label">倒计时设置</div>
-    <section class="surface-card duration-card">
-      <div class="duration-heading">
-        <span class="setting-icon countdown"><i class="fa-light fa-hourglass-clock"></i></span>
-        <div><small>倒计时总时长</small><strong>{{ countdownDurationText }}</strong></div>
-      </div>
-      <div class="duration-inputs">
-        <label>
-          <input type="number" inputmode="numeric" min="0" max="68" [(ngModel)]="countdownHours" />
-          <span>小时</span>
-        </label>
-        <label>
-          <input type="number" inputmode="numeric" min="0" max="59" [(ngModel)]="countdownMinutes" />
-          <span>分钟</span>
-        </label>
-      </div>
-      <div class="run-setting">
-        <div><strong>保存后立即开始</strong><small>关闭时任务将保持暂停</small></div>
-        <ion-toggle
-          aria-label="保存后立即开始倒计时"
-          [checked]="startImmediately"
-          (ionChange)="startImmediately = $event.detail.checked"
-        ></ion-toggle>
-      </div>
-    </section>
-    }
-
-    @if (selectedType === 'loop') {
-    <div class="section-label">循环设置</div>
-    <section class="surface-card loop-card">
-      <label class="number-setting">
-        <span class="setting-icon loop"><i class="fa-light fa-arrows-repeat"></i></span>
-        <span class="setting-copy"><small>循环次数</small><strong>{{ loopCycleText }}</strong></span>
-        <input type="number" inputmode="numeric" min="0" max="100" [(ngModel)]="loopCycles" />
-      </label>
-      <p class="field-tip">输入 0 表示无限循环，最大 100 次。</p>
-      <div class="phase-grid">
-        <label>
-          <span><i class="fa-light fa-play"></i> 阶段一</span>
-          <input type="number" inputmode="numeric" min="1" max="2047" [(ngModel)]="loopPhase1Minutes" />
-          <small>分钟</small>
-        </label>
-        <label>
-          <span><i class="fa-light fa-forward-step"></i> 阶段二</span>
-          <input type="number" inputmode="numeric" min="1" max="2047" [(ngModel)]="loopPhase2Minutes" />
-          <small>分钟</small>
-        </label>
-      </div>
-      <div class="run-setting">
-        <div><strong>保存后立即运行</strong><small>按阶段一开始循环</small></div>
-        <ion-toggle
-          aria-label="保存后立即运行循环任务"
-          [checked]="startImmediately"
-          (ionChange)="startImmediately = $event.detail.checked"
-        ></ion-toggle>
-      </div>
-    </section>
-    }
-
-    <div class="section-label action-label">
-      <span>执行动作</span>
-      <small>{{ activeActionText }}</small>
-    </div>
-
-    @if (selectedType === 'loop') {
-    <section class="action-targets" aria-label="循环阶段动作">
-      <button
-        type="button"
-        [class.selected]="activeActionTarget === 'primary'"
-        (click)="selectActionTarget('primary')"
-      >
-        <small>阶段一动作</small>
-        <strong>{{ selectedActionText }}</strong>
-      </button>
-      <button
-        type="button"
-        [class.selected]="activeActionTarget === 'secondary'"
-        (click)="selectActionTarget('secondary')"
-      >
-        <small>阶段二动作</small>
-        <strong>{{ secondaryActionText }}</strong>
-      </button>
-    </section>
-    }
-
-    <section class="surface-card action-list" role="radiogroup" aria-label="执行动作">
-      @for (option of actionOptions; track option.text) {
-      <button
-        type="button"
-        [class.selected]="isActionSelected(option)"
-        role="radio"
-        [attr.aria-checked]="isActionSelected(option)"
-        (click)="selectAction(option)"
-      >
-        <span class="action-icon"><i class="fa-light" [class]="'fa-light ' + option.icon"></i></span>
-        <strong>{{ option.text }}</strong>
-        <i
-          class="selection-icon fa-solid"
-          [class.fa-circle-check]="isActionSelected(option)"
-          [class.fa-circle]="!isActionSelected(option)"
-        ></i>
-      </button>
-      }
-    </section>
-
-  </main>
-  } @else if (loaded && taskNotFound) {
-  <main>
-    <section class="not-found surface-card">
-      <i class="fa-light fa-calendar-xmark"></i>
-      <strong>找不到该任务</strong>
-      <p>任务可能已经被设备删除，或任务列表刚刚发生变化。</p>
-      <button type="button" class="primary-action" (click)="backToList()">返回任务列表</button>
-    </section>
-  </main>
-  } @else {
-  <div class="loading-state">
-    <ion-spinner name="crescent"></ion-spinner>
-    <span>正在载入任务设置…</span>
   </div>
-  }
-</ion-content>
-@if (loaded && !taskNotFound) {
-<div class="editor-bottom-actions">
-  <button type="button" class="save-action" [disabled]="isSaveDisabled" (click)="save()">
-    <span>{{ saving ? '正在保存' : '保存任务' }}</span>
-  </button>
-  @if (mode === 'edit') {
-  <button
-    type="button"
-    class="delete-action"
-    [disabled]="saving"
-    aria-label="删除任务"
-    title="删除任务"
-    (click)="deleteTask()"
-  >
-    <i class="fa-light fa-trash-can"></i>
-  </button>
-  }
-</div>
 }

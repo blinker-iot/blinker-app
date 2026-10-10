@@ -18,6 +18,8 @@
 </ion-header>
 <ion-content fullscreen="true">
   <main>
+    <ion-button expand="block" (click)="openAutomations()">设备自动化（V2 试点）</ion-button>
+    <p>下方为原场景配置，不会自动转换或启用为 V2 云端规则。</p>
     <app-hero-card
       iconClass="fa-light fa-wand-magic-sparkles"
       eyebrow="SMART AUTOMATION"
@@ -26,7 +28,7 @@
       [meta]="sceneDataList.length"
     />
 
-    <div class="section-label">我的场景</div>
+    <div class="section-label">原场景配置</div>
 
     @if (loaded && sceneDataList.length) {
     <section class="manager-card">

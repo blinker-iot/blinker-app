@@ -406,6 +406,7 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
     await finishHarness.page.finishKeySetup();
 
     expect(finishHarness.page.secretKey).toBe('');
+    expect(finishHarness.userService.getAllInfo).toHaveBeenCalledTimes(2);
     expect(finishHarness.navController.navigateRoot).toHaveBeenCalledWith(
       '/device/logical%2Fdevice%20%231'
     );

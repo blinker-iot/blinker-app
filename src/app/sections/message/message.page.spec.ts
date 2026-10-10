@@ -7,6 +7,7 @@ import {
   convertToParamMap,
   type ParamMap,
   provideRouter,
+  Router,
 } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 import {
@@ -18,6 +19,7 @@ import { BehaviorSubject } from 'rxjs';
 import { MessageItem } from './message.model';
 import { MessagePage } from './message.page';
 import { MessageService } from './message.service';
+import { DeviceV2ShareInvitationService } from 'src/app/core/services/device-v2-share-invitation.service';
 import { TabProfileComponent } from '../../home/components/tab-profile/tab-profile';
 
 describe('MessagePage', () => {
@@ -41,6 +43,7 @@ describe('MessagePage', () => {
           useValue: { queryParamMap },
         },
         { provide: MessageService, useValue: service },
+        { provide: DeviceV2ShareInvitationService, useValue: { stageDirected: vi.fn().mockReturnValue(true), accept: vi.fn() } },
       ],
     }).compileComponents();
 
@@ -171,6 +174,55 @@ describe('MessagePage', () => {
     expect(page.markingAllRead).toBe(false);
   });
 
+  it('revalidates the authenticated message action and enters the sole confirmation flow without accepting', async () => {
+    const invitationId = 'A'.repeat(22);
+    const item = message({ type: 'share.invitation', unread: false, readAt: 100,
+      action: { type: 'share_invitation', invitationId } });
+    service.getMessage.mockResolvedValue(item);
+    createFixture(); await page.openMessage(item);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const flow = TestBed.inject(DeviceV2ShareInvitationService);
+    expect(page.detailItem).toEqual(item);
+    expect(page.detailLoading).toBe(false);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="message-invitation-action"]')).not.toBeNull();
+    await page.openInvitation();
+    expect(service.getMessage).toHaveBeenCalledTimes(2);
+    expect(flow.stageDirected).toHaveBeenCalledWith(invitationId);
+    expect(flow.accept).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('/share-invitation');
+  });
+
+  it('blocks an action revoked after detail display rather than deriving permission from notification text', async () => {
+    const item = message({ action: { type: 'share_invitation', invitationId: 'A'.repeat(22) } });
+    createFixture(() => { page.detailItem = item; });
+    service.getMessage.mockResolvedValue({ ...item, action: null });
+    await page.openInvitation();
+    expect(TestBed.inject(DeviceV2ShareInvitationService).stageDirected).not.toHaveBeenCalled();
+    expect(page.detailError).toContain('已不可操作');
+  });
+
+  it('ignores duplicate clicks and a late action response after account change', async () => {
+    const item = message({ action: { type: 'share_invitation', invitationId: 'A'.repeat(22) } });
+    createFixture(() => { page.detailItem = item; });
+    let resolve!: (value: MessageItem) => void;
+    service.getMessage.mockReturnValue(new Promise(done => { resolve = done; }));
+    const first = page.openInvitation(); await page.openInvitation();
+    expect(service.getMessage).toHaveBeenCalledTimes(1);
+    service.sessionEpoch++;
+    resolve(item); await first;
+    expect(TestBed.inject(DeviceV2ShareInvitationService).stageDirected).not.toHaveBeenCalled();
+    expect(page.detailItem).toBeNull();
+  });
+
+  it('does not reopen a destroyed page from a late authenticated detail response', async () => {
+    let resolve!: (value: MessageItem) => void;
+    service.getMessage.mockReturnValue(new Promise(done => { resolve = done; }));
+    createFixture(); const pending = page.openMessageById('later');
+    fixture.destroy(); resolve(message({ id: 'later' })); await pending;
+    expect(page.detailItem).toBeNull(); expect(service.markRead).not.toHaveBeenCalled();
+  });
+
   it('completes refresh and disables infinite scroll at the final cursor', async () => {
     createFixture();
     const refreshTarget = {
@@ -285,6 +337,7 @@ function message(overrides: Partial<MessageItem> = {}): MessageItem {
 
 function createMessageService() {
   return {
+    sessionEpoch: 1,
     items: [] as MessageItem[],
     summary: { total: 0, categories: {}, beforeCursor: null },
     unreadTotal: 0,

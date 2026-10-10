@@ -94,4 +94,5 @@ describe('DeviceV2PageLayoutService', () => {
       1,
     )).rejects.toThrow(/incompatible/);
   });
+
 });

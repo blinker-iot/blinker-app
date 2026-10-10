@@ -49,6 +49,7 @@ import {
 import { DeviceV2ManifestCache } from './device-v2-manifest-cache.service';
 import { DataService } from './data.service';
 import { BleDirectConnectionAdmission } from '../device-v2/ble-direct/transport';
+import { environment } from '../../../environments/environment';
 
 function emptySnapshot(): DeviceV2TargetSnapshot {
   return {
@@ -1156,7 +1157,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
           signal: admission?.signal ?? signal,
           assertAcquire: () => admission?.assertAcquire(), assertActive: () => admission?.assertActive(),
           onAcquire: () => admission?.onAcquire?.(),
-        }));
+        }, environment.deviceV2BleBootstrapPriorityEnabled));
         const cancelLink = () => { void link.disconnect().catch(() => undefined); };
         signal.addEventListener('abort', cancelLink, { once: true });
         try {

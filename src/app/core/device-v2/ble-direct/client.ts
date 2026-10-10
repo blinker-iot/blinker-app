@@ -259,6 +259,9 @@ export class BleDirectClient {
       if (session) await session.close().catch(() => undefined);
       throw error;
     } finally {
+      // synchronize() includes Manifest acceptance and fresh State. The native
+      // link owns the optional hint, its deadline and generation/close fences.
+      this.link.finishBootstrap?.();
       clearBleControllerCredentialSecrets(credential);
     }
   }

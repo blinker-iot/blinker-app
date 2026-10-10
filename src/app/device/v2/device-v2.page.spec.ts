@@ -14,8 +14,8 @@ import {
 } from '../../core/device-v2/device-ui.port';
 import { BlinkerDevice } from '../../core/model/device.model';
 import { generateDefaultPageLayout } from '../../core/device-v2/page-layout';
-import { DeviceV2Page } from './device-v2.page';
 import { DeviceUiConnectionScope } from '../../core/device-v2/connection-scope';
+import { DeviceV2Page } from './device-v2.page';
 
 const logicalDeviceId = 'device_11111111-1111-4111-8111-111111111111';
 
@@ -122,16 +122,21 @@ function harness(
     }),
     close: vi.fn().mockResolvedValue(undefined),
   };
-  const connect = vi.fn().mockResolvedValue(undefined);
   const port = {
+    isBleDirect: vi.fn(() => true),
     appActive: appActive.asObservable(),
     connectionState,
     watchConnection: vi.fn(() => connectionState.asObservable()),
     watchConnectivity: vi.fn(() => connectivity.asObservable()),
     watchState: vi.fn(() => state.asObservable()),
     watchEvents: vi.fn(() => events.asObservable()),
-    connect,
-    openConnection: vi.fn((id: string, signal: AbortSignal) => new DeviceUiConnectionScope(() => connect(id), signal)),
+    connect: vi.fn().mockResolvedValue(undefined),
+    openConnection: vi.fn((id: string, signal: AbortSignal) => {
+      // Keep the existing controllable read mock while exercising the real
+      // lifetime object, including cancellation AFTER the read has finished.
+      const task = port.connect(id, signal);
+      return new DeviceUiConnectionScope(() => task, signal);
+    }),
     disconnect: vi.fn().mockResolvedValue(undefined),
     sendCommand: vi.fn().mockResolvedValue(undefined),
     openTelemetry: vi.fn(openTelemetry ?? (async () => telemetryLease)),
@@ -168,9 +173,187 @@ describe('DeviceV2Page UI port lifecycle', () => {
     page.ngOnDestroy();
   });
 
+  it('does not clear a layout-fetch failure just because another State arrives', async () => {
+    const layouts = { get: vi.fn().mockRejectedValue(Error('LAYOUT_FETCH_FAILED')), saveCandidate: vi.fn() };
+    const { page, state } = harness(snapshot(), layouts);
+    await vi.waitFor(() => expect(page.error).toBe('LAYOUT_FETCH_FAILED'));
+    state.next(snapshot(true));
+    expect(page.error).toBe('LAYOUT_FETCH_FAILED');
+    page.ngOnDestroy();
+  });
+  it.each([false, true])('recovers a corrupt schema preview without clearing unrelated errors (%s)', async unrelated => {
+    const { page, state } = harness();
+    await vi.waitFor(() => expect((page as any).storedLayout).toBeDefined());
+    const valid = snapshot();
+    state.next({ ...valid, endpoints: valid.endpoints.map(f => f.id === 1 ? { ...f, key: 'corrupt' } : f) });
+    expect(page.error).toContain('incompatible');
+    if (unrelated) page.error = 'UNRELATED_FAILURE';
+    state.next(valid);
+    expect(page.layout?.widgets.some(w => w.endpointKey === 'power')).toBe(true);
+    expect(page.error).toBe(unrelated ? 'UNRELATED_FAILURE' : '');
+    page.ngOnDestroy();
+  });
+
+  it('validates a delayed layout against the current verified schema, not the stale preview', async () => {
+    const valid = snapshot(), preview = { ...valid, stateFresh: false,
+      endpoints: valid.endpoints.map(f => f.id === 1 ? { ...f, key: 'corrupt' } : f) };
+    let finish!: (record: unknown) => void;
+    const layouts = { get: vi.fn(() => new Promise(resolve => { finish = resolve; })), saveCandidate: vi.fn() };
+    const { page, state } = harness(preview, layouts);
+    state.next(valid);
+    finish({ logicalDeviceId, revision: 1, manifestFingerprint: valid.manifestFingerprint,
+      layout: generateDefaultPageLayout(valid), createdAt: 0, updatedAt: 0 });
+    await vi.waitFor(() => expect((page as any).storedLayout).toBeDefined());
+    expect(page.error).toBe('');
+    expect(page.layout?.widgets.some(w => w.endpointKey === 'power')).toBe(true);
+    expect(layouts.saveCandidate).not.toHaveBeenCalled();
+    page.ngOnDestroy();
+  });
+  it.each(['ready', 'failed', 'hidden', 'background', 'destroyed'])('retains the ready page scope while replacement is %s', async outcome => {
+    const { page, port, appActive } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    const original = port.openConnection.mock.results.at(-1)!.value;
+    let resolve!: () => void, reject!: (reason: Error) => void;
+    port.connect.mockImplementationOnce(() => new Promise<void>((yes, no) => { resolve = yes; reject = no; }));
+    page.retry();
+    await vi.waitFor(() => expect(resolve).toBeDefined());
+    const candidate = port.openConnection.mock.results.at(-1)!.value;
+    try {
+      expect(original.signal.aborted).toBe(false); expect(page.canControl).toBe(true);
+      if (outcome === 'hidden') page.viewActive = false;
+      if (outcome === 'background') appActive.next(false);
+      if (outcome === 'destroyed') page.ngOnDestroy();
+      if (['hidden', 'background', 'destroyed'].includes(outcome)) {
+        expect(original.signal.aborted).toBe(true); expect(candidate.signal.aborted).toBe(true);
+      }
+      if (outcome === 'failed') reject(Error('CANDIDATE_FAILED')); else resolve();
+      await vi.waitFor(() => expect((page as any).syncing).toBeUndefined());
+      expect(page.canControl).toBe(outcome === 'ready' || outcome === 'failed');
+      expect(original.signal.aborted).toBe(outcome !== 'failed');
+      expect(candidate.signal.aborted).toBe(outcome !== 'ready');
+      expect(port.sendCommand).not.toHaveBeenCalled();
+    } finally { resolve(); page.ngOnDestroy(); }
+  });
+
+  it.each(['cloud', 'lan'] as const)('uses fresh selected %s readiness, not unknown inventory presence', async activeTransport => {
+    const { page, port, connectivity, state } = harness();
+    port.isBleDirect.mockReturnValue(false);
+    connectivity.next({ ...connectivity.value, activeTransport, cloudSessionState: 'ready' });
+    page.device.data.cloudReachable = null;
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    await page.setBoolean(page.snapshot.endpoints[0]!, { detail: { checked: true } } as CustomEvent);
+    expect(port.sendCommand).toHaveBeenCalledOnce();
+    // Inventory becoming online cannot re-enable a stale live snapshot.
+    page.device.data.cloudReachable = true;
+    state.next({ ...snapshot(), stateFresh: false });
+    expect(page.canControl).toBe(false);
+    await page.execute(page.snapshot.endpoints[3]!);
+    expect(port.sendCommand).toHaveBeenCalledOnce();
+    state.next(snapshot()); port.connectionState.next('retrying');
+    expect(page.canControl).toBe(false);
+    page.ngOnDestroy();
+  });
+  it('cancels pending acquisition synchronously when hidden, before the next change-detection pass', async () => {
+    const { page, port } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    page.viewActive = false; page.ngOnChanges(changed('viewActive'));
+    let ready!: () => void;
+    port.connect.mockImplementationOnce(() => new Promise<void>(resolve => { ready = resolve; }));
+    page.viewActive = true; page.ngOnChanges(changed('viewActive'));
+    const signal = port.connect.mock.lastCall![1] as AbortSignal;
+    try {
+      page.viewActive = false; // ComponentRef.setInput writes now; ngOnChanges may run later.
+      expect(signal.aborted).toBe(true);
+      ready(); await Promise.resolve(); await Promise.resolve();
+      expect(page.canControl).toBe(false);
+      expect(port.sendCommand).not.toHaveBeenCalled();
+    } finally { ready(); page.ngOnDestroy(); }
+  });
+
+  it.each(['hidden', 'background', 'destroyed'])('releases the persistent scope after readiness on %s', async reason => {
+    const { page, port, appActive } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    const connection = port.openConnection.mock.results.at(-1)!.value;
+    const close = vi.spyOn(connection, 'close');
+    expect(close).not.toHaveBeenCalled();
+    if (reason === 'hidden') { page.viewActive = false; page.ngOnChanges(changed('viewActive')); }
+    if (reason === 'background') appActive.next(false);
+    if (reason === 'destroyed') page.ngOnDestroy();
+    await connection.closed;
+    expect(close).toHaveBeenCalled();
+    expect(page.canControl).toBe(false);
+    expect(port.disconnect).not.toHaveBeenCalled(); // Never cancels another page's owner.
+    if (reason !== 'destroyed') page.ngOnDestroy();
+  });
+
+  it('a retired ready scope disables control without replaying an Action; new ready opens a new scope', async () => {
+    const { page, port } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    const old = port.openConnection.mock.results.at(-1)!.value;
+    old.close();
+    expect(page.canControl).toBe(false); // Synchronous fence, before Promise observers run.
+    await old.closed; await Promise.resolve();
+    expect(page.canControl).toBe(false);
+    await page.execute(page.endpoint(page.widgets[3])!);
+    expect(port.sendCommand).not.toHaveBeenCalled();
+    port.connectionState.next('ready');
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    expect(port.openConnection.mock.results.at(-1)!.value).not.toBe(old);
+    page.ngOnDestroy();
+  });
+  it.each(['hidden', 'background', 'destroyed'])('cancels a read wait on %s and never sends a captured Action later', async reason => {
+    const { page, port, appActive } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    let release!: () => void;
+    port.connect.mockImplementationOnce(() => new Promise<void>(resolve => { release = resolve; }));
+    page.viewActive = false; page.ngOnChanges(changed('viewActive'));
+    page.viewActive = true; page.ngOnChanges(changed('viewActive'));
+    const signal = port.connect.mock.lastCall![1] as AbortSignal;
+    expect(page.canControl).toBe(false);
+    expect(page.stateLabel).toBe('正在连接并同步');
+    await page.execute(page.endpoint(page.widgets[3])!);
+    expect(port.sendCommand).not.toHaveBeenCalled();
+    if (reason === 'hidden') { page.viewActive = false; page.ngOnChanges(changed('viewActive')); }
+    if (reason === 'background') appActive.next(false);
+    if (reason === 'destroyed') page.ngOnDestroy();
+    expect(signal.aborted).toBe(true);
+    release();
+    await Promise.resolve(); await Promise.resolve();
+    expect(port.sendCommand).not.toHaveBeenCalled();
+    expect(page.error).toBe('');
+    if (reason !== 'destroyed') page.ngOnDestroy();
+  });
+
+  it('shows an unknown execution result and does not retry when the connection recovers', async () => {
+    const { page, port } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    port.sendCommand.mockRejectedValueOnce({ code: 'DEVICE_V2_COMMAND_OUTCOME_UNKNOWN' });
+    const field = page.endpoint(page.widgets[3])!;
+    await page.execute(field);
+    expect(page.fieldError(field)).toContain('勿重复操作');
+    port.connectionState.next('ready');
+    await Promise.resolve();
+    expect(port.sendCommand).toHaveBeenCalledOnce();
+    page.ngOnDestroy();
+  });
+
+  it('keeps cached values but disables controls after a ready timeout', async () => {
+    const { page, port } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    page.viewActive = false; page.ngOnChanges(changed('viewActive'));
+    port.connect.mockRejectedValueOnce({ code: 'DEVICE_V2_READY_TIMEOUT' });
+    page.viewActive = true; page.ngOnChanges(changed('viewActive'));
+    await vi.waitFor(() => expect(page.error).toContain('本次未发送控制指令'));
+    expect(page.canControl).toBe(false);
+    expect(page.value(page.endpoint(page.widgets[0])!)).toBe(false);
+    await page.execute(page.endpoint(page.widgets[3])!);
+    expect(port.sendCommand).not.toHaveBeenCalled();
+    page.ngOnDestroy();
+  });
+
   it('renders UI state and sends typed commands for the basic controls', async () => {
     const { page, port, state, events } = harness();
-    await Promise.resolve();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
 
     expect(port.openConnection).toHaveBeenCalledWith(logicalDeviceId, expect.any(AbortSignal));
     await vi.waitFor(() => expect(page.widgets.map(widget => widget.type)).toEqual(['switch', 'slider', 'input', 'button']));

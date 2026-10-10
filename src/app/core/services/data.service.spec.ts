@@ -1,6 +1,8 @@
 import { Capacitor } from '@capacitor/core';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { Subject } from 'rxjs';
+import { API } from '../../configs/api.config';
+import { loadDeviceCatalog, saveDeviceCatalog } from '../device-v2/device-catalog-cache';
 import {
   AUTH_INVALIDATED_STORAGE_KEY,
   DataService,
@@ -30,6 +32,69 @@ describe('DataService', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  const scope = () => ({ authority: API.BASE_URL, accountId: 'user-a' });
+  const auth = { accessToken: 'a', refreshToken: 'r', tokenType: 'bearer', uuid: 'user-a' };
+  const item = { device: { logicalDeviceId: 'ble_one', name: 'Sensor', deviceType: 'ble', cloudEnabled: true },
+    state: 'active', shared: true, access: { shareId: 'share-1', role: 'viewer' as const } };
+
+  it('restores directory only after native auth; no fake user, online state, values or credential', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    vi.mocked(SecureStorage.get).mockResolvedValue(auth);
+    saveDeviceCatalog(scope(), [item]);
+    await service.init();
+    expect(service.getDevice('ble_one')).toMatchObject({ deviceType: 'ble', cloudEnabled: true,
+      config: { mode: 'bbp2', isShared: true }, data: { enable: false, cloudReachable: null, canCommand: false } });
+    expect(service.deviceDataLoader.value).toBe(true);
+    expect(service.initCompleted.value).toBe(true);
+    expect(service.userDataLoader.value).toBe(false);
+    expect(service.user.id).toBeUndefined();
+    expect(service.getDevice('ble_one')?.data.power).toBeUndefined();
+    expect(SecureStorage.get).toHaveBeenCalledExactlyOnceWith('session');
+  });
+
+  it('clears old account view synchronously and does not restore another account catalog', async () => {
+    saveDeviceCatalog(scope(), [item]);
+    await service.setAuthData(auth);
+    expect(service.device.list).toEqual(['ble_one']);
+    const changed = service.setAuthData({ ...auth, uuid: 'user-b', accessToken: 'b' });
+    expect(service.device.list).toEqual([]);
+    await changed;
+    expect(service.device.list).toEqual([]);
+  });
+
+  it.each(['logout', 'login'])('a late SecureStorage read cannot undo %s', async action => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    let resolve!: (value: any) => void;
+    vi.mocked(SecureStorage.get).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+    const loading = service.loadAuthData();
+    await vi.waitFor(() => expect(resolve).toBeDefined());
+    saveDeviceCatalog(scope(), [item]);
+    if (action === 'logout') await service.removeAuthData();
+    else await service.setAuthData({ ...auth, uuid: 'user-b', accessToken: 'b' });
+    resolve(auth); await loading;
+    expect(service.auth?.uuid).toBe(action === 'logout' ? undefined : 'user-b');
+    expect(service.device.list).toEqual([]);
+  });
+
+  it('logout removes the current catalog and full server replacement removes revoked shared entries', async () => {
+    await service.setAuthData(auth);
+    saveDeviceCatalog(scope(), [item]);
+    service.loadGatewayData({ id: 'user-a' } as any, [], [{ ...item.device,
+      share: { state: 'revoked', shareId: 'share-1', role: 'viewer' } } as any]);
+    expect(loadDeviceCatalog(scope())).toEqual([]);
+    expect(service.device.list).toEqual([]);
+    expect(service.share.received).toEqual([]);
+    await service.removeAuthData();
+    expect(loadDeviceCatalog(scope())).toBeUndefined();
+  });
+
+  it('partial online directories cannot be persisted as a complete shared inventory', async () => {
+    await service.setAuthData(auth);
+    saveDeviceCatalog(scope(), [item]);
+    service.loadGatewayData({ id: 'user-a' } as any, [], [], false);
+    expect(loadDeviceCatalog(scope())).toBeUndefined();
   });
 
   it('persists the native token pair in secure storage', async () => {

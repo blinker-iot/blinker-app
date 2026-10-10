@@ -95,15 +95,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     return this.revealedAuthKey || this.device?.config?.authKey || '';
   }
 
-  get hasTimerTask() {
-    if (typeof this.device?.data?.timer != 'undefined') {
-      if (this.device.data.timer != '000') {
-        return true;
-      }
-    }
-    return false;
-  }
-
   get hasNewVersion() {
     return this.device?.data?.hasNewVersion;
   }
@@ -113,9 +104,8 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       {
         id: 'timer',
         title: '定时任务',
-        description: '设置设备按计划自动执行',
+        description: '本机定时（普通 WiFi 所有者试点）',
         icon: 'fa-timer',
-        badge: this.hasTimerTask ? '已启用' : undefined,
         route: `/device-manager/${this.id}/timer`,
       },
       {

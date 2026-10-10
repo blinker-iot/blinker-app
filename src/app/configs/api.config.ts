@@ -42,12 +42,17 @@ export const API = {
     SELF_HOSTED_SERVER: API_V2_URL + '/account/self-hosted-server',
     SELF_HOSTED_MIGRATION: API_V2_URL + '/account/self-hosted-server/migration',
   },
+  AUTOMATION: {
+    LIST: API_V2_URL + '/automations',
+    RULE: (ruleId: string) => API_V2_URL + '/automations/' + encodeURIComponent(ruleId),
+  },
   DEVICE_V2: {
     LIST: API_V2_URL + '/devices',
     CREATE: API_V2_URL + '/devices',
     RESOLVE_INSTANCE: API_V2_URL + '/devices:resolve-instance',
     ENABLE_CLOUD: API_V2_URL + '/devices:enable-cloud',
     DETAIL: deviceKeyV2Url,
+    TASKS: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/tasks:execute',
     DIRECT_ADMIN: (logicalDeviceId: string) =>
       deviceKeyV2Url(logicalDeviceId) + '/direct-access/admin',
     LOCAL_ACCESS: (logicalDeviceId: string) =>
@@ -162,7 +167,16 @@ export function isGatewayUrl(url: string): boolean {
     || url === API.MESSAGE.MARK_ALL_READ
     || url === API.NOTIFICATION_INSTALLATIONS.COLLECTION
     || url.startsWith(API.NOTIFICATION_INSTALLATIONS.COLLECTION + '/')
+    || isAutomationManagementUrl(url)
     || isDeviceKeyManagementUrl(url);
+}
+
+function isAutomationManagementUrl(url: string): boolean {
+  const path = url.split(/[?#]/, 1)[0];
+  if (path === API.AUTOMATION.LIST) return true;
+  const prefix = API.AUTOMATION.LIST + '/';
+  return path.startsWith(prefix)
+    && /^[A-Za-z0-9_-]{1,128}(?:\/retire)?$/.test(path.slice(prefix.length));
 }
 
 function isDeviceKeyManagementUrl(url: string): boolean {
@@ -178,6 +192,7 @@ function isDeviceKeyManagementUrl(url: string): boolean {
   if (parts.length === 1) return true;
   if (parts.length === 2) {
     return parts[1] === 'device-key:reveal'
+      || parts[1] === 'tasks:execute'
       || parts[1] === 'local-access'
       || parts[1] === 'device-key:rotate'
       || parts[1] === 'presence-key'

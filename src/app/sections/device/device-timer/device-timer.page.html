@@ -1,82 +1,41 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
-    </ion-buttons>
-    <ion-title>定时功能</ion-title>
-    @if (loaded) {
-    <ion-buttons slot="end">
-      <ion-button aria-label="刷新任务" [disabled]="syncing" (click)="refreshTasks()">
-        <i class="fa-light fa-rotate-right" [class.fa-spin]="syncing"></i>
-      </ion-button>
-    </ion-buttons>
-    }
-  </ion-toolbar>
-</ion-header>
-
-<ion-content [fullscreen]="true">
-  @if (loaded) {
-  <main>
-    <app-hero-card
-      iconClass="fa-light fa-timer"
-      eyebrow="AUTOMATION"
-      [heading]="deviceName"
-      description="按时间、循环周期或倒计时自动执行设备动作。"
-      [meta]="timerItems.length"
-    />
-
-    <button type="button" class="add-task-button primary-action" (click)="addTask()">
-      <i class="fa-light fa-calendar-plus"></i>
-      新建任务
-    </button>
-
-    @if (timerItems.length) {
-    <section class="task-list surface-card">
-      @for (item of timerItems; track item.routeId) {
-      <article
-        class="task-row"
-        [class.disabled]="!item.enabled"
-        [class.timing]="item.type === 'timing'"
-        [class.loop]="item.type === 'loop'"
-        [class.countdown]="item.type === 'countdown'"
-      >
-        <button type="button" class="task-main" (click)="editTask(item)">
-          <span class="task-type-icon"><i class="fa-light" [class]="'fa-light ' + item.icon"></i></span>
-          <span class="task-copy">
-            <span class="task-heading">
-              <small>{{ item.typeLabel }}</small>
-              <strong>{{ item.title }}</strong>
-            </span>
-            <span class="task-detail">
-              <strong>{{ item.action }}</strong>
-              <small>{{ item.schedule }}</small>
-            </span>
-          </span>
-          <i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i>
-        </button>
-        <span class="task-toggle" (click)="$event.stopPropagation()">
-          <ion-toggle
-            [attr.aria-label]="'切换' + item.typeLabel + '状态'"
-            [checked]="item.enabled"
-            (ionChange)="setTaskEnabled(item, $event.detail.checked)"
-          ></ion-toggle>
-        </span>
-      </article>
-      }
-    </section>
-    } @else {
-    <section class="empty-state surface-card">
-      <span><i class="fa-light fa-calendar-clock"></i></span>
-      <strong>还没有自动任务</strong>
-      <p>创建定时、循环或倒计时任务，让设备按计划自动执行。</p>
-      <button type="button" class="empty-add" (click)="addTask()">创建第一个任务</button>
-    </section>
-    }
-  </main>
-  } @else {
-  <div class="loading-state">
-    <ion-spinner name="crescent"></ion-spinner>
-    <span>正在加载定时功能…</span>
-  </div>
+<ion-header><ion-toolbar>
+  <ion-buttons slot="start"><ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button></ion-buttons>
+  <ion-title>定时功能</ion-title>
+  <ion-buttons slot="end"><ion-button aria-label="刷新任务" [disabled]="timer.busy" (click)="timer.refresh()">
+    <i class="fa-light fa-rotate-right" [class.fa-spin]="timer.busy"></i>
+  </ion-button></ion-buttons>
+</ion-toolbar></ion-header>
+<ion-content [fullscreen]="true"><main>
+  <app-hero-card iconClass="fa-light fa-timer" eyebrow="LOCAL TASKS" [heading]="timer.deviceName"
+    description="设备本地执行属性赋值，退出页面不会取消已安装任务。" [meta]="timer.records.length" />
+  <app-task-status [timer]="timer" />
+  @if (timer.ready) {
+    <p>已用 {{ timer.records.length }} / {{ timer.capacity }} 个任务槽 · 当前查询修订 {{ timer.revision }}</p>
+    <button class="add-task-button primary-action" type="button"
+      [disabled]="!timer.canWrite || !timer.targets.length || timer.records.length >= timer.capacity" (click)="addTask()">新建任务</button>
+    @if (timer.records.length) {
+      <section class="task-list surface-card">
+        @for (record of timer.records; track record.taskId) {
+          <article class="task-row" [class.disabled]="!record.definition.enabled">
+            <button class="task-main" type="button" (click)="editTask(record)" [disabled]="timer.busy">
+              <span class="task-type-icon"><i class="fa-light fa-calendar-clock"></i></span>
+              <span class="task-copy">
+                <span class="task-heading"><small>#{{ record.taskId }}</small><strong>{{ scheduleText(record) }}</strong></span>
+                <span class="task-detail"><strong>{{ record.definition.key }} = {{ record.definition.value }}</strong>
+                  <small>{{ progressText(record) }}</small></span>
+              </span><i class="fa-light fa-chevron-right row-arrow"></i>
+            </button>
+            <div class="task-actions">
+              <ion-button fill="clear" size="small" [disabled]="!timer.canWrite" (click)="change(record, 'enable')">
+                {{ record.definition.enabled ? '停用' : '启用' }}
+              </ion-button>
+              @if (record.definition.schedule.kind === 'countdown') {
+                <ion-button fill="clear" size="small" [disabled]="!timer.canWrite || !record.definition.enabled || record.progress === 1 || record.progress === 2" (click)="change(record, 'start')">开始新倒计时</ion-button>
+              }
+            </div>
+          </article>
+        }
+      </section>
+    } @else { <section class="empty-state surface-card"><strong>当前没有已安装任务</strong><p>支持倒计时、一次日期、固定时区的星期任务。不支持循环动作链。</p></section> }
   }
-</ion-content>
+</main></ion-content>
