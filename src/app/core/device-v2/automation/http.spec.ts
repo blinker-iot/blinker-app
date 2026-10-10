@@ -49,4 +49,16 @@ describe('automation HTTP account channel', () => {
     expect(http.request).not.toHaveBeenCalled(); await expect(api.get('r', signal)).rejects.toThrow();
     expect(http.request).toHaveBeenCalledTimes(1);
   });
+  it('sends and receives optional normalized names on the existing account route, without changing legacy bodies', async () => {
+    const named = { ...detail, rule: { ...detail.rule, name: '开灯' } };
+    const http = { request: vi.fn((_method: string, _url: string, _options: unknown) => of(response(named))) };
+    const api = new HttpAutomationApi(http as any), signal = new AbortController().signal;
+    expect((await api.write({ ruleId: 'r', operation: 'put', body: { ...write, name: '  开灯  ' } }, signal)).rule.name).toBe('开灯');
+    expect(http.request).toHaveBeenCalledWith('PUT', API.AUTOMATION.RULE('r'), { body: { ...write, name: '开灯' }, observe: 'response' });
+    http.request.mockReturnValueOnce(of(response(detail)));
+    await api.write({ ruleId: 'r', operation: 'put', body: write }, signal);
+    expect(Object.hasOwn((http.request.mock.calls[1][2] as any).body, 'name')).toBe(false);
+    await expect(api.write({ ruleId: 'r', operation: 'put', body: { ...write, name: '' } }, signal)).rejects.toThrow();
+    expect(http.request).toHaveBeenCalledTimes(2);
+  });
 });

@@ -1,6 +1,10 @@
 # App Android：源码闭包与隔离重建
 
-更新：2026-10-09，第七十六批P1新来源匹配CA有限实物完成。**维护入口仍取§6，新变体实物取§7；普通P1关闭。** 第75批隔离构建包另输出公开CA变体，Android/XIAO控制/退出/认证取消/只读恢复已测，原APK/账号/授权/两个intent journal恢复核对。原无CA/S4/P1制品不覆写，不改通信API、插件、依赖锁或运行时；iOS/Wio/独立接收/生产限制保持。优先级取[设备主线](../../blinker-library/docs/DEVICE_V2_NEXT_EXECUTION_PLAN.md)，组件选择取[候选清单§3.1](../../blinker-library/docs/DEVICE_V2_CANDIDATE_SOURCE_AND_SUPPORT.md#31-当前交付选择第74批收口)，无新差异不重复打包/实测，历史下一步不作当前指令。
+第86批最小自动化M1～M5已按限定范围完成，当前本机匹配新APK／Gateway050、来源与安装实物结果取[产品方案§8](APP_DEVICE_V2_MINIMAL_AUTOMATION_PRODUCT_PLAN.md#8-m5本机新版本验收)及本页§9。以下第82～84冻结源／制品仅代表当批历史，不包含命名／编辑／入口改动，不直接作为新版本交付物。正式签名／profile及独立接收方验收仍分别准入。
+
+更新：2026-10-10，第83批候选索引与升级/回退合同核对。**当前普通A2 App来源、实物与保留状态取§8；P1实验来源取§6～7，普通P1/LAN仍关闭。** 第82批匹配A2 Android debug App已安装且两普通WiFi限定自动化闭环通过；保留匹配App/服务及停用历史，不再将旧`05071e…7606`称为当前可恢复包。原S4/P1的来源与当批恢复记录保持历史，不改其manifest。组件唯一选择取[候选清单§3.1](../../blinker-library/docs/DEVICE_V2_CANDIDATE_SOURCE_AND_SUPPORT.md#31-当前匹配组件索引第83批收口)，升级/暂停/回退取[候选清单§7.5](../../blinker-library/docs/DEVICE_V2_CANDIDATE_SOURCE_AND_SUPPORT.md#75-匹配候选升级暂停与回退)，优先级取[设备主线](../../blinker-library/docs/DEVICE_V2_NEXT_EXECUTION_PLAN.md)。本批只核对现有来源及说明，不重建、安装、部署或创建新交付包；独立接收、iOS、正式签名/profile仍待准入。
+
+第84批用户将本机真实App最小自动化设为主线，已复用当前匹配APK完成真实界面新建/启停/退出后执行/结果查询/退役及两设备各一次联动；新5项DOM维护回归与原相关集合共45项通过。详见[主线§8.84](../../blinker-library/docs/DEVICE_V2_NEXT_EXECUTION_PLAN.md#884-第八十四批本机真实app最小自动化用户闭环2026-10-10)及[App最小使用流程](../src/app/sections/scene/README.md#第84批真实app最小使用流程与验收)。生产运行时代码/依赖和冻结制品不变，没有因交接重复构建；正式profile/签名或独立接收不是本机功能验收前置。以下历史“下一步”不重新成为当前任务。
 
 第71批（2026-10-09）只推进R4最小兼容性准备：1,646项P1输入摘要零差异，没有修改App/插件运行时、依赖、origin或冻结交接物。短暂安装原P1开启测试包后恢复原`05071e…7606`并读回，原账号/授权/Manifest缓存及零连接保留。USB测试映射恢复、App重启后账户MQTT ready；WiFi见证设备离线，因此不算Cloud设备控制或健康同会话BLE并行通过。R4隔离编译通过、上传握手失败，BLE用例未开始；16项工具检查不是App业务回归。下一步仍主线第32项，见[共同方案§7.7](../../blinker-library/docs/DEVICE_V2_SCHEDULING_AUTOMATION_AND_BLE_PLAN.md#77-第71批r4兼容性准备及烧录阻断2026-10-09)。
 
@@ -118,3 +122,43 @@ pnpm11.19.0属于维护者外部工具，需先按团队工具链安装；传入
 - 原手机APK `05071e…7606`已实际恢复读回；原账号/授权/Manifest缓存、3条任务intent及空自动化journal摘要保持，账户ready、零连接/观测，测量CDP移除，既有USB reverse保留。详细原始证据取[主线§8.76](../../blinker-library/docs/DEVICE_V2_NEXT_EXECUTION_PLAN.md#876-第七十六批新目录p1公开ca变体与有限实物闭合2026-10-09)。
 
 第34/35项构建来源与有限实物差异链已闭合，不继续重测相同输入。独立接收/iOS/Wio和原T2/A1/生产边界仍待相应环境/准入；新的合成交付、默认启用、生产端点、推送/部署须明确范围与必要差异验收，不能自动扩大。
+
+## 8. 第82～83批普通A2来源与匹配交付
+
+本节更新当前选择，不重写前面S4/P1的当批事实。第82批真实安装、两设备有限闭环与恢复边界取[主线§8.82](../../blinker-library/docs/DEVICE_V2_NEXT_EXECUTION_PLAN.md#882-第八十二批a2-4匹配候选两设备有限实物与安全收尾2026-10-10)及[Service§28.13](../../aily-blinker-services/docs/SERVICE_DEVICE_V2_AUTOMATION_IMPLEMENTATION_PLAN.md#2813-第82批a2-4匹配候选两设备有限实物与收尾)。第83批只核现有匹配索引和操作说明，不重复这些构建/测试，也不把发送方验证称为接收方验收。
+
+| 材料 | 精确来源/范围 |
+| --- | --- |
+| 普通A2源码快照 | [core-app-source-a2-20261010](../../local-maintenance/core-app-source-a2-20261010/manifest.json)，1,646个输入；manifest SHA-256 `9fa45279444874820350083a81cc2953d06753179476684752c73be66c73140c`；App来源HEAD `e9e1880726c24476a1b84a9cb1ed9bc531a85136`，五插件来源与逐文件摘要随manifest固定 |
+| 独立重建 | `core-app-rebuilt-a2-20261010`新目录；五插件各原npm锁构建、App/模板原pnpm frozen install、类型/Web/sync完成，再明确加入公开debug CA独立完成Android构建；未借旧dist或升级依赖 |
+| 实际安装APK | [app-debug.apk](../../local-maintenance/core-app-rebuilt-a2-20261010/source/blinker-app/android/app/build/outputs/apk/debug/app-debug.apk)，79,959,579 B；SHA-256 `66b47aaa416085561759be7fdd0358f8dcd775cd10b4a5a5899fa8c101c42e5d`；applicationId=`iot.diandeng.tech.debug`，安装后手机读回一致 |
+| 配置与信任 | `local,local-device`、P1=false、LAN=false；原默认HTTPS WebView origin、Gateway `https://127.0.0.1:17000`和匹配账户WSS；明确公开测试CA，cleartext=false，不包含私钥，不是release签名或生产信任配置 |
+| 实物范围 | 匹配本机A2 Gateway/Broker shard 1、同owner/tenant/shard两普通WiFi XIAO S3；下降沿及一种uint32阈值/回差、退出/停用/源重启恢复通过，4条真实ACK/回调；不是全条件、BLE/P1、跨账号/片或生产验收 |
+
+五相邻插件布局、原锁和运行时不因本次交接改变。包内原`tools/source-handoff.mjs verify`可只读校验该冻结来源；它只证明输入完整性，不证明当前服务可达、typed历史兼容或接收方运行成功。原S4工具/manifest仍使用其当时合同，不把新工具或新APK覆盖进原包。普通用户不运行这些维护工具；Android SDK/JDK/Gradle/Maven仍外置，iOS没有新构建或实物结论。
+
+### 8.1 暂停不等于降级
+
+- 现环境保留policy2定义和执行历史，即使规则disabled，旧A1 `05071e…7606` APK的实际decoder仍拒绝该规则；匹配新APK接受。旧A1服务也不能安全处理non-retired A2 graph。因此测试结束保留匹配A2 App/Gateway/Broker，试点revision8/disabled、pending=0、4条历史保留，不能删typed行或覆盖业务库/手机数据来伪装无感回退。
+- 原S4及旧P1 App来自A1来源链。P1参数实验证据不证明A2读取兼容；不能把旧P1 APK安装覆盖当前A2 App后仍宣称typed规则可用。当前普通A2 App中P1关闭不等于移除其模块；若未来需要A2＋P1合成候选，应明确选源/profile并做有限差异准入，不由本索引自动生成或启用。
+- 升级必须同时核对App union解析、Gateway仓储/管理/worker及参与链路的Broker typed观察/投递合同、用途配对配置和当前schema；不能只凭相同schema49、Git HEAD或SHA完整性判断可混版本。暂停先沿公开CAS停用并核对pending/未决执行；回退须先验证目标组合对保留定义/历史的读取与原意图恢复，不可无条件恢复旧APK或旧数据库备份。详细唯一操作顺序取候选清单§7.5，本页不复制第二套脚本。
+- 保持原HTTPS origin及账号隔离的持久意图；新origin下的空journal不证明原请求不存在。新制品重新确认摘要/更新签名/CA期限及精确端点；debug包、公开CA与ADB reverse仅是有限本机测试配置，不是生产部署许可。
+
+### 8.2 白名单交付与未完成项
+
+维护者可提供上述独立源码快照，并按制品摘要**逐项**挑选已审阅APK和公开debug overlay；APK不是源码包内容，overlay不会被原工具自动继承。现场`build/automation-a2-live-20261010`以及旧实物目录包含Flash/应用数据/业务库备份、DeviceKey和网络参数，**禁止整体复制、上传或打包交付**。只允许经审阅的公开CA/限定域配置，不提供私钥、全域信任或关闭证书验证。
+
+当前来源与有限发送方实物链已闭合；独立接收须另记录接收人、实际profile/端点、安装与短链结果，不能把历史模板空白或本页核对算接收通过。正式服务profile、release签名/信任根、完整外部工具链离线闭包、iOS及原缺环境项仍待办。未给定正式profile不自动创建生产包，未发生源码/配置差异不重复巨大bundle、全量构建或刷板；既有现场临时入口与ADB测试转发已清理，恢复测试连接另需明确匹配网络配置。
+
+用户已确认先保留内部候选并交接验收，执行取[候选§7.6](../../blinker-library/docs/DEVICE_V2_CANDIDATE_SOURCE_AND_SUPPORT.md#76-内部候选交接验收用户已确认)。继续使用本节匹配普通A2来源，不新建生产APK或恢复旧P1包；来源/安装与有匹配环境条件下的联网验收分开记录，缺环境记未测。此确认不代表App已发送给同事、其已安装或第28项接收通过。
+
+## 9. 第86批M5命名与编辑的当前本机候选
+
+新工作树冻结源1,641项，manifest SHA256 `8a36e0576faa6d88333dd4a0dcff3137d39b756469764e3edde489c94ecce934`；在新目录按固定pnpm锁及5个相邻插件闭包完成依赖、类型、Web／Android构建，不覆盖第82来源或制品。实际APK内新生产模板与编译Web字节一致，AppID／原debug签名／公开CA／HTTPS WebView origin保留，P1／LAN=false。
+
+- 当前本机APK：79,913,838 B，SHA256 `7284b0673517a52eb8b76d4ec5ce1581ff772748ebe89495659c0e1f37ed514c`；实际安装并设备读回一致，原APK及完整私有数据先备份，无清数据／切origin／切账号。
+- 必须匹配Gateway管理代码及schema50，新镜像`468e06bb4e898193238ebac7d11fb9e35ace7a903da53ebe7690edbf59608a41`；Broker沿第82镜像／执行链未改。名称进入管理响应，旧APK不保证读取新命名历史，不能把停用／删除当兼容降级依据。
+- 生产DOM经统一入口完成命名／停用编辑／启用／已启用编辑、两设备触发、App退出后执行、重开查询、停用／删除；两ACK、目标回调0→1→2。首命令原帧重试2次尝试、第二1次，如实记录；不是手动软键盘或物理负载验收。
+- 测试网络／ADB入口已撤，保留匹配新App／Gateway50和命名历史；不恢复旧APK或业务库。正式release签名、可公开服务profile、iOS／其他平台及接收人独立验收不由本机成功代签。
+
+公开进度取[主线§8.86](../../blinker-library/docs/DEVICE_V2_NEXT_EXECUTION_PLAN.md#886-第八十六批m5本机新版app与两设备产品验收2026-10-10)。本地`build/automation-product-m5-live-20261010`保存source／APK审计、真实UI、数据库及Flash私有备份；不得整体上传或交付。第83交接目录／镜像索引仍为当批历史，不能冒充本次产品候选。没有Git暂存／提交／推送或正式发布。

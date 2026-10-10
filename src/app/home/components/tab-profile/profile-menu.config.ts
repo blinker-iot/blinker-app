@@ -1,8 +1,7 @@
-import { MenuListItem } from '../../../core/components/menu-list/menu-list';
+import type { MenuListItem } from '../../../core/components/menu-list/menu-list';
 
 export interface ProfileMenuStats {
   roomNum: number;
-  sceneNum: number;
   sharedDeviceNum: number;
 }
 
@@ -35,8 +34,7 @@ export function createProfileMenuGroups(
           id: 'automation',
           title: translate('PROFILE.AUTOMATION'),
           icon: 'fa-bullseye-pointer',
-          value: translate('PROFILE.SCENE_COUNT', { count: stats.sceneNum }),
-          route: '/scene-manager',
+          route: '/automation-manager',
         },
         {
           id: 'sharing',

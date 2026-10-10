@@ -1,8 +1,15 @@
 main { max-width: 48rem; margin: auto; padding: 1rem; }
-section { margin-block: 1rem; padding: 1rem; border: 1px solid var(--ion-color-light-shade); border-radius: .75rem; }
+section { margin-block: 1rem; padding: 1rem; border: 1px solid var(--ion-color-light-shade); border-radius: .75rem; background: var(--ion-background-color); }
 article { padding-block: .75rem; border-bottom: 1px solid var(--ion-color-light-shade); }
-h2 { font-size: 1.1rem; } h3 { font-size: 1rem; }
+article:last-child { border-bottom: 0; }
+h2 { font-size: 1.1rem; } h3 { font-size: 1rem; } h2, h3 { overflow-wrap: anywhere; }
 p { line-height: 1.5; overflow-wrap: anywhere; } code { overflow-wrap: anywhere; }
 .hint { color: var(--ion-color-medium-shade); font-size: .9rem; }
 [role=alert] { color: var(--ion-color-danger); }
-ion-select { margin-bottom: .75rem; }
+ion-select, ion-input { margin-bottom: .75rem; }
+.rule-status { font-size: .9rem; color: var(--ion-color-primary); }
+.pending { border-color: var(--ion-color-warning); }
+.actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; }
+details { margin-block: 1rem; font-size: .9rem; color: var(--ion-color-medium-shade); }
+summary { cursor: pointer; padding-block: .3rem; }
+.empty { padding-block: 1rem; text-align: center; }

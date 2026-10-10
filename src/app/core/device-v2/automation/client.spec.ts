@@ -1,6 +1,6 @@
 import { AutomationClient } from './client';
 import { AutomationCondition, AutomationDetail, AutomationIntent, AutomationScalarType, AutomationWriteV2,
-  automationCondition, automationDetail, automationIntent, automationPage, automationWriteOutcome } from './contract';
+  automationCondition, automationDetail, automationIntent, automationName, automationPage, automationWriteOutcome } from './contract';
 const source = { deviceId: 'source', key: 'power', fingerprint: 'ab'.repeat(32), valueType: 'boolean' as const };
 const intent: AutomationIntent = { ruleId: 'rule-one', operation: 'put', body: { expectedRevision: 0, enabled: false,
   source, target: { ...source, deviceId: 'target', value: true } } };
@@ -286,5 +286,88 @@ describe('automation typed public contract and exact journal recovery', () => {
       await expect(f.client.recover(input.ruleId, false, controller.signal)).rejects.toThrow();
       expect(await f.create().pending()).toEqual([input]); expect(f.api.write).toHaveBeenCalledTimes(1);
     }
+  });
+});
+
+describe('automation optional name contract and recovery', () => {
+  it('normalizes optional management names without adding fields to old intent or rule bodies', () => {
+    for (const input of [intent, typedIntent()]) {
+      const named = automationIntent({ ...input, body: { ...input.body, name: '  温度升高时打开风扇  ' } });
+      expect(named.body).toEqual({ ...input.body, name: '温度升高时打开风扇' });
+      const old = automationIntent(input);
+      expect(Object.hasOwn(old.body, 'name')).toBe(false);
+      expect(JSON.stringify(old)).toBe(JSON.stringify(input));
+    }
+    const named = { ...detail(), rule: { ...detail().rule, name: '开灯' } };
+    expect(automationDetail(named, intent.ruleId)).toEqual(named);
+    expect(automationPage({ rules: [named.rule, { ...typedDetail().rule, name: '温度提醒' }], nextAfter: null }).rules.map(r => r.name)).toEqual(['开灯', '温度提醒']);
+    expect(Object.hasOwn(automationDetail(detail(), intent.ruleId).rule, 'name')).toBe(false);
+  });
+
+  it('uses a normalized UTF-16 bound, rejecting supplied empty/invalid/control names and retirement metadata', () => {
+    expect(automationName('  ' + '😀'.repeat(40) + '  ')).toBe('😀'.repeat(40));
+    expect(automationName('x'.repeat(80))).toBe('x'.repeat(80));
+    for (const name of [undefined, null, 1, {}, '', '  ', 'x'.repeat(81), '😀'.repeat(41), '\nTitle', 'Title\t', 'Title\u007f', '\u0000', '\ud800', '\udfff']) {
+      expect(() => automationName(name)).toThrow();
+      expect(() => automationIntent({ ...intent, body: { ...intent.body, name } })).toThrow();
+      expect(() => automationDetail({ ...detail(), rule: { ...detail().rule, name } }, intent.ruleId)).toThrow();
+    }
+    expect(() => automationIntent({ ruleId: 'rule-one', operation: 'retire', body: { expectedRevision: 1, name: '开灯' } })).toThrow();
+  });
+
+  it('requires a supplied name to match confirmation but keeps old nameless intents compatible', () => {
+    for (const input of [intent, typedIntent()]) {
+      const named = automationIntent({ ...input, body: { ...input.body, name: '开灯' } });
+      const original = input === intent ? detail().rule : typedDetail().rule;
+      const rule = { ...original, name: '开灯' };
+      expect(automationWriteOutcome(named, rule)).toBe('confirmed');
+      expect(automationWriteOutcome(named, original)).toBe('changed');
+      expect(automationWriteOutcome(named, { ...rule, name: '其他名称' })).toBe('changed');
+      expect(automationWriteOutcome(input, rule)).toBe('confirmed');
+    }
+  });
+
+  it('retains an unknown named write when only its returned name differs, then confirms without resending', async () => {
+    const f = setup(), input = typedIntent('uint32', undefined, 2);
+    input.body.name = '温度提醒';
+    f.api.write.mockRejectedValue(Error('lost response'));
+    await expect(f.client.submit(input, f.signal)).rejects.toThrow();
+    const changed = typedDetail(input); changed.rule.name = '其他名称'; f.api.get.mockResolvedValue(changed);
+    expect((await f.create().recover(input.ruleId, true, f.signal)).outcome).toBe('changed');
+    expect(f.api.write).toHaveBeenCalledTimes(1); expect(await f.client.pending()).toEqual([input]);
+    await expect(f.client.acceptChanged({ ...input, body: { ...input.body, name: '其他名称' } }, f.signal)).rejects.toThrow('AUTOMATION_PENDING_CHANGED');
+    f.api.get.mockResolvedValue(typedDetail(input));
+    expect((await f.client.recover(input.ruleId, false, f.signal)).outcome).toBe('confirmed');
+    expect(f.api.write).toHaveBeenCalledTimes(1); expect(await f.client.pending()).toEqual([]);
+  });
+
+  it('keeps named retries exact and old journals nameless without a read-time rewrite', async () => {
+    const f = setup(), input = typedIntent(); input.body.name = '  温度提醒  ';
+    f.api.write.mockRejectedValueOnce(Error('lost response'));
+    await expect(f.client.submit(input, f.signal)).rejects.toThrow();
+    const normalized = automationIntent(input);
+    expect(await f.create().pending()).toEqual([normalized]);
+    f.api.get.mockRejectedValueOnce(Object.assign(Error('not found'), { code: 'AUTOMATION_NOT_FOUND' }));
+    f.api.write.mockResolvedValue(typedDetail({ ...input, body: { ...input.body, name: '温度提醒' } }));
+    expect((await f.client.recover(input.ruleId, true, f.signal)).outcome).toBe('confirmed');
+    expect(f.api.write.mock.calls[1][0]).toEqual(normalized);
+
+    f.api.write.mockRejectedValueOnce(Error('lost old response'));
+    await expect(f.client.submit(intent, f.signal)).rejects.toThrow();
+    const [key, raw] = [...f.values][0], writes = f.storage.setItem.mock.calls.length;
+    expect(await f.create().pending()).toEqual([intent]);
+    expect(f.values.get(key)).toBe(raw); expect(f.storage.setItem).toHaveBeenCalledTimes(writes);
+    expect(Object.hasOwn((await f.client.pending())[0].body, 'name')).toBe(false);
+  });
+
+  it('rejects a mismatched named initial success and malformed named history without erasing either', async () => {
+    const f = setup(), input = typedIntent(); input.body.name = '温度提醒';
+    f.api.write.mockResolvedValue(typedDetail());
+    await expect(f.client.submit(input, f.signal)).rejects.toThrow('AUTOMATION_WRITE_NOT_CONFIRMED');
+    expect(await f.client.pending()).toEqual([input]);
+    const [key, raw] = [...f.values][0], corrupted = JSON.parse(raw);
+    corrupted[0].body.name = ''; const invalid = JSON.stringify(corrupted); f.values.set(key, invalid);
+    await expect(f.create().pending()).rejects.toThrow('AUTOMATION_JOURNAL_INVALID');
+    expect(f.values.get(key)).toBe(invalid); expect(f.api.write).toHaveBeenCalledTimes(1);
   });
 });

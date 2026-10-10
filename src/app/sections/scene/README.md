@@ -1,16 +1,16 @@
 # V2 自动化页面：最小接线边界
 
-更新：2026-10-09，第81批同步。**A2公开联合合同、条件选择和原意图恢复软件完成，未部署/安装；下一步匹配差异候选＋两设备有限实物。** 新建支持布尔双方向、数值上下阈值/正回差；原A1仍兼容。当前UI提供新建/启停/退役/恢复，不含已有条件编辑器。优先级见[设备主线§8.81](../../../../../blinker-library/docs/DEVICE_V2_NEXT_EXECUTION_PLAN.md#881-第八十一批a2公开合同app与原意图恢复软件收口2026-10-09)，最新合同取[Service§28.12](../../../../../aily-blinker-services/docs/SERVICE_DEVICE_V2_AUTOMATION_IMPLEMENTATION_PLAN.md#2812-第81批a2公开合同app与最终软件验收)。以下第62批A1实物/旧默认配置是历史限定证据，不可继承给新A2。原SceneService仍有消费者，不扩编辑器。
+更新：2026-10-10，第86批M5完成。第85软件59项、类型／模板构建与第84历史结果保留；新APK及Gateway050已在本机匹配安装／部署，用真实Android生产DOM完成命名、停用／启用编辑、两设备触发、App退出后执行、查询、停用及删除。两逻辑执行ACK、目标回调0→1→2；首条尝试2、第二1，不宣称单次发送或实物exactly-once。见[产品方案§8](../../../../docs/APP_DEVICE_V2_MINIMAL_AUTOMATION_PRODUCT_PLAN.md#8-m5本机新版本验收)及[主线§8.86](../../../../../blinker-library/docs/DEVICE_V2_NEXT_EXECUTION_PLAN.md#886-第八十六批m5本机新版app与两设备产品验收2026-10-10)。限定两普通WiFi XIAO和程序化真实UI，不扩Action／多步骤或替换执行器；旧编辑器和失用SceneService已移除，历史数据只读保留。
 
 ## 现有页面不是云执行器
 
-原`scene.service.ts`向SAVE_CONFIG保存userConf.sceneList；scene editor仍有真实消费者和编辑退出保存行为。当前scene管理页增加“设备自动化（V2试点）”入口，旧区域明确标为“原场景配置”。保存旧场景不等于V2服务器已启用规则，不转换旧多动作/延时场景，也不删除仍使用的页面。新路由`automation-manager`独立，避免把旧场景名称当保留路径。
+原`scene.service.ts`曾向SAVE_CONFIG保存userConf.sceneList，不代表V2云规则已启用。第85批将`scene-manager`重定向到`automation-manager`；旧配置仅从明确的只读`scene-archive`历史入口查询，不自动转换多动作／延时场景。旧编辑器、选择器和失用的SceneService已删除；旧数据仍由DataService读取供归档展示。
 
 ## A1首轮范围
 
 - 两台同owner/tenant/shard普通WiFi设备；只读/控制分享不包含规则管理权。源boolean Property的false→true变化，设置目标boolean Property固定值；不是按钮Action或本机日期任务。
 - 规则保存/显式启用、停用、最近结果由Gateway维护；App仍用原用户HTTP会话，没有第二MQTT连接，不借设备Key登录。不在页面定时轮询触发动作；页面退出/杀进程后云规则继续。
-- 已接最小列表/创建/启停/退役/最近结果，不重构Layouter/通用场景编辑器；同设备端点编辑API虽支持，当前UI不包含完整编辑器。设备列表/Manifest可作展示，服务实时权限及目标校验才是准入，不能从旧缓存推断支持。
+- 第85批在原管理链路补列表／创建和已有规则编辑／详情分层，不重构Layouter或通用场景编辑器；编辑保留源／目标端点，沿原ID／CAS修改名称、条件、目标布尔值。设备列表／Manifest只供展示，服务实时权限及目标校验才是准入，不能从旧缓存推断支持。
 - UI明确区分已保存但停用、待基线、观察中、暂停和执行结果未知。创建不默认启用；写入固定ruleId/原正文/expectedRevision，网络未知先GET同ID，不能生成新ID猜成功或自动提高revision覆盖。
 - 初次源值已为true、恢复快照、设备重新连接均只建基线，不补发历史动作。规则停用阻止后续新准入，但不能召回此前已发包；不能显示“所有设备动作立即取消”。
 - unknown执行不自动重试、改规则绕过或清记录；普通手动控制仍独立可用。ACK/State/物理动作是不同证据，页面不乐观标记全部完成。
@@ -42,7 +42,7 @@ A1-1～6限定软件/本机部署/真实App/两S3实物已过。原503创建在�
 - 初始请求在App发送前保留同ID/正文/revision；失败后只读核对，首次创建重试可返回后来编辑或退役的当前版本，不回退。409刷新后由用户确认，不能自动换ID/提高revision；账号切换/离页停止本页请求，不操作云worker。
 - A1活动定义4/tenant、封闭pilot16；包含退役的保留记录64/tenant、pilot256。STORAGE_CAPACITY只拒绝新建，不删除历史解锁。unknown执行只能等待可信结果恢复，不能借新规则绕过。
 
-这些是精确HTTP合同；自动化启用仍由原试点composition控制，配对新版runtime源码支持A1/A2，未部署/正式发布。未显式组装的repository/service仍只接A1；未知版本fail-closed，不向旧服务降级重发。沿用原用户HTTP认证，不新增MQTT连接。替换实际scene消费者后才删除其旧保存逻辑，不做旧多动作场景自动转换。
+这些是精确HTTP合同；自动化启用仍由原试点composition控制，配对新版runtime支持A1/A2，第82批只在本机匹配候选部署/有限实测，未正式发布。未显式组装的repository/service仍只接A1；未知版本fail-closed，不向旧服务降级重发。沿用原用户HTTP认证，不新增MQTT连接。替换实际scene消费者后才删除其旧保存逻辑，不做旧多动作场景自动转换。
 
 区分“配置启用”“正在观察/执行”：prepared不是已发送，dispatching及准入次数不是设备ACK；原派发窗口内可能正在等准入/ACK，页面查询不能催促重发。not_sent是原账本可证未publish，不冒充设备rejected，missing不证明未发送，unknown不自动重试。认领响应丢失后仅恢复查询；历史结果能在撤权/停用后按原execution收敛，但不能因此新准入。迟到missing/inflight不能覆盖终态或擦除发布证据。恢复权限须新fence/基线，不能补旧边沿；删除账号不能撤回物理动作。能力收据是短期快照，App缓存只作展示，内部端口不是App入口。旧scene页面仍有消费者，待最小V2管理替换后再清旧保存逻辑，不新增Legacy通信双栈。
 
@@ -55,3 +55,30 @@ A1-1～6限定软件/本机部署/真实App/两S3实物已过。原503创建在�
 - 原`automation-v1:` journal不迁移；首次HTTP成功及retry返回都必须匹配原ruleId/revision/policy/condition/端点type/目标value，否则保留pending，不强行confirmed。查询/用户确认重提用原ID/正文/CAS，不能从表单或当前规则重组。明确首次提交前拒绝可清新记录，先前未知后的拒绝不证明未提交；1→2升级后的旧create回读当前配置不等于证明原intent已确认。
 - 最终三文件40项App测试、App/app-spec TypeScript和Angular严格模板检查通过；两侧真实validator 59项对照通过。未构建/安装Android APK、未真机点击，不继承原A1手机实物证据。一次文案修订后旧文字断言失败已修正/重跑，日志保留；Service与隔离PG结果取§28.12。
 - 下一步只A2-4匹配App/Gateway/Broker差异候选及同owner/片两普通WiFi短闭环；不再扩原场景编辑器、多动作、设备/网关执行器或账户MQTT。正式profile/信任、独立接收与生产门禁继续独立。
+
+## 第82批A2-4限定实物与兼容性收尾
+
+- 新目录冻结1,646项来源，五插件/原锁/固定工具链构建；普通P1/LAN=false、原HTTPS origin与公开debug CA，APK79,959,579 B、SHA `66b47aaa416085561759be7fdd0358f8dcd775cd10b4a5a5899fa8c101c42e5d`实际安装并手机读回。原APK/私有数据先备份，未清数据或切换账号；439个Android构建任务不是439项测试。
+- 同owner/tenant/shard两XIAO S3普通WiFi重新协商Manifest/fresh State，真实App页面组件新建下降沿与启停；改为sensor:uint32/above/10/回差2沿原公开客户端同ID精确CAS，**非手工触屏或已有条件编辑UI验收**。原账号HTTP管理规则，App不采样或后台执行规则，也不另开账户MQTT。
+- 实际force-stop App后下降沿、数值阈值及源板重启后的新边沿仍执行；初值触发区/新会话仅建基线，重复/停用不执行。第一次拟测冷却错过截止产生合法第3次，保留历史；一次有限补测证明窗口内消费不执行、截止后不补发。共4条PG/Broker ACK和连续目标回调0→4，实际fresh State独立读取，不等于GPIO或物理exactly-once。
+- 原ruleId最终revision8/disabled/pending0、4条历史ACK；两板原固件/授权已设备端校验恢复、临时入口移除。收尾再核原账号HTTP200/账户ready/公开详情与空journal，返回首页、释放State interests、停止App进程并移除本批ADB转发；原板恢复后的缓存不是新的fresh fixture证据。
+- 实际原APK `05071e…7606`模块仅接受policy1/boolean，停用A2行仍无法解析；真实ZIP decoder内存对照拒绝，而新包接受（不是旧包真机运行）。故保留匹配A2 App/Gateway/Broker作为本机候选，**不恢复不兼容的旧APK/服务、不删规则或覆盖数据库凑回退**。原备份保留；正式升级须匹配全链。
+- 证据取设备主线§8.82/Service§28.13及本地忽略目录`blinker-library/build/automation-a2-live-20261010`。只测下降沿/一种uint32上阈值回差边界；其他类型、below、全ACL、完整编辑器、iOS/Wio、长稳和生产发布不外推。本批无App生产代码/依赖变更、无Git暂存/提交/推送。
+
+## 第84批真实App最小使用流程与验收
+
+普通用户操作顺序：
+
+1. 使用原账号登录；两台所属账号的普通WiFi设备已上线。没有能力选择时先进入对应设备页获取Manifest；规则页不主动连接全部设备，缓存只供选择，服务保存/执行仍验实时权限和能力。
+2. “Me → Automation → 设备自动化（V2试点）”，选择源属性和条件、目标属性与固定布尔值。数值源还需有限阈值/正回差。点击“保存为停用规则”不会执行。
+3. 显式“启用”。初始/重连只建立基线，后续源边沿或重新布防后的阈值进入才触发；关闭App不停止服务器规则，不需要页面循环采样或额外MQTT连接。
+4. “详情与结果”查询协议执行结果；ACK不等于物理执行。页面的近期观察状态不是启用开关：超过5秒无新样本或worker租约失效都可能显示“已启用 · 等待观察恢复”，不能仅凭它认定离线/停用；30秒是动作冷却，不能混作样本新鲜度。
+5. “停用”阻止新执行，不能召回已发命令；“退役”需确认，不可重新启用，历史仍可查询。网络未知时先“查询原请求”，必要时确认“恢复同一请求”，不重新创建来猜成功。
+
+本轮按该路径使用生产WebView DOM控件，Ionic选择框单选/OK、原生数值input/change及按钮触发原生产链；未调用页面save、client/API或业务SQL写入替代UI，是ADB/CDP程序化真实界面，不是人手触屏/键盘验收。两规则均默认disabled后显式启用，分别实际下降沿→power=true与uint32 below10/回差2→power=false，各1ACK及串口回调0→1→2；数值基线0无动作，保持触发区8无第二动作，停用后再次变化均不执行。
+
+布尔触发前原工具序列force-stop+空PID，执行/ACK后文件化PID仍为空，重新从菜单进入能查ACK；不能用后置PID JSON冒充前置采样。一次网关重建使新建结果未知，经真实页面查询/确认恢复原ID才保存，无重复规则。真实数值控件零回差/空阈值禁保存，修正后才可保存。两新规则最后revision4退役，退役列表只有详情，无启用按钮；重进表单清空且无未确认请求，原两规则/旧历史不变。
+
+新增`automation.dom.spec.ts`只提供维护回归：生产模板/Forms/Ionic/service/client保留，API/cache/storage显式替身；四方向管理流程及无效/清空/切源共5项。与原page/client/http同一次联合 **4文件45项通过**，最终App spec TypeScript检查通过；不与历史40累加，也不冒充手机/设备证据。无产品运行时、插件、依赖变更或新APK构建。
+
+匹配A2 APK/服务保留，原板app/NVS范围已验证恢复，不清Key/数据；临时网络及ADB入口撤除。两规则软退役、2新ACK和原8执行历史留存；不支持按钮Action、多步骤、BLE-only/网关、跨账号/片或已有条件编辑器。本机最小用户目标已通过，线上profile、签名、接收/生产准入仍独立后续，不再作为功能继续推进的前置。

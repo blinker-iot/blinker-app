@@ -101,11 +101,16 @@ export const routes: Routes = [
   },
   {
     path: 'scene-manager',
-    loadComponent: () => import('./sections/scene/scene-manager/scene-manager').then(m => m.SceneManager),
+    pathMatch: 'full',
+    redirectTo: 'automation-manager',
   },
   {
     path: 'scene-manager/:scene',
-    loadComponent: () => import('./sections/scene/scene-editor/scene-edit').then(m => m.SceneEditor),
+    redirectTo: 'scene-archive',
+  },
+  {
+    path: 'scene-archive',
+    loadComponent: () => import('./sections/scene/scene-manager/scene-manager').then(m => m.SceneManager),
   },
   {
     path: 'share-manager',

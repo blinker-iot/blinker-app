@@ -4,7 +4,7 @@ export type AutomationCondition = { kind: 'boolean-edge'; direction: 'rising' | 
 export interface AutomationEndpoint { deviceId: string; key: string; fingerprint: string; valueType: AutomationScalarType; }
 export interface AutomationBooleanEndpoint extends AutomationEndpoint { valueType: 'boolean'; }
 export interface AutomationTargetEndpoint extends AutomationBooleanEndpoint { value: boolean; }
-interface AutomationWriteFields { expectedRevision: number; enabled: boolean; target: AutomationTargetEndpoint; }
+interface AutomationWriteFields { expectedRevision: number; enabled: boolean; target: AutomationTargetEndpoint; name?: string; }
 export interface AutomationWriteV1 extends AutomationWriteFields { source: AutomationBooleanEndpoint; }
 export interface AutomationWriteV2 extends AutomationWriteFields { source: AutomationEndpoint; policyVersion: 2; condition: AutomationCondition; }
 export type AutomationWrite = AutomationWriteV1 | AutomationWriteV2;
@@ -12,7 +12,7 @@ export type AutomationIntent = { ruleId: string; operation: 'put'; body: Automat
   | { ruleId: string; operation: 'retire'; body: { expectedRevision: number } };
 export type AutomationStatus = 'disabled' | 'waiting-baseline' | 'observing' | 'paused' | 'execution-unknown' | 'retired';
 interface AutomationRuleFields {
-  ruleId: string; definitionRevision: number; enabled: boolean; target: AutomationTargetEndpoint;
+  ruleId: string; definitionRevision: number; enabled: boolean; target: AutomationTargetEndpoint; name?: string;
   status: AutomationStatus; targetOutcomeUnknown: boolean; retiredAtMs: number | null; updatedAtMs: number;
 }
 export interface AutomationRuleV1 extends AutomationRuleFields { source: AutomationBooleanEndpoint; condition: 'rising-boolean'; policyVersion: 1; }
@@ -33,6 +33,11 @@ function exact(v: any, keys: string[]): void {
     && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k)));
 }
 function integer(v: unknown, min = 0): void { automationAssert(Number.isSafeInteger(v) && !Object.is(v, -0) && (v as number) >= min); }
+export function automationName(raw: unknown): string {
+  automationAssert(typeof raw === 'string' && !/[\u0000-\u001f\u007f]/.test(raw)
+    && new TextDecoder().decode(new TextEncoder().encode(raw)) === raw);
+  const name = raw.trim(); automationAssert(name.length > 0 && name.length <= 80); return name;
+}
 export function automationCondition(raw: unknown): AutomationCondition {
   const v = raw as any;
   if (v?.kind === 'boolean-edge') {
@@ -62,8 +67,9 @@ export function automationIntent(raw: unknown): AutomationIntent {
   const v = raw as any; exact(v, ['ruleId', 'operation', 'body']); automationId(v.ruleId);
   automationAssert(v.operation === 'put' || v.operation === 'retire');
   const typed = v.operation === 'put' && v.body && (Object.hasOwn(v.body, 'policyVersion') || Object.hasOwn(v.body, 'condition'));
+  const named = v.operation === 'put' && v.body && Object.hasOwn(v.body, 'name');
   exact(v.body, v.operation === 'put' ? ['expectedRevision', 'enabled', 'source', 'target',
-    ...(typed ? ['policyVersion', 'condition'] : [])] : ['expectedRevision']);
+    ...(typed ? ['policyVersion', 'condition'] : []), ...(named ? ['name'] : [])] : ['expectedRevision']);
   integer(v.body.expectedRevision, v.operation === 'put' ? 0 : 1);
   automationAssert(v.body.expectedRevision < Number.MAX_SAFE_INTEGER);
   if (v.operation === 'retire') return { ruleId: v.ruleId, operation: v.operation, body: { ...v.body } };
@@ -72,14 +78,16 @@ export function automationIntent(raw: unknown): AutomationIntent {
   automationAssert(source.deviceId !== target.deviceId && typeof v.body.enabled === 'boolean'
     && (v.body.expectedRevision !== 0 || v.body.enabled === false));
   const body = { expectedRevision: v.body.expectedRevision, enabled: v.body.enabled, source, target };
+  const name = named ? { name: automationName(v.body.name) } : {};
   if (typed) {
     const condition = automationCondition(v.body.condition); conditionMatchesSource(condition, source);
-    return { ruleId: v.ruleId, operation: 'put', body: { ...body, policyVersion: 2, condition } };
+    return { ruleId: v.ruleId, operation: 'put', body: { ...body, policyVersion: 2, condition, ...name } };
   }
-  return { ruleId: v.ruleId, operation: 'put', body: { ...body, source: source as AutomationBooleanEndpoint } };
+  return { ruleId: v.ruleId, operation: 'put', body: { ...body, source: source as AutomationBooleanEndpoint, ...name } };
 }
 function rule(raw: any): AutomationRule {
-  exact(raw, ['ruleId','definitionRevision','enabled','source','target','condition','policyVersion','status','targetOutcomeUnknown','retiredAtMs','updatedAtMs']);
+  const named = raw && Object.hasOwn(raw, 'name');
+  exact(raw, ['ruleId','definitionRevision','enabled','source','target','condition','policyVersion','status','targetOutcomeUnknown','retiredAtMs','updatedAtMs', ...(named ? ['name'] : [])]);
   automationId(raw.ruleId); integer(raw.definitionRevision, 1); integer(raw.updatedAtMs);
   automationAssert(raw.policyVersion === 1 || raw.policyVersion === 2);
   const source = endpoint(raw.source, false, raw.policyVersion === 2), target = endpoint(raw.target, true);
@@ -91,7 +99,7 @@ function rule(raw: any): AutomationRule {
   if (raw.retiredAtMs !== null) { integer(raw.retiredAtMs); automationAssert(!raw.enabled && raw.status === 'retired' && raw.retiredAtMs <= raw.updatedAtMs); }
   else automationAssert(raw.status !== 'retired' && (raw.enabled ? raw.status !== 'disabled' : raw.status === 'disabled'));
   automationAssert(raw.status !== 'execution-unknown' || raw.targetOutcomeUnknown);
-  return { ...raw, source, target, condition };
+  return { ...raw, source, target, condition, ...(named ? { name: automationName(raw.name) } : {}) };
 }
 export function automationDetail(raw: any, ruleId: string): AutomationDetail {
   exact(raw, ['rule','recentExecutions']); const value = rule(raw.rule); automationAssert(value.ruleId === ruleId);
@@ -126,7 +134,8 @@ export function automationWriteOutcome(intent: AutomationIntent, value: Automati
       : value.policyVersion === 1 && value.condition === 'rising-boolean');
     if (intent.operation === 'put' && sameCondition && value.retiredAtMs === null && value.enabled === intent.body.enabled
       && ['deviceId','key','fingerprint','valueType'].every(k => value.source[k] === intent.body.source[k] && value.target[k] === intent.body.target[k])
-      && value.target.value === intent.body.target.value) return 'confirmed';
+      && value.target.value === intent.body.target.value
+      && (!Object.hasOwn(intent.body, 'name') || value.name === intent.body.name)) return 'confirmed';
   }
   return 'changed'; // A newer definition is not proof that OUR write committed.
 }

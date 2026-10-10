@@ -9,7 +9,7 @@ import { HttpAutomationApi } from '../../../core/device-v2/automation/http';
 import { IndexedDbIntentStorage } from '../../../core/device-v2/intent-storage';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceV2ManifestCache } from '../../../core/services/device-v2-manifest-cache.service';
-import { AutomationChoice, automationChoices, automationErrorText } from './automation.models';
+import { AutomationChoice, automationChoices, automationDeviceName, automationErrorText } from './automation.models';
 function context(data: DataService): DeviceV2AccountContext {
   if (!data.auth?.uuid) throw new Error('AUTOMATION_ACCOUNT_CHANGED');
   return { authority: API.BASE_URL, accountId: data.auth.uuid, sessionEpoch: data.sessionEpoch };
@@ -79,34 +79,50 @@ export class AutomationService implements OnDestroy {
   async inspect(ruleId: string): Promise<void> {
     await this.run(async signal => { const detail = await this.client.get(ruleId, signal); if (this.current(signal)) this.patch({ detail, reviewed: undefined }); });
   }
-  async create(sourceId: string, targetId: string, value: boolean, condition: AutomationCondition): Promise<void> {
-    if (!this.state().ready || this.state().busy) return;
+  deviceName(deviceId: string): string { return automationDeviceName(this.data.device?.dict, deviceId); }
+  endpointLabel(endpoint: AutomationRule['source']): string { return `${this.deviceName(endpoint.deviceId)} · ${endpoint.key}`; }
+  async create(sourceId: string, targetId: string, value: boolean, condition: AutomationCondition, name?: string): Promise<boolean> {
+    if (!this.state().ready || this.state().busy) return false;
     const source = this.state().choices.find(c => c.id === sourceId && c.source), target = this.state().choices.find(c => c.id === targetId && c.target);
-    if (!source || !target || target.endpoint.valueType !== 'boolean' || source.endpoint.deviceId === target.endpoint.deviceId) return;
+    if (!source || !target || target.endpoint.valueType !== 'boolean' || source.endpoint.deviceId === target.endpoint.deviceId) return false;
     let intent: AutomationIntent;
     try { intent = automationIntent({ ruleId: crypto.randomUUID(), operation: 'put', body: {
       expectedRevision: 0, enabled: false, source: source.endpoint,
-      target: { ...target.endpoint, valueType: 'boolean', value }, policyVersion: 2, condition } }); }
-    catch { this.patch({ error: automationErrorText(new Error('AUTOMATION_INVALID_INPUT')) }); return; }
-    await this.submit(intent);
+      target: { ...target.endpoint, valueType: 'boolean', value }, policyVersion: 2, condition,
+      ...(name === undefined ? {} : { name }) } }); }
+    catch { this.patch({ error: automationErrorText(new Error('AUTOMATION_INVALID_INPUT')) }); return false; }
+    return this.submit(intent);
+  }
+  async edit(rule: AutomationRule, name: string, condition: AutomationCondition, value: boolean): Promise<boolean> {
+    if (!this.state().ready || this.state().busy || rule.retiredAtMs !== null) return false;
+    let intent: AutomationIntent;
+    try { intent = automationIntent({ ruleId: rule.ruleId, operation: 'put', body: {
+      expectedRevision: rule.definitionRevision, enabled: rule.enabled, name, source: rule.source,
+      target: { ...rule.target, value }, policyVersion: 2, condition } }); }
+    catch { this.patch({ error: automationErrorText(new Error('AUTOMATION_INVALID_INPUT')) }); return false; }
+    return this.submit(intent);
   }
   async toggle(rule: AutomationRule): Promise<void> {
     if (!this.state().ready || rule.retiredAtMs !== null) return;
     await this.submit(automationIntent({ ruleId: rule.ruleId, operation: 'put', body: { expectedRevision: rule.definitionRevision,
       enabled: !rule.enabled, source: rule.source, target: rule.target,
+      ...(rule.name === undefined ? {} : { name: rule.name }),
       ...(rule.policyVersion === 2 ? { policyVersion: 2, condition: rule.condition } : {}) } }));
   }
   async retire(rule: AutomationRule): Promise<void> {
     if (!this.state().ready || rule.retiredAtMs !== null) return;
     await this.submit({ ruleId: rule.ruleId, operation: 'retire', body: { expectedRevision: rule.definitionRevision } });
   }
-  private async submit(intent: AutomationIntent): Promise<void> {
+  private async submit(intent: AutomationIntent): Promise<boolean> {
+    let confirmed = false;
     await this.run(async signal => {
       const detail = await this.client.submit(intent, signal);
       if (!this.current(signal)) return;
-      this.patch({ detail, reviewed: undefined, notice: '服务器已返回当前规则配置；不代表设备动作已执行。' });
+      confirmed = true;
+      this.patch({ detail, reviewed: undefined, notice: '配置已保存。' });
       await this.list(signal, this.state().retired);
     });
+    return confirmed;
   }
   async recover(intent: AutomationIntent, retry = false): Promise<void> {
     await this.run(async signal => {

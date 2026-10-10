@@ -2,7 +2,7 @@ import '@angular/compiler';
 import { Subject } from 'rxjs';
 import { AutomationService } from './automation.service';
 import { AutomationPage } from './automation.page';
-import { automationChoices, automationConditionText, automationErrorText, automationExecutionText } from './automation.models';
+import { automationChoices, automationConditionText, automationDeviceName, automationErrorText, automationExecutionText, automationRuleStatus } from './automation.models';
 import { AutomationDetail, AutomationIntent, AutomationRule, automationIntent } from '../../../core/device-v2/automation/contract';
 const manifest = { revision: 1, fingerprint: 'ab'.repeat(32), fields: [
   { id: 1, key: 'power', kind: 0, type: 0, access: 7 }, { id: 2, key: 'button', kind: 1, type: 0, access: 7 },
@@ -20,7 +20,8 @@ function setup() {
     recover: vi.fn(async () => ({ detail, outcome: 'unresolved' as const })), acceptChanged: vi.fn(async () => detail) };
   const service = new AutomationService(client as any, data as any, { load: () => manifest } as any);
   const alerts = { create: vi.fn(async () => ({ present: async () => undefined, onDidDismiss: async () => ({ role: 'confirm' }) })) };
-  return { data, client, service, alerts, page: new AutomationPage(service, alerts as any) };
+  const page = new AutomationPage(service, alerts as any); page.name = '测试自动化';
+  return { data, client, service, alerts, page };
 }
 describe('minimal automation view lifecycle', () => {
   it('offers only owned ordinary WiFi scalar source Properties and boolean targets; cache is not authority', () => {
@@ -31,7 +32,10 @@ describe('minimal automation view lifecycle', () => {
     expect(choices).toHaveLength(2); expect(choices[0].endpoint.key).toBe('power'); expect(choices[0].source).toBe(true); expect(choices[0].target).toBe(true);
     expect(choices[1].endpoint.valueType).toBe('uint32'); expect(choices[1].source).toBe(true); expect(choices[1].target).toBe(false);
     expect(automationChoices({ good: device }, () => undefined)).toEqual([]);
-    expect(automationExecutionText.acknowledged).toContain('非实物');
+    expect(automationDeviceName({ b: device, a: device }, 'a')).toBe('未命名设备 1');
+    expect(automationDeviceName({ b: device, a: device }, 'b')).toBe('未命名设备 2');
+    expect(automationDeviceName({}, 'missing')).toBe('设备不在当前列表');
+    expect(automationExecutionText.acknowledged).toBe('设备已确认');
     expect(automationErrorText({ code: 'HTTP_404' })).toContain('尚未提供');
   });
   it('creates disabled with a stable intent, never allows same source/target or auto-enable', async () => {
@@ -104,12 +108,13 @@ describe('minimal automation view lifecycle', () => {
     expect(f.page.condition).toBe('rising'); expect(f.page.threshold).toBeNull(); expect(f.page.hysteresis).toBeNull();
     f.service.ngOnDestroy();
   });
-  it('serializes numeric above/below conditions only as explicit six-field A2 disabled writes', async () => {
-    const f = setup(); await f.service.open(); f.page.source = 'source:4'; f.page.sourceChanged(); f.page.target = 'target:1';
+  it('serializes named numeric above/below as explicit A2 disabled writes', async () => {
+    const f = setup(); await f.service.open();
     for (const direction of ['above', 'below'] as const) {
+      f.page.startCreate(); f.page.name = '阈值联动'; f.page.source = 'source:4'; f.page.sourceChanged(); f.page.target = 'target:1';
       f.page.condition = direction; f.page.threshold = 30; f.page.hysteresis = 2; f.page.value = false;
       await f.page.save(); const intent = f.client.submit.mock.calls.at(-1)[0] as AutomationIntent;
-      expect(intent.operation).toBe('put'); expect(Object.keys(intent.body)).toEqual(['expectedRevision', 'enabled', 'source', 'target', 'policyVersion', 'condition']);
+      expect(intent.operation).toBe('put'); expect(Object.keys(intent.body)).toEqual(['expectedRevision', 'enabled', 'source', 'target', 'policyVersion', 'condition', 'name']);
       expect(intent).toMatchObject({ body: { expectedRevision: 0, enabled: false, source: { valueType: 'uint32' },
         target: { valueType: 'boolean', value: false }, policyVersion: 2,
         condition: { kind: 'numeric-threshold', direction, threshold: 30, hysteresis: 2 } } });
@@ -140,7 +145,7 @@ describe('minimal automation view lifecycle', () => {
       expectedRevision: 1, enabled: true, source: typed.source, target: typed.target, policyVersion: 2, condition: typed.condition } });
     expect(typed).toEqual(before); expect(Object.hasOwn(f.client.submit.mock.calls[0][0].body, 'condition')).toBe(false);
     expect(automationConditionText(typed.condition)).toContain('19.5');
-    expect(automationConditionText(detail.rule.condition)).toContain('false → true'); f.service.ngOnDestroy();
+    expect(automationConditionText(detail.rule.condition)).toContain('从关变为开'); f.service.ngOnDestroy();
   });
   it('shows and recovers original typed pending intent without rebuilding from current form or choices', async () => {
     const f = setup(), pending = automationIntent({ ruleId: 'pending-a2', operation: 'put', body: {
@@ -154,5 +159,47 @@ describe('minimal automation view lifecycle', () => {
     expect(f.client.submit).not.toHaveBeenCalled(); expect(f.service.state().pending).toEqual([before]); expect(pending).toEqual(before);
     expect(automationErrorText(new Error('AUTOMATION_UNSUPPORTED_VERSION'))).toContain('不会降级重发');
     expect(automationErrorText(new Error('AUTOMATION_WRITE_NOT_CONFIRMED'))).toContain('请求记录已保留'); f.service.ngOnDestroy();
+  });
+  it('edits latest original endpoints and revision even when capability choices disappear; named toggles preserve name', async () => {
+    const f = setup(); await f.service.open();
+    const named: AutomationRule = { ...detail.rule, definitionRevision: 5, name: '旧名称', enabled: true,
+      policyVersion: 2, condition: { kind: 'boolean-edge', direction: 'rising' } };
+    f.client.get.mockResolvedValue({ ...detail, rule: named });
+    f.service.state.update(s => ({ ...s, choices: [] }));
+    await f.page.startEdit(detail.rule);
+    expect(f.page.editing).toBe(named); expect(f.page.name).toBe('旧名称');
+    f.page.name = '  修改后的名称  '; f.page.condition = 'falling'; f.page.value = false;
+    await f.page.save();
+    expect(f.alerts.create).toHaveBeenCalled();
+    expect(f.client.submit.mock.calls[0][0]).toMatchObject({ ruleId: named.ruleId, operation: 'put', body: {
+      expectedRevision: 5, enabled: true, name: '修改后的名称', source: named.source,
+      target: { ...named.target, value: false }, condition: { kind: 'boolean-edge', direction: 'falling' } } });
+    await f.service.toggle(named); expect(f.client.submit.mock.calls[1][0].body.name).toBe('旧名称');
+    expect(named.target.value).toBe(true); f.service.ngOnDestroy();
+  });
+  it('cancelled enabled edit and invalid names do not submit; no 5s observation creates false offline status', async () => {
+    const f = setup(); await f.service.open();
+    const enabled = { ...detail.rule, enabled: true, status: 'paused' as const };
+    f.client.get.mockResolvedValue({ ...detail, rule: enabled }); await f.page.startEdit(enabled);
+    for (const name of ['', ' '.repeat(3), 'a'.repeat(81), 'bad\nname']) { f.page.name = name; expect(f.page.canSave).toBe(false); await f.page.save(); }
+    f.page.name = '有效名称'; f.alerts.create.mockResolvedValueOnce({ present: async () => undefined, onDidDismiss: async () => ({ role: 'cancel' }) });
+    await f.page.save(); expect(f.client.submit).not.toHaveBeenCalled();
+    expect(automationRuleStatus(enabled)).toBe('已启用');
+    expect(automationRuleStatus({ ...enabled, targetOutcomeUnknown: true })).toBe('已启用 · 上次执行待确认');
+    expect(automationRuleStatus({ ...enabled, enabled: false, targetOutcomeUnknown: true })).toBe('未启用 · 上次执行待确认');
+    expect(automationRuleStatus({ ...enabled, retiredAtMs: 2 })).toBe('已删除');
+    f.service.ngOnDestroy();
+  });
+  it('backing out invalidates an enabled edit confirmation; failed GET does not open stale detail', async () => {
+    const f = setup(); await f.service.open();
+    const enabled = { ...detail.rule, name: '旧名称', enabled: true };
+    f.client.get.mockResolvedValue({ ...detail, rule: enabled }); await f.page.startEdit(enabled); f.page.name = '新名称';
+    let resolve!: (value: any) => void;
+    f.alerts.create.mockResolvedValueOnce({ present: async () => undefined, onDidDismiss: () => new Promise(r => resolve = r) });
+    const save = f.page.save(); await Promise.resolve(); await Promise.resolve();
+    f.page.backToList(); resolve({ role: 'confirm' }); await save;
+    expect(f.client.submit).not.toHaveBeenCalled(); expect(f.page.view).toBe('list');
+    f.client.get.mockRejectedValueOnce(new Error('network lost')); await f.page.inspect(enabled);
+    expect(f.page.view).toBe('list'); expect(f.service.state().error).not.toBe(''); f.service.ngOnDestroy();
   });
 });

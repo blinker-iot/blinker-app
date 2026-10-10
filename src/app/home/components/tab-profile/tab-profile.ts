@@ -35,7 +35,6 @@ export class TabProfileComponent implements OnInit {
     return createProfileMenuGroups(
       {
         roomNum: this.roomNum,
-        sceneNum: this.sceneNum,
         sharedDeviceNum: this.sharedDeviceNum,
       },
       (key, params) => this.translate.instant(key, params)
@@ -71,10 +70,6 @@ export class TabProfileComponent implements OnInit {
 
   get roomNum() {
     return this.dataService.room?.list?.length || 2;
-  }
-
-  get sceneNum() {
-    return this.dataService.scene?.list?.length || 10;
   }
 
   get sharedDeviceNum() {
