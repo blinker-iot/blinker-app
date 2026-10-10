@@ -1,0 +1,74 @@
+// Device-scoped tokens: do not change the application's global theme.
+@mixin palette {
+  &[data-device-theme='clear'] {
+    color-scheme: light;
+    --blinker-bg: #f3f6fb;
+    --blinker-bg-elevated: #f9fbff;
+    --blinker-surface: #ffffff;
+    --blinker-surface-muted: #eaf0f8;
+    --blinker-surface-active: #e4efff;
+    --blinker-text-primary: #182b46;
+    --blinker-text-secondary: #526780;
+    --blinker-text-tertiary: #6b7c92;
+    --blinker-border: #d8e2ef;
+    --blinker-divider: #e4ebf4;
+    --ion-color-primary: #176bd8;
+    --ion-color-primary-rgb: 23, 107, 216;
+    --ion-color-primary-contrast: #ffffff;
+    --blinker-shadow-soft: 0 4px 16px rgba(33, 62, 104, 0.045);
+    --blinker-radius-card: 16px;
+    --blinker-radius-control: 12px;
+  }
+
+  &[data-device-theme='sand'] {
+    color-scheme: light;
+    --blinker-bg: #f3eee5;
+    --blinker-bg-elevated: #fbf8f2;
+    --blinker-surface: #fffcf6;
+    --blinker-surface-muted: #eee6d9;
+    --blinker-surface-active: #e7ede3;
+    --blinker-text-primary: #363c30;
+    --blinker-text-secondary: #6a6a58;
+    --blinker-text-tertiary: #7a7565;
+    --blinker-border: #ddd5c6;
+    --blinker-divider: #e8e0d3;
+    --ion-color-primary: #536b45;
+    --ion-color-primary-rgb: 83, 107, 69;
+    --ion-color-primary-contrast: #ffffff;
+    --blinker-shadow-soft: 0 3px 12px rgba(79, 65, 39, 0.04);
+    --blinker-radius-card: 20px;
+    --blinker-radius-control: 14px;
+  }
+
+  &[data-device-theme='graphite'] {
+    color-scheme: dark;
+    --blinker-bg: #171b21;
+    --blinker-bg-elevated: #1b2027;
+    --blinker-surface: #242a33;
+    --blinker-surface-muted: #303843;
+    --blinker-surface-active: #2c4051;
+    --blinker-text-primary: #eef3f8;
+    --blinker-text-secondary: #b4c0cd;
+    --blinker-text-tertiary: #94a3b5;
+    --blinker-border: #3c4653;
+    --blinker-divider: #333c48;
+    --ion-color-primary: #8bc8f4;
+    --ion-color-primary-rgb: 139, 200, 244;
+    --ion-color-primary-contrast: #182b3d;
+    --blinker-shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.16);
+    --blinker-radius-card: 12px;
+    --blinker-radius-control: 10px;
+  }
+
+  &[data-device-theme] {
+    --transparent-page-mask-color: var(--blinker-bg);
+    --ion-background-color: var(--blinker-bg);
+    --ion-text-color: var(--blinker-text-primary);
+    --ion-toolbar-color: var(--blinker-text-primary);
+    --ion-toolbar-background: var(--blinker-bg);
+    --ion-card-background: var(--blinker-surface);
+    --ion-card-color: var(--blinker-text-primary);
+    --ion-item-background: var(--blinker-surface);
+    --ion-border-color: var(--blinker-border);
+  }
+}

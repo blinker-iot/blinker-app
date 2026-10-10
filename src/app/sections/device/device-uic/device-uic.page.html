@@ -1,46 +1,105 @@
-<ion-header>
+<ion-header class="ion-no-border">
   <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button [defaultHref]="backHref" text=""></ion-back-button>
-    </ion-buttons>
-    <ion-title>界面配置</ion-title>
+    <ion-buttons slot="start"><ion-back-button [defaultHref]="backHref" text=""></ion-back-button></ion-buttons>
+    <ion-title>界面工作室</ion-title>
+    <ion-buttons slot="end"><span class="studio-mark" aria-hidden="true">blinker / studio</span></ion-buttons>
   </ion-toolbar>
 </ion-header>
-
-<ion-content fullscreen="true">
-  <main>
-    <section class="uic-hero" aria-labelledby="uic-heading">
-      <div class="hero-copy">
-        <span class="eyebrow">设备界面配置</span>
-        <h1 id="uic-heading">选择界面配置方式</h1>
-        <p>根据使用场景，选择适合你的方式来创建或调整设备控制界面。</p>
+<ion-content #studioContent>
+  <main class="studio" [class.studio--editing]="selected">
+    @if (!device) {
+      <section class="empty-state"><i class="fa-light fa-microchip"></i><h1>还没有找到这台设备</h1><p>返回设备列表，选择设备后再来设计它的界面。</p></section>
+    } @else if (!selected) {
+      <header class="studio-intro">
+        <div class="eyebrow"><span></span> YOUR DEVICE, YOUR WAY</div>
+        <h1>好用的界面，<br>由你定义<span class="period">。</span></h1>
+        <p>从自动适配到自由创作，<br class="mobile-break">为「{{ device.config.customName || device.deviceName }}」找到最顺手的方式。</p>
+        <div class="current-interface"><span class="status-dot"></span><span>当前使用</span><strong>{{ currentLabel }}</strong><span class="saved-label">已保留</span></div>
+        <div class="intro-art" aria-hidden="true"><div class="art-grid"></div><div class="art-panel"><span class="art-line"></span><span class="art-toggle"></span><div class="art-metric"><b>24<span>°</span></b><i class="fa-light fa-sun"></i></div><span class="art-slider"></span><div class="art-bottom"><span></span><span></span></div></div><span class="art-cross">+</span></div>
+      </header>
+      @if (device.config.isShared) { <p class="notice" role="status">共享设备的界面由设备所有者配置。</p> }
+      <div class="section-heading"><span>选择你的创作方式</span><span>THREE WAYS TO CREATE</span></div>
+      <section class="method-grid" aria-label="界面配置方式">
+        @for (method of methods; track method.id) {
+          <button type="button" class="method-card" [class]="'method-card method-card--' + method.id" [disabled]="saving || device.config.isShared" (click)="selectMethod(method.id)">
+            <span class="card-top"><span class="method-number">{{ method.index }} /</span><span class="method-tag">{{ method.tag }}</span></span>
+            <span class="method-body"><span class="method-icon"><i [class]="'fa-light ' + method.icon" aria-hidden="true"></i></span><span><strong>{{ method.title }}</strong><span class="method-description">{{ method.subtitle }}</span></span></span>
+            <span class="card-bottom"><span>{{ method.id === 'automatic' ? '识别能力 · 自动编排' : method.id === 'ai' ? '描述需求 · 预览生成' : '添加组件 · 随心布局' }}</span><span class="card-arrow"><i class="fa-light fa-arrow-up-right" aria-hidden="true"></i></span></span>
+          </button>
+        }
+      </section>
+      <button class="debug-entry" type="button" [disabled]="saving || device.config.isShared" (click)="openDebug()"><i class="fa-light fa-terminal" aria-hidden="true"></i><span><strong>调试工具</strong><small>查看原始数据与指令</small></span><i class="fa-light fa-chevron-right" aria-hidden="true"></i></button>
+      <p class="studio-footnote"><i class="fa-light fa-layer-group" aria-hidden="true"></i>先预览，再应用。切换方式时保留已保存的经典布局。</p>
+    } @else {
+      <button class="back-to-methods" type="button" [disabled]="saving || generating" (click)="closeEditor()"><i class="fa-light fa-arrow-left" aria-hidden="true"></i> 所有创作方式</button>
+      <div class="workspace-heading"><span class="eyebrow">{{ selected === 'automatic' ? '01 / ADAPT' : selected === 'ai' ? '02 / CREATE' : '03 / COMPOSE' }}</span><h1>{{ selected === 'automatic' ? '让界面，读懂设备。' : selected === 'ai' ? '把想法，变成界面。' : '你的面板，你来编排。' }}</h1><p>{{ selected === 'automatic' ? '识别设备可用能力，自动匹配适合的控制组件。' : selected === 'ai' ? '描述使用场景，AI 将围绕已有设备能力设计布局。' : '从已有布局出发，拖动、调整，让每一次操作都顺手。' }}</p></div>
+      @if (selected === 'ai') {
+        <section class="style-picker" aria-label="界面风格">
+          <div class="style-picker-heading"><div><span class="eyebrow">START WITH A STYLE</span><h2>先选一种感觉</h2></div><span>3 种风格 · 同一台设备，不同的表达</span></div>
+          <div class="style-options">
+            @for (option of styles; track option.id; let index = $index) {
+              <button type="button" class="style-option" [class.active]="style === option.id" [attr.aria-pressed]="style === option.id" [attr.aria-label]="option.name + '，' + option.caption" [disabled]="generating || saving" (click)="chooseStyle(option.id)">
+                <span class="style-sample" [attr.data-interface-style]="option.id" aria-hidden="true">
+                  <span class="sample-top"><span>{{ option.id === 'technical' ? 'DEVICE / 01' : option.id === 'warm' ? '家的舒适，刚刚好' : '我的日常' }}</span><i></i></span>
+                  <span class="sample-tiles">
+                    <span class="sample-control"><span><i class="fa-light fa-power-off"></i> 客厅电源</span><span class="sample-toggle"></span></span>
+                    <span class="sample-metric"><small>室内温度</small><b>24.6<small>°C</small></b><span class="sample-spark">▁ ▂ ▂ ▄ ▃ ▅</span></span>
+                    <span class="sample-metric"><small>空气湿度</small><b>58<small>%</small></b><span class="sample-spark">▂ ▁ ▃ ▂ ▄ ▃</span></span>
+                    <span class="sample-brightness"><span>灯光亮度</span><i></i><small>68%</small></span>
+                  </span>
+                </span>
+                <span class="style-copy"><span class="style-name"><strong>{{ option.name }}</strong><span class="style-check">{{ style === option.id ? '✓' : '0' + (index + 1) }}</span></span><span class="style-caption">{{ option.caption }}</span></span>
+              </button>
+            }
+          </div>
+          <p class="style-description"><i class="fa-light fa-swatchbook" aria-hidden="true"></i><strong>{{ selectedStyle.name }}</strong><span>{{ selectedStyle.description }}</span></p>
+          <p class="style-disclaimer">以上为风格示意，组件和数据以你的设备为准。</p>
+        </section>
+      }
+      <div class="workspace">
+        <section class="workspace-controls">
+          @if (selected === 'classic') {
+            <div class="classic-guide"><span class="panel-label">你的创作画布</span><strong class="count-number">{{ widgetCount < 10 ? '0' : '' }}{{ widgetCount }}<small>个已保存组件</small></strong><p>{{ widgetCount ? '继续打磨现有界面，组件配置和数据绑定会一起带入。' : '一张空白画布，准备好承接你的想法。' }}</p><ol><li><span>01</span><div><strong>挑选组件</strong><p>按键、数据、滑块、图表，按需添加。</p></div></li><li><span>02</span><div><strong>拖动与调整</strong><p>拖动手柄排列，拉伸边缘调整大小。</p></div></li><li><span>03</span><div><strong>绑定并保存</strong><p>配置数据键，保存后即可使用。</p></div></li></ol></div>
+          } @else {
+            @if (selected === 'ai') {
+              <label class="panel-label" for="interface-prompt">再说说你的想法（可选）</label>
+              <div class="prompt-box"><textarea id="interface-prompt" [(ngModel)]="prompt" maxlength="1200" rows="5" [disabled]="generating || saving" placeholder="例如：做一个适合家人使用的控制面板，把电源放在最上面，数据清楚一些…"></textarea><span>{{ prompt.length }} / 1200</span></div>
+              <div class="suggestions">@for (suggestion of suggestions; track suggestion) { <button type="button" [disabled]="generating || saving" (click)="useSuggestion(suggestion)">{{ suggestion }} <span>↗</span></button> }</div>
+            } @else {
+              <div class="capability-status"><span class="scan-icon"><i class="fa-light fa-microchip" aria-hidden="true"></i></span><div><strong>{{ !isV2 ? '此设备使用经典数据协议' : sourceTiles.length ? '设备能力已识别' : '等待设备能力' }}</strong><p>{{ !isV2 ? '可使用 AI 生成或拖拽编辑来创建界面。' : '控制和数据组件会随设备能力变化适配。' }}</p></div>@if (isV2) { <button type="button" aria-label="刷新设备能力" [disabled]="loading || saving || generating" (click)="refreshCapabilities()"><i class="fa-light fa-arrow-rotate-right" [class.spinning]="loading"></i></button> }</div>
+            }
+            @if (isV2 || selected === 'ai') {
+              <span class="panel-label density-label">选择布局节奏</span><div class="density-options" aria-label="布局密度">@for (option of densities; track option.id) { <button type="button" [class.active]="density === option.id" [attr.aria-pressed]="density === option.id" [disabled]="generating || saving" (click)="chooseDensity(option.id)"><span [class]="'density-symbol ' + option.id"><i></i><i></i><i></i></span><strong>{{ option.label }}</strong></button> }</div>
+              <div class="capability-heading"><span>可用组件</span><span>{{ sourceTiles.length }} 项</span></div><div class="capability-chips">@for (tile of sourceTiles; track tile.id) { <span><i class="fa-light fa-check" aria-hidden="true"></i>{{ tile.title }}</span> } @empty { <p>尚无可用组件，请先连接设备或在经典编辑器中配置组件。</p> }</div>
+            }
+            @if (selected === 'ai') {
+              <button class="generate-button" type="button" [disabled]="generating || saving" (click)="generate()"><i [class]="generating ? 'fa-light fa-spinner-third spinning' : 'fa-light fa-wand-magic-sparkles'" aria-hidden="true"></i>{{ generating ? '正在设计你的界面…' : generated ? '重新生成' : '按此风格生成' }}</button>
+              @if (!sourceTiles.length && !error) { <p class="generate-requirement" role="status">{{ missingCapabilityMessage }}@if (!isV2 || !loading) { <button type="button" (click)="isV2 ? refreshCapabilities() : selectMethod('classic')">{{ isV2 ? '重新读取' : '打开经典编辑器' }}</button> }</p> }
+              @if (error) { <p class="generate-feedback" role="alert">{{ error }}@if (!sourceTiles.length && (!isV2 || !loading)) { <button type="button" (click)="isV2 ? refreshCapabilities() : selectMethod('classic')">{{ isV2 ? '重新读取' : '打开经典编辑器' }}</button> }</p> }
+              <p class="helper">AI 根据所选风格安排已有组件；也可以补充需求、调整布局节奏，预览满意后再应用。</p>
+            }
+          }
+        </section>
+        <section #previewPanel class="preview-section" aria-label="界面预览" [attr.aria-busy]="generating">
+          <div class="preview-heading"><span><span class="status-dot"></span>{{ selected === 'classic' ? '编辑器一瞥' : generating ? '正在实时生成' : generated ? '生成结果' : '布局预览' }}</span><small>{{ selected === 'classic' ? '示意画布' : '预览不会发送设备指令' }}</small></div>
+          @if (generating) {
+            <div class="generation-progress" role="status" aria-live="polite">
+              <span><i class="fa-light fa-spinner-third spinning" aria-hidden="true"></i>{{ previewCount ? '已编排 ' + previewCount + ' 个组件，画布持续更新中…' : '正在构思布局，收到组件后会立即显示…' }}</span>
+              <button type="button" (click)="cancelGeneration()">取消生成</button>
+            </div>
+          }
+          <div class="preview-canvas" [attr.data-interface-style]="previewStyle" [class.classic-canvas]="selected === 'classic'" [class.is-generating]="generating">
+            <div class="preview-device"><i class="fa-light fa-microchip" aria-hidden="true"></i><strong>{{ device.config.customName || device.deviceName }}</strong><span>{{ selected === 'classic' ? '自由布局' : selected === 'ai' ? selectedStyle.name : '专属控制面板' }}</span></div>
+            @if (selected === 'classic') { <div class="sample-grid" aria-hidden="true"><div><i class="fa-light fa-grip-dots-vertical"></i><i class="fa-light fa-power-off"></i><span>开关</span></div><div><i class="fa-light fa-grip-dots-vertical"></i><b>24.6<small>°C</small></b><span>数据</span></div><div><i class="fa-light fa-sliders"></i><span class="sample-range"></span></div><span class="sample-add">＋ 添加你需要的组件</span></div> }
+            @else if (selected === 'automatic' && !isV2) { <div class="preview-empty"><i class="fa-light fa-grid-4"></i><strong>为经典设备自由创作</strong><p>选择 AI 生成或经典编辑器，继续设计。</p><button type="button" (click)="selectMethod('classic')">打开经典编辑器 →</button></div> }
+            @else { <div class="tile-grid">@for (tile of tiles; track tile.id) { <article class="preview-tile" [class.emphasized]="tile.emphasized" [style.grid-column]="'span ' + tile.width"><span>{{ tile.title }}</span>@switch (tile.type) { @case ('switch') { <div class="tile-switch" [class.off]="tile.value === '关闭' || tile.value === '—'"><small>{{ tile.value }}</small><i></i></div> } @case ('value') { <strong class="tile-value">{{ tile.value }}<small>{{ tile.unit }}</small></strong> } @case ('slider') { <div class="tile-range"><i [style.width.%]="tile.level ?? 0"></i></div><small class="tile-range-value">{{ tile.value }}{{ tile.unit }}</small> } @case ('button') { <span class="tile-button"><i class="fa-light fa-power-off"></i> 执行</span> } @default { <span class="tile-input">{{ tile.value === '—' ? '输入内容' : tile.value }} <i class="fa-light fa-arrow-right"></i></span> } }</article> } @empty { <div class="preview-empty"><i class="fa-light fa-wave-pulse"></i><strong>{{ loading ? '正在读取设备能力…' : '你的界面将在这里出现' }}</strong><p>连接设备后，即可预览可用组件。</p></div> }</div> }
+          </div>
+          @if (summary) { <p class="generation-summary" role="status"><i class="fa-light fa-sparkles" aria-hidden="true"></i>{{ summary }}</p> }
+          @if (selected === 'ai' && !generated && !generating) { <p class="preview-caption">当前为所选风格的本地预览；点击“按此风格生成”，由 AI 进一步编排。</p> }
+        </section>
       </div>
-
-      <div class="hero-visual" aria-hidden="true">
-        <span class="method-icon method-icon--ai">
-          <i class="fa-light fa-wand-magic-sparkles"></i>
-        </span>
-        <span class="method-icon method-icon--classic">
-          <i class="fa-light fa-grid-4"></i>
-        </span>
-        <span class="method-icon method-icon--debug">
-          <i class="fa-light fa-terminal"></i>
-        </span>
-        <span class="interface-orbit"></span>
-        <span class="interface-hub">
-          <i class="fa-light fa-mobile-screen-button"></i>
-        </span>
-      </div>
-    </section>
-
-    <section class="methods-section" aria-labelledby="methods-heading">
-      <h2 id="methods-heading" class="section-label">选择配置方式</h2>
-
-      <app-menu-list
-        [items]="availableMethodItems"
-        [detailed]="true"
-        (itemSelected)="selectMethod($event)"
-      ></app-menu-list>
-    </section>
+      <footer class="apply-bar"><span>{{ selected === 'classic' ? '现有布局将保留' : selected === 'ai' ? '应用后替换当前面板布局' : '预览满意，一步应用' }}</span><button type="button" class="apply-button" [disabled]="!canApply || (selected === 'automatic' && !isV2)" (click)="apply()">{{ saving ? '正在保存…' : selected === 'classic' ? '进入拖拽编辑器' : '应用这个界面' }} <i class="fa-light fa-arrow-right" aria-hidden="true"></i></button></footer>
+    }
+    @if (error && selected !== 'ai') { <div class="error-message" role="alert"><i class="fa-light fa-circle-exclamation" aria-hidden="true"></i><span>{{ error }}</span>@if (isV2 && !loading) { <button type="button" [disabled]="saving || generating" (click)="refreshCapabilities()">刷新</button> }</div> }
   </main>
 </ion-content>

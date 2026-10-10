@@ -1,6 +1,5 @@
 import { Component, Input } from '@angular/core';
 import { Layouter2Widget } from '../config';
-import { AlertController } from '@ionic/angular';
 import { LayouterService } from '../../../layouter.service';
 import { NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -65,41 +64,12 @@ export class WidgetInputComponent implements Layouter2Widget {
     return 0;
   }
 
-  sendmess;
+  sendmess = '';
 
-  constructor(
-    private alertCtrl: AlertController,
-    private layouterService: LayouterService
-  ) {}
+  constructor(private layouterService: LayouterService) {}
 
-  send() {}
-
-  async showInputModal() {
-    const alert = await this.alertCtrl.create({
-      header: '发送数据',
-      inputs: [
-        {
-          name: 'message',
-          type: 'text',
-          value: this.sendmess,
-          placeholder: '请输入要发送的内容',
-        },
-      ],
-      buttons: [
-        '取消',
-        {
-          text: '发送',
-          handler: (data) => {
-            this.sendmess = data.message;
-            if (this.sendmess) {
-              this.layouterService.send(
-                JSON.stringify({ [this.key]: this.sendmess })
-              );
-            }
-          },
-        },
-      ],
-    });
-    await alert.present();
+  send(): void {
+    if (this.isDemo || !this.sendmess.trim()) return;
+    this.layouterService.send(JSON.stringify({ [this.key]: this.sendmess }));
   }
 }

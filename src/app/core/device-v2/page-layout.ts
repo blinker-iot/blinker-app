@@ -1,3 +1,4 @@
+import { InterfaceStyle, INTERFACE_STYLE_IDS } from './interface-style';
 import { DeviceUiEndpoint, DeviceUiSnapshot } from './device-ui.port';
 
 export const PAGE_LAYOUT_SCHEMA_VERSION = 1 as const;
@@ -29,6 +30,7 @@ export interface PageLayout {
   manifestFingerprint: string;
   columns: typeof PAGE_LAYOUT_COLUMNS;
   widgets: PageLayoutWidget[];
+  style?: InterfaceStyle;
 }
 
 export interface PageLayoutDiff {
@@ -72,9 +74,10 @@ export function generateDefaultPageLayout(snapshot: DeviceUiSnapshot): PageLayou
 
 export function parsePageLayout(input: unknown, endpoints?: readonly DeviceUiEndpoint[]): PageLayout {
   const root = object(input, 'PageLayout');
-  exactKeys(root, ['schemaVersion', 'revision', 'manifestFingerprint', 'columns', 'widgets'], 'PageLayout');
+  exactKeys(root, ['schemaVersion', 'revision', 'manifestFingerprint', 'columns', 'widgets', 'style'], 'PageLayout');
   if (root['schemaVersion'] !== PAGE_LAYOUT_SCHEMA_VERSION) throw new Error('PageLayout schemaVersion is unsupported');
   if (root['columns'] !== PAGE_LAYOUT_COLUMNS) throw new Error('PageLayout columns are unsupported');
+  const style = root['style'] === undefined ? undefined : enumeration(root['style'], INTERFACE_STYLE_IDS, 'PageLayout style');
   const revision = integer(root['revision'], 1, 0x7fffffff, 'PageLayout revision');
   const manifestFingerprint = text(root['manifestFingerprint'], 64, 'PageLayout manifestFingerprint');
   if (!/^[0-9a-f]{64}$/.test(manifestFingerprint)) {
@@ -103,6 +106,7 @@ export function parsePageLayout(input: unknown, endpoints?: readonly DeviceUiEnd
   return {
     schemaVersion: PAGE_LAYOUT_SCHEMA_VERSION,
     revision,
+    ...(style ? { style } : {}),
     manifestFingerprint,
     columns: PAGE_LAYOUT_COLUMNS,
     widgets,

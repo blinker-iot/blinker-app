@@ -9,6 +9,7 @@ const deviceKeyV2Url = (logicalDeviceId: string) =>
 
 export const API = {
   BASE_URL: GATEWAY_BASE_URL,
+  INTERFACE_GENERATE: API_V1_URL + '/interface/generate',
   LOGIN: API_V1_URL + '/user/login',
   REGISTER: API_V1_URL + '/web/register',
   RETRIEVE: API_V1_URL + '/web/password',
@@ -52,6 +53,8 @@ export const API = {
       deviceKeyV2Url(logicalDeviceId) + '/device-key:rotate',
     PAGE_LAYOUT: (logicalDeviceId: string) =>
       deviceKeyV2Url(logicalDeviceId) + '/page-layout',
+    UI_CONFIG: (logicalDeviceId: string) =>
+      deviceKeyV2Url(logicalDeviceId) + '/ui-config',
     SHARE_INVITATIONS: (logicalDeviceId: string) =>
       deviceKeyV2Url(logicalDeviceId) + '/share-invitations',
     SHARE_INVITATION: (logicalDeviceId: string, invitationId: string) =>
@@ -129,7 +132,8 @@ export const API = {
 } as const;
 
 export function isGatewayUrl(url: string): boolean {
-  return url.startsWith(API_V1_URL + '/auth/')
+  return url === API.INTERFACE_GENERATE
+    || url.startsWith(API_V1_URL + '/auth/')
     || url === API_V1_URL + '/account'
     || url.startsWith(API_V1_URL + '/account/')
     || url === API_V2_URL + '/account/connection'
@@ -175,6 +179,7 @@ function isDeviceKeyManagementUrl(url: string): boolean {
       || parts[1] === 'presence-key:sync'
       || parts[1] === 'presence-key:confirm'
       || parts[1] === 'page-layout'
+      || parts[1] === 'ui-config'
       || parts[1] === 'share-invitations'
       || parts[1] === 'shares';
   }

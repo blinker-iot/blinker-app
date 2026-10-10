@@ -27,6 +27,11 @@
       </div>
     </ion-title>
     <ion-buttons slot="end">
+      @if (deviceComponent !== 'Customizer') {
+      <ion-button aria-label="设备主题" title="设备主题" [attr.aria-expanded]="themePickerOpen" (click)="openThemePicker($event)">
+        <i class="fa-light fa-palette"></i>
+      </ion-button>
+      }
       <ng-container
         [ngTemplateOutlet]="deviceHeaderActions"
       ></ng-container>
@@ -40,6 +45,29 @@
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
+<ion-popover class="device-theme-popover" [isOpen]="themePickerOpen" [event]="themePickerEvent"
+  (didDismiss)="themePickerOpen = false" side="bottom" alignment="end">
+  <ng-template>
+    <section class="theme-picker" [attr.data-device-theme]="deviceTheme" aria-label="设备主题选择">
+      <div class="theme-picker-heading">
+        <div><h2>设备主题</h2><p>为这个设备选一个喜欢的风格</p></div>
+        <button type="button" class="theme-close" aria-label="关闭主题选择" (click)="themePickerOpen = false">×</button>
+      </div>
+      <div class="theme-options" role="group" aria-label="主题风格">
+        @for (theme of deviceThemes; track theme.id) {
+        <button type="button" class="theme-option" [attr.data-device-theme]="theme.id"
+          [attr.aria-pressed]="selectedDeviceTheme === theme.id" (click)="selectDeviceTheme(theme.id)">
+          <span class="theme-swatch" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span class="theme-copy"><strong>{{theme.name}}</strong><small>{{theme.description}}</small></span>
+          <span class="theme-check" aria-hidden="true">{{selectedDeviceTheme === theme.id ? '✓' : ''}}</span>
+        </button>
+        }
+      </div>
+      <button type="button" class="theme-restore" [disabled]="!selectedDeviceTheme" (click)="restoreDeviceTheme()">{{selectedDeviceTheme ? '恢复界面原有风格' : '当前使用界面原有风格'}}</button>
+      <p class="theme-save-hint" role="status">{{themeSaved ? '仅此设备 · 在此浏览器记住选择' : '已应用 · 当前浏览器无法保存偏好'}}</p>
+    </section>
+  </ng-template>
+</ion-popover>
 }
 @if (loaded && device && usesV2DevicePage) {
 <ng-template #deviceView></ng-template>

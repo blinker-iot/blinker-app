@@ -1,9 +1,9 @@
 <div widget [ngClass]="{'flex-row-box': lstyle==2 || lstyle==3}">
   @if (lstyle==3) {
   <div class="jj-box jj-box2">
-    <div class="jj-btn" (click)="jian()">
+    <button type="button" class="jj-btn" aria-label="减小数值" [disabled]="value <= min" (click)="jian()">
       <i class="fal fa-minus"></i>
-    </div>
+    </button>
   </div>
   }
   <div
@@ -20,10 +20,10 @@
       [max]="max"
       [(value)]="value"
       (valueChange)="sendData($event)"
-      [barcolor]="'#D8D8D8'"
-      [activecolor]="color"
+      [barcolor]="'var(--blinker-surface-muted)'"
+      [activecolor]="color || 'var(--ion-color-primary)'"
     >
-      <div class="textbox top" [ngStyle]="{'width': textBoxWidth}">
+      <div class="textbox top" aria-hidden="true" [ngStyle]="{'width': textBoxWidth}">
         <span>{{t0}}</span>
         <span>{{value}}</span>
       </div>
@@ -32,18 +32,18 @@
   <!-- 加减按键 -->
   @if (lstyle==2) {
   <div class="jj-box">
-    <div class="jj-btn" (click)="jia()">
+    <button type="button" class="jj-btn" aria-label="增大数值" [disabled]="value >= max" (click)="jia()">
       <i class="fal fa-plus"></i>
-    </div>
-    <div class="jj-btn" (click)="jian()">
+    </button>
+    <button type="button" class="jj-btn" aria-label="减小数值" [disabled]="value <= min" (click)="jian()">
       <i class="fal fa-minus"></i>
-    </div>
+    </button>
   </div>
   } @if (lstyle==3) {
   <div class="jj-box jj-box2">
-    <div class="jj-btn" (click)="jia()">
+    <button type="button" class="jj-btn" aria-label="增大数值" [disabled]="value >= max" (click)="jia()">
       <i class="fal fa-plus"></i>
-    </div>
+    </button>
   </div>
   }
 </div>

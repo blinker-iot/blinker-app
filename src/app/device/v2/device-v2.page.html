@@ -20,7 +20,7 @@
 </ion-header>
 }
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" [attr.data-interface-style]="layout?.style || null">
   <main class="v2-content content-under-header">
     @if (error) {
       <section class="notice error">
@@ -71,7 +71,7 @@
         @for (widget of widgets; track widget.widgetId) {
           @if (endpoint(widget); as field) {
             <article
-              class="field"
+              class="field" [class.value-field]="widget.type === 'value'"
               [class.compact]="widget.appearance === 'compact'"
               [class.emphasized]="widget.appearance === 'emphasized'"
               [style.grid-column]="(widget.grid.x + 1) + ' / span ' + widget.grid.width"

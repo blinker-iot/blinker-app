@@ -1,5 +1,9 @@
+:host { container-type: size; }
+
 .btnbox {
-    padding: 0.2rem;
+    box-sizing: border-box;
+    padding: 10px 8px;
+    gap: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -14,17 +18,19 @@
     -webkit-touch-callout: none;
 
     i {
-        font-size: 2.1rem;
+        font-size: clamp(22px, 28cqh, 34px);
+        line-height: 1.1;
     }
 
     .content {
-        position: absolute;
-        bottom: 0.25rem;
+        flex: 0 0 auto;
+        line-height: 1.2;
         font-size: 0.7rem;
         width: 100%;
         text-align: center;
         overflow: hidden;
         white-space: nowrap;
+        text-overflow: ellipsis;
     }
 }
 
@@ -44,7 +50,7 @@
 }
 
 .bigger {
-    font-size: 5rem !important;
+    font-size: clamp(32px, 42cqh, 72px) !important;
 }
 
 .action:active {
@@ -81,4 +87,9 @@
     .off {
         right: calc(100% - 22px);
     }
+}
+
+@container (max-height: 78px) {
+    .btnbox { padding: 6px; gap: 4px; }
+    .btnbox .content { font-size: 10px; }
 }

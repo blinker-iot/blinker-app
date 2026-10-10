@@ -347,6 +347,9 @@ export class Layouter2Component implements DeviceComponent {
     this.viewService.disableSwipeBack();
     this.viewReady = true;
     this.applyMode();
+    if (this.activatedRoute.snapshot.queryParamMap?.get('edit') === '1') {
+      this.unlock();
+    }
     this.actionSubject = this.LayouterService.action.subscribe(async (act) => {
       if (act.name == 'addWidget') this.addWidget(act.data);
       else if (act.name == 'delWidget') this.delWidget(act.data);
@@ -488,9 +491,21 @@ export class Layouter2Component implements DeviceComponent {
     this.changeLayoutMode(Mode.Edit);
   }
 
-  lock(): void {
-    this.changeLayoutMode(Mode.Default);
-    this.saveLayouterData();
+  savingLayout = false;
+
+  async lock(): Promise<void> {
+    if (this.savingLayout) return;
+    this.savingLayout = true;
+    const submitted = JSON.stringify(this.device?.data?.layouterData);
+    try {
+      if (await this.saveLayouterData()
+        && submitted === JSON.stringify(this.device?.data?.layouterData)) {
+        this.changeLayoutMode(Mode.Default);
+      }
+    } finally {
+      this.savingLayout = false;
+      this.changeDetectorRef.markForCheck();
+    }
   }
 
   canDeactivate(): Observable<boolean> | boolean {
@@ -502,24 +517,27 @@ export class Layouter2Component implements DeviceComponent {
     this.mode = mode;
   }
 
-  private saveLayouterData(): void {
-    if (!this.device?.data?.layouterData) return;
+  private async saveLayouterData(): Promise<boolean> {
+    if (!this.device?.data?.layouterData) return false;
 
     const data = JSON.stringify(this.device.data.layouterData);
-    if (this.oldLayouterData === data) return;
-    this.device.config.layouter = data;
-    this.oldLayouterData = data;
+    if (this.oldLayouterData === data) return true;
 
     if (this.device.config.isPreview) {
+      this.device.config.layouter = data;
+      this.oldLayouterData = data;
       this.device.subject.next({ key: 'layouter', value: data });
-      return;
+      return true;
     }
-
-    this.deviceService
-      .saveDeviceConfig(this.device, { layouter: data })
-      .then((result) => {
-        if (result) this.deviceService.loadDeviceLayouter(this.device);
-      });
+    try {
+      if (!await this.deviceService.saveDeviceConfig(this.device, { layouter: data })) throw new Error();
+      this.device.config.layouter = data;
+      this.oldLayouterData = data;
+      return true;
+    } catch {
+      await this.noticeService.showToast('布局保存失败，修改已保留，请重试保存');
+      return false;
+    }
   }
 
   //删除组件

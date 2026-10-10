@@ -1,20 +1,20 @@
 <ng-template #headerActions>
   @if (canEditLayout) {
   @if (mode != 'edit') {
-  <ion-button class="layouter-action" (click)="unlock()">
+  <ion-button class="layouter-action" aria-label="编辑布局" (click)="unlock()">
     <i class="fa-light fa-pen-to-square"></i>
   </ion-button>
   } @else {
-  <ion-button class="layouter-action" (click)="cleanWidgets()">
+  <ion-button class="layouter-action" aria-label="清空组件" [disabled]="savingLayout" (click)="cleanWidgets()">
     <i class="fa-light fa-trash-can"></i>
   </ion-button>
-  <ion-button class="layouter-action" (click)="lock()">
+  <ion-button class="layouter-action" aria-label="保存布局" [disabled]="savingLayout" (click)="lock()">
     <i class="fa-light fa-lock"></i>
   </ion-button>
   }
   }
 </ng-template>
-<div device-box #gridsterBox [class.is-editing]="mode == 'edit'">
+<div device-box #gridsterBox [attr.data-interface-style]="config.interfaceStyle || null" [class.is-editing]="mode == 'edit'">
   <gridster [options]="options">
     @for (widget of dashboard; track widget) {
     <gridster-item [item]="widget">

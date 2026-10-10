@@ -356,6 +356,28 @@ describe('ServerInterceptor', () => {
     httpTesting.expectNone(API.AUTH.REFRESH);
   });
 
+  it('preserves structured AI errors when the streaming transport requests text', () => {
+    let received: unknown;
+    http.post(API.INTERFACE_GENERATE, {}, { responseType: 'text' }).subscribe({ error: error => received = error });
+    const request = httpTesting.expectOne(API.INTERFACE_GENERATE);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer old-access');
+    request.flush(JSON.stringify({ errorCode: 'INTERFACE_AI_UNAVAILABLE', errorMessage: 'not configured' }), { status: 503, statusText: 'Service Unavailable' });
+    expect(received).toMatchObject({ code: 'INTERFACE_AI_UNAVAILABLE', httpStatus: 503 });
+  });
+
+  it('allows AI generation to exceed 30 seconds but keeps a bounded timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      let received: unknown;
+      http.post(API.INTERFACE_GENERATE, {}).subscribe({ error: error => received = error });
+      const request = httpTesting.expectOne(API.INTERFACE_GENERATE);
+      await vi.advanceTimersByTimeAsync(45_001);
+      expect(request.cancelled).toBe(false); expect(received).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(request.cancelled).toBe(true); expect(received).toMatchObject({ code: 'GATEWAY_TIMEOUT' });
+    } finally { vi.useRealTimers(); }
+  });
+
   it('times out a pending Gateway request with a normalized error', async () => {
     vi.useFakeTimers();
     try {

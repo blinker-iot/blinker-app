@@ -27,6 +27,7 @@ import { DebugComponent } from '../debug/debug.component';
 import { DebugService } from '../debug/debug.service';
 import { DeviceService } from '../core/services/device.service';
 import { ViewService } from '../core/services/view.service';
+import { DEVICE_THEMES, DeviceTheme, readDeviceTheme, saveDeviceTheme } from './device-theme';
 
 interface LoadedDeviceComponent {
   device?: BlinkerDevice;
@@ -48,6 +49,7 @@ interface LoadedDeviceComponent {
   ],
   templateUrl: './device.page.html',
   styleUrls: ['./device.page.scss'],
+  host: { '[attr.data-device-theme]': 'selectedDeviceTheme ?? null' },
 })
 export class DevicePage implements OnInit, OnDestroy {
   loaded = false;
@@ -56,6 +58,30 @@ export class DevicePage implements OnInit, OnDestroy {
   viewActive = false;
   deviceComponent = '';
   deviceHeaderActions: TemplateRef<unknown> | null = null;
+  readonly deviceThemes = DEVICE_THEMES;
+  selectedDeviceTheme?: DeviceTheme;
+  themePickerOpen = false;
+  themePickerEvent?: Event;
+  themeSaved = true;
+
+  get deviceTheme(): DeviceTheme {
+    return this.selectedDeviceTheme ?? (this.viewService.theme === 'dark' ? 'graphite' : 'clear');
+  }
+
+  openThemePicker(event: Event): void {
+    this.themePickerEvent = event;
+    this.themePickerOpen = true;
+  }
+
+  selectDeviceTheme(theme: DeviceTheme): void {
+    this.selectedDeviceTheme = theme;
+    this.themeSaved = saveDeviceTheme(this.id, theme);
+  }
+
+  restoreDeviceTheme(): void {
+    this.selectedDeviceTheme = undefined;
+    this.themeSaved = saveDeviceTheme(this.id, undefined);
+  }
 
   private readonly subscriptions = new Subscription();
   private deviceSubject?: Subscription;
@@ -112,6 +138,9 @@ export class DevicePage implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.activatedRoute.paramMap.subscribe((params) => {
         this.id = params.get('id') || '';
+        this.selectedDeviceTheme = readDeviceTheme(this.id);
+        this.themePickerOpen = false;
+        this.themeSaved = true;
         this.updateViewActive(this.router.url);
         this.bindDevice();
       }),

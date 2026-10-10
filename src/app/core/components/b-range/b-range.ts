@@ -68,7 +68,7 @@ export class BRangeComponent {
   _barColor = '#389BEE'
   @Input()
   set barcolor(color) {
-    if (color[0] != '#' && color[0] != 'r' && color[0] != 'l') color = '#' + color;
+    color = this.normalizeColor(color);
     this.renderer.setStyle(this.bar.nativeElement, 'background', color);
     this._barColor = color;
   }
@@ -79,7 +79,7 @@ export class BRangeComponent {
   _activebarColor = '#389BEE'
   @Input()
   set activecolor(color) {
-    if (color[0] != '#' && color[0] != 'r') color = '#' + color;
+    color = this.normalizeColor(color);
     if (this.activebar)
       this.renderer.setStyle(this.activeBar.nativeElement, 'background', color);
     if (this.activebar2)
@@ -88,6 +88,11 @@ export class BRangeComponent {
   }
   get activecolor() {
     return this._activebarColor;
+  }
+
+  private normalizeColor(color: string | undefined): string {
+    if (!color) return 'var(--ion-color-primary)';
+    return /^[0-9a-f]{3,8}$/i.test(color) ? `#${color}` : color;
   }
 
   @Output() sendData = new EventEmitter();

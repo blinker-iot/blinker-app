@@ -1,3 +1,4 @@
+@use '../../../theme/interface-style' as panel;
 :host {
   display: flex;
   min-height: 0;
@@ -162,5 +163,18 @@ ion-content {
 
   .slider {
     width: 100%;
+  }
+}
+
+ion-content {
+  @include panel.interface-style;
+  &[data-interface-style] {
+    --background: var(--panel-bg);
+    .field.emphasized { border-color: var(--panel-accent); background: color-mix(in srgb, var(--panel-accent) 8%, var(--panel-surface)); }
+    .value-field .field-copy span { color: var(--panel-ink); font: 30px var(--panel-font); }
+    ion-toggle { --track-background-checked: var(--panel-accent); }
+    ion-range { --bar-background-active: var(--panel-accent); --knob-background: var(--panel-accent); }
+    ion-button { --background: var(--panel-accent); --color: var(--panel-surface); }
+    .field-copy strong { white-space: normal; overflow-wrap: anywhere; }
   }
 }

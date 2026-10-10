@@ -429,12 +429,17 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   async saveName(customName) {
-    let newConfig = {
-      customName: customName,
-    };
-    if (await this.deviceService.saveDeviceConfig(this.device, newConfig)) {
-      this.device.config.customName = customName;
+    const name = typeof customName === 'string' ? customName.trim() : '';
+    if (!name) {
+      await this.noticeService.showToast('设备名称不能为空');
+      return;
     }
+    if (await this.deviceService.saveDeviceConfig(this.device, { customName: name })) {
+      this.device.config.customName = name;
+      this.device.subject.next({ key: 'customName', value: name });
+      return;
+    }
+    await this.noticeService.showToast('保存设备名称失败，请稍后重试');
   }
 
   async selectIcon() {
