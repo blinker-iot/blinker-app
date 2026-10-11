@@ -87,6 +87,7 @@ export interface DeviceKeyLogicalDevice extends DeviceV2PresenceMetadata {
   locator: string | null;
   tenantId: string;
   name: string;
+  displayMetadata?: import('../device-v2/display-metadata').DeviceDisplayMetadata;
   deviceType: string;
   state: string;
   createdAt: number;

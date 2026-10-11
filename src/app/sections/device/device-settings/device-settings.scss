@@ -144,3 +144,19 @@ main {
 }
 
 .notice { padding: 18px; color: var(--muted); line-height: 1.55; }
+
+.display-card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface, #fff);
+  .section-heading { align-items: center; }
+  button { border: 0; border-radius: 10px; padding: 10px 14px; color: #4e63dc; background: #edf1ff; }
+  button:disabled { opacity: .45; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  label { display: grid; gap: 7px; color: var(--muted); font-size: 13px; }
+  input { min-width: 0; width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 10px; color: inherit; background: transparent; }
+  .display-field { display: grid; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+  .boolean-labels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .display-save { margin-top: 14px; }
+}

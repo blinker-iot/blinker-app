@@ -16,7 +16,6 @@ import { Router } from '@angular/router';
 import Sortable from 'sortablejs';
 
 import { DataService } from 'src/app/core/services/data.service';
-import { DeviceUiPort } from 'src/app/core/device-v2/device-ui.port';
 import { UserService } from 'src/app/core/services/user.service';
 import { Deviceblock } from '../deviceblock/deviceblock';
 import { getDeviceRoute } from './device-navigation';
@@ -103,7 +102,6 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     private userService: UserService,
     private router: Router,
     private dataService: DataService,
-    private deviceUi: DeviceUiPort,
     private cd: ChangeDetectorRef,
     destroyRef: DestroyRef
   ) {
@@ -111,7 +109,6 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
       .pipe(takeUntilDestroyed(destroyRef))
       .subscribe(() => {
         this.cd.markForCheck();
-        this.refreshBlePresence();
       });
   }
 
@@ -120,7 +117,6 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
       this.sortbox.nativeElement,
       this.sortableOptions
     );
-    this.refreshBlePresence();
   }
 
   ngOnDestroy() {
@@ -178,7 +174,4 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     this.refresherEnabled.emit(enabled);
   }
 
-  private refreshBlePresence(): void {
-    void this.deviceUi.refreshBlePresence(this.deviceDataList).catch(() => undefined);
-  }
 }

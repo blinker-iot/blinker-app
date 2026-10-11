@@ -13,6 +13,7 @@ import { IonicModule } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 
 import { BlinkerDevice } from '../../core/model/device.model';
+import { capabilityBooleanLabel, capabilityDisplayName } from '../../core/device-v2/display-metadata';
 import {
   DeviceUiConnectivitySnapshot,
   DeviceUiConnectionState,
@@ -22,6 +23,7 @@ import {
   DeviceUiPort,
   DeviceUiSnapshot,
   DeviceUiTelemetryLease,
+  DeviceUiTelemetrySnapshot,
   DeviceUiValue,
 } from '../../core/device-v2/device-ui.port';
 import {
@@ -37,6 +39,14 @@ import {
   DeviceV2PageLayoutRecord,
   DeviceV2PageLayoutService,
 } from '../../core/services/device-v2-page-layout.service';
+import { TelemetryChartComponent } from './telemetry-chart.component';
+import {
+  TelemetryPresentation,
+  TelemetryFieldPresentation,
+  telemetryFreshnessLabel,
+  telemetryIntervalLabel,
+  telemetrySourceLabel,
+} from './telemetry-presentation';
 const BLE_FOREGROUND_RECONNECT_DELAYS_MS = [1000, 2500, 5000] as const;
 
 function emptySnapshot(): DeviceUiSnapshot {
@@ -53,7 +63,7 @@ function emptySnapshot(): DeviceUiSnapshot {
 @Component({
   selector: 'app-device-v2-page',
   standalone: true,
-  imports: [CommonModule, IonicModule, RouterModule],
+  imports: [CommonModule, IonicModule, RouterModule, TelemetryChartComponent],
   templateUrl: './device-v2.page.html',
   styleUrls: ['./device-v2.page.scss'],
 })
@@ -103,9 +113,13 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private telemetry?: DeviceUiTelemetryLease;
   private telemetryDetach?: () => void;
   private telemetryKey = '';
+  private telemetryCarrier: 'cloud' | 'ble' | 'lan' = 'cloud';
   private telemetryEpoch = 0;
   private telemetryOpening = false;
-  private telemetryValues = new Map<string, DeviceUiValue | undefined>();
+  private telemetrySnapshot?: DeviceUiTelemetrySnapshot;
+  private readonly telemetryPresentation = new TelemetryPresentation();
+  private telemetryFields = new Map<string, TelemetryFieldPresentation>();
+  private telemetryClockTimer?: ReturnType<typeof setInterval>;
   private readonly drafts = new Map<string, string>();
   private readonly fieldErrors = new Map<string, string>();
   private endpointsByKey = new Map<string, DeviceUiEndpoint>();
@@ -115,7 +129,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   constructor(
     private readonly deviceUi: DeviceUiPort,
     private readonly pageLayouts: DeviceV2PageLayoutService,
-    private readonly changeDetector: ChangeDetectorRef = { detectChanges: () => undefined } as ChangeDetectorRef,
+    private readonly changeDetector: ChangeDetectorRef = { detectChanges: () => undefined,
+      markForCheck: () => undefined } as ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
@@ -125,6 +140,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       const resumed = active && !this.appActive;
       this.appActive = active;
       if (!active) {
+        this.clearTelemetryPresentation();
         this.cancelSynchronization();
         this.cancelBleReconnect(false);
       } else if (resumed && this.pageVisible) {
@@ -189,13 +205,35 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   value(field: DeviceUiEndpoint): DeviceUiValue | undefined {
-    return this.telemetryValues.has(field.key)
-      ? this.telemetryValues.get(field.key)
-      : field.value;
+    const liveValue = this.telemetryFields.get(field.key)?.value;
+    return liveValue !== undefined ? liveValue : field.value;
+  }
+
+  telemetryField(field: DeviceUiEndpoint): TelemetryFieldPresentation | undefined {
+    return this.telemetryFields.get(field.key);
+  }
+
+  telemetryFreshness(field: TelemetryFieldPresentation): string {
+    return telemetryFreshnessLabel(field);
+  }
+
+  get telemetrySummary(): string {
+    const source = this.telemetrySnapshot?.source;
+    return source ? `${telemetrySourceLabel(source)} · ${telemetryIntervalLabel(this.telemetryIntervalMs)}` : '';
   }
 
   display(field: DeviceUiEndpoint): string {
-    return this.format(this.value(field));
+    const value = this.value(field);
+    return typeof value === 'boolean' && field.valueType === 'boolean'
+      ? capabilityBooleanLabel(this.device, { key: field.key, kind: field.manifestKind, type: field.manifestType }, value)
+      : this.format(value);
+  }
+
+  fieldTitle(widget: PageLayoutWidget, field: DeviceUiEndpoint): string {
+    // Older generated layouts used the raw key as their default title.
+    // A genuine custom widget title remains local to that widget.
+    return widget.title && widget.title !== field.key ? widget.title
+      : capabilityDisplayName(this.device, { key: field.key, kind: field.manifestKind, type: field.manifestType });
   }
 
   get lastEventText(): string {
@@ -345,7 +383,17 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
         }
       }));
       this.deviceSubscriptions.add(this.deviceUi.watchConnectivity(nextId).subscribe(
-        connectivity => this.updateBleReconnect(connectivity),
+        connectivity => {
+          // Ready -> ready carrier changes do not emit watchConnection again.
+          // Retire the old stream before accepting a new source or its samples.
+          const carrier = connectivity.activeTransport;
+          if (this.telemetryCarrier !== carrier) {
+            this.telemetryCarrier = carrier;
+            this.releaseTelemetry();
+            this.refreshTelemetry();
+          }
+          this.updateBleReconnect(connectivity);
+        },
       ));
       this.deviceSubscriptions.add(this.deviceUi.watchState(nextId).subscribe({
         next: snapshot => this.applySnapshot(snapshot),
@@ -468,7 +516,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.releaseTelemetry();
       return;
     }
-    const key = `${this.logicalDeviceId}\0${this.snapshot.manifestFingerprint}\0`
+    const key = `${this.logicalDeviceId}\0${this.snapshot.manifestFingerprint}\0${this.telemetryCarrier}\0`
       + `${configuration.intervalMs}\0${configuration.endpointKeys.join('\0')}`;
     if (key !== this.telemetryKey) {
       this.releaseTelemetry();
@@ -499,9 +547,14 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.telemetryOpening = false;
       this.telemetry = lease;
       this.telemetryDetach = lease.subscribe(snapshot => {
+        if (this.destroyed || !this.pageVisible || !this.appActive || this.telemetry !== lease
+          || this.telemetryEpoch !== epoch || this.telemetryKey !== key) return;
         this.telemetryActive = snapshot.active;
         this.telemetryIntervalMs = snapshot.effectiveIntervalMs;
-        this.telemetryValues = new Map(Object.entries(snapshot.values));
+        this.telemetrySnapshot = snapshot;
+        this.telemetryPresentation.update(snapshot);
+        this.refreshTelemetryPresentation();
+        this.reconcileTelemetryClock();
         this.telemetryError = '';
         this.requestRender();
       });
@@ -543,14 +596,43 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.telemetry = undefined;
     this.telemetryActive = false;
     this.telemetryIntervalMs = 0;
-    this.telemetryValues.clear();
+    this.clearTelemetryPresentation();
     if (lease) void lease.close().catch(() => undefined);
+  }
+
+  private refreshTelemetryPresentation(): void {
+    const now = performance.now();
+    this.telemetryFields = new Map((this.telemetrySnapshot ? this.telemetryConfiguration()?.endpointKeys ?? [] : [])
+      .map(key => [key, this.telemetryPresentation.field(key, now)]));
+  }
+
+  private reconcileTelemetryClock(): void {
+    const enabled = this.telemetryActive && this.pageVisible && this.appActive && !this.destroyed;
+    if (!enabled) {
+      clearInterval(this.telemetryClockTimer);
+      this.telemetryClockTimer = undefined;
+    } else if (!this.telemetryClockTimer) {
+      this.telemetryClockTimer = setInterval(() => {
+        this.refreshTelemetryPresentation();
+        this.requestRender();
+      }, 1000);
+    }
+  }
+
+  private clearTelemetryPresentation(): void {
+    this.telemetryActive = false;
+    this.telemetryIntervalMs = 0;
+    clearInterval(this.telemetryClockTimer);
+    this.telemetryClockTimer = undefined;
+    this.telemetrySnapshot = undefined;
+    this.telemetryPresentation.reset();
+    this.telemetryFields.clear();
   }
 
   private setTelemetryError(error: unknown): void {
     this.telemetryError = this.messageOf(error, '实时数据暂不可用');
     this.telemetryActive = false;
-    this.telemetryValues.clear();
+    this.clearTelemetryPresentation();
     this.requestRender();
   }
 
@@ -627,6 +709,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private setPageVisible(visible: boolean): void {
     if (this.pageVisible === visible) return;
     this.pageVisible = visible;
+    if (!visible) this.clearTelemetryPresentation();
     if (!this.initialized || this.destroyed) return;
     if (visible) {
       this.resetBleReconnect();
@@ -707,7 +790,12 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.renderPending = true;
     queueMicrotask(() => {
       this.renderPending = false;
-      if (!this.destroyed) this.changeDetector.detectChanges();
+      if (!this.destroyed) {
+        // The embedded shell also reads our status. A child-only refresh does
+        // not invalidate its parent after an async/native completion.
+        this.changeDetector.markForCheck();
+        this.changeDetector.detectChanges();
+      }
     });
   }
 
@@ -723,6 +811,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     if (code === 'DEVICE_V2_READY_CANCELLED') return '';
     if (code === 'DEVICE_V2_COMMAND_OUTCOME_UNKNOWN') return '操作结果尚未确认，请先检查设备状态，勿重复操作';
     const message = error instanceof Error ? error.message : '';
+    if (message === 'DIRECT_TELEMETRY_NOT_SUPPORTED') return '此设备固件暂不支持本地实时数据';
+    if (message === 'DIRECT_TELEMETRY_OBSERVE_REQUIRED') return '没有实时数据查看权限';
     if (message === 'BLE_DIRECT_SCAN_TIMEOUT' || message === 'BLE_DIRECT_SCAN_FAILED') {
       return '未发现附近设备';
     }

@@ -58,14 +58,12 @@
         }
       </section>
     } @else {
-      <section class="summary">
-        <span>Manifest {{ snapshot.manifestRevision }}</span>
-        <span>Layout {{ layout.revision }}</span>
-        <span>State {{ snapshot.stateRevision ?? '—' }}</span>
-        @if (telemetryActive) {
-          <span>Realtime {{ telemetryIntervalMs }} ms</span>
-        }
-      </section>
+      @if (telemetryActive) {
+        <section class="summary telemetry-summary" aria-label="实时数据来源与实际间隔">
+          <span>{{ telemetrySummary }}</span>
+          <span>仅本页可见时更新</span>
+        </section>
+      }
 
       <section class="fields">
         @for (widget of widgets; track widget.widgetId) {
@@ -78,13 +76,16 @@
               [style.grid-row]="(widget.grid.y + 1) + ' / span ' + widget.grid.height"
             >
               <div class="field-copy">
-                <strong>{{ widget.title || field.key }}</strong>
+                <strong>{{ fieldTitle(widget, field) }}</strong>
                 <span>{{ display(field) }}{{ unit(field) ? ' ' + unit(field) : '' }}</span>
+                @if (telemetryField(field); as live) {
+                  <small class="telemetry-freshness" [class.stale]="live.status === 'stale'">{{ telemetryFreshness(live) }}</small>
+                }
               </div>
 
               @if (widget.type === 'switch') {
                 <ion-toggle
-                  aria-label="设置 {{ widget.title || field.key }}"
+                  aria-label="设置 {{ fieldTitle(widget, field) }}"
                   [checked]="value(field) === true"
                   [disabled]="pending.has(field.key) || !canControl"
                   (ionChange)="setBoolean(field, $event)"
@@ -121,6 +122,13 @@
                     (click)="commit(field)"
                   >发送</ion-button>
                 </div>
+              }
+
+              @if (telemetryField(field); as live) {
+                @if (field.valueType === 'integer' || field.valueType === 'number') {
+                  <app-telemetry-chart class="telemetry-chart" [points]="live.points"
+                    [label]="fieldTitle(widget, field) + '实时变化'" [unit]="unit(field)" />
+                }
               }
 
               @if (fieldError(field)) {

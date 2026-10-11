@@ -27,6 +27,8 @@ import { DeviceV2ManifestCache } from '../services/device-v2-manifest-cache.serv
 import { DataService } from '../services/data.service';
 import { NetworkService } from '../services/network.service';
 import { DeviceV2LanService } from '../services/device-v2-lan.service';
+import { API } from '../../configs/api.config';
+import { captureDeviceV2AccountContext, assertDeviceV2AccountContext, DeviceV2AccountContext } from './account-scope';
 import { DirectDeviceSession } from '../protocol/device-v2/direct-session';
 import { BleOfflineOpportunity } from './ble-direct/offline-opportunity';
 import { DeviceUiConnection, DeviceUiConnectionScope } from './connection-scope';
@@ -51,12 +53,16 @@ interface ConnectionGroup {
   disconnectOnIdle: boolean;
   // Explicitly offline callers share one bounded physical Direct opportunity.
   direct?: DeviceUiConnectionScope;
-  lan?: { controller: AbortController; ready: Promise<void>; session?: DirectDeviceSession; permissions?: 1 | 3 };
+  lan?: { controller: AbortController; ready: Promise<void>; account: DeviceV2AccountContext; generation: number;
+    session?: DirectDeviceSession; permissions?: 1 | 3 };
 }
 
 export interface DeviceUiEndpoint {
   id: number;
   key: string;
+  /** Exact Manifest identity for display aliases; never inferred from a widget. */
+  manifestKind?: DeviceV2EndpointKind;
+  manifestType?: DeviceV2ValueType;
   role: DeviceUiEndpointRole;
   valueType: DeviceUiValueType;
   readable: boolean;
@@ -88,7 +94,15 @@ export interface DeviceUiEvent {
 
 export interface DeviceUiTelemetrySnapshot {
   active: boolean;
+  source: DeviceUiTransport;
+  streamId: number;
+  epoch: number;
   effectiveIntervalMs: number;
+  sampleSequence?: number;
+  sampleMonotonicMs?: number;
+  receivedAtMs?: number;
+  receivedMonotonicMs?: number;
+  missedSamples: number;
   values: Readonly<Record<string, DeviceUiValue | undefined>>;
 }
 
@@ -97,6 +111,9 @@ export interface DeviceUiConnectivitySnapshot {
   directConnectAllowed: boolean;
   bleAccess: boolean | null;
   bleAdapterEnabled: boolean | null;
+  // Recent authenticated advertisement evidence, independent of connection
+  // work. Older/mock adapters may omit it; omission is not proof of proximity.
+  bleNearby?: boolean;
   bleState: DeviceV2BleConnectionState;
   cloudSessionState: DeviceV2AccountState;
 }
@@ -115,10 +132,19 @@ function cloneUiValue(value: DeviceV2Value['value']): DeviceUiValue | undefined 
   return value instanceof Uint8Array ? new Uint8Array(value) : value;
 }
 
-function mapTelemetrySnapshot(snapshot: DeviceV2TelemetrySnapshot): DeviceUiTelemetrySnapshot {
+function mapTelemetrySnapshot(snapshot: DeviceV2TelemetrySnapshot,
+  source: DeviceUiTransport): DeviceUiTelemetrySnapshot {
   return {
     active: snapshot.active,
+    source,
+    streamId: snapshot.streamId,
+    epoch: snapshot.epoch,
     effectiveIntervalMs: snapshot.effectiveIntervalMs,
+    sampleSequence: snapshot.sampleSequence,
+    sampleMonotonicMs: snapshot.sampleMonotonicMs,
+    receivedAtMs: snapshot.receivedAtMs,
+    receivedMonotonicMs: snapshot.receivedMonotonicMs,
+    missedSamples: snapshot.missedSamples,
     values: Object.fromEntries(Object.entries(snapshot.values).map(
       ([key, value]) => [key, cloneUiValue(value.value)],
     )),
@@ -129,15 +155,16 @@ class DeviceUiTelemetryLeaseAdapter implements DeviceUiTelemetryLease {
   constructor(
     private readonly lease: DeviceV2TelemetryLease,
     private readonly zone: NgZone,
+    private readonly source: DeviceUiTransport,
   ) {}
 
   get snapshot(): DeviceUiTelemetrySnapshot {
-    return mapTelemetrySnapshot(this.lease.snapshot);
+    return mapTelemetrySnapshot(this.lease.snapshot, this.source);
   }
 
   subscribe(listener: (snapshot: DeviceUiTelemetrySnapshot) => void): () => void {
     return this.lease.subscribe(snapshot => {
-      this.zone.run(() => listener(mapTelemetrySnapshot(snapshot)));
+      this.zone.run(() => listener(mapTelemetrySnapshot(snapshot, this.source)));
     });
   }
 
@@ -175,6 +202,19 @@ export class DeviceUiPort {
       this.active = active;
       if (!active) for (const group of this.connections.values()) {
         for (const scope of group.scopes) scope.close();
+      }
+    });
+    network?.changes?.subscribe(state => {
+      if (!this.active || !state.wifi) return;
+      for (const [id, group] of this.connections) {
+        const previous = group.lan;
+        if (!previous || previous.generation === state.generation || !this.lan?.available(id)
+          || ![...group.scopes].some(scope => !scope.signal.aborted)) continue;
+        // Resume can report native network freshness after page demand. One
+        // new generation may replace that old candidate, never retry its work.
+        previous.controller.abort();
+        if (this.transport(id).value === 'lan') this.selectTransport(id, 'cloud');
+        this.prepareLan(id, group, previous);
       }
     });
     let accountEpoch = data.sessionEpoch;
@@ -347,16 +387,30 @@ export class DeviceUiPort {
     return false;
   }
 
-  private prepareLan(id: string, group: ConnectionGroup): void {
-    const entry: NonNullable<ConnectionGroup['lan']> = { controller: new AbortController(), ready: Promise.resolve() };
+  private prepareLan(id: string, group: ConnectionGroup, previous?: NonNullable<ConnectionGroup['lan']>): void {
+    const entry: NonNullable<ConnectionGroup['lan']> = { controller: new AbortController(), ready: Promise.resolve(),
+      account: captureDeviceV2AccountContext(this.data, API.BASE_URL), generation: this.network?.current?.generation ?? 0 };
     group.lan = entry;
     const retire = () => {
       entry.controller.abort();
+      if (this.connections.get(id) !== group || group.lan !== entry) return;
       this.lanChanges.next(id);
-      if (this.connections.get(id) === group && this.transport(id).value === 'lan') this.selectTransport(id, 'cloud');
+      if (this.transport(id).value === 'lan') this.selectTransport(id, 'cloud');
     };
-    entry.ready = Promise.resolve().then(() => this.lan!.open(id, entry.controller.signal)).then(async ({ session, permissions }) => {
+    entry.ready = Promise.resolve().then(async () => {
+      if (previous) {
+        await previous.ready.catch(error => {
+          if (error instanceof Error && (error.message === 'LOCAL_DISCOVERY_CLEANUP_FAILED'
+            || ('code' in error && error.code === 'LOCAL_WS_CLEANUP_FAILED'))) throw error;
+        });
+        await previous.session?.close();
+      }
+      if (entry.controller.signal.aborted || this.connections.get(id) !== group || group.lan !== entry
+        || ![...group.scopes].some(scope => !scope.signal.aborted)) throw new Error('LOCAL_ACCESS_SCOPE_CLOSED');
+      return this.lan!.open(id, entry.controller.signal);
+    }).then(async ({ session, permissions }) => {
       if (entry.controller.signal.aborted || this.connections.get(id) !== group
+        || group.lan !== entry
         || ![...group.scopes].some(scope => !scope.signal.aborted)) {
         await session.close(); throw new Error('LOCAL_ACCESS_SCOPE_CLOSED');
       }
@@ -555,6 +609,7 @@ export class DeviceUiPort {
         : this.isCloudCapable(logicalDeviceId) ? null : true;
       let bleAdapterEnabled: boolean | null = null;
       let bleState = this.ble.connectionSnapshot(logicalDeviceId);
+      let bleNearby = this.ble.nearbySnapshot?.(logicalDeviceId) ?? false;
       let cloudSessionState = this.deviceV2.state.value;
       let closed = false;
       let last = '';
@@ -564,11 +619,12 @@ export class DeviceUiPort {
           directConnectAllowed: this.directConnectAllowed(logicalDeviceId),
           bleAccess,
           bleAdapterEnabled,
+          bleNearby,
           bleState,
           cloudSessionState,
         };
         const key = `${activeTransport}|${String(bleAccess)}|${String(bleAdapterEnabled)}`
-          + `|${bleState}|${cloudSessionState}`;
+          + `|${bleNearby}|${bleState}|${cloudSessionState}`;
         if (key === last) return;
         last = key;
         this.zone.run(() => subscriber.next(snapshot));
@@ -583,6 +639,10 @@ export class DeviceUiPort {
       });
       const bleSubscription = this.ble.watchConnection(logicalDeviceId).subscribe(value => {
         bleState = value;
+        publish();
+      });
+      const nearbySubscription = this.ble.watchNearby?.(logicalDeviceId).subscribe(value => {
+        bleNearby = value;
         publish();
       });
       const adapterSubscription = this.supportsDirectBle(logicalDeviceId)
@@ -615,16 +675,24 @@ export class DeviceUiPort {
         transportSubscription.unsubscribe();
         cloudSubscription.unsubscribe();
         bleSubscription.unsubscribe();
+        nearbySubscription?.unsubscribe();
         adapterSubscription?.unsubscribe();
         deviceSubscription?.unsubscribe();
       };
     });
   }
 
-  async refreshBlePresence(logicalDeviceIds: readonly string[]): Promise<void> {
+  watchBleAdapterEnabled(): Observable<boolean | null> {
+    return this.ble.watchAdapterEnabled();
+  }
+
+  async refreshBlePresence(logicalDeviceIds: readonly string[], signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) return;
     const ids = [...new Set(logicalDeviceIds.filter(id => id.length > 0))];
     const directIds = ids.filter(id => this.supportsDirectBle(id));
-    if (directIds.length) await this.ble.refreshPresence(directIds);
+    if (directIds.length) await (signal
+      ? this.ble.refreshPresence(directIds, signal) : this.ble.refreshPresence(directIds));
+    if (signal?.aborted) return;
     for (const logicalDeviceId of ids) {
       if (this.lanSession(logicalDeviceId)) continue;
       if (!this.supportsDirectBle(logicalDeviceId)) {
@@ -743,11 +811,39 @@ export class DeviceUiPort {
     endpointKeys: string[],
     intervalMs: number,
   ): Promise<DeviceUiTelemetryLease> {
+    if (this.transport(logicalDeviceId).value === 'lan') {
+      // A page's existing authenticated LAN session owns this lease. Opening
+      // telemetry must never discover, reconnect or silently use Cloud instead.
+      const entry = this.connections.get(logicalDeviceId)?.lan;
+      const session = this.lanSession(logicalDeviceId);
+      const assertCurrent = (): void => {
+        if (!entry || !session || !this.active || this.connections.get(logicalDeviceId)?.lan !== entry
+          || this.transport(logicalDeviceId).value !== 'lan' || this.lanSession(logicalDeviceId) !== session) {
+          throw new Error('LOCAL_ACCESS_SESSION_NOT_READY');
+        }
+        assertDeviceV2AccountContext(this.data, entry.account);
+        if (API.BASE_URL !== entry.account.authority) throw new Error('LOCAL_ACCESS_ACCOUNT_CHANGED');
+        if (entry.permissions !== 1 && entry.permissions !== 3) throw new Error('DIRECT_TELEMETRY_OBSERVE_REQUIRED');
+      };
+      assertCurrent();
+      const lease = await session!.openTelemetry(endpointKeys, intervalMs);
+      try {
+        assertCurrent();
+        return new DeviceUiTelemetryLeaseAdapter(lease, this.zone, 'lan');
+      } catch (error) {
+        await lease.close().catch(() => undefined);
+        throw error;
+      }
+    }
     if (this.transport(logicalDeviceId).value === 'ble') {
-      throw new Error('BLE_DIRECT_TELEMETRY_NOT_ENABLED');
+      if (this.isGatewayChild(logicalDeviceId) && !this.connections.get(logicalDeviceId)?.direct?.isReady) {
+        throw new Error('BLE_DIRECT_SCOPE_REQUIRED');
+      }
+      const lease = await this.ble.openTelemetryConnected(logicalDeviceId, endpointKeys, intervalMs);
+      return new DeviceUiTelemetryLeaseAdapter(lease, this.zone, 'ble');
     }
     const lease = await this.deviceV2.openTelemetry(logicalDeviceId, endpointKeys, intervalMs);
-    return new DeviceUiTelemetryLeaseAdapter(lease, this.zone);
+    return new DeviceUiTelemetryLeaseAdapter(lease, this.zone, 'cloud');
   }
 
   isBleDirect(logicalDeviceId: string): boolean {
@@ -818,6 +914,8 @@ export class DeviceUiPort {
     return {
       id: field.id,
       key: field.key,
+      manifestKind: field.kind,
+      manifestType: field.type,
       role: this.mapRole(field.kind),
       valueType: this.mapValueType(field.type),
       readable: (field.access & DeviceV2EndpointAccess.Read) !== 0,

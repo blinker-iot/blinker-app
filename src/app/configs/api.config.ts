@@ -46,6 +46,8 @@ export const API = {
     RESOLVE_INSTANCE: API_V2_URL + '/devices:resolve-instance',
     ENABLE_CLOUD: API_V2_URL + '/devices:enable-cloud',
     DETAIL: deviceKeyV2Url,
+    DISPLAY_METADATA: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/display-metadata',
+    STATE_HISTORY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/state-history',
     TASKS: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/tasks:execute',
     DIRECT_ADMIN: (logicalDeviceId: string) =>
       deviceKeyV2Url(logicalDeviceId) + '/direct-access/admin',
@@ -169,6 +171,8 @@ function isAutomationManagementUrl(url: string): boolean {
 }
 
 function isDeviceKeyManagementUrl(url: string): boolean {
+  // Range/cursor query parameters must not bypass the account Bearer chain.
+  url = url.split(/[?#]/, 1)[0];
   if (url === API_V2_URL + '/devices') return true;
   if (url === API.DEVICE_V2.RESOLVE_INSTANCE) return true;
   if (url === API.DEVICE_V2.ENABLE_CLOUD) return true;
@@ -190,6 +194,8 @@ function isDeviceKeyManagementUrl(url: string): boolean {
       || parts[1] === 'presence-key:sync'
       || parts[1] === 'presence-key:confirm'
       || parts[1] === 'page-layout'
+      || parts[1] === 'display-metadata'
+      || parts[1] === 'state-history'
       || parts[1] === 'share-invitations'
       || parts[1] === 'shares';
   }

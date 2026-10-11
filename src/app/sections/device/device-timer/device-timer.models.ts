@@ -4,6 +4,27 @@ import { DeviceV2Manifest, DeviceV2ManifestConstraints } from '../../../core/pro
 export type TaskTarget = TaskCatalog['targets'][number] & { constraints?: DeviceV2ManifestConstraints };
 const types: readonly string[] = ['boolean', 'int', 'uint', 'float32', 'float64'];
 
+type TaskEntryDevice = {
+  config?: { mode?: string; isPreview?: boolean; isShared?: boolean; disabled?: boolean };
+  deviceType?: string; gatewayRouted?: boolean;
+};
+
+// Availability grants access to a read-only query, not task support or authority.
+// Only the fresh authenticated catalog/table can confirm capacity and targets.
+export function taskEntryState(device?: TaskEntryDevice | null): { available: boolean; description: string } {
+  let description: string;
+  if (!device) description = '尚未找到设备，暂不能查询定时任务。';
+  else if (device.config?.isPreview) description = '预览设备不能管理定时任务，请先完成认领。';
+  else if (device.config?.isShared) description = '当前仅设备所有者可管理定时任务。';
+  else if (device.config?.disabled) description = '设备已停用，暂不能管理定时任务。';
+  else if (device.config?.mode !== 'bbp2') description = '此设备未使用 BBP/2，暂不能查询定时任务。';
+  else if (device.deviceType === 'edge-hub') description = '网关设备的定时管理暂未开放。';
+  else if (device.gatewayRouted) description = '网关子设备的定时管理暂未开放。';
+  else if (device.deviceType === 'ble') description = 'BLE 设备的定时管理暂未开放。';
+  else return { available: true, description: '设备本地执行，通过云端查询和管理；容量以设备查询结果为准。' };
+  return { available: false, description };
+}
+
 // Cached Manifest constraints are display hints, never scheduling permission.
 // The fresh authenticated catalog is authoritative; MCU revalidates the value.
 export function taskTargets(catalog: TaskCatalog, manifest?: DeviceV2Manifest): TaskTarget[] {
@@ -49,6 +70,10 @@ export function taskErrorText(error: unknown): string {
     TASK_RATE_LIMITED: '请求过快，请稍后手动重试。',
     TASK_BUSY: '设备管理繁忙，请稍后手动重试。',
     TASK_IN_FLIGHT: '原请求仍在处理中，请稍后核对。',
+    TASK_UNAVAILABLE: '定时管理服务暂不可用，请稍后手动查询。这不代表设备离线或设备上的任务已停止。',
+    TASK_CATALOG_UNAVAILABLE: '尚未取得设备定时能力目录，容量和可用属性尚未确认，请稍后手动查询。',
+    TASK_CATALOG_INVALID: '设备定时能力目录未能通过核对，容量和可用属性尚未确认，请刷新后再操作。',
+    TASK_TABLE_UNAVAILABLE: '尚未取得设备当前任务表，不能据此判断任务为空或已停止，请稍后手动查询。',
     TASK_DEVICE_OFFLINE: '设备当前没有可用的云端连接，请等待设备上线后手动查询。原未确认请求仍保留，不会自动重发。',
     TASK_CONNECTION_NOT_READY: '设备云端连接尚未就绪，请稍后手动查询。这不是设备任务额度或冷却限制。',
     TASK_CONNECTION_AMBIGUOUS: '设备存在多个云端连接，暂不能确定任务通道，请稍后手动查询。不会自动选择连接或重发操作。',

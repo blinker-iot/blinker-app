@@ -323,15 +323,21 @@ export class BleDirectClient {
     logicalDeviceId: string,
     credential: BleDirectAuthenticationCredential,
   ): Promise<BleDirectSession> {
+    // Read the physical MTU without activating it. ATT20 remains the carrier
+    // throughout Method 2; only the subsequent authenticated Hello can change
+    // packet size. Suppress unsolicited time requests until that exchange ends.
+    const capacity = this.link.maxPacketSize && this.link.preparePacketNegotiation && this.link.applyPacketSize
+      ? await this.link.maxPacketSize() : 20;
+    const packetCapacity = Number.isInteger(capacity) && capacity >= 20 && capacity <= 244 ? capacity : 20;
     let sequence = 1;
     await this.link.sendRecord(makeBbp2Frame(
-      Bbp2MessageKind.Hello, sequence, encodeDirectAppHelloBody('controller', 512, true),
+      Bbp2MessageKind.Hello, sequence, encodeDirectAppHelloBody('controller', 512, packetCapacity === 20),
     ));
     const helloFrame = parseBbp2Response(
       await this.link.receiveRecord(), Bbp2MessageKind.Hello, sequence,
     );
-    const hello = decodeDirectDeviceHelloBody(helloFrame.body, 'controller');
-    const maxFrameSize = Math.min(512, hello.maxFrameSize, hello.maxReassemblySize);
+    let hello = decodeDirectDeviceHelloBody(helloFrame.body, 'controller');
+    let maxFrameSize = Math.min(512, hello.maxFrameSize, hello.maxReassemblySize);
 
     const clientNonce = this.crypto.random(16);
     sequence += 1;
@@ -383,6 +389,30 @@ export class BleDirectClient {
     const secure = await DirectSecureInitiator.create(
       this.crypto, credential.controllerSecret, context,
     );
+    if (packetCapacity > 20) {
+      try {
+        this.link.preparePacketNegotiation!(packetCapacity);
+        sequence += 1;
+        await this.link.sendRecord(await secure.encrypt(makeBbp2Frame(
+          Bbp2MessageKind.Hello, sequence,
+          encodeDirectAppHelloBody('controller', maxFrameSize, true, packetCapacity),
+        )));
+        const response = parseBbp2Response(await secure.decrypt(
+          await this.link.receiveRecord(2000),
+        ), Bbp2MessageKind.Hello, sequence);
+        hello = decodeDirectDeviceHelloBody(response.body, 'controller');
+        const accepted = hello.blePacketSize ?? 20;
+        if (accepted > packetCapacity) throw Error('BLE_DIRECT_PACKET_NEGOTIATION_INVALID');
+        this.link.applyPacketSize!(accepted);
+        maxFrameSize = Math.min(maxFrameSize, hello.maxFrameSize, hello.maxReassemblySize);
+      } catch (error) {
+        secure.clear();
+        this.link.rememberPacketFallback?.();
+        // Missing/legacy capability is a successful ATT20 answer. A timeout,
+        // invalid authenticated answer or send failure is not safe to ignore.
+        throw error;
+      }
+    }
     return new BleDirectSession(new BleDirectSecureChannel(
       logicalDeviceId,
       this.link,

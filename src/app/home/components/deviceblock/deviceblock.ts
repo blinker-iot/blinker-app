@@ -74,13 +74,13 @@ export class Deviceblock {
   @Input() wide = false;
 
   get online(): boolean {
-    return this.connectivity.bleState === 'ready'
+    return this.connectivity.bleAdapterEnabled !== false && this.connectivity.bleState === 'ready'
       || this.current?.data?.cloudReachable === true;
   }
 
   get canControl(): boolean {
     const routeReady = this.connectivity.activeTransport === 'ble'
-      ? this.connectivity.bleState === 'ready'
+      ? this.connectivity.bleAdapterEnabled !== false && this.connectivity.bleState === 'ready'
       : this.current?.data?.cloudReachable === true
         && this.connectivity.cloudSessionState === 'ready';
     return routeReady
@@ -89,13 +89,9 @@ export class Deviceblock {
 
   get status(): DeviceCardStatus {
     if (this.blePrimary) {
+      if (this.connectivity.bleAdapterEnabled === false) return 'offline';
       if (this.connectivity.bleState === 'ready') return 'ready';
-      return this.connectivity.bleState === 'scanning'
-        || this.connectivity.bleState === 'nearby'
-        || this.connectivity.bleState === 'connecting'
-        || this.connectivity.bleState === 'retrying'
-        ? 'reachable'
-        : 'offline';
+      return this.connectivity.bleNearby === true ? 'reachable' : 'unknown';
     }
     if (this.current?.data?.cloudReachable !== true) {
       return this.current?.data?.cloudReachable === null ? 'unknown' : 'offline';
@@ -113,10 +109,14 @@ export class Deviceblock {
       : '云端已同步';
     if (this.status === 'reachable') {
       if (!this.blePrimary) return '云端在线';
-      if (this.connectivity.bleState === 'nearby') return '蓝牙在附近';
-      return this.connectivity.bleState === 'scanning' ? '正在查找蓝牙' : '正在连接蓝牙';
+      return '蓝牙在附近';
     }
-    if (this.blePrimary) return '蓝牙未连接';
+    if (this.blePrimary) {
+      if (this.connectivity.bleAdapterEnabled === false) return '蓝牙不可用';
+      if (this.connectivity.bleState === 'scanning') return '正在查找蓝牙';
+      if (['connecting', 'retrying'].includes(this.connectivity.bleState)) return '正在连接蓝牙';
+      return '蓝牙未发现';
+    }
     return this.current?.data?.cloudReachable === null ? '状态未知' : '离线';
   }
 
@@ -153,11 +153,8 @@ export class Deviceblock {
   private get blePrimary(): boolean {
     if (this.directOnly) return true;
     if (this.connectivity.bleAccess !== true) return false;
-    return this.connectivity.bleState === 'scanning'
-      || this.connectivity.bleState === 'nearby'
-      || this.connectivity.bleState === 'connecting'
-      || this.connectivity.bleState === 'retrying'
-      || this.connectivity.bleState === 'ready';
+    return this.connectivity.bleAdapterEnabled !== false
+      && (this.connectivity.bleNearby === true || this.connectivity.bleState === 'ready');
   }
 
   constructor(

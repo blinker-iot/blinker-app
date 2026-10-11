@@ -1,13 +1,13 @@
 import { AutomationCondition, AutomationEndpoint, AutomationExecution, AutomationRule, AutomationScalarType,
-  AutomationStatus, automationErrorCode } from '../../../core/device-v2/automation/contract';
+  AutomationStatus, automationErrorCode, automationTargetValue } from '../../../core/device-v2/automation/contract';
 import { DeviceV2Manifest } from '../../../core/protocol/device-v2/types';
-export interface AutomationChoice { id: string; label: string; endpoint: AutomationEndpoint; source: boolean; target: boolean; }
+import { capabilityDisplayName, deviceDisplayName } from '../../../core/device-v2/display-metadata';
+export interface AutomationChoice { id: string; label: string; endpoint: AutomationEndpoint; source: boolean; target: boolean;
+  minimum?: number; maximum?: number; step?: number; }
 const scalarTypes: readonly AutomationScalarType[] = ['boolean', 'int32', 'uint32', 'float32', 'float64'];
 export function automationDeviceName(devices: Record<string, any>, deviceId: string): string {
-  const name = devices?.[deviceId]?.config?.customName;
-  if (typeof name === 'string' && name.trim()) return name;
   const index = Object.keys(devices || {}).sort().indexOf(deviceId);
-  return index < 0 ? '设备不在当前列表' : `未命名设备 ${index + 1}`;
+  return deviceDisplayName(devices?.[deviceId], index < 0 ? '设备不在当前列表' : `未命名设备 ${index + 1}`);
 }
 export function automationChoices(devices: Record<string, any>, manifest: (id: string) => DeviceV2Manifest | undefined): AutomationChoice[] {
   const choices: AutomationChoice[] = [];
@@ -19,24 +19,36 @@ export function automationChoices(devices: Record<string, any>, manifest: (id: s
       if (!Number.isInteger(field.type) || field.type < 0 || field.type >= scalarTypes.length) continue;
       const valueType = scalarTypes[field.type];
       if (field.kind !== 0 || !valueType) continue;
-      const source = (field.access & 5) === 5, target = valueType === 'boolean' && (field.access & 2) === 2;
+      const source = (field.access & 5) === 5, target = ['boolean', 'uint32'].includes(valueType) && (field.access & 2) === 2;
       if (source || target) choices.push({ id: `${deviceId}:${field.id}`,
-        label: `${automationDeviceName(devices, deviceId)} · ${field.key}`,
-        endpoint: { deviceId, key: field.key, fingerprint: m.fingerprint, valueType }, source, target });
+        label: `${automationDeviceName(devices, deviceId)} · ${capabilityDisplayName(device, field)}`,
+        endpoint: { deviceId, key: field.key, fingerprint: m.fingerprint, valueType }, source, target,
+        ...(valueType === 'uint32' ? { minimum: field.constraints?.minimum, maximum: field.constraints?.maximum,
+          step: field.constraints?.step } : {}) });
     }
   }
   return choices; // Cached selection only. Gateway rechecks live permissions and capabilities.
 }
-export function automationConditionText(condition: AutomationRule['condition'] | AutomationCondition): string {
-  if (condition === 'rising-boolean') return '从关变为开';
+export function automationChoiceValue(choice: Pick<AutomationChoice, 'endpoint' | 'minimum' | 'maximum' | 'step'>, input: unknown): boolean | number {
+  // Form text is converted here, never by the persisted management contract.
+  const raw = choice.endpoint.valueType === 'uint32' && typeof input === 'string' && /^[0-9]+$/.test(input)
+    ? Number(input) : input;
+  const value = automationTargetValue(choice.endpoint.valueType, raw);
+  if (typeof value === 'number' && ((choice.minimum !== undefined && value < choice.minimum)
+    || (choice.maximum !== undefined && value > choice.maximum)
+    || (choice.step !== undefined && (value - (choice.minimum ?? 0)) % choice.step !== 0))) throw new Error('AUTOMATION_INVALID_INPUT');
+  return value;
+}
+export function automationConditionText(condition: AutomationRule['condition'] | AutomationCondition, labels = { on: '开', off: '关' }): string {
+  if (condition === 'rising-boolean') return `从${labels.off}变为${labels.on}`;
   if (condition.kind === 'boolean-edge') return condition.direction === 'rising'
-    ? '从关变为开' : '从开变为关';
+    ? `从${labels.off}变为${labels.on}` : `从${labels.on}变为${labels.off}`;
   return condition.direction === 'above'
     ? `升至 ${condition.threshold} 或以上；降至 ${condition.threshold - condition.hysteresis} 后可再次触发`
     : `降至 ${condition.threshold} 或以下；升至 ${condition.threshold + condition.hysteresis} 后可再次触发`;
 }
-export function automationTriggerText(condition: AutomationRule['condition'] | AutomationCondition): string {
-  if (condition === 'rising-boolean' || condition.kind === 'boolean-edge') return automationConditionText(condition);
+export function automationTriggerText(condition: AutomationRule['condition'] | AutomationCondition, labels = { on: '开', off: '关' }): string {
+  if (condition === 'rising-boolean' || condition.kind === 'boolean-edge') return automationConditionText(condition, labels);
   return condition.direction === 'above' ? `升至 ${condition.threshold} 或以上` : `降至 ${condition.threshold} 或以下`;
 }
 // Enabled is configuration, not evidence of device presence or recent execution.
@@ -60,10 +72,10 @@ export function automationErrorText(error: unknown): string {
     AUTOMATION_CAPACITY: '规则名额已满，可先停用并退役不再使用的规则。',
     AUTOMATION_STORAGE_CAPACITY: '自动化保留记录已达试点上限，不能通过删除历史绕过。',
     AUTOMATION_CAPABILITY_CHANGED: '设备能力已变化，请重新读取设备能力，再核对规则端点。',
-    AUTOMATION_CAPABILITY_REQUIRED: '设备当前能力尚未就绪，请确认两台设备在线。',
+    AUTOMATION_CAPABILITY_REQUIRED: '设备当前能力或目标值尚未确认，请确认在线、刷新能力并核对目标范围。',
     AUTOMATION_PROFILE: '当前试点仅支持同账号的普通 WiFi 设备，不包含网关和子设备。',
     AUTOMATION_DUPLICATE_RULE: '已有相同规则，请使用现有规则，不重复创建。',
-    AUTOMATION_TARGET_CONFLICT: '目标属性已被其他规则使用，请检查现有配置。',
+    AUTOMATION_TARGET_CONFLICT: '目标设备已有启用的自动化，请先停用相关规则或选择其他设备。',
     AUTOMATION_CHAIN_FORBIDDEN: '当前试点不支持连锁自动化，请选择独立的源和目标。',
     AUTOMATION_RATE_LIMITED: '请求过于频繁，请稍后再操作。',
     AUTOMATION_JOURNAL_UNAVAILABLE: '请求日志无法持久保存或清理，请检查存储空间和 WebView；不会换 ID 重发。',
@@ -71,7 +83,7 @@ export function automationErrorText(error: unknown): string {
     AUTOMATION_ACCOUNT_CHANGED: '账号已变化，请重新进入自动化页面。',
     AUTOMATION_BUSY: '上一项操作尚未结束，请稍后再试。',
     AUTOMATION_NOT_FOUND: '规则不存在或当前账号不可访问，请核对原请求。',
-    AUTOMATION_INVALID_INPUT: '名称、条件或阈值/回差无效；未发送新请求。',
+    AUTOMATION_INVALID_INPUT: '名称、条件、阈值/回差或目标值无效；未发送新请求。',
     AUTOMATION_UNSUPPORTED_VERSION: '服务器与规则版本不匹配，不会降级重发；未确认的原请求请保留排查。',
     AUTOMATION_WRITE_NOT_CONFIRMED: '返回配置尚未确认与原请求一致；请求记录已保留，请查询原请求。',
     AUTOMATION_RESPONSE_INVALID: '服务器回复无法按规则合同校验，请保留原请求排查，不会猜测或转换条件。',

@@ -34,7 +34,7 @@
         <div class="device-name-row">
           <h1>{{ device.config.customName }}</h1>
           @if (!isSharedDevice) {
-          <button type="button" class="rename-button" (click)="changeName()" aria-label="修改设备名称">
+          <button type="button" class="rename-button" [disabled]="!canEditDisplay || displayBusy" (click)="changeName()" aria-label="修改设备名称">
             <i class="fa-light fa-pen"></i>
           </button>
           }
@@ -44,6 +44,27 @@
         </span>
       </div>
     </section>
+    @if (canEditDisplay) {
+    <section class="display-card">
+      <div class="section-heading"><div><h2>功能名称</h2><p class="help">设置控制页面、自动化和定时共用的名称，不改变设备代码中的 key。</p></div>
+        <button type="button" [disabled]="displayBusy" (click)="loadDisplayMetadata()">{{ displayOpen ? '重新加载' : '设置' }}</button>
+      </div>
+      @if (displayOpen) {
+        <fieldset [disabled]="displayBusy">
+        @for (row of displayRows; track row.key) {
+          <div class="display-field"><label>{{ row.key }}<input maxlength="80" [(ngModel)]="row.displayName" placeholder="功能名称（留空使用原 key）" /></label>
+            @if (row.type === 0) {
+              <div class="boolean-labels"><label>开启 / true<input maxlength="80" [(ngModel)]="row.trueLabel" placeholder="开" /></label>
+                <label>关闭 / false<input maxlength="80" [(ngModel)]="row.falseLabel" placeholder="关" /></label></div>
+            }
+          </div>
+        } @empty { <p class="help">还没有设备能力缓存，请先打开控制页获取能力，再重新加载。</p> }
+        </fieldset>
+        <button class="display-save" type="button" [disabled]="!canSaveDisplay" (click)="saveDisplayMetadata()">保存功能名称</button>
+      }
+    </section>
+    }
+    @if (displayError) { <p class="error" role="alert">{{ displayError }}</p> }
     @if (hasDeviceKeyContext && isOwner) {
     <section class="access-card">
       <div class="section-heading">

@@ -3,12 +3,15 @@
   <ion-title>{{ taskId === undefined ? '新建任务' : '编辑任务 #' + taskId }}</ion-title>
 </ion-toolbar></ion-header>
 <ion-content [fullscreen]="true"><main>
-  <app-hero-card iconClass="fa-light fa-calendar-clock" eyebrow="TASK EDITOR" [heading]="timer.deviceName"
-    description="只设置固件允许的属性值。保存倒计时不会自动开始；日历任务需设备有有效授时。" />
+  <app-hero-card iconClass="fa-light fa-calendar-clock" eyebrow="设置定时" [heading]="timer.deviceName"
+    description="保存倒计时不会自动开始；一次日期和星期任务需要设备具备有效 UTC 时间。" />
   <app-task-status [timer]="timer" />
   @if (error) { <p role="alert">{{ error }}</p> }
   @if (timer.ready && !taskNotFound) {
-    <button type="button" class="primary-action" [disabled]="timer.busy" (click)="loadForm()">从当前查询重新载入（覆盖未保存编辑）</button>
+    @if (taskId === undefined && timer.creationHint) { <p class="creation-hint">{{ timer.creationHint }}</p> }
+    <button type="button" class="primary-action load-form-button" [disabled]="timer.busy" (click)="loadForm()">{{ formLoaded ? '从当前查询重新载入（覆盖未保存编辑）' : '载入当前任务信息' }}</button>
+    @if (!formLoaded) { <p class="form-load-hint">查询已恢复，请明确载入当前任务信息后编辑。</p> }
+    @else {
     <fieldset [disabled]="!timer.canWrite">
       <section class="surface-card setting-card">
         <label>任务类型<select [(ngModel)]="kind">
@@ -33,20 +36,21 @@
       <section class="surface-card setting-card">
         <label>固件允许的目标<select [ngModel]="key" (ngModelChange)="selectTarget($event)">
           <option value="" disabled>请选择属性</option>
-          @for (item of timer.targets; track item.key) { <option [value]="item.key">{{ item.key }} ({{ item.valueType }})</option> }
+          @for (item of timer.targets; track item.key) { <option [value]="item.key">{{ timer.targetLabel(item.key, item.valueType) }}</option> }
         </select></label>
         @if (target?.valueType === 'boolean') {
-          <label>属性值<select [(ngModel)]="value"><option [ngValue]="false">false</option><option [ngValue]="true">true</option></select></label>
-        } @else {
+          <label>属性值<select [(ngModel)]="value"><option [ngValue]="false">{{ timer.valueLabel(key, false, target?.valueType) }}</option><option [ngValue]="true">{{ timer.valueLabel(key, true, target?.valueType) }}</option></select></label>
+        } @else if (target) {
           <label>数值<input type="text" inputmode="decimal" [(ngModel)]="value" /></label>
         }
         @if (target?.constraints; as hint) { <p>上次能力缓存提示：最小 {{ hint.minimum ?? '未限定' }}，最大 {{ hint.maximum ?? '未限定' }}，步进 {{ hint.step ?? '未限定' }} {{ hint.unit }}；以设备实际校验为准。</p> }
-        @if (!target) { <p>该目标不在当前固件调度目录中，不能保存。</p> }
+        @if (!target) { <p class="target-unavailable">{{ key ? timer.targetLabel(key) + '不在当前固件调度目录中，不能保存。' : '当前没有可选的定时属性，请检查设备代码。' }}{{ taskId !== undefined ? '仍可删除原任务。' : '' }}</p> }
       </section>
     </fieldset>
+    }
   } @else if (taskNotFound) { <section class="not-found surface-card"><strong>找不到任务或旧任务地址已失效</strong><p>请返回列表，按设备任务 ID 重新选择。</p></section> }
 </main></ion-content>
-@if (timer.ready && !taskNotFound) {
+@if (timer.ready && !taskNotFound && formLoaded) {
   <div class="editor-bottom-actions">
     <button class="save-action" type="button" [disabled]="!canSave" (click)="save()">保存定义（不自动开始倒计时）</button>
     @if (taskId !== undefined) {

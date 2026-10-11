@@ -9,6 +9,7 @@ const FEATURE_RELIABLE = 1 << 6;
 const FEATURE_STATE_REVISION = 1 << 7;
 const FEATURE_CONTROLLER_CONTROL = 1 << 9;
 const FEATURE_PRESENCE_KEY_CONTROL = 1 << 13;
+export const DIRECT_FEATURE_TELEMETRY = 1 << 11;
 const REQUIRED_FEATURES = FEATURE_MANIFEST | FEATURE_ENDPOINT_IDS | FEATURE_RELIABLE | FEATURE_STATE_REVISION;
 const CONTROLLER_FEATURES = REQUIRED_FEATURES | FEATURE_AUTHENTICATION
   | FEATURE_CONTROLLER_CONTROL | FEATURE_PRESENCE_KEY_CONTROL;
@@ -22,28 +23,38 @@ export interface DeviceDirectHello {
   maxFrameSize: number;
   maxReassemblySize: number;
   reliableWindow: number;
+  // BLE carrier limit, not BBP frame size. Only an authenticated exchange may
+  // activate it; absent on LAN and on legacy ATT20 peers.
+  blePacketSize?: number;
   manifest?: Pick<DeviceV2Manifest, 'revision' | 'fingerprint'>;
 }
 
-export function encodeDirectAppHelloBody(security: DirectHelloSecurity, maxFrameSize = 512, timeResponder = false): Uint8Array {
+export function encodeDirectAppHelloBody(security: DirectHelloSecurity, maxFrameSize = 512, timeResponder = false,
+  blePacketSize?: number, telemetryRequested = true): Uint8Array {
   if (!Number.isInteger(maxFrameSize) || maxFrameSize < 10 || maxFrameSize > 0xffff)
     throw new Error('DIRECT_APP_HELLO_LIMIT_INVALID');
   const fields: Array<[number, Uint8Array]> = [
     [0, encodeCanonicalUnsigned(1)],
     [1, encodeCanonicalArray([encodeCanonicalUnsigned(2)])],
     [2, encodeCanonicalUnsigned((security === 'controller' ? CONTROLLER_FEATURES : REQUIRED_FEATURES)
+      | (telemetryRequested ? DIRECT_FEATURE_TELEMETRY : 0)
       | (timeResponder && maxFrameSize >= DIRECT_TIME_MAX_FRAME_BYTES ? BBP2_FEATURE_TIME_SYNC : 0))],
     [3, encodeCanonicalUnsigned(maxFrameSize)],
     [4, encodeCanonicalUnsigned(maxFrameSize)],
   ];
   if (security === 'controller') fields.push([8, encodeCanonicalArray([encodeCanonicalUnsigned(2)])]);
   fields.push([9, encodeCanonicalUnsigned(security === 'controller' ? 4 : 1)]);
+  if (blePacketSize !== undefined) {
+    if (!Number.isInteger(blePacketSize) || blePacketSize < 20 || blePacketSize > 244)
+      throw new Error('DIRECT_APP_HELLO_BLE_LIMIT_INVALID');
+    fields.push([12, encodeCanonicalUnsigned(blePacketSize)]);
+  }
   return encodeCanonicalMap(fields);
 }
 
 export function decodeDirectDeviceHelloBody(body: Uint8Array, security: DirectHelloSecurity): DeviceDirectHello {
   const reader = new CborReader(body);
-  const count = reader.readMapSize(9);
+  const count = reader.readMapSize(10);
   let role: number | undefined;
   let versions: number[] | undefined;
   let features: number | undefined;
@@ -53,9 +64,10 @@ export function decodeDirectDeviceHelloBody(body: Uint8Array, security: DirectHe
   let manifestFingerprint: Uint8Array | undefined;
   let methods: number[] | undefined;
   let reliableWindow = 0;
+  let blePacketSize: number | undefined;
   let previous = -1;
   for (let index = 0; index < count; index += 1) {
-    const key = reader.readUnsigned(9);
+    const key = reader.readUnsigned(12);
     if (key <= previous) throw new Error('DIRECT_HELLO_KEYS_INVALID');
     previous = key;
     if (key === 0) role = reader.readUnsigned(2);
@@ -67,6 +79,7 @@ export function decodeDirectDeviceHelloBody(body: Uint8Array, security: DirectHe
     else if (key === 7) manifestFingerprint = reader.readBytes(32);
     else if (key === 8) methods = readUnsignedArray(reader, 4, 0xffff);
     else if (key === 9) reliableWindow = reader.readUnsigned(16);
+    else if (key === 12) blePacketSize = reader.readUnsigned(244);
     else throw new Error('DIRECT_HELLO_FIELD_UNSUPPORTED');
   }
   reader.finish();
@@ -82,7 +95,9 @@ export function decodeDirectDeviceHelloBody(body: Uint8Array, security: DirectHe
     || (manifestFingerprint && manifestFingerprint.length !== 32)) {
     throw new Error('DIRECT_DEVICE_HELLO_INVALID');
   }
+  if (blePacketSize !== undefined && blePacketSize < 20) throw new Error('DIRECT_DEVICE_HELLO_INVALID');
   return { features, maxFrameSize, maxReassemblySize, reliableWindow,
+    ...(blePacketSize === undefined ? {} : { blePacketSize }),
     ...(manifestRevision === undefined ? {} : {
       manifest: { revision: manifestRevision, fingerprint: bytesToHex(manifestFingerprint!) },
     }),

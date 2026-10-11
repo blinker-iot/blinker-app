@@ -247,6 +247,11 @@ describe('DeviceUiPort', () => {
           streamId: 1,
           epoch: 2,
           effectiveIntervalMs: 1000,
+          sampleSequence: 7,
+          sampleMonotonicMs: 6000,
+          receivedAtMs: 1700000000000,
+          receivedMonotonicMs: 8000,
+          missedSamples: 2,
           values: {
             temperature: {
               type: DeviceV2ValueType.Float32,
@@ -276,6 +281,7 @@ describe('DeviceUiPort', () => {
       ensureReady: vi.fn().mockResolvedValue(undefined),
       disconnect: vi.fn().mockResolvedValue(undefined),
       command: vi.fn().mockResolvedValue(undefined),
+      openTelemetryConnected: vi.fn().mockRejectedValue(new Error('BLE_DIRECT_SESSION_NOT_READY')),
     };
     const appActive = new BehaviorSubject(true);
     const port = new DeviceUiPort(
@@ -298,6 +304,8 @@ describe('DeviceUiPort', () => {
       endpoints: [{
         id: 1,
         key: 'level',
+        manifestKind: DeviceV2EndpointKind.Property,
+        manifestType: DeviceV2ValueType.UnsignedInteger,
         role: 'property',
         valueType: 'integer',
         readable: true,
@@ -335,7 +343,15 @@ describe('DeviceUiPort', () => {
     const telemetry = await port.openTelemetry(logicalDeviceId, ['temperature'], 1000);
     expect(telemetry.snapshot).toEqual({
       active: true,
+      source: 'cloud',
+      streamId: 1,
+      epoch: 2,
       effectiveIntervalMs: 1000,
+      sampleSequence: 7,
+      sampleMonotonicMs: 6000,
+      receivedAtMs: 1700000000000,
+      receivedMonotonicMs: 8000,
+      missedSamples: 2,
       values: { temperature: 21.5 },
     });
     await telemetry.setVisible(false);
@@ -356,7 +372,46 @@ describe('DeviceUiPort', () => {
     await port.refreshBlePresence([logicalDeviceId, directId]);
     expect(ble.refreshPresence).toHaveBeenCalledWith([logicalDeviceId, directId]);
     await expect(port.openTelemetry(directId, ['temperature'], 1000))
-      .rejects.toThrow('BLE_DIRECT_TELEMETRY_NOT_ENABLED');
+      .rejects.toThrow('BLE_DIRECT_SESSION_NOT_READY');
+  });
+
+  it('pins realtime to the existing BLE lease without acquiring or silently falling back to Cloud', async () => {
+    const snapshot: DeviceV2TelemetrySnapshot = { active: true, visible: true, streamId: 2, epoch: 3,
+      effectiveIntervalMs: 2000, missedSamples: 0, values: {} };
+    const lease = { snapshot, subscribe: vi.fn(listener => { listener(snapshot); return () => undefined; }),
+      setVisible: vi.fn(async () => undefined), close: vi.fn(async () => undefined) };
+    const service = { openTelemetry: vi.fn() };
+    const ble = { refreshPresence: vi.fn(async () => undefined), connectionSnapshot: () => 'ready',
+      openTelemetryConnected: vi.fn(async () => lease), ensureReady: vi.fn() };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    await port.refreshBlePresence([logicalDeviceId]);
+    const realtime = await port.openTelemetry(logicalDeviceId, ['temperature'], 1000);
+    expect(ble.openTelemetryConnected).toHaveBeenCalledExactlyOnceWith(logicalDeviceId, ['temperature'], 1000);
+    expect(realtime.snapshot.source).toBe('ble');
+    (port as any).transport(logicalDeviceId).next('cloud');
+    const observed = vi.fn();
+    realtime.subscribe(observed);
+    expect(observed).toHaveBeenCalledWith(expect.objectContaining({ source: 'ble' }));
+    await realtime.setVisible(false); await realtime.close();
+    expect(lease.setVisible).toHaveBeenCalledWith(false); expect(lease.close).toHaveBeenCalledOnce();
+    expect(ble.ensureReady).not.toHaveBeenCalled(); expect(service.openTelemetry).not.toHaveBeenCalled();
+    (port as any).transport(logicalDeviceId).next('ble');
+    ble.openTelemetryConnected.mockRejectedValueOnce(Error('DIRECT_TELEMETRY_NOT_SUPPORTED'));
+    await expect(port.openTelemetry(logicalDeviceId, ['temperature'], 1000))
+      .rejects.toThrow('DIRECT_TELEMETRY_NOT_SUPPORTED');
+    expect(service.openTelemetry).not.toHaveBeenCalled();
+  });
+
+  it('rejects LAN-selected realtime without a ready page-owned session instead of masquerading Cloud', async () => {
+    const lease = { snapshot: { active: true, streamId: 1, epoch: 1,
+      effectiveIntervalMs: 1000, missedSamples: 0, values: {} } };
+    const service = { openTelemetry: vi.fn(async () => lease) }, ble = { openTelemetryConnected: vi.fn() };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    (port as any).transport(logicalDeviceId).next('lan');
+    await expect(port.openTelemetry(logicalDeviceId, ['temperature'], 1000)).rejects.toThrow('LOCAL_ACCESS_SESSION_NOT_READY');
+    expect(service.openTelemetry).not.toHaveBeenCalled(); expect(ble.openTelemetryConnected).not.toHaveBeenCalled();
   });
 
   it('uses a verified Manifest cache for an offline page without treating state as fresh', async () => {
@@ -484,6 +539,7 @@ describe('DeviceUiPort', () => {
       directConnectAllowed: true,
       bleAccess: true,
       bleAdapterEnabled: true,
+      bleNearby: false,
       bleState: 'ready',
       cloudSessionState: 'ready',
     });

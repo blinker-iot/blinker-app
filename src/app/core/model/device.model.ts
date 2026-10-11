@@ -20,6 +20,8 @@ export interface DeviceCardConfig {
 }
 
 export interface BlinkerDevice {
+    name?: string,
+    displayMetadata?: import('../device-v2/display-metadata').DeviceDisplayMetadata,
     deviceName: string,
     id?: string,
     cloudEnabled?: boolean,

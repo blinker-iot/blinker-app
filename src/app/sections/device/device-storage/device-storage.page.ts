@@ -1,193 +1,164 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 import { Subscription } from 'rxjs';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
-import { BlinkerDevice } from 'src/app/core/model/device.model';
-import { DataService } from 'src/app/core/services/data.service';
+import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
+import { assertDeviceV2AccountContext, captureDeviceV2AccountContext, DeviceV2AccountContext } from '../../../core/device-v2/account-scope';
+import { capabilityBooleanLabel, capabilityDisplayName, deviceDisplayName } from '../../../core/device-v2/display-metadata';
+import { StateHistoryItem, StateHistoryQuery, STATE_HISTORY_PAGE_LIMIT, STATE_HISTORY_RECORDED_TYPES,
+  STATE_HISTORY_VIEW_LIMIT } from '../../../core/device-v2/state-history';
+import { API } from '../../../configs/api.config';
+import { DataService } from '../../../core/services/data.service';
+import { DeviceV2HistoryService } from '../../../core/services/device-v2-history.service';
+import { DeviceV2ManifestCache } from '../../../core/services/device-v2-manifest-cache.service';
+import { AppVisibilityService } from '../../../core/services/app-visibility.service';
+import { GatewayHttpError } from '../../../core/model/response.model';
 
-interface StoragePoint {
-  time: Date;
-  value: number;
-}
-
-interface StorageDataset {
-  key: string;
-  label: string;
-  unit: string;
-  icon: string;
-  color: string;
-  points: StoragePoint[];
-}
-
-const DATASET_META: Record<string, Omit<StorageDataset, 'key' | 'points'>> = {
-  temperature: { label: '温度', unit: '°C', icon: 'fa-temperature-half', color: '#f97316' },
-  temp: { label: '温度', unit: '°C', icon: 'fa-temperature-half', color: '#f97316' },
-  humidity: { label: '湿度', unit: '%', icon: 'fa-droplet', color: '#0ea5e9' },
-  humi: { label: '湿度', unit: '%', icon: 'fa-droplet', color: '#0ea5e9' },
-  co2: { label: 'CO₂', unit: 'ppm', icon: 'fa-cloud', color: '#8b5cf6' },
-  pm25: { label: 'PM2.5', unit: 'μg/m³', icon: 'fa-wind', color: '#22c55e' },
-  power: { label: '功率', unit: 'W', icon: 'fa-bolt', color: '#eab308' },
-};
-
-function points(values: number[], minuteStep = 30): StoragePoint[] {
-  const now = Date.now();
-  return values.map((value, index) => ({
-    time: new Date(now - (values.length - index - 1) * minuteStep * 60_000),
-    value,
-  }));
-}
-
-function createTestDatasets(): StorageDataset[] {
-  return [
-    {
-      key: 'temperature',
-      ...DATASET_META['temperature'],
-      points: points([23.2, 23.6, 24.1, 24.8, 24.5, 24.6]),
-    },
-    {
-      key: 'humidity',
-      ...DATASET_META['humidity'],
-      points: points([58, 57, 55, 54, 55, 56]),
-    },
-    {
-      key: 'co2',
-      ...DATASET_META['co2'],
-      points: points([612, 635, 680, 724, 658, 620]),
-    },
-    {
-      key: 'pm25',
-      ...DATASET_META['pm25'],
-      points: points([12, 15, 18, 21, 17, 16]),
-    },
-  ];
-}
+const DAY = 24 * 60 * 60 * 1000;
+const TYPE_LABELS = ['开关', '整数', '非负整数', '数值', '数值', '文字'];
 
 @Component({
-  selector: 'app-device-storage',
-  templateUrl: './device-storage.page.html',
-  styleUrls: ['./device-storage.page.scss'],
-  imports: [CommonModule, IonicModule, HeroCardComponent],
+  selector: 'app-device-storage', templateUrl: './device-storage.page.html', styleUrls: ['./device-storage.page.scss'],
+  imports: [CommonModule, FormsModule, IonicModule, HeroCardComponent],
 })
-export class DeviceStoragePage implements OnInit, OnDestroy {
+export class DeviceStoragePage implements OnDestroy {
   id = '';
-  device?: BlinkerDevice;
-  loaded = false;
-  usingTestData = false;
-  datasets: StorageDataset[] = [];
-  selectedKey = '';
-  storageUsed = 13.6;
-  storageQuota = 20;
-  retentionDays = 30;
+  readonly ranges = [{ value: 60 * 60 * 1000, label: '最近 1 小时' }, { value: DAY, label: '最近 24 小时' },
+    { value: 7 * DAY, label: '最近 7 天' }];
+  readonly viewLimit = STATE_HISTORY_VIEW_LIMIT;
+  readonly state = signal({ busy: false, ready: false, error: '', rows: [] as StateHistoryItem[],
+    rangeMs: DAY, key: '', from: 0, to: 0, nextCursor: null as string | null, policyConfirmed: false });
+  private readonly subscriptions = new Subscription();
+  private visible = false;
+  private destroyed = false;
+  private generation = 0;
+  private controller?: AbortController;
+  private account?: DeviceV2AccountContext;
 
-  private subscription?: Subscription;
-
-  get defaultBackHref(): string {
-    return `/device-manager/${this.id}`;
+  constructor(private readonly route: ActivatedRoute, private readonly data: DataService,
+    private readonly history: DeviceV2HistoryService, private readonly manifests: DeviceV2ManifestCache,
+    private readonly visibility: AppVisibilityService) {
+    this.subscriptions.add(data.authDataChanged.subscribe(() => {
+      if (this.account && !this.accountCurrent()) {
+        this.close(); this.state.update(s => ({ ...s, error: '登录账号已变化，请重新进入设备页面。' }));
+      }
+    }));
+    this.subscriptions.add(visibility.active.subscribe(active => {
+      if (!active) this.cancelAndClear();
+      else if (this.visible && this.accountCurrent()) void this.refresh();
+    }));
+    this.subscriptions.add(data.deviceDataLoader.subscribe(() => {
+      if (this.visible && !this.available) {
+        this.cancelAndClear(); this.state.update(s => ({ ...s, error: '设备不可用或权限已变化，请刷新设备列表。' }));
+      }
+    }));
   }
-
-  get deviceName(): string {
-    return this.device?.config?.customName || '设备';
+  get defaultBackHref(): string { return `/device-manager/${this.id}`; }
+  get deviceName(): string { return this.accountCurrent() ? deviceDisplayName(this.data.device?.dict?.[this.id]) : '设备'; }
+  get available(): boolean {
+    const device = this.data.device?.dict?.[this.id];
+    return !!device && device.config.mode === 'bbp2' && !device.config.isPreview && !device.config.disabled;
   }
-
-  get selectedDataset(): StorageDataset | undefined {
-    return this.datasets.find((dataset) => dataset.key === this.selectedKey);
+  get canQuery(): boolean { return this.visible && !this.destroyed && this.visibility.active.value
+    && this.available && this.accountCurrent(); }
+  get canLoadMore(): boolean { return this.canQuery && this.state().ready && !this.state().busy
+    && !!this.state().nextCursor && this.state().rows.length < this.viewLimit; }
+  get bounded(): boolean { return this.state().ready && this.state().rows.length >= this.viewLimit && !!this.state().nextCursor; }
+  get keyOptions(): { key: string; label: string }[] {
+    if (!this.accountCurrent()) return [];
+    const fields = new Map<string, { key: string; kind: number; type: number }>();
+    for (const field of this.manifests.load(this.id)?.fields ?? []) {
+      if (field.kind === 0 && STATE_HISTORY_RECORDED_TYPES.includes(field.type as any)) fields.set(field.key, field);
+    }
+    for (const row of this.state().rows) if (!fields.has(row.key)) fields.set(row.key, row);
+    // A removed historical field remains an exact visible filter after a
+    // refresh returns no rows. Unknown type deliberately cannot match an alias.
+    const selected = this.state().key;
+    if (selected && !fields.has(selected)) fields.set(selected, { key: selected, kind: 0, type: -1 });
+    return [...fields.values()].map(field => ({ key: field.key,
+      label: capabilityDisplayName(this.data.device?.dict?.[this.id], field) }));
   }
-
-  get usagePercent(): number {
-    if (!this.storageQuota) return 0;
-    return Math.min(100, Math.round((this.storageUsed / this.storageQuota) * 100));
+  fieldLabel(row: StateHistoryItem): string { return capabilityDisplayName(this.data.device?.dict?.[this.id], row); }
+  valueLabel(row: StateHistoryItem): string {
+    return row.type === 0 && typeof row.state.value === 'boolean'
+      ? capabilityBooleanLabel(this.data.device?.dict?.[this.id], row, row.state.value)
+      : String(row.state.value);
   }
+  typeLabel(row: StateHistoryItem): string { return TYPE_LABELS[row.type]; }
+  utcDate(at: number): string { return new Date(at).toISOString(); }
+  utcText(at: number): string { return this.utcDate(at).replace('T', ' ').replace('Z', ' UTC'); }
 
-  get totalRecords(): number {
-    return this.datasets.reduce((total, dataset) => total + dataset.points.length, 0);
+  ionViewWillEnter(): void {
+    this.close(); this.id = this.route.snapshot.paramMap.get('id') || ''; this.visible = true;
+    try {
+      if (!this.data.auth?.uuid) throw Error('STATE_HISTORY_ACCOUNT_CHANGED');
+      this.account = captureDeviceV2AccountContext(this.data, API.BASE_URL);
+      if (!this.available) throw Error('STATE_HISTORY_DEVICE_UNAVAILABLE');
+      if (this.visibility.active.value) void this.refresh();
+    } catch (error) { this.state.update(s => ({ ...s, error: this.errorText(error) })); }
   }
-
-  constructor(
-    private readonly activatedRoute: ActivatedRoute,
-    private readonly dataService: DataService,
-  ) {}
-
-  ngOnInit(): void {
-    this.id = this.activatedRoute.snapshot.paramMap.get('id') || '';
-    this.bindDevice();
-    this.subscription = this.dataService.userDataLoader.subscribe((loaded) => {
-      if (loaded) this.bindDevice();
-    });
+  ionViewWillLeave(): void { this.close(); }
+  ngOnDestroy(): void { this.destroyed = true; this.close(); this.subscriptions.unsubscribe(); }
+  close(): void { this.visible = false; this.account = undefined; this.cancelAndClear(); }
+  private cancelAndClear(): void {
+    ++this.generation; this.controller?.abort(); this.controller = undefined;
+    this.state.update(s => ({ ...s, busy: false, ready: false, rows: [], nextCursor: null, policyConfirmed: false }));
   }
-
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
+  changeRange(rangeMs: number): void {
+    if (!this.ranges.some(range => range.value === rangeMs) || !this.canQuery) return;
+    this.cancelAndClear(); this.state.update(s => ({ ...s, rangeMs })); void this.refresh();
   }
-
-  selectDataset(key: string): void {
-    this.selectedKey = key;
+  changeKey(key: string): void {
+    if ((key && !this.keyOptions.some(field => field.key === key)) || !this.canQuery) return;
+    this.cancelAndClear(); this.state.update(s => ({ ...s, key })); void this.refresh();
   }
-
-  latestValue(dataset: StorageDataset): number {
-    return dataset.points.at(-1)?.value ?? 0;
+  async refresh(): Promise<void> {
+    if (!this.canQuery || this.state().busy) return;
+    this.cancelAndClear();
+    const to = Date.now(), from = Math.max(0, to - this.state().rangeMs);
+    this.state.update(s => ({ ...s, from, to }));
+    await this.read(false);
   }
-
-  pointPercent(point: StoragePoint, dataset: StorageDataset): number {
-    const values = dataset.points.map((item) => item.value);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    if (max === min) return 65;
-    return 18 + ((point.value - min) / (max - min)) * 82;
+  async loadMore(): Promise<void> { if (this.canLoadMore) await this.read(true); }
+  private async read(append: boolean): Promise<void> {
+    const generation = ++this.generation, controller = this.controller = new AbortController(), id = this.id;
+    const baseline = this.state();
+    const query: StateHistoryQuery = { from: baseline.from, to: baseline.to, limit: STATE_HISTORY_PAGE_LIMIT,
+      ...(baseline.key ? { key: baseline.key } : {}), ...(append ? { before: baseline.nextCursor! } : {}) };
+    this.state.update(s => ({ ...s, busy: true, error: '' }));
+    try {
+      const page = await this.history.read(id, query, controller.signal);
+      this.assertCurrent(id, generation, controller);
+      const rows = append ? [...baseline.rows, ...page.items] : page.items;
+      if (rows.length > this.viewLimit || new Set(rows.map(row => row.id)).size !== rows.length
+        || (append && page.items.length && BigInt(page.items[0].id) >= BigInt(baseline.rows.at(-1)!.id))) {
+        throw Error('STATE_HISTORY_RESPONSE_INVALID');
+      }
+      this.state.update(s => ({ ...s, rows, nextCursor: page.nextCursor, ready: true, policyConfirmed: true }));
+    } catch (error) {
+      if (this.current(id, generation, controller)) this.state.update(s => ({ ...s, ready: false,
+        rows: [], nextCursor: null, policyConfirmed: false, error: this.errorText(error) }));
+    } finally { if (this.current(id, generation, controller)) this.state.update(s => ({ ...s, busy: false })); }
   }
-
-  private bindDevice(): void {
-    this.device = this.dataService.device?.dict?.[this.id];
-    this.loaded = Boolean(this.device);
-    if (!this.device) return;
-
-    const realDatasets = this.normalizeStorage(this.device.storage);
-    this.usingTestData = realDatasets.length === 0;
-    this.datasets = this.usingTestData ? createTestDatasets() : realDatasets;
-    this.selectedKey = this.datasets.some((dataset) => dataset.key === this.selectedKey)
-      ? this.selectedKey
-      : this.datasets[0]?.key || '';
-
-    const storageInfo = this.device.data?.storageInfo;
-    if (storageInfo && typeof storageInfo === 'object') {
-      this.storageUsed = Number(storageInfo.used) || this.storageUsed;
-      this.storageQuota = Number(storageInfo.quota) || this.storageQuota;
-      this.retentionDays = Number(storageInfo.retentionDays) || this.retentionDays;
+  private accountCurrent(): boolean {
+    try { if (!this.account || !this.data.auth?.uuid) return false; assertDeviceV2AccountContext(this.data, this.account); return true; }
+    catch { return false; }
+  }
+  private assertCurrent(id: string, generation: number, controller: AbortController): void {
+    controller.signal.throwIfAborted();
+    if (id !== this.id || generation !== this.generation || controller !== this.controller || !this.canQuery) {
+      throw Error('STATE_HISTORY_ACCOUNT_CHANGED');
     }
   }
-
-  private normalizeStorage(storage: unknown): StorageDataset[] {
-    if (!storage || typeof storage !== 'object') return [];
-
-    return Object.entries(storage as Record<string, unknown>)
-      .filter(([, value]) => Array.isArray(value) && value.length > 0)
-      .map(([key, value]) => {
-        const meta = DATASET_META[key.toLocaleLowerCase()] || {
-          label: key,
-          unit: '',
-          icon: 'fa-chart-line',
-          color: '#6366f1',
-        };
-        const normalizedPoints = (value as unknown[])
-          .map((item, index) => this.normalizePoint(item, index))
-          .filter((item): item is StoragePoint => Boolean(item));
-        return { key, ...meta, points: normalizedPoints };
-      })
-      .filter((dataset) => dataset.points.length > 0);
+  private current(id: string, generation: number, controller: AbortController): boolean {
+    try { this.assertCurrent(id, generation, controller); return true; } catch { return false; }
   }
-
-  private normalizePoint(item: unknown, index: number): StoragePoint | undefined {
-    if (typeof item === 'number') {
-      return { time: new Date(Date.now() - index * 60_000), value: item };
-    }
-    if (!item || typeof item !== 'object') return undefined;
-
-    const entry = item as Record<string, unknown>;
-    const value = Number(entry['value'] ?? entry['data']);
-    if (!Number.isFinite(value)) return undefined;
-    const rawTime = entry['time'] ?? entry['date'] ?? entry['timestamp'];
-    const time = rawTime ? new Date(rawTime as string | number) : new Date();
-    return { time: Number.isNaN(time.getTime()) ? new Date() : time, value };
+  private errorText(error: unknown): string {
+    if (error instanceof GatewayHttpError && [403, 404].includes(error.httpStatus)) return '设备不存在或查询权限已变化，请刷新设备列表。';
+    if (error instanceof Error && error.message === 'STATE_HISTORY_ACCOUNT_CHANGED') return '请先登录当前账号，再重新进入设备页面。';
+    if (error instanceof Error && error.message === 'STATE_HISTORY_DEVICE_UNAVAILABLE') return '当前设备无法查询状态历史。';
+    return '尚未取得有效的状态历史，请手动刷新重试；不会使用演示数据代替。';
   }
 }

@@ -3,6 +3,35 @@ import { DeviceV2ManagementService } from './device-v2-management.service';
 import { API, isGatewayUrl } from '../../configs/api.config';
 import { base64UrlEncode } from '../device-v2/ble-direct/wire';
 
+describe('Device V2 display metadata CAS', () => {
+  const value = { logicalDeviceId: 'device_a', revision: 2, name: '客厅灯',
+    capabilities: [{ key: 'power', kind: 0, type: 0, displayName: '电源开关' }] };
+  function harness(result = { ...value, revision: 3 }, status = 200) {
+    const headers = { get: () => 'no-store' };
+    const http = { get: vi.fn(() => of({ status, body: { status, data: value }, headers })),
+      put: vi.fn(() => of({ status, body: { status, data: result }, headers })) };
+    return { client: new DeviceV2ManagementService(http as any), http };
+  }
+  it('uses only the V2 metadata route and verifies the exact next revision/target', async () => {
+    const f = harness();
+    await expect(f.client.getDisplayMetadataV2('device_a')).resolves.toEqual(value);
+    await expect(f.client.saveDisplayMetadataV2(value)).resolves.toEqual({ ...value, revision: 3 });
+    expect(f.http.put.mock.calls[0]).toEqual([API.DEVICE_V2.DISPLAY_METADATA('device_a'),
+      { expectedRevision: 2, name: '客厅灯', capabilities: value.capabilities }, { observe: 'response' }]);
+    expect(isGatewayUrl(API.DEVICE_V2.DISPLAY_METADATA('device_a'))).toBe(true);
+  });
+  it('rejects malformed writes before HTTP and inconsistent save receipts without fallback/retry', async () => {
+    const f = harness();
+    await expect(f.client.saveDisplayMetadataV2({ ...value, revision: -1 })).rejects.toThrow();
+    expect(f.http.put).not.toHaveBeenCalled();
+    for (const result of [{ ...value }, { ...value, revision: 3, name: 'other' },
+      { ...value, revision: 3, logicalDeviceId: 'other' }, { ...value, revision: 3, capabilities: [] }]) {
+      const h = harness(result); await expect(h.client.saveDisplayMetadataV2(value)).rejects.toThrow();
+      expect(h.http.put).toHaveBeenCalledTimes(1);
+    }
+  });
+});
+
 describe('Device V2 exact owner state lookup', () => {
   const id = 'device_11111111-1111-4111-8111-111111111111';
   it('accepts only a 200 exact owner state, never absence or an arbitrary response as deletion', async () => {

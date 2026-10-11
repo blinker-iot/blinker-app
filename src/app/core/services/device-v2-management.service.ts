@@ -13,6 +13,7 @@ import {
   DeviceRemovalResponse,
 } from '../model/response.model';
 import { base64UrlDecode, base64UrlEncode } from '../device-v2/ble-direct/wire';
+import { DeviceDisplayMetadata, parseDeviceDisplayMetadata } from '../device-v2/display-metadata';
 
 export interface DirectAdminRecord {
   logicalDeviceId: string;
@@ -37,6 +38,30 @@ export interface DirectAdminResetRequest {
 @Injectable({ providedIn: 'root' })
 export class DeviceV2ManagementService {
   constructor(private readonly http: HttpClient) {}
+
+  async getDisplayMetadataV2(logicalDeviceId: string): Promise<DeviceDisplayMetadata> {
+    const id = this.deviceId(logicalDeviceId);
+    const response = await firstValueFrom(this.http.get<{ status: number; data: DeviceDisplayMetadata }>(
+      API.DEVICE_V2.DISPLAY_METADATA(id), { observe: 'response' }));
+    if (response.status !== 200) throw Error('DEVICE_V2_DISPLAY_RESPONSE_INVALID');
+    this.noStore(response.headers.get('Cache-Control'));
+    return parseDeviceDisplayMetadata(this.body(response.body, response.status).data, id);
+  }
+
+  async saveDisplayMetadataV2(candidate: DeviceDisplayMetadata): Promise<DeviceDisplayMetadata> {
+    const value = parseDeviceDisplayMetadata(candidate);
+    if (value.revision >= 0x7fffffff) throw Error('DEVICE_V2_DISPLAY_INVALID');
+    const response = await firstValueFrom(this.http.put<{ status: number; data: DeviceDisplayMetadata }>(
+      API.DEVICE_V2.DISPLAY_METADATA(value.logicalDeviceId),
+      { expectedRevision: value.revision, name: value.name, capabilities: value.capabilities },
+      { observe: 'response' }));
+    if (response.status !== 200) throw Error('DEVICE_V2_DISPLAY_RESPONSE_INVALID');
+    this.noStore(response.headers.get('Cache-Control'));
+    const result = parseDeviceDisplayMetadata(this.body(response.body, response.status).data, value.logicalDeviceId);
+    if (result.revision !== value.revision + 1 || result.name !== value.name
+      || JSON.stringify(result.capabilities) !== JSON.stringify(value.capabilities)) throw Error('DEVICE_V2_DISPLAY_RESPONSE_INVALID');
+    return result;
+  }
 
   async getDirectAdminV2(logicalDeviceId: string): Promise<DirectAdminRecord | null> {
     const id = this.deviceId(logicalDeviceId);

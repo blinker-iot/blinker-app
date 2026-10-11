@@ -8,6 +8,17 @@ const cacheKey = () => deviceV2AccountStoragePrefix('blinker-v2-catalog:', scope
 beforeEach(() => localStorage.clear());
 
 describe('minimal device catalog', () => {
+  it('persists only validated display metadata in the same authority/account/device directory', () => {
+    const item = entry();
+    item.device.displayMetadata = { logicalDeviceId: item.device.logicalDeviceId, revision: 1,
+      name: item.device.name, capabilities: [{ key: 'power', kind: 0, type: 0, displayName: '电源' }] };
+    saveDeviceCatalog(scope, [item]);
+    expect(loadDeviceCatalog(scope)).toEqual([item]);
+    expect(loadDeviceCatalog({ ...scope, accountId: 'other' })).toBeUndefined();
+    saveDeviceCatalog(scope, [{ ...item, device: { ...item.device, displayMetadata: { ...item.device.displayMetadata,
+      logicalDeviceId: 'other' } } }]);
+    expect(loadDeviceCatalog(scope)).toBeUndefined();
+  });
   it.each([true, false, undefined])('retains the nonsecret routing hint %s without inventing an absent hint', gatewayRouted => {
     const item = entry();
     if (gatewayRouted !== undefined) item.device.gatewayRouted = gatewayRouted;

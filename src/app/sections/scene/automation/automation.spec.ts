@@ -2,7 +2,7 @@ import '@angular/compiler';
 import { Subject } from 'rxjs';
 import { AutomationService } from './automation.service';
 import { AutomationPage } from './automation.page';
-import { automationChoices, automationConditionText, automationDeviceName, automationErrorText, automationExecutionText, automationRuleStatus } from './automation.models';
+import { automationChoices, automationChoiceValue, automationConditionText, automationDeviceName, automationErrorText, automationExecutionText, automationRuleStatus } from './automation.models';
 import { AutomationDetail, AutomationIntent, AutomationRule, automationIntent } from '../../../core/device-v2/automation/contract';
 const manifest = { revision: 1, fingerprint: 'ab'.repeat(32), fields: [
   { id: 1, key: 'power', kind: 0, type: 0, access: 7 }, { id: 2, key: 'button', kind: 1, type: 0, access: 7 },
@@ -20,17 +20,32 @@ function setup() {
     recover: vi.fn(async () => ({ detail, outcome: 'unresolved' as const })), acceptChanged: vi.fn(async () => detail) };
   const service = new AutomationService(client as any, data as any, { load: () => manifest } as any);
   const alerts = { create: vi.fn(async () => ({ present: async () => undefined, onDidDismiss: async () => ({ role: 'confirm' }) })) };
-  const page = new AutomationPage(service, alerts as any); page.name = '测试自动化';
+  const page = new AutomationPage(service, alerts as any, { markForCheck: vi.fn() } as any); page.name = '测试自动化';
   return { data, client, service, alerts, page };
 }
 describe('minimal automation view lifecycle', () => {
-  it('offers only owned ordinary WiFi scalar source Properties and boolean targets; cache is not authority', () => {
+  it('shows shared names/boolean labels without altering rule endpoints, revisions or choices', async () => {
+    const f = setup();
+    const metadata = { logicalDeviceId: 'target', revision: 1, name: '客厅灯', capabilities: [
+      { key: 'power', kind: 0, type: 0, displayName: '电源开关', trueLabel: '亮', falseLabel: '灭' },
+    ] };
+    Object.assign(f.data.device.dict.target, { displayMetadata: metadata });
+    await f.service.open();
+    expect(f.service.endpointLabel(detail.rule.target)).toBe('客厅灯 · 电源开关');
+    expect(f.page.actionText(detail.rule)).toBe('客厅灯 · 电源开关：亮');
+    expect(f.service.state().choices.find(c => c.id === 'target:1')?.label).toBe('客厅灯 · 电源开关');
+    expect(detail.rule.target).toEqual({ ...endpoint, deviceId: 'target', value: true });
+    expect(f.service.endpointLabel({ ...detail.rule.target, valueType: 'uint32' })).toBe('客厅灯 · power');
+    expect(automationErrorText({ code: 'AUTOMATION_TARGET_CONFLICT' })).toContain('目标设备');
+    f.service.ngOnDestroy();
+  });
+  it('offers only owned ordinary WiFi scalar source Properties and boolean/uint32 targets; cache is not authority', () => {
     const device = { deviceType: 'diy', config: { mode: 'bbp2' } };
     const choices = automationChoices({ good: device, ble: { ...device, deviceType: 'ble' }, hub: { ...device, deviceType: 'edge-hub' },
       shared: { ...device, config: { ...device.config, isShared: true } }, preview: { ...device, config: { ...device.config, isPreview: true } },
       child: { ...device, gatewayRouted: true }, unknown: { ...device, deviceType: undefined } }, () => manifest as any);
     expect(choices).toHaveLength(2); expect(choices[0].endpoint.key).toBe('power'); expect(choices[0].source).toBe(true); expect(choices[0].target).toBe(true);
-    expect(choices[1].endpoint.valueType).toBe('uint32'); expect(choices[1].source).toBe(true); expect(choices[1].target).toBe(false);
+    expect(choices[1].endpoint.valueType).toBe('uint32'); expect(choices[1].source).toBe(true); expect(choices[1].target).toBe(true);
     expect(automationChoices({ good: device }, () => undefined)).toEqual([]);
     expect(automationDeviceName({ b: device, a: device }, 'a')).toBe('未命名设备 1');
     expect(automationDeviceName({ b: device, a: device }, 'b')).toBe('未命名设备 2');
@@ -85,7 +100,7 @@ describe('minimal automation view lifecycle', () => {
     await f.service.open(); expect(f.service.state().ready).toBe(false); expect(f.service.state().pending).toEqual([pending]);
     await f.service.toggle(detail.rule); expect(f.client.submit).not.toHaveBeenCalled(); f.service.ngOnDestroy();
   });
-  it('maps all five actual Manifest types and excludes non-Property, unsupported, non-notify and numeric targets', () => {
+  it('maps scalar sources and excludes Action, unsupported targets and non-notify sources', () => {
     const fields = Array.from({ length: 5 }, (_, type) => ({ id: type + 1, key: `scalar${type}`, kind: 0, type, access: 7 }));
     const choices = automationChoices({ good: { deviceType: 'diy', config: { mode: 'bbp2' } } }, () => ({ ...manifest, fields: [
       ...fields, { id: 6, key: 'text', kind: 0, type: 5, access: 7 }, { id: 7, key: 'action', kind: 1, type: 0, access: 7 },
@@ -94,7 +109,7 @@ describe('minimal automation view lifecycle', () => {
     ] } as any));
     expect(choices.slice(0, 5).map(choice => choice.endpoint.valueType)).toEqual(['boolean', 'int32', 'uint32', 'float32', 'float64']);
     expect(choices).toHaveLength(6); expect(choices.slice(0, 5).every(choice => choice.source)).toBe(true);
-    expect(choices.filter(choice => choice.target).map(choice => choice.endpoint.key)).toEqual(['scalar0', 'writeOnlyBool']);
+    expect(choices.filter(choice => choice.target).map(choice => choice.endpoint.key)).toEqual(['scalar0', 'scalar2', 'writeOnlyBool']);
     expect(choices.at(-1).source).toBe(false);
   });
   it('switching source type clears incompatible condition inputs and same-device targets', async () => {
@@ -201,5 +216,48 @@ describe('minimal automation view lifecycle', () => {
     expect(f.client.submit).not.toHaveBeenCalled(); expect(f.page.view).toBe('list');
     f.client.get.mockRejectedValueOnce(new Error('network lost')); await f.page.inspect(enabled);
     expect(f.page.view).toBe('list'); expect(f.service.state().error).not.toBe(''); f.service.ngOnDestroy();
+  });
+  it('validates uint32 form values without guessing defaults or exposing other numeric target types', () => {
+    const choice = { endpoint: { ...endpoint, valueType: 'uint32' as const }, minimum: 2, maximum: 10, step: 2 };
+    expect(automationChoiceValue(choice, '2')).toBe(2); expect(automationChoiceValue(choice, 10)).toBe(10);
+    for (const value of ['', null, false, '-0', -0, -1, '1.5', 1.5, NaN, Infinity, '1e2', '0x10', 1, 3, 11, 0x100000000])
+      expect(() => automationChoiceValue(choice, value)).toThrow();
+    expect(automationChoiceValue({ endpoint: { ...endpoint, valueType: 'uint32' } }, '0')).toBe(0);
+    expect(automationChoiceValue({ endpoint: { ...endpoint, valueType: 'uint32' } }, '4294967295')).toBe(0xffffffff);
+    expect(() => automationChoiceValue({ endpoint: { ...endpoint, valueType: 'uint32' }, step: 2 }, 1)).toThrow();
+    expect(automationChoiceValue({ endpoint: { ...endpoint, valueType: 'uint32' }, minimum: 1, step: 2 }, 3)).toBe(3);
+    expect(() => automationChoiceValue({ endpoint: { ...endpoint, valueType: 'float32' } }, 2)).toThrow();
+  });
+  it('clears switched target input, accepts explicit zero and sends a named uint32 disabled write', async () => {
+    const f = setup(); await f.service.open(); f.page.source = 'source:1'; f.page.target = 'target:1';
+    f.page.value = false; f.page.target = 'target:4'; f.page.targetChanged();
+    expect(f.page.numericTarget).toBe(true); expect(f.page.value).toBe(''); expect(f.page.canSave).toBe(false);
+    f.page.value = '0'; expect(f.page.targetValue).toBe(0); expect(f.page.canSave).toBe(true);
+    await f.page.save(); expect(f.client.submit.mock.calls[0][0]).toMatchObject({ body: {
+      enabled: false, expectedRevision: 0, target: { key: 'value', valueType: 'uint32', value: 0 }, policyVersion: 2 } });
+    f.page.backToList(); f.page.source = 'source:1'; f.page.target = 'target:4'; f.page.targetChanged(); f.page.value = 25;
+    f.page.target = 'target:1'; f.page.targetChanged(); expect(f.page.numericTarget).toBe(false); expect(f.page.value).toBe(true);
+    f.page.target = ''; f.page.targetChanged(); expect(f.page.targetValue).toBeUndefined();
+    f.service.ngOnDestroy();
+  });
+  it('checks cached uint32 range on create/edit but retains exact original endpoints and CAS', async () => {
+    const f = setup();
+    (f.service as any).manifests.load = () => ({ ...manifest, fields: [
+      ...manifest.fields.filter(field => field.id !== 4), { ...manifest.fields[3], constraints: { minimum: 0, maximum: 10, step: 2 } },
+    ] });
+    await f.service.open();
+    const condition = { kind: 'boolean-edge' as const, direction: 'rising' as const };
+    await f.service.create('source:1', 'target:4', 11, condition); expect(f.client.submit).not.toHaveBeenCalled();
+    await f.service.create('source:1', 'target:4', 3, condition); expect(f.client.submit).not.toHaveBeenCalled();
+    const rule: AutomationRule = { ...detail.rule, policyVersion: 2, condition, name: '档位', definitionRevision: 7,
+      target: { ...detail.rule.target, key: 'value', valueType: 'uint32', value: 5 } };
+    await f.service.edit(rule, '新档位', condition, 11); expect(f.client.submit).not.toHaveBeenCalled();
+    await f.service.edit(rule, '新档位', condition, 3); expect(f.client.submit).not.toHaveBeenCalled();
+    await f.service.edit(rule, '新档位', condition, 0);
+    expect(f.client.submit.mock.calls[0][0]).toEqual({ ruleId: rule.ruleId, operation: 'put', body: {
+      expectedRevision: 7, enabled: false, name: '新档位', source: rule.source,
+      target: { ...rule.target, value: 0 }, policyVersion: 2, condition } });
+    expect(f.page.actionText(rule)).toBe('Target · value：5'); expect(rule.target.value).toBe(5);
+    f.service.ngOnDestroy();
   });
 });

@@ -36,7 +36,7 @@
         @for (rule of automation.state().rules; track rule.ruleId) {
           <article>
             <h3>{{ ruleTitle(rule) }}</h3>
-            <p>当：{{ automation.endpointLabel(rule.source) }}{{ triggerText(rule.condition) }}</p>
+            <p>当：{{ automation.endpointLabel(rule.source) }}{{ triggerText(rule.condition, rule.source) }}</p>
             <p>执行：{{ actionText(rule) }}</p>
             <p class="rule-status">{{ ruleStatus(rule) }}</p>
             @if (rule.targetOutcomeUnknown) { <p role="status">请先核对上次执行结果，不能重复创建来绕过。</p> }
@@ -52,7 +52,7 @@
       @if (!automation.state().retired && automation.state().rules.length >= 4) { <p class="hint">目前最多保留 4 条自动化；删除不再使用的规则可腾出名额。</p> }
     }
     <details class="help"><summary>使用说明与支持范围</summary>
-      <p>目前支持所属账号的普通 WiFi 设备，一条自动化包含一个条件和一个开关动作。按钮、多步骤、延时暂不支持。</p>
+      <p>目前支持所属账号的普通 WiFi 设备，一条自动化包含一个条件和一个开关或非负整数属性动作。按钮、多步骤、延时暂不支持。</p>
       <p>首次数据和重连只建立起点，不执行动作。持续保持条件不会重复执行。每次动作间隔至少 30 秒，间隔内的新触发不会稍后补发。</p>
       <ion-button fill="clear" routerLink="/scene-archive">查看原场景配置（仅存档）</ion-button>
     </details>
@@ -73,7 +73,7 @@
         @if (numericSource) {
           <ion-select-option value="above">升至阈值或以上</ion-select-option><ion-select-option value="below">降至阈值或以下</ion-select-option>
         } @else {
-          <ion-select-option value="rising">从关变为开</ion-select-option><ion-select-option value="falling">从开变为关</ion-select-option>
+          <ion-select-option value="rising">{{ conditionText('rising-boolean') }}</ion-select-option><ion-select-option value="falling">{{ conditionText({ kind: 'boolean-edge', direction: 'falling' }) }}</ion-select-option>
         }
       </ion-select>
       @if (numericSource) {
@@ -84,13 +84,23 @@
         @else { <p class="hint">请填写有效阈值和正回差，两个边界须能区分。</p> }
       }
       <h3>就执行</h3>
-      @if (editing) { <p>{{ automation.endpointLabel(editing.target) }}</p><p class="hint">保留原设备与属性，仅修改条件、开关值和名称。</p> }
+      @if (editing) { <p>{{ automation.endpointLabel(editing.target) }}</p><p class="hint">保留原设备与属性，仅修改条件、目标值和名称。</p> }
       @else {
-        <ion-select label="目标属性" labelPlacement="stacked" [(ngModel)]="target" [disabled]="automation.state().busy">
+        <ion-select label="目标属性" labelPlacement="stacked" [(ngModel)]="target" (ionChange)="targetChanged()" [disabled]="automation.state().busy">
           @for (choice of targets; track choice.id) { <ion-select-option [value]="choice.id">{{ choice.label }}</ion-select-option> }
         </ion-select>
       }
-      <ion-select label="目标值" [(ngModel)]="value" [disabled]="automation.state().busy"><ion-select-option [value]="true">开</ion-select-option><ion-select-option [value]="false">关</ion-select-option></ion-select>
+      @if (numericTarget) {
+        <ion-input label="目标值" labelPlacement="stacked" type="number" inputmode="numeric" [(ngModel)]="value" [disabled]="automation.state().busy" />
+        <p class="hint">填写 0～4294967295 的整数；0 是有效值，不会自动填入。
+          @if (targetChoice?.minimum !== undefined) { 最小值 {{ targetChoice?.minimum }}。 }
+          @if (targetChoice?.maximum !== undefined) { 最大值 {{ targetChoice?.maximum }}。 }
+          @if (targetChoice?.step !== undefined) { 步长 {{ targetChoice?.step }}（以最小值或 0 为起点）。 }
+          缓存范围仅作提示，服务器会核对设备当前能力。</p>
+        @if (targetValue === undefined) { <p class="hint">请填写符合设备范围的非负整数。</p> }
+      } @else {
+        <ion-select label="目标值" [(ngModel)]="value" [disabled]="automation.state().busy || !selectedTarget"><ion-select-option [value]="true">{{ targetValueText(true) }}</ion-select-option><ion-select-option [value]="false">{{ targetValueText(false) }}</ion-select-option></ion-select>
+      }
       <p class="hint">{{ editing ? '保存后保留原启停状态；已发出的动作不会撤回。' : '新建后先保存为未启用，检查无误后再启用。' }}</p>
       <ion-button [disabled]="!canSave" (click)="save()">{{ editing ? '保存修改' : '保存自动化' }}</ion-button>
       <ion-button fill="clear" [disabled]="automation.state().busy" (click)="leaveView()">取消</ion-button>
@@ -99,9 +109,9 @@
   @if (view === 'detail') {
     @if (automation.state().detail; as detail) {
       <section><h2>{{ ruleTitle(detail.rule) }}</h2><p class="rule-status">{{ ruleStatus(detail.rule) }}</p>
-        <p>当：{{ automation.endpointLabel(detail.rule.source) }}{{ triggerText(detail.rule.condition) }}</p>
+        <p>当：{{ automation.endpointLabel(detail.rule.source) }}{{ triggerText(detail.rule.condition, detail.rule.source) }}</p>
         <p>执行：{{ actionText(detail.rule) }}</p>
-        <p class="hint">{{ conditionText(detail.rule.condition) }}。每次动作间隔至少 30 秒。</p>
+        <p class="hint">{{ conditionText(detail.rule.condition, detail.rule.source) }}。每次动作间隔至少 30 秒。</p>
         @if (detail.rule.targetOutcomeUnknown) { <p role="status">上次执行结果待确认，不会自动重发；删除规则也不会撤回已发出的动作。</p> }
         @if (detail.rule.retiredAtMs === null) {
           <ion-button [disabled]="automation.state().busy || hasPending(detail.rule.ruleId)" (click)="automation.toggle(detail.rule)">{{ detail.rule.enabled ? '停用' : '启用' }}</ion-button>

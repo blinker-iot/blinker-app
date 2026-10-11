@@ -8,7 +8,8 @@ import { IndexedDbIntentStorage } from '../../../core/device-v2/intent-storage';
 import { TaskIntent, TaskRecord, TaskResponse } from '../../../core/device-v2/tasks/contract';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceV2ManifestCache } from '../../../core/services/device-v2-manifest-cache.service';
-import { TaskTarget, taskErrorCode, taskErrorText, taskTargets } from './device-timer.models';
+import { capabilityBooleanLabel, capabilityDisplayName, deviceDisplayName } from '../../../core/device-v2/display-metadata';
+import { TaskTarget, taskEntryState, taskErrorCode, taskErrorText, taskTargets } from './device-timer.models';
 
 function context(data: DataService): DeviceV2AccountContext {
   if (!data.auth?.uuid) throw new Error('TASK_ACCOUNT_CHANGED');
@@ -30,7 +31,7 @@ export class TimerService implements OnDestroy {
   // template event. Signal-backed accessors notify every consuming page/status
   // view without injecting a view's ChangeDetectorRef into this service.
   private readonly state = signal({ id: '', busy: false, ready: false, error: '', notice: '',
-    capacity: 0, revision: 0, records: [] as TaskRecord[], targets: [] as TaskTarget[], journal: { held: false } as TaskPendingState });
+    capacity: null as number | null, revision: 0, records: [] as TaskRecord[], targets: [] as TaskTarget[], journal: { held: false } as TaskPendingState });
   get id(): string { return this.state().id; }
   set id(value: string) { this.state.update(s => ({ ...s, id: value })); }
   get busy(): boolean { return this.state().busy; }
@@ -41,8 +42,8 @@ export class TimerService implements OnDestroy {
   set error(value: string) { this.state.update(s => ({ ...s, error: value })); }
   get notice(): string { return this.state().notice; }
   set notice(value: string) { this.state.update(s => ({ ...s, notice: value })); }
-  get capacity(): number { return this.state().capacity; }
-  set capacity(value: number) { this.state.update(s => ({ ...s, capacity: value })); }
+  get capacity(): number | null { return this.state().capacity; }
+  set capacity(value: number | null) { this.state.update(s => ({ ...s, capacity: value })); }
   get revision(): number { return this.state().revision; }
   set revision(value: number) { this.state.update(s => ({ ...s, revision: value })); }
   get records(): TaskRecord[] { return this.state().records; }
@@ -65,8 +66,39 @@ export class TimerService implements OnDestroy {
       }
     });
   }
-  get deviceName(): string { return this.data.device?.dict?.[this.id]?.config?.customName || '设备'; }
+  get deviceName(): string { return deviceDisplayName(this.data.device?.dict?.[this.id]); }
+  targetLabel(key: string, valueType?: TaskRecord['definition']['valueType']): string {
+    const field = this.displayField(key, valueType);
+    return field ? capabilityDisplayName(this.data.device?.dict?.[this.id], field) : key;
+  }
+  valueLabel(key: string, value: unknown, valueType?: TaskRecord['definition']['valueType']): string {
+    const field = this.displayField(key, valueType);
+    return field?.type === 0 && typeof value === 'boolean'
+      ? capabilityBooleanLabel(this.data.device?.dict?.[this.id], field, value)
+      : typeof value === 'boolean' ? value ? '开' : '关' : String(value);
+  }
+  private displayField(key: string, valueType?: TaskRecord['definition']['valueType']) {
+    const expected = valueType ?? this.targets.find(target => target.key === key)?.valueType;
+    const types = ['boolean', 'int', 'uint', 'float32', 'float64'];
+    return expected && this.manifests.load(this.id)?.fields.find(field => field.key === key
+      && field.kind === 0 && types[field.type] === expected);
+  }
   get canWrite(): boolean { return this.ready && !this.busy && !this.pending; }
+  get canCreate(): boolean {
+    return this.canWrite && this.targets.length > 0 && this.capacity !== null && this.records.length < this.capacity;
+  }
+  get capacityText(): string {
+    return this.ready && this.capacity !== null ? `已用 ${this.records.length} / ${this.capacity} 条` : '容量尚未确认';
+  }
+  get creationHint(): string {
+    if (this.busy) return '正在查询或确认任务，请稍候。';
+    if (this.pending) return '有未确认的管理操作，请先查询并核对原请求。';
+    if (!this.ready || this.capacity === null) return '容量尚未确认，请先查询设备的定时能力和当前任务。';
+    if (!this.targets.length) return '固件未提供可用于定时的属性，请检查设备代码。';
+    if (this.records.length >= this.capacity) return '任务容量已满；仍可编辑、停用或删除已有任务。';
+    return '';
+  }
+  get sourceText(): string { return '设备本地执行，通过云端查询和管理；查询与管理需要设备云端连接。'; }
   get canInitialize(): boolean {
     return !this.busy && !!this.controller && !this.recoveryUnsupported
       && (!!this.journal.authority || ['TASK_SCOPE_REQUIRED', 'TASK_AUTHORITY_REQUIRED'].includes(this.lastCode));
@@ -79,10 +111,7 @@ export class TimerService implements OnDestroy {
     const generation = this.viewGeneration;
     try {
       this.account = context(this.data);
-      const device = this.data.device?.dict?.[id];
-      if (!device || device.config?.isPreview || device.config?.isShared || device.config?.disabled
-        || device.config?.mode !== 'bbp2' || device.deviceType === 'ble' || device.deviceType === 'edge-hub'
-        || device.gatewayRouted) throw new Error('TASK_PAGE_UNAVAILABLE');
+      if (!taskEntryState(this.data.device?.dict?.[id]).available) throw new Error('TASK_PAGE_UNAVAILABLE');
       const controller = this.controller = new AbortController();
       this.busy = true;
       const journal = await this.client.inspect(id); this.assertCurrent(controller);
@@ -93,15 +122,18 @@ export class TimerService implements OnDestroy {
   close(): void {
     ++this.viewGeneration;
     this.controller?.abort(); this.controller = undefined;
-    this.ready = false; this.busy = false; this.records = []; this.targets = []; this.capacity = 0;
+    this.clearTable(); this.busy = false;
     this.journal = { held: false };
     this.lastCode = '';
+  }
+  private clearTable(): void {
+    this.state.update(s => ({ ...s, ready: false, capacity: null, revision: 0, records: [], targets: [] }));
   }
   ngOnDestroy(): void { this.close(); this.subscription.unsubscribe(); }
   async refresh(): Promise<void> {
     if (this.busy) return;
     if (!this.controller) { if (this.id) await this.open(this.id); return; }
-    const controller = this.controller; this.busy = true; this.ready = false; this.error = ''; this.lastCode = '';
+    const controller = this.controller; this.busy = true; this.clearTable(); this.error = ''; this.lastCode = '';
     try {
       const catalog = await this.client.catalog(this.id, controller.signal);
       const table = await this.client.table(this.id, controller.signal);
@@ -111,11 +143,12 @@ export class TimerService implements OnDestroy {
       this.targets = taskTargets(catalog, this.manifests.load(this.id));
       this.capacity = catalog.capacity; this.revision = table.revision; this.records = table.records;
       this.journal = journal; this.ready = true;
-    } catch (error) { if (this.controller === controller) { this.records = []; this.targets = []; this.fail(error); } }
+    } catch (error) { if (this.controller === controller) this.fail(error); }
     finally { if (this.controller === controller) this.busy = false; }
   }
   async write(intent: Mutation, refreshAfter = true): Promise<boolean> {
     if (intent.operation === 'initialize' ? !this.canInitialize : !this.canWrite) return false;
+    if (intent.operation === 'create' && !this.canCreate) return false;
     if ('expectedRevision' in intent && intent.expectedRevision !== this.revision) throw new Error('TASK_TABLE_CHANGED');
     if ('definition' in intent && !this.targets.some(t => t.key === intent.definition.key && t.valueType === intent.definition.valueType))
       throw new Error('TASK_TARGET_UNAVAILABLE');
@@ -142,7 +175,7 @@ export class TimerService implements OnDestroy {
   get canReviewPending(): boolean { return this.ready && !!this.pending && !this.busy; }
   private async mutate(send: (signal: AbortSignal) => Promise<TaskResponse>, refreshAfter = true, authorityRecovery = false): Promise<boolean> {
     const controller = this.controller; if (!controller) return false;
-    this.busy = true; this.ready = false; this.error = ''; this.notice = ''; let confirmed = false;
+    this.busy = true; this.clearTable(); this.error = ''; this.notice = ''; let confirmed = false;
     try {
       const response = await send(controller.signal); this.assertCurrent(controller);
       confirmed = true;
@@ -172,6 +205,7 @@ export class TimerService implements OnDestroy {
       || this.account.sessionEpoch !== this.data.sessionEpoch) throw new Error('TASK_ACCOUNT_CHANGED');
   }
   private fail(error: unknown): void {
+    this.clearTable();
     this.lastCode = taskErrorCode(error); this.error = taskErrorText(error);
   }
 }

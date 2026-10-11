@@ -5,11 +5,19 @@ import { TimerService } from './timer.service';
 @Component({
   selector: 'app-task-status', imports: [IonicModule],
   template: `
+    <section class="task-summary" aria-label="任务容量与来源">
+      <strong class="capacity-text">{{ timer.capacityText }}</strong>
+      <p class="source-text">{{ timer.sourceText }}</p>
+    </section>
     @if (timer.busy) { <p role="status"><ion-spinner name="crescent" />正在等待设备确认/读取任务…</p> }
     @if (timer.error) { <p role="alert">{{ timer.error }}</p> }
     @if (error) { <p role="alert">{{ error }}</p> }
     @if (timer.notice) { <p role="status">{{ timer.notice }}</p> }
-    @if (timer.ready) { <p>设备有写入配额和开始冷却；被限流时稍后手动核对，不连续点击或自动重试。</p> }
+    @if (timer.ready) {
+      <details class="task-query-details"><summary>查询与操作说明</summary>
+        <p>当前查询修订 {{ timer.revision }}。设备有写入配额和开始冷却；被限流时稍后手动核对，不连续点击或自动重试。</p>
+      </details>
+    }
     @if (!timer.busy && !timer.ready) { <ion-button fill="outline" (click)="timer.refresh()">重新查询</ion-button> }
     @if (timer.canInitialize) { <ion-button (click)="initialize()">{{ timer.journal.authority ? '恢复原授权同步' : '启用/同步本机任务授权' }}</ion-button> }
     @if (timer.pending) {
@@ -24,7 +32,7 @@ import { TimerService } from './timer.service';
       </section>
     }
   `,
-  styles: ['p { overflow-wrap: anywhere; font-size: 12px; line-height: 1.6; } section { padding: 12px; border: 1px solid var(--blinker-border); border-radius: 12px; }'],
+  styles: ['p { overflow-wrap: anywhere; font-size: 12px; line-height: 1.6; } section { padding: 12px; border: 1px solid var(--blinker-border); border-radius: 12px; } .task-summary { margin-bottom: 12px; } .task-summary p { margin-bottom: 0; color: var(--blinker-text-secondary); } details { margin: 10px 0; font-size: 12px; color: var(--blinker-text-secondary); }'],
 })
 export class TaskStatusComponent {
   @Input({ required: true }) timer!: TimerService;

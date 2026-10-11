@@ -1,8 +1,20 @@
 # App Android：源码闭包与隔离重建
 
-第86批最小自动化M1～M5已按限定范围完成，当前本机匹配新APK／Gateway050、来源与安装实物结果取[产品方案§8](APP_DEVICE_V2_MINIMAL_AUTOMATION_PRODUCT_PLAN.md#8-m5本机新版本验收)及本页§9。以下第82～84冻结源／制品仅代表当批历史，不包含命名／编辑／入口改动，不直接作为新版本交付物。正式签名／profile及独立接收方验收仍分别准入。
+当前入口（2026-10-11）：同事从设备库、App、Service各自当前Git分支及五个插件仓拉取源码，自行编译并完成有限短验收。统一操作取[Git拉取、编译与独立短验收手册](../../blinker-library/docs/DEVICE_V2_INDEPENDENT_ACCEPTANCE.md)，不再使用本地交接包、预编译APK或冻结源码快照作为交付入口。M1～M5、N1～N5及H1只保留已准入范围；同事独立签收仍待完成，不能由发送方的本机验证代替。
 
-更新：2026-10-10，第83批候选索引与升级/回退合同核对。**当前普通A2 App来源、实物与保留状态取§8；P1实验来源取§6～7，普通P1/LAN仍关闭。** 第82批匹配A2 Android debug App已安装且两普通WiFi限定自动化闭环通过；保留匹配App/服务及停用历史，不再将旧`05071e…7606`称为当前可恢复包。原S4/P1的来源与当批恢复记录保持历史，不改其manifest。组件唯一选择取[候选清单§3.1](../../blinker-library/docs/DEVICE_V2_CANDIDATE_SOURCE_AND_SUPPORT.md#31-当前匹配组件索引第83批收口)，升级/暂停/回退取[候选清单§7.5](../../blinker-library/docs/DEVICE_V2_CANDIDATE_SOURCE_AND_SUPPORT.md#75-匹配候选升级暂停与回退)，优先级取[设备主线](../../blinker-library/docs/DEVICE_V2_NEXT_EXECUTION_PLAN.md)。本批只核对现有来源及说明，不重建、安装、部署或创建新交付包；独立接收、iOS、正式签名/profile仍待准入。
+App和五插件必须保留六个相邻目录，沿用现有`file:../...`依赖。五插件的必要原生源码已在各自远端，按手册固定提交，不另推候选实现或复制旧`dist`。已测工具链为Node22.22.3、插件npm10.9.8、App pnpm11.19.0、JDK21及Android SDK36；插件分别按npm锁构建，App按唯一pnpm锁安装，再构建模板、类型、Web和Android。Capacitor生成路径由接收方sync，不复制本机生成文件；两个LocalAccess回归使用相邻设备库的公共golden fixture。
+
+账号、DeviceKey、网络密钥、运行secret和私有备份不进入Git。SDK/JDK、服务运行配置及测试CA另行准备；公开CA不能签发服务器证书，禁止交付私钥或关闭证书验证。Android独立debug构建通常产生不同更新签名，不以卸载、清账号或切换WebView origin替代兼容更新。普通源码配置仍关闭LAN/P1，选择性验收必须显式配对配置与服务。
+
+H1已完成的有限发送方结果取[共同方案§9.5～§9.6](../../blinker-library/docs/DEVICE_V2_LIVE_AND_HISTORY_EXECUTION_PLAN.md#96-h1真实分享只读与撤权收口2026-10-11)。下列source-handoff工具、冻结摘要和第71～86批记录只保存历史来源，不是本轮材料入口，也不重新派发其中的旧“下一步”；M5/schema50与N5旧候选不能用于H1验收。
+
+H1已安装Android候选为79,987,977 B，SHA-256 `34e3499a4db42ed9db33bc6cec5f06fbd444dd51ae3df5ad1a84bcf2dfe56b35`；1,666项源码输入manifest摘要为`240b11f0554f92aa17ebb650a8038b31577e7eb44f7d2200fd465b4f9bd0eb66`。该包沿用原AppID、更新签名及HTTPS WebView origin，并保留原已装内部LAN-enabled测试配置，不代表普通源码默认开关或生产发行配置。H1服务仍为schema51，仅参与Broker shard1完成匹配部署；schema相同不能代替源码/镜像配对。验收证明撤权后的下一次真实查询清空旧内容，不宣称推送即时清空或分享控制门禁已通过；私有目录、请求日志及APK不整体作为源码交接包。
+
+上述manifest对应基础源码快照，实测APK另有仅开启LAN的私有local-device overlay；普通source-handoff重建不能据此称得到同一APK字节或实测配置。需要复现该有限环境时，维护者另核对公开配置与overlay来源，账号、Key和运行secret不随源码包交付。
+
+顺序4改为Git交付后，接收方分别记录三端实际提交、公开profile、构建结果及自己的安装、控制ACK/State和恢复检查结果。标准短链为power与单次button/counter，整数试点仅按原可写Manifest选测。签收清单取Git验收手册，本页的旧APK和源码摘要仅作历史对照，不要求保留本机交接目录。
+
+第83批历史索引（2026-10-10）：§8记当时普通A2来源，§6～7记P1实验来源；普通P1/LAN关闭。原S4/P1、第82APK及恢复记录保留原manifest，不再作为N5保留历史环境的可恢复包。历史升级/暂停/回退合同取[候选清单§7.5](../../blinker-library/docs/DEVICE_V2_CANDIDATE_SOURCE_AND_SUPPORT.md#75-匹配候选升级暂停与回退)，当前组件和优先级只取本页开头的共同计划，不复用旧“下一步”。
 
 第84批用户将本机真实App最小自动化设为主线，已复用当前匹配APK完成真实界面新建/启停/退出后执行/结果查询/退役及两设备各一次联动；新5项DOM维护回归与原相关集合共45项通过。详见[主线§8.84](../../blinker-library/docs/DEVICE_V2_NEXT_EXECUTION_PLAN.md#884-第八十四批本机真实app最小自动化用户闭环2026-10-10)及[App最小使用流程](../src/app/sections/scene/README.md#第84批真实app最小使用流程与验收)。生产运行时代码/依赖和冻结制品不变，没有因交接重复构建；正式profile/签名或独立接收不是本机功能验收前置。以下历史“下一步”不重新成为当前任务。
 
@@ -150,13 +162,15 @@ pnpm11.19.0属于维护者外部工具，需先按团队工具链安装；传入
 
 当前来源与有限发送方实物链已闭合；独立接收须另记录接收人、实际profile/端点、安装与短链结果，不能把历史模板空白或本页核对算接收通过。正式服务profile、release签名/信任根、完整外部工具链离线闭包、iOS及原缺环境项仍待办。未给定正式profile不自动创建生产包，未发生源码/配置差异不重复巨大bundle、全量构建或刷板；既有现场临时入口与ADB测试转发已清理，恢复测试连接另需明确匹配网络配置。
 
-用户已确认先保留内部候选并交接验收，执行取[候选§7.6](../../blinker-library/docs/DEVICE_V2_CANDIDATE_SOURCE_AND_SUPPORT.md#76-内部候选交接验收用户已确认)。继续使用本节匹配普通A2来源，不新建生产APK或恢复旧P1包；来源/安装与有匹配环境条件下的联网验收分开记录，缺环境记未测。此确认不代表App已发送给同事、其已安装或第28项接收通过。
+用户当时已确认先保留内部候选并交接验收，历史执行取[候选§7.6](../../blinker-library/docs/DEVICE_V2_CANDIDATE_SOURCE_AND_SUPPORT.md#76-内部候选交接验收用户已确认)。本节普通A2来源后来已被N5匹配候选替代，当前选择取页首及执行计划§10，不恢复旧P1包；来源/安装与有匹配环境条件下的联网验收分开记录，缺环境记未测。此确认不代表App已发送给同事、其已安装或第28项接收通过。
 
 ## 9. 第86批M5命名与编辑的当前本机候选
 
+本节仅保存第86批当时的候选，当前H1匹配选择取本页开头；保留原标题以维持历史链接，不把旧APK作为本轮交付物。
+
 新工作树冻结源1,641项，manifest SHA256 `8a36e0576faa6d88333dd4a0dcff3137d39b756469764e3edde489c94ecce934`；在新目录按固定pnpm锁及5个相邻插件闭包完成依赖、类型、Web／Android构建，不覆盖第82来源或制品。实际APK内新生产模板与编译Web字节一致，AppID／原debug签名／公开CA／HTTPS WebView origin保留，P1／LAN=false。
 
-- 当前本机APK：79,913,838 B，SHA256 `7284b0673517a52eb8b76d4ec5ce1581ff772748ebe89495659c0e1f37ed514c`；实际安装并设备读回一致，原APK及完整私有数据先备份，无清数据／切origin／切账号。
+- 第86批当时APK：79,913,838 B，SHA256 `7284b0673517a52eb8b76d4ec5ce1581ff772748ebe89495659c0e1f37ed514c`；当批实际安装并设备读回一致，原APK及完整私有数据先备份，无清数据／切origin／切账号。此包已被N5匹配版本替代。
 - 必须匹配Gateway管理代码及schema50，新镜像`468e06bb4e898193238ebac7d11fb9e35ace7a903da53ebe7690edbf59608a41`；Broker沿第82镜像／执行链未改。名称进入管理响应，旧APK不保证读取新命名历史，不能把停用／删除当兼容降级依据。
 - 生产DOM经统一入口完成命名／停用编辑／启用／已启用编辑、两设备触发、App退出后执行、重开查询、停用／删除；两ACK、目标回调0→1→2。首命令原帧重试2次尝试、第二1次，如实记录；不是手动软键盘或物理负载验收。
 - 测试网络／ADB入口已撤，保留匹配新App／Gateway50和命名历史；不恢复旧APK或业务库。正式release签名、可公开服务profile、iOS／其他平台及接收人独立验收不由本机成功代签。

@@ -8,11 +8,12 @@ import { TaskRecord } from '../../../core/device-v2/tasks/contract';
 const record: TaskRecord = { taskId: 7, definitionRevision: 2, consumedUtcMillis: 0, startSequence: 0, progress: 0,
   definition: { enabled: true, key: 'power', valueType: 'boolean', value: true, schedule: { kind: 'countdown', durationMillis: 3000 } } };
 function setup(routeId = 'task-7') {
-  const timer = { generation: 1, id: 'device_a', ready: true, busy: false, canWrite: true, capacity: 4, revision: 2,
+  const timer = { generation: 1, id: 'device_a', ready: true, busy: false, canWrite: true, capacity: 4 as number | null, revision: 2,
     targets: [{ key: 'power', valueType: 'boolean' }, { key: 'level', valueType: 'uint' }],
     records: structuredClone([record]), deviceName: 'test', open: vi.fn(async () => undefined),
     close: vi.fn(), write: vi.fn(async () => true), retry: vi.fn(async () => true), forget: vi.fn(),
-    canInitialize: false, canReviewPending: false, canRetry: true, pending: undefined as any, journal: { held: false } as any };
+    canInitialize: false, canReviewPending: false, canRetry: true, pending: undefined as any, journal: { held: false } as any,
+    get canCreate() { return this.canWrite && this.capacity !== null && !!this.targets.length && this.records.length < this.capacity; } };
   const nav = { navigateBack: vi.fn(async () => true) }, router = { navigate: vi.fn(async () => true) };
   const route = { snapshot: { paramMap: { get: (name: string) => name === 'id' ? 'device_a' : routeId } } };
   const dismissal = vi.fn(async () => ({ role: 'confirm' }));
@@ -23,6 +24,20 @@ function setup(routeId = 'task-7') {
 }
 
 describe('V2 task pages', () => {
+  it('uses the service creation gate and keeps full-table editing/removal available', async () => {
+    const f = setup('new'); await f.editor.ionViewWillEnter();
+    f.timer.capacity = null; f.list.addTask(); await f.editor.save();
+    expect(f.router.navigate).not.toHaveBeenCalled(); expect(f.timer.write).not.toHaveBeenCalled();
+    f.timer.capacity = 1; f.list.addTask(); expect(f.editor.canSave).toBe(false);
+    expect(f.router.navigate).not.toHaveBeenCalled();
+    const edit = setup(); await edit.editor.ionViewWillEnter(); edit.timer.capacity = 1;
+    expect(edit.editor.canSave).toBe(true);
+    edit.list.editTask(record); expect(edit.router.navigate).toHaveBeenCalled();
+    edit.timer.targets = []; expect(edit.editor.canSave).toBe(false);
+    await edit.editor.deleteTask();
+    expect(edit.timer.write).toHaveBeenCalledExactlyOnceWith({ operation: 'remove', expectedRevision: 2, taskId: 7 }, false);
+  });
+
   it('distinguishes cloud link readiness from device policy and does not promise rollback', () => {
     expect(taskErrorText({ error: { errorCode: 'TASK_DEVICE_OFFLINE' } })).toContain('不会自动重发');
     expect(taskErrorText({ error: { errorCode: 'TASK_CONNECTION_NOT_READY' } })).toContain('不是设备任务额度或冷却限制');
@@ -47,6 +62,7 @@ describe('V2 task pages', () => {
     expect(f.editor.taskNotFound).toBe(false); expect(f.editor.seconds).toBe(3);
     f.list.ionViewWillEnter(); f.list.editTask(record); expect(f.router.navigate).toHaveBeenCalledWith(['/device-manager/device_a/timer/task-7']);
     f.editor.ionViewWillLeave(); f.list.ionViewWillLeave(); expect(f.timer.close).toHaveBeenCalledTimes(2);
+    expect(f.editor.formLoaded).toBe(false);
     for (const id of ['timing-0', 'countdown', 'loop-0', '0', 'task-0', 'task-4294967296']) {
       const page = setup(id).editor; await page.ionViewWillEnter(); expect(page.taskNotFound).toBe(true);
     }
@@ -63,9 +79,33 @@ describe('V2 task pages', () => {
   });
   it('keeps form CAS stable after a refresh until the user explicitly reloads', async () => {
     const f = setup(); await f.editor.ionViewWillEnter();
-    f.timer.revision = 9; await f.editor.save();
+    f.editor.seconds = 12; f.editor.value = false;
+    f.timer.revision = 9; f.timer.records[0].definition.schedule = { kind: 'countdown', durationMillis: 4000 };
+    expect(f.editor.seconds).toBe(12); expect(f.editor.value).toBe(false); expect(f.editor.revision).toBe(2);
+    await f.editor.save();
     expect(f.timer.write).toHaveBeenCalledWith(expect.objectContaining({ operation: 'replace', taskId: 7, expectedRevision: 2 }), false);
-    f.editor.loadForm(); expect(f.editor.revision).toBe(9);
+    f.editor.loadForm(); expect(f.editor.revision).toBe(9); expect(f.editor.seconds).toBe(4); expect(f.editor.value).toBe(true);
+  });
+  it.each(['task-7', 'new'])('recovers a failed first query through an explicit form load for %s', async routeId => {
+    const f = setup(routeId); f.timer.ready = false;
+    await f.editor.ionViewWillEnter(); expect(f.editor.formLoaded).toBe(false);
+    f.timer.ready = true;
+    expect(f.editor.taskNotFound).toBe(false); expect(f.editor.canSave).toBe(false);
+    await f.editor.save(); expect(f.timer.write).not.toHaveBeenCalled();
+    f.editor.loadForm(); expect(f.editor.formLoaded).toBe(true); expect(f.editor.revision).toBe(2);
+    expect(f.editor.key).toBe('power'); expect(f.editor.canSave).toBe(true);
+  });
+  it('does not confuse an unloaded existing task with a genuinely missing or invalid task route', async () => {
+    for (const routeId of ['task-7', 'timing-0']) {
+      const f = setup(routeId); f.timer.ready = false; await f.editor.ionViewWillEnter();
+      f.timer.records = []; f.timer.ready = true;
+      expect(f.editor.taskNotFound).toBe(true);
+      f.editor.loadForm(); expect(f.editor.formLoaded).toBe(false); expect(f.editor.canSave).toBe(false);
+      await f.editor.save(); await f.editor.deleteTask(); expect(f.timer.write).not.toHaveBeenCalled();
+    }
+    const f = setup(); await f.editor.ionViewWillEnter();
+    f.timer.records = []; expect(f.editor.taskNotFound).toBe(true); expect(f.editor.canSave).toBe(false);
+    await f.editor.deleteTask(); expect(f.alerts.create).not.toHaveBeenCalled(); expect(f.timer.write).not.toHaveBeenCalled();
   });
   it('weekly input is Monday bit0 with explicit fixed offset, no implicit Sunday remapping', async () => {
     const f = setup('new'); await f.editor.ionViewWillEnter();

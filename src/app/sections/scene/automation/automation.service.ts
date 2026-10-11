@@ -9,7 +9,8 @@ import { HttpAutomationApi } from '../../../core/device-v2/automation/http';
 import { IndexedDbIntentStorage } from '../../../core/device-v2/intent-storage';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceV2ManifestCache } from '../../../core/services/device-v2-manifest-cache.service';
-import { AutomationChoice, automationChoices, automationDeviceName, automationErrorText } from './automation.models';
+import { capabilityBooleanLabel, capabilityDisplayName } from '../../../core/device-v2/display-metadata';
+import { AutomationChoice, automationChoices, automationChoiceValue, automationDeviceName, automationErrorText } from './automation.models';
 function context(data: DataService): DeviceV2AccountContext {
   if (!data.auth?.uuid) throw new Error('AUTOMATION_ACCOUNT_CHANGED');
   return { authority: API.BASE_URL, accountId: data.auth.uuid, sessionEpoch: data.sessionEpoch };
@@ -80,25 +81,44 @@ export class AutomationService implements OnDestroy {
     await this.run(async signal => { const detail = await this.client.get(ruleId, signal); if (this.current(signal)) this.patch({ detail, reviewed: undefined }); });
   }
   deviceName(deviceId: string): string { return automationDeviceName(this.data.device?.dict, deviceId); }
-  endpointLabel(endpoint: AutomationRule['source']): string { return `${this.deviceName(endpoint.deviceId)} · ${endpoint.key}`; }
-  async create(sourceId: string, targetId: string, value: boolean, condition: AutomationCondition, name?: string): Promise<boolean> {
+  endpointLabel(endpoint: AutomationRule['source']): string {
+    const types = ['boolean', 'int32', 'uint32', 'float32', 'float64'];
+    const field = this.manifests.load(endpoint.deviceId)?.fields.find(f => f.key === endpoint.key && f.kind === 0 && types[f.type] === endpoint.valueType);
+    const key = field ? capabilityDisplayName(this.data.device?.dict?.[endpoint.deviceId], field) : endpoint.key;
+    return `${this.deviceName(endpoint.deviceId)} · ${key}`;
+  }
+  booleanLabel(endpoint: AutomationRule['source'] | undefined, value: boolean): string {
+    const field = endpoint && this.manifests.load(endpoint.deviceId)?.fields.find(f => f.key === endpoint.key && f.kind === 0 && f.type === 0);
+    return field && endpoint?.valueType === 'boolean'
+      ? capabilityBooleanLabel(this.data.device?.dict?.[endpoint.deviceId], field, value) : value ? '开' : '关';
+  }
+  valueLabel(endpoint: AutomationRule['target']): string {
+    return endpoint.valueType === 'boolean' ? this.booleanLabel(endpoint, endpoint.value) : String(endpoint.value);
+  }
+  targetChoice(endpoint: AutomationRule['source']): Pick<AutomationChoice, 'endpoint' | 'minimum' | 'maximum' | 'step'> {
+    const manifest = this.manifests.load(endpoint.deviceId);
+    const field = manifest?.fingerprint === endpoint.fingerprint && endpoint.valueType === 'uint32'
+      ? manifest.fields.find(f => f.key === endpoint.key && f.kind === 0 && f.type === 2 && (f.access & 2) === 2) : undefined;
+    return { endpoint, minimum: field?.constraints?.minimum, maximum: field?.constraints?.maximum, step: field?.constraints?.step };
+  }
+  async create(sourceId: string, targetId: string, value: boolean | number, condition: AutomationCondition, name?: string): Promise<boolean> {
     if (!this.state().ready || this.state().busy) return false;
     const source = this.state().choices.find(c => c.id === sourceId && c.source), target = this.state().choices.find(c => c.id === targetId && c.target);
-    if (!source || !target || target.endpoint.valueType !== 'boolean' || source.endpoint.deviceId === target.endpoint.deviceId) return false;
+    if (!source || !target || source.endpoint.deviceId === target.endpoint.deviceId) return false;
     let intent: AutomationIntent;
     try { intent = automationIntent({ ruleId: crypto.randomUUID(), operation: 'put', body: {
       expectedRevision: 0, enabled: false, source: source.endpoint,
-      target: { ...target.endpoint, valueType: 'boolean', value }, policyVersion: 2, condition,
+      target: { ...target.endpoint, value: automationChoiceValue(target, value) }, policyVersion: 2, condition,
       ...(name === undefined ? {} : { name }) } }); }
     catch { this.patch({ error: automationErrorText(new Error('AUTOMATION_INVALID_INPUT')) }); return false; }
     return this.submit(intent);
   }
-  async edit(rule: AutomationRule, name: string, condition: AutomationCondition, value: boolean): Promise<boolean> {
+  async edit(rule: AutomationRule, name: string, condition: AutomationCondition, value: boolean | number): Promise<boolean> {
     if (!this.state().ready || this.state().busy || rule.retiredAtMs !== null) return false;
     let intent: AutomationIntent;
     try { intent = automationIntent({ ruleId: rule.ruleId, operation: 'put', body: {
       expectedRevision: rule.definitionRevision, enabled: rule.enabled, name, source: rule.source,
-      target: { ...rule.target, value }, policyVersion: 2, condition } }); }
+      target: { ...rule.target, value: automationChoiceValue(this.targetChoice(rule.target), value) }, policyVersion: 2, condition } }); }
     catch { this.patch({ error: automationErrorText(new Error('AUTOMATION_INVALID_INPUT')) }); return false; }
     return this.submit(intent);
   }

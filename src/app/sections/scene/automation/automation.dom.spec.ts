@@ -16,6 +16,7 @@ import { AutomationService } from './automation.service';
 const manifest = { revision: 1, fingerprint: 'ab'.repeat(32), fields: [
   { id: 1, key: 'power', kind: 0, type: 0, access: 7 },
   { id: 2, key: 'temperature', kind: 0, type: 3, access: 7 },
+  { id: 3, key: 'level', kind: 0, type: 2, access: 7, constraints: { minimum: 0, maximum: 10, step: 2 } },
 ] };
 type FormControl = HTMLElement & { value: string | number | boolean; disabled: boolean };
 
@@ -25,6 +26,7 @@ describe('automation rendered form management flow (local API/cache/storage doub
   let replies: Map<string, AutomationDetail>;
   let api: ReturnType<typeof createApi>;
   let alerts: { create: ReturnType<typeof vi.fn> };
+  let devices: Record<string, any>;
 
   function createApi() {
     return {
@@ -63,10 +65,11 @@ describe('automation rendered form management flow (local API/cache/storage doub
   beforeEach(async () => {
     replies = new Map(); api = createApi();
     alerts = { create: vi.fn(async () => ({ present: async () => undefined, onDidDismiss: async () => ({ role: 'confirm' }) })) };
-    const data = { auth: { uuid: 'owner' }, sessionEpoch: 1, authDataChanged: new Subject<void>(), device: { dict: {
+    devices = {
       source: { deviceType: 'diy', config: { mode: 'bbp2', customName: 'Source' } },
       target: { deviceType: 'diy', config: { mode: 'bbp2', customName: 'Target' } },
-    } } };
+    };
+    const data = { auth: { uuid: 'owner' }, sessionEpoch: 1, authDataChanged: new Subject<void>(), device: { dict: devices } };
     const values = new Map<string, string>();
     const client = new AutomationClient(api, {
       getItem: key => values.get(key) ?? null,
@@ -127,6 +130,22 @@ describe('automation rendered form management flow (local API/cache/storage doub
     element.click();
     await settled();
   }
+
+  it('renders the list after delayed discard confirmation without a second click or manual detectChanges', async () => {
+    await click('新建自动化'); await input('ion-input', '名称', '未保存草稿');
+    fixture.autoDetectChanges();
+    let dismiss!: (result: { role: string }) => void;
+    alerts.create.mockResolvedValueOnce({ present: async () => undefined,
+      onDidDismiss: () => new Promise(resolve => { dismiss = resolve; }) });
+    const leaving = fixture.componentInstance.leaveView();
+    await vi.waitFor(() => expect(dismiss).toBeDefined());
+    expect(fixture.nativeElement.querySelector('ion-input[label="名称"]')).not.toBeNull();
+    dismiss({ role: 'confirm' }); await leaving;
+    expect(fixture.componentInstance.view).toBe('list');
+    await vi.waitFor(() => expect(fixture.nativeElement.querySelector('ion-input[label="名称"]')).toBeNull());
+    expect(fixture.nativeElement.textContent).toContain('我的自动化');
+    expect(api.write).not.toHaveBeenCalled();
+  });
 
   it.each([
     { source: 'source:1', direction: 'rising', condition: { kind: 'boolean-edge', direction: 'rising' } },
@@ -213,6 +232,23 @@ describe('automation rendered form management flow (local API/cache/storage doub
     expect(control('ion-input', '恢复幅度（回差）').value).toBeNull();
     expect(api.write).not.toHaveBeenCalled();
   });
+  it('DOM uses display aliases and boolean labels but sends the unchanged stable protocol key/value', async () => {
+    devices['source'].displayMetadata = { logicalDeviceId: 'source', revision: 1, name: '玄关感应器', capabilities: [
+      { key: 'power', kind: 0, type: 0, displayName: '有人', trueLabel: '检测到人', falseLabel: '无人' } ] };
+    devices['target'].displayMetadata = { logicalDeviceId: 'target', revision: 1, name: '客厅灯', capabilities: [
+      { key: 'power', kind: 0, type: 0, displayName: '电源开关', trueLabel: '亮', falseLabel: '灭' } ] };
+    await service.refresh(); await settled();
+    await click('新建自动化'); await input('ion-input', '名称', '进门亮灯');
+    await input('ion-select', '源属性', 'source:1'); await input('ion-select', '目标属性', 'target:1');
+    expect(control('ion-select', '源属性').textContent).toContain('玄关感应器 · 有人');
+    expect(control('ion-select', '目标属性').textContent).toContain('客厅灯 · 电源开关');
+    expect(control('ion-select', '触发条件').textContent).toContain('从无人变为检测到人');
+    expect(control('ion-select', '目标值').textContent).toContain('亮');
+    await click('保存自动化');
+    expect(api.write.mock.calls[0][0]).toMatchObject({ body: { source: { deviceId: 'source', key: 'power' },
+      target: { deviceId: 'target', key: 'power', value: true }, condition: { kind: 'boolean-edge', direction: 'rising' } } });
+    expect(fixture.nativeElement.textContent).toContain('客厅灯 · 电源开关：亮');
+  });
   it('DOM name/edit uses fresh CAS, keeps endpoints and explicitly confirms enabled edits', async () => {
     await click('新建自动化'); await input('ion-input', '名称', '  开灯联动  ');
     await input('ion-select', '源属性', 'source:1'); await input('ion-select', '目标属性', 'target:1');
@@ -263,5 +299,47 @@ describe('automation rendered form management flow (local API/cache/storage doub
     expect(service.state().pending).toEqual([]);
     expect(fixture.nativeElement.textContent).toContain('原名称');
     expect(fixture.nativeElement.querySelector('ion-input')).toBeNull();
+  });
+  it('DOM uint32 target has no zero default, checks cached range and saves/edits exact values and CAS', async () => {
+    devices['target'].displayMetadata = { logicalDeviceId: 'target', revision: 1, name: '客厅风扇', capabilities: [
+      { key: 'level', kind: 0, type: 2, displayName: '风速档位' } ] };
+    await service.refresh(); await settled();
+    await click('新建自动化'); await input('ion-input', '名称', '进门调风速');
+    expect(control('ion-select', '目标值').disabled).toBe(true);
+    await input('ion-select', '源属性', 'source:1'); await input('ion-select', '目标属性', 'target:3');
+    expect(fixture.nativeElement.querySelector('ion-select[label="目标值"]')).toBeNull();
+    expect(control('ion-input', '目标值').value).toBe(''); expect(button('保存自动化').disabled).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('最小值 0'); expect(fixture.nativeElement.textContent).toContain('最大值 10');
+    expect(fixture.nativeElement.textContent).toContain('步长 2');
+    for (const value of ['', '-0', '-1', '1.5', '3', '11', '1e309']) {
+      await input('ion-input', '目标值', value); expect(button('保存自动化').disabled).toBe(true);
+    }
+    await input('ion-input', '目标值', '0'); await click('保存自动化');
+    const created = api.write.mock.calls[0][0];
+    expect(created).toMatchObject({ operation: 'put', body: { expectedRevision: 0, enabled: false,
+      target: { deviceId: 'target', key: 'level', valueType: 'uint32', value: 0 }, policyVersion: 2 } });
+    expect(fixture.nativeElement.textContent).toContain('客厅风扇 · 风速档位：0');
+    await click('编辑'); expect(control('ion-input', '目标值').value).toBe(0);
+    expect(fixture.nativeElement.querySelector('ion-select[label="目标属性"]')).toBeNull();
+    await input('ion-input', '目标值', '10'); await click('保存修改');
+    expect(api.write.mock.calls[1][0]).toMatchObject({ ruleId: created.ruleId, body: { expectedRevision: 1, enabled: false,
+      target: { deviceId: 'target', key: 'level', valueType: 'uint32', value: 10 } } });
+    expect(fixture.nativeElement.textContent).toContain('客厅风扇 · 风速档位：10');
+    await click('启用'); expect(api.write.mock.calls[2][0]).toMatchObject({ ruleId: created.ruleId,
+      body: { expectedRevision: 2, enabled: true, target: { valueType: 'uint32', value: 10 } } });
+  });
+  it('DOM switching target type clears numeric input, and unknown numeric create retries the exact old value', async () => {
+    await click('新建自动化'); await input('ion-input', '名称', '原档位'); await input('ion-select', '源属性', 'source:1');
+    await input('ion-select', '目标属性', 'target:3'); await input('ion-input', '目标值', '5');
+    await input('ion-select', '目标属性', 'target:1'); expect(control('ion-select', '目标值').value).toBe(true);
+    await input('ion-select', '目标属性', 'target:3'); expect(control('ion-input', '目标值').value).toBe('');
+    expect(button('保存自动化').disabled).toBe(true); await input('ion-input', '目标值', '0');
+    api.write.mockRejectedValueOnce(new Error('lost numeric response')); await click('保存自动化');
+    const original = structuredClone(api.write.mock.calls[0][0]); expect(service.state().pending).toEqual([original]);
+    await input('ion-input', '目标值', '9'); await input('ion-input', '名称', '不得替换原请求');
+    expect(button('保存自动化').disabled).toBe(true); await click('查询原请求'); expect(api.write).toHaveBeenCalledTimes(1);
+    await click('恢复同一请求'); expect(api.write.mock.calls[1][0]).toEqual(original);
+    expect(service.state().pending).toEqual([]); expect(fixture.nativeElement.textContent).toContain('Target · level：0');
+    expect(fixture.nativeElement.textContent).toContain('原档位');
   });
 });

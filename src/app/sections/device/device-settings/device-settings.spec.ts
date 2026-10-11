@@ -29,12 +29,14 @@ describe('DeviceSettingsPage V2 access flow', () => {
       cloudLastSeenAt: 1_700_000_000_000,
     };
     const route = {
-      paramMap: new BehaviorSubject({ get: (name: string) => name === 'id' ? logicalDeviceId : null }),
+      paramMap: new BehaviorSubject<{ get: (name: string) => string | null }>({ get: (name: string) => name === 'id' ? logicalDeviceId : null }),
     };
     const data = {
       auth: { uuid: 'owner' }, sessionEpoch: 1,
+      authDataChanged: new BehaviorSubject<void>(undefined),
       deviceDataLoader: new BehaviorSubject(true),
       getDevice: vi.fn(() => device),
+      updateDeviceV2DisplayMetadata: vi.fn(value => { device.displayMetadata = value; device.name = value.name; device.config.customName = value.name; }),
     };
     const management = {
       revealDeviceKeyV2: vi.fn().mockResolvedValue({
@@ -43,6 +45,8 @@ describe('DeviceSettingsPage V2 access flow', () => {
       }),
       rotateDeviceKeyV2: vi.fn(),
       deleteDeviceV2: vi.fn(),
+      getDisplayMetadataV2: vi.fn().mockResolvedValue({ logicalDeviceId, revision: 0, name: 'Hybrid light', capabilities: [] }),
+      saveDisplayMetadataV2: vi.fn().mockImplementation(async value => ({ ...value, revision: value.revision + 1 })),
     };
     const users = { getAllInfo: vi.fn().mockResolvedValue(true) };
     const alert = {
@@ -66,10 +70,139 @@ describe('DeviceSettingsPage V2 access flow', () => {
       { isAvailable: false } as any,
       notice as any,
       cd as any,
+      { load: () => ({ fields: [{ key: 'power', kind: 0, type: 0, id: 1, access: 7 }] }) } as any,
     );
     page.ngOnInit();
-    return { page, device, data, management, users, alerts, nav, notice };
+    return { page, device, data, management, users, alerts, nav, notice, route };
   }
+
+  it('keeps one task entry for ordinary WiFi candidates without promising firmware support or a fixed capacity', () => {
+    const f = harness(); f.device.deviceType = 'wifi';
+    const entry = f.page.deviceMenuItems.find(item => item.id === 'timer')!;
+    expect(entry.disabled).toBe(false);
+    expect(entry.description).toContain('查询');
+    expect(entry.description).not.toContain('4');
+    f.page.selectMenuItem(entry);
+    expect(f.nav.navigateForward).toHaveBeenCalledExactlyOnceWith(`/device-manager/${logicalDeviceId}/timer`);
+    f.page.ngOnDestroy();
+  });
+
+  it('reuses the existing storage route as actual State history without advertising fabricated quota', () => {
+    const f = harness(); const entry = f.page.deviceMenuItems.find(item => item.id === 'storage')!;
+    expect(entry.title).toBe('状态历史'); expect(entry.description).toContain('服务器实际收到');
+    expect(entry.description).not.toContain('用量'); f.page.selectMenuItem(entry);
+    expect(f.nav.navigateForward).toHaveBeenCalledExactlyOnceWith(`/device-manager/${logicalDeviceId}/storage`);
+    f.page.ngOnDestroy();
+  });
+
+  it.each([
+    ['预览', { config: { isPreview: true } }], ['分享', { config: { isShared: true } }],
+    ['停用', { config: { disabled: true } }], ['旧协议', { config: { mode: 'legacy' } }],
+    ['BLE', { deviceType: 'ble' }], ['网关', { deviceType: 'edge-hub' }], ['子设备', { gatewayRouted: true }],
+  ])('disables the task entry for %s and rechecks direct selection', (_label, patch: any) => {
+    const f = harness(); f.device.deviceType = 'wifi';
+    Object.assign(f.device, { ...patch, config: { ...f.device.config, ...patch.config } });
+    const entry = f.page.deviceMenuItems.find(item => item.id === 'timer')!;
+    expect(entry.disabled).toBe(true); expect(entry.showChevron).toBe(false);
+    expect(entry.description).toBeTruthy(); expect(entry.route).toBeUndefined();
+    f.page.selectMenuItem({ ...entry, disabled: false, route: `/device-manager/${logicalDeviceId}/timer` });
+    expect(f.nav.navigateForward).not.toHaveBeenCalled();
+    f.page.ngOnDestroy();
+  });
+
+
+  it('renames through V2 CAS and preserves existing shared capability aliases', async () => {
+    const f = harness();
+    const current = { logicalDeviceId, revision: 3, name: 'Hybrid light', capabilities: [
+      { key: 'power', kind: 0, type: 0, displayName: '电源' } ] };
+    f.management.getDisplayMetadataV2.mockResolvedValue(current);
+    await f.page.saveName('  客厅灯  ');
+    expect(f.management.saveDisplayMetadataV2).toHaveBeenCalledExactlyOnceWith({ ...current, name: '客厅灯' });
+    expect(f.data.updateDeviceV2DisplayMetadata).toHaveBeenCalledWith({ ...current, revision: 4, name: '客厅灯' });
+    expect(f.device.config.customName).toBe('客厅灯');
+    f.page.ngOnDestroy();
+  });
+
+  it('freezes the nickname dialog revision before editing and does not fetch a newer base after confirmation', async () => {
+    const f = harness();
+    const baseline = { logicalDeviceId, revision: 1, name: '旧名称', capabilities: [
+      { key: 'power', kind: 0, type: 0, displayName: '电源' } ] };
+    f.management.getDisplayMetadataV2.mockResolvedValue(baseline);
+    await f.page.showChangeNameConfirm();
+    const options = f.alerts.create.mock.calls[0][0] as any;
+    expect(options.inputs[0].value).toBe('旧名称');
+    f.management.getDisplayMetadataV2.mockResolvedValue({ ...baseline, revision: 2, name: '另一端修改' });
+    f.management.saveDisplayMetadataV2.mockRejectedValueOnce(new GatewayHttpError({ httpStatus: 409,
+      code: 'DEVICE_V2_DISPLAY_METADATA_CONFLICT', message: 'Conflict' }));
+    options.buttons[1].handler({ customName: '我的修改' });
+    await vi.waitFor(() => expect(f.page.displayBusy).toBe(false));
+    expect(f.management.getDisplayMetadataV2).toHaveBeenCalledTimes(1);
+    expect(f.management.saveDisplayMetadataV2).toHaveBeenCalledExactlyOnceWith({ ...baseline, name: '我的修改' });
+    expect(f.page.displayError).toContain('不会自动覆盖');
+  });
+
+  it('keeps alias form revision on save, preserves orphan aliases and explicitly stops after CAS conflict', async () => {
+    const f = harness();
+    const current = { logicalDeviceId, revision: 4, name: 'Lamp', capabilities: [
+      { key: 'removed', kind: 0, type: 2, displayName: '旧能力' } ] };
+    f.management.getDisplayMetadataV2.mockResolvedValue(current);
+    await f.page.loadDisplayMetadata();
+    f.page.displayRows[0].displayName = '电源开关';
+    f.page.displayRows[0].trueLabel = '亮';
+    f.management.saveDisplayMetadataV2.mockRejectedValueOnce(new GatewayHttpError({ httpStatus: 409,
+      code: 'DEVICE_V2_DISPLAY_METADATA_CONFLICT', message: 'Conflict' }));
+    await f.page.saveDisplayMetadata();
+    expect(f.management.getDisplayMetadataV2).toHaveBeenCalledTimes(1);
+    expect(f.management.saveDisplayMetadataV2).toHaveBeenCalledExactlyOnceWith({ ...current, capabilities: [
+      ...current.capabilities, { key: 'power', kind: 0, type: 0, displayName: '电源开关', trueLabel: '亮' } ] });
+    expect(f.page.displayError).toContain('不会自动覆盖');
+    expect(f.page.canSaveDisplay).toBe(false);
+    await f.page.saveDisplayMetadata();
+    expect(f.management.saveDisplayMetadataV2).toHaveBeenCalledTimes(1);
+    f.page.ngOnDestroy();
+  });
+
+  it.each(['read', 'write'])('does not apply a late nickname %s result to another account', async operation => {
+    const f = harness();
+    const current = { logicalDeviceId, revision: 0, name: 'Hybrid light', capabilities: [] };
+    if (operation === 'read') f.management.getDisplayMetadataV2.mockImplementationOnce(async () => {
+      f.data.sessionEpoch++; return current;
+    });
+    else f.management.saveDisplayMetadataV2.mockImplementationOnce(async value => {
+      f.data.sessionEpoch++; return { ...value, revision: 1 };
+    });
+    await f.page.saveName('客厅灯');
+    expect(f.data.updateDeviceV2DisplayMetadata).not.toHaveBeenCalled();
+    if (operation === 'read') expect(f.management.saveDisplayMetadataV2).not.toHaveBeenCalled();
+    f.page.ngOnDestroy();
+  });
+
+  it('does not let shared users edit global display metadata', async () => {
+    const f = harness(); f.device.config.isShared = true;
+    await f.page.saveName('Shared name'); await f.page.loadDisplayMetadata();
+    expect(f.management.getDisplayMetadataV2).not.toHaveBeenCalled();
+    expect(f.management.saveDisplayMetadataV2).not.toHaveBeenCalled(); f.page.ngOnDestroy();
+  });
+
+  it('fences an old form load after leaving and returning to the same device, including the new busy state', async () => {
+    const f = harness();
+    let resolveOld!: (value: any) => void, resolveNew!: (value: any) => void;
+    f.management.getDisplayMetadataV2
+      .mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve; }))
+      .mockImplementationOnce(() => new Promise(resolve => { resolveNew = resolve; }));
+    const oldLoad = f.page.loadDisplayMetadata();
+    for (const id of ['other_device', logicalDeviceId]) {
+      f.route.paramMap.next({ get: (name: string) => name === 'id' ? id : null });
+    }
+    const newLoad = f.page.loadDisplayMetadata();
+    resolveOld({ logicalDeviceId, revision: 1, name: 'Old', capabilities: [] }); await oldLoad;
+    expect(f.page.displayBusy).toBe(true);
+    expect(f.data.updateDeviceV2DisplayMetadata).not.toHaveBeenCalled();
+    resolveNew({ logicalDeviceId, revision: 2, name: 'New', capabilities: [
+      { key: 'power', kind: 0, type: 0, displayName: '新电源名称' } ] }); await newLoad;
+    expect(f.page.displayRows[0].displayName).toBe('新电源名称');
+    expect(f.page.displayBusy).toBe(false); f.page.ngOnDestroy();
+  });
 
   it('reveals and copies the current key without persisting it in the device model', async () => {
     const { page, device, management } = harness();

@@ -19,6 +19,13 @@ app-hero-card {
   margin: 0;
 }
 
+.creation-hint {
+  margin: 8px 0;
+  color: var(--blinker-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .task-list,
 .empty-state {
   margin-top: 12px;

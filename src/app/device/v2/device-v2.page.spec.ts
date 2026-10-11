@@ -94,7 +94,11 @@ function harness(
   const appActive = new BehaviorSubject(true);
   const telemetry = new BehaviorSubject<DeviceUiTelemetrySnapshot>({
     active: true,
+    source: 'cloud',
+    streamId: 1,
+    epoch: 1,
     effectiveIntervalMs: 1000,
+    missedSamples: 0,
     values: {},
   });
   const connectionState = new BehaviorSubject<
@@ -117,7 +121,9 @@ function harness(
       return () => subscription.unsubscribe();
     }),
     setVisible: vi.fn(async (visible: boolean) => {
-      telemetry.next({ ...telemetry.value, active: visible, values: {} });
+      telemetry.next({ ...telemetry.value, active: visible, sampleSequence: undefined,
+        sampleMonotonicMs: undefined, receivedAtMs: undefined, receivedMonotonicMs: undefined,
+        missedSamples: 0, values: {} });
     }),
     close: vi.fn().mockResolvedValue(undefined),
   };
@@ -159,6 +165,23 @@ function harness(
 }
 
 describe('DeviceV2Page UI port lifecycle', () => {
+  it('uses compatible shared labels while preserving explicit widget titles and protocol values', async () => {
+    const { page } = harness();
+    page.device.displayMetadata = { logicalDeviceId, revision: 1, name: '客厅灯', capabilities: [
+      { key: 'power', kind: 0, type: 0, displayName: '电源开关', trueLabel: '亮', falseLabel: '灭' },
+    ] };
+    const field = endpoint({ manifestKind: 0, manifestType: 0, value: true });
+    const widget = { widgetId: 'power', endpointKey: 'power', type: 'switch' as const,
+      grid: { x: 0, y: 0, width: 8, height: 1 } };
+    expect(page.fieldTitle(widget, field)).toBe('电源开关');
+    expect(page.fieldTitle({ ...widget, title: 'power' }, field)).toBe('电源开关');
+    expect(page.fieldTitle({ ...widget, title: '我的按钮' }, field)).toBe('我的按钮');
+    expect(page.fieldTitle(widget, { ...field, manifestType: 2 })).toBe('power');
+    expect(page.display(field)).toBe('亮');
+    expect(page.value(field)).toBe(true);
+    expect(field.key).toBe('power');
+    page.ngOnDestroy();
+  });
   it('does not clear a layout-fetch failure just because another State arrives', async () => {
     const layouts = { get: vi.fn().mockRejectedValue(Error('LAYOUT_FETCH_FAILED')), saveCandidate: vi.fn() };
     const { page, state } = harness(snapshot(), layouts);
@@ -549,7 +572,15 @@ describe('DeviceV2Page UI port lifecycle', () => {
     ));
     telemetry.next({
       active: true,
+      source: 'cloud',
+      streamId: 1,
+      epoch: 1,
       effectiveIntervalMs: 1000,
+      sampleSequence: 1,
+      sampleMonotonicMs: 100,
+      receivedAtMs: Date.now(),
+      receivedMonotonicMs: performance.now(),
+      missedSamples: 0,
       values: { temperature: 21.5 },
     });
     const field = page.snapshot.endpoints.find(candidate => candidate.key === 'temperature')!;
@@ -603,6 +634,142 @@ describe('DeviceV2Page UI port lifecycle', () => {
     result.page.ngOnChanges(changed('viewActive'));
     await vi.waitFor(() => expect(result.port.openTelemetry).toHaveBeenCalledTimes(2));
     result.page.ngOnDestroy();
+  });
+
+  it('replaces realtime and clears its curve when the carrier changes ready to ready', async () => {
+    const realtime = snapshot();
+    realtime.endpoints.push(endpoint({ id: 5, key: 'temperature', valueType: 'number', value: 20,
+      writable: false, telemetryMinimumIntervalMs: 1000 }));
+    const { page, port, connectivity, telemetry, telemetryLease } = harness(realtime);
+    try {
+      await vi.waitFor(() => expect(telemetryLease.subscribe).toHaveBeenCalledOnce());
+      const field = page.snapshot.endpoints.find(candidate => candidate.key === 'temperature')!;
+      telemetry.next({ ...telemetry.value, source: 'ble', sampleSequence: 1,
+        receivedMonotonicMs: performance.now(), values: { temperature: 22 } });
+      expect(page.value(field)).toBe(22); expect(page.telemetryField(field)?.points).toHaveLength(1);
+      // Only connectivity changes; watchConnection remains ready throughout.
+      connectivity.next({ ...connectivity.value, activeTransport: 'cloud', bleState: 'stopped' });
+      expect(telemetryLease.close).toHaveBeenCalledOnce(); expect(page.value(field)).toBe(20);
+      expect(page.telemetryField(field)).toBeUndefined();
+      telemetry.next({ ...telemetry.value, source: 'cloud', epoch: 2, sampleSequence: undefined, values: {} });
+      await vi.waitFor(() => expect(port.openTelemetry).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() => expect(telemetryLease.subscribe).toHaveBeenCalledTimes(2));
+      expect(page.telemetryField(field)?.status).toBe('waiting');
+      expect(page.telemetryField(field)?.points).toHaveLength(0);
+      expect(page.telemetrySummary).toContain('云端 MQTT');
+      connectivity.next({ ...connectivity.value });
+      expect(port.openTelemetry).toHaveBeenCalledTimes(2);
+      // A verified LAN promotion owns a different realtime carrier too.
+      connectivity.next({ ...connectivity.value, activeTransport: 'lan' });
+      expect(telemetryLease.close).toHaveBeenCalledTimes(2);
+      expect(page.telemetryField(field)).toBeUndefined();
+      telemetry.next({ ...telemetry.value, source: 'lan', epoch: 3, sampleSequence: undefined, values: {} });
+      await vi.waitFor(() => expect(port.openTelemetry).toHaveBeenCalledTimes(3));
+      await vi.waitFor(() => expect(telemetryLease.subscribe).toHaveBeenCalledTimes(3));
+      expect(page.telemetrySummary).toContain('局域网');
+      expect(page.telemetryField(field)?.points).toHaveLength(0);
+      connectivity.next({ ...connectivity.value });
+      expect(port.openTelemetry).toHaveBeenCalledTimes(3);
+    } finally { page.ngOnDestroy(); }
+  });
+
+  it('closes a late old-carrier Open without admitting its values to the new carrier', async () => {
+    const realtime = snapshot();
+    realtime.endpoints.push(endpoint({ id: 5, key: 'temperature', valueType: 'number', value: 20,
+      writable: false, telemetryMinimumIntervalMs: 1000 }));
+    let finish!: (lease: DeviceUiTelemetryLease) => void;
+    const pending = new Promise<DeviceUiTelemetryLease>(resolve => { finish = resolve; });
+    const old = { snapshot: {} as DeviceUiTelemetrySnapshot, subscribe: vi.fn(),
+      setVisible: vi.fn(), close: vi.fn(async () => undefined) };
+    const { page, port, connectivity, telemetryLease } = harness(realtime, undefined, () => pending);
+    try {
+      await vi.waitFor(() => expect(port.openTelemetry).toHaveBeenCalledOnce());
+      port.openTelemetry.mockResolvedValueOnce(telemetryLease);
+      connectivity.next({ ...connectivity.value, activeTransport: 'cloud', bleState: 'stopped' });
+      await vi.waitFor(() => expect(telemetryLease.subscribe).toHaveBeenCalledOnce());
+      finish(old); await vi.waitFor(() => expect(old.close).toHaveBeenCalledOnce());
+      expect(old.subscribe).not.toHaveBeenCalled();
+      expect(page.telemetrySummary).toContain('云端 MQTT');
+    } finally { finish(old); page.ngOnDestroy(); }
+  });
+
+  it('shows an explicit unsupported Direct realtime error without disabling ordinary controls', async () => {
+    const realtime = snapshot();
+    realtime.endpoints.push(endpoint({ id: 5, key: 'temperature', valueType: 'number', value: 20,
+      writable: false, telemetryMinimumIntervalMs: 1000 }));
+    const { page, port } = harness(realtime, undefined, async () => {
+      throw Error('DIRECT_TELEMETRY_NOT_SUPPORTED');
+    });
+    try {
+      await vi.waitFor(() => expect(page.telemetryError).toBe('此设备固件暂不支持本地实时数据'));
+      expect(page.accountState).toBe('ready'); expect(page.error).toBe('');
+      expect(port.disconnect).not.toHaveBeenCalled();
+    } finally { page.ngOnDestroy(); }
+  });
+
+  it('shows the confirmed cloud interval and ages samples without a new message', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    let now = 100;
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const realtime = snapshot();
+    realtime.endpoints.push(endpoint({ id: 5, key: 'temperature', valueType: 'number', value: 20,
+      writable: false, telemetryMinimumIntervalMs: 1000 }));
+    const { page, telemetry, telemetryLease } = harness(realtime);
+    try {
+      await vi.waitFor(() => expect(telemetryLease.subscribe).toHaveBeenCalledOnce());
+      const field = page.snapshot.endpoints.find(candidate => candidate.key === 'temperature')!;
+      expect(page.telemetryField(field)?.status).toBe('waiting');
+      expect(page.value(field)).toBe(20);
+      telemetry.next({ ...telemetry.value, effectiveIntervalMs: 2000, sampleSequence: 1,
+        receivedMonotonicMs: now, receivedAtMs: Date.now(), sampleMonotonicMs: 99,
+        values: { temperature: 22 } });
+      expect(page.telemetrySummary).toBe('云端 MQTT · 实际 2 秒/次');
+      expect(page.telemetryField(field)?.points).toHaveLength(1);
+      now += 6000;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(page.telemetryField(field)?.status).toBe('stale');
+      expect(page.telemetryFreshness(page.telemetryField(field)!)).toContain('数据陈旧');
+      // A status/renew update can change the interval, but is not a new sample.
+      telemetry.next({ ...telemetry.value, effectiveIntervalMs: 1000 });
+      expect(page.telemetryField(field)?.ageMs).toBe(6000);
+      expect(page.telemetryField(field)?.points).toHaveLength(1);
+    } finally {
+      page.ngOnDestroy();
+      clock.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('clears realtime values and its clock immediately on background and ignores late samples', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const realtime = snapshot();
+    realtime.endpoints.push(endpoint({ id: 5, key: 'temperature', valueType: 'number', value: 20,
+      writable: false, telemetryMinimumIntervalMs: 1000 }));
+    const { page, telemetry, telemetryLease, appActive } = harness(realtime);
+    try {
+      await vi.waitFor(() => expect(telemetryLease.subscribe).toHaveBeenCalledOnce());
+      const field = page.snapshot.endpoints.find(candidate => candidate.key === 'temperature')!;
+      telemetry.next({ ...telemetry.value, sampleSequence: 1, receivedMonotonicMs: performance.now(),
+        values: { temperature: 22 } });
+      expect(page.value(field)).toBe(22);
+      expect(vi.getTimerCount()).toBe(1);
+      appActive.next(false);
+      expect(page.value(field)).toBe(20);
+      expect(page.telemetryActive).toBe(false);
+      expect(page.telemetryField(field)).toBeUndefined();
+      expect(vi.getTimerCount()).toBe(0);
+      telemetry.next({ ...telemetry.value, active: true, sampleSequence: 2,
+        receivedMonotonicMs: performance.now(), values: { temperature: 99 } });
+      expect(page.value(field)).toBe(20);
+      expect(vi.getTimerCount()).toBe(0);
+      appActive.next(true);
+      await vi.waitFor(() => expect(telemetryLease.setVisible).toHaveBeenLastCalledWith(true));
+      expect(page.telemetryField(field)?.status).toBe('waiting');
+      expect(page.telemetryField(field)?.points).toHaveLength(0);
+    } finally {
+      page.ngOnDestroy();
+      vi.useRealTimers();
+    }
   });
 
   it('keeps a stale cloud layout as a migration preview until the user accepts it', async () => {

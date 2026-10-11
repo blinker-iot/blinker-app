@@ -97,6 +97,30 @@ describe('DataService', () => {
     expect(loadDeviceCatalog(scope())).toBeUndefined();
   });
 
+  it('uses server display names, retains newer CAS receipts across stale inventory and offline restart', async () => {
+    await service.setAuthData(auth);
+    const metadata = { logicalDeviceId: 'device_a', revision: 1, name: 'Server name',
+      capabilities: [{ key: 'power', kind: 0, type: 0, displayName: '电源' }] };
+    const device = { ...item.device, logicalDeviceId: 'device_a', name: metadata.name, displayMetadata: metadata, state: 'active' };
+    service.loadGatewayData({ id: 'user-a' } as any, [device as any]);
+    const current = service.getDevice('device_a');
+    current.config.customName = 'Stale local name';
+    service.loadGatewayData({ id: 'user-a' } as any, [device as any]);
+    expect(service.getDevice('device_a').config.customName).toBe('Server name');
+    const saved = { ...metadata, revision: 2, name: '客厅灯',
+      capabilities: [{ key: 'power', kind: 0, type: 0, displayName: '电源开关' }] };
+    service.updateDeviceV2DisplayMetadata(saved);
+    service.loadGatewayData({ id: 'user-a' } as any, [device as any]);
+    expect(service.getDevice('device_a').displayMetadata).toEqual(saved);
+    expect(service.getDevice('device_a').config.customName).toBe('客厅灯');
+    expect(loadDeviceCatalog(scope())?.[0].device.displayMetadata).toEqual(saved);
+    const restarted = new DataService(); await restarted.setAuthData(auth);
+    expect(restarted.getDevice('device_a').displayMetadata).toEqual(saved);
+    expect(restarted.getDevice('device_a').config.customName).toBe('客厅灯');
+    await service.setAuthData({ ...auth, uuid: 'user-b' });
+    expect(service.getDevice('device_a')).toBeUndefined();
+  });
+
   it('persists the native token pair in secure storage', async () => {
     vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
 
@@ -258,7 +282,7 @@ describe('DataService', () => {
     expect(device.id).toBe(deviceId);
     expect(device.deviceName).toBe(deviceId);
     expect(device.config).toMatchObject({
-      customName: 'Previous name',
+      customName: 'Temperature sensor',
       image: 'diyarduino.png',
       broker: 'blinker',
       mode: 'bbp2',

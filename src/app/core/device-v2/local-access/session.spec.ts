@@ -179,8 +179,10 @@ describe('transport-authenticated LAN self BBP session (fake secure byte port)',
     expect(() => decodeDirectDeviceHelloBody(hello(), 'controller')).toThrow();
     expect(decodeDirectDeviceHelloBody(hello(), 'transport').maxFrameSize).toBe(256);
     expect(decodeDirectDeviceHelloBody(hello({ features: 0x22e3, methods: true }), 'controller').features).toBe(0x22e3);
-    // Existing BLE canonical bytes stay unchanged, including Method 2 and window 4.
-    expect(encodeDirectAppHelloBody('controller')).toEqual(hexToBytes('a70001018102021922e303190200041902000881020904'));
+    // Optional telemetry does not change the Method 2 or reliable-window contract.
+    expect(encodeDirectAppHelloBody('controller')).toEqual(hexToBytes('a7000101810202192ae303190200041902000881020904'));
+    expect(encodeDirectAppHelloBody('controller', 512, false, undefined, false))
+      .toEqual(hexToBytes('a70001018102021922e303190200041902000881020904'));
   });
 
   it.each([hello({ role: 2 }), hello({ features: 3 }), hello({ window: 0 }), hello({ size: 9 })])(

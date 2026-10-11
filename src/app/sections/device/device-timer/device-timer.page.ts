@@ -22,7 +22,7 @@ export class DeviceTimerPage implements OnDestroy {
   ionViewWillLeave(): void { this.timer.close(); }
   ngOnDestroy(): void { this.timer.close(); }
   addTask(): void {
-    if (this.timer.canWrite && this.timer.targets.length && this.timer.records.length < this.timer.capacity)
+    if (this.timer.canCreate)
       void this.router.navigate([`/device-manager/${this.id}/timer/new`]);
   }
   editTask(record: TaskRecord): void {

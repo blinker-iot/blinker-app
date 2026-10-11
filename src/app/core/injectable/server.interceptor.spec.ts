@@ -81,6 +81,16 @@ describe('ServerInterceptor', () => {
     request.flush({ status: 200, data: { id: 'user-1' } });
   });
 
+  it('uses the same account Bearer and request-id chain for a ranged State history GET', () => {
+    const url = API.DEVICE_V2.STATE_HISTORY('device_a') + '?from=1000&to=2000&limit=50&key=power&before=YWJj';
+    http.get(url).subscribe(); const request = httpTesting.expectOne(url);
+    expect(request.request.method).toBe('GET'); expect(request.request.body).toBeNull();
+    expect(request.request.headers.get('Authorization')).toBe('Bearer old-access');
+    expect(request.request.headers.get('X-Request-ID')).toBeTruthy();
+    expect(request.request.params.has('uuid')).toBe(false); expect(request.request.params.has('token')).toBe(false);
+    request.flush({ message: 1000, detail: { items: [] } });
+  });
+
   it('preserves exact account-deletion bodies with Bearer and JSON headers', () => {
     http.post(API.ACCOUNT.DELETION_CODE, {}).subscribe();
     const codeRequest = httpTesting.expectOne(API.ACCOUNT.DELETION_CODE);

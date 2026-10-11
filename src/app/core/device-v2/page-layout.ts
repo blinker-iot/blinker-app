@@ -55,7 +55,6 @@ export function generateDefaultPageLayout(snapshot: DeviceUiSnapshot): PageLayou
         widgetId: `endpoint-${endpoint.id}`,
         type,
         endpointKey: endpoint.key,
-        title: endpoint.key,
         grid: { x: 0, y, width: PAGE_LAYOUT_COLUMNS, height },
       };
       y += height;

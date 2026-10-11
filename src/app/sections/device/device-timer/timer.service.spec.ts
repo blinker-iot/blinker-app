@@ -14,7 +14,7 @@ const id = 'device_task';
 class TaskViewChild { @Input({ required: true }) timer!: TimerService; }
 @Component({ imports: [TaskViewChild], template: '{{ timer.deviceName }} {{ timer.ready }} {{ timer.records.length }} <task-view-child [timer]="timer" />' })
 class TaskViewProbe { timer!: TimerService; }
-function fixture() {
+function fixture({ capacity = 4, targetCount = 1 } = {}) {
   const data = { auth: { uuid: 'owner' }, sessionEpoch: 1, authDataChanged: new Subject<void>(),
     device: { dict: { [id]: { config: { mode: 'bbp2', customName: 'test' } } } } };
   const records: TaskRecord[] = [];
@@ -26,7 +26,7 @@ function fixture() {
     if (request.operation === 'initialize') { initialized = true; result.result = { kind: 'authority', tableRevision: revision, count: records.length }; }
     else if (!initialized) throw new GatewayHttpError({ code: 'TASK_SCOPE_REQUIRED', httpStatus: 409, message: 'Task request failed' });
     else if (request.operation === 'catalog') {
-      const meta = { capacity: 4, total: 1, fingerprint: base64UrlEncode(new Uint8Array(32).fill(8)), tableRevision: revision, count: records.length };
+      const meta = { capacity, total: targetCount, fingerprint: base64UrlEncode(new Uint8Array(32).fill(8)), tableRevision: revision, count: records.length };
       result.result = request.index === null ? { kind: 'catalog', ...meta }
         : { kind: 'target', ...meta, index: request.index, key: 'power', valueType: 'boolean' };
     } else if (request.operation === 'read') {
@@ -48,12 +48,39 @@ function fixture() {
   () => new Uint8Array(16).fill(serial++));
   const manifests = { load: vi.fn(() => undefined) };
   const page = () => new TimerService(client, data as any, manifests as any);
-  return { data, records, storage, execute, client, page, setInitialized: (v: boolean) => { initialized = v; } };
+  return { data, records, storage, execute, client, page, manifests,
+    setInitialized: (v: boolean) => { initialized = v; }, setRevision: (v: number) => { revision = v; } };
 }
 const definition = { schedule: { kind: 'countdown' as const, durationMillis: 3000 }, enabled: true,
   key: 'power', valueType: 'boolean' as const, value: false };
 
 describe('V2 task page lifecycle and original intent', () => {
+  it('uses compatible shared capability names/value labels without adding a scheduling target or changing definitions', async () => {
+    const f = fixture(), page = f.page();
+    Object.assign(f.data.device.dict[id], { displayMetadata: { logicalDeviceId: id, revision: 1, name: '客厅灯', capabilities: [
+      { key: 'power', kind: 0, type: 0, displayName: '电源开关', trueLabel: '亮', falseLabel: '灭' },
+      { key: 'unknown', kind: 0, type: 0, displayName: '不在调度目录' },
+    ] } });
+    f.manifests.load.mockReturnValue({ revision: 1, fingerprint: 'a'.repeat(64), fields: [
+      { key: 'power', kind: 0, type: 0, id: 1, access: 7 } ] } as any);
+    await page.open(id);
+    expect(page.deviceName).toBe('客厅灯'); expect(page.targetLabel('power')).toBe('电源开关');
+    expect(page.valueLabel('power', true)).toBe('亮'); expect(page.valueLabel('power', false)).toBe('灭');
+    expect(page.targets.map(t => t.key)).toEqual(['power']);
+    expect(page.targetLabel('unknown')).toBe('unknown');
+    expect(page.targetLabel('power', 'uint')).toBe('power');
+    expect(page.valueLabel('power', true, 'uint')).toBe('开');
+    expect(definition.key).toBe('power'); expect(definition.value).toBe(false);
+    for (const field of [{ key: 'power', kind: 1, type: 0, id: 1, access: 7 },
+      { key: 'power', kind: 0, type: 2, id: 1, access: 7 }]) {
+      f.manifests.load.mockReturnValue({ revision: 2, fingerprint: 'b'.repeat(64), fields: [field] } as any);
+      expect(page.targetLabel('power')).toBe('power'); expect(page.valueLabel('power', true)).toBe('开');
+      expect(page.targets.map(t => t.key)).toEqual(['power']);
+    }
+    f.manifests.load.mockReturnValue(undefined);
+    expect(page.valueLabel('power', true)).toBe('开');
+    page.ngOnDestroy();
+  });
   it('preserves unconfirmed initialization across unsupported root recovery and reopening without retry or sync', async () => {
     for (const withAuthorityJournal of [false, true]) {
       const f = fixture(); f.setInitialized(false); const page = f.page(); await page.open(id);
@@ -142,6 +169,84 @@ describe('V2 task page lifecycle and original intent', () => {
     expect(await page.write({ operation: 'create', expectedRevision: 0, definition })).toBe(true);
     expect(page.records[0].taskId).toBe(7); expect(page.revision).toBe(1); expect(page.pending).toBeUndefined();
     expect(f.execute.mock.calls.filter(c => !['read', 'catalog'].includes(c[1].operation)).map(c => c[1].operation)).toEqual(['create']);
+    page.ngOnDestroy();
+  });
+  it.each([1, 10])('shows actual %i-slot capacity only after a fresh catalog and table, without a fixed four-slot guess', async capacity => {
+    const f = fixture({ capacity }), page = f.page();
+    expect(page.capacity).toBeNull(); expect(page.capacityText).toBe('容量尚未确认');
+    expect(page.canCreate).toBe(false); expect(page.creationHint).toContain('容量尚未确认');
+    await page.open(id);
+    expect(page.capacity).toBe(capacity); expect(page.capacityText).toBe(`已用 0 / ${capacity} 条`);
+    expect(page.canCreate).toBe(true); expect(page.creationHint).toBe('');
+    expect(page.sourceText).toContain('设备本地执行'); expect(page.sourceText).toContain('设备云端连接');
+    expect(page.sourceText).not.toContain('授时');
+    expect(f.execute.mock.calls.every(c => ['catalog', 'read'].includes(c[1].operation))).toBe(true);
+    page.ngOnDestroy();
+    expect(page.capacity).toBeNull(); expect(page.revision).toBe(0); expect(page.capacityText).toBe('容量尚未确认');
+  });
+  it('a valid capacity with no authorized targets is not a zero-slot profile and does not allow creating a task', async () => {
+    const f = fixture({ capacity: 10, targetCount: 0 }), page = f.page(); await page.open(id);
+    expect(page.ready).toBe(true); expect(page.capacity).toBe(10); expect(page.capacityText).toBe('已用 0 / 10 条');
+    expect(page.canWrite).toBe(true); expect(page.canCreate).toBe(false); expect(page.creationHint).toContain('固件未提供');
+    const calls = f.execute.mock.calls.length;
+    expect(await page.write({ operation: 'create', expectedRevision: 0, definition })).toBe(false);
+    expect(f.execute).toHaveBeenCalledTimes(calls); expect(f.storage.size).toBe(0); page.ngOnDestroy();
+  });
+  it.each([1, 10])('blocks creation at the actual %i-slot limit while retaining edit/remove management', async capacity => {
+    const f = fixture({ capacity }), page = f.page(); f.setRevision(1);
+    for (let i = 0; i < capacity; ++i) f.records.push({ taskId: i + 1, definitionRevision: 1,
+      consumedUtcMillis: 0, progress: 0, startSequence: 0, definition });
+    await page.open(id);
+    expect(page.capacityText).toBe(`已用 ${capacity} / ${capacity} 条`); expect(page.canWrite).toBe(true);
+    expect(page.canCreate).toBe(false); expect(page.creationHint).toContain('容量已满');
+    const calls = f.execute.mock.calls.length;
+    expect(await page.write({ operation: 'create', expectedRevision: 1, definition })).toBe(false);
+    expect(f.execute).toHaveBeenCalledTimes(calls); expect(f.storage.size).toBe(0); page.ngOnDestroy();
+  });
+  it('an invalid zero capacity or profile refusal stays unknown and cannot initialize on its own', async () => {
+    for (const code of ['TASK_CONTRACT_INVALID', 'TASK_PROFILE_NOT_ADMITTED', 'TASK_UNAVAILABLE']) {
+      const f = fixture({ capacity: 0 }), page = f.page();
+      if (code !== 'TASK_CONTRACT_INVALID') f.execute.mockRejectedValueOnce(new Error(code));
+      await page.open(id);
+      expect(page.ready).toBe(false); expect(page.capacity).toBeNull(); expect(page.capacityText).toBe('容量尚未确认');
+      expect(page.revision).toBe(0); expect(page.records).toEqual([]); expect(page.targets).toEqual([]);
+      expect(page.canCreate).toBe(false); expect(page.canInitialize).toBe(false);
+      expect(f.execute.mock.calls.map(c => c[1].operation)).toEqual(['catalog']); page.ngOnDestroy();
+    }
+  });
+  it('clears old table, targets, revision and capacity as soon as refresh starts and retains unknown state on failure', async () => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    await page.write({ operation: 'create', expectedRevision: 0, definition });
+    expect(page.revision).toBe(1); expect(page.records).toHaveLength(1);
+    let reject!: (error: unknown) => void;
+    f.execute.mockImplementationOnce(async () => new Promise((_, r) => { reject = r; }));
+    const work = page.refresh();
+    expect(page.busy).toBe(true); expect(page.ready).toBe(false); expect(page.capacity).toBeNull();
+    expect(page.revision).toBe(0); expect(page.records).toEqual([]); expect(page.targets).toEqual([]);
+    expect(page.creationHint).toContain('正在查询');
+    await vi.waitFor(() => expect(reject).toBeTypeOf('function')); reject(new Error('TASK_DEVICE_OFFLINE')); await work;
+    expect(page.busy).toBe(false); expect(page.capacity).toBeNull(); expect(page.revision).toBe(0);
+    expect(page.records).toEqual([]); expect(page.targets).toEqual([]); expect(page.canCreate).toBe(false);
+    expect(page.capacityText).toBe('容量尚未确认'); expect(page.error).toContain('云端连接');
+    page.ngOnDestroy();
+  });
+  it('an unknown mutation clears confirmed capacity/table but preserves its exact pending journal and creation block', async () => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    await page.write({ operation: 'create', expectedRevision: 0, definition });
+    f.execute.mockRejectedValueOnce(new Error('TASK_OUTCOME_UNKNOWN'));
+    expect(await page.write({ operation: 'start', expectedRevision: 1, taskId: 7 })).toBe(false);
+    expect(page.capacity).toBeNull(); expect(page.revision).toBe(0); expect(page.records).toEqual([]); expect(page.targets).toEqual([]);
+    expect(page.pending?.operation).toBe('start'); expect(page.pending && 'expectedRevision' in page.pending ? page.pending.expectedRevision : null).toBe(1);
+    expect(page.creationHint).toContain('未确认'); expect(page.canCreate).toBe(false);
+    expect(f.storage.size).toBe(1); page.ngOnDestroy();
+  });
+  it('closing a populated fresh table removes its revision/capacity rather than exposing an empty confirmed table', async () => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    await page.write({ operation: 'create', expectedRevision: 0, definition });
+    expect(page.ready).toBe(true); expect(page.revision).toBe(1); expect(page.capacity).toBe(4); expect(page.records).toHaveLength(1);
+    page.close(); expect(page.capacity).toBeNull(); expect(page.revision).toBe(0);
+    expect(page.ready).toBe(false); expect(page.targets).toEqual([]); expect(page.records).toEqual([]);
+    expect(page.capacityText).toBe('容量尚未确认'); expect(page.canWrite).toBe(false); expect(page.canCreate).toBe(false);
     page.ngOnDestroy();
   });
   it('never initializes merely by entering/refreshing; explicit initialization uses existing client', async () => {
@@ -265,6 +370,7 @@ describe('V2 task page lifecycle and original intent', () => {
     await vi.waitFor(() => expect(release).toBeTypeOf('function'));
     f.data.sessionEpoch++; f.data.authDataChanged.next(); release({} as TaskResponse);
     expect(await work).toBe(false); expect(page.records).toEqual([]); expect(page.ready).toBe(false);
+    expect(page.targets).toEqual([]); expect(page.capacity).toBeNull(); expect(page.revision).toBe(0);
     expect(page.pending).toBeUndefined(); expect(f.storage.size).toBe(1); page.ngOnDestroy();
   });
   it('page leave suppresses late refresh, while token refresh in the same epoch does not reset the page', async () => {
@@ -280,10 +386,14 @@ describe('V2 task page lifecycle and original intent', () => {
   });
   it('denies preview/shared/gateway/absent pages without any network request', async () => {
     for (const patch of [{ config: { mode: 'bbp2', isPreview: true } }, { config: { mode: 'bbp2', isShared: true } },
-      { config: { mode: 'bbp2' }, gatewayRouted: true }, { config: { mode: 'bbp2' }, deviceType: 'ble' }]) {
+      { config: { mode: 'bbp2', disabled: true } }, { config: { mode: 'json' } },
+      { config: { mode: 'bbp2' }, gatewayRouted: true }, { config: { mode: 'bbp2' }, deviceType: 'ble' },
+      { config: { mode: 'bbp2' }, deviceType: 'edge-hub' }]) {
       const f = fixture(); Object.assign(f.data.device.dict[id], patch);
       const page = f.page(); await page.open(id); expect(page.ready).toBe(false); expect(f.execute).not.toHaveBeenCalled(); page.ngOnDestroy();
     }
+    const f = fixture(), page = f.page(); await page.open('device_absent');
+    expect(page.ready).toBe(false); expect(page.capacity).toBeNull(); expect(f.execute).not.toHaveBeenCalled(); page.ngOnDestroy();
   });
   it('refuses stale CAS and noncatalog target before journal/network I/O; readonly refresh failure is not an empty table', async () => {
     const f = fixture(), page = f.page(); await page.open(id); const calls = f.execute.mock.calls.length;
@@ -291,7 +401,8 @@ describe('V2 task page lifecycle and original intent', () => {
     await expect(page.write({ operation: 'create', expectedRevision: 0, definition: { ...definition, key: 'guess' } })).rejects.toThrow('TASK_TARGET_UNAVAILABLE');
     expect(f.execute).toHaveBeenCalledTimes(calls); expect(f.storage.size).toBe(0);
     f.execute.mockRejectedValueOnce(new Error('offline')); await page.refresh();
-    expect(page.ready).toBe(false); expect(page.canInitialize).toBe(false); page.ngOnDestroy();
+    expect(page.ready).toBe(false); expect(page.canInitialize).toBe(false); expect(page.capacity).toBeNull();
+    expect(page.revision).toBe(0); expect(page.records).toEqual([]); expect(page.targets).toEqual([]); page.ngOnDestroy();
   });
   it('storage failure blocks management rather than sending a request without a recoverable ID', async () => {
     const f = fixture(), page = f.page(); await page.open(id);

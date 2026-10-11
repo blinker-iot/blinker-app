@@ -45,6 +45,7 @@ import { GatewayHttpError } from '../model/response.model';
 import {
   DeviceV2Event,
   DeviceV2TargetSnapshot,
+  DeviceV2TelemetryLease,
 } from '../protocol/device-v2';
 import { DeviceV2ManifestCache } from './device-v2-manifest-cache.service';
 import { DataService } from './data.service';
@@ -163,7 +164,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   private readonly eventListeners = new Set<(event: DeviceV2Event) => void>();
   private readonly connectionStates = new Map<
     string,
-    { subject: BehaviorSubject<DeviceV2BleConnectionState>; nearbyUntil: number }
+    { subject: BehaviorSubject<DeviceV2BleConnectionState>; nearby: BehaviorSubject<boolean>; nearbyUntil: number }
   >();
   private nearbyTimer?: ReturnType<typeof setTimeout>;
   private readonly accountLinks = new Set<BleDirectRecordLink>();
@@ -186,6 +187,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   private readonly presenceSyncs = new Map<string, Promise<void>>();
   private readonly adapterEnabled = new BehaviorSubject<boolean | null>(null);
   private adapterMonitoring?: Promise<void>;
+  private adapterNotificationsActive = false;
   private accountSessionEpoch: number;
 
   constructor(
@@ -604,6 +606,17 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     return this.connectionState(logicalDeviceId).value;
   }
 
+  watchNearby(logicalDeviceId: string): Observable<boolean> {
+    this.connectionState(logicalDeviceId);
+    return this.connectionStates.get(logicalDeviceId)!.nearby.asObservable();
+  }
+
+  nearbySnapshot(logicalDeviceId: string): boolean {
+    this.connectionState(logicalDeviceId);
+    this.expireNearby();
+    return this.connectionStates.get(logicalDeviceId)!.nearby.value;
+  }
+
   async hasActiveCredential(logicalDeviceId: string): Promise<boolean> {
     const context = this.accountContext();
     const credential = await this.credentialStore(context).load(logicalDeviceId);
@@ -698,8 +711,9 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     }
   }
 
-  refreshPresence(logicalDeviceIds: readonly string[]): Promise<void> {
+  refreshPresence(logicalDeviceIds: readonly string[], signal?: AbortSignal): Promise<void> {
     const context = this.accountContext();
+    if (signal?.aborted) return Promise.resolve();
     if (this.active || this.opening) return Promise.resolve();
     const ids = [...new Set(logicalDeviceIds.filter(id => id.length > 0))];
     if (!ids.length) return Promise.resolve();
@@ -709,10 +723,13 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
       const previous = this.presence;
       previous.abort.abort();
       return previous.promise.catch(() => undefined).then(
-        () => this.refreshPresence(ids),
+        () => this.refreshPresence(ids, signal),
       );
     }
     const abort = new AbortController();
+    const cancel = () => abort.abort();
+    signal?.addEventListener('abort', cancel, { once: true });
+    if (signal?.aborted) cancel();
     const promise = this.scanPresence(ids, abort.signal, context)
       .catch(error => {
         if (!(error instanceof Error) || !['BLE_DIRECT_SCAN_CANCELLED', 'BLE_SCAN_CANCELLED'].includes(error.message)) {
@@ -720,6 +737,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
         }
       })
       .finally(() => {
+        signal?.removeEventListener('abort', cancel);
         if (this.presence?.promise === promise) this.presence = undefined;
       });
     this.presence = { scope, promise, abort };
@@ -786,7 +804,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     await opening?.promise.catch(error => {
       if (error instanceof Error && error.message === 'BLE_DIRECT_NATIVE_RELEASE_FAILED') throw error;
     });
-    this.setConnection(logicalDeviceId, 'nearby');
+    this.setConnection(logicalDeviceId, this.nearbySnapshot(logicalDeviceId) ? 'nearby' : 'stopped');
   }
 
   snapshot(logicalDeviceId: string): DeviceV2TargetSnapshot {
@@ -830,6 +848,33 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     await this.accountMutation(
       context, () => active.session.command(endpointKey, value),
     );
+  }
+
+  // Page-owned telemetry never acquires a radio connection. Its lease belongs
+  // to the already authenticated session, including while Open is in flight.
+  async openTelemetryConnected(logicalDeviceId: string, endpointKeys: string[],
+    intervalMs: number): Promise<DeviceV2TelemetryLease> {
+    const context = this.accountContext();
+    this.assertAccount(context);
+    const active = this.active;
+    const assertActive = (): void => {
+      this.assertAccount(context);
+      if (!active || this.active !== active || active.logicalDeviceId !== logicalDeviceId
+        || !sameAccountContext(active.context, context) || active.session.state !== 'ready') {
+        throw new Error('BLE_DIRECT_SESSION_NOT_READY');
+      }
+      active.admission?.signal.throwIfAborted();
+      active.admission?.assertActive();
+    };
+    assertActive();
+    const lease = await active!.session.openTelemetry(endpointKeys, intervalMs);
+    try {
+      assertActive();
+      return lease;
+    } catch (error) {
+      await lease.close().catch(() => undefined);
+      throw error;
+    }
   }
 
   private client(
@@ -977,19 +1022,33 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     for (const link of links) void link.disconnect().catch(() => undefined);
     this.snapshots.clear();
     clearTimeout(this.nearbyTimer); this.nearbyTimer = undefined;
-    for (const state of this.connectionStates.values()) { state.nearbyUntil = 0; state.subject.next('idle'); }
+    for (const state of this.connectionStates.values()) {
+      state.nearbyUntil = 0; state.nearby.next(false); state.subject.next('idle');
+    }
   }
 
   private ensureAdapterMonitoring(): Promise<void> {
     if (this.adapterMonitoring) return this.adapterMonitoring;
     const monitoring = BleClient.initialize({ androidNeverForLocation: true })
       .then(async () => {
-        await BleClient.startEnabledNotifications(enabled => {
-          this.adapterEnabled.next(enabled);
-        });
-        this.adapterEnabled.next(await BleClient.isEnabled());
+        if (!this.adapterNotificationsActive) {
+          await BleClient.startEnabledNotifications(enabled => {
+            this.adapterEnabled.next(enabled);
+            if (!enabled) { this.presence?.abort.abort(); this.clearNearby(); }
+          });
+          this.adapterNotificationsActive = true;
+        }
+        const enabled = await BleClient.isEnabled();
+        this.adapterEnabled.next(enabled);
+        if (!enabled) { this.presence?.abort.abort(); this.clearNearby(); }
       })
-      .catch(() => this.adapterEnabled.next(false));
+      .catch(() => {
+        this.adapterEnabled.next(false); this.presence?.abort.abort(); this.clearNearby();
+        // A new visible lifetime may retry after permission has been granted.
+        // Do not retry periodically or duplicate an already-installed listener
+        // when only the subsequent isEnabled snapshot failed.
+        if (this.adapterMonitoring === monitoring) this.adapterMonitoring = undefined;
+      });
     this.adapterMonitoring = monitoring;
     return monitoring;
   }
@@ -1218,7 +1277,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     this.detach(active);
     const task = Promise.resolve().then(() => active.session.close()).then(() => {
       if (generation !== this.generation || !this.isCurrentAccount(active.context)) return;
-      this.setConnection(active.logicalDeviceId, 'nearby');
+      this.setConnection(active.logicalDeviceId, this.nearbySnapshot(active.logicalDeviceId) ? 'nearby' : 'stopped');
       const snapshot = active.session.store.snapshot(active.logicalDeviceId);
       this.snapshots.set(active.logicalDeviceId, snapshot);
       for (const listener of this.stateListeners) listener(active.logicalDeviceId, snapshot);
@@ -1265,7 +1324,8 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   ): BehaviorSubject<DeviceV2BleConnectionState> {
     let state = this.connectionStates.get(logicalDeviceId);
     if (!state) {
-      state = { subject: new BehaviorSubject<DeviceV2BleConnectionState>('idle'), nearbyUntil: 0 };
+      state = { subject: new BehaviorSubject<DeviceV2BleConnectionState>('idle'),
+        nearby: new BehaviorSubject(false), nearbyUntil: 0 };
       this.connectionStates.set(logicalDeviceId, state);
     }
     return state.subject;
@@ -1273,11 +1333,16 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
 
   private setConnection(logicalDeviceId: string, state: DeviceV2BleConnectionState): void {
     const subject = this.connectionState(logicalDeviceId);
-    const entry = this.connectionStates.get(logicalDeviceId)!;
-    if (state === 'nearby') entry.nearbyUntil = performance.now() + 15_000;
-    else if (state !== 'scanning') entry.nearbyUntil = 0;
     this.expireNearby();
     if (subject.value !== state) subject.next(state);
+  }
+
+  private markNearby(logicalDeviceId: string): void {
+    this.connectionState(logicalDeviceId);
+    const entry = this.connectionStates.get(logicalDeviceId)!;
+    entry.nearbyUntil = performance.now() + 15_000;
+    if (!entry.nearby.value) entry.nearby.next(true);
+    this.setConnection(logicalDeviceId, 'nearby');
   }
 
   private expireNearby(): void {
@@ -1287,10 +1352,22 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
       if (!entry.nearbyUntil) continue;
       if (entry.nearbyUntil <= now) {
         entry.nearbyUntil = 0;
+        if (entry.nearby.value) entry.nearby.next(false);
         if (entry.subject.value === 'nearby') entry.subject.next('stopped');
       } else next = Math.min(next, entry.nearbyUntil);
     }
     if (next !== Infinity) this.nearbyTimer = setTimeout(() => this.expireNearby(), Math.ceil(next - now));
+  }
+
+  private clearNearby(logicalDeviceIds: Iterable<string> = this.connectionStates.keys()): void {
+    for (const id of logicalDeviceIds) {
+      const entry = this.connectionStates.get(id);
+      if (!entry) continue;
+      entry.nearbyUntil = 0;
+      if (entry.nearby.value) entry.nearby.next(false);
+      if (entry.subject.value === 'nearby') entry.subject.next('stopped');
+    }
+    this.expireNearby();
   }
 
   private async scanPresence(
@@ -1300,18 +1377,22 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   ): Promise<void> {
     const authorized: AuthorizedBlePresenceCandidate[] = [];
     const scanning = new Set<string>();
-    let observed = false;
+    let matching: Promise<void> = Promise.resolve();
+    let matchError: unknown;
+    let finished = false;
     try {
       for (const logicalDeviceId of logicalDeviceIds) {
+        if (signal.aborted) return;
         if (this.connectionState(logicalDeviceId).value === 'ready') continue;
         if (this.connectionState(logicalDeviceId).value !== 'nearby') this.setConnection(logicalDeviceId, 'idle');
         const credential = await this.credentialStore(context).load(
           logicalDeviceId,
         ).catch(() => undefined);
-        this.assertAccount(context);
-        if (!credential) { this.setConnection(logicalDeviceId, 'idle'); continue; }
         try {
-          if (credential.state !== 'active') continue;
+          this.assertAccount(context);
+          if (signal.aborted) return;
+          if (!credential) { this.clearNearby([logicalDeviceId]); this.setConnection(logicalDeviceId, 'idle'); continue; }
+          if (credential.state !== 'active') { this.clearNearby([logicalDeviceId]); continue; }
           const presenceKeys = credential.presenceKeys ?? [];
           for (const presence of presenceKeys) {
             authorized.push({
@@ -1322,28 +1403,39 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
               key: presence.key.slice(),
             });
           }
-          if (!presenceKeys.length) continue;
+          if (!presenceKeys.length) { this.clearNearby([logicalDeviceId]); continue; }
           this.setConnection(logicalDeviceId, 'scanning');
           scanning.add(logicalDeviceId);
         } finally {
-          clearBleControllerCredentialSecrets(credential);
+          if (credential) clearBleControllerCredentialSecrets(credential);
         }
       }
       if (!authorized.length || signal.aborted) return;
-      const targets = await discoverBlinkerDevices(BleApplicationMode.Direct, 2_500, signal);
+      // Transport deduplicates and caps observations at 64. Verify in one
+      // serialized chain; no concurrent HMAC jobs or unbounded native queue.
+      await discoverBlinkerDevices(BleApplicationMode.Direct, 2_500, signal, target => {
+        matching = matching.then(async () => {
+          if (finished || signal.aborted || matchError) return;
+          this.assertAccount(context);
+          const logicalDeviceId = await matchAuthorizedBlePresence(target.profile, authorized);
+          this.assertAccount(context);
+          if (!finished && !signal.aborted && logicalDeviceId) this.markNearby(logicalDeviceId);
+        }).catch(error => { matchError ??= error; });
+      });
+      await matching;
       this.assertAccount(context);
-      if (signal.aborted) return;
-      observed = true;
-      for (const target of targets) {
-        const logicalDeviceId = await matchAuthorizedBlePresence(
-          target.profile,
-          authorized,
-        );
-        this.assertAccount(context);
-        if (signal.aborted) return;
-        if (logicalDeviceId) this.setConnection(logicalDeviceId, 'nearby');
+      if (matchError) throw matchError;
+    } catch (error) {
+      if (this.isCurrentAccount(context) && error instanceof Error
+        && ['BLE_SCAN_PERMISSION', 'BLE_SCAN_UNAVAILABLE'].includes(error.message)) {
+        this.clearNearby(logicalDeviceIds);
       }
+      throw error;
     } finally {
+      finished = true;
+      // An in-flight verifier still reads these secrets after its await.
+      // Drain it before zeroing; cancellation fences its publication.
+      await matching;
       for (const presence of authorized) {
         presence.deviceInstanceId.fill(0);
         presence.key.fill(0);
@@ -1352,7 +1444,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
         if (this.isCurrentAccount(context)
           && this.connectionState(logicalDeviceId).value === 'scanning') {
           const entry = this.connectionStates.get(logicalDeviceId)!;
-          if (!observed && entry.nearbyUntil > performance.now()) entry.subject.next('nearby');
+          if (entry.nearbyUntil > performance.now()) entry.subject.next('nearby');
           else this.setConnection(logicalDeviceId, 'stopped');
         }
       }

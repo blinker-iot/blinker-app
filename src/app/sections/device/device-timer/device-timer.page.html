@@ -6,13 +6,13 @@
   </ion-button></ion-buttons>
 </ion-toolbar></ion-header>
 <ion-content [fullscreen]="true"><main>
-  <app-hero-card iconClass="fa-light fa-timer" eyebrow="LOCAL TASKS" [heading]="timer.deviceName"
-    description="设备本地执行属性赋值，退出页面不会取消已安装任务。" [meta]="timer.records.length" />
+  <app-hero-card iconClass="fa-light fa-timer" eyebrow="设备定时" [heading]="timer.deviceName"
+    description="定时/延时由设备执行，退出 App 不会取消已安装任务。" />
   <app-task-status [timer]="timer" />
   @if (timer.ready) {
-    <p>已用 {{ timer.records.length }} / {{ timer.capacity }} 个任务槽 · 当前查询修订 {{ timer.revision }}</p>
     <button class="add-task-button primary-action" type="button"
-      [disabled]="!timer.canWrite || !timer.targets.length || timer.records.length >= timer.capacity" (click)="addTask()">新建任务</button>
+      [disabled]="!timer.canCreate" (click)="addTask()">新建任务</button>
+    @if (timer.creationHint) { <p class="creation-hint">{{ timer.creationHint }}</p> }
     @if (timer.records.length) {
       <section class="task-list surface-card">
         @for (record of timer.records; track record.taskId) {
@@ -21,7 +21,7 @@
               <span class="task-type-icon"><i class="fa-light fa-calendar-clock"></i></span>
               <span class="task-copy">
                 <span class="task-heading"><small>#{{ record.taskId }}</small><strong>{{ scheduleText(record) }}</strong></span>
-                <span class="task-detail"><strong>{{ record.definition.key }} = {{ record.definition.value }}</strong>
+                <span class="task-detail"><strong>{{ timer.targetLabel(record.definition.key, record.definition.valueType) }}：{{ timer.valueLabel(record.definition.key, record.definition.value, record.definition.valueType) }}</strong>
                   <small>{{ progressText(record) }}</small></span>
               </span><i class="fa-light fa-chevron-right row-arrow"></i>
             </button>

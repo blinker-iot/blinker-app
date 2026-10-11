@@ -3,9 +3,11 @@ export type AutomationCondition = { kind: 'boolean-edge'; direction: 'rising' | 
   | { kind: 'numeric-threshold'; direction: 'above' | 'below'; threshold: number; hysteresis: number };
 export interface AutomationEndpoint { deviceId: string; key: string; fingerprint: string; valueType: AutomationScalarType; }
 export interface AutomationBooleanEndpoint extends AutomationEndpoint { valueType: 'boolean'; }
-export interface AutomationTargetEndpoint extends AutomationBooleanEndpoint { value: boolean; }
+export interface AutomationBooleanTarget extends AutomationBooleanEndpoint { value: boolean; }
+export type AutomationTargetEndpoint = AutomationBooleanTarget
+  | (AutomationEndpoint & { valueType: 'uint32'; value: number });
 interface AutomationWriteFields { expectedRevision: number; enabled: boolean; target: AutomationTargetEndpoint; name?: string; }
-export interface AutomationWriteV1 extends AutomationWriteFields { source: AutomationBooleanEndpoint; }
+export interface AutomationWriteV1 extends AutomationWriteFields { source: AutomationBooleanEndpoint; target: AutomationBooleanTarget; }
 export interface AutomationWriteV2 extends AutomationWriteFields { source: AutomationEndpoint; policyVersion: 2; condition: AutomationCondition; }
 export type AutomationWrite = AutomationWriteV1 | AutomationWriteV2;
 export type AutomationIntent = { ruleId: string; operation: 'put'; body: AutomationWrite }
@@ -15,7 +17,7 @@ interface AutomationRuleFields {
   ruleId: string; definitionRevision: number; enabled: boolean; target: AutomationTargetEndpoint; name?: string;
   status: AutomationStatus; targetOutcomeUnknown: boolean; retiredAtMs: number | null; updatedAtMs: number;
 }
-export interface AutomationRuleV1 extends AutomationRuleFields { source: AutomationBooleanEndpoint; condition: 'rising-boolean'; policyVersion: 1; }
+export interface AutomationRuleV1 extends AutomationRuleFields { source: AutomationBooleanEndpoint; target: AutomationBooleanTarget; condition: 'rising-boolean'; policyVersion: 1; }
 export interface AutomationRuleV2 extends AutomationRuleFields { source: AutomationEndpoint; condition: AutomationCondition; policyVersion: 2; }
 export type AutomationRule = AutomationRuleV1 | AutomationRuleV2;
 export interface AutomationExecution { executionId: string; definitionRevision: number; state: 'prepared' | 'dispatching'
@@ -54,13 +56,20 @@ export function automationCondition(raw: unknown): AutomationCondition {
 function conditionMatchesSource(condition: AutomationCondition, source: AutomationEndpoint): void {
   automationAssert((condition.kind === 'boolean-edge') === (source.valueType === 'boolean'));
 }
-function endpoint(v: any, target: boolean, typed = false): AutomationEndpoint & { value?: boolean } {
+export function automationTargetValue(type: AutomationEndpoint['valueType'], value: unknown): boolean | number {
+  if (type === 'boolean') automationAssert(typeof value === 'boolean');
+  else automationAssert(type === 'uint32' && typeof value === 'number' && Number.isInteger(value)
+    && !Object.is(value, -0) && value >= 0 && value <= 0xffffffff);
+  return value as boolean | number;
+}
+function endpoint(v: any, target: boolean, typed = false): AutomationEndpoint & { value?: boolean | number } {
   exact(v, ['deviceId','key','fingerprint','valueType', ...(target ? ['value'] : [])]); automationId(v.deviceId);
   automationAssert(typeof v.key === 'string' && v.key.length > 0 && new TextEncoder().encode(v.key).length <= 64
     && !/[\u0000-\u001f\u007f]/.test(v.key) && new TextDecoder().decode(new TextEncoder().encode(v.key)) === v.key);
   automationAssert(typeof v.fingerprint === 'string' && v.fingerprint.length === 64 && !/[^a-f0-9]/.test(v.fingerprint)
-    && (typed && !target ? ['boolean', 'int32', 'uint32', 'float32', 'float64'].includes(v.valueType) : v.valueType === 'boolean')
-    && (!target || typeof v.value === 'boolean'));
+    && (typed ? (target ? ['boolean', 'uint32'] : ['boolean', 'int32', 'uint32', 'float32', 'float64']).includes(v.valueType)
+      : v.valueType === 'boolean'));
+  if (target) automationTargetValue(v.valueType, v.value);
   return { ...v };
 }
 export function automationIntent(raw: unknown): AutomationIntent {
@@ -74,7 +83,7 @@ export function automationIntent(raw: unknown): AutomationIntent {
   automationAssert(v.body.expectedRevision < Number.MAX_SAFE_INTEGER);
   if (v.operation === 'retire') return { ruleId: v.ruleId, operation: v.operation, body: { ...v.body } };
   if (typed) automationAssert(v.body.policyVersion === 2);
-  const source = endpoint(v.body.source, false, typed), target = endpoint(v.body.target, true) as AutomationTargetEndpoint;
+  const source = endpoint(v.body.source, false, typed), target = endpoint(v.body.target, true, typed) as AutomationTargetEndpoint;
   automationAssert(source.deviceId !== target.deviceId && typeof v.body.enabled === 'boolean'
     && (v.body.expectedRevision !== 0 || v.body.enabled === false));
   const body = { expectedRevision: v.body.expectedRevision, enabled: v.body.enabled, source, target };
@@ -83,14 +92,15 @@ export function automationIntent(raw: unknown): AutomationIntent {
     const condition = automationCondition(v.body.condition); conditionMatchesSource(condition, source);
     return { ruleId: v.ruleId, operation: 'put', body: { ...body, policyVersion: 2, condition, ...name } };
   }
-  return { ruleId: v.ruleId, operation: 'put', body: { ...body, source: source as AutomationBooleanEndpoint, ...name } };
+  return { ruleId: v.ruleId, operation: 'put', body: { ...body, source: source as AutomationBooleanEndpoint,
+    target: target as AutomationBooleanTarget, ...name } };
 }
 function rule(raw: any): AutomationRule {
   const named = raw && Object.hasOwn(raw, 'name');
   exact(raw, ['ruleId','definitionRevision','enabled','source','target','condition','policyVersion','status','targetOutcomeUnknown','retiredAtMs','updatedAtMs', ...(named ? ['name'] : [])]);
   automationId(raw.ruleId); integer(raw.definitionRevision, 1); integer(raw.updatedAtMs);
   automationAssert(raw.policyVersion === 1 || raw.policyVersion === 2);
-  const source = endpoint(raw.source, false, raw.policyVersion === 2), target = endpoint(raw.target, true);
+  const source = endpoint(raw.source, false, raw.policyVersion === 2), target = endpoint(raw.target, true, raw.policyVersion === 2);
   const condition = raw.policyVersion === 2 ? automationCondition(raw.condition) : raw.condition;
   if (raw.policyVersion === 2) conditionMatchesSource(condition, source);
   else automationAssert(condition === 'rising-boolean');

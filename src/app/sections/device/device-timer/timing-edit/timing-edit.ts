@@ -21,14 +21,17 @@ export class TimingEditPage implements OnDestroy {
   readonly days = ['一', '二', '三', '四', '五', '六', '日'];
   private generation = 0;
   private record?: TaskRecord;
+  private loaded = false;
   constructor(public readonly timer: TimerService, private readonly route: ActivatedRoute,
     private readonly nav: NavController, private readonly alerts: AlertController) {}
   get defaultBackHref(): string { return `/device-manager/${this.id}/timer`; }
   get target(): TaskTarget | undefined { return this.timer.targets.find(t => t.key === this.key); }
-  get taskNotFound(): boolean { return this.invalidRoute || (this.timer.ready && this.taskId !== undefined && !this.record); }
+  get taskNotFound(): boolean { return this.invalidRoute || (this.timer.ready && this.taskId !== undefined
+    && !this.timer.records.some(record => record.taskId === this.taskId)); }
+  get formLoaded(): boolean { return this.loaded; }
   get canSave(): boolean {
-    return this.timer.canWrite && !this.taskNotFound && !!this.target
-      && (this.taskId !== undefined || this.timer.records.length < this.timer.capacity);
+    return this.timer.canWrite && this.formLoaded && !this.taskNotFound && !!this.target
+      && (this.taskId !== undefined || this.timer.canCreate);
   }
   async ionViewWillEnter(): Promise<void> {
     const generation = ++this.generation;
@@ -37,18 +40,19 @@ export class TimingEditPage implements OnDestroy {
     const match = /^task-([1-9]\d*)$/.exec(routeId);
     this.taskId = match ? Number(match[1]) : undefined;
     this.invalidRoute = routeId !== 'new' && (!match || !Number.isSafeInteger(this.taskId) || this.taskId! > 0xffffffff);
-    this.record = undefined; this.error = ''; this.key = ''; this.kind = 'countdown';
+    this.record = undefined; this.loaded = false; this.error = ''; this.key = ''; this.kind = 'countdown';
     this.seconds = 1800; this.value = ''; this.enabled = true;
     await this.timer.open(this.id);
     if (generation !== this.generation || !this.timer.ready) return;
     this.loadForm();
   }
-  ionViewWillLeave(): void { ++this.generation; this.timer.close(); }
+  ionViewWillLeave(): void { ++this.generation; this.loaded = false; this.timer.close(); }
   ngOnDestroy(): void { this.ionViewWillLeave(); }
   loadForm(): void {
-    if (!this.timer.ready) return;
+    if (!this.timer.ready || this.taskNotFound) return;
     this.revision = this.timer.revision;
     this.record = this.timer.records.find(record => record.taskId === this.taskId);
+    this.loaded = true;
     if (this.taskId === undefined) { this.selectTarget(this.timer.targets[0]?.key || ''); return; }
     if (!this.record) return;
     const d = this.record.definition;
@@ -95,7 +99,7 @@ export class TimingEditPage implements OnDestroy {
     } catch (error) { this.error = taskErrorText(error); }
   }
   async deleteTask(): Promise<void> {
-    if (!this.timer.canWrite || !this.record) return;
+    if (!this.timer.canWrite || !this.formLoaded || this.taskNotFound || !this.record) return;
     const generation = this.generation, taskId = this.record.taskId, revision = this.revision;
     const alert = await this.alerts.create({ header: '删除任务？', message: '删除定义不会撤销已经执行的属性赋值。',
       buttons: [{ text: '取消', role: 'cancel' }, { text: '删除', role: 'confirm' }] });

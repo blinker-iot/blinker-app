@@ -246,6 +246,26 @@ describe('BLE Direct transport', () => {
     ]));
   });
 
+  it('streams only the first deduplicated observation, with at most 64 candidates', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
+    try {
+      const seen = vi.fn();
+      bleClient.requestLEScan.mockImplementationOnce(async (_options, callback) => {
+        for (let locator = 1; locator <= 70; ++locator) {
+          const profile = new DataView(Uint8Array.of(1, BleApplicationMode.Provisioning, 1, 0x07, 0,
+            locator, 2, 3, 4, 5, 6, 7, 8).buffer);
+          for (const deviceId of [`first-${locator}`, `alias-${locator}`]) callback({ device: { deviceId },
+            serviceData: { '5f6d0001-3f5b-4e4f-9f4d-626c696e6b32': profile } });
+        }
+      });
+      let complete = false;
+      const result = discoverBlinkerDevices(BleApplicationMode.Provisioning, 100, undefined, seen)
+        .then(value => { complete = true; return value; });
+      await turn(); expect(seen).toHaveBeenCalledTimes(64); expect(complete).toBe(false);
+      await vi.advanceTimersByTimeAsync(100); expect(await result).toHaveLength(64);
+    } finally { vi.useRealTimers(); }
+  });
+
   it('collapses transport-address aliases for one advertising session', async () => {
     const profile = new DataView(Uint8Array.of(
       1, BleApplicationMode.Provisioning, 1, 0x07, 0,

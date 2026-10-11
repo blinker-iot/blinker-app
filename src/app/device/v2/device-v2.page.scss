@@ -61,6 +61,20 @@ ion-content {
   color: var(--ion-color-danger);
 }
 
+.telemetry-chart {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.telemetry-freshness {
+  color: var(--blinker-text-secondary);
+  font-size: 11px;
+}
+
+.telemetry-freshness.stale {
+  color: var(--ion-color-warning-shade);
+}
+
 .summary {
   color: var(--blinker-text-secondary);
   font-size: 12px;

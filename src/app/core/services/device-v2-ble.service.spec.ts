@@ -20,6 +20,56 @@ describe('DeviceV2BleService presence identity', () => {
     authDataChanged: { subscribe: vi.fn() },
   };
 
+  function realtimeHarness() {
+    const account = { ...data, auth: { uuid: 'account-a' }, user: { id: 'account-a' } };
+    const service = new DeviceV2BleService({} as any, { save: vi.fn() } as any, account as any);
+    const internal = service as any;
+    const lease = { close: vi.fn(async () => undefined) };
+    const active = { context: internal.accountContext(), logicalDeviceId: 'ble-one',
+      session: { state: 'ready', openTelemetry: vi.fn(async () => lease) } };
+    internal.active = active;
+    const reconnect = vi.spyOn(service, 'ensureReady');
+    return { account, service, internal, active, lease, reconnect };
+  }
+
+  it('opens realtime only in the authenticated current ready BLE session', async () => {
+    const { service, internal, active, lease, reconnect } = realtimeHarness();
+    expect(await service.openTelemetryConnected('ble-one', ['temperature'], 1000)).toBe(lease);
+    expect(active.session.openTelemetry).toHaveBeenCalledExactlyOnceWith(['temperature'], 1000);
+    await expect(service.openTelemetryConnected('ble-two', ['temperature'], 1000))
+      .rejects.toThrow('BLE_DIRECT_SESSION_NOT_READY');
+    active.session.state = 'closed';
+    await expect(service.openTelemetryConnected('ble-one', ['temperature'], 1000))
+      .rejects.toThrow('BLE_DIRECT_SESSION_NOT_READY');
+    internal.active = undefined;
+    await expect(service.openTelemetryConnected('ble-one', ['temperature'], 1000))
+      .rejects.toThrow('BLE_DIRECT_SESSION_NOT_READY');
+    expect(active.session.openTelemetry).toHaveBeenCalledOnce(); expect(reconnect).not.toHaveBeenCalled();
+  });
+
+  it.each(['account', 'session', 'permit'])('retires a late realtime Open after %s changes', async reason => {
+    const { account, service, internal, active, lease, reconnect } = realtimeHarness();
+    let finish!: (value: any) => void;
+    active.session.openTelemetry.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const abort = new AbortController();
+    (active as any).admission = { signal: abort.signal, assertActive: vi.fn() };
+    const open = service.openTelemetryConnected('ble-one', ['temperature'], 1000);
+    const rejected = expect(open).rejects.toThrow();
+    if (reason === 'account') account.sessionEpoch++;
+    if (reason === 'session') internal.active = { ...active };
+    if (reason === 'permit') abort.abort();
+    finish(lease); await rejected;
+    expect(lease.close).toHaveBeenCalledOnce(); expect(reconnect).not.toHaveBeenCalled();
+  });
+
+  it('does not send realtime Open under an expired physical permit', async () => {
+    const { service, active, reconnect } = realtimeHarness();
+    const abort = new AbortController(); abort.abort();
+    (active as any).admission = { signal: abort.signal, assertActive: vi.fn() };
+    await expect(service.openTelemetryConnected('ble-one', ['temperature'], 1000)).rejects.toThrow();
+    expect(active.session.openTelemetry).not.toHaveBeenCalled(); expect(reconnect).not.toHaveBeenCalled();
+  });
+
   it('loads negotiation candidates only in the account session that created the client', () => {
     const account = { ...data, auth: { uuid: 'account-a' } };
     const cache = { load: vi.fn().mockReturnValue(undefined), save: vi.fn() };
@@ -115,7 +165,7 @@ describe('DeviceV2BleService presence identity', () => {
         deviceInstanceId: new Uint8Array(16).fill(1), controllerId: new Uint8Array(16).fill(2), controllerSecret: new Uint8Array(32).fill(3),
         presenceKeys: [{ accessEpoch: 1, version: 1, key: new Uint8Array(16).fill(4) }],
       }) });
-      internal.setConnection('ble_test', 'nearby');
+      internal.markNearby('ble_test');
       const deadline = internal.connectionStates.get('ble_test').nearbyUntil;
       await vi.advanceTimersByTimeAsync(1000);
       await expect(service.refreshPresence(['ble_test'])).rejects.toThrow('BLE_SCAN_THROTTLED');
@@ -130,7 +180,7 @@ describe('DeviceV2BleService presence identity', () => {
     vi.useFakeTimers();
     try {
       const service = new DeviceV2BleService({} as any, { save: vi.fn() } as any, data as any), internal = service as any;
-      internal.setConnection('ble_test', 'nearby'); internal.resetAccountSession();
+      internal.markNearby('ble_test'); internal.resetAccountSession();
       expect(internal.connectionStates.get('ble_test').nearbyUntil).toBe(0);
       await vi.advanceTimersByTimeAsync(20_000); expect(service.connectionSnapshot('ble_test')).toBe('idle');
     } finally { vi.useRealTimers(); }
