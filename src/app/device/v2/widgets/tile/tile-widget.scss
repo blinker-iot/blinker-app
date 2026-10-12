@@ -1,0 +1,118 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+
+:host {
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+:host(:active) { transform: scale(0.975); }
+
+.tile-ico {
+  width: 42px;
+  height: 42px;
+  padding: 9px;
+  border-radius: 50%;
+  background: var(--ui-well);
+  color: var(--ui-muted);
+  transition: background-color 0.25s, color 0.25s;
+}
+
+.tile-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+
+  strong {
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-transform: var(--ui-case);
+    letter-spacing: var(--ui-tracking);
+  }
+
+  small {
+    color: var(--ui-muted);
+    font-size: 12px;
+    transition: color 0.25s;
+  }
+}
+
+:host(.wide) {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+
+  .tile-ico { flex: none; width: 38px; height: 38px; padding: 8px; }
+  .tile-dot { top: 50%; margin-top: -4px; }
+  .tile-more { top: 50%; margin-top: -9px; }
+}
+
+.tile-dot {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ui-faint);
+}
+
+:host(.on) .tile-dot { background: var(--ui-accent); }
+
+.tile-more {
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  width: 18px;
+  height: 18px;
+  color: var(--ui-faint);
+}
+
+// Active styles
+
+:host(.on[data-style='fill']) {
+  border-color: transparent;
+  background: var(--ui-accent);
+  color: var(--ui-on-accent);
+
+  .tile-ico { background: rgba(255, 255, 255, 0.24); color: var(--ui-on-accent); }
+  small, .tile-more { color: rgba(255, 255, 255, 0.8); }
+  .tile-dot { background: var(--ui-on-accent); }
+}
+
+:host(.on[data-style='tint']) {
+  background: color-mix(in srgb, var(--ui-accent) 13%, var(--ui-card));
+
+  .tile-ico { background: var(--ui-accent); color: var(--ui-on-accent); }
+}
+
+:host(.on[data-style='outline']) {
+  border-color: var(--ui-accent);
+  box-shadow: inset 0 0 0 1px var(--ui-accent);
+
+  .tile-ico { background: color-mix(in srgb, var(--ui-accent) 14%, transparent); color: var(--ui-accent); }
+}
+
+// Electronic: dotted icon ring; on is an accent outline, never a fill.
+
+.tile-ico {
+  @include theme.electronic { border: 1.5px dotted var(--ui-faint); background: none; }
+}
+
+@include theme.electronic-host('.on') {
+  border-color: var(--ui-accent);
+  background: var(--ui-card);
+  box-shadow: none;
+  color: var(--ui-ink);
+
+  .tile-ico { border-color: var(--ui-accent); background: none; color: var(--ui-accent); }
+  small { color: var(--ui-accent); }
+  .tile-dot { background: var(--ui-accent); }
+}

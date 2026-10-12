@@ -1,0 +1,80 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+
+.gs-val {
+  font-size: 22px;
+  line-height: 1;
+
+  small { margin-left: 2px; color: var(--ui-muted); font-size: 12px; }
+}
+
+.gs-wrap {
+  position: relative;
+  margin-top: auto;
+
+  &.h-thin { height: 6px; margin-block: auto 12px; }
+  &.h-mid { height: 14px; margin-block: auto 8px; }
+  &.h-thick { height: 32px; }
+}
+
+.gs-track {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: none;
+
+  &.cct { background: linear-gradient(90deg, #ffa54f, #ffd9a8 38%, #fff6ea 58%, #e4eeff 78%, #a9cbff); }
+  &.hue { background: linear-gradient(90deg, #f33, #ff0 17%, #3f3 33%, #3ff 50%, #33f 67%, #f3f 83%, #f33); }
+  &.bright { background: linear-gradient(90deg, #3a3a3c, #fff4d6); }
+
+  @include theme.electronic {
+    border-radius: 0;
+    -webkit-mask: radial-gradient(circle, #000 1.7px, transparent 2.2px) left center / 6px 6px;
+    mask: radial-gradient(circle, #000 1.7px, transparent 2.2px) left center / 6px 6px;
+  }
+}
+
+.gs-knob {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--p) * 1%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+
+  &.ring { border: 4px solid var(--ui-knob); box-shadow: var(--ui-knob-shadow), inset var(--ui-knob-shadow); }
+  &.dot { background: var(--ui-knob); box-shadow: var(--ui-knob-shadow); }
+  &.bar { width: 8px; height: calc(100% + 14px); border-radius: 4px; background: var(--ui-knob); box-shadow: var(--ui-knob-shadow); }
+
+  @include theme.electronic { display: none; }
+}
+
+// Electronic hides the knob (the mask would cut it) and marks the value outside the track.
+.gs-mark {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: calc(var(--p) * 1%);
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: var(--ui-accent);
+  box-shadow: 0 0 0 4px var(--ui-card);
+  pointer-events: none;
+
+  @include theme.electronic { display: block; }
+}
+
+.gs-ticks {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ui-muted);
+  font-family: var(--ui-font-mono);
+  font-size: 10px;
+}

@@ -86,7 +86,6 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   private initialized = false;
   private destroyed = false;
-  private renderPending = false;
   private logicalDeviceId = '';
   private syncing?: Promise<void>;
   private syncAbort?: AbortController;
@@ -119,7 +118,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   constructor(
     private readonly deviceUi: DeviceUiPort,
     private readonly pageLayouts: DeviceV2PageLayoutService,
-    private readonly changeDetector: ChangeDetectorRef = { detectChanges: () => undefined } as ChangeDetectorRef,
+    private readonly changeDetector: ChangeDetectorRef = { markForCheck: () => undefined } as ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
@@ -173,9 +172,18 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   get panelCards(): PanelCard[] {
     return this.widgets.flatMap(widget => {
       const field = this.endpoint(widget);
-      return field ? [{ widget, field, value: this.value(field), history: this.history?.points(field.key),
+      return field ? [{ widget, field, value: this.value(field), extras: this.extras(widget),
+        history: this.history?.points(field.key),
         display: this.display(field), draft: this.draft(field), error: this.fieldError(field),
         disabled: this.pending.has(field.key) || !this.canControl }] : [];
+    });
+  }
+
+  // 附属读数 the device declares; read-only, so they never touch pending or drafts.
+  private extras(widget: PageLayoutWidget): PanelCard['extras'] {
+    return widget.extraKeys?.flatMap(key => {
+      const field = this.endpointsByKey.get(key);
+      return field ? [{ field, value: this.value(field) }] : [];
     });
   }
 
@@ -549,8 +557,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private telemetryConfiguration(): { endpointKeys: string[]; intervalMs: number } | undefined {
     if (!this.logicalDeviceId || !this.snapshot.manifestAccepted || !this.layout) return undefined;
     const fields = new Map<string, DeviceUiEndpoint>();
-    for (const widget of this.widgets) {
-      const field = this.endpointsByKey.get(widget.endpointKey);
+    // Extra readings stream like the card's own field.
+    for (const key of this.widgets.flatMap(widget => [widget.endpointKey, ...widget.extraKeys ?? []])) {
+      const field = this.endpointsByKey.get(key);
       if (field?.role === 'property' && field.readable && !field.writable
         && field.telemetryMinimumIntervalMs) {
         fields.set(field.key, field);
@@ -735,13 +744,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  // Device events arrive outside the zone. markForCheck schedules a full pass,
+  // so the host page's bindings derived from this view (theme, state) follow too.
   private requestRender(): void {
-    if (this.destroyed || this.renderPending) return;
-    this.renderPending = true;
-    queueMicrotask(() => {
-      this.renderPending = false;
-      if (!this.destroyed) this.changeDetector.detectChanges();
-    });
+    if (!this.destroyed) this.changeDetector.markForCheck();
   }
 
   private setFieldError(key: string, message: string): void {

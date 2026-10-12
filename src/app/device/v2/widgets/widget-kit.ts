@@ -3,24 +3,14 @@ import type { HistoryPoint } from '../../../core/device-v2/endpoint-history';
 import type { PageLayoutWidget } from '../../../core/device-v2/page-layout';
 import { PAGE_WIDGET_VARIANTS, PageWidgetOptions, PageWidgetVariant } from '../../../core/device-v2/page-widget';
 
-// Visual families: each one is rendered by a single widget component.
-export type WidgetFamily =
-  | 'switch' | 'button' | 'slider' | 'dial' | 'select' | 'input' | 'value' | 'meter' | 'chart' | 'color';
-
-const FAMILY_OF_VARIANT: Readonly<Record<string, WidgetFamily>> = {
-  'slider:dial': 'dial', 'slider:knob': 'dial',
-  'value:gauge': 'meter', 'value:ring': 'meter', 'value:level': 'meter', 'value:battery': 'meter',
-  'value:signal': 'meter', 'value:compass': 'meter', 'value:thermo': 'meter',
-  'value:trend': 'chart', 'value:bars': 'chart', 'value:wave': 'chart',
-  'value:line': 'chart', 'value:timeline': 'chart', 'value:stat': 'chart', 'value:log': 'chart',
-};
-
 export type { HistoryPoint } from '../../../core/device-v2/endpoint-history';
 
 export interface PanelCard {
   widget: PageLayoutWidget;
   field: DeviceUiEndpoint;
   value: DeviceUiValue | undefined;
+  // 附属读数: the widget's extraKeys that the device declares, in order.
+  extras?: readonly { field: DeviceUiEndpoint; value: DeviceUiValue | undefined }[];
   // Oldest first. Absent when the host records no history.
   history?: readonly HistoryPoint[];
   display: string;
@@ -43,10 +33,6 @@ export interface PanelAction extends WidgetAct {
 
 export function variantOf(widget: PageLayoutWidget): PageWidgetVariant {
   return widget.variant ?? PAGE_WIDGET_VARIANTS[widget.type][0];
-}
-
-export function familyOf(widget: PageLayoutWidget): WidgetFamily {
-  return FAMILY_OF_VARIANT[`${widget.type}:${variantOf(widget)}`] ?? widget.type;
 }
 
 export function optionsOf(card: PanelCard): PageWidgetOptions {
@@ -108,13 +94,13 @@ export function present(
   }
 }
 
-// Seconds as m:ss or h:mm:ss.
+// Seconds as mm:ss or h:mm:ss.
 export function duration(seconds: number): string {
   const total = Math.max(0, Math.round(seconds));
   const hours = Math.floor(total / 3600);
-  const minutes = Math.floor(total % 3600 / 60);
+  const minutes = String(Math.floor(total % 3600 / 60)).padStart(2, '0');
   const rest = String(total % 60).padStart(2, '0');
-  return hours ? `${hours}:${String(minutes).padStart(2, '0')}:${rest}` : `${minutes}:${rest}`;
+  return hours ? `${hours}:${minutes}:${rest}` : `${minutes}:${rest}`;
 }
 
 // Seconds since midnight as HH:MM.
@@ -142,13 +128,41 @@ export function isAlert(value: number | undefined, options: PageWidgetOptions): 
 
 // SVG arc on a clock face: 0deg points up, angles grow clockwise.
 export function arcPath(cx: number, cy: number, radius: number, from: number, to: number): string {
+  const finish = Math.min(Math.max(to, from + 0.01), from + 359.99);
   const start = polar(cx, cy, radius, from);
-  const end = polar(cx, cy, radius, to);
-  const large = to - from > 180 ? 1 : 0;
+  const end = polar(cx, cy, radius, finish);
+  const large = finish - from > 180 ? 1 : 0;
   return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${large} 1 ${end.x} ${end.y}`;
 }
 
 export function polar(cx: number, cy: number, radius: number, angle: number): { x: number; y: number } {
   const radians = (angle - 90) * Math.PI / 180;
   return { x: +(cx + radius * Math.cos(radians)).toFixed(3), y: +(cy + radius * Math.sin(radians)).toFixed(3) };
+}
+
+// Colours are 24-bit RGB integers on the wire and #RRGGBB on screen.
+export function hexOf(rgb: number): string {
+  return '#' + Math.round(rgb).toString(16).padStart(6, '0').toUpperCase();
+}
+
+export function hueOf(rgb: number): number {
+  const r = (rgb >> 16 & 255) / 255, g = (rgb >> 8 & 255) / 255, b = (rgb & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  if (!d) return 0;
+  const hue = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return hue * 60;
+}
+
+export function rgbOfHsl(hue: number, saturation: number, lightness: number): number {
+  const s = saturation / 100, l = lightness / 100;
+  const a = s * Math.min(l, 1 - l);
+  const channel = (n: number) => {
+    const k = (n + hue / 30) % 12;
+    return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))));
+  };
+  return channel(0) << 16 | channel(8) << 8 | channel(4);
+}
+
+export function isLight(rgb: number): boolean {
+  return 0.299 * (rgb >> 16 & 255) + 0.587 * (rgb >> 8 & 255) + 0.114 * (rgb & 255) > 170;
 }

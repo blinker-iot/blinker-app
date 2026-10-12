@@ -9,6 +9,7 @@ import { PageLayoutPanelComponent, PanelAction, PanelCard } from '../../../devic
 import { numeric } from '../../../device/v2/widgets/widget-kit';
 import { WidgetInspectorComponent } from '../widget-inspector/widget-inspector';
 import { createDemoSections, DemoSection, liveDemo, nextReading } from './component-preview.data';
+import { WidgetLongPressDirective } from './widget-long-press.directive';
 
 const TICK_MS = 3000;
 const HISTORY_LIMIT = 120;
@@ -18,7 +19,7 @@ const HISTORY_LIMIT = 120;
 @Component({
   selector: 'app-component-preview',
   standalone: true,
-  imports: [IonicModule, PageLayoutPanelComponent, WidgetInspectorComponent],
+  imports: [IonicModule, PageLayoutPanelComponent, WidgetInspectorComponent, WidgetLongPressDirective],
   templateUrl: './component-preview.page.html',
   styleUrls: ['./component-preview.page.scss'],
   host: { '[attr.data-ui-theme]': 'theme' },
@@ -26,10 +27,9 @@ const HISTORY_LIMIT = 120;
 export class ComponentPreviewPage implements OnDestroy {
   readonly id: string;
   readonly themes = UI_THEMES;
-  sections: DemoSection[] = createDemoSections();
+  sections: DemoSection[] = linkExtras(createDemoSections());
   theme: UiTheme;
   selectedId?: string;
-  inspectorOpen = false;
 
   private readonly timer = setInterval(() => this.tick(), TICK_MS);
 
@@ -46,25 +46,36 @@ export class ComponentPreviewPage implements OnDestroy {
     return this.sections.flatMap(section => section.cards).find(card => card.widget.widgetId === this.selectedId);
   }
 
+  // Fields the selected card may show as extra readings: the other display cards.
+  get extraCandidates(): { key: string; label: string }[] {
+    const selected = this.selected;
+    return this.sections.flatMap(section => section.cards)
+      .filter(card => card.widget.type === 'value' && card !== selected)
+      .map(card => ({ key: card.field.key, label: card.widget.title ?? card.field.key }));
+  }
+
   selectTheme(theme: UiTheme): void {
     this.theme = theme;
   }
 
-  pick(event: Event): void {
-    const id = (event.target as HTMLElement).closest<HTMLElement>('[data-widget-id]')?.dataset['widgetId'];
-    if (!id) return;
+  // A tap is the widget's own action; a long press opens its settings.
+  select(id: string): void {
     this.selectedId = id;
-    this.inspectorOpen = true;
+  }
+
+  // Closing the inspector clears the selection; on phones that hides the sheet.
+  closeInspector(): void {
+    this.selectedId = undefined;
   }
 
   // The inspector may change a size, so the section is packed again.
   updateWidget(widget: PageLayoutWidget): void {
-    this.sections = this.sections.map(section => {
+    this.sections = linkExtras(this.sections.map(section => {
       if (!section.cards.some(card => card.widget.widgetId === widget.widgetId)) return section;
       const cards = section.cards.map(card => card.widget.widgetId === widget.widgetId ? { ...card, widget } : card);
       const widgets = reflowPageWidgets(cards.map(card => card.widget));
       return { ...section, cards: cards.map((card, index) => ({ ...card, widget: widgets[index] })) };
-    });
+    }));
   }
 
   onAction(action: PanelAction): void {
@@ -93,10 +104,10 @@ export class ComponentPreviewPage implements OnDestroy {
   }
 
   private updateCard(key: string, change: (card: PanelCard) => PanelCard): void {
-    this.sections = this.sections.map(section => ({
+    this.sections = linkExtras(this.sections.map(section => ({
       ...section,
       cards: section.cards.map(card => card.field.key === key ? change(card) : card),
-    }));
+    })));
   }
 
   // Live demo readings drift a little on every tick.
@@ -108,4 +119,19 @@ export class ComponentPreviewPage implements OnDestroy {
     }
     this.cd.markForCheck();
   }
+}
+
+// Extra readings follow the demo cards they name, so they drift with them.
+function linkExtras(sections: DemoSection[]): DemoSection[] {
+  const cards = new Map(sections.flatMap(section => section.cards).map(card => [card.field.key, card]));
+  return sections.map(section => ({
+    ...section,
+    cards: section.cards.map(card => {
+      const extras = card.widget.extraKeys?.flatMap(key => {
+        const source = cards.get(key);
+        return source ? [{ field: source.field, value: source.value }] : [];
+      });
+      return extras ? { ...card, extras } : card;
+    }),
+  }));
 }

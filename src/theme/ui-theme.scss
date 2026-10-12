@@ -1,12 +1,13 @@
 // The only device UI theme source: page chrome (--blinker-*, Ionic) and widgets (--ui-*).
-// Values follow docs/2026-10-10/设备组件库设计稿.html. Apply with [data-ui-theme];
-// nested attributes override their ancestors.
-// Tokens that depend on --ui-accent are mix ratios: a var() resolves where it is
-// declared, and widgets override --ui-accent locally.
+// Values are those of docs/2026-10-10/设备组件库设计稿.html (natural, dark, electro).
+// Apply with [data-ui-theme]; nested attributes override their ancestors.
+// Electronic differences beyond colour (dotted outlines, dot fields) are explicit
+// overrides in each widget, as in the design.
 
 $_sans: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Noto Sans SC', 'Helvetica Neue', sans-serif;
-$_num: 'Outfit', 'Helvetica Neue', Arial, sans-serif;
-$_mono: 'Geist Mono', ui-monospace, 'SF Mono', 'PingFang SC', Menlo, monospace;
+$_num: 'Outfit Variable', 'Helvetica Neue', Arial, sans-serif;
+$_mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+$_dots: 'Doto Variable', 'Geist Mono Variable', ui-monospace, monospace;
 
 @mixin ui-theme {
   &[data-ui-theme='natural'] {
@@ -20,46 +21,36 @@ $_mono: 'Geist Mono', ui-monospace, 'SF Mono', 'PingFang SC', Menlo, monospace;
     --ui-muted: #868b93;
     --ui-faint: #bdc1c7;
     --ui-line: #e8eaee;
-    --ui-alert: #ff5146;
     --ui-on-accent: #ffffff;
+    --ui-knob: #ffffff;
+    --ui-knob-shadow: 0 1px 3px rgba(23, 25, 28, 0.16);
     --ui-card-border: 1px solid transparent;
     --ui-shadow: 0 1px 2px rgba(23, 25, 28, 0.03), 0 8px 24px rgba(23, 25, 28, 0.04);
+    --ui-focus: #3482ff;
     --ui-radius: 22px;
     --ui-radius-sm: 14px;
     --ui-font: #{$_sans};
     --ui-font-num: #{$_num};
+    --ui-font-mono: #{$_mono};
     --ui-num-weight: 300;
     --ui-case: none;
     --ui-tracking: 0;
-    --ui-dot-mask: none;
-    --ui-dash: none;
-    --ui-icon-dash: none;
-    --ui-icon-stroke: 1.8;
-    --ui-dotnum: none;
-    --ui-textnum: inline;
-    --ui-tile-on-fill: 100%;
-    --ui-tile-on-ink: var(--ui-on-accent);
-    --ui-tile-on-edge: 0%;
-    --ui-switch-ink: 0%;
-    --ui-off-fill: 100%;
-    --ui-control-edge: solid;
-    --ui-arc-width: 10px;
     --ui-heading-prefix: '';
-    --ui-knob: #ffffff;
-    --ui-knob-shadow: 0 1px 3px rgba(23, 25, 28, 0.16);
+    --ui-icon-stroke: 1.8;
+    --ui-icon-dash: none;
     --ui-backdrop: url('/img/ui-theme/natural.jpg') center / cover no-repeat;
     --ui-veil: rgba(242, 243, 245, 0.62);
 
     --ui-blue: #3482ff;
-    --ui-teal: #10b3be;
-    --ui-green: #22b573;
     --ui-orange: #ff9a1f;
-    --ui-red: #ff5146;
+    --ui-green: #22b573;
     --ui-purple: #7f63f4;
+    --ui-teal: #10b3be;
+    --ui-red: #ff5146;
     --ui-ok: #22b573;
+    --ui-alert: #ff5146;
     --ui-off: #b4b8bf;
     --ui-info: #3482ff;
-    --ui-default-accent: var(--ui-blue);
 
     --blinker-bg: #f2f3f5;
     --blinker-bg-elevated: #f8f9fa;
@@ -90,46 +81,36 @@ $_mono: 'Geist Mono', ui-monospace, 'SF Mono', 'PingFang SC', Menlo, monospace;
     --ui-muted: #8c9099;
     --ui-faint: #50545b;
     --ui-line: #2b2d32;
-    --ui-alert: #ff6459;
     --ui-on-accent: #ffffff;
+    --ui-knob: #f4f5f7;
+    --ui-knob-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
     --ui-card-border: 1px solid rgba(255, 255, 255, 0.035);
     --ui-shadow: none;
+    --ui-focus: #4d93ff;
     --ui-radius: 22px;
     --ui-radius-sm: 14px;
     --ui-font: #{$_sans};
     --ui-font-num: #{$_num};
+    --ui-font-mono: #{$_mono};
     --ui-num-weight: 300;
     --ui-case: none;
     --ui-tracking: 0;
-    --ui-dot-mask: none;
-    --ui-dash: none;
-    --ui-icon-dash: none;
-    --ui-icon-stroke: 1.8;
-    --ui-dotnum: none;
-    --ui-textnum: inline;
-    --ui-tile-on-fill: 100%;
-    --ui-tile-on-ink: var(--ui-on-accent);
-    --ui-tile-on-edge: 0%;
-    --ui-switch-ink: 0%;
-    --ui-off-fill: 100%;
-    --ui-control-edge: solid;
-    --ui-arc-width: 10px;
     --ui-heading-prefix: '';
-    --ui-knob: #f4f5f7;
-    --ui-knob-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    --ui-icon-stroke: 1.8;
+    --ui-icon-dash: none;
     --ui-backdrop: url('/img/ui-theme/dark.jpg') center / cover no-repeat;
     --ui-veil: rgba(12, 13, 15, 0.58);
 
     --ui-blue: #4d93ff;
-    --ui-teal: #26c4ce;
-    --ui-green: #35c987;
     --ui-orange: #ffa53d;
-    --ui-red: #ff6459;
+    --ui-green: #35c987;
     --ui-purple: #937bff;
+    --ui-teal: #26c4ce;
+    --ui-red: #ff6459;
     --ui-ok: #35c987;
+    --ui-alert: #ff6459;
     --ui-off: #5e626a;
     --ui-info: #4d93ff;
-    --ui-default-accent: var(--ui-blue);
 
     --blinker-bg: #0c0d0f;
     --blinker-bg-elevated: #131417;
@@ -149,7 +130,7 @@ $_mono: 'Geist Mono', ui-monospace, 'SF Mono', 'PingFang SC', Menlo, monospace;
     --blinker-radius-control: 14px;
   }
 
-  // One signal colour: every accent is the same red, as on an OLED instrument.
+  // One signal colour: every tone is the same red, as on an OLED instrument.
   &[data-ui-theme='electronic'] {
     color-scheme: dark;
 
@@ -161,47 +142,36 @@ $_mono: 'Geist Mono', ui-monospace, 'SF Mono', 'PingFang SC', Menlo, monospace;
     --ui-muted: #8b8e91;
     --ui-faint: #45484c;
     --ui-line: #24272b;
-    --ui-alert: #ff3b30;
     --ui-on-accent: #070809;
+    --ui-knob: #e8e8e6;
+    --ui-knob-shadow: none;
     --ui-card-border: 1px solid #2a2d31;
     --ui-shadow: none;
+    --ui-focus: #ff3b30;
     --ui-radius: 14px;
     --ui-radius-sm: 8px;
     --ui-font: #{$_mono};
-    --ui-font-num: #{$_mono};
-    --ui-num-weight: 400;
+    --ui-font-num: #{$_dots};
+    --ui-font-mono: #{$_mono};
+    --ui-num-weight: 800;
     --ui-case: uppercase;
     --ui-tracking: 0.06em;
-    // Any solid painted shape becomes a dot field through this mask.
-    --ui-dot-mask: radial-gradient(circle, #000 1.5px, transparent 1.9px) 0 0 / 5px 5px repeat;
-    --ui-dash: 0 5.5;
-    --ui-icon-dash: 0.01 3.1;
-    --ui-icon-stroke: 2.1;
-    --ui-dotnum: inline-block;
-    --ui-textnum: none;
-    --ui-tile-on-fill: 0%;
-    --ui-tile-on-ink: var(--ui-ink);
-    --ui-tile-on-edge: 100%;
-    --ui-switch-ink: 100%;
-    --ui-off-fill: 0%;
-    --ui-control-edge: dotted;
-    --ui-arc-width: 3.6px;
     --ui-heading-prefix: '## ';
-    --ui-knob: #e8e8e6;
-    --ui-knob-shadow: none;
+    --ui-icon-stroke: 2.1;
+    --ui-icon-dash: 0.01 3.1;
     --ui-backdrop: radial-gradient(circle, rgba(255, 255, 255, 0.045) 1px, transparent 1.3px) 0 0 / 16px 16px;
     --ui-veil: transparent;
 
     --ui-blue: #ff3b30;
-    --ui-teal: #ff3b30;
-    --ui-green: #ff3b30;
     --ui-orange: #ff3b30;
-    --ui-red: #ff3b30;
+    --ui-green: #ff3b30;
     --ui-purple: #ff3b30;
+    --ui-teal: #ff3b30;
+    --ui-red: #ff3b30;
     --ui-ok: #e8e8e6;
+    --ui-alert: #ff3b30;
     --ui-off: #45484c;
     --ui-info: #e8e8e6;
-    --ui-default-accent: #ff3b30;
 
     --blinker-bg: #070809;
     --blinker-bg-elevated: #0b0c0e;
@@ -222,7 +192,7 @@ $_mono: 'Geist Mono', ui-monospace, 'SF Mono', 'PingFang SC', Menlo, monospace;
   }
 
   &[data-ui-theme] {
-    --ui-accent: var(--ui-default-accent);
+    --ui-accent: var(--ui-blue);
     --transparent-page-mask-color: var(--blinker-bg);
     --ion-background-color: var(--blinker-bg);
     --ion-text-color: var(--blinker-text-primary);
@@ -233,6 +203,17 @@ $_mono: 'Geist Mono', ui-monospace, 'SF Mono', 'PingFang SC', Menlo, monospace;
     --ion-item-background: var(--blinker-surface);
     --ion-border-color: var(--blinker-border);
   }
+}
+
+// Electronic-only rules in a component: `.x { @include electronic { … } }`, or
+// `@include electronic-host('.on') { … }` for the host in a state. Host states
+// must follow :host-context directly; `:host(.on)` there loses the ancestor match.
+@mixin electronic {
+  :host-context([data-ui-theme='electronic']) & { @content; }
+}
+
+@mixin electronic-host($state: '') {
+  :host-context([data-ui-theme='electronic'])#{$state} { @content; }
 }
 
 // Atmosphere behind a themed page: the theme's picture, blurred, under a veil.
@@ -258,4 +239,21 @@ $_mono: 'Geist Mono', ui-monospace, 'SF Mono', 'PingFang SC', Menlo, monospace;
   }
 
   &::after { background: var(--ui-veil); }
+}
+
+// Frosted header over a themed page: the theme's tint, and a blur that fades
+// out with it. Include at the top level of a page's styles.
+@mixin ui-header-glass {
+  ion-header:not(.main-tab-header):not(.opaque-page-header)::before {
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--ui-bg) 72%, transparent) 0%,
+      color-mix(in srgb, var(--ui-bg) 40%, transparent) 70%,
+      transparent 100%
+    );
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent);
+    mask-image: linear-gradient(to bottom, #000 60%, transparent);
+  }
 }

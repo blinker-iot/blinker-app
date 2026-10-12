@@ -1,0 +1,20 @@
+<div class="hd">
+  @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+  <span class="hd-t">{{ showTitle ? title : '' }}</span>
+  <span class="gs-val num">{{ reading.text }}<small>{{ reading.unit }}</small></span>
+</div>
+
+<div class="gs-wrap" [class]="'h-' + (options.trackSize ?? 'mid')">
+  <div class="gs-track" [class]="track" role="slider" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
+    [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" (pointerdown)="dragStart($event)"
+    (pointermove)="dragMove($event)" (pointerup)="dragEnd($event)" (pointercancel)="dragEnd($event)" (keydown)="key($event)">
+    <i class="gs-knob" [class]="options.knob ?? 'ring'" [style.--p]="percent"></i>
+  </div>
+  <i class="gs-mark" [style.--p]="percent"></i>
+</div>
+
+@if (options.showTicks !== false && rows > 1) {
+  <div class="gs-ticks">
+    @for (tick of ticks; track $index) { <span>{{ tick }}</span> }
+  </div>
+}

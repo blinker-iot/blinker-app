@@ -52,7 +52,7 @@
       <div class="editor" [attr.data-ui-theme]="theme">
         <app-page-layout-panel class="editor-preview" [cards]="previewCards" />
         @if (editing) {
-          <app-widget-inspector [widget]="editing.widget" (widgetChange)="editing.widget = $event" />
+          <app-widget-inspector [widget]="editing.widget" [extraCandidates]="extraCandidates" (widgetChange)="editing.widget = $event" />
         }
       </div>
     </ion-content>

@@ -1,0 +1,15 @@
+// Arc strokes shared by the dial, the ring and the timer.
+@use '../../../../../theme/ui-theme' as theme;
+
+@mixin strokes {
+  .arc-track { fill: none; stroke: var(--ui-track); stroke-linecap: round; }
+  .arc-prog { fill: none; stroke: var(--ui-accent); stroke-linecap: round; }
+  .arc-prog.warn { stroke: var(--ui-alert); }
+
+  // Electronic: arcs become rows of dots spaced by the stroke width.
+  .arc-track, .arc-prog {
+    @include theme.electronic { stroke-dasharray: 0.01 calc(var(--thick, 5) * 1.75); }
+  }
+
+  .arc-track { @include theme.electronic { stroke: var(--ui-faint); } }
+}

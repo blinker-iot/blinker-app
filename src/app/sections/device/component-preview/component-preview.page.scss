@@ -10,6 +10,8 @@
   font-family: var(--ui-font);
 }
 
+@include theme.ui-header-glass;
+
 ion-content { --background: transparent; }
 ion-toolbar { --ion-color-contrast: var(--ui-ink); }
 
@@ -23,10 +25,15 @@ button {
   cursor: pointer;
 }
 
+// The routed page shell lays out `ion-content > main` (width, padding, background)
+// and outranks local rules, so it is tuned through its variables.
 .page {
-  max-width: 1380px;
-  margin: 0 auto;
-  padding: 12px clamp(16px, 3vw, 36px) 72px;
+  --section-main-max-width: 1380px;
+  --section-main-padding-inline: clamp(16px, 3vw, 36px);
+  --section-main-background: transparent;
+  --section-main-accent-opacity: 0;
+  // Room at the end so the last cards can scroll clear of the inspector sheet.
+  --section-main-padding-bottom: 300px;
 }
 
 .top {
@@ -35,7 +42,8 @@ button {
   align-items: flex-end;
   justify-content: space-between;
   gap: 18px 28px;
-  padding-bottom: 26px;
+  // The shell's header spacer ends right at the toolbar; keep the title clear of its glass.
+  padding: 12px 0 26px;
 }
 
 .brand {
@@ -80,16 +88,26 @@ button {
 
   [aria-pressed='true'] { background: var(--ui-well); color: var(--ui-ink); }
 
+  // Each swatch is its theme in miniature: background with an accent dot.
   i {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
+    background: radial-gradient(circle, var(--dot) 0 3px, var(--base) 3.5px);
     box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.35);
   }
 
-  [data-swatch='natural'] { background: #f2f3f5; }
-  [data-swatch='electronic'] { background: #070809; }
-  [data-swatch='dark'] { background: #1b1c20; }
+  [data-swatch='natural'] { --base: #ffffff; --dot: #3482ff; }
+  [data-swatch='electronic'] { --base: #070809; --dot: #ff3b30; }
+  [data-swatch='dark'] { --base: #1b1c20; --dot: #4d93ff; }
+}
+
+// Electronic: a dotted outline, and the chosen segment inverted as on an OLED menu.
+:host[data-ui-theme='electronic'] .skins {
+  border: 1px dotted var(--ui-faint);
+
+  button { text-transform: uppercase; letter-spacing: 0.06em; }
+  [aria-pressed='true'] { background: var(--ui-ink); color: var(--ui-bg); }
 }
 
 .bench {
@@ -100,6 +118,15 @@ button {
 }
 
 .sec + .sec { margin-top: 36px; }
+
+// Long press opens the inspector, so it must not select text or raise the
+// system callout; fields stay editable.
+.gallery {
+  -webkit-touch-callout: none;
+  user-select: none;
+
+  :is(input, textarea) { user-select: text; }
+}
 
 .sec-h {
   display: flex;
@@ -114,6 +141,7 @@ button {
   &::before { content: var(--ui-heading-prefix); color: var(--ui-muted); font-weight: 400; }
 
   small {
+    margin-left: auto;
     color: var(--ui-muted);
     font-family: var(--ui-font-num);
     font-size: 11px;
@@ -123,8 +151,8 @@ button {
 
 .insp {
   position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 32px);
+  top: calc(var(--transparent-page-content-top) + 12px);
+  max-height: calc(100vh - var(--transparent-page-content-top) - 28px);
   overflow: auto;
   padding: 18px;
   border: var(--ui-card-border);
@@ -134,7 +162,20 @@ button {
   backdrop-filter: blur(18px);
 }
 
-.grab { display: none; }
+// Floated so the inspector heading wraps around it.
+.close {
+  float: right;
+  margin: -6px -6px 6px 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ui-well);
+  color: var(--ui-muted);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.scrim { display: none; }
 
 .insp-hint {
   margin: 0;
@@ -149,32 +190,39 @@ button {
 
 @media (max-width: 900px) {
   .bench { grid-template-columns: minmax(0, 1fr); }
-  .page { padding-bottom: 140px; }
+
+  // Phones: the inspector is a bottom sheet over a scrim, shown only while a
+  // component is selected; tapping the scrim or × closes it.
+  .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 19;
+    background: rgba(0, 0, 0, 0.28);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .scrim.open { opacity: 1; pointer-events: auto; }
 
   .insp {
     position: fixed;
     inset: auto 0 0 0;
+    top: auto;
     z-index: 20;
     max-height: 78vh;
     padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
     border-radius: var(--ui-radius) var(--ui-radius) 0 0;
     box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
-    transform: translateY(calc(100% - 64px - env(safe-area-inset-bottom, 0px)));
-    transition: transform 0.3s cubic-bezier(0.3, 0.7, 0.4, 1);
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform 0.3s cubic-bezier(0.3, 0.7, 0.4, 1), visibility 0s 0.3s;
   }
 
-  .insp.open { transform: none; }
-
-  .grab {
-    display: block;
-    width: 36px;
-    height: 5px;
-    margin: -6px auto 12px;
-    border-radius: 3px;
-    background: var(--ui-faint);
-  }
+  .insp.open { transform: none; visibility: visible; transition-delay: 0s; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .insp { transition: none; }
+  .insp, .scrim { transition: none; }
 }

@@ -1,0 +1,94 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+@include c.fills-rows;
+
+// The track is the whole card, so the card has no frame of its own: a
+// transparent border would show the card colour as a ring around the fill.
+// Electronic keeps its frame, which is part of the OLED look.
+:host {
+  gap: 0;
+  padding: 0;
+  border: 0;
+}
+
+@include theme.electronic-host { border: var(--ui-card-border); }
+
+.lvl-track {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--ui-track);
+  cursor: grab;
+  touch-action: none;
+  outline-offset: -3px;
+
+  @include theme.electronic {
+    background: radial-gradient(circle, var(--ui-faint) 1.5px, transparent 2px) left bottom / 8px 8px;
+  }
+}
+
+$dots: radial-gradient(circle, var(--ui-accent) 1.9px, transparent 2.4px) left bottom / 8px 8px;
+
+.lvl-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  background: var(--ui-accent);
+
+  @include theme.electronic { background: $dots; }
+}
+
+// Value changes glide; a moving drag follows the pointer exactly.
+.lvl-fill { transition: height 0.4s cubic-bezier(0.3, 0.7, 0.4, 1), width 0.4s cubic-bezier(0.3, 0.7, 0.4, 1); }
+:host(.moving) .lvl-fill { transition: none; }
+
+:host(.v) .lvl-fill { right: 0; height: calc(var(--p) * 1%); }
+:host(.h) .lvl-fill { top: 0; width: calc(var(--p) * 1%); }
+:host(.grad.v) .lvl-fill { background: linear-gradient(to top, color-mix(in srgb, var(--ui-accent) 55%, var(--ui-card)), var(--ui-accent)); }
+:host(.grad.h) .lvl-fill { background: linear-gradient(to right, color-mix(in srgb, var(--ui-accent) 55%, var(--ui-card)), var(--ui-accent)); }
+
+// Electronic draws the fill as a dot field, gradient or not.
+@include theme.electronic-host('.grad') { .lvl-fill { background: $dots; } }
+
+.lvl-mk {
+  position: absolute;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ui-ink) 10%, transparent);
+
+  @include theme.electronic { background: var(--ui-muted); }
+}
+
+:host(.v) .lvl-mk { left: 30%; right: 30%; bottom: calc(var(--m) * 1%); height: 2px; }
+:host(.h) .lvl-mk { top: 30%; bottom: 30%; left: calc(var(--m) * 1%); width: 2px; }
+
+.lvl-ico, .lvl-t, .lvl-val {
+  position: absolute;
+  color: var(--ui-ink);
+  pointer-events: none;
+  transition: color 0.2s;
+}
+
+.lvl-ico { width: 26px; height: 26px; color: var(--ui-muted); }
+.lvl-t { text-transform: var(--ui-case); letter-spacing: var(--ui-tracking); }
+.lvl-val small { margin-left: 2px; font-size: 0.5em; }
+
+.inv {
+  color: var(--ui-on-accent);
+
+  @include theme.electronic { color: var(--ui-ink); }
+}
+
+:host(.v) {
+  .lvl-ico { left: 50%; bottom: 18px; transform: translateX(-50%); }
+  .lvl-val { top: 16px; left: 0; right: 0; font-size: 30px; line-height: 1; text-align: center; }
+  .lvl-t { top: 52px; left: 0; right: 0; font-size: 12px; text-align: center; }
+}
+
+:host(.h) {
+  .lvl-ico { left: 16px; top: 50%; transform: translateY(-50%); }
+  .lvl-t { left: 52px; top: 50%; transform: translateY(-50%); font-size: 14px; font-weight: 500; }
+  .lvl-val { right: 18px; top: 50%; transform: translateY(-50%); font-size: 24px; }
+}

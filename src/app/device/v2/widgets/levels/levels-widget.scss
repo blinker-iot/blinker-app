@@ -1,0 +1,121 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+@include c.fills-rows;
+
+.lv-row {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  > :not(.rbtn) { flex: 1; min-width: 0; align-self: stretch; }
+  > .lv-seg { align-self: center; height: 44px; }
+}
+
+// Bars
+
+.lv-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 100%;
+}
+
+.lv-bar {
+  flex: 1;
+  height: calc(var(--h) * 1%);
+  border-radius: 7px;
+  background: var(--ui-track);
+  transition: background-color 0.2s;
+
+  &.on { background: var(--ui-accent); }
+
+  @include theme.electronic {
+    border-radius: 0;
+    background: radial-gradient(circle, var(--ui-faint) 1.8px, transparent 2.3px) center bottom / 7px 7px;
+
+    &.on { background: radial-gradient(circle, var(--ui-accent) 2px, transparent 2.5px) center bottom / 7px 7px; }
+  }
+}
+
+// Dots
+
+.lv-dots {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.lv-dot {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--ui-well);
+  color: var(--ui-muted);
+  font-size: 12px;
+  transition: background-color 0.2s, color 0.2s;
+
+  &.on { background: var(--ui-accent); color: var(--ui-on-accent); }
+
+  @include theme.electronic {
+    border: 1.5px dotted var(--ui-faint);
+    background: none;
+
+    &.on { border-color: var(--ui-accent); background: none; color: var(--ui-accent); }
+  }
+}
+
+.lv-gap {
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ui-track);
+
+  &.on { background: var(--ui-accent); }
+
+  @include theme.electronic {
+    height: 0;
+    border-top: 2px dotted var(--ui-faint);
+    background: none;
+
+    &.on { border-color: var(--ui-accent); background: none; }
+  }
+}
+
+// Segment
+
+.lv-seg {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-well);
+
+  button {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    padding-inline: 2px;
+    border-radius: calc(var(--ui-radius-sm) - 3px);
+    color: var(--ui-muted);
+    font-size: 13px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  button.on { background: var(--ui-card); box-shadow: var(--ui-knob-shadow); color: var(--ui-accent); font-weight: 500; }
+
+  @include theme.electronic {
+    border: 1px dotted var(--ui-faint);
+    background: none;
+
+    button.on { background: var(--ui-well); }
+  }
+}

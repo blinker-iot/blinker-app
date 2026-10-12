@@ -18,7 +18,7 @@ button {
 
 .head {
   h2 {
-    margin: 2px 0 0;
+    margin: 0;
     font-size: 18px;
     font-weight: 600;
     letter-spacing: var(--ui-tracking);
@@ -33,13 +33,6 @@ button {
   }
 
   b { color: var(--ui-ink); font-weight: 500; }
-}
-
-.eyebrow {
-  color: var(--ui-muted);
-  font-family: var(--ui-font-num);
-  font-size: 11px;
-  letter-spacing: 0.04em;
 }
 
 .group {
@@ -111,6 +104,8 @@ button {
     white-space: nowrap;
   }
 
+  button:disabled { opacity: 0.4; cursor: default; }
+
   [aria-checked='true'],
   [aria-pressed='true'] {
     background: var(--ui-card);
@@ -132,6 +127,9 @@ button {
     color: var(--ui-muted);
     font-size: 16px;
   }
+
+  // ui-icon fills its box; keep it at glyph size inside the cell.
+  app-ui-icon { width: 18px; height: 18px; }
 
   [aria-checked='true'] {
     background: var(--ui-well);

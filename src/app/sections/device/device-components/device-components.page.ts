@@ -7,7 +7,7 @@ import { API } from '../../../configs/api.config';
 import { assertDeviceV2AccountContext, captureDeviceV2AccountContext } from '../../../core/device-v2/account-scope';
 import { DeviceUiConnection, DeviceUiPort, DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
 import {
-  generateDefaultPageLayout, migratePageLayout, PageLayout, PageLayoutWidget, reflowPageWidgets,
+  generateDefaultPageLayout, isExtraReading, migratePageLayout, PageLayout, PageLayoutWidget, reflowPageWidgets,
 } from '../../../core/device-v2/page-layout';
 import type { UiTheme } from '../../../core/device-v2/ui-theme';
 import { BlinkerDevice } from '../../../core/model/device.model';
@@ -178,12 +178,24 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
     return readDeviceTheme(this.id) ?? this.layout?.style ?? 'natural';
   }
 
+  // Fields the edited widget may show as extra readings, named as on the device page.
+  get extraCandidates(): { key: string; label: string }[] {
+    return (this.snapshot?.endpoints ?? []).filter(endpoint => isExtraReading(endpoint)).map(endpoint => ({
+      key: endpoint.key,
+      label: this.layout?.widgets.find(widget => widget.endpointKey === endpoint.key)?.title || endpoint.key,
+    }));
+  }
+
   // One-card preview of the widget being edited, with the device's current value.
   get previewCards(): PanelCard[] {
     const widget = this.editing?.widget;
     const field = widget && this.snapshot?.endpoints.find(endpoint => endpoint.key === widget.endpointKey);
     if (!widget || !field) return [];
-    return [{ widget: { ...widget, grid: { ...widget.grid, x: 0, y: 0 } }, field, value: field.value,
+    const extras = widget.extraKeys?.flatMap(key => {
+      const extra = this.snapshot?.endpoints.find(endpoint => endpoint.key === key);
+      return extra ? [{ field: extra, value: extra.value }] : [];
+    });
+    return [{ widget: { ...widget, grid: { ...widget.grid, x: 0, y: 0 } }, field, value: field.value, extras,
       display: String(field.value ?? '—'), draft: '', error: '', disabled: false }];
   }
 

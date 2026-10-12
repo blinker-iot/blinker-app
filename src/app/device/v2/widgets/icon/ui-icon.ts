@@ -18,15 +18,17 @@ import { UI_ICONS } from './ui-icons';
     }
   `,
   styles: [`
+    // Fills the box its container gives it, as .ico does in the design.
     :host {
-      display: inline-grid;
+      display: grid;
       place-items: center;
-      width: 1.25em;
-      height: 1.25em;
+      width: 100%;
+      height: 100%;
       line-height: 1;
     }
 
     svg {
+      display: block;
       width: 100%;
       height: 100%;
       overflow: visible;

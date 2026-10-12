@@ -1,0 +1,33 @@
+@if (showTitle || options.showHex !== false) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ showTitle ? title : '' }}</span>
+    @if (options.showHex !== false) { <span class="hd-v">{{ hex }}</span> }
+  </div>
+}
+
+<ng-template #swatchRow let-big="big">
+  <div class="sws" [class.big]="big" role="radiogroup" [attr.aria-label]="title">
+    @for (swatch of swatches; track swatch) {
+      <button type="button" class="swc" role="radio" [class.on]="swatch === hex" [attr.aria-checked]="swatch === hex"
+        [attr.aria-label]="swatch" [style.--c]="swatch" [disabled]="card.disabled" (click)="pick(swatch)"></button>
+    }
+  </div>
+</ng-template>
+
+@if (mode === 'swatches') {
+  <ng-container *ngTemplateOutlet="swatchRow; context: { big: true }" />
+} @else {
+  <div class="cw-wrap">
+    <div class="cw-box" role="slider" tabindex="0" [attr.aria-label]="title + ' 色相'" aria-valuemin="0" aria-valuemax="360"
+      [attr.aria-valuenow]="hue" [style.--rw]="ring + 'px'" [style.--a]="hue + 'deg'" (pointerdown)="turnStart($event)"
+      (pointermove)="turnMove($event)" (pointerup)="turnEnd($event)" (pointercancel)="turnEnd($event)" (keydown)="key($event)">
+      <div class="cw"></div>
+      <i class="cw-knob" [style.background]="hex"></i>
+      <div class="cw-mid" [class.lt]="light" [class.dk]="!light" [style.--c]="hex"></div>
+    </div>
+  </div>
+  @if (mode === 'both') {
+    <ng-container *ngTemplateOutlet="swatchRow; context: { big: false }" />
+  }
+}

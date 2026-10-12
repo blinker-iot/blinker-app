@@ -3,6 +3,7 @@ import type { DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
 import {
   generateDefaultPageLayout, PageLayout, PageWidgetOptions, PageWidgetType, PageWidgetVariant, parsePageLayout, reflowPageWidgets,
 } from '../../../core/device-v2/page-layout';
+import { fitSize, widgetVariant } from '../../../core/device-v2/page-widget';
 
 import { UiTheme } from '../../../core/device-v2/ui-theme';
 
@@ -21,6 +22,8 @@ export interface InterfaceTile {
   compact?: boolean;
   // Presentation chosen by AI; absent means the type's default variant.
   variant?: PageWidgetVariant;
+  // 附属读数 chosen by AI: the components (and their fields) shown in the note line.
+  extras?: { id: string; key: string }[];
   icon?: string;
   tone?: PageWidgetOptions['tone'];
   // Only the local capability adapter may supply bindings and command options.
@@ -124,12 +127,15 @@ function positions(tiles: InterfaceTile[]) {
   });
 }
 export function toPageLayout(tiles: InterfaceTile[], snapshot: DeviceUiSnapshot, revision: number, style?: UiTheme): PageLayout {
-  // Visual order is the tile order; the packer turns sizes into rows.
+  // Visual order is the tile order; the packer turns sizes into rows. Density
+  // presets are coarse, so each size lands on the nearest one its variant allows.
   const grids = reflowPageWidgets(tiles.map((tile, index) => ({ widgetId: tile.id, type: tile.type, endpointKey: tile.key,
-    grid: { x: 0, y: index, width: tile.width, height: tile.height ?? 2 } }))).map(widget => widget.grid);
+    grid: { x: 0, y: index, ...fitSize(widgetVariant(tile.type, tile.variant), tile.width, tile.height ?? 2) } })))
+    .map(widget => widget.grid);
   return parsePageLayout({ ...generateDefaultPageLayout(snapshot), revision: Math.max(1, revision), ...(style ? { style } : {}),
     widgets: tiles.map((tile, index) => ({ widgetId: tile.id, endpointKey: tile.key, type: tile.type,
       title: tile.title, appearance: tile.emphasized ? 'emphasized' : tile.compact ? 'compact' : 'default',
+      ...(tile.extras ? { extraKeys: tile.extras.map(extra => extra.key) } : {}),
       ...(tile.variant ? { variant: tile.variant } : {}),
       ...(tile.icon || tile.tone ? { options: { ...(tile.icon ? { icon: tile.icon } : {}), ...(tile.tone ? { tone: tile.tone } : {}) } } : {}),
       grid: grids[index] })) }, snapshot.endpoints);

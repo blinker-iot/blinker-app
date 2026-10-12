@@ -2,7 +2,7 @@ import { ApplicationRef, Component, EnvironmentInjector, Injectable, Input, crea
 import { toJpeg } from 'html-to-image';
 import { PageLayoutPanelComponent, type PanelCard } from '../../../device/v2/panel/page-layout-panel';
 import type { UiTheme } from '../../../core/device-v2/ui-theme';
-import type { DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
+import type { DeviceUiEndpoint, DeviceUiSnapshot, DeviceUiValue } from '../../../core/device-v2/device-ui.port';
 import { toPageLayout, type InterfaceTile } from './interface-draft';
 import { validateWorkflowProposal } from './interface-workflow';
 
@@ -51,12 +51,15 @@ export class InterfacePreviewService {
     try {
       signal.throwIfAborted();
       component.setInput('theme', style);
+      const fieldOf = (key: string) => snapshot.endpoints.find(field => field.key === key);
       component.setInput('cards', layout.widgets.map(widget => {
-        const field = snapshot.endpoints.find(field => field.key === widget.endpointKey)!;
-        // Images contain deterministic example states, never the user's live device values.
-        const value = field.valueType === 'boolean' ? true : field.valueType === 'text' ? field.choices?.[0] ?? '示例'
-          : ['integer', 'number'].includes(field.valueType) ? exampleNumber(field.minimum, field.maximum) : undefined;
-        return { widget, field, value, display: value === true ? '开启' : value === undefined ? '—' : String(value),
+        const field = fieldOf(widget.endpointKey)!;
+        const value = exampleValue(field);
+        const extras = widget.extraKeys?.flatMap(key => {
+          const extra = fieldOf(key);
+          return extra ? [{ field: extra, value: exampleValue(extra) }] : [];
+        });
+        return { widget, field, value, extras, display: value === true ? '开启' : value === undefined ? '—' : String(value),
           draft: value === undefined ? '' : String(value), error: '', disabled: false } satisfies PanelCard;
       }));
       component.changeDetectorRef.detectChanges();
@@ -92,6 +95,12 @@ export class InterfacePreviewService {
 }
 
 // A mid-range example reads better in previews than an empty minimum.
+// Images contain deterministic example states, never the user's live device values.
+function exampleValue(field: DeviceUiEndpoint): DeviceUiValue | undefined {
+  return field.valueType === 'boolean' ? true : field.valueType === 'text' ? field.choices?.[0] ?? '示例'
+    : ['integer', 'number'].includes(field.valueType) ? exampleNumber(field.minimum, field.maximum) : undefined;
+}
+
 function exampleNumber(minimum?: number, maximum?: number): number {
   if (minimum === undefined || maximum === undefined) return minimum ?? 0;
   return Math.round(minimum + (maximum - minimum) * 0.62);

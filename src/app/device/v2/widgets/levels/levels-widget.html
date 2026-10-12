@@ -1,0 +1,49 @@
+@if (showTitle) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ title }}</span>
+    <span class="hd-v">{{ currentName }}</span>
+  </div>
+}
+
+<div class="lv-row">
+  @if (options.showButtons) {
+    <button type="button" class="rbtn" aria-label="降档" [disabled]="card.disabled || value <= min" (click)="nudge(-1)">
+      <app-ui-icon name="minus" /></button>
+  }
+
+  @switch (style) {
+    @case ('dots') {
+      <div class="lv-dots" role="radiogroup" [attr.aria-label]="title">
+        @for (level of levels; track $index; let index = $index) {
+          @if (index > 0) { <i class="lv-gap" [class.on]="index + 1 <= current"></i> }
+          <button type="button" class="lv-dot" role="radio" [class.on]="index + 1 <= current"
+            [attr.aria-checked]="index + 1 === current" [attr.aria-label]="name(index + 1)" [disabled]="card.disabled"
+            (click)="set(index + 1)">{{ index + 1 }}</button>
+        }
+      </div>
+    }
+    @case ('segment') {
+      <div class="lv-seg" role="radiogroup" [attr.aria-label]="title">
+        @for (level of levels; track $index; let index = $index) {
+          <button type="button" role="radio" [class.on]="index + 1 === current" [attr.aria-checked]="index + 1 === current"
+            [disabled]="card.disabled" (click)="set(index + 1)">{{ name(index + 1) }}</button>
+        }
+      </div>
+    }
+    @default {
+      <div class="lv-bars" role="radiogroup" [attr.aria-label]="title">
+        @for (level of levels; track $index; let index = $index) {
+          <button type="button" class="lv-bar" role="radio" [class.on]="index + 1 <= current"
+            [attr.aria-checked]="index + 1 === current" [attr.aria-label]="name(index + 1)" [disabled]="card.disabled"
+            [style.--h]="height(index + 1)" (click)="set(index + 1)"></button>
+        }
+      </div>
+    }
+  }
+
+  @if (options.showButtons) {
+    <button type="button" class="rbtn" aria-label="升档" [disabled]="card.disabled || value >= max" (click)="nudge(1)">
+      <app-ui-icon name="plus" /></button>
+  }
+</div>

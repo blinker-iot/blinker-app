@@ -2,7 +2,7 @@ import { normalizeUiTheme, UiTheme } from './ui-theme';
 import { DeviceUiEndpoint, DeviceUiSnapshot } from './device-ui.port';
 import {
   COLOR_MAXIMUM, PAGE_WIDGET_TYPES, PageWidgetOptions, PageWidgetType, PageWidgetVariant,
-  parseWidgetOptions, parseWidgetVariant,
+  MAX_EXTRA_KEYS, acceptsExtras, parseWidgetOptions, parseWidgetVariant, sizeAllowed, widgetVariant,
 } from './page-widget';
 
 export type { PageWidgetOptions, PageWidgetType, PageWidgetVariant } from './page-widget';
@@ -24,6 +24,8 @@ export interface PageLayoutWidget {
   widgetId: string;
   type: PageWidgetType;
   endpointKey: string;
+  // 附属读数: further read-only fields shown in a display card's note line.
+  extraKeys?: string[];
   title?: string;
   appearance?: PageWidgetAppearance;
   variant?: PageWidgetVariant;
@@ -50,7 +52,7 @@ const appearances: readonly PageWidgetAppearance[] = ['default', 'compact', 'emp
 
 // Default size of each type's default variant, as width x height.
 const DEFAULT_SIZES: Readonly<Record<PageWidgetType, [number, number]>> = {
-  switch: [4, 2], value: [4, 2], slider: [8, 1], button: [8, 1], select: [8, 2], input: [8, 2], color: [4, 4],
+  switch: [2, 2], button: [2, 2], value: [2, 2], slider: [4, 1], select: [4, 2], input: [4, 2], color: [4, 4],
 };
 
 export function generateDefaultPageLayout(snapshot: DeviceUiSnapshot): PageLayout {
@@ -152,6 +154,9 @@ export function parsePageLayout(input: unknown, endpoints?: readonly DeviceUiEnd
     if (endpointByKey && (!endpoint || !isCompatible(widget.type, endpoint))) {
       throw new Error(`PageLayout widget ${widget.widgetId} is incompatible with its endpoint`);
     }
+    if (endpointByKey && widget.extraKeys?.some(key => !isExtraReading(endpointByKey.get(key)))) {
+      throw new Error(`PageLayout widget ${widget.widgetId} has an incompatible extra reading`);
+    }
     return widget;
   });
   rejectOverlaps(widgets);
@@ -180,6 +185,8 @@ export function diffPageLayout(
     if (!endpoint) removedWidgetIds.push(widget.widgetId);
     else if (!isCompatible(widget.type, endpoint)) incompatibleWidgetIds.push(widget.widgetId);
     else boundEndpointKeys.add(widget.endpointKey);
+    // A field shown as an extra reading is bound too, so it gets no card of its own.
+    for (const key of widget.extraKeys ?? []) if (isExtraReading(endpointByKey.get(key))) boundEndpointKeys.add(key);
   }
   const addedEndpointKeys = endpoints
     .filter(endpoint => defaultWidgetType(endpoint) && !boundEndpointKeys.has(endpoint.key))
@@ -197,8 +204,14 @@ export function migratePageLayout(input: unknown, snapshot: DeviceUiSnapshot): P
   const widgets = previous.widgets.filter(widget => {
     const endpoint = endpointByKey.get(widget.endpointKey);
     return !!endpoint && isCompatible(widget.type, endpoint);
+  }).map((widget): PageLayoutWidget => {
+    // Extra readings that are gone or no longer readable are dropped; the card stays.
+    if (!widget.extraKeys) return widget;
+    const { extraKeys, ...rest } = widget;
+    const kept = extraKeys.filter(key => isExtraReading(endpointByKey.get(key)));
+    return kept.length ? { ...rest, extraKeys: kept } : rest;
   });
-  const boundEndpointKeys = new Set(widgets.map(widget => widget.endpointKey));
+  const boundEndpointKeys = new Set(widgets.flatMap(widget => [widget.endpointKey, ...widget.extraKeys ?? []]));
   const widgetIds = new Set(widgets.map(widget => widget.widgetId));
   let y = widgets.reduce((maximum, widget) => Math.max(
     maximum,
@@ -223,7 +236,7 @@ export function migratePageLayout(input: unknown, snapshot: DeviceUiSnapshot): P
 function parseWidget(input: unknown, index: number): PageLayoutWidget {
   const label = `PageLayout widget ${index}`;
   const value = object(input, label);
-  exactKeys(value, ['widgetId', 'type', 'endpointKey', 'title', 'appearance', 'variant', 'options', 'grid'], label);
+  exactKeys(value, ['widgetId', 'type', 'endpointKey', 'extraKeys', 'title', 'appearance', 'variant', 'options', 'grid'], label);
   const widgetId = text(value['widgetId'], 64, `${label} widgetId`);
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(widgetId)) throw new Error(`${label} widgetId is invalid`);
   const type = enumeration(value['type'], PAGE_WIDGET_TYPES, `${label} type`);
@@ -234,6 +247,8 @@ function parseWidget(input: unknown, index: number): PageLayoutWidget {
     : enumeration(value['appearance'], appearances, `${label} appearance`);
   const variant = parseWidgetVariant(type, value['variant'], label);
   const options = parseWidgetOptions(value['options'], label);
+  const extraKeys = value['extraKeys'] === undefined ? undefined : parseExtraKeys(value['extraKeys'], endpointKey, label);
+  if (extraKeys && !acceptsExtras(type, variant)) throw new Error(`${label} extraKeys need a number, ring or status display`);
   const gridValue = object(value['grid'], `${label} grid`);
   exactKeys(gridValue, ['x', 'y', 'width', 'height'], `${label} grid`);
   const grid = {
@@ -243,12 +258,27 @@ function parseWidget(input: unknown, index: number): PageLayoutWidget {
     height: integer(gridValue['height'], 1, 16, `${label} grid.height`),
   };
   if (grid.x + grid.width > PAGE_LAYOUT_COLUMNS) throw new Error(`${label} exceeds the grid`);
+  if (!sizeAllowed(widgetVariant(type, variant), grid.width, grid.height)) throw new Error(`${label} size is not allowed for its variant`);
   return {
     widgetId, type, endpointKey, title, appearance,
+    ...(extraKeys ? { extraKeys } : {}),
     ...(variant ? { variant } : {}),
     ...(options && Object.keys(options).length ? { options } : {}),
     grid,
   };
+}
+
+// One to three distinct field keys, none of them the widget's own.
+function parseExtraKeys(value: unknown, endpointKey: string, label: string): string[] {
+  if (!Array.isArray(value) || !value.length || value.length > MAX_EXTRA_KEYS) throw new Error(`${label} extraKeys are invalid`);
+  const keys = value.map((key, index) => text(key, 64, `${label} extraKeys[${index}]`));
+  if (new Set([endpointKey, ...keys]).size !== keys.length + 1) throw new Error(`${label} extraKeys repeat a field`);
+  return keys;
+}
+
+// An extra reading is bound like a display card's own field.
+export function isExtraReading(endpoint: DeviceUiEndpoint | undefined): boolean {
+  return !!endpoint && isCompatible('value', endpoint);
 }
 
 function defaultWidgetType(endpoint: DeviceUiEndpoint): PageWidgetType | null {

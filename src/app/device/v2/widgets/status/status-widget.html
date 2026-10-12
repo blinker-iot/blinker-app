@@ -1,0 +1,21 @@
+<ng-template #dot>
+  <i class="st-dot" [class.pulse]="pulse" [class.hollow]="semantic === 'off'"></i>
+</ng-template>
+
+@if (showTitle) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ title }}</span>
+    @if (rows === 1 && extras) { <span class="hd-v">{{ extras }}</span> }
+  </div>
+}
+
+@if (style === 'pill') {
+  <span class="st-pill" role="status"><ng-container *ngTemplateOutlet="dot" />{{ reading.text }}{{ reading.unit }}</span>
+} @else {
+  <span class="st-line" role="status"><ng-container *ngTemplateOutlet="dot" /><span>{{ reading.text }}{{ reading.unit }}</span></span>
+}
+
+@if (rows > 1 && withExtras(options.caption ?? ''); as meta) {
+  <span class="st-meta">{{ meta }}</span>
+}

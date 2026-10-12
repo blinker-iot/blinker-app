@@ -5,22 +5,71 @@
 export const PAGE_WIDGET_TYPES = ['switch', 'button', 'slider', 'select', 'input', 'value', 'color'] as const;
 export type PageWidgetType = typeof PAGE_WIDGET_TYPES[number];
 
-// The first variant of each type is its default.
+// The first variant of each type is its default. Each variant is one component
+// of the 「Blinker 控件库」 design (docs/2026-10-10/设备组件库设计稿.html);
+// `slide` and `log` follow the same tokens.
 export const PAGE_WIDGET_VARIANTS = {
-  switch: ['tile', 'entity', 'toggle', 'power', 'chip', 'segment', 'check', 'lock', 'slide'],
-  button: ['pill', 'tile', 'icon', 'hold', 'scene', 'keycap'],
-  slider: ['fill', 'entity', 'bar', 'gradient', 'dial', 'knob', 'stepper', 'steps', 'curtain', 'ruler', 'timer'],
-  select: ['tiles', 'segment', 'pills', 'list', 'wheel', 'menu'],
-  input: ['field', 'keypad', 'note'],
-  value: [
-    'metric', 'entity', 'chip', 'text', 'status', 'countdown', 'matrix',
-    'gauge', 'ring', 'level', 'battery', 'signal', 'compass', 'thermo',
-    'trend', 'bars', 'wave', 'line', 'timeline', 'stat', 'log',
-  ],
-  color: ['wheel', 'swatches', 'spectrum'],
+  switch: ['tile', 'toggle', 'slide'],
+  button: ['action'],
+  slider: ['level', 'gradient', 'dial', 'levels', 'stepper', 'timer'],
+  select: ['mode'],
+  input: ['text'],
+  value: ['number', 'trend', 'ring', 'status', 'log'],
+  color: ['picker'],
 } as const satisfies Record<PageWidgetType, readonly string[]>;
 
 export type PageWidgetVariant = typeof PAGE_WIDGET_VARIANTS[PageWidgetType][number];
+
+// The sizes each variant is designed for, as grid columns and rows (the
+// `spans` and `rowsOpts` of the design draft). Layouts outside them are invalid.
+export const VARIANT_SIZES: Readonly<Record<PageWidgetVariant, { widths: readonly number[]; heights: readonly number[] }>> = {
+  tile: { widths: [2, 4], heights: [1, 2] },
+  toggle: { widths: [4, 8], heights: [1] },
+  slide: { widths: [4, 8], heights: [1] },
+  action: { widths: [2, 4], heights: [1, 2] },
+  mode: { widths: [4, 8], heights: [1, 2] },
+  level: { widths: [2, 4, 8], heights: [1, 2, 3, 4] },
+  gradient: { widths: [4, 8], heights: [1, 2] },
+  dial: { widths: [4, 8], heights: [3, 4] },
+  levels: { widths: [2, 4, 8], heights: [1, 2, 3] },
+  stepper: { widths: [2, 4, 8], heights: [1, 2] },
+  timer: { widths: [4, 8], heights: [2, 3] },
+  picker: { widths: [4, 8], heights: [2, 3, 4] },
+  text: { widths: [4, 8], heights: [2, 3] },
+  number: { widths: [2, 4], heights: [1, 2] },
+  trend: { widths: [4, 8], heights: [2, 3] },
+  ring: { widths: [2, 4], heights: [2, 3] },
+  status: { widths: [2, 4, 8], heights: [1, 2] },
+  log: { widths: [4, 8], heights: [2, 3, 4] },
+};
+
+// 附属读数: display cards may show up to three more read-only fields in their
+// note line, besides the field they are bound to.
+export const MAX_EXTRA_KEYS = 3;
+export const EXTRA_READING_VARIANTS: readonly PageWidgetVariant[] = ['number', 'ring', 'status'];
+
+export function acceptsExtras(type: PageWidgetType, variant?: PageWidgetVariant): boolean {
+  return type === 'value' && EXTRA_READING_VARIANTS.includes(widgetVariant(type, variant));
+}
+
+export function widgetVariant(type: PageWidgetType, variant?: PageWidgetVariant): PageWidgetVariant {
+  return variant ?? PAGE_WIDGET_VARIANTS[type][0];
+}
+
+export function sizeAllowed(variant: PageWidgetVariant, width: number, height: number): boolean {
+  const sizes = VARIANT_SIZES[variant];
+  return sizes.widths.includes(width) && sizes.heights.includes(height);
+}
+
+// The allowed size nearest to the one asked for (the smaller one on a tie).
+export function fitSize(variant: PageWidgetVariant, width: number, height: number): { width: number; height: number } {
+  const sizes = VARIANT_SIZES[variant];
+  return { width: nearest(sizes.widths, width), height: nearest(sizes.heights, height) };
+}
+
+function nearest(values: readonly number[], target: number): number {
+  return values.reduce((best, value) => Math.abs(value - target) < Math.abs(best - target) ? value : best);
+}
 
 // 24-bit RGB as declared by a color endpoint.
 export const COLOR_MAXIMUM = 0xffffff;
@@ -31,14 +80,18 @@ export type PageWidgetTone = typeof PAGE_WIDGET_TONES[number];
 export const PAGE_WIDGET_FORMATS = ['number', 'percent', 'duration', 'clock', 'bytes'] as const;
 export type PageWidgetFormat = typeof PAGE_WIDGET_FORMATS[number];
 
+// Every value any variant offers for `style`; each variant uses its own subset.
+export const PAGE_WIDGET_STYLES = [
+  'tiles', 'segmented', 'chips', 'bars', 'dots', 'segment', 'ring', 'bar', 'text', 'dot', 'pill', 'banner',
+] as const;
+export type PageWidgetStyle = typeof PAGE_WIDGET_STYLES[number];
+
 export interface PageWidgetOptions {
   // Common
   icon?: string;
   tone?: PageWidgetTone;
   caption?: string;
   showTitle?: boolean;
-  size?: 'md' | 'lg' | 'xl';
-  align?: 'start' | 'center';
   // Texts
   onText?: string;
   offText?: string;
@@ -48,13 +101,16 @@ export interface PageWidgetOptions {
   labels?: string;
   states?: string;
   choiceIcons?: string;
+  // "ERROR:red,WARN:orange": a tone per choice.
+  choiceTones?: string;
   presets?: string;
   palette?: string;
   // Behaviour
   confirm?: boolean;
-  holdMs?: number;
+  hold?: boolean;
   allowOff?: boolean;
   longPress?: boolean;
+  multiline?: boolean;
   // Readings
   decimals?: number;
   scale?: number;
@@ -66,10 +122,13 @@ export interface PageWidgetOptions {
   points?: number;
   ticks?: number;
   // Looks
+  style?: PageWidgetStyle;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   activeStyle?: 'fill' | 'tint' | 'outline';
   corner?: 'none' | 'dot' | 'chevron';
   iconStyle?: 'circle' | 'plain' | 'none';
-  orientation?: 'horizontal' | 'vertical';
+  shape?: 'circle' | 'card' | 'ring' | 'half' | 'segments';
+  orientation?: 'vertical' | 'horizontal';
   fill?: 'solid' | 'gradient';
   track?: 'cct' | 'hue' | 'bright';
   trackSize?: 'thin' | 'mid' | 'thick';
@@ -77,15 +136,14 @@ export interface PageWidgetOptions {
   sweep?: number;
   thickness?: number;
   layout?: 'inline' | 'split';
-  timerStyle?: 'ring' | 'bar' | 'text';
+  chart?: 'line' | 'area' | 'bars' | 'steps';
+  mode?: 'wheel' | 'swatches' | 'both';
   unitPosition?: 'sup' | 'base';
-  curve?: 'line' | 'area' | 'steps';
-  shape?: 'ring' | 'half' | 'segments';
-  statusStyle?: 'dot' | 'pill' | 'banner';
   // Toggles
   showState?: boolean;
   showCount?: boolean;
   showValue?: boolean;
+  showTicks?: boolean;
   showButtons?: boolean;
   showIcons?: boolean;
   showHex?: boolean;
@@ -117,8 +175,6 @@ export const PAGE_WIDGET_OPTION_RULES: Readonly<Record<PageWidgetOptionKey, Opti
   tone: { kind: 'enum', values: PAGE_WIDGET_TONES },
   caption: text(64),
   showTitle: flag,
-  size: oneOf('md', 'lg', 'xl'),
-  align: oneOf('start', 'center'),
   onText: text(24),
   offText: text(24),
   actionText: text(24),
@@ -128,15 +184,18 @@ export const PAGE_WIDGET_OPTION_RULES: Readonly<Record<PageWidgetOptionKey, Opti
   labels: text(120),
   // "在线:ok,离线:off,告警:warn"
   states: text(200),
-  // "制冷:snow,制热:flame"
+  // "自动:auto,省电:moon"
   choiceIcons: text(240),
+  // "ERROR:red,WARN:orange"
+  choiceTones: text(240),
   // Minutes: "15,30,60,120"
   presets: text(40, /^\d{1,4}(,\d{1,4}){0,5}$/),
   palette: text(120, /^#[0-9a-fA-F]{6}(,#[0-9a-fA-F]{6}){0,11}$/),
   confirm: flag,
-  holdMs: integer(300, 5000),
+  hold: flag,
   allowOff: flag,
   longPress: flag,
+  multiline: flag,
   decimals: integer(0, 4),
   scale: { kind: 'number', nonZero: true },
   format: { kind: 'enum', values: PAGE_WIDGET_FORMATS },
@@ -146,25 +205,27 @@ export const PAGE_WIDGET_OPTION_RULES: Readonly<Record<PageWidgetOptionKey, Opti
   warnAbove: number,
   points: integer(8, 120),
   ticks: integer(0, 24),
+  style: { kind: 'enum', values: PAGE_WIDGET_STYLES },
+  size: oneOf('sm', 'md', 'lg', 'xl'),
   activeStyle: oneOf('fill', 'tint', 'outline'),
   corner: oneOf('none', 'dot', 'chevron'),
   iconStyle: oneOf('circle', 'plain', 'none'),
-  orientation: oneOf('horizontal', 'vertical'),
+  shape: oneOf('circle', 'card', 'ring', 'half', 'segments'),
+  orientation: oneOf('vertical', 'horizontal'),
   fill: oneOf('solid', 'gradient'),
   track: oneOf('cct', 'hue', 'bright'),
   trackSize: oneOf('thin', 'mid', 'thick'),
   knob: oneOf('ring', 'dot', 'bar'),
   sweep: integer(180, 320),
-  thickness: integer(2, 30),
+  thickness: integer(3, 30),
   layout: oneOf('inline', 'split'),
-  timerStyle: oneOf('ring', 'bar', 'text'),
+  chart: oneOf('line', 'area', 'bars', 'steps'),
+  mode: oneOf('wheel', 'swatches', 'both'),
   unitPosition: oneOf('sup', 'base'),
-  curve: oneOf('line', 'area', 'steps'),
-  shape: oneOf('ring', 'half', 'segments'),
-  statusStyle: oneOf('dot', 'pill', 'banner'),
   showState: flag,
   showCount: flag,
   showValue: flag,
+  showTicks: flag,
   showButtons: flag,
   showIcons: flag,
   showHex: flag,
@@ -177,70 +238,41 @@ export const PAGE_WIDGET_OPTION_RULES: Readonly<Record<PageWidgetOptionKey, Opti
 };
 
 // Options every widget reads.
-export const COMMON_WIDGET_OPTIONS: readonly PageWidgetOptionKey[] = ['icon', 'tone', 'caption', 'showTitle', 'size', 'align'];
+export const COMMON_WIDGET_OPTIONS: readonly PageWidgetOptionKey[] = ['icon', 'tone', 'caption', 'showTitle'];
 
-// Further options each variant reads, keyed "type:variant". The inspector and
-// the AI layout guide both come from this table.
-export const VARIANT_WIDGET_OPTIONS: Readonly<Record<string, readonly PageWidgetOptionKey[]>> = {
-  'switch:tile': ['onText', 'offText', 'confirm', 'activeStyle', 'showState', 'corner'],
-  'switch:entity': ['onText', 'offText', 'confirm', 'iconStyle'],
-  'switch:toggle': ['onText', 'offText', 'confirm', 'iconStyle'],
-  'switch:power': ['onText', 'offText', 'confirm'],
-  'switch:chip': ['onText', 'offText', 'confirm'],
-  'switch:segment': ['onText', 'offText', 'confirm'],
-  'switch:check': ['onText', 'offText', 'confirm'],
-  'switch:lock': ['onText', 'offText', 'confirm', 'activeStyle'],
-  'switch:slide': ['onText', 'offText'],
-  'button:pill': ['actionText', 'doneText', 'confirm', 'showCount'],
-  'button:tile': ['actionText', 'doneText', 'confirm', 'showCount', 'activeStyle'],
-  'button:icon': ['actionText', 'doneText', 'confirm', 'showCount'],
-  'button:hold': ['actionText', 'doneText', 'holdMs', 'showCount'],
-  'button:scene': ['actionText', 'doneText', 'confirm', 'showCount'],
-  'button:keycap': ['actionText', 'doneText', 'confirm'],
-  'slider:fill': ['orientation', 'fill', 'showValue', 'ticks', 'decimals', 'scale', 'format'],
-  'slider:entity': ['ticks', 'decimals', 'scale', 'format'],
-  'slider:bar': ['ticks', 'decimals', 'scale', 'format'],
-  'slider:gradient': ['track', 'trackSize', 'knob', 'ticks', 'decimals', 'scale', 'format'],
-  'slider:dial': ['sweep', 'thickness', 'ticks', 'showButtons', 'decimals', 'scale', 'format'],
-  'slider:knob': ['sweep', 'ticks', 'decimals', 'scale', 'format'],
-  'slider:stepper': ['layout', 'longPress', 'showRange', 'decimals', 'scale', 'format'],
-  'slider:steps': ['ticks', 'labels', 'allowOff', 'showButtons'],
-  'slider:curtain': ['decimals', 'scale', 'format'],
-  'slider:ruler': ['decimals', 'scale', 'format'],
-  'slider:timer': ['presets', 'actionText', 'timerStyle'],
-  'select:tiles': ['choiceIcons', 'showIcons'],
-  'select:segment': ['choiceIcons', 'showIcons'],
-  'select:pills': ['choiceIcons', 'showIcons'],
-  'select:list': ['choiceIcons', 'showIcons'],
-  'select:wheel': [],
-  'select:menu': [],
-  'input:field': ['actionText', 'placeholder', 'showCounter'],
-  'input:keypad': ['actionText'],
-  'input:note': ['actionText', 'placeholder', 'showCounter'],
-  'value:metric': ['decimals', 'scale', 'format', 'unitPosition', 'showDelta', 'warnBelow', 'warnAbove'],
-  'value:entity': ['decimals', 'scale', 'format', 'iconStyle', 'onText', 'offText', 'warnBelow', 'warnAbove'],
-  'value:chip': ['decimals', 'scale', 'format', 'onText', 'offText', 'warnBelow', 'warnAbove'],
-  'value:text': ['decimals', 'scale', 'format', 'onText', 'offText', 'warnBelow', 'warnAbove'],
-  'value:status': ['statusStyle', 'states', 'pulse', 'onText', 'offText'],
-  'value:countdown': ['max', 'timerStyle', 'scale'],
-  'value:matrix': ['decimals', 'scale', 'format', 'warnBelow', 'warnAbove'],
-  'value:gauge': ['min', 'max', 'sweep', 'thickness', 'ticks', 'decimals', 'scale', 'format', 'warnBelow', 'warnAbove'],
-  'value:ring': ['min', 'max', 'shape', 'thickness', 'ticks', 'decimals', 'scale', 'format', 'warnBelow', 'warnAbove'],
-  'value:level': ['min', 'max', 'ticks', 'decimals', 'scale', 'format', 'warnBelow', 'warnAbove'],
-  'value:battery': ['min', 'max', 'ticks', 'decimals', 'format', 'warnBelow', 'warnAbove'],
-  'value:signal': ['min', 'max', 'ticks', 'decimals', 'scale', 'format', 'warnBelow', 'warnAbove'],
-  'value:compass': ['scale'],
-  'value:thermo': ['min', 'max', 'decimals', 'scale', 'format', 'warnBelow', 'warnAbove'],
-  'value:trend': ['curve', 'smooth', 'points', 'showRange', 'showAxis', 'min', 'max', 'decimals', 'scale', 'format', 'warnBelow', 'warnAbove'],
-  'value:bars': ['points', 'showRange', 'showAxis', 'min', 'max', 'decimals', 'scale', 'format', 'warnBelow', 'warnAbove'],
-  'value:wave': ['points', 'min', 'max', 'decimals', 'scale', 'format'],
-  'value:line': ['decimals', 'scale', 'format', 'warnBelow', 'warnAbove'],
-  'value:timeline': ['points', 'onText', 'offText', 'states'],
-  'value:stat': ['points', 'decimals', 'scale', 'format'],
-  'value:log': ['points', 'decimals', 'scale', 'format', 'onText', 'offText'],
-  'color:wheel': ['thickness', 'palette', 'showHex'],
-  'color:swatches': ['palette', 'showHex'],
-  'color:spectrum': ['showHex'],
+// Further options each variant reads, keyed by variant (names are unique across
+// types). The inspector and the AI layout guide both follow this table.
+export const VARIANT_WIDGET_OPTIONS: Readonly<Record<PageWidgetVariant, readonly PageWidgetOptionKey[]>> = {
+  tile: ['activeStyle', 'showState', 'onText', 'offText', 'corner', 'confirm'],
+  toggle: ['iconStyle', 'size', 'confirm'],
+  slide: ['onText', 'offText'],
+  action: ['shape', 'hold', 'doneText', 'showCount'],
+  level: ['orientation', 'fill', 'showValue', 'ticks'],
+  gradient: ['track', 'trackSize', 'knob', 'showTicks'],
+  dial: ['sweep', 'thickness', 'showTicks', 'showButtons'],
+  levels: ['style', 'labels', 'allowOff', 'showButtons'],
+  stepper: ['layout', 'longPress', 'showRange'],
+  timer: ['presets', 'actionText', 'style'],
+  mode: ['style', 'showIcons', 'choiceIcons', 'choiceTones'],
+  text: ['placeholder', 'actionText', 'showCounter', 'multiline'],
+  number: ['decimals', 'size', 'unitPosition', 'showDelta', 'warnBelow', 'warnAbove', 'scale', 'format'],
+  trend: ['chart', 'points', 'smooth', 'showRange', 'showAxis', 'decimals', 'scale'],
+  ring: ['shape', 'min', 'max', 'warnBelow', 'warnAbove', 'decimals', 'scale'],
+  status: ['style', 'states', 'pulse', 'onText', 'offText'],
+  log: ['points', 'onText', 'offText', 'decimals', 'scale'],
+  picker: ['mode', 'thickness', 'palette', 'showHex'],
+};
+
+// Enumerated options whose allowed values differ by variant.
+export const VARIANT_OPTION_VALUES: Readonly<Partial<Record<PageWidgetVariant, Partial<Record<PageWidgetOptionKey, readonly string[]>>>>> = {
+  action: { shape: ['circle', 'card'] },
+  ring: { shape: ['ring', 'half', 'segments'] },
+  toggle: { size: ['sm', 'md', 'lg'] },
+  number: { size: ['md', 'lg', 'xl'] },
+  mode: { style: ['tiles', 'segmented', 'chips'] },
+  levels: { style: ['bars', 'dots', 'segment'] },
+  timer: { style: ['ring', 'bar', 'text'] },
+  status: { style: ['dot', 'pill', 'banner'] },
 };
 
 export function parseWidgetVariant(type: PageWidgetType, value: unknown, label: string): PageWidgetVariant | undefined {
@@ -282,7 +314,7 @@ export function validOption(rule: OptionRule, value: unknown): boolean {
     && (!rule.pattern || rule.pattern.test(value));
 }
 
-// "名称:值" pairs separated by commas, as used by states and choiceIcons.
+// "名称:值" pairs separated by commas, as used by states, choiceIcons and choiceTones.
 export function parsePairs(value: string | undefined): [string, string][] {
   return (value ?? '').split(/[,，]/).flatMap(part => {
     const [name, ...rest] = part.split(/[:：]/);

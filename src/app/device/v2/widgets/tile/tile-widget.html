@@ -1,0 +1,14 @@
+<span class="tile-ico"><app-ui-icon [name]="options.icon || 'power'" /></span>
+
+<span class="tile-copy">
+  <strong>{{ title }}</strong>
+  @if (options.showState !== false) {
+    <small>{{ state }}</small>
+  }
+</span>
+
+@if (corner === 'dot') {
+  <i class="tile-dot"></i>
+} @else if (corner === 'chevron') {
+  <span class="tile-more"><app-ui-icon name="chevron" /></span>
+}

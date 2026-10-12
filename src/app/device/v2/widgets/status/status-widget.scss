@@ -1,0 +1,90 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+
+// Head on top like every other card; the state settles at the bottom.
+:host(:not(.inline)) :is(.st-line, .st-pill) { margin-top: auto; }
+
+:host(.inline) {
+  flex-direction: row;
+  align-items: center;
+
+  .hd { flex: 1; }
+  .st-line { font-size: 14px; }
+}
+
+.st-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 18px;
+  font-weight: 500;
+
+  > span { text-transform: var(--ui-case); letter-spacing: var(--ui-tracking); }
+}
+
+.st-dot {
+  --halo: color-mix(in srgb, var(--sc) 20%, transparent);
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--sc);
+  box-shadow: 0 0 0 4px var(--halo);
+
+  // Pulse: the halo breathes; the dot itself stays put.
+  &.pulse { animation: breathe 2.4s ease-in-out infinite; }
+
+  @include theme.electronic { box-shadow: none; animation: none; }
+
+  &.hollow { @include theme.electronic { border: 1.5px solid var(--ui-muted); background: none; } }
+}
+
+@keyframes breathe {
+  50% { box-shadow: 0 0 0 7px transparent; }
+}
+
+.st-pill {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sc) 15%, transparent);
+  color: var(--sc);
+  font-size: 13px;
+  font-weight: 500;
+
+  .st-dot { width: 7px; height: 7px; box-shadow: none; animation: none; }
+
+  @include theme.electronic {
+    border: 1px dotted var(--sc);
+    border-radius: 4px;
+    background: none;
+    text-transform: uppercase;
+  }
+}
+
+:host(.inline) .st-pill { align-self: center; }
+
+.st-meta { margin-top: -4px; color: var(--ui-muted); font-size: 12px; }
+
+:host(.banner) {
+  border-color: color-mix(in srgb, var(--sc) 30%, transparent);
+  background: color-mix(in srgb, var(--sc) 12%, var(--ui-card));
+
+  .hd-ico { color: var(--sc); }
+}
+
+@include theme.electronic-host('.banner') {
+  border-color: var(--sc);
+  border-style: dotted;
+  background: var(--ui-card);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-dot.pulse { animation: none; }
+}

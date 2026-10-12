@@ -1,0 +1,16 @@
+<div class="lvl-track" role="slider" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
+  [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" [attr.aria-orientation]="vertical ? 'vertical' : 'horizontal'"
+  (pointerdown)="dragStart($event, false, vertical)" (pointermove)="move($event)" (pointerup)="end($event)"
+  (pointercancel)="end($event)" (keydown)="key($event)">
+  <div class="lvl-fill" [style.--p]="percent"></div>
+  @for (mark of marks; track mark) {
+    <i class="lvl-mk" [style.--m]="mark"></i>
+  }
+  <span class="lvl-ico" [class.inv]="inverted(9, 10)"><app-ui-icon [name]="options.icon || 'sun'" /></span>
+  @if (showTitle) {
+    <span class="lvl-t" [class.inv]="inverted(74, 32)">{{ title }}</span>
+  }
+  @if (options.showValue !== false) {
+    <span class="lvl-val num" [class.inv]="inverted(86, 88)">{{ reading.text }}<small>{{ reading.unit }}</small></span>
+  }
+</div>

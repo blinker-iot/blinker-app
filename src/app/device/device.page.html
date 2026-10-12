@@ -55,16 +55,15 @@
       </div>
       <div class="theme-options" role="group" aria-label="主题风格">
         @for (theme of deviceThemes; track theme.id) {
-        <button type="button" class="theme-option" [attr.data-ui-theme]="theme.id"
-          [attr.aria-pressed]="selectedDeviceTheme === theme.id" (click)="selectDeviceTheme(theme.id)">
-          <span class="theme-swatch" aria-hidden="true"><span></span><span></span><span></span></span>
+        <button type="button" class="theme-option"
+          [attr.aria-pressed]="deviceTheme === theme.id" (click)="selectDeviceTheme(theme.id)">
+          <span class="theme-swatch" [attr.data-ui-theme]="theme.id" aria-hidden="true"><span></span><span></span><span></span></span>
           <span class="theme-copy"><strong>{{theme.name}}</strong><small>{{theme.caption}}</small></span>
-          <span class="theme-check" aria-hidden="true">{{selectedDeviceTheme === theme.id ? '✓' : ''}}</span>
+          <span class="theme-check" aria-hidden="true">{{deviceTheme === theme.id ? '✓' : ''}}</span>
         </button>
         }
       </div>
-      <button type="button" class="theme-restore" [disabled]="!selectedDeviceTheme" (click)="restoreDeviceTheme()">{{selectedDeviceTheme ? '恢复界面原有风格' : '当前使用界面原有风格'}}</button>
-      <p class="theme-save-hint" role="status">{{themeSaved ? '仅此设备 · 在此浏览器记住选择' : '已应用 · 当前浏览器无法保存偏好'}}</p>
+      <p class="theme-save-hint" role="status">{{themeSaved ? '仅此设备' : '仅此设备 · 当前浏览器无法保存偏好'}}</p>
     </section>
   </ng-template>
 </ion-modal>

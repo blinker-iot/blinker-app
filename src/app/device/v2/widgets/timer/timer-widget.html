@@ -1,0 +1,43 @@
+@if (showTitle || left > 0) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ showTitle ? title : '' }}</span>
+    @if (left > 0) {
+      <button type="button" class="tm-x" [disabled]="card.disabled" (click)="cancel()">取消</button>
+    } @else {
+      <span class="hd-v">未设置</span>
+    }
+  </div>
+}
+
+@if (left <= 0) {
+  <div class="tm-presets" [style.--n]="presets.length || 1">
+    @for (minutes of presets; track minutes) {
+      <button type="button" class="tm-p" [disabled]="card.disabled" (click)="start(minutes)">
+        <b>{{ presetLabel(minutes).value }}</b>{{ presetLabel(minutes).unit }}</button>
+    }
+  </div>
+} @else {
+  @switch (style) {
+    @case ('ring') {
+      <div class="tm-run">
+        <svg class="tm-ring" viewBox="0 0 64 64" aria-hidden="true">
+          <path class="arc-track" [attr.d]="ringTrack" stroke-width="5" />
+          <path class="arc-prog" [attr.d]="ring" stroke-width="5" />
+        </svg>
+        <div class="tm-copy"><span class="tm-time num" role="timer">{{ time }}</span><span class="tm-act">{{ actionText }} · {{ finish }}</span></div>
+      </div>
+    }
+    @case ('bar') {
+      <div class="tm-copy tm-end">
+        <span class="tm-time num" role="timer">{{ time }}</span><span class="tm-act">{{ actionText }} · {{ finish }}</span>
+        <div class="tm-bar"><span [style.width.%]="share * 100"></span></div>
+      </div>
+    }
+    @default {
+      <div class="tm-copy tm-end">
+        <span class="tm-time num">{{ finish }}</span><span class="tm-act" role="timer">将在 {{ time }} {{ actionText }}</span>
+      </div>
+    }
+  }
+}

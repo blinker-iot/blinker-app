@@ -81,11 +81,6 @@ export class DevicePage implements OnInit, OnDestroy {
     this.themeSaved = saveDeviceTheme(this.id, theme);
   }
 
-  restoreDeviceTheme(): void {
-    this.selectedDeviceTheme = undefined;
-    this.themeSaved = saveDeviceTheme(this.id, undefined);
-  }
-
   private readonly subscriptions = new Subscription();
   private deviceSubject?: Subscription;
   private deviceComponentRef?: ComponentRef<unknown>;
@@ -121,8 +116,10 @@ export class DevicePage implements OnInit, OnDestroy {
     return !!this.device?.config?.isPreview;
   }
 
+  // Decided from the config, not the loaded component: the template must pick
+  // its branch before loading, or a throwaway ion-content is created and torn down.
   get usesV2DevicePage(): boolean {
-    return this.deviceComponent === 'DeviceV2';
+    return this.resolveComponentName() === 'DeviceV2';
   }
 
   get layoutTheme(): UiTheme | undefined {

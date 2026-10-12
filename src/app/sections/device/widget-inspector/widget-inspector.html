@@ -1,5 +1,4 @@
 <header class="head">
-  <span class="eyebrow">{{ widget.type }} · {{ variant }}</span>
   <h2>{{ variantLabel(variant) }}</h2>
   <p>{{ typeLabel }}组件 · 绑定字段 <b>{{ widget.endpointKey }}</b></p>
 </header>
@@ -79,6 +78,21 @@
 
 <section class="group">
   <h3>专属参数</h3>
+  @if (showExtras) {
+    <div class="field top">
+      <span>附属读数</span>
+      <span class="stack">
+        <span class="seg wrap">
+          @for (candidate of candidates; track candidate.key) {
+            <button type="button" [attr.aria-pressed]="extraKeys.includes(candidate.key)"
+              [disabled]="!extraKeys.includes(candidate.key) && extraKeys.length >= maxExtras"
+              (click)="toggleExtra(candidate.key)">{{ candidate.label }}</button>
+          }
+        </span>
+        <small>最多 {{ maxExtras }} 个，按选择顺序显示在附注行</small>
+      </span>
+    </div>
+  }
   @for (key of specific; track key) {
     <div class="field" [class.top]="rule(key).kind === 'text' && hints[key]" [class.invalid]="invalid.has(key)">
       <span>{{ optionLabels[key] }}</span>

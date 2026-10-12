@@ -5,12 +5,16 @@
   container-type: inline-size;
 }
 
+// 8-column grid on an 84px row, as in the component library design. Row
+// heights come from the cells (see .cell), not from the tracks.
 .panel {
   @include theme.ui-theme;
+  --row-h: 84px;
+  --gap: 12px;
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  grid-auto-rows: minmax(var(--ui-row, 84px), auto);
-  gap: 12px;
+  grid-auto-rows: auto;
+  gap: var(--gap);
   color: var(--ui-ink);
   font-family: var(--ui-font);
 
@@ -28,14 +32,24 @@
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-
-  > :first-child { flex: 1 1 auto; }
+  // Height of its rows. Widgets sharing a row keep exactly this: size
+  // containment keeps their content out of the row sizing.
+  --fill-h: calc(var(--rows) * var(--row-h) + (var(--rows) - 1) * var(--gap));
+  min-height: var(--fill-h);
+  contain: size;
 }
+
+// A widget spanning the whole row has no neighbour to line up with, so its
+// content sets the height. Widgets that fill their box (charts, dials) have no
+// content height and claim --fill-h themselves (see _card.scss `fills-rows`).
+.cell.full { min-height: 0; contain: none; }
 
 .cell.selected > :first-child {
-  outline: 2px var(--ui-control-edge) var(--ui-accent);
+  outline: 2px solid var(--ui-focus);
   outline-offset: 3px;
 }
+
+:host-context([data-ui-theme='electronic']) .cell.selected > :first-child { outline: 1px dashed var(--ui-focus); }
 
 .cell-error {
   margin: 0 6px;
@@ -50,17 +64,19 @@
   text-align: center;
 }
 
-// Phones: a quarter-width widget takes half a row, wider ones the whole row,
-// placed in layout order (as in the component library design).
+// Phones: a quarter-width widget takes half a row, wider ones the whole row
+// (and so size to their content), placed in layout order.
 @container (max-width: 560px) {
   .panel {
-    --ui-row: 78px;
+    --row-h: 78px;
+    --gap: 10px;
     grid-auto-flow: row dense;
-    gap: 10px;
   }
 
   .cell {
     grid-column: span min(8, calc(var(--span) * 2));
     grid-row: span var(--rows);
   }
+
+  .cell.wide { min-height: 0; contain: none; }
 }

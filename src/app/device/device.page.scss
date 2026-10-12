@@ -57,7 +57,6 @@
 .theme-options { display: grid; gap: 8px; }
 
 .theme-option {
-  @include theme.ui-theme;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -79,12 +78,18 @@
   outline-offset: 3px;
 }
 
+// A miniature of the target theme; the option itself follows the current one.
 .theme-swatch {
+  @include theme.ui-theme;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3px;
-  flex: 0 0 38px;
-  height: 34px;
+  flex: 0 0 44px;
+  height: 40px;
+  padding: 3px;
+  border: 1px solid var(--blinker-border);
+  border-radius: 8px;
+  background: var(--blinker-bg);
 
   span { border-radius: 3px; background: var(--blinker-surface); border: 1px solid var(--blinker-border); }
   span:first-child { grid-row: span 2; background: var(--ion-color-primary); border: 0; }
@@ -100,26 +105,10 @@
 
 .theme-check { width: 16px; color: var(--ion-color-primary); font-weight: 700; }
 .theme-save-hint { margin: 14px 0 0; font-size: 11px; text-align: center; color: var(--blinker-text-secondary); }
-.theme-restore {
-  width: 100%;
-  margin-top: 12px;
-  padding: 10px;
-  border-radius: 8px;
-  color: var(--ion-color-primary);
-  background: var(--blinker-surface-muted);
-  font-size: 12px;
-  &:disabled { color: var(--blinker-text-secondary); }
-  &:focus-visible { outline: 2px solid var(--ion-color-primary); outline-offset: 2px; }
-}
+
+@include theme.ui-header-glass;
 
 ion-header:not(.main-tab-header):not(.opaque-page-header) {
-  &::before {
-    height: var(--transparent-page-content-top);
-    background: transparent;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
   ion-toolbar {
     --color: var(--blinker-text-primary);
     --ion-color-contrast: var(--blinker-text-primary);

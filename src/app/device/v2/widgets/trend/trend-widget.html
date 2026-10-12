@@ -1,0 +1,38 @@
+<div class="hd">
+  @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+  <span class="hd-t">{{ showTitle ? title : '' }}</span>
+  <span class="sp-last num">{{ reading.text }}<small>{{ reading.unit }}</small></span>
+</div>
+
+<div class="sp-plot" aria-hidden="true">
+  <svg class="sp-svg" viewBox="0 0 300 100" preserveAspectRatio="none">
+    <line class="sp-grid" x1="0" x2="300" y1="12" y2="12" />
+    <line class="sp-grid" x1="0" x2="300" y1="51" y2="51" />
+    <line class="sp-grid" x1="0" x2="300" y1="90" y2="90" />
+    @if (chart === 'bars') {
+      @for (bar of bars; track $index; let last = $last) {
+        <rect class="sp-bar" [class.last]="last" [attr.x]="bar.x" [attr.y]="bar.y" [attr.width]="bar.width"
+          [attr.height]="bar.height" rx="1.5" />
+      }
+    } @else {
+      @if (chart === 'area') { <path class="sp-area" [attr.d]="line + 'L300,100L0,100Z'" /> }
+      <path class="sp-line" [attr.d]="line" />
+    }
+  </svg>
+  @if (chart !== 'bars' && end) {
+    <i class="sp-end" [style.left.%]="end[0] / 3" [style.top.%]="end[1]"></i>
+  }
+  <div class="sp-cols" [class.wide]="chart === 'bars'">
+    @for (height of columns; track $index; let last = $last) {
+      <i class="sp-col" [class.peak]="chart === 'line' || chart === 'steps'" [class.last]="last" [style.--h]="height"></i>
+    }
+  </div>
+</div>
+
+@if (options.showAxis !== false || options.showRange !== false) {
+  <div class="sp-ax">
+    <span>{{ options.showAxis !== false ? since : '' }}</span>
+    <span>{{ options.showRange !== false ? range : '' }}</span>
+    <span>{{ options.showAxis !== false ? '现在' : '' }}</span>
+  </div>
+}

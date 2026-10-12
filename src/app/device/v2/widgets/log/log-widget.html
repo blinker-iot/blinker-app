@@ -1,0 +1,15 @@
+@if (showTitle) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ title }}</span>
+    <span class="hd-v">{{ entries.length }} 条</span>
+  </div>
+}
+
+<ol class="lg" [attr.aria-label]="title">
+  @for (entry of entries; track $index; let first = $first) {
+    <li [class.new]="first"><time>{{ entry.time }}</time><span>{{ entry.text }}</span></li>
+  } @empty {
+    <li class="empty">暂无记录</li>
+  }
+</ol>

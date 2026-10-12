@@ -19,11 +19,24 @@ export abstract class ReadingWidgetBase extends WidgetBase {
     return this.describe(this.card.value);
   }
 
+  // 附属读数, each in its own field's format: the card's options belong to its own field.
+  get extras(): string {
+    return (this.card.extras ?? []).map(extra => {
+      const reading = this.describe(extra.value, extra.field, {});
+      return reading.unit ? `${reading.text} ${reading.unit}` : reading.text;
+    }).join(' · ');
+  }
+
+  // A note line followed by the extra readings.
+  withExtras(note: string): string {
+    return [note, this.extras].filter(Boolean).join(' · ');
+  }
+
   // Text for any reading: formatted numbers, on/off words for booleans, raw text otherwise.
-  describe(value: unknown): { text: string; unit: string } {
+  describe(value: unknown, field = this.card.field, options = this.options): { text: string; unit: string } {
     const number = numeric(value as never);
-    if (number !== undefined) return present(number, this.options, this.card.field);
-    if (typeof value === 'boolean') return { text: value ? this.options.onText ?? '开启' : this.options.offText ?? '关闭', unit: '' };
+    if (number !== undefined) return present(number, options, field);
+    if (typeof value === 'boolean') return { text: value ? options.onText ?? '开启' : options.offText ?? '关闭', unit: '' };
     if (typeof value === 'string') return { text: value, unit: '' };
     if (value === undefined || value === null) return { text: '—', unit: '' };
     return { text: this.card.display, unit: '' };

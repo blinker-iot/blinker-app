@@ -1,0 +1,16 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+@include c.readout;
+
+.delta {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--ui-well);
+  font-family: var(--ui-font-mono);
+  font-size: 11px;
+
+  @include theme.electronic { border: 1px dotted var(--ui-faint); border-radius: 3px; background: none; }
+}

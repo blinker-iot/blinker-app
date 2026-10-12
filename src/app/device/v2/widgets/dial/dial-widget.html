@@ -1,50 +1,38 @@
-<div class="head">
-  @if (options.icon) {
-    <span class="icon"><app-ui-icon [name]="options.icon" /></span>
-  }
-  <span class="titles">
-    <span class="title">{{ title }}</span>
-    @if (options.caption) {
-      <span class="caption">{{ options.caption }}</span>
-    }
-  </span>
-</div>
+@if (showTitle) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ title }}</span>
+  </div>
+}
 
-<div class="face">
-  <svg viewBox="0 0 200 200" role="slider" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
-    [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" [attr.aria-valuetext]="reading.text + reading.unit"
-    [attr.aria-disabled]="card.disabled" (pointerdown)="start($event)" (pointermove)="move($event)"
-    (pointerup)="end($event)" (pointercancel)="end($event)" (keydown)="key($event)">
-    @for (tick of ticks; track $index) {
-      <circle class="tick" [class.lit]="tick <= level + 0.0001" [attr.cx]="tickPoint(tick).x"
-        [attr.cy]="tickPoint(tick).y" [attr.r]="variant === 'knob' ? 2.4 : 1.6" />
-    }
-
-    @if (variant === 'knob') {
-      <circle class="knob-body" cx="100" cy="100" r="70" />
-      <g [attr.transform]="'rotate(' + angle + ' 100 100)'">
-        <line class="knob-notch" x1="100" y1="40" x2="100" y2="58" />
-      </g>
-    } @else {
-      <path class="arc-track" [attr.d]="track" [style.stroke-width]="options.thickness ?? null" />
-      @if (valueArc) {
-        <path class="arc-value" [attr.d]="valueArc" [style.stroke-width]="options.thickness ?? null" />
+<div class="dl-wrap">
+  <div class="dl-box" [style.--vh]="viewHeight">
+    <svg class="dl-svg" [attr.viewBox]="'0 0 220 ' + viewHeight" role="slider" tabindex="0" [attr.aria-label]="title"
+      [attr.aria-valuemin]="min" [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" [style.--thick]="thickness"
+      (pointerdown)="turnStart($event)" (pointermove)="turnMove($event)" (pointerup)="turnEnd($event)"
+      (pointercancel)="turnEnd($event)" (keydown)="key($event)">
+      @for (tick of ticks; track $index) {
+        <line class="arc-tick" [class.on]="tick.on" [attr.x1]="tick.x1" [attr.y1]="tick.y1" [attr.x2]="tick.x2" [attr.y2]="tick.y2" />
       }
-      <circle class="arc-knob" [attr.cx]="knob.x" [attr.cy]="knob.y" r="8" />
-    }
-  </svg>
-
-  @if (variant === 'dial') {
-    <span class="center"><app-dot-text [text]="reading.text" /><span class="unit">{{ reading.unit }}</span></span>
-    @if (options.showButtons !== false) {
-    <button type="button" class="nudge minus" aria-label="减小" [disabled]="card.disabled || value <= min"
-      (click)="nudge(-1)"><app-ui-icon name="minus" /></button>
-    <button type="button" class="nudge plus" aria-label="增大" [disabled]="card.disabled || value >= max"
-      (click)="nudge(1)"><app-ui-icon name="plus" /></button>
-    }
-  }
+      <path class="arc-track" [attr.d]="track" [attr.stroke-width]="thickness" />
+      @if (level > 0.002) {
+        <path class="arc-prog" [attr.d]="progress" [attr.stroke-width]="thickness" />
+      }
+      <circle class="arc-knob" [attr.cx]="knob.x" [attr.cy]="knob.y" [attr.r]="thickness / 2 + 4" />
+    </svg>
+    <div class="dl-center">
+      <div class="dl-num num">{{ reading.text }}<sup>{{ reading.unit }}</sup></div>
+      @if (options.caption) { <div class="dl-sub">{{ options.caption }}</div> }
+    </div>
+  </div>
 </div>
 
-@if (variant === 'knob') {
-  <span class="knob-value"><app-dot-text [text]="reading.text" /><span class="unit">{{ reading.unit }}</span></span>
+@if (options.showButtons !== false) {
+  <div class="dl-btns">
+    <button type="button" class="rbtn" aria-label="降低" [disabled]="card.disabled || value <= min"
+      (pointerdown)="repeatStart($event, -1)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()"><app-ui-icon name="minus" /></button>
+    <span class="dl-range">{{ min }}–{{ max }}{{ unit }}</span>
+    <button type="button" class="rbtn" aria-label="升高" [disabled]="card.disabled || value >= max"
+      (pointerdown)="repeatStart($event, 1)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()"><app-ui-icon name="plus" /></button>
+  </div>
 }

@@ -5,6 +5,9 @@ import { clamp, decimalsOf, numeric, present, quantize, ratio } from './widget-k
 
 // Keep the dragged value on screen until the device reports back.
 const SETTLE_MS = 1500;
+// Press-and-hold on − / +: first repeat, then the repeat interval.
+const REPEAT_DELAY_MS = 400;
+const REPEAT_EVERY_MS = 90;
 
 interface LinearDrag {
   pointerId: number;
@@ -24,6 +27,7 @@ export abstract class RangeWidgetBase extends WidgetBase implements OnChanges, O
   private reported?: number;
   private timer?: ReturnType<typeof setTimeout>;
   private linear?: LinearDrag;
+  private repeater?: { start: number; timer?: ReturnType<typeof setTimeout> };
 
   get min(): number { return this.card.field.minimum ?? 0; }
   get max(): number { return this.card.field.maximum ?? 100; }
@@ -109,6 +113,34 @@ export abstract class RangeWidgetBase extends WidgetBase implements OnChanges, O
     this.settle(start);
   }
 
+  // − / + held down: steps on screen while held, one command on release.
+  // Without `hold` each press is a single step.
+  repeatStart(event: PointerEvent, direction: number, hold = true): void {
+    if (this.card.disabled || this.dragging) return;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this.dragging = true;
+    this.repeater = { start: this.value };
+    this.preview(this.value + direction * this.step);
+    if (hold) this.repeat(direction, REPEAT_DELAY_MS);
+  }
+
+  repeatStop(): void {
+    if (!this.repeater) return;
+    clearTimeout(this.repeater.timer);
+    const start = this.repeater.start;
+    this.repeater = undefined;
+    this.settle(start);
+  }
+
+  private repeat(direction: number, delay: number): void {
+    const repeater = this.repeater;
+    if (!repeater) return;
+    repeater.timer = setTimeout(() => {
+      this.preview(this.value + direction * this.step);
+      this.repeat(direction, REPEAT_EVERY_MS);
+    }, delay);
+  }
+
   // Ends any drag: commit a changed value, otherwise drop the preview.
   protected settle(startValue: number): void {
     this.dragging = false;
@@ -119,5 +151,6 @@ export abstract class RangeWidgetBase extends WidgetBase implements OnChanges, O
 
   ngOnDestroy(): void {
     clearTimeout(this.timer);
+    clearTimeout(this.repeater?.timer);
   }
 }

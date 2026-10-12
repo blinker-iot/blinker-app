@@ -1,10 +1,10 @@
+// Always embedded in the device page, which paints the themed backdrop.
 :host {
   display: flex;
   min-height: 0;
   height: 100%;
   flex-direction: column;
   color: var(--blinker-text-primary);
-  background: var(--blinker-bg);
 }
 
 ion-title {
@@ -21,7 +21,7 @@ ion-title {
 ion-content {
   min-height: 0;
   flex: 1 1 0;
-  --background: var(--blinker-bg);
+  --background: transparent;
 }
 
 .v2-content {

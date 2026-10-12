@@ -1,17 +1,25 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 import type { UiTheme } from '../../../core/device-v2/ui-theme';
-import { ButtonWidgetComponent } from '../widgets/button/button-widget';
-import { ChartWidgetComponent } from '../widgets/chart/chart-widget';
-import { ColorWidgetComponent } from '../widgets/color/color-widget';
+import { ActionWidgetComponent } from '../widgets/action/action-widget';
 import { DialWidgetComponent } from '../widgets/dial/dial-widget';
-import { InputWidgetComponent } from '../widgets/input/input-widget';
-import { MeterWidgetComponent } from '../widgets/meter/meter-widget';
-import { SelectWidgetComponent } from '../widgets/select/select-widget';
-import { SliderWidgetComponent } from '../widgets/slider/slider-widget';
-import { SwitchWidgetComponent } from '../widgets/switch/switch-widget';
-import { ValueWidgetComponent } from '../widgets/value/value-widget';
-import { familyOf, type PanelAction, type PanelCard, type WidgetAct } from '../widgets/widget-kit';
+import { GradientWidgetComponent } from '../widgets/gradient/gradient-widget';
+import { LevelWidgetComponent } from '../widgets/level/level-widget';
+import { LevelsWidgetComponent } from '../widgets/levels/levels-widget';
+import { LogWidgetComponent } from '../widgets/log/log-widget';
+import { ModeWidgetComponent } from '../widgets/mode/mode-widget';
+import { NumberWidgetComponent } from '../widgets/number/number-widget';
+import { PickerWidgetComponent } from '../widgets/picker/picker-widget';
+import { RingWidgetComponent } from '../widgets/ring/ring-widget';
+import { SlideWidgetComponent } from '../widgets/slide/slide-widget';
+import { StatusWidgetComponent } from '../widgets/status/status-widget';
+import { StepperWidgetComponent } from '../widgets/stepper/stepper-widget';
+import { TextWidgetComponent } from '../widgets/text/text-widget';
+import { TileWidgetComponent } from '../widgets/tile/tile-widget';
+import { TimerWidgetComponent } from '../widgets/timer/timer-widget';
+import { ToggleWidgetComponent } from '../widgets/toggle/toggle-widget';
+import { TrendWidgetComponent } from '../widgets/trend/trend-widget';
+import { variantOf, type PanelAction, type PanelCard, type WidgetAct } from '../widgets/widget-kit';
 
 export type { PanelAction, PanelCard } from '../widgets/widget-kit';
 
@@ -19,8 +27,10 @@ export type { PanelAction, PanelCard } from '../widgets/widget-kit';
   selector: 'app-page-layout-panel',
   standalone: true,
   imports: [
-    ButtonWidgetComponent, ChartWidgetComponent, ColorWidgetComponent, DialWidgetComponent, InputWidgetComponent,
-    MeterWidgetComponent, SelectWidgetComponent, SliderWidgetComponent, SwitchWidgetComponent, ValueWidgetComponent,
+    ActionWidgetComponent, DialWidgetComponent, GradientWidgetComponent, LevelWidgetComponent, LevelsWidgetComponent,
+    LogWidgetComponent, ModeWidgetComponent, NumberWidgetComponent, PickerWidgetComponent, RingWidgetComponent,
+    SlideWidgetComponent, StatusWidgetComponent, StepperWidgetComponent, TextWidgetComponent, TileWidgetComponent,
+    TimerWidgetComponent, ToggleWidgetComponent, TrendWidgetComponent,
   ],
   templateUrl: './page-layout-panel.html',
   styleUrls: ['./page-layout-panel.scss'],
@@ -34,7 +44,7 @@ export class PageLayoutPanelComponent {
   @Input() selectedId?: string;
   @Output() action = new EventEmitter<PanelAction>();
 
-  readonly familyOf = familyOf;
+  readonly variantOf = variantOf;
 
   // Visual order, which narrow screens use for automatic placement.
   get ordered(): PanelCard[] {

@@ -1,0 +1,16 @@
+@if (showTitle) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ title }}</span>
+  </div>
+}
+
+<div class="bn" [class]="size" [class.warn]="alert">
+  <div class="bn-num num">{{ reading.text }}<span class="bn-u" [class.base]="options.unitPosition === 'base'">{{ reading.unit }}</span></div>
+  @if (rows > 1 || size === 'md') {
+    <div class="bn-sub">
+      @if (options.showDelta && delta) { <span class="delta">{{ delta }}</span> }
+      <span>{{ withExtras(note) }}</span>
+    </div>
+  }
+</div>

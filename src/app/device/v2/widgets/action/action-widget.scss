@@ -1,0 +1,214 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+
+$ease: cubic-bezier(0.3, 0.7, 0.4, 1);
+
+// ── Round key ──────────────────────────────────────────────
+
+:host(:not(.op-card)) {
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+// One row tall: the key and its title side by side.
+:host(.wide:not(.op-card)) {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 12px;
+
+  .act { width: 44px; height: 44px; }
+}
+
+.act {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ui-accent) 12%, var(--ui-card));
+  color: var(--ui-accent);
+  touch-action: manipulation;
+  user-select: none;
+  transition: background-color 0.25s, color 0.25s, transform 0.15s;
+
+  &:active { transform: scale(0.95); }
+
+  app-ui-icon { position: relative; z-index: 1; width: 28px; height: 28px; }
+
+  // Hold progress sweeps across the key.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--ui-accent);
+    opacity: 0.28;
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  &.holding::after { transform: scaleX(1); transition: transform 0.8s linear; }
+  &.run { background: var(--ui-accent); color: var(--ui-on-accent); }
+
+  @include theme.electronic {
+    border: 1.5px dotted var(--ui-ink);
+    background: none;
+    color: var(--ui-ink);
+
+    &.run { border-color: var(--ui-accent); background: none; color: var(--ui-accent); }
+  }
+}
+
+.act-t {
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-tracking);
+}
+
+.act-s {
+  min-height: 16px;
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+
+// ── Action card ────────────────────────────────────────────
+// The whole card is the button: an icon chip, the title with its status, and
+// a round go key. Two rows tall it stacks; one row tall it is a bar.
+
+:host(.op-card) { padding: 0; }
+
+.op {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template: 'chip count' auto '. .' 1fr 'copy go' auto / minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 14px 14px 14px 16px;
+  text-align: left;
+  touch-action: manipulation;
+  user-select: none;
+  transition: background-color 0.3s, transform 0.15s;
+
+  &:active { transform: scale(0.98); }
+}
+
+:host(.wide) .op {
+  grid-template: 'chip copy count go' 1fr / auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding-block: 14px;
+}
+
+.op-chip {
+  grid-area: chip;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--ui-accent) 13%, var(--ui-card));
+  color: var(--ui-accent);
+  transition: background-color 0.3s, color 0.3s;
+
+  @include theme.electronic { border: 1.5px dotted var(--ui-accent); background: none; }
+}
+
+.op-count {
+  grid-area: count;
+  align-self: start;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--ui-well);
+  color: var(--ui-muted);
+  font-size: 11px;
+
+  @include theme.electronic { border: 1px dotted var(--ui-faint); background: none; }
+}
+
+:host(.wide) :is(.op-count, .op-go) { align-self: center; }
+
+.op-copy {
+  grid-area: copy;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+
+  span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+}
+
+.op-t {
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-tracking);
+}
+
+.op-s { color: var(--ui-muted); font-size: 12px; transition: color 0.3s; }
+
+.op-go {
+  grid-area: go;
+  align-self: end;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 9px;
+  border-radius: 50%;
+  background: var(--ui-accent);
+  color: var(--ui-on-accent);
+  transition: transform 0.3s $ease;
+
+  @include theme.electronic { border: 1.5px dotted var(--ui-accent); background: none; color: var(--ui-accent); }
+}
+
+.op:active .op-go { transform: translateX(2px); }
+
+// Running: the go key breathes until the device answers.
+.op.run .op-go { animation: op-run 0.9s ease-in-out infinite; }
+
+@keyframes op-run {
+  50% { transform: scale(0.86); opacity: 0.7; }
+}
+
+// Done: the card takes the accent for a moment.
+:host(.op-card.done) {
+  border-color: color-mix(in srgb, var(--ui-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--ui-accent) 11%, var(--ui-card));
+
+  .op-chip { background: var(--ui-accent); color: var(--ui-on-accent); }
+  .op-s { color: var(--ui-accent); }
+}
+
+@include theme.electronic-host('.op-card.done') {
+  border-color: var(--ui-accent);
+  background: var(--ui-card);
+
+  .op-chip { background: none; color: var(--ui-accent); }
+}
+
+// Hold progress runs along the bottom edge.
+.op-hold {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--ui-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  pointer-events: none;
+}
+
+.op.holding .op-hold { transform: scaleX(1); transition: transform 0.8s linear; }
+
+@media (prefers-reduced-motion: reduce) {
+  .op.run .op-go { animation: none; }
+}
