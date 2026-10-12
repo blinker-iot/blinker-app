@@ -1,0 +1,62 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+
+:host(.inline) { justify-content: center; }
+
+.hd-v { color: var(--ui-accent); font-size: 12px; }
+
+.keys {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-auto-rows: minmax(36px, 1fr);
+  gap: 8px;
+}
+
+// A key at rest is neutral, or tinted with its tone; the key just sent fills.
+.key {
+  --c: var(--ui-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 8px;
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-well);
+  color: var(--ui-ink);
+  font-size: 13px;
+  font-weight: 500;
+  touch-action: manipulation;
+  user-select: none;
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.12s;
+
+  span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-transform: var(--ui-case); }
+
+  app-ui-icon { flex: none; width: 16px; height: 16px; }
+
+  &:active { transform: scale(0.95); }
+  &:disabled { opacity: 0.5; cursor: default; }
+
+  &.toned {
+    background: color-mix(in srgb, var(--c) 12%, var(--ui-card));
+    color: color-mix(in srgb, var(--c) 82%, var(--ui-ink));
+  }
+
+  &.sent {
+    background: var(--c);
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--c) 30%, transparent);
+    color: var(--ui-on-accent);
+  }
+
+  @include theme.electronic {
+    border: 1px dotted var(--ui-faint);
+    background: none;
+    box-shadow: none;
+
+    &.toned { border-color: var(--c); background: none; color: var(--c); }
+    &.sent { border-style: solid; border-color: var(--c); background: none; box-shadow: none; color: var(--c); }
+  }
+}

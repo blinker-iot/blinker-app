@@ -15,6 +15,7 @@
         <p>{{ count }} 个组件，按 PageLayout 8 栏栅格排布。轻点组件即操作，长按（或右键）组件调整参数，下方实时生成布局片段。所有数据均为演示值，操作不连接设备。</p>
       </div>
       <nav class="skins" aria-label="主题">
+
         @for (option of themes; track option.id) {
           <button type="button" [attr.aria-pressed]="theme === option.id" (click)="selectTheme(option.id)">
             <i [attr.data-swatch]="option.id"></i>{{ option.name }}
@@ -22,7 +23,6 @@
         }
       </nav>
     </header>
-
     <div class="bench">
       <div class="gallery">
         @for (section of sections; track section.id) {
@@ -32,17 +32,22 @@
               (action)="onAction($event)" />
           </section>
         }
+
       </div>
 
-      <div class="scrim" [class.open]="selected" aria-hidden="true" (click)="closeInspector()"></div>
-      <aside class="insp" [class.open]="selected" aria-label="组件参数">
-        @if (selected; as card) {
+      @if (selected; as card) {
+        <div class="scrim open" aria-hidden="true" (click)="closeInspector()"></div>
+
+        <aside class="insp open" aria-label="组件参数">
           <button type="button" class="close" aria-label="关闭" (click)="closeInspector()">×</button>
-          <app-widget-inspector [widget]="card.widget" [extraCandidates]="extraCandidates" (widgetChange)="updateWidget($event)" />
-        } @else {
+          <app-widget-inspector [widget]="card.widget" [field]="card.field" [extraCandidates]="extraCandidates" (widgetChange)="updateWidget($event)" />
+        </aside>
+      } @else {
+        <aside class="insp insp-idle" aria-label="组件参数">
           <p class="insp-hint">长按（或右键）左侧任一组件，在这里调整外观与参数。</p>
-        }
-      </aside>
+        </aside>
+      }
+
     </div>
   </main>
 </ion-content>

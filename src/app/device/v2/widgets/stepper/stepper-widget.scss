@@ -88,3 +88,25 @@
   strong { font-size: 14px; font-weight: 500; text-transform: var(--ui-case); letter-spacing: var(--ui-tracking); }
   small { color: var(--ui-muted); font-size: 12px; }
 }
+
+// Send key of an action stepper: a round accent key, a check once sent.
+.ns-go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-left: auto;
+  padding: 9px;
+  border-radius: 50%;
+  background: var(--ui-accent);
+  color: var(--ui-on-accent);
+  transition: transform 0.15s, background-color 0.25s;
+
+  &:active { transform: scale(0.92); }
+  &:disabled { opacity: 0.5; cursor: default; }
+
+  @include theme.electronic { border: 1.5px dotted var(--ui-accent); background: none; color: var(--ui-accent); }
+}
+
+.hd .ns-go { width: 30px; height: 30px; margin-block: -4px; padding: 8px; }

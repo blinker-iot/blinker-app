@@ -1,8 +1,8 @@
 import { normalizeUiTheme, UiTheme } from './ui-theme';
 import { DeviceUiEndpoint, DeviceUiSnapshot } from './device-ui.port';
 import {
-  COLOR_MAXIMUM, PAGE_WIDGET_TYPES, PageWidgetOptions, PageWidgetType, PageWidgetVariant,
-  MAX_EXTRA_KEYS, acceptsExtras, parseWidgetOptions, parseWidgetVariant, sizeAllowed, widgetVariant,
+  COLOR_MAXIMUM, PAGE_WIDGET_TYPES, PAGE_WIDGET_VARIANTS, PageWidgetOptions, PageWidgetType, PageWidgetVariant,
+  MAX_EXTRA_KEYS, acceptsExtras, fitSize, parseWidgetOptions, parseWidgetVariant, sizeAllowed, widgetVariant,
 } from './page-widget';
 
 export type { PageWidgetOptions, PageWidgetType, PageWidgetVariant } from './page-widget';
@@ -62,15 +62,17 @@ export function generateDefaultPageLayout(snapshot: DeviceUiSnapshot): PageLayou
   const widgets = reflowPageWidgets([...snapshot.endpoints]
     .sort((left, right) => left.id - right.id)
     .flatMap((endpoint, index) => {
-      const type = defaultWidgetType(endpoint);
-      if (!type) return [];
-      const [width, height] = DEFAULT_SIZES[type];
+      const binding = defaultBinding(endpoint);
+      if (!binding) return [];
+      const { type, variant } = binding;
       const widget: PageLayoutWidget = {
         widgetId: `endpoint-${endpoint.id}`,
         type,
         endpointKey: endpoint.key,
         title: endpoint.key,
-        grid: { x: 0, y: index, width, height },
+        // Written out only when the endpoint cannot take its type's default variant.
+        ...(variant !== widgetVariant(type) ? { variant } : {}),
+        grid: { x: 0, y: index, ...fitSize(variant, ...DEFAULT_SIZES[type]) },
       };
       return [widget];
     }));
@@ -138,28 +140,7 @@ export function parsePageLayout(input: unknown, endpoints?: readonly DeviceUiEnd
   if (!/^[0-9a-f]{64}$/.test(manifestFingerprint)) {
     throw new Error('PageLayout manifestFingerprint is invalid');
   }
-  if (!Array.isArray(root['widgets']) || root['widgets'].length > PAGE_LAYOUT_MAX_WIDGETS) {
-    throw new Error('PageLayout widgets are invalid');
-  }
-
-  const endpointByKey = endpoints
-    ? new Map(endpoints.map(endpoint => [endpoint.key, endpoint]))
-    : undefined;
-  const ids = new Set<string>();
-  const widgets = root['widgets'].map((value, index) => {
-    const widget = parseWidget(value, index);
-    if (ids.has(widget.widgetId)) throw new Error('PageLayout widgetId is duplicated');
-    ids.add(widget.widgetId);
-    const endpoint = endpointByKey?.get(widget.endpointKey);
-    if (endpointByKey && (!endpoint || !isCompatible(widget.type, endpoint))) {
-      throw new Error(`PageLayout widget ${widget.widgetId} is incompatible with its endpoint`);
-    }
-    if (endpointByKey && widget.extraKeys?.some(key => !isExtraReading(endpointByKey.get(key)))) {
-      throw new Error(`PageLayout widget ${widget.widgetId} has an incompatible extra reading`);
-    }
-    return widget;
-  });
-  rejectOverlaps(widgets);
+  const widgets = parsePageWidgets(root['widgets'], endpoints);
 
   return {
     schemaVersion: PAGE_LAYOUT_SCHEMA_VERSION,
@@ -169,6 +150,34 @@ export function parsePageLayout(input: unknown, endpoints?: readonly DeviceUiEnd
     columns: PAGE_LAYOUT_COLUMNS,
     widgets,
   };
+}
+
+// Shared presentation validation for V2 layouts and legacy device panels.
+export function parsePageWidgets(input: unknown, endpoints?: readonly DeviceUiEndpoint[]): PageLayoutWidget[] {
+  if (!Array.isArray(input) || input.length > PAGE_LAYOUT_MAX_WIDGETS) {
+    throw new Error('PageLayout widgets are invalid');
+  }
+
+  const endpointByKey = endpoints
+    ? new Map(endpoints.map(endpoint => [endpoint.key, endpoint]))
+    : undefined;
+  const ids = new Set<string>();
+  const widgets = input.map((value, index) => {
+    const widget = parseWidget(value, index);
+    if (ids.has(widget.widgetId)) throw new Error('PageLayout widgetId is duplicated');
+    ids.add(widget.widgetId);
+    const endpoint = endpointByKey?.get(widget.endpointKey);
+    if (endpointByKey && (!endpoint || !isCompatible(widget, endpoint))) {
+      throw new Error(`PageLayout widget ${widget.widgetId} is incompatible with its endpoint`);
+    }
+    if (endpointByKey && widget.extraKeys?.some(key => !isExtraReading(endpointByKey.get(key)))) {
+      throw new Error(`PageLayout widget ${widget.widgetId} has an incompatible extra reading`);
+    }
+    return widget;
+  });
+  rejectOverlaps(widgets);
+
+  return widgets;
 }
 
 export function diffPageLayout(
@@ -183,13 +192,13 @@ export function diffPageLayout(
   for (const widget of layout.widgets) {
     const endpoint = endpointByKey.get(widget.endpointKey);
     if (!endpoint) removedWidgetIds.push(widget.widgetId);
-    else if (!isCompatible(widget.type, endpoint)) incompatibleWidgetIds.push(widget.widgetId);
+    else if (!isCompatible(widget, endpoint)) incompatibleWidgetIds.push(widget.widgetId);
     else boundEndpointKeys.add(widget.endpointKey);
     // A field shown as an extra reading is bound too, so it gets no card of its own.
     for (const key of widget.extraKeys ?? []) if (isExtraReading(endpointByKey.get(key))) boundEndpointKeys.add(key);
   }
   const addedEndpointKeys = endpoints
-    .filter(endpoint => defaultWidgetType(endpoint) && !boundEndpointKeys.has(endpoint.key))
+    .filter(endpoint => defaultBinding(endpoint) && !boundEndpointKeys.has(endpoint.key))
     .sort((left, right) => left.id - right.id)
     .map(endpoint => endpoint.key);
   return { removedWidgetIds, incompatibleWidgetIds, addedEndpointKeys };
@@ -203,7 +212,7 @@ export function migratePageLayout(input: unknown, snapshot: DeviceUiSnapshot): P
   const endpointByKey = new Map(snapshot.endpoints.map(endpoint => [endpoint.key, endpoint]));
   const widgets = previous.widgets.filter(widget => {
     const endpoint = endpointByKey.get(widget.endpointKey);
-    return !!endpoint && isCompatible(widget.type, endpoint);
+    return !!endpoint && isCompatible(widget, endpoint);
   }).map((widget): PageLayoutWidget => {
     // Extra readings that are gone or no longer readable are dropped; the card stays.
     if (!widget.extraKeys) return widget;
@@ -278,51 +287,55 @@ function parseExtraKeys(value: unknown, endpointKey: string, label: string): str
 
 // An extra reading is bound like a display card's own field.
 export function isExtraReading(endpoint: DeviceUiEndpoint | undefined): boolean {
-  return !!endpoint && isCompatible('value', endpoint);
+  return !!endpoint && variantsFor('value', endpoint).length > 0;
 }
 
-function defaultWidgetType(endpoint: DeviceUiEndpoint): PageWidgetType | null {
-  if (endpoint.role === 'property' && endpoint.writable && endpoint.valueType === 'boolean') {
-    return 'switch';
+// Tried in this order; the first type that binds the endpoint is its default.
+const DEFAULT_TYPES: readonly PageWidgetType[] = ['switch', 'select', 'color', 'button', 'slider', 'input', 'value'];
+
+function defaultBinding(endpoint: DeviceUiEndpoint): { type: PageWidgetType; variant: PageWidgetVariant } | null {
+  for (const type of DEFAULT_TYPES) {
+    const variant = variantsFor(type, endpoint)[0];
+    if (variant) return { type, variant };
   }
-  if (isChoice(endpoint)) return 'select';
-  if (isColor(endpoint)) return 'color';
-  if (endpoint.role === 'action' && endpoint.writable
-    && (endpoint.valueType === 'boolean' || endpoint.valueType === 'null')) {
-    return 'button';
-  }
-  if (endpoint.role === 'property' && endpoint.writable
-    && (endpoint.valueType === 'integer' || endpoint.valueType === 'number')
-    && Number.isFinite(endpoint.minimum) && Number.isFinite(endpoint.maximum)) {
-    return 'slider';
-  }
-  if (endpoint.writable && (endpoint.valueType === 'integer'
-    || endpoint.valueType === 'number' || endpoint.valueType === 'text')) {
-    return 'input';
-  }
-  return endpoint.readable || endpoint.notifies || endpoint.role === 'event' ? 'value' : null;
+  return null;
 }
 
-function isCompatible(type: PageWidgetType, endpoint: DeviceUiEndpoint): boolean {
+// The variants a widget of `type` may take on this endpoint, the endpoint's
+// default first; empty when the type cannot bind it. Most variants fit every
+// endpoint of their type, but a few are made for one kind of endpoint only.
+export function variantsFor(type: PageWidgetType, endpoint: DeviceUiEndpoint): readonly PageWidgetVariant[] {
+  const all: readonly PageWidgetVariant[] = PAGE_WIDGET_VARIANTS[type];
+  const numeric = endpoint.valueType === 'integer' || endpoint.valueType === 'number';
+
   if (type === 'switch') {
-    return endpoint.role === 'property' && endpoint.writable && endpoint.valueType === 'boolean';
+    return endpoint.role === 'property' && endpoint.writable && endpoint.valueType === 'boolean' ? all : [];
   }
   if (type === 'button') {
-    return endpoint.role === 'action' && endpoint.writable
-      && (endpoint.valueType === 'boolean' || endpoint.valueType === 'null');
+    if (endpoint.role !== 'action' || !endpoint.writable) return [];
+    if (endpoint.valueType === 'boolean' || endpoint.valueType === 'null') return ['action'];
+    // 指令键盘; four or five choices also read as up, down, left, right (and centre).
+    const choices = endpoint.valueType === 'text' ? endpoint.choices?.length ?? 0 : 0;
+    if (!choices) return [];
+    return choices === 4 || choices === 5 ? ['keys', 'dpad'] : ['keys'];
   }
   if (type === 'slider') {
-    return endpoint.role === 'property' && endpoint.writable
-      && (endpoint.valueType === 'integer' || endpoint.valueType === 'number')
-      && Number.isFinite(endpoint.minimum) && Number.isFinite(endpoint.maximum);
+    if (!endpoint.writable || !numeric || !Number.isFinite(endpoint.minimum) || !Number.isFinite(endpoint.maximum)) return [];
+    // An action has no state to show, so it only takes the stepper: pick a value, then send it.
+    if (endpoint.role === 'action') return ['stepper'];
+    return endpoint.role === 'property' ? all : [];
   }
-  if (type === 'select') return isChoice(endpoint);
-  if (type === 'color') return isColor(endpoint);
-  if (type === 'input') {
-    return endpoint.writable && (endpoint.valueType === 'integer'
-      || endpoint.valueType === 'number' || endpoint.valueType === 'text');
-  }
-  return endpoint.readable || endpoint.notifies || endpoint.role === 'event';
+  if (type === 'select') return isChoice(endpoint) ? all : [];
+  if (type === 'color') return isColor(endpoint) ? all : [];
+  if (type === 'input') return endpoint.writable && (numeric || endpoint.valueType === 'text') ? all : [];
+
+  if (!endpoint.readable && !endpoint.notifies && endpoint.role !== 'event') return [];
+  // An event is an occurrence: the status card shows when it last happened.
+  return endpoint.role === 'event' ? ['status', ...all.filter(variant => variant !== 'status')] : all;
+}
+
+function isCompatible(widget: Pick<PageLayoutWidget, 'type' | 'variant'>, endpoint: DeviceUiEndpoint): boolean {
+  return variantsFor(widget.type, endpoint).includes(widgetVariant(widget.type, widget.variant));
 }
 
 function isChoice(endpoint: DeviceUiEndpoint): boolean {

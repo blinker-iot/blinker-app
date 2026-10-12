@@ -5,8 +5,8 @@ export const TYPE_LABELS: Readonly<Record<PageWidgetType, string>> = {
 };
 
 export const VARIANT_LABELS: Readonly<Record<PageWidgetVariant, string>> = {
-  tile: '图标开关卡', toggle: '胶囊开关行', slide: '滑动开关',
-  action: '动作按钮',
+  tile: '图标开关卡', toggle: '胶囊开关行', slide: '滑动开关', hold: '按住开关',
+  action: '动作按钮', keys: '指令键盘', dpad: '方向键',
   level: '大块滑块', gradient: '色温 / 色彩滑块', dial: '环形旋钮', levels: '档位选择', stepper: '数值步进器', timer: '定时',
   mode: '模式宫格',
   text: '文本输入',
@@ -18,7 +18,7 @@ export const OPTION_LABELS: Readonly<Record<PageWidgetOptionKey, string>> = {
   icon: '图标', tone: '色调', caption: '说明', showTitle: '显示标题',
   onText: '开启文案', offText: '关闭文案', actionText: '按钮文案', doneText: '完成文案', placeholder: '占位文字',
   labels: '档位名称', states: '状态映射', choiceIcons: '选项图标', choiceTones: '选项色调', presets: '预设分钟', palette: '预设色板',
-  confirm: '二次确认', hold: '长按执行', allowOff: '轻点当前档关闭', longPress: '长按连续', multiline: '多行',
+  confirm: '二次确认', hold: '长按执行', allowOff: '轻点当前档关闭', longPress: '长按连续', multiline: '多行', momentary: '松开即停',
   decimals: '小数位', scale: '换算倍率', format: '显示格式', min: '最小值', max: '最大值',
   warnBelow: '低于即告警', warnAbove: '高于即告警', points: '点数', ticks: '分段刻度',
   style: '样式', size: '尺寸', activeStyle: '开启样式', corner: '角标', iconStyle: '图标底', shape: '形状',
@@ -44,7 +44,7 @@ export const VALUE_LABELS: Readonly<Record<string, string>> = {
   number: '数字', percent: '百分比', duration: '时长', clock: '时钟', bytes: '字节',
 };
 
-// Hints shown under text options that follow a small syntax.
+// Hints shown under options that follow a small syntax or are not obvious from the label.
 export const OPTION_HINTS: Partial<Record<PageWidgetOptionKey, string>> = {
   labels: '逗号分隔，如：低,中,高,全速',
   states: '名称:语义，语义为 ok / off / warn / info',
@@ -53,4 +53,5 @@ export const OPTION_HINTS: Partial<Record<PageWidgetOptionKey, string>> = {
   presets: '分钟，逗号分隔，最多 6 个',
   palette: '#RRGGBB，逗号分隔，最多 12 个',
   scale: '显示值 = 原始值 × 倍率，如 0.1',
+  momentary: '按住方向持续执行，松开时发送中心键（第 5 个选项，如 stop）',
 };

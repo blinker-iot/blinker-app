@@ -1,0 +1,23 @@
+@switch (variantOf(card.widget)) {
+  @case ('tile') { <app-tile-widget [card]="card" (act)="emit($event)" /> }
+  @case ('toggle') { <app-toggle-widget [card]="card" (act)="emit($event)" /> }
+  @case ('slide') { <app-slide-widget [card]="card" (act)="emit($event)" /> }
+  @case ('hold') { <app-hold-widget [card]="card" (act)="emit($event)" /> }
+  @case ('action') { <app-action-widget [card]="card" (act)="emit($event)" /> }
+  @case ('keys') { <app-keys-widget [card]="card" (act)="emit($event)" /> }
+  @case ('dpad') { <app-dpad-widget [card]="card" (act)="emit($event)" /> }
+  @case ('mode') { <app-mode-widget [card]="card" (act)="emit($event)" /> }
+  @case ('level') { <app-level-widget [card]="card" (act)="emit($event)" /> }
+  @case ('gradient') { <app-gradient-widget [card]="card" (act)="emit($event)" /> }
+  @case ('dial') { <app-dial-widget [card]="card" (act)="emit($event)" /> }
+  @case ('levels') { <app-levels-widget [card]="card" (act)="emit($event)" /> }
+  @case ('stepper') { <app-stepper-widget [card]="card" (act)="emit($event)" /> }
+  @case ('timer') { <app-timer-widget [card]="card" (act)="emit($event)" /> }
+  @case ('picker') { <app-picker-widget [card]="card" (act)="emit($event)" /> }
+  @case ('text') { <app-text-widget [card]="card" (act)="emit($event)" /> }
+  @case ('trend') { <app-trend-widget [card]="card" /> }
+  @case ('ring') { <app-ring-widget [card]="card" /> }
+  @case ('status') { <app-status-widget [card]="card" /> }
+  @case ('log') { <app-log-widget [card]="card" /> }
+  @default { <app-number-widget [card]="card" /> }
+}

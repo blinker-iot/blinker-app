@@ -1,13 +1,15 @@
-@if (loaded && device) {
-<ion-header>
+@if (device) {
+<ion-header [class.debug-header]="debugMode">
   <ion-toolbar color="transparent">
     <ion-buttons slot="start">
       <ion-back-button text="" defaultHref="/home/device"></ion-back-button>
     </ion-buttons>
     <ion-title (click)="enterDebug()">
       <div class="name">{{device.config.customName}}</div>
+
       <div
         class="state"
+
         [ngClass]="{'showState': device.config.mode === 'bbp2' ? !!deviceStateLabel : device.data.state !== 'waiting'}"
       >
         @if (device.config.mode === 'ble') { @if ((device.data.state === 'connected')
@@ -21,8 +23,10 @@
         } @if (!deviceService.islocalDevice(device)) {
         <i class="fal fa-cloud"></i>
         } } @else { ({{'DEVICE.OFFLINE' | translate}}) }
+
         <ng-template #offline> ({{'DEVICE.OFFLINE' | translate}}) </ng-template>
         }
+
         @if (device.config.mode === 'bbp2' && deviceStateLabel) { ({{deviceStateLabel}}) }
       </div>
     </ion-title>
@@ -32,21 +36,38 @@
         <i class="fa-light fa-palette"></i>
       </ion-button>
       }
+
+      @if (loaded && !device.config.isShared) {
+        @if (debugMode) {
+          <ion-button aria-label="返回正常模式" title="返回正常模式" [disabled]="switchingMode" (click)="returnToPanel()">
+            <i class="fa-light fa-grid-2"></i>
+          </ion-button>
+        } @else {
+          <ion-button aria-label="编辑页面" title="编辑页面" [routerLink]="['/device', id, 'edit']">
+            <i class="fa-light fa-pen-to-square"></i>
+          </ion-button>
+        }
+      }
+
       <ng-container
         [ngTemplateOutlet]="deviceHeaderActions"
       ></ng-container>
+
       <!-- 设置 -->
       <ion-button [routerLink]="['/device-manager',id]">
         <i class="fa-light fa-circle-ellipsis"></i>
+
         @if (device.data.hasNewVersion) {
         <div redpoint></div>
         }
+
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 <ion-modal class="device-theme-modal" [isOpen]="themePickerOpen"
   (didDismiss)="themePickerOpen = false" aria-label="设备主题选择">
+
   <ng-template>
     <section class="theme-picker" [attr.data-ui-theme]="deviceTheme" aria-label="设备主题选择">
       <div class="theme-picker-heading">
@@ -54,6 +75,7 @@
         <button type="button" class="theme-close" aria-label="关闭主题选择" (click)="themePickerOpen = false">×</button>
       </div>
       <div class="theme-options" role="group" aria-label="主题风格">
+
         @for (theme of deviceThemes; track theme.id) {
         <button type="button" class="theme-option"
           [attr.aria-pressed]="deviceTheme === theme.id" (click)="selectDeviceTheme(theme.id)">
@@ -62,17 +84,34 @@
           <span class="theme-check" aria-hidden="true">{{deviceTheme === theme.id ? '✓' : ''}}</span>
         </button>
         }
+
       </div>
       <p class="theme-save-hint" role="status">{{themeSaved ? '仅此设备' : '仅此设备 · 当前浏览器无法保存偏好'}}</p>
     </section>
   </ng-template>
 </ion-modal>
 }
+
+@if (device && !loaded) {
+<ion-content>
+  <div class="view-loading">
+    @if (viewError) {
+      <p role="alert">{{ viewError }}</p>
+      <ion-button fill="clear" (click)="resolveDefaultView()">重试</ion-button>
+    } @else {
+      <ion-spinner name="crescent" />
+      <p>正在读取界面配置…</p>
+    }
+
+  </div>
+</ion-content>
+}
+
 @if (loaded && device && usesV2DevicePage) {
 <ng-template #deviceView></ng-template>
 } @else if (loaded && device) {
 <ion-content [fullscreen]="true" [ngClass]="{'offline': device.data.state === 'offline'}">
-  <div class="device-view content-under-header">
+  <div class="device-view content-under-header" [class.debug-view]="debugMode">
     <ng-template #deviceView></ng-template>
   </div>
 </ion-content>

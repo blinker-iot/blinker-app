@@ -6,55 +6,59 @@
 <section class="group">
   <h3>外观</h3>
   <div class="seg wrap" role="radiogroup" aria-label="组件外观">
+
     @for (item of variants; track item) {
       <button type="button" role="radio" [attr.aria-checked]="item === variant" (click)="setVariant(item)">
         {{ variantLabel(item) }}</button>
     }
+
   </div>
 </section>
 
 <section class="group">
   <h3>通用</h3>
-
   <label class="field">
     <span>标题</span>
     <input class="input" maxlength="32" [value]="widget.title ?? ''" (change)="setTitle($any($event.target).value)" />
-  </label>
 
+  </label>
   <div class="field top">
     <span>图标</span>
     <div class="icons" role="radiogroup" aria-label="图标">
       <button type="button" role="radio" class="icon-none" [attr.aria-checked]="!options.icon"
         (click)="setOption('icon', undefined)">无</button>
+
       @for (name of icons; track name) {
         <button type="button" role="radio" [attr.aria-checked]="options.icon === name" [attr.aria-label]="name"
           (click)="setOption('icon', name)"><app-ui-icon [name]="name" /></button>
       }
+
     </div>
   </div>
-
   <div class="field">
     <span>色调</span>
     <div class="tones" role="radiogroup" aria-label="色调">
       <button type="button" role="radio" class="tone-auto" [attr.aria-checked]="!options.tone" aria-label="主题默认"
         (click)="setOption('tone', undefined)">自</button>
+
       @for (tone of tones; track tone) {
         <button type="button" role="radio" [attr.aria-checked]="options.tone === tone" [attr.aria-label]="valueLabel(tone)"
           [style.--c]="'var(--ui-' + tone + ')'" (click)="setOption('tone', tone)"></button>
       }
+
     </div>
   </div>
-
   <div class="field">
     <span>宽度</span>
     <div class="seg" role="radiogroup" aria-label="宽度">
+
       @for (width of widths; track width) {
         <button type="button" role="radio" [attr.aria-checked]="widget.grid.width === width"
-          (click)="setSize(width, widget.grid.height)">{{ width }} 栏</button>
+          (click)="setSize(width, widget.grid.height)">{{ widthLabel(width) }}</button>
       }
+
     </div>
   </div>
-
   <div class="field">
     <span>高度</span>
     <div class="seg" role="radiogroup" aria-label="高度">
@@ -62,22 +66,13 @@
         <button type="button" role="radio" [attr.aria-checked]="widget.grid.height === height"
           (click)="setSize(widget.grid.width, height)">{{ height }} 行</button>
       }
-    </div>
-  </div>
 
-  <div class="field">
-    <span>强调</span>
-    <div class="seg" role="radiogroup" aria-label="强调">
-      @for (item of appearances; track item.id) {
-        <button type="button" role="radio" [attr.aria-checked]="(widget.appearance ?? 'default') === item.id"
-          (click)="setAppearance(item.id)">{{ item.label }}</button>
-      }
     </div>
   </div>
 </section>
-
 <section class="group">
   <h3>专属参数</h3>
+
   @if (showExtras) {
     <div class="field top">
       <span>附属读数</span>
@@ -88,51 +83,66 @@
               [disabled]="!extraKeys.includes(candidate.key) && extraKeys.length >= maxExtras"
               (click)="toggleExtra(candidate.key)">{{ candidate.label }}</button>
           }
+
         </span>
         <small>最多 {{ maxExtras }} 个，按选择顺序显示在附注行</small>
       </span>
     </div>
   }
+
   @for (key of specific; track key) {
-    <div class="field" [class.top]="rule(key).kind === 'text' && hints[key]" [class.invalid]="invalid.has(key)">
+    <div class="field" [class.top]="rule(key).kind !== 'enum' && hints[key]" [class.invalid]="invalid.has(key)">
       <span>{{ optionLabels[key] }}</span>
+
       @switch (rule(key).kind) {
         @case ('boolean') {
-          <span class="seg">
-            <button type="button" [attr.aria-pressed]="options[key] === undefined" (click)="setOption(key, undefined)">默认</button>
-            <button type="button" [attr.aria-pressed]="options[key] === true" (click)="setOption(key, true)">开</button>
-            <button type="button" [attr.aria-pressed]="options[key] === false" (click)="setOption(key, false)">关</button>
+          <span class="stack">
+            <span class="seg">
+              <button type="button" [attr.aria-pressed]="options[key] === undefined" (click)="setOption(key, undefined)">默认</button>
+              <button type="button" [attr.aria-pressed]="options[key] === true" (click)="setOption(key, true)">开</button>
+              <button type="button" [attr.aria-pressed]="options[key] === false" (click)="setOption(key, false)">关</button>
+            </span>
+
+            @if (hints[key]) { <small>{{ hints[key] }}</small> }
           </span>
         }
+
         @case ('enum') {
           <span class="seg wrap">
             <button type="button" [attr.aria-pressed]="options[key] === undefined" (click)="setOption(key, undefined)">默认</button>
+
             @for (value of enumValues(key); track value) {
               <button type="button" [attr.aria-pressed]="options[key] === value" (click)="setOption(key, value)">
                 {{ valueLabel(value) }}</button>
             }
+
           </span>
         }
+
         @case ('text') {
           <span class="stack">
             <input class="input" [value]="text(key)" placeholder="默认" (change)="setOption(key, $any($event.target).value)" />
+
             @if (hints[key]) { <small>{{ hints[key] }}</small> }
           </span>
         }
+
         @default {
           <span class="stack">
             <input class="input" type="number" inputmode="decimal" [value]="text(key)" placeholder="默认"
               (change)="setOption(key, $any($event.target).value)" />
+
             @if (hints[key]) { <small>{{ hints[key] }}</small> }
           </span>
         }
       }
+
     </div>
   } @empty {
     <p class="note">这个外观没有专属参数。</p>
   }
-</section>
 
+</section>
 <section class="group">
   <h3>布局片段</h3>
   <pre class="json">{{ json }}</pre>

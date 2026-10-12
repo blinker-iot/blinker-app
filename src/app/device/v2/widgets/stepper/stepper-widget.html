@@ -10,6 +10,11 @@
     <app-ui-icon name="plus" /></button>
 </ng-template>
 
+<ng-template #go>
+  <button type="button" class="ns-go" [class.sent]="sent()" aria-label="发送" [disabled]="card.disabled" (click)="send()">
+    <app-ui-icon [name]="sent() ? 'check' : 'arrow'" /></button>
+</ng-template>
+
 @if (rows === 1) {
   <span class="rc-ico"><app-ui-icon [name]="options.icon || 'gauge'" /></span>
   <span class="rc-copy">
@@ -19,17 +24,19 @@
   <ng-container *ngTemplateOutlet="dec" />
   <span class="ns-v ns-sm num">{{ reading.text }}<small>{{ reading.unit }}</small></span>
   <ng-container *ngTemplateOutlet="inc" />
+  @if (command) { <ng-container *ngTemplateOutlet="go" /> }
 } @else {
   @if (showTitle) {
     <div class="hd">
       @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
       <span class="hd-t">{{ title }}</span>
+      @if (command) { <ng-container *ngTemplateOutlet="go" /> }
     </div>
   }
 
   <ng-template #middle>
     <div class="ns-mid" role="spinbutton" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
-      [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" (keydown)="key($event)">
+      [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" (keydown)="key($event)" (keydown.enter)="send()">
       <span class="ns-v num">{{ reading.text }}<small>{{ reading.unit }}</small></span>
       @if (showRange) { <span class="ns-range">{{ min }}–{{ max }} · 步长 {{ step }}</span> }
     </div>

@@ -1,7 +1,6 @@
 import { ChangeDetectorRef, ViewContainerRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { BehaviorSubject, Subject } from 'rxjs';
-
 import { deviceComponentDict } from '../configs/components.config';
 import { BlinkerDevice } from '../core/model/device.model';
 import { DataService } from '../core/services/data.service';
@@ -10,11 +9,13 @@ import { DevicePage } from './device.page';
 
 const ionicMock = vi.hoisted(() => {
   class IonicStub {}
+
   return new Proxy(
     { IonicModule: IonicStub, ModalController: IonicStub },
     {
       get: (target, property: string | symbol) => {
         if (property === 'then' || typeof property === 'symbol') return undefined;
+
         return target[property as keyof typeof target] ?? IonicStub;
       },
     },
@@ -28,6 +29,7 @@ describe('DevicePage component switching', () => {
   let device: BlinkerDevice;
   let page: DevicePage;
   let createComponent: ReturnType<typeof vi.fn>;
+
   let componentRefs: Array<{
     instance: Record<string, unknown>;
     setInput: ReturnType<typeof vi.fn>;
@@ -52,6 +54,7 @@ describe('DevicePage component switching', () => {
     };
 
     componentRefs = [];
+
     createComponent = vi.fn(() => {
       const ref = {
         instance: {},
@@ -59,15 +62,19 @@ describe('DevicePage component switching', () => {
         changeDetectorRef: { detectChanges: vi.fn() },
         destroy: vi.fn(),
       };
+
       componentRefs.push(ref);
+
       return ref;
     });
 
     const route = {
+      snapshot: { queryParamMap: { get: () => null } },
       paramMap: new BehaviorSubject({
         get: (key: string) => (key === 'id' ? 'device-1' : null),
       }),
     } as unknown as ActivatedRoute;
+
     const dataService = {
       device: { dict: { 'device-1': device } },
       initCompleted: new BehaviorSubject(false),
@@ -86,9 +93,13 @@ describe('DevicePage component switching', () => {
       { init: vi.fn(), end: vi.fn() } as unknown as DebugService,
       { create: vi.fn() } as never,
       { detectChanges: vi.fn(), markForCheck: vi.fn() } as unknown as ChangeDetectorRef,
+      { showToast: vi.fn() } as never,
+      { get: vi.fn().mockResolvedValue(null) } as never,
+      { get: vi.fn().mockResolvedValue(null) } as never,
     );
 
     page.ngOnInit();
+
     page.deviceView = {
       clear: vi.fn(),
       createComponent,
@@ -105,12 +116,14 @@ describe('DevicePage component switching', () => {
     );
 
     device.config.component = 'Customizer';
-    device.subject.next({ key: 'component', value: 'Customizer' });
 
+    device.subject.next({ key: 'component', value: 'Customizer' });
     expect(createComponent).toHaveBeenCalledTimes(2);
+
     expect(createComponent).toHaveBeenLastCalledWith(
       deviceComponentDict['Customizer'],
     );
+
     expect(componentRefs[1].setInput).toHaveBeenCalledWith(
       'customizerUrl',
       '',
@@ -119,7 +132,6 @@ describe('DevicePage component switching', () => {
 
   it('does not rebuild for unrelated device data events', () => {
     device.subject.next({ key: 'switch', value: true });
-
     expect(createComponent).toHaveBeenCalledTimes(1);
   });
 
@@ -127,8 +139,8 @@ describe('DevicePage component switching', () => {
     device.config.component = 'TestDashboard';
 
     page.ionViewWillEnter();
-
     expect(createComponent).toHaveBeenCalledTimes(2);
+
     expect(createComponent).toHaveBeenLastCalledWith(
       deviceComponentDict['TestDashboard'],
     );
@@ -142,24 +154,26 @@ describe('DevicePage component switching', () => {
     expect(createComponent).toHaveBeenLastCalledWith(
       deviceComponentDict['Customizer'],
     );
+
     expect(componentRefs[1].setInput).toHaveBeenCalledWith(
       'customizerUrl',
       'https://example.com/device-ui',
     );
   });
 
-  it('uses the embedded Device V2 page for bbp2 devices without an explicit component', () => {
+  it('uses the debug dashboard for bbp2 devices without a saved layout or explicit component', async () => {
     device.config.mode = 'bbp2';
+
     delete device.config.component;
+    await page.resolveDefaultView();
+    expect(page.usesV2DevicePage).toBe(false);
 
-    page.ionViewWillEnter();
-
-    expect(page.usesV2DevicePage).toBe(true);
     expect(createComponent).toHaveBeenLastCalledWith(
-      deviceComponentDict['DeviceV2'],
+      deviceComponentDict['TestDashboard'],
     );
+
     expect(componentRefs[1].setInput).toHaveBeenCalledWith('device', device);
-    expect(componentRefs[1].setInput).toHaveBeenCalledWith('embedded', true);
+    expect(componentRefs[1].setInput).toHaveBeenCalledWith('viewActive', true);
   });
 
   it('keeps an explicit component authoritative for a bbp2 device', () => {
@@ -167,11 +181,12 @@ describe('DevicePage component switching', () => {
     device.config.component = 'TestDashboard';
 
     page.ionViewWillEnter();
-
     expect(page.usesV2DevicePage).toBe(false);
+
     expect(createComponent).toHaveBeenLastCalledWith(
       deviceComponentDict['TestDashboard'],
     );
+
     expect(componentRefs[1].setInput).not.toHaveBeenCalledWith(
       'embedded',
       true,
@@ -183,8 +198,8 @@ describe('DevicePage component switching', () => {
     device.config.component = 'RetiredDashboard';
 
     page.ionViewWillEnter();
-
     expect(page.usesV2DevicePage).toBe(true);
+
     expect(createComponent).toHaveBeenLastCalledWith(
       deviceComponentDict['DeviceV2'],
     );
@@ -192,20 +207,25 @@ describe('DevicePage component switching', () => {
 
   it('bridges the Device V2 state label from the loaded component to the shell', () => {
     device.config.mode = 'bbp2';
-    delete device.config.component;
+    device.config.component = 'DeviceV2';
+
     page.ionViewWillEnter();
+
     componentRefs[1].instance['stateLabel'] = '\u5728\u7ebf';
 
     expect(page.deviceStateLabel).toBe('\u5728\u7ebf');
 
     device.config.component = 'TestDashboard';
-    page.ionViewWillEnter();
 
+    page.ionViewWillEnter();
     expect(page.deviceStateLabel).toBe('离线');
 
     device.data.state = 'waiting';
+
     expect(page.deviceStateLabel).toBe('正在连接');
+
     device.data.enable = true;
+
     expect(page.deviceStateLabel).toBe('在线');
   });
 });
@@ -240,17 +260,23 @@ describe('DevicePage delayed BLE connection lifecycle', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+
     const bleDevice = makeDevice('ble-device', 'ble', 'Layouter2Component');
+
     deviceDict = { [bleDevice.id!]: bleDevice };
+
     routeParams = new BehaviorSubject({
       get: (key: string) => (key === 'id' ? bleDevice.id! : null),
     });
+
     bleConnection = new Promise<boolean>((resolve) => {
       resolveBleConnection = resolve;
     });
+
     connectDevice = vi.fn((target: BlinkerDevice) =>
       target === bleDevice ? bleConnection : Promise.resolve(true),
     );
+
     disconnectDevice = vi.fn();
     queryDevice = vi.fn();
 
@@ -266,7 +292,11 @@ describe('DevicePage delayed BLE connection lifecycle', () => {
       { init: vi.fn(), end: vi.fn() } as unknown as DebugService,
       { create: vi.fn() } as never,
       { detectChanges: vi.fn(), markForCheck: vi.fn() } as unknown as ChangeDetectorRef,
+      { showToast: vi.fn() } as never,
+      { get: vi.fn().mockResolvedValue(null) } as never,
+      { get: vi.fn().mockResolvedValue(null) } as never,
     );
+
     page.ngOnInit();
   });
 
@@ -277,30 +307,36 @@ describe('DevicePage delayed BLE connection lifecycle', () => {
 
   it('does not query or start a heartbeat after switching devices while BLE connects', async () => {
     const v2Device = makeDevice('v2-device', 'bbp2');
+
     deviceDict[v2Device.id!] = v2Device;
 
     routeParams.next({
       get: (key: string) => (key === 'id' ? v2Device.id! : null),
     });
+
     resolveBleConnection(true);
+
     await bleConnection;
+
     await Promise.resolve();
     vi.advanceTimersByTime(60_000);
-
     expect(disconnectDevice).toHaveBeenCalledWith(deviceDict['ble-device']);
     expect(queryDevice).not.toHaveBeenCalled();
   });
 
   it('does not query or start a heartbeat when destroyed while BLE connects', async () => {
     const destroyedPage = page!;
+
     destroyedPage.ngOnDestroy();
+
     page = undefined;
 
     resolveBleConnection(true);
+
     await bleConnection;
+
     await Promise.resolve();
     vi.advanceTimersByTime(60_000);
-
     expect(disconnectDevice).toHaveBeenCalledWith(deviceDict['ble-device']);
     expect(queryDevice).not.toHaveBeenCalled();
   });

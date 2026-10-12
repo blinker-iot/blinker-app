@@ -10,6 +10,11 @@ $_mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
 $_dots: 'Doto Variable', 'Geist Mono Variable', ui-monospace, monospace;
 
 @mixin ui-theme {
+  &[data-ui-theme] {
+    --ui-backdrop-blur: 28px;
+    --ui-header-blur: 16px;
+  }
+
   &[data-ui-theme='natural'] {
     color-scheme: light;
 
@@ -99,7 +104,10 @@ $_dots: 'Doto Variable', 'Geist Mono Variable', ui-monospace, monospace;
     --ui-icon-stroke: 1.8;
     --ui-icon-dash: none;
     --ui-backdrop: url('/img/ui-theme/dark.jpg') center / cover no-repeat;
-    --ui-veil: rgba(12, 13, 15, 0.58);
+    --ui-backdrop-blur: 14px;
+    --ui-veil: rgba(12, 13, 15, 0.28);
+    --ui-header-blur: 8px;
+    --ui-header-tint: 40%;
 
     --ui-blue: #4d93ff;
     --ui-orange: #ffa53d;
@@ -130,7 +138,7 @@ $_dots: 'Doto Variable', 'Geist Mono Variable', ui-monospace, monospace;
     --blinker-radius-control: 14px;
   }
 
-  // One signal colour: every tone is the same red, as on an OLED instrument.
+  // One signal colour: every tone uses fluorescent green, as on an OLED instrument.
   &[data-ui-theme='electronic'] {
     color-scheme: dark;
 
@@ -147,7 +155,7 @@ $_dots: 'Doto Variable', 'Geist Mono Variable', ui-monospace, monospace;
     --ui-knob-shadow: none;
     --ui-card-border: 1px solid #2a2d31;
     --ui-shadow: none;
-    --ui-focus: #ff3b30;
+    --ui-focus: #39ff14;
     --ui-radius: 14px;
     --ui-radius-sm: 8px;
     --ui-font: #{$_mono};
@@ -162,12 +170,12 @@ $_dots: 'Doto Variable', 'Geist Mono Variable', ui-monospace, monospace;
     --ui-backdrop: radial-gradient(circle, rgba(255, 255, 255, 0.045) 1px, transparent 1.3px) 0 0 / 16px 16px;
     --ui-veil: transparent;
 
-    --ui-blue: #ff3b30;
-    --ui-orange: #ff3b30;
-    --ui-green: #ff3b30;
-    --ui-purple: #ff3b30;
-    --ui-teal: #ff3b30;
-    --ui-red: #ff3b30;
+    --ui-blue: #39ff14;
+    --ui-orange: #39ff14;
+    --ui-green: #39ff14;
+    --ui-purple: #39ff14;
+    --ui-teal: #39ff14;
+    --ui-red: #39ff14;
     --ui-ok: #e8e8e6;
     --ui-alert: #ff3b30;
     --ui-off: #45484c;
@@ -177,14 +185,14 @@ $_dots: 'Doto Variable', 'Geist Mono Variable', ui-monospace, monospace;
     --blinker-bg-elevated: #0b0c0e;
     --blinker-surface: #0f1113;
     --blinker-surface-muted: #15181b;
-    --blinker-surface-active: #1d1314;
+    --blinker-surface-active: #11200f;
     --blinker-text-primary: #e8e8e6;
     --blinker-text-secondary: #a3a6a9;
     --blinker-text-tertiary: #8b8e91;
     --blinker-border: #2a2d31;
     --blinker-divider: #24272b;
-    --ion-color-primary: #ff3b30;
-    --ion-color-primary-rgb: 255, 59, 48;
+    --ion-color-primary: #39ff14;
+    --ion-color-primary-rgb: 57, 255, 20;
     --ion-color-primary-contrast: #070809;
     --blinker-shadow-soft: none;
     --blinker-radius-card: 14px;
@@ -219,41 +227,26 @@ $_dots: 'Doto Variable', 'Geist Mono Variable', ui-monospace, monospace;
 // Atmosphere behind a themed page: the theme's picture, blurred, under a veil.
 // Hosts are Ionic pages, which are already positioned (absolute, full size);
 // changing their position collapses the page, so this mixin never sets it.
-@mixin ui-backdrop {
+@mixin ui-backdrop($position: fixed) {
   isolation: isolate;
-  background: var(--ui-bg);
 
+  background: var(--ui-bg);
   &::before,
   &::after {
     content: '';
-    position: fixed;
+    position: $position;
     inset: 0;
+
     z-index: -1;
     pointer-events: none;
   }
 
   &::before {
     inset: -48px;
+
     background: var(--ui-backdrop);
-    filter: blur(28px) saturate(1.1);
+    filter: blur(var(--ui-backdrop-blur)) saturate(1.1);
   }
 
   &::after { background: var(--ui-veil); }
-}
-
-// Frosted header over a themed page: the theme's tint, and a blur that fades
-// out with it. Include at the top level of a page's styles.
-@mixin ui-header-glass {
-  ion-header:not(.main-tab-header):not(.opaque-page-header)::before {
-    background: linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--ui-bg) 72%, transparent) 0%,
-      color-mix(in srgb, var(--ui-bg) 40%, transparent) 70%,
-      transparent 100%
-    );
-    -webkit-backdrop-filter: blur(16px) saturate(1.2);
-    backdrop-filter: blur(16px) saturate(1.2);
-    -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent);
-    mask-image: linear-gradient(to bottom, #000 60%, transparent);
-  }
 }

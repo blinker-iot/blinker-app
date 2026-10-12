@@ -36,6 +36,8 @@
 
   // Pulse: the halo breathes; the dot itself stays put.
   &.pulse { animation: breathe 2.4s ease-in-out infinite; }
+  // A fresh event: the dot pings a few times, then settles.
+  &.fired { animation: fired 0.9s ease-out 3; }
 
   @include theme.electronic { box-shadow: none; animation: none; }
 
@@ -44,6 +46,11 @@
 
 @keyframes breathe {
   50% { box-shadow: 0 0 0 7px transparent; }
+}
+
+@keyframes fired {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sc) 55%, transparent); }
+  to { box-shadow: 0 0 0 10px transparent; }
 }
 
 .st-pill {

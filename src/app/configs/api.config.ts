@@ -9,6 +9,7 @@ const deviceKeyV2Url = (logicalDeviceId: string) =>
 
 export const API = {
   BASE_URL: GATEWAY_BASE_URL,
+  DEVICE_PANEL: (panelId: string) => API_V2_URL + '/device-panels/' + encodeURIComponent(panelId),
   INTERFACE_PREVIEW: API_V1_URL + '/interface/preview',
   INTERFACE_REFINE: API_V1_URL + '/interface/refine',
   INTERFACE_WORKFLOW: API_V1_URL + '/interface/workflow',
@@ -136,6 +137,7 @@ export const API = {
 
 export function isGatewayUrl(url: string): boolean {
   return url === API.INTERFACE_REFINE
+    || url.startsWith(API_V2_URL + '/device-panels/')
     || url === API.INTERFACE_PREVIEW
     || url === API.INTERFACE_WORKFLOW
     || url === API.INTERFACE_GENERATE
@@ -170,11 +172,14 @@ function isDeviceKeyManagementUrl(url: string): boolean {
   if (url === API.DEVICE_V2.ENABLE_CLOUD) return true;
 
   const prefix = API_V2_URL + '/devices/';
+
   if (!url.startsWith(prefix)) return false;
 
   const parts = url.slice(prefix.length).split('/');
+
   if (!parts[0]) return false;
   if (parts.length === 1) return true;
+
   if (parts.length === 2) {
     return parts[1] === 'device-key:reveal'
       || parts[1] === 'local-access'
@@ -189,6 +194,7 @@ function isDeviceKeyManagementUrl(url: string): boolean {
       || parts[1] === 'share-invitations'
       || parts[1] === 'shares';
   }
+
   return parts.length === 3
     && !!parts[2]
     && (parts[1] === 'share-invitations' || parts[1] === 'shares'

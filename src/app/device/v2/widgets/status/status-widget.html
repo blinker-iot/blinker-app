@@ -1,12 +1,15 @@
 <ng-template #dot>
-  <i class="st-dot" [class.pulse]="pulse" [class.hollow]="semantic === 'off'"></i>
+  <!-- Keyed by the latest event, so each new one replays the flash. -->
+  @for (at of [lastEvent?.at]; track at) {
+    <i class="st-dot" [class.pulse]="pulse" [class.hollow]="semantic === 'off'" [class.fired]="fresh"></i>
+  }
 </ng-template>
 
 @if (showTitle) {
   <div class="hd">
     @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
     <span class="hd-t">{{ title }}</span>
-    @if (rows === 1 && extras) { <span class="hd-v">{{ extras }}</span> }
+    @if (rows === 1 && (lastEvent ? note : extras); as aside) { <span class="hd-v">{{ aside }}</span> }
   </div>
 }
 
@@ -16,6 +19,6 @@
   <span class="st-line" role="status"><ng-container *ngTemplateOutlet="dot" /><span>{{ reading.text }}{{ reading.unit }}</span></span>
 }
 
-@if (rows > 1 && withExtras(options.caption ?? ''); as meta) {
+@if (rows > 1 && withExtras(note); as meta) {
   <span class="st-meta">{{ meta }}</span>
 }

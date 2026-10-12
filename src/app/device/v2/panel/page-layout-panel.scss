@@ -12,14 +12,17 @@
   --row-h: 84px;
   --gap: 12px;
   display: grid;
+
   grid-template-columns: repeat(8, minmax(0, 1fr));
   grid-auto-rows: auto;
+
   gap: var(--gap);
   color: var(--ui-ink);
   font-family: var(--ui-font);
 
   &[data-ui-theme] {
     padding: 12px;
+
     border-radius: calc(var(--ui-radius) + 6px);
     background: var(--ui-bg);
   }
@@ -28,14 +31,17 @@
 .cell {
   grid-column: var(--col) / span var(--span);
   grid-row: var(--row) / span var(--rows);
+
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+
   // Height of its rows. Widgets sharing a row keep exactly this: size
   // containment keeps their content out of the row sizing.
   --fill-h: calc(var(--rows) * var(--row-h) + (var(--rows) - 1) * var(--gap));
   min-height: var(--fill-h);
+
   contain: size;
 }
 
@@ -53,14 +59,19 @@
 
 .cell-error {
   margin: 0 6px;
+
   color: var(--ui-alert);
+
   font-size: 11px;
 }
 
 .empty {
   grid-column: 1 / -1;
+
   color: var(--ui-muted);
+
   font-size: 13px;
+
   text-align: center;
 }
 

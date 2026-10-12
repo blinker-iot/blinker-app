@@ -2,20 +2,21 @@
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-button
-        class="close-button"
+        class="close-button header-action"
         fill="clear"
         aria-label="关闭文档"
+
         (click)="close()"
       >
-        <span aria-hidden="true">&times;</span>
+        <i class="fa-light fa-xmark" aria-hidden="true"></i>
       </ion-button>
     </ion-buttons>
     <ion-title>{{ docTitle }}</ion-title>
   </ion-toolbar>
 </ion-header>
-
 <ion-content
   class="doc-page-content"
+
   [attr.aria-busy]="loadState() === 'loading'"
 >
   @switch (loadState()) {
@@ -25,6 +26,7 @@
         <p>正在加载文档…</p>
       </div>
     }
+
     @case ('error') {
       <div class="doc-state" role="alert">
         <h2>文档加载失败</h2>
@@ -34,6 +36,7 @@
         </ion-button>
       </div>
     }
+
     @case ('empty') {
       <div class="doc-state" role="status">
         <h2>暂无内容</h2>
@@ -43,10 +46,12 @@
         </ion-button>
       </div>
     }
+
     @case ('ready') {
       <article class="markdown-document">
         <markdown [data]="docContent()"></markdown>
       </article>
     }
   }
+
 </ion-content>

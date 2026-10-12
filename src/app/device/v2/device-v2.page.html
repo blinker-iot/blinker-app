@@ -8,6 +8,7 @@
       <div class="name">{{ device.config.customName }}</div>
       <div class="state">{{ stateLabel }}</div>
     </ion-title>
+
     @if (!device.config.isShared) {
       <ion-buttons slot="end">
         <ion-button
@@ -16,12 +17,14 @@
         ><i class="fa-light fa-gear"></i></ion-button>
       </ion-buttons>
     }
+
   </ion-toolbar>
 </ion-header>
 }
 
 <ion-content [fullscreen]="true">
   <main class="v2-content content-under-header">
+
     @if (error) {
       <section class="notice error">
         <span>{{ error }}</span>
@@ -41,6 +44,7 @@
         <ion-button
           size="small"
           fill="clear"
+
           [disabled]="layoutUpdating"
           (click)="updateLayout()"
         >更新页面</ion-button>
@@ -53,9 +57,10 @@
           <ion-spinner name="crescent"></ion-spinner>
           <p>正在获取设备能力…</p>
         } @else {
-          <p>尚未缓存设备能力，首次连接后将自动生成控制页面。</p>
-          <ion-button size="small" fill="clear" (click)="retry()">重新连接</ion-button>
+          <p>尚未配置组件面板，可以先添加部件或使用 AI 生成界面。</p>
+          <ion-button size="small" fill="clear" [routerLink]="['/device', device.id || device.deviceName, 'edit']">编辑页面</ion-button>
         }
+
       </section>
     } @else {
       <app-page-layout-panel [cards]="panelCards" [interactive]="true"
@@ -68,5 +73,6 @@
         </section>
       }
     }
+
   </main>
 </ion-content>

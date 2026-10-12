@@ -9,8 +9,8 @@ export type PageWidgetType = typeof PAGE_WIDGET_TYPES[number];
 // of the 「Blinker 控件库」 design (docs/2026-10-10/设备组件库设计稿.html);
 // `slide` and `log` follow the same tokens.
 export const PAGE_WIDGET_VARIANTS = {
-  switch: ['tile', 'toggle', 'slide'],
-  button: ['action'],
+  switch: ['tile', 'toggle', 'slide', 'hold'],
+  button: ['action', 'keys', 'dpad'],
   slider: ['level', 'gradient', 'dial', 'levels', 'stepper', 'timer'],
   select: ['mode'],
   input: ['text'],
@@ -26,7 +26,10 @@ export const VARIANT_SIZES: Readonly<Record<PageWidgetVariant, { widths: readonl
   tile: { widths: [2, 4], heights: [1, 2] },
   toggle: { widths: [4, 8], heights: [1] },
   slide: { widths: [4, 8], heights: [1] },
+  hold: { widths: [2, 4], heights: [1, 2] },
   action: { widths: [2, 4], heights: [1, 2] },
+  keys: { widths: [4, 8], heights: [1, 2, 3] },
+  dpad: { widths: [4, 8], heights: [3, 4] },
   mode: { widths: [4, 8], heights: [1, 2] },
   level: { widths: [2, 4, 8], heights: [1, 2, 3, 4] },
   gradient: { widths: [4, 8], heights: [1, 2] },
@@ -111,6 +114,8 @@ export interface PageWidgetOptions {
   allowOff?: boolean;
   longPress?: boolean;
   multiline?: boolean;
+  // 方向键: holding a direction keeps it, releasing sends the centre key.
+  momentary?: boolean;
   // Readings
   decimals?: number;
   scale?: number;
@@ -196,6 +201,7 @@ export const PAGE_WIDGET_OPTION_RULES: Readonly<Record<PageWidgetOptionKey, Opti
   allowOff: flag,
   longPress: flag,
   multiline: flag,
+  momentary: flag,
   decimals: integer(0, 4),
   scale: { kind: 'number', nonZero: true },
   format: { kind: 'enum', values: PAGE_WIDGET_FORMATS },
@@ -246,7 +252,10 @@ export const VARIANT_WIDGET_OPTIONS: Readonly<Record<PageWidgetVariant, readonly
   tile: ['activeStyle', 'showState', 'onText', 'offText', 'corner', 'confirm'],
   toggle: ['iconStyle', 'size', 'confirm'],
   slide: ['onText', 'offText'],
+  hold: ['onText', 'offText'],
   action: ['shape', 'hold', 'doneText', 'showCount'],
+  keys: ['choiceIcons', 'choiceTones'],
+  dpad: ['momentary'],
   level: ['orientation', 'fill', 'showValue', 'ticks'],
   gradient: ['track', 'trackSize', 'knob', 'showTicks'],
   dial: ['sweep', 'thickness', 'showTicks', 'showButtons'],

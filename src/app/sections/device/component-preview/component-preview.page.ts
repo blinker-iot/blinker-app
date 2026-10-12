@@ -8,7 +8,7 @@ import { readDeviceTheme } from '../../../device/device-theme';
 import { PageLayoutPanelComponent, PanelAction, PanelCard } from '../../../device/v2/panel/page-layout-panel';
 import { numeric } from '../../../device/v2/widgets/widget-kit';
 import { WidgetInspectorComponent } from '../widget-inspector/widget-inspector';
-import { createDemoSections, DemoSection, liveDemo, nextReading } from './component-preview.data';
+import { createDemoSections, demoFires, DemoSection, liveDemo, nextReading } from './component-preview.data';
 import { WidgetLongPressDirective } from './widget-long-press.directive';
 
 const TICK_MS = 3000;
@@ -110,12 +110,17 @@ export class ComponentPreviewPage implements OnDestroy {
     })));
   }
 
-  // Live demo readings drift a little on every tick.
+  // Live demo readings drift a little on every tick; event demos fire now and then.
   private tick(): void {
     for (const card of this.sections.flatMap(section => section.cards)) {
       const live = liveDemo(card.field.key);
       const current = numeric(card.value);
       if (live && current !== undefined) this.updateCard(card.field.key, item => this.withValue(item, nextReading(current, live)));
+
+      const fires = demoFires(card.field.key);
+      if (fires && Math.random() < 0.15) {
+        this.updateCard(card.field.key, item => this.withValue(item, fires[Math.floor(Math.random() * fires.length)]));
+      }
     }
     this.cd.markForCheck();
   }

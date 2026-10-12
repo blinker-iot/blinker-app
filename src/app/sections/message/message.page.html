@@ -2,17 +2,21 @@
   <ion-toolbar>
     <ion-buttons slot="start">
       @if (detailItem) {
-      <ion-button aria-label="返回消息列表" (click)="closeDetail()">
+      <ion-button class="header-back" aria-label="返回消息列表" (click)="closeDetail()">
         <i class="fa-light fa-chevron-left"></i>
       </ion-button>
       } @else {
       <ion-back-button text="" defaultHref="/home/device"></ion-back-button>
       }
+
     </ion-buttons>
     <ion-title>{{ detailItem ? '消息详情' : '消息中心' }}</ion-title>
+
     @if (!detailItem) {
     <ion-buttons slot="end">
       <ion-button
+        class="header-action"
+
         [attr.aria-label]="unreadTotal > 0 ? '全部标为已读，当前' + unreadTotal + '条未读' : '暂无未读消息'"
         [disabled]="markingAllRead || unreadTotal === 0"
         (click)="markAllRead()"
@@ -22,12 +26,15 @@
         } @else {
         <i class="fa-light fa-check-double"></i>
         }
+
       </ion-button>
     </ion-buttons>
     } @else {
     <ion-buttons slot="end">
       <ion-button
+        class="header-action"
         aria-label="删除当前消息"
+
         [disabled]="isDeleting(detailItem)"
         (click)="deleteMessage(detailItem, $event)"
       >
@@ -36,14 +43,17 @@
         } @else {
         <i class="fa-light fa-trash-can"></i>
         }
+
       </ion-button>
     </ion-buttons>
     }
+
   </ion-toolbar>
 </ion-header>
 
 <ion-content fullscreen="true">
   <div class="message-content">
+
     @if (actionError && !detailItem) {
     <div class="status-banner" role="status">
       <i class="fa-light fa-circle-info"></i>
@@ -65,11 +75,12 @@
           <button type="button" (click)="retryDetail()">重试</button>
         </div>
         }
-
       <article class="message-detail-card">
         <div
           class="detail-icon"
+
           [attr.data-category]="categoryTone(detailItem)"
+
           aria-hidden="true"
         >
           <i [class]="categoryIcon(detailItem)"></i>
@@ -80,11 +91,13 @@
           {{ detailItem.createdAt | date:'yyyy-MM-dd HH:mm' }}
         </time>
         <p>{{ detailItem.body }}</p>
+
         @if (detailItem.action?.type === 'share_invitation' && !detailError) {
         <ion-button [disabled]="openingInvitation" (click)="openInvitation()" data-testid="message-invitation-action">
           {{ openingInvitation ? '正在核对邀请' : '查看设备分享邀请' }}
         </ion-button>
         }
+
         <div class="detail-status">
           <span [class.is-unread]="detailItem.unread">
             {{ detailItem.unread ? '未读' : '已读' }}
@@ -124,21 +137,23 @@
         @if (sharingUnreadCount > 0) {
         <span class="category-unread-badge">分享 {{ sharingUnreadCount }}</span>
         }
+
         <strong>{{ unreadTotal }} 条未读</strong>
       </span>
     </div>
-
     <section class="message-list">
       @for (message of messages; track message.id) {
       <article class="message-item" [class.is-unread]="message.unread">
         <button
           type="button"
           class="message-open"
+
           [attr.aria-label]="message.title + (message.unread ? '，未读' : '，已读')"
           (click)="openMessage(message)"
         >
           <span
             class="message-icon"
+
             [attr.data-category]="categoryTone(message)"
             aria-hidden="true"
           >
@@ -153,14 +168,17 @@
             <time [attr.datetime]="message.createdAt">
               {{ message.createdAt | date:'MM-dd HH:mm' }}
             </time>
+
             @if (message.unread) {
             <span class="unread-dot" aria-label="未读"></span>
             }
+
           </span>
         </button>
         <button
           type="button"
           class="delete-action"
+
           [attr.aria-label]="'删除消息：' + message.title"
           [disabled]="isDeleting(message)"
           (click)="deleteMessage(message, $event)"
@@ -173,8 +191,8 @@
         </button>
       </article>
       }
-    </section>
 
+    </section>
     <div class="inbox-hint">
       @if (messageService.loadingMore) {
       <ion-spinner name="dots"></ion-spinner>
@@ -182,8 +200,10 @@
       } @else if (!messageService.hasMore) {
       <strong>以上是全部消息</strong>
       }
+
     </div>
     }
+
   </div>
 
   @if (!detailItem) {
@@ -194,7 +214,6 @@
       refreshingText="正在刷新"
     ></ion-refresher-content>
   </ion-refresher>
-
   <ion-infinite-scroll
     threshold="120px"
     [disabled]="!messageService.hasMore || messageService.loading || messages.length === 0"
@@ -206,4 +225,5 @@
     ></ion-infinite-scroll-content>
   </ion-infinite-scroll>
   }
+
 </ion-content>

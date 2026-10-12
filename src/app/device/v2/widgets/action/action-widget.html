@@ -1,6 +1,6 @@
 @if (shape === 'card') {
   <button type="button" class="op" [class.run]="status() === 'run'" [class.holding]="holding()"
-    [attr.aria-label]="title + '，' + caption" [disabled]="card.disabled" (click)="tap()"
+    [attr.aria-label]="title + '，' + caption" [disabled]="card.disabled" [attr.data-press]="options.hold ? '' : null" (click)="tap()"
     (pointerdown)="holdStart($event)" (pointerup)="holdEnd()" (pointerleave)="holdEnd()" (pointercancel)="holdEnd()"
     (contextmenu)="$event.preventDefault()">
     <span class="op-chip"><app-ui-icon [name]="icon" /></span>
@@ -14,7 +14,7 @@
   </button>
 } @else {
   <button type="button" class="act" [class.run]="status() === 'run'" [class.holding]="holding()"
-    [attr.aria-label]="title" [disabled]="card.disabled" (click)="tap()"
+    [attr.aria-label]="title" [disabled]="card.disabled" [attr.data-press]="options.hold ? '' : null" (click)="tap()"
     (pointerdown)="holdStart($event)" (pointerup)="holdEnd()" (pointerleave)="holdEnd()" (pointercancel)="holdEnd()"
     (contextmenu)="$event.preventDefault()">
     <app-ui-icon [name]="icon" />

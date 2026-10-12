@@ -7,28 +7,32 @@ const SLOP_PX = 8;
 // Long press (or the context menu) on a widget cell emits its widget id, so a
 // tap stays the widget's own action. When the press fires, the gesture the
 // widget began is cancelled and the click that follows release is swallowed.
+// Keys that are meant to be held (marked `data-press`) keep their press; their
+// settings open from the rest of the card or the context menu.
 @Directive({
   selector: '[appWidgetLongPress]',
   standalone: true,
   host: {
     '(pointerdown)': 'start($event)',
     '(pointermove)': 'move($event)',
-    '(pointerup)': 'stop()',
-    '(pointercancel)': 'stop()',
+    '(document:pointerup)': 'end($event)',
+    '(document:pointercancel)': 'end($event)',
     '(contextmenu)': 'menu($event)',
   },
 })
+
 export class WidgetLongPressDirective implements OnDestroy {
   @Output() readonly widgetLongPress = new EventEmitter<string>();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-  private press?: { timer: ReturnType<typeof setTimeout>; x: number; y: number };
+  private press?: { timer: ReturnType<typeof setTimeout>; pointerId: number; x: number; y: number };
   private swallowClick = false;
-
   // Capture phase, so the click never reaches the widget.
   private readonly onClick = (event: MouseEvent): void => {
     if (!this.swallowClick) return;
+
     this.swallowClick = false;
+
     event.stopPropagation();
     event.preventDefault();
   };
@@ -39,32 +43,51 @@ export class WidgetLongPressDirective implements OnDestroy {
 
   start(event: PointerEvent): void {
     this.stop();
+
     this.swallowClick = false;
+
     const id = widgetId(event.target);
-    if (!id || event.button !== 0) return;
+
+    if (!id || event.button !== 0 || (event.target as HTMLElement).closest('[data-press]')) return;
 
     const { target, pointerId } = event;
+    const path = event.composedPath().filter((node): node is Element => node instanceof Element);
+
     const timer = setTimeout(() => {
       this.press = undefined;
       this.swallowClick = true;
+
       target?.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId }));
+
+      for (const element of path) {
+        if (element.hasPointerCapture(pointerId)) element.releasePointerCapture(pointerId);
+      }
+
       this.widgetLongPress.emit(id);
     }, PRESS_MS);
-    this.press = { timer, x: event.clientX, y: event.clientY };
+
+    this.press = { timer, pointerId, x: event.clientX, y: event.clientY };
   }
 
   move(event: PointerEvent): void {
-    if (this.press && Math.hypot(event.clientX - this.press.x, event.clientY - this.press.y) > SLOP_PX) this.stop();
+    if (this.press?.pointerId === event.pointerId
+      && Math.hypot(event.clientX - this.press.x, event.clientY - this.press.y) > SLOP_PX) this.stop();
+  }
+  end(event: PointerEvent): void {
+    if (this.press?.pointerId === event.pointerId) this.stop();
   }
 
   stop(): void {
     if (this.press) clearTimeout(this.press.timer);
+
     this.press = undefined;
   }
 
   menu(event: MouseEvent): void {
     const id = widgetId(event.target);
+
     if (!id) return;
+
     event.preventDefault();
     this.stop();
     this.widgetLongPress.emit(id);

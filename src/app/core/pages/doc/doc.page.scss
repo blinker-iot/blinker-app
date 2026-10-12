@@ -10,19 +10,8 @@
     }
 
     .close-button {
-      width: 44px;
-      height: 44px;
-      margin-inline-start: 2px;
       --border-radius: 50%;
       --color: var(--blinker-text-primary);
-      --padding-start: 0;
-      --padding-end: 0;
-
-      span {
-        font-size: 30px;
-        font-weight: 300;
-        line-height: 1;
-      }
     }
   }
 
@@ -38,18 +27,23 @@
     align-items: center;
     flex-direction: column;
     justify-content: center;
+
     color: var(--blinker-text-secondary);
+
     text-align: center;
 
     ion-spinner {
       width: 28px;
       height: 28px;
+
       color: var(--ion-color-primary);
     }
 
     h2 {
       margin: 0 0 8px;
+
       color: var(--blinker-text-primary);
+
       font-size: 18px;
       font-weight: 600;
     }
@@ -57,17 +51,23 @@
     p {
       margin: 8px 0 20px;
       font-size: 14px;
+
       line-height: 1.6;
     }
   }
 
   .markdown-document {
     box-sizing: border-box;
+
     width: min(100%, 760px);
+
     margin: 0 auto;
+
     padding: 24px max(20px, var(--ion-safe-area-right)) 48px
       max(20px, var(--ion-safe-area-left));
+
     color: var(--blinker-text-primary);
+
     overflow-wrap: anywhere;
 
     markdown {

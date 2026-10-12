@@ -4,13 +4,37 @@
 @include c.base;
 @include c.readout;
 
+.bn-num {
+  container-type: inline-size;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.bn-value {
+  max-width: 100%;
+
+  font-size: min(1em, calc(100cqi / var(--reading-length) * 1.5));
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.bn-u {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .delta {
   flex: none;
   padding: 1px 7px;
   border-radius: 999px;
+
   background: var(--ui-well);
   font-family: var(--ui-font-mono);
   font-size: 11px;
 
   @include theme.electronic { border: 1px dotted var(--ui-faint); border-radius: 3px; background: none; }
 }
+
+.delta-arrow { margin-right: 4px; }

@@ -1,0 +1,143 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="transparent">
+    <ion-buttons slot="start">
+      <ion-back-button text="" [defaultHref]="'/device/' + id" [disabled]="saving"></ion-back-button>
+    </ion-buttons>
+    <ion-title>编辑页面</ion-title>
+    <ion-buttons slot="end">
+      <ion-button class="save" (click)="save()" [disabled]="loading || saving || !document || stale">
+        @if (saving) { <ion-spinner name="crescent" /> } @else { 保存 }
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" [scrollY]="false">
+  <div class="workspace content-under-header">
+    <div class="editor-tools">
+      <div class="mode-switch" role="group" aria-label="编辑模式">
+        <button type="button" [attr.aria-pressed]="mode === 'edit'" (click)="setMode('edit')" [disabled]="saving">编辑</button>
+        <button type="button" [attr.aria-pressed]="mode === 'layout'" (click)="setMode('layout')" [disabled]="saving">布局</button>
+        <button type="button" [attr.aria-pressed]="mode === 'preview'" (click)="setMode('preview')" [disabled]="saving">预览</button>
+      </div>
+      <div class="tools-right">
+
+        @if (mode !== 'preview') {
+          <button class="icon-button" type="button" aria-label="撤销" title="撤销" [disabled]="!canUndo || saving" (click)="undo()">
+            <i class="fa-light fa-arrow-rotate-left"></i>
+          </button>
+        }
+
+        @if (mode === 'edit') {
+          <button class="add-button" type="button" (click)="openLibrary()" [disabled]="!document || saving || stale">
+            <i class="fa-light fa-plus"></i><span>添加部件</span>
+          </button>
+        }
+
+      </div>
+    </div>
+
+    @if (mode === 'layout') { <p class="layout-hint">按住拖拽放置位置</p> }
+    @if (message) { <p class="notice">{{ message }}</p> }
+    @if (stale) { <p class="error" role="alert">设备字段已改变，请重新读取后编辑。<button (click)="reload()">重新读取</button></p> }
+    @if (error) { <p class="error" role="alert">{{ error }}<button type="button" (click)="reload()" [disabled]="saving">重新读取</button></p> }
+
+    @if (loading) {
+      <div class="empty"><ion-spinner name="crescent" /><p>正在读取组件面板…</p></div>
+    } @else if (document) {
+      <div class="canvas" [attr.inert]="saving ? '' : null">
+        <gridster [options]="options" aria-label="组件面板网格">
+          @for (item of items; track item.id) {
+            <gridster-item [item]="item">
+              @if (cards.get(item.id); as card) {
+                <app-page-widget [card]="card" [interactive]="mode === 'preview'" (action)="previewAction(card, $event)" />
+
+                @if (mode === 'edit') {
+                  <button type="button" class="widget-overlay widget-edit"
+                    [attr.aria-label]="'编辑 ' + (card.widget.title || card.field.key)"
+                    (click)="selectedId = item.id"></button>
+                } @else if (mode === 'layout') {
+                  <div class="widget-overlay widget-drag" aria-hidden="true"></div>
+                }
+              } @else { <div class="missing">字段暂不可用</div> }
+
+            </gridster-item>
+          }
+
+        </gridster>
+
+        @if (!items.length) {
+          <div class="empty-canvas"><i class="fa-light fa-grid-2-plus"></i><p>从一个部件开始</p>
+            @if (mode === 'edit') { <button type="button" (click)="openLibrary()">添加部件</button> }
+          </div>
+        }
+
+      </div>
+    }
+
+  </div>
+</ion-content>
+<ion-modal class="library-modal" [isOpen]="libraryOpen" (didDismiss)="libraryOpen = false">
+  <ng-template>
+    <section class="sheet" [attr.data-ui-theme]="theme">
+      <header class="sheet-heading"><div><h2>添加部件</h2><p>选择字段，再挑选适合的部件。</p></div>
+        <button type="button" class="icon-button" aria-label="关闭部件库" (click)="libraryOpen = false">×</button>
+
+      </header>
+      <div class="library-filters">
+        <div class="field-select">
+          <span>绑定字段</span>
+          <ion-select aria-label="绑定字段" interface="popover" placeholder="选择字段" [(ngModel)]="fieldKey">
+            @for (field of availableFields; track field.key) { <ion-select-option [value]="field.key">{{ field.key }}</ion-select-option> }
+
+            @if (!isV2) { <ion-select-option value="__new__">新字段…</ion-select-option> }
+          </ion-select>
+        </div>
+        <label>查找部件<input type="search" [(ngModel)]="search" placeholder="开关、数字、滑块…" /></label>
+      </div>
+
+      @if (!isV2 && fieldKey === '__new__') {
+        <div class="new-field">
+          <label>字段 key<input [(ngModel)]="newKey" placeholder="与设备程序中的 key 一致" maxlength="64" /></label>
+          <label>最小值<input type="number" [(ngModel)]="minimum" /></label>
+          <label>最大值<input type="number" [(ngModel)]="maximum" /></label>
+          <label>步进<input type="number" [(ngModel)]="step" min="0.001" /></label>
+          <label>选项<input [(ngModel)]="choices" placeholder="英文逗号分隔，用于模式／指令部件" /></label>
+          <label>按钮指令<input [(ngModel)]="command" placeholder="tap" /></label>
+        </div>
+      }
+
+      <div class="catalogue">
+        @if (error) { <p class="error" role="alert">{{ error }}</p> }
+
+        @for (entry of catalogue; track entry.id) {
+          <div class="preset" [style.--span]="entry.preset.width <= 2 ? 1 : 2" [style.--rows]="entry.preset.height">
+            <div class="preset-preview"><app-page-widget [card]="entry.card" /></div>
+            <div class="preset-label"><span>{{ variantLabels[entry.preset.variant] }}</span><small>{{ widthLabel(entry.preset.width) }} · {{ entry.preset.height }} 行</small></div>
+            <button class="preset-pick" type="button" [attr.aria-label]="'添加' + variantLabels[entry.preset.variant]" (click)="add(entry.id)"></button>
+          </div>
+        } @empty { <p class="catalogue-empty">当前字段没有匹配的部件，请换一个字段或调整筛选条件。</p> }
+
+      </div>
+    </section>
+  </ng-template>
+</ion-modal>
+<ion-modal class="inspector-modal" [isOpen]="!!selected" (didDismiss)="selectedId = ''">
+  <ng-template>
+    <section class="sheet inspector-sheet" [attr.data-ui-theme]="theme">
+      <header class="sheet-heading"><h2>部件属性</h2>
+        <button type="button" class="done-button" (click)="selectedId = ''">完成</button>
+      </header>
+
+      @if (selected; as card) {
+        @if (error) { <p class="error" role="alert">{{ error }}</p> }
+        <div class="inspector-preview"><app-page-widget [card]="card" /></div>
+
+        <app-widget-inspector [widget]="card.widget" [field]="card.field" [extraCandidates]="extraCandidates" [twoColumnLayout]="true"
+          (widgetChange)="updateWidget($event)" />
+        <button type="button" class="remove-button" (click)="removeSelected()"><i class="fa-light fa-trash"></i>移除部件</button>
+      }
+
+    </section>
+  </ng-template>
+</ion-modal>
