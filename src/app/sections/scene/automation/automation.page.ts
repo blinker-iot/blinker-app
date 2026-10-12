@@ -11,6 +11,7 @@ import { automationChoiceValue, automationConditionText, automationExecutionText
   imports: [IonicModule, FormsModule, DatePipe, RouterLink], providers: [AutomationService] })
 export class AutomationPage {
   private generation = 0;
+  private capabilityVisitScope?: string;
   view: 'list' | 'editor' | 'detail' = 'list';
   editing?: AutomationRule;
   name = ''; source = ''; target = ''; value: boolean | number | string | null = true;
@@ -41,10 +42,31 @@ export class AutomationPage {
   readonly ruleStatus = automationRuleStatus;
   constructor(readonly automation: AutomationService, private readonly alerts: AlertController,
     private readonly changeDetector: ChangeDetectorRef) {}
-  ionViewWillEnter(): void { ++this.generation; this.backToList(); void this.automation.open(); }
-  ionViewWillLeave(): void { ++this.generation; this.backToList(); this.automation.close(); }
+  ionViewWillEnter(): void {
+    ++this.generation;
+    const restoreDraft = this.capabilityVisitScope && this.capabilityVisitScope === this.automation.accountScope;
+    this.capabilityVisitScope = undefined;
+    if (!restoreDraft) this.backToList();
+    void this.automation.open();
+  }
+  ionViewWillLeave(): void {
+    ++this.generation;
+    if (!this.capabilityVisitScope) this.backToList();
+    this.automation.close();
+  }
   ngOnDestroy(): void { this.ionViewWillLeave(); }
   get sources() { return this.automation.state().choices.filter(c => c.source); }
+  get capabilityGuidance() {
+    const sourceNeeded = !this.sources.length, targetNeeded = !this.targets.length;
+    const sourceDeviceId = this.selectedSource?.deviceId;
+    return this.automation.capabilityGuidance.filter(device => device.reason === 'unsupported'
+      || device.reason === 'manifest-missing' || (sourceNeeded && !device.source)
+      || (targetNeeded && device.deviceId !== sourceDeviceId && !device.target));
+  }
+  prepareCapabilityVisit(): void {
+    if (this.view === 'editor' && !this.editing && !this.automation.state().busy)
+      this.capabilityVisitScope = this.automation.accountScope;
+  }
   get numericSource(): boolean {
     const endpoint = this.editing?.source ?? this.sources.find(choice => choice.id === this.source)?.endpoint;
     return !!endpoint && endpoint.valueType !== 'boolean';
@@ -96,7 +118,7 @@ export class AutomationPage {
     // rendered. Notify Angular instead of waiting for another user click.
     this.changeDetector.markForCheck();
   }
-  backToList(): void { ++this.generation; this.resetForm(); this.setView('list'); }
+  backToList(): void { ++this.generation; this.capabilityVisitScope = undefined; this.resetForm(); this.setView('list'); }
   async leaveView(): Promise<void> {
     if (this.view === 'editor' && this.draftChanged && !(await this.confirm('放弃尚未保存的修改？'))) return;
     this.backToList();

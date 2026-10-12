@@ -24,6 +24,7 @@ import {
   DeviceUiSnapshot,
   DeviceUiTelemetryLease,
   DeviceUiTelemetrySnapshot,
+  DeviceUiTransport,
   DeviceUiValue,
 } from '../../core/device-v2/device-ui.port';
 import {
@@ -113,7 +114,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private telemetry?: DeviceUiTelemetryLease;
   private telemetryDetach?: () => void;
   private telemetryKey = '';
-  private telemetryCarrier: 'cloud' | 'ble' | 'lan' = 'cloud';
+  private activeTransport: DeviceUiTransport = 'cloud';
   private telemetryEpoch = 0;
   private telemetryOpening = false;
   private telemetrySnapshot?: DeviceUiTelemetrySnapshot;
@@ -182,12 +183,15 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   get stateLabel(): string {
+    if (this.canControl) {
+      return { ble: '蓝牙已连接', lan: '局域网已连接', cloud: '云端已连接' }[this.activeTransport];
+    }
     if (this.syncing) return '正在连接并同步';
-    if (this.direct && this.accountState === 'ready') return '蓝牙已连接';
-    if (!this.direct && this.device?.data?.cloudReachable === true) return '云端在线';
     if (this.accountState === 'retrying') return '正在重连';
     if (this.accountState === 'connecting') return '正在连接';
-    if (!this.direct && this.device?.data?.cloudReachable === null) return '状态未知';
+    if (this.accountState === 'ready') return this.snapshot.stateFresh ? '连接未就绪' : '设备状态未同步';
+    if (this.activeTransport === 'cloud' && this.accountState === 'idle'
+      && this.device?.data?.cloudReachable === null) return '状态未知';
     return '离线';
   }
 
@@ -239,7 +243,11 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   get lastEventText(): string {
     if (!this.lastEvent) return '';
     return Object.entries(this.lastEvent.values)
-      .map(([key, value]) => `${key}: ${this.format(value)}`)
+      .map(([key, value]) => {
+        const field = this.endpointsByKey.get(key);
+        const name = capabilityDisplayName(this.device, { key, kind: field?.manifestKind, type: field?.manifestType });
+        return `${name}: ${this.format(value)}`;
+      })
       .join(', ');
   }
 
@@ -301,7 +309,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       value = raw;
     } else {
       value = Number(raw);
-      if (!Number.isFinite(value) || (field.valueType === 'integer' && !Number.isSafeInteger(value))) {
+      if (raw.trim() === '' || !Number.isFinite(value)
+        || (field.valueType === 'integer' && !Number.isSafeInteger(value))) {
         this.setFieldError(field.key, '请输入有效数值');
         return;
       }
@@ -353,6 +362,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.bleAdapterEnabled = null;
     this.logicalDeviceId = nextId;
     this.accountState = 'idle';
+    this.activeTransport = 'cloud';
     this.snapshot = emptySnapshot();
     this.layout = undefined;
     this.layoutStale = undefined;
@@ -387,10 +397,11 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
           // Ready -> ready carrier changes do not emit watchConnection again.
           // Retire the old stream before accepting a new source or its samples.
           const carrier = connectivity.activeTransport;
-          if (this.telemetryCarrier !== carrier) {
-            this.telemetryCarrier = carrier;
+          if (this.activeTransport !== carrier) {
+            this.activeTransport = carrier;
             this.releaseTelemetry();
             this.refreshTelemetry();
+            this.requestRender();
           }
           this.updateBleReconnect(connectivity);
         },
@@ -413,10 +424,6 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.error = this.messageOf(error, '设备标识无效');
       this.requestRender();
     }
-  }
-
-  private get direct(): boolean {
-    return this.deviceUi.isBleDirect(this.logicalDeviceId);
   }
 
   private applySnapshot(snapshot: DeviceUiSnapshot): void {
@@ -516,7 +523,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.releaseTelemetry();
       return;
     }
-    const key = `${this.logicalDeviceId}\0${this.snapshot.manifestFingerprint}\0${this.telemetryCarrier}\0`
+    const key = `${this.logicalDeviceId}\0${this.snapshot.manifestFingerprint}\0${this.activeTransport}\0`
       + `${configuration.intervalMs}\0${configuration.endpointKeys.join('\0')}`;
     if (key !== this.telemetryKey) {
       this.releaseTelemetry();

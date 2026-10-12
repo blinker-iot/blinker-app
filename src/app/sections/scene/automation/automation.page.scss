@@ -9,6 +9,8 @@ p { line-height: 1.5; overflow-wrap: anywhere; } code { overflow-wrap: anywhere;
 ion-select, ion-input { margin-bottom: .75rem; }
 .rule-status { font-size: .9rem; color: var(--ion-color-primary); }
 .pending { border-color: var(--ion-color-warning); }
+.capability-guide { margin-block: 1rem; padding: .75rem; border-radius: .5rem; background: var(--ion-color-light); }
+.capability-guide h3 { margin-top: 0; }
 .actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; }
 details { margin-block: 1rem; font-size: .9rem; color: var(--ion-color-medium-shade); }
 summary { cursor: pointer; padding-block: .3rem; }

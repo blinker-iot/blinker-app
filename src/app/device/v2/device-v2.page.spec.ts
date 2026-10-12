@@ -250,17 +250,45 @@ describe('DeviceV2Page UI port lifecycle', () => {
     connectivity.next({ ...connectivity.value, activeTransport, cloudSessionState: 'ready' });
     page.device.data.cloudReachable = null;
     await vi.waitFor(() => expect(page.canControl).toBe(true));
+    expect(page.stateLabel).toBe(activeTransport === 'lan' ? '局域网已连接' : '云端已连接');
     await page.setBoolean(page.snapshot.endpoints[0]!, { detail: { checked: true } } as CustomEvent);
     expect(port.sendCommand).toHaveBeenCalledOnce();
     // Inventory becoming online cannot re-enable a stale live snapshot.
     page.device.data.cloudReachable = true;
     state.next({ ...snapshot(), stateFresh: false });
     expect(page.canControl).toBe(false);
+    expect(page.stateLabel).toBe('设备状态未同步');
     await page.execute(page.snapshot.endpoints[3]!);
     expect(port.sendCommand).toHaveBeenCalledOnce();
     state.next(snapshot()); port.connectionState.next('retrying');
     expect(page.canControl).toBe(false);
+    expect(page.stateLabel).toBe('正在重连');
+    port.connectionState.next('stopped');
+    expect(page.stateLabel).toBe('离线');
     page.ngOnDestroy();
+  });
+  it('updates selected carrier labels without another ready event or inventory evidence', async () => {
+    const { page, port, connectivity, state } = harness();
+    try {
+      await vi.waitFor(() => expect(page.canControl).toBe(true));
+      page.device.data.cloudReachable = false;
+      expect(page.stateLabel).toBe('蓝牙已连接');
+      const labels = { lan: '局域网已连接', cloud: '云端已连接', ble: '蓝牙已连接' };
+      for (const activeTransport of ['lan', 'cloud', 'ble'] as const) {
+        connectivity.next({ ...connectivity.value, activeTransport });
+        expect(page.stateLabel).toBe(labels[activeTransport]);
+        expect(page.canControl).toBe(true);
+      }
+      state.next({ ...snapshot(), stateFresh: false });
+      expect(page.stateLabel).toBe('设备状态未同步');
+      expect(page.canControl).toBe(false);
+      state.next(snapshot());
+      expect(page.stateLabel).toBe('蓝牙已连接');
+      const connection = port.openConnection.mock.results.at(-1)!.value;
+      connection.close();
+      expect(page.stateLabel).toBe('连接未就绪');
+      expect(page.canControl).toBe(false);
+    } finally { page.ngOnDestroy(); }
   });
   it('cancels pending acquisition synchronously when hidden, before the next change-detection pass', async () => {
     const { page, port } = harness();
@@ -385,6 +413,54 @@ describe('DeviceV2Page UI port lifecycle', () => {
     expect(page.value(page.endpoint(page.widgets[0])!)).toBe(true);
     events.next({ logicalDeviceId, values: { power: true } });
     expect(page.lastEventText).toBe('power: true');
+  });
+
+  it.each(['', ' ', '\t\n', '\u00a0'])('rejects a blank numeric draft without a command (%j)', async input => {
+    const { page, port } = harness();
+    try {
+      await vi.waitFor(() => expect(page.canControl).toBe(true));
+      const field = page.snapshot.endpoints.find(candidate => candidate.key === 'level')!;
+      page.updateDraft(field, { detail: { value: input } } as CustomEvent);
+      await page.commit(field);
+      expect(page.fieldError(field)).toBe('请输入有效数值');
+      expect(port.sendCommand).not.toHaveBeenCalled();
+      expect(page.pending.size).toBe(0);
+    } finally { page.ngOnDestroy(); }
+  });
+
+  it('accepts explicit integer zero after a blank draft and keeps integer rejection', async () => {
+    const { page, port } = harness();
+    try {
+      await vi.waitFor(() => expect(page.canControl).toBe(true));
+      const field = page.snapshot.endpoints.find(candidate => candidate.key === 'level')!;
+      for (const value of ['', '0', '42', '1.5']) {
+        page.updateDraft(field, { detail: { value } } as CustomEvent);
+        await page.commit(field);
+      }
+      expect(port.sendCommand.mock.calls).toEqual([
+        [logicalDeviceId, 'level', 0], [logicalDeviceId, 'level', 42],
+      ]);
+      expect(page.fieldError(field)).toBe('请输入有效数值');
+    } finally { page.ngOnDestroy(); }
+  });
+
+  it('uses only compatible current endpoint aliases for recent event names', () => {
+    const initial = snapshot();
+    initial.endpoints.push(endpoint({ id: 5, key: 'alarm', role: 'event', valueType: 'integer',
+      writable: false, manifestKind: 2, manifestType: 2 }));
+    const { page, state, events } = harness(initial);
+    try {
+      page.device.displayMetadata = { logicalDeviceId, revision: 1, name: '客厅灯', capabilities: [
+        { key: 'alarm', kind: 2, type: 2, displayName: '报警次数' },
+        { key: 'removed', kind: 2, type: 2, displayName: '已删除事件' },
+      ] };
+      events.next({ logicalDeviceId, values: { alarm: 0, removed: 1 } });
+      expect(page.lastEventText).toBe('报警次数: 0, removed: 1');
+      state.next({ ...initial, endpoints: initial.endpoints.map(field => field.key === 'alarm'
+        ? { ...field, manifestType: 1 } : field) });
+      expect(page.lastEventText).toBe('alarm: 0, removed: 1');
+      expect(page.lastEvent?.values).toEqual({ alarm: 0, removed: 1 });
+    } finally { page.ngOnDestroy(); }
   });
 
   it('surfaces synchronization failure and retries when the account reconnects', async () => {

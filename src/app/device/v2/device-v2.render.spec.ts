@@ -4,7 +4,7 @@ import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { DeviceUiPort, DeviceUiSnapshot } from '../../core/device-v2/device-ui.port';
+import { DeviceUiConnectivitySnapshot, DeviceUiPort, DeviceUiSnapshot } from '../../core/device-v2/device-ui.port';
 import { BlinkerDevice } from '../../core/model/device.model';
 import { DeviceV2PageLayoutService } from '../../core/services/device-v2-page-layout.service';
 import { DeviceV2Page } from './device-v2.page';
@@ -28,13 +28,14 @@ describe('embedded DeviceV2 asynchronous status rendering', () => {
     let finish!: () => void;
     const ready = new Promise<void>(resolve => { finish = resolve; });
     const controller = new AbortController();
+    const connectivity = new BehaviorSubject<DeviceUiConnectivitySnapshot>({ activeTransport: 'ble', directConnectAllowed: true,
+      bleAccess: true, bleAdapterEnabled: true, bleState: 'connecting', cloudSessionState: 'idle' });
     let closed!: () => void;
     const connection = { ready, signal: controller.signal, closed: new Promise<void>(resolve => { closed = resolve; }),
       close: () => { controller.abort(); closed(); } };
     const port = { appActive: new BehaviorSubject(true), isBleDirect: () => true,
       watchConnection: () => connectionState,
-      watchConnectivity: () => new BehaviorSubject({ activeTransport: 'ble', directConnectAllowed: true,
-        bleAccess: true, bleAdapterEnabled: true, bleState: 'connecting', cloudSessionState: 'idle' }),
+      watchConnectivity: () => connectivity,
       watchState: () => snapshot, watchEvents: () => new Subject(), openConnection: () => connection };
     await TestBed.configureTestingModule({ imports: [EmbeddedDeviceHost], providers: [
       provideRouter([]), provideIonicAngular({ animated: false }), { provide: DeviceUiPort, useValue: port },
@@ -51,6 +52,17 @@ describe('embedded DeviceV2 asynchronous status rendering', () => {
     await vi.waitFor(() => expect(fixture.componentInstance.child()!.canControl).toBe(true));
     expect(fixture.componentInstance.child()!.stateLabel).toBe('蓝牙已连接');
     await vi.waitFor(() => expect(fixture.nativeElement.querySelector('.shell-state').textContent).toBe('蓝牙已连接'));
+    for (const [activeTransport, label] of [['lan', '局域网已连接'], ['cloud', '云端已连接']] as const) {
+      connectivity.next({ ...connectivity.value, activeTransport });
+      await vi.waitFor(() => expect(fixture.nativeElement.querySelector('.shell-state').textContent).toBe(label));
+    }
+    snapshot.next({ ...snapshot.value, stateFresh: false });
+    await vi.waitFor(() => expect(fixture.nativeElement.querySelector('.shell-state').textContent).toBe('设备状态未同步'));
+    connectionState.next('retrying');
+    await vi.waitFor(() => expect(fixture.nativeElement.querySelector('.shell-state').textContent).toBe('正在重连'));
+    fixture.componentInstance.device.data.cloudReachable = true;
+    connectionState.next('stopped');
+    await vi.waitFor(() => expect(fixture.nativeElement.querySelector('.shell-state').textContent).toBe('离线'));
     fixture.destroy();
   });
 });

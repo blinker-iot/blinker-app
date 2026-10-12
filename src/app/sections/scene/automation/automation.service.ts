@@ -10,7 +10,7 @@ import { IndexedDbIntentStorage } from '../../../core/device-v2/intent-storage';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceV2ManifestCache } from '../../../core/services/device-v2-manifest-cache.service';
 import { capabilityBooleanLabel, capabilityDisplayName } from '../../../core/device-v2/display-metadata';
-import { AutomationChoice, automationChoices, automationChoiceValue, automationDeviceName, automationErrorText } from './automation.models';
+import { AutomationChoice, automationCapabilityGuidance, automationChoices, automationChoiceValue, automationDeviceName, automationErrorText } from './automation.models';
 function context(data: DataService): DeviceV2AccountContext {
   if (!data.auth?.uuid) throw new Error('AUTOMATION_ACCOUNT_CHANGED');
   return { authority: API.BASE_URL, accountId: data.auth.uuid, sessionEpoch: data.sessionEpoch };
@@ -79,6 +79,10 @@ export class AutomationService implements OnDestroy {
   }
   async inspect(ruleId: string): Promise<void> {
     await this.run(async signal => { const detail = await this.client.get(ruleId, signal); if (this.current(signal)) this.patch({ detail, reviewed: undefined }); });
+  }
+  get capabilityGuidance() { return automationCapabilityGuidance(this.data.device?.dict, id => this.manifests.load(id)); }
+  get accountScope(): string | undefined {
+    return this.data.auth?.uuid ? JSON.stringify([API.BASE_URL, this.data.auth.uuid, this.data.sessionEpoch]) : undefined;
   }
   deviceName(deviceId: string): string { return automationDeviceName(this.data.device?.dict, deviceId); }
   endpointLabel(endpoint: AutomationRule['source']): string {

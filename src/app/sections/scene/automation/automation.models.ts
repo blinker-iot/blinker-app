@@ -4,7 +4,22 @@ import { DeviceV2Manifest } from '../../../core/protocol/device-v2/types';
 import { capabilityDisplayName, deviceDisplayName } from '../../../core/device-v2/display-metadata';
 export interface AutomationChoice { id: string; label: string; endpoint: AutomationEndpoint; source: boolean; target: boolean;
   minimum?: number; maximum?: number; step?: number; }
+export interface AutomationCapabilityGuidance {
+  deviceId: string; name: string; reason: 'ready' | 'manifest-missing' | 'capabilities-missing' | 'unsupported';
+  source: boolean; target: boolean; description: string;
+}
 const scalarTypes: readonly AutomationScalarType[] = ['boolean', 'int32', 'uint32', 'float32', 'float64'];
+function unsupportedDeviceReason(device: any): string | undefined {
+  if (device?.config?.isPreview) return '预览设备尚未认领，不能管理自动化。';
+  if (device?.config?.isShared) return '分享设备的权限不包含自动化管理。';
+  if (device?.config?.disabled) return '设备已停用，暂不能参与自动化。';
+  if (device?.gatewayRouted) return '网关子设备的自动化暂未开放。';
+  if (device?.deviceType === 'edge-hub') return '网关设备的自动化暂未开放。';
+  if (device?.deviceType === 'ble') return 'BLE 设备的自动化暂未开放。';
+  if (device?.config?.mode !== 'bbp2') return '此设备未使用当前通信协议，暂不支持自动化。';
+  if (device?.deviceType !== 'diy') return '目前仅支持所属账号的普通 WiFi 设备。';
+  return undefined;
+}
 export function automationDeviceName(devices: Record<string, any>, deviceId: string): string {
   const index = Object.keys(devices || {}).sort().indexOf(deviceId);
   return deviceDisplayName(devices?.[deviceId], index < 0 ? '设备不在当前列表' : `未命名设备 ${index + 1}`);
@@ -12,8 +27,7 @@ export function automationDeviceName(devices: Record<string, any>, deviceId: str
 export function automationChoices(devices: Record<string, any>, manifest: (id: string) => DeviceV2Manifest | undefined): AutomationChoice[] {
   const choices: AutomationChoice[] = [];
   for (const [deviceId, device] of Object.entries(devices || {})) {
-    if (device?.deviceType !== 'diy' || device.gatewayRouted || device.config?.mode !== 'bbp2'
-      || device.config.isShared || device.config.isPreview || device.config.disabled) continue;
+    if (unsupportedDeviceReason(device)) continue;
     const m = manifest(deviceId); if (!m) continue;
     for (const field of m.fields) {
       if (!Number.isInteger(field.type) || field.type < 0 || field.type >= scalarTypes.length) continue;
@@ -28,6 +42,22 @@ export function automationChoices(devices: Record<string, any>, manifest: (id: s
     }
   }
   return choices; // Cached selection only. Gateway rechecks live permissions and capabilities.
+}
+// Explain the existing cache selection; never discover, connect or grant access.
+export function automationCapabilityGuidance(devices: Record<string, any>, manifest: (id: string) => DeviceV2Manifest | undefined): AutomationCapabilityGuidance[] {
+  return Object.entries(devices || {}).map<AutomationCapabilityGuidance>(([deviceId, device]) => {
+    const name = automationDeviceName(devices, deviceId), unsupported = unsupportedDeviceReason(device);
+    if (unsupported) return { deviceId, name, reason: 'unsupported', source: false, target: false, description: unsupported };
+    const m = manifest(deviceId);
+    if (!m) return { deviceId, name, reason: 'manifest-missing', source: false, target: false,
+      description: '尚未取得设备能力。请打开控制页，连接并读取能力后返回。' };
+    const choices = automationChoices({ [deviceId]: device }, () => m);
+    const source = choices.some(choice => choice.source), target = choices.some(choice => choice.target);
+    const description = [!source && '没有可读取并通知变化的开关或数值条件',
+      !target && '没有可写的开关或非负整数动作'].filter(Boolean).join('；');
+    return { deviceId, name, reason: source && target ? 'ready' : 'capabilities-missing', source, target,
+      description: description ? `${description}。已取得能力，打开控制页不会自动补出固件未提供的属性。` : '已取得可用条件与动作能力。' };
+  });
 }
 export function automationChoiceValue(choice: Pick<AutomationChoice, 'endpoint' | 'minimum' | 'maximum' | 'step'>, input: unknown): boolean | number {
   // Form text is converted here, never by the persisted management contract.

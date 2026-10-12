@@ -61,13 +61,16 @@
     <section class="editor"><h2>{{ editing ? '修改条件与动作' : '设置条件与动作' }}</h2>
       <ion-input label="名称" labelPlacement="stacked" maxlength="80" placeholder="例如：关灯后打开风扇" [(ngModel)]="name" [disabled]="automation.state().busy" />
       @if (!validName) { <p class="hint">请输入 1～80 个字符的名称，不包含控制字符。</p> }
+      @if (!editing && !automation.state().ready && !automation.state().busy) {
+        <ion-button fill="outline" (click)="automation.refresh()">重新查询自动化</ion-button>
+      }
       <h3>当</h3>
       @if (editing) { <p>{{ automation.endpointLabel(editing.source) }}</p> }
       @else {
         <ion-select label="源属性" labelPlacement="stacked" [(ngModel)]="source" (ionChange)="sourceChanged()" [disabled]="automation.state().busy">
           @for (choice of sources; track choice.id) { <ion-select-option [value]="choice.id">{{ choice.label }}</ion-select-option> }
         </ion-select>
-        @if (!sources.length) { <p class="hint">还没有可选条件。请先进入两台所属 WiFi 设备的控制页获取能力，再回来刷新。</p> }
+        @if (automation.state().ready && !sources.length) { <p class="hint">暂无可选条件，需要可读取并通知变化的开关或数值属性。</p> }
       }
       <ion-select label="触发条件" labelPlacement="stacked" [(ngModel)]="condition" [disabled]="automation.state().busy || (!editing && !source)">
         @if (numericSource) {
@@ -89,6 +92,21 @@
         <ion-select label="目标属性" labelPlacement="stacked" [(ngModel)]="target" (ionChange)="targetChanged()" [disabled]="automation.state().busy">
           @for (choice of targets; track choice.id) { <ion-select-option [value]="choice.id">{{ choice.label }}</ion-select-option> }
         </ion-select>
+        @if (automation.state().ready && !targets.length) { <p class="hint">暂无可选动作，请使用另一台所属普通 WiFi 设备的可写开关或非负整数属性（0～4294967295，仍须符合设备范围）。</p> }
+      }
+      @if (automation.state().ready && !editing && (!sources.length || !targets.length)) {
+        <div class="capability-guide" aria-label="自动化设备能力引导">
+          <h3>准备设备能力</h3>
+          <p class="hint">这里只读取已保存的能力，不会自动连接其他设备。打开所需设备控制页后返回，此处会更新可选属性。本次填写仅临时保留，不跨 App 重启。</p>
+          @for (device of capabilityGuidance; track device.deviceId) {
+            <article>
+              <strong>{{ device.name }}</strong><p class="hint">{{ device.description }}</p>
+              @if (device.reason !== 'unsupported') {
+                <ion-button size="small" fill="outline" [routerLink]="['/device', device.deviceId]" [disabled]="automation.state().busy" (click)="prepareCapabilityVisit()">打开 {{ device.name }} 控制页</ion-button>
+              }
+            </article>
+          } @empty { <p class="hint">一条自动化需要两台不同的所属普通 WiFi 设备，请先添加或准备另一台设备。</p> }
+        </div>
       }
       @if (numericTarget) {
         <ion-input label="目标值" labelPlacement="stacked" type="number" inputmode="numeric" [(ngModel)]="value" [disabled]="automation.state().busy" />

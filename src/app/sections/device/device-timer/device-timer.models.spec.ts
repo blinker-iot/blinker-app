@@ -1,6 +1,13 @@
-import { taskEntryState, taskErrorText } from './device-timer.models';
+import { taskEntryState, taskErrorText, taskOperationText } from './device-timer.models';
 
 describe('task entry describes query eligibility, not cached permission or capacity', () => {
+  it.each([
+    ['initialize', '启用/同步任务授权'], ['read', '查询任务'], ['catalog', '读取任务能力'],
+    ['create', '创建任务'], ['replace', '修改任务'], ['remove', '删除任务'],
+    ['start', '开始倒计时'], ['enable', '修改任务启停状态'],
+  ] as const)('describes %s in user-facing Chinese without changing its protocol operation', (operation, label) => {
+    expect(taskOperationText(operation)).toBe(label);
+  });
   it.each([
     [undefined, '尚未找到设备'],
     [{ config: { mode: 'bbp2', isPreview: true } }, '预览设备'],

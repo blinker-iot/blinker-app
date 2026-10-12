@@ -46,7 +46,7 @@
         </section>
       }
       @if (canLoadMore) { <button class="secondary-action load-more-action" type="button" (click)="loadMore()">查看更早记录</button> }
-      @if (bounded) { <p class="bounded-note">本页最多显示 {{ viewLimit }} 条，请缩短时间范围或选择功能后查询更早记录。</p> }
+      @if (bounded) { <p class="bounded-note">已达到本页 {{ viewLimit }} 条显示上限，仍有更早记录未显示。可按功能筛选或调整范围重新查询。</p> }
     }
   </main>
 </ion-content>

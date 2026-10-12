@@ -1,8 +1,13 @@
-import { TaskCatalog, TaskDefinition, TaskRecord } from '../../../core/device-v2/tasks/contract';
+import { TaskCatalog, TaskDefinition, TaskIntent, TaskRecord } from '../../../core/device-v2/tasks/contract';
 import { DeviceV2Manifest, DeviceV2ManifestConstraints } from '../../../core/protocol/device-v2/types';
 
 export type TaskTarget = TaskCatalog['targets'][number] & { constraints?: DeviceV2ManifestConstraints };
 const types: readonly string[] = ['boolean', 'int', 'uint', 'float32', 'float64'];
+const operationLabels: Record<TaskIntent['operation'], string> = {
+  initialize: '启用/同步任务授权', read: '查询任务', catalog: '读取任务能力',
+  create: '创建任务', replace: '修改任务', remove: '删除任务', start: '开始倒计时', enable: '修改任务启停状态',
+};
+export function taskOperationText(operation: TaskIntent['operation']): string { return operationLabels[operation]; }
 
 type TaskEntryDevice = {
   config?: { mode?: string; isPreview?: boolean; isShared?: boolean; disabled?: boolean };

@@ -2,7 +2,7 @@ import '@angular/compiler';
 import { Subject } from 'rxjs';
 import { AutomationService } from './automation.service';
 import { AutomationPage } from './automation.page';
-import { automationChoices, automationChoiceValue, automationConditionText, automationDeviceName, automationErrorText, automationExecutionText, automationRuleStatus } from './automation.models';
+import { automationCapabilityGuidance, automationChoices, automationChoiceValue, automationConditionText, automationDeviceName, automationErrorText, automationExecutionText, automationRuleStatus } from './automation.models';
 import { AutomationDetail, AutomationIntent, AutomationRule, automationIntent } from '../../../core/device-v2/automation/contract';
 const manifest = { revision: 1, fingerprint: 'ab'.repeat(32), fields: [
   { id: 1, key: 'power', kind: 0, type: 0, access: 7 }, { id: 2, key: 'button', kind: 1, type: 0, access: 7 },
@@ -24,6 +24,38 @@ function setup() {
   return { data, client, service, alerts, page };
 }
 describe('minimal automation view lifecycle', () => {
+  it('distinguishes missing cached capability, absent conditions/actions and unsupported profiles without reading unsupported caches', () => {
+    const device = { deviceType: 'diy', config: { mode: 'bbp2' } };
+    const devices = { missing: device, sourceOnly: device, targetOnly: device, neither: device,
+      ble: { ...device, deviceType: 'ble' }, shared: { ...device, config: { ...device.config, isShared: true } },
+      child: { ...device, gatewayRouted: true }, hub: { ...device, deviceType: 'edge-hub' },
+      preview: { ...device, config: { ...device.config, isPreview: true } },
+      disabled: { ...device, config: { ...device.config, disabled: true } },
+      legacy: { ...device, config: { mode: 'json' } } };
+    const load = vi.fn((id: string) => id === 'missing' ? undefined : ({ ...manifest, fields: [
+      { id: 1, key: 'value', kind: 0, type: id === 'sourceOnly' ? 3 : 0,
+        access: id === 'sourceOnly' ? 5 : id === 'targetOnly' ? 2 : 1 },
+    ] }));
+    const guidance = automationCapabilityGuidance(devices, load);
+    expect(guidance.find(g => g.deviceId === 'missing')).toMatchObject({ reason: 'manifest-missing', source: false, target: false });
+    expect(guidance.find(g => g.deviceId === 'sourceOnly')).toMatchObject({ reason: 'capabilities-missing', source: true, target: false });
+    expect(guidance.find(g => g.deviceId === 'sourceOnly')?.description).toContain('没有可写');
+    expect(guidance.find(g => g.deviceId === 'targetOnly')).toMatchObject({ reason: 'capabilities-missing', source: false, target: true });
+    expect(guidance.find(g => g.deviceId === 'targetOnly')?.description).toContain('没有可读取并通知');
+    expect(guidance.find(g => g.deviceId === 'neither')?.description).toContain('没有可写');
+    expect(guidance.filter(g => g.reason === 'unsupported')).toHaveLength(7);
+    expect(load.mock.calls.map(call => call[0])).toEqual(['missing', 'sourceOnly', 'targetOnly', 'neither']);
+    expect(automationChoices(devices, load).map(choice => choice.endpoint.deviceId)).toEqual(['sourceOnly', 'targetOnly']);
+  });
+  it.each(['account', 'session-epoch'] as const)('never restores a capability-visit draft after changing %s', async change => {
+    const f = setup(); await f.service.open(); f.page.startCreate(); f.page.name = '原账号草稿';
+    f.page.prepareCapabilityVisit(); f.page.ionViewWillLeave();
+    if (change === 'account') f.data.auth.uuid = 'other';
+    f.data.sessionEpoch++; f.data.authDataChanged.next();
+    f.page.ionViewWillEnter();
+    expect(f.page.view).toBe('list'); expect(f.page.name).toBe(''); expect(f.client.submit).not.toHaveBeenCalled();
+    f.service.ngOnDestroy();
+  });
   it('shows shared names/boolean labels without altering rule endpoints, revisions or choices', async () => {
     const f = setup();
     const metadata = { logicalDeviceId: 'target', revision: 1, name: '客厅灯', capabilities: [

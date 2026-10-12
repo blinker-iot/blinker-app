@@ -11,7 +11,10 @@ import { DevicePage } from './device.page';
 const ionicMock = vi.hoisted(() => {
   class IonicStub {}
   return new Proxy(
-    { IonicModule: IonicStub, ModalController: IonicStub },
+    { IonicModule: IonicStub, ModalController: IonicStub,
+      IonBackButton: IonicStub, IonButton: IonicStub, IonButtons: IonicStub,
+      IonContent: IonicStub, IonHeader: IonicStub, IonRouterLink: IonicStub,
+      IonRouterLinkWithHref: IonicStub, IonTitle: IonicStub, IonToolbar: IonicStub },
     {
       get: (target, property: string | symbol) => {
         if (property === 'then' || typeof property === 'symbol') return undefined;

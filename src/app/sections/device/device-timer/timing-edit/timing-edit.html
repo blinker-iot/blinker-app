@@ -4,7 +4,7 @@
 </ion-toolbar></ion-header>
 <ion-content [fullscreen]="true"><main>
   <app-hero-card iconClass="fa-light fa-calendar-clock" eyebrow="设置定时" [heading]="timer.deviceName"
-    description="保存倒计时不会自动开始；一次日期和星期任务需要设备具备有效 UTC 时间。" />
+    description="保存倒计时不会自动开始；日期/星期任务需要设备有效时间，本页无法确认校时状态及来源。" />
   <app-task-status [timer]="timer" />
   @if (error) { <p role="alert">{{ error }}</p> }
   @if (timer.ready && !taskNotFound) {

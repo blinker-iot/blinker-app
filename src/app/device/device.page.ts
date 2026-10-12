@@ -16,7 +16,18 @@ import {
   Router,
   RouterModule,
 } from '@angular/router';
-import { IonicModule, ModalController } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonRouterLink,
+  IonRouterLinkWithHref,
+  IonTitle,
+  IonToolbar,
+  ModalController,
+} from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Observable, Subscription } from 'rxjs';
 
@@ -42,7 +53,15 @@ interface LoadedDeviceComponent {
   standalone: true,
   imports: [
     CommonModule,
-    IonicModule,
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonRouterLink,
+    IonRouterLinkWithHref,
+    IonTitle,
+    IonToolbar,
     RouterModule,
     TranslatePipe,
   ],

@@ -87,6 +87,32 @@ describe('State history production template and read API', () => {
     expect(Number(last.get('to')) - Number(last.get('from'))).toBe(3600000); expect(last.get('limit')).toBe('50');
     expect(f.http.get.mock.calls.every(call => call[0].includes('/state-history?'))).toBe(true);
   });
+  it('explains the 200-row display boundary without promising that a shorter range retrieves older records', async () => {
+    const f = await render();
+    let pageIndex = 0;
+    f.http.get.mockImplementation((url: string) => {
+      const row = response(url).body.detail.items[0];
+      const items = Array.from({ length: 50 }, (_, index) => ({ ...row, id: String(250 - pageIndex * 50 - index) }));
+      return of(response(url, items, btoa(`page-${pageIndex++}`)));
+    });
+    f.element.querySelector<HTMLButtonElement>('.refresh-action')!.click(); await f.fixture.whenStable();
+    for (let index = 0; index < 3; ++index) {
+      expect(f.element.querySelector('.bounded-note')).toBeNull();
+      f.element.querySelector<HTMLButtonElement>('.load-more-action')!.click(); await f.fixture.whenStable();
+    }
+    expect(f.page.state().rows).toHaveLength(200); expect(f.page.state().nextCursor).not.toBeNull();
+    expect(f.element.querySelectorAll('.history-row')).toHaveLength(200);
+    expect(f.element.querySelector('.load-more-action')).toBeNull();
+    const note = f.element.querySelector('.bounded-note')?.textContent;
+    expect(note).toContain('200 条显示上限'); expect(note).toContain('仍有更早记录未显示');
+    expect(note).toContain('按功能筛选或调整范围重新查询');
+    expect(note).not.toContain('缩短时间范围'); expect(note).not.toContain('查询更早记录');
+    const requests = f.http.get.mock.calls.length;
+    await f.page.loadMore(); expect(f.http.get).toHaveBeenCalledTimes(requests);
+    const ranges = f.http.get.mock.calls.slice(1).map(([url]) => new URL(url).searchParams);
+    expect(ranges.every(query => query.get('limit') === '50'
+      && query.get('from') === ranges[0].get('from') && query.get('to') === ranges[0].get('to'))).toBe(true);
+  });
   it('clears the actual rendered records on native background, account change or view exit', async () => {
     const f = await render();
     expect(f.element.querySelector('.history-row')).not.toBeNull();

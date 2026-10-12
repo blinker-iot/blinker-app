@@ -77,6 +77,31 @@ describe('task pages production template rendering', () => {
     expect(f.timer.write).not.toHaveBeenCalled(); expect(f.timer.retry).not.toHaveBeenCalled();
   });
 
+  it('folds unchanged request IDs behind technical details and keeps read, retry and stop-tracking actions separate', async () => {
+    const timer = timerState(); timer.canRetry = true; timer.canReviewPending = true;
+    timer.pending = { operation: 'start', requestId: 'original-request-long-id' };
+    timer.journal = { held: false, pending: timer.pending,
+      authority: { operation: 'initialize', requestId: 'authority-request-long-id' } };
+    const journal = structuredClone(timer.journal), f = await render('list', timer);
+    const panel = f.element.querySelector('[aria-label="未确认请求"]')!;
+    expect(panel.querySelector('strong')?.textContent).toBe('尚未确认：开始倒计时');
+    const details = panel.querySelector<HTMLDetailsElement>('.task-request-details')!;
+    expect(details.open).toBe(false);
+    expect(details.textContent).toContain('original-request-long-id');
+    expect(details.textContent).toContain('authority-request-long-id');
+    expect([...panel.querySelectorAll('p')].filter(p => !details.contains(p)).map(p => p.textContent).join(' ')).not.toContain('request-long-id');
+    expect(panel.textContent).toContain('查询只读取当前任务'); expect(panel.textContent).toContain('恢复原请求可能执行原操作');
+    expect(panel.textContent).toContain('停止本地追踪不会取消设备任务');
+    const buttons = [...panel.querySelectorAll<HTMLElement>('ion-button')];
+    buttons.find(button => button.textContent?.trim() === '查询当前任务')!.click(); await f.fixture.whenStable();
+    expect(timer.refresh).toHaveBeenCalledTimes(1); expect(timer.retry).not.toHaveBeenCalled();
+    expect(timer.write).not.toHaveBeenCalled(); expect(timer.journal).toEqual(journal);
+    buttons.find(button => button.textContent?.trim() === '恢复原请求')!.click(); await f.fixture.whenStable();
+    expect(timer.retry).toHaveBeenCalledTimes(1); expect(timer.journal).toEqual(journal);
+    buttons.find(button => button.textContent?.trim() === '已核对，停止追踪原请求')!.click(); await f.fixture.whenStable();
+    expect(timer.forget).toHaveBeenCalledWith(timer.journal); expect(timer.write).not.toHaveBeenCalled();
+  });
+
   it.each(['loading', 'blocked', 'pending'])('never renders fake zero capacity or empty task results when %s', async mode => {
     const timer = timerState(); timer.ready = false; timer.capacity = null; timer.records = [];
     timer.busy = mode === 'loading';
@@ -109,13 +134,30 @@ describe('task pages production template rendering', () => {
     expect(f.element.querySelector('select')?.textContent).toContain('倒计时');
     expect(f.element.querySelector<HTMLButtonElement>('.save-action')?.disabled).toBe(false);
     expect(f.element.querySelector<HTMLButtonElement>('.delete-action')?.disabled).toBe(false);
-    expect(f.element.textContent).toContain('有效 UTC 时间');
+    expect(f.element.textContent).toContain('日期/星期任务需要设备有效时间');
+    expect(f.element.textContent).toContain('本页无法确认校时状态及来源');
     expect(f.element.textContent).not.toContain('已授时');
     timer.targets = []; f.fixture.detectChanges();
     expect(f.element.querySelector<HTMLButtonElement>('.save-action')?.disabled).toBe(true);
     expect(f.element.querySelector<HTMLButtonElement>('.delete-action')?.disabled).toBe(false);
     expect(f.element.querySelector('.target-unavailable')?.textContent).toContain('仍可删除原任务');
     expect(timer.write).not.toHaveBeenCalled(); expect(timer.refresh).not.toHaveBeenCalled();
+  });
+
+  it.each(['once', 'weekly'] as const)('keeps %s editing available without inventing a clock status or extra query', async kind => {
+    const timer = timerState();
+    timer.records[0].definition.schedule = kind === 'once'
+      ? { kind, utcMillis: Date.now() + 60000 }
+      : { kind, minuteOfDay: 485, weekdays: 65, utcOffsetMinutes: 480 };
+    const f = await render('edit', timer);
+    expect(f.element.querySelector('.hero-card')?.textContent).toContain('本页无法确认校时状态及来源');
+    expect(f.element.textContent).not.toContain('已授时');
+    expect(f.element.querySelector<HTMLButtonElement>('.save-action')?.disabled).toBe(false);
+    expect((f.fixture.componentInstance as TimingEditPage).canSave).toBe(true);
+    f.fixture.detectChanges(); await f.fixture.whenStable();
+    expect(timer.open).toHaveBeenCalledOnce();
+    expect(timer.refresh).not.toHaveBeenCalled(); expect(timer.write).not.toHaveBeenCalled();
+    expect(timer.retry).not.toHaveBeenCalled();
   });
 
   it('keeps explicit form loading reachable after a failed query without misreporting the existing task', async () => {

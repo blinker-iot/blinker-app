@@ -1,6 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { AlertController, IonicModule } from '@ionic/angular';
 import { TimerService } from './timer.service';
+import { taskOperationText } from './device-timer.models';
 
 @Component({
   selector: 'app-task-status', imports: [IonicModule],
@@ -22,10 +23,15 @@ import { TimerService } from './timer.service';
     @if (timer.canInitialize) { <ion-button (click)="initialize()">{{ timer.journal.authority ? '恢复原授权同步' : '启用/同步本机任务授权' }}</ion-button> }
     @if (timer.pending) {
       <section aria-label="未确认请求">
-        <strong>尚未确认：{{ timer.pending.operation }}</strong>
-        <p>请求号 {{ timer.pending.requestId }}。断线不代表未执行；不自动生成新请求。</p>
+        <strong>尚未确认：{{ operationText(timer.pending.operation) }}</strong>
+        <p>断线不代表未执行；原请求和日志已保留，不自动生成新请求。</p>
         @if (timer.journal.held) { <p>原操作已暂停重提。同步授权不证明原操作未执行；请查询核对后明确停止本地追踪，不会替你重新开始任务。</p> }
-        @if (timer.journal.authority) { <p>授权同步尚未确认：{{ timer.journal.authority.requestId }}。恢复同步只使用此请求号，不重提原操作。</p> }
+        @if (timer.journal.authority) { <p>任务授权同步尚未确认。恢复同步只使用原请求，不重提原操作。</p> }
+        <p>查询只读取当前任务；恢复原请求可能执行原操作；停止本地追踪不会取消设备任务。</p>
+        <details class="task-request-details"><summary>技术详情</summary>
+          <p>原操作请求号：<code>{{ timer.pending.requestId }}</code></p>
+          @if (timer.journal.authority) { <p>授权同步请求号：<code>{{ timer.journal.authority.requestId }}</code></p> }
+        </details>
         <ion-button [disabled]="!timer.canRetry" (click)="retry()">恢复原请求</ion-button>
         <ion-button fill="outline" [disabled]="timer.busy" (click)="timer.refresh()">查询当前任务</ion-button>
         <ion-button fill="clear" [disabled]="!timer.canReviewPending" (click)="forget()">已核对，停止追踪原请求</ion-button>
@@ -37,6 +43,7 @@ import { TimerService } from './timer.service';
 export class TaskStatusComponent {
   @Input({ required: true }) timer!: TimerService;
   error = '';
+  readonly operationText = taskOperationText;
   constructor(private readonly alerts: AlertController) {}
   async initialize(): Promise<void> {
     if (!this.timer.canInitialize) return;

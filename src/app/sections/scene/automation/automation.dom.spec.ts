@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AlertController } from '@ionic/angular';
@@ -19,6 +20,8 @@ const manifest = { revision: 1, fingerprint: 'ab'.repeat(32), fields: [
   { id: 3, key: 'level', kind: 0, type: 2, access: 7, constraints: { minimum: 0, maximum: 10, step: 2 } },
 ] };
 type FormControl = HTMLElement & { value: string | number | boolean; disabled: boolean };
+@Component({ template: '' })
+class CapabilityControlStub {}
 
 describe('automation rendered form management flow (local API/cache/storage doubles)', () => {
   let fixture: ComponentFixture<AutomationPage>;
@@ -27,6 +30,7 @@ describe('automation rendered form management flow (local API/cache/storage doub
   let api: ReturnType<typeof createApi>;
   let alerts: { create: ReturnType<typeof vi.fn> };
   let devices: Record<string, any>;
+  let cachedManifests: Record<string, typeof manifest | undefined>;
 
   function createApi() {
     return {
@@ -69,6 +73,7 @@ describe('automation rendered form management flow (local API/cache/storage doub
       source: { deviceType: 'diy', config: { mode: 'bbp2', customName: 'Source' } },
       target: { deviceType: 'diy', config: { mode: 'bbp2', customName: 'Target' } },
     };
+    cachedManifests = { source: manifest, target: manifest };
     const data = { auth: { uuid: 'owner' }, sessionEpoch: 1, authDataChanged: new Subject<void>(), device: { dict: devices } };
     const values = new Map<string, string>();
     const client = new AutomationClient(api, {
@@ -76,10 +81,11 @@ describe('automation rendered form management flow (local API/cache/storage doub
       setItem: (key, value) => { values.set(key, value); },
       removeItem: key => { values.delete(key); },
     }, () => ({ authority: API.BASE_URL, accountId: data.auth.uuid, sessionEpoch: data.sessionEpoch }));
-    service = new AutomationService(client, data as any, { load: () => manifest } as any);
+    service = new AutomationService(client, data as any, { load: (id: string) => cachedManifests[id] } as any);
     TestBed.overrideComponent(AutomationPage, { set: { providers: [{ provide: AutomationService, useValue: service }] } });
     await TestBed.configureTestingModule({ imports: [AutomationPage], providers: [
-      provideRouter([]), provideIonicAngular({ animated: false }), { provide: AlertController, useValue: alerts },
+      provideRouter([{ path: 'device/:id', component: CapabilityControlStub }]),
+      provideIonicAngular({ animated: false }), { provide: AlertController, useValue: alerts },
     ] }).compileComponents();
     fixture = TestBed.createComponent(AutomationPage);
     fixture.detectChanges();
@@ -130,6 +136,73 @@ describe('automation rendered form management flow (local API/cache/storage doub
     element.click();
     await settled();
   }
+
+  it('explains missing Manifest separately from unsupported devices and offers control links only within the existing profile', async () => {
+    cachedManifests = {};
+    devices['ble'] = { deviceType: 'ble', config: { mode: 'bbp2', customName: '蓝牙灯' } };
+    devices['shared'] = { deviceType: 'diy', config: { mode: 'bbp2', isShared: true, customName: '分享灯' } };
+    await service.refresh(); await settled(); await click('新建自动化');
+    const guide = fixture.nativeElement.querySelector('[aria-label="自动化设备能力引导"]') as HTMLElement;
+    expect(guide.textContent).toContain('尚未取得设备能力'); expect(guide.textContent).toContain('BLE 设备的自动化暂未开放');
+    expect(guide.textContent).toContain('分享设备的权限不包含自动化管理');
+    const labels = [...guide.querySelectorAll('ion-button')].map(button => button.textContent?.trim());
+    expect(labels).toEqual(['打开 Source 控制页', '打开 Target 控制页']);
+    expect(fixture.nativeElement.textContent).toContain('暂无可选条件');
+    expect(fixture.nativeElement.textContent).toContain('暂无可选动作');
+    expect(button('保存自动化').disabled).toBe(true); expect(api.write).not.toHaveBeenCalled();
+  });
+  it('reports the actual missing source/target permissions rather than blaming a cached Manifest', async () => {
+    cachedManifests = {
+      source: { ...manifest, fields: [{ id: 1, key: 'temperature', kind: 0, type: 3, access: 5 }] },
+      target: { ...manifest, fields: [{ id: 1, key: 'temperature', kind: 0, type: 3, access: 1 }] },
+    };
+    await service.refresh(); await settled(); await click('新建自动化'); await input('ion-select', '源属性', 'source:1');
+    const guide = fixture.nativeElement.querySelector('[aria-label="自动化设备能力引导"]') as HTMLElement;
+    expect(guide.textContent).toContain('没有可读取并通知变化'); expect(guide.textContent).toContain('没有可写');
+    expect(guide.textContent).not.toContain('尚未取得设备能力');
+    expect(fixture.nativeElement.textContent).not.toContain('暂无可选条件');
+    expect(fixture.nativeElement.textContent).toContain('暂无可选动作');
+    expect(api.write).not.toHaveBeenCalled();
+  });
+  it('opens the requested control page and refreshes existing cache on return without replacing the unsaved form or writing', async () => {
+    delete cachedManifests['target']; await service.refresh(); await settled();
+    await click('新建自动化'); await input('ion-input', '名称', '保留未保存名称');
+    await input('ion-select', '源属性', 'source:1'); await click('打开 Target 控制页');
+    fixture.componentInstance.ionViewWillLeave();
+    expect(service.state().ready).toBe(false);
+    cachedManifests['target'] = manifest;
+    fixture.componentInstance.ionViewWillEnter(); await settled();
+    expect(control('ion-input', '名称').value).toBe('保留未保存名称');
+    expect(control('ion-select', '源属性').value).toBe('source:1');
+    expect(fixture.nativeElement.querySelector('[aria-label="自动化设备能力引导"]')).toBeNull();
+    expect(control('ion-select', '目标属性').textContent).toContain('Target · power');
+    expect(api.write).not.toHaveBeenCalled();
+  });
+  it('requires another physical device even when one cached device has both condition and action capabilities', async () => {
+    delete devices['target']; delete cachedManifests['target']; await service.refresh(); await settled();
+    await click('新建自动化'); await input('ion-select', '源属性', 'source:1');
+    expect(fixture.nativeElement.textContent).toContain('两台不同的所属普通 WiFi 设备');
+    expect(button('保存自动化').disabled).toBe(true); expect(api.write).not.toHaveBeenCalled();
+  });
+  it('preserves a returning draft after a failed list read without mistaking unavailable choices for missing capabilities', async () => {
+    delete cachedManifests['target']; await service.refresh(); await settled();
+    await click('新建自动化'); await input('ion-input', '名称', '待返回草稿');
+    await input('ion-select', '源属性', 'source:1'); await click('打开 Target 控制页');
+    fixture.componentInstance.ionViewWillLeave(); cachedManifests['target'] = manifest;
+    api.list.mockRejectedValueOnce(new Error('AUTOMATION_UNAVAILABLE'));
+    fixture.componentInstance.ionViewWillEnter(); await settled();
+    expect(control('ion-input', '名称').value).toBe('待返回草稿');
+    expect(service.state().ready).toBe(false); expect(fixture.nativeElement.textContent).toContain('暂时不可用');
+    expect(fixture.nativeElement.querySelector('[aria-label="自动化设备能力引导"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('暂无可选条件');
+    expect(fixture.nativeElement.textContent).not.toContain('暂无可选动作');
+    expect(button('保存自动化').disabled).toBe(true); expect(api.write).not.toHaveBeenCalled();
+    await click('重新查询自动化');
+    expect(service.state().ready).toBe(true); expect(control('ion-input', '名称').value).toBe('待返回草稿');
+    expect(control('ion-select', '源属性').value).toBe('source:1');
+    expect(fixture.nativeElement.querySelector('[aria-label="自动化设备能力引导"]')).toBeNull();
+    expect(api.write).not.toHaveBeenCalled();
+  });
 
   it('renders the list after delayed discard confirmation without a second click or manual detectChanges', async () => {
     await click('新建自动化'); await input('ion-input', '名称', '未保存草稿');
