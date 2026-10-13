@@ -3,6 +3,7 @@ import { Component, signal } from '@angular/core';
 
 import { parseList } from '../../../../core/device-v2/page-widget';
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { WidgetBase } from '../widget-base';
 import { hexOf, hueOf, isLight, numeric, rgbOfHsl } from '../widget-kit';
 
@@ -15,7 +16,7 @@ const LIGHTNESS = 58;
 @Component({
   selector: 'app-picker-widget',
   standalone: true,
-  imports: [UiIconComponent, NgTemplateOutlet],
+  imports: [ValueTransitionDirective, UiIconComponent, NgTemplateOutlet],
   templateUrl: './picker-widget.html',
   styleUrls: ['./picker-widget.scss'],
 })

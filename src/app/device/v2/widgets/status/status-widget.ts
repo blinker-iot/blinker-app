@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 
 import { parsePairs } from '../../../../core/device-v2/page-widget';
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { ReadingWidgetBase } from '../reading-base';
 import type { HistoryPoint } from '../widget-kit';
 
@@ -20,7 +21,7 @@ const COLORS: Readonly<Record<Semantic, string>> = {
 @Component({
   selector: 'app-status-widget',
   standalone: true,
-  imports: [UiIconComponent, NgTemplateOutlet],
+  imports: [ValueTransitionDirective, UiIconComponent, NgTemplateOutlet],
   templateUrl: './status-widget.html',
   styleUrls: ['./status-widget.scss'],
   host: {

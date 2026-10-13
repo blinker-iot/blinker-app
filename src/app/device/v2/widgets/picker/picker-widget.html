@@ -2,7 +2,7 @@
   <div class="hd">
     @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
     <span class="hd-t">{{ showTitle ? title : '' }}</span>
-    @if (options.showHex !== false) { <span class="hd-v">{{ hex }}</span> }
+    @if (options.showHex !== false) { <span class="hd-v" [valueTransition]="hex">{{ hex }}</span> }
   </div>
 }
 

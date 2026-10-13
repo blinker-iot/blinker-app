@@ -41,10 +41,7 @@ $dots: radial-gradient(circle, var(--ui-accent) 1.9px, transparent 2.4px) left b
   @include theme.electronic { background: $dots; }
 }
 
-// Value changes glide; a moving drag follows the pointer exactly.
-.lvl-fill { transition: height 0.4s cubic-bezier(0.3, 0.7, 0.4, 1), width 0.4s cubic-bezier(0.3, 0.7, 0.4, 1); }
-:host(.moving) .lvl-fill { transition: none; }
-
+// RangeWidgetBase animates the shared display value used by this fill.
 :host(.v) .lvl-fill { right: 0; height: calc(var(--p) * 1%); }
 :host(.h) .lvl-fill { top: 0; width: calc(var(--p) * 1%); }
 :host(.grad.v) .lvl-fill { background: linear-gradient(to top, color-mix(in srgb, var(--ui-accent) 55%, var(--ui-card)), var(--ui-accent)); }

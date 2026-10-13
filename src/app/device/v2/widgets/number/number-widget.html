@@ -10,7 +10,7 @@
   @let display = displayReading;
 
   <div class="bn-num num" [attr.title]="'原始值：' + fullValue" [attr.aria-label]="title + '，原始值：' + fullValue">
-    <span class="bn-value" [style.--reading-length]="display.text.length || 1">{{ display.text }}</span>
+    <span class="bn-value" [valueTransition]="display.text" [style.--reading-length]="display.text.length || 1">{{ display.text }}</span>
     <span class="bn-u" [class.base]="options.unitPosition === 'base'">{{ display.unit }}</span>
   </div>
 
@@ -18,10 +18,10 @@
     <div class="bn-sub">
 
       @if (options.showDelta && delta) {
-        <span class="delta"><span class="delta-arrow">{{ delta.charAt(0) }}</span>{{ delta.slice(1) }}</span>
+        <span class="delta"><span class="delta-arrow">{{ delta.charAt(0) }}</span><span [valueTransition]="delta">{{ delta.slice(1) }}</span></span>
       }
 
-      <span>{{ withExtras(note) }}</span>
+      <span [valueTransition]="withExtras(note)">{{ withExtras(note) }}</span>
     </div>
   }
 

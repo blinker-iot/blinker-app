@@ -1,4 +1,4 @@
-import { Routes } from '@angular/router';
+import { Routes, RouterStateSnapshot } from '@angular/router';
 import { LayouterGuard } from './device/layouter2/layouter.guard';
 import { asHomeTabId } from './home/home-tab-state';
 
@@ -120,9 +120,16 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/device/share-invitation/share-invitation.page').then(m => m.ShareInvitationPage),
   },
   {
+    path: 'device/:id/edit/widget/:widgetId',
+    loadComponent: () => import('./sections/device/panel-editor/panel-widget-editor.page').then(m => m.PanelWidgetEditorPage),
+    canDeactivate: [(component: { canDeactivate(nextUrl?: string): Promise<boolean> },
+      _route: unknown, _state: unknown, next: RouterStateSnapshot) => component.canDeactivate(next.url)],
+  },
+  {
     path: 'device/:id/edit',
     loadComponent: () => import('./sections/device/panel-editor/panel-editor.page').then(m => m.PanelEditorPage),
-    canDeactivate: [(component: { canDeactivate(): Promise<boolean> }) => component.canDeactivate()],
+    canDeactivate: [(component: { canDeactivate(nextUrl?: string): Promise<boolean> },
+      _route: unknown, _state: unknown, next: RouterStateSnapshot) => component.canDeactivate(next.url)],
   },
   {
     path: 'device/:id',
@@ -155,6 +162,17 @@ export const routes: Routes = [
   },
   {
     path: 'device-manager/:id/uic',
+    pathMatch: 'full',
+    loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+  },
+  {
+    path: 'device-manager/:id/uic/automatic',
+    data: { method: 'automatic' },
+    loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+  },
+  {
+    path: 'device-manager/:id/uic/ai',
+    data: { method: 'ai' },
     loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
   },
   {

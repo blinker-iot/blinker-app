@@ -1,7 +1,7 @@
 <div class="hd">
   @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
   <span class="hd-t">{{ showTitle ? title : '' }}</span>
-  <span class="gs-val num">{{ reading.text }}<small>{{ reading.unit }}</small></span>
+  <span class="gs-val num"><span [valueTransition]="reading.text">{{ reading.text }}</span><small>{{ reading.unit }}</small></span>
 </div>
 
 <div class="gs-wrap" [class]="'h-' + (options.trackSize ?? 'mid')">

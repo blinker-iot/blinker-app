@@ -31,8 +31,6 @@ import { DeviceService } from '../core/services/device.service';
 import { ViewService } from '../core/services/view.service';
 import { NoticeService } from '../core/services/notice.service';
 import { DevicePanelService } from '../core/services/device-panel.service';
-import { DeviceV2PageLayoutService } from '../core/services/device-v2-page-layout.service';
-import { legacyRoot } from '../core/device-v2/legacy-panel';
 import { normalizeUiTheme, UI_THEMES, UiTheme } from '../core/device-v2/ui-theme';
 import { readDeviceTheme, saveDeviceTheme } from './device-theme';
 
@@ -90,19 +88,7 @@ export class DevicePage implements OnInit, OnDestroy {
 
     try {
       if (this.device.config.mode !== 'bbp2') {
-        if (!await this.panels.get(this.device) && !this.hasSavedLegacyLayout(this.device)) {
-          await this.router.navigate(['/device', this.id, 'edit']);
-
-          return;
-        }
-
         await this.panels.setView(this.device, 'normal');
-
-        return;
-      }
-
-      if (!await this.pageLayouts.get(this.device.deviceName)) {
-        await this.router.navigate(['/device', this.id, 'edit']);
 
         return;
       }
@@ -138,6 +124,7 @@ export class DevicePage implements OnInit, OnDestroy {
   private deviceComponentRef?: ComponentRef<unknown>;
   private deviceViewContainer?: ViewContainerRef;
   private loadedComponentConfig = '';
+  private loadingDevice = false;
   private heartbeatTimer?: number;
 
   @ViewChild('deviceView', { read: ViewContainerRef })
@@ -167,7 +154,6 @@ export class DevicePage implements OnInit, OnDestroy {
     private readonly cd: ChangeDetectorRef,
     private readonly notice: NoticeService,
     private readonly panels: DevicePanelService,
-    private readonly pageLayouts: DeviceV2PageLayoutService,
   ) {}
 
   get isPreview(): boolean {
@@ -382,12 +368,12 @@ export class DevicePage implements OnInit, OnDestroy {
       let component: string;
 
       if (device.config.mode === 'bbp2') {
-        component = await this.pageLayouts.get(device.deviceName) ? 'DeviceV2' : 'TestDashboard';
+        component = 'DeviceV2';
       } else {
         const record = await this.panels.get(device);
 
         component = record ? record.panel.view === 'debug' ? 'TestDashboard' : 'Layouter2Component'
-          : this.hasSavedLegacyLayout(device) ? 'Layouter2Component' : 'TestDashboard';
+          : 'Layouter2Component';
       }
 
       if (epoch !== this.viewEpoch || this.device !== device || this.subscriptions.closed) return;
@@ -400,12 +386,6 @@ export class DevicePage implements OnInit, OnDestroy {
     } catch {
       if (epoch === this.viewEpoch) this.viewError = '无法读取设备界面配置，请重试。';
     } finally { if (!this.subscriptions.closed) this.cd.markForCheck(); }
-  }
-
-  private hasSavedLegacyLayout(device: BlinkerDevice): boolean {
-    const root = legacyRoot(device.config.layouter);
-
-    return !!root['pagePanel'] || (Array.isArray(root['dashboard']) && root['dashboard'].length > 0);
   }
 
   private async restorePanelView(device: BlinkerDevice): Promise<void> {
@@ -423,59 +403,71 @@ export class DevicePage implements OnInit, OnDestroy {
   }
 
   private loadDevice(): void {
-    if (!this.loaded || !this.device || !this.deviceViewContainer) return;
+    if (this.loadingDevice || !this.loaded || !this.device || !this.deviceViewContainer) return;
 
-    const componentConfig = this.getComponentConfig();
+    this.loadingDevice = true;
 
-    const customizerUrl = componentConfig.startsWith('Customizer?')
-      ? componentConfig.slice('Customizer?'.length) : '';
+    try {
+      const componentConfig = this.getComponentConfig();
 
-    this.deviceComponent = this.resolveComponentName(componentConfig);
+      const customizerUrl = componentConfig.startsWith('Customizer?')
+        ? componentConfig.slice('Customizer?'.length) : '';
 
-    const componentType = deviceComponentDict[this.deviceComponent];
+      this.deviceComponent = this.resolveComponentName(componentConfig);
 
-    this.deviceHeaderActions = null;
+      const componentType = deviceComponentDict[this.deviceComponent];
 
-    this.deviceViewContainer.clear();
+      this.deviceHeaderActions = null;
 
-    this.deviceComponentRef =
-      this.deviceViewContainer.createComponent(componentType);
-
-    this.loadedComponentConfig = componentConfig;
-
-    this.deviceComponentRef.setInput('device', this.device);
-
-    if (this.deviceComponent === 'DeviceV2') {
-      this.deviceComponentRef.setInput('embedded', true);
-    }
-
-    if (this.deviceComponent === 'DeviceV2' || this.deviceComponent === 'TestDashboard') {
-      this.deviceComponentRef.setInput('viewActive', this.viewActive);
-    }
-
-    if (this.deviceComponent === 'Customizer') {
-      this.deviceComponentRef.setInput('customizerUrl', customizerUrl);
-    }
-
-    this.deviceComponentRef.changeDetectorRef.detectChanges();
-
-    const componentRef = this.deviceComponentRef;
-    const component = componentRef.instance as LoadedDeviceComponent;
-    const headerActions = component.headerActions ?? null;
-
-    queueMicrotask(() => {
-      if (this.deviceComponentRef !== componentRef) return;
-
-      this.deviceHeaderActions = headerActions;
-
+      // Switching modes can replace the host container. Refresh it before mounting,
+      // while the loading guard prevents the ViewChild setter from mounting again.
       this.cd.detectChanges();
-    });
+
+      if (!this.deviceViewContainer) return;
+
+      this.deviceViewContainer.clear();
+
+      this.deviceComponentRef =
+        this.deviceViewContainer.createComponent(componentType);
+
+      this.loadedComponentConfig = componentConfig;
+
+      this.deviceComponentRef.setInput('device', this.device);
+
+      if (this.deviceComponent === 'DeviceV2') {
+        this.deviceComponentRef.setInput('embedded', true);
+      }
+
+      if (this.deviceComponent === 'DeviceV2' || this.deviceComponent === 'TestDashboard') {
+        this.deviceComponentRef.setInput('viewActive', this.viewActive);
+      }
+
+      if (this.deviceComponent === 'Customizer') {
+        this.deviceComponentRef.setInput('customizerUrl', customizerUrl);
+      }
+
+      this.deviceComponentRef.changeDetectorRef.detectChanges();
+
+      const componentRef = this.deviceComponentRef;
+      const component = componentRef.instance as LoadedDeviceComponent;
+      const headerActions = component.headerActions ?? null;
+
+      queueMicrotask(() => {
+        if (this.deviceComponentRef !== componentRef) return;
+
+        this.deviceHeaderActions = headerActions;
+
+        this.cd.detectChanges();
+      });
+    } finally {
+      this.loadingDevice = false;
+    }
   }
 
   private getComponentConfig(): string {
     if (this.device?.config.component) return this.device.config.component;
 
-    return this.defaultComponent ?? 'TestDashboard';
+    return this.defaultComponent ?? (this.device?.config.mode === 'bbp2' ? 'DeviceV2' : 'Layouter2Component');
   }
 
   private resolveComponentName(config = this.getComponentConfig()): string {

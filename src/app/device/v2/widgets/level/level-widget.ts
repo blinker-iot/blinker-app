@@ -2,36 +2,22 @@ import { Component } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
 import { RangeWidgetBase } from '../range-base';
+import { ValueTransitionDirective } from '../value-transition.directive';
 
 // 大块滑块: the whole card is the track; vertical when taller than one row.
 @Component({
   selector: 'app-level-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './level-widget.html',
   styleUrls: ['./level-widget.scss'],
   host: {
     '[class.v]': 'vertical',
     '[class.h]': '!vertical',
     '[class.grad]': 'options.fill === "gradient"',
-    '[class.moving]': 'moving',
   },
 })
 export class LevelWidgetComponent extends RangeWidgetBase {
-  // While the pointer moves the fill follows it exactly; taps and remote
-  // changes animate.
-  moving = false;
-
-  move(event: PointerEvent): void {
-    this.moving = this.dragging;
-    this.dragMove(event);
-  }
-
-  end(event: PointerEvent): void {
-    this.moving = false;
-    this.dragEnd(event);
-  }
-
   get vertical(): boolean {
     return (this.options.orientation ?? (this.rows > 1 ? 'vertical' : 'horizontal')) === 'vertical';
   }

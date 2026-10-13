@@ -1,7 +1,7 @@
 <div class="hd">
   @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
   <span class="hd-t">{{ showTitle ? title : '' }}</span>
-  <span class="sp-last num">{{ reading.text }}<small>{{ reading.unit }}</small></span>
+  <span class="sp-last num"><span [valueTransition]="displayReading.text">{{ displayReading.text }}</span><small>{{ displayReading.unit }}</small></span>
 </div>
 
 <div class="sp-plot" aria-hidden="true">
@@ -32,7 +32,7 @@
 @if (options.showAxis !== false || options.showRange !== false) {
   <div class="sp-ax">
     <span>{{ options.showAxis !== false ? since : '' }}</span>
-    <span>{{ options.showRange !== false ? range : '' }}</span>
+    <span [valueTransition]="range">{{ options.showRange !== false ? range : '' }}</span>
     <span>{{ options.showAxis !== false ? '现在' : '' }}</span>
   </div>
 }

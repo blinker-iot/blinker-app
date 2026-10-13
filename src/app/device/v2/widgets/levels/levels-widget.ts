@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 
 import { parseList } from '../../../../core/device-v2/page-widget';
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { RangeWidgetBase } from '../range-base';
 
 const MAX_LEVELS = 12;
@@ -10,7 +11,7 @@ const MAX_LEVELS = 12;
 @Component({
   selector: 'app-levels-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './levels-widget.html',
   styleUrls: ['./levels-widget.scss'],
 })

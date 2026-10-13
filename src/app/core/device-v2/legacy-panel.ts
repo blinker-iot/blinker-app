@@ -38,8 +38,10 @@ export function readLegacyPanel(device: BlinkerDevice): LegacyPanel {
       if (saved.bindings[widget.widgetId]?.field?.key !== widget.endpointKey) throw new Error('组件字段绑定已损坏');
     }
 
-    return { document: { schemaVersion: 1, columns: 8, widgets, style: normalizeUiTheme(saved.style) },
-      bindings: saved.bindings, omitted: 0 };
+    if (widgets.length) {
+      return { document: { schemaVersion: 1, columns: 8, widgets, style: normalizeUiTheme(saved.style) },
+        bindings: saved.bindings, omitted: 0 };
+    }
   }
 
   const dashboard = Array.isArray(root['dashboard']) ? root['dashboard'] as Record<string, unknown>[] : [];
@@ -93,7 +95,7 @@ export function readLegacyPanel(device: BlinkerDevice): LegacyPanel {
 
   const config = root['config'] as Record<string, unknown> | undefined;
 
-  return { document: { schemaVersion: 1, columns: 8, widgets, style: normalizeUiTheme(config?.['interfaceStyle']) }, bindings, omitted };
+  return { document: { schemaVersion: 1, columns: 8, widgets, style: normalizeUiTheme(saved?.style) ?? normalizeUiTheme(config?.['interfaceStyle']) }, bindings, omitted };
 }
 
 export function writeLegacyPanel(raw: string | undefined, document: PanelDocument, bindings: Record<string, LegacyBinding>): string {

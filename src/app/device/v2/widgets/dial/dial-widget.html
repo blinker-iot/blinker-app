@@ -21,7 +21,7 @@
       <circle class="arc-knob" [attr.cx]="knob.x" [attr.cy]="knob.y" [attr.r]="thickness / 2 + 4" />
     </svg>
     <div class="dl-center">
-      <div class="dl-num num">{{ reading.text }}<sup>{{ reading.unit }}</sup></div>
+      <div class="dl-num num"><span [valueTransition]="reading.text">{{ reading.text }}</span><sup>{{ reading.unit }}</sup></div>
       @if (options.caption) { <div class="dl-sub">{{ options.caption }}</div> }
     </div>
   </div>

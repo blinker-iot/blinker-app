@@ -1,13 +1,14 @@
 import { Component } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { SwitchWidgetBase } from '../switch-base';
 
 // 胶囊开关行: icon, title and caption with a pill switch at the end.
 @Component({
   selector: 'app-toggle-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './toggle-widget.html',
   styleUrls: ['./toggle-widget.scss'],
 })

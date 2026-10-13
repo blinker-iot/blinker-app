@@ -3,6 +3,9 @@
 
 @include c.base;
 
+:host { gap: 0; }
+.hd { margin-bottom: 12px; }
+
 .gs-val {
   font-size: 22px;
   line-height: 1;
@@ -12,10 +15,9 @@
 
 .gs-wrap {
   position: relative;
-  margin-top: auto;
 
-  &.h-thin { height: 6px; margin-block: auto 12px; }
-  &.h-mid { height: 14px; margin-block: auto 8px; }
+  &.h-thin { height: 6px; margin-bottom: 12px; }
+  &.h-mid { height: 14px; margin-bottom: 8px; }
   &.h-thick { height: 32px; }
 }
 
@@ -32,6 +34,7 @@
 
   @include theme.electronic {
     border-radius: 0;
+
     -webkit-mask: radial-gradient(circle, #000 1.7px, transparent 2.2px) left center / 6px 6px;
     mask: radial-gradient(circle, #000 1.7px, transparent 2.2px) left center / 6px 6px;
   }
@@ -40,10 +43,13 @@
 .gs-knob {
   position: absolute;
   top: 50%;
+
   left: calc(var(--p) * 1%);
+
   width: 26px;
   height: 26px;
   border-radius: 50%;
+
   transform: translate(-50%, -50%);
   pointer-events: none;
 
@@ -59,11 +65,14 @@
   display: none;
   position: absolute;
   top: 50%;
+
   left: calc(var(--p) * 1%);
+
   width: 12px;
   height: 12px;
   margin: -6px 0 0 -6px;
   border-radius: 50%;
+
   background: var(--ui-accent);
   box-shadow: 0 0 0 4px var(--ui-card);
   pointer-events: none;
@@ -74,7 +83,10 @@
 .gs-ticks {
   display: flex;
   justify-content: space-between;
+  margin-top: 10px;
+
   color: var(--ui-muted);
   font-family: var(--ui-font-mono);
+
   font-size: 10px;
 }

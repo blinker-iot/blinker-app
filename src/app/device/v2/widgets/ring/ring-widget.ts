@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { ReadingWidgetBase } from '../reading-base';
 import { arcPath } from '../widget-kit';
 
@@ -16,7 +17,7 @@ const HALF = { box: '3 4 34 19', cx: 20, cy: 21, radius: 15, start: -90, sweep: 
 @Component({
   selector: 'app-ring-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './ring-widget.html',
   styleUrls: ['./ring-widget.scss'],
 })
@@ -33,11 +34,11 @@ export class RingWidgetComponent extends ReadingWidgetBase {
 
   get progress(): string {
     const { cx, cy, radius, start, sweep } = this.geometry;
-    return this.level > 0 ? arcPath(cx, cy, radius, start, start + this.level * sweep) : '';
+    return this.displayLevel > 0 ? arcPath(cx, cy, radius, start, start + this.displayLevel * sweep) : '';
   }
 
   get segments(): boolean[] {
-    const lit = Math.round(this.level * SEGMENTS);
+    const lit = Math.round(this.displayLevel * SEGMENTS);
     return Array.from({ length: SEGMENTS }, (_, index) => index < lit);
   }
 

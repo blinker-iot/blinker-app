@@ -8,18 +8,19 @@ import { BlinkerDevice } from '../../../core/model/device.model';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceService } from '../../../core/services/device.service';
 import { NoticeService } from '../../../core/services/notice.service';
-import { DeviceUiConnection, DeviceUiPort, DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
+import { DeviceUiConnection, DeviceUiEndpoint, DeviceUiPort, DeviceUiSnapshot, DeviceUiTelemetryLease, DeviceUiValue } from '../../../core/device-v2/device-ui.port';
 import { DeviceV2PageLayoutService } from '../../../core/services/device-v2-page-layout.service';
+import type { HistoryPoint } from '../../../core/device-v2/endpoint-history';
 import { arrangeTiles, capabilityTiles, displayValue, InterfaceTile, toPageLayout } from './interface-draft';
-import { legacyRoot, readLegacyPanel } from '../../../core/device-v2/legacy-panel';
+import { readLegacyPanel } from '../../../core/device-v2/legacy-panel';
 import { DevicePanelRecord, DevicePanelService } from '../../../core/services/device-panel.service';
 import { PageLayoutPanelComponent, type PanelCard } from '../../../device/v2/panel/page-layout-panel';
-import type { WorkflowPreview } from './interface-workflow';
 import { InterfaceGenerationService, type InterfaceGenerationOptions } from './interface-generation.service';
 import { UI_THEMES, UiTheme } from '../../../core/device-v2/ui-theme';
 import { legacyPreviewCards } from './legacy-preview-cards';
 
 type Method = 'automatic' | 'ai' | 'classic';
+const PREVIEW_HISTORY_LIMIT = 240;
 
 @Component({
   selector: 'app-device-uic', standalone: true, imports: [IonicModule, FormsModule, PageLayoutPanelComponent],
@@ -30,6 +31,7 @@ type Method = 'automatic' | 'ai' | 'classic';
 export class DeviceUicPage implements OnInit, OnDestroy {
   readonly id: string;
   readonly backHref: string;
+  readonly configurationHref: string;
 
   readonly methods: { id: Method; title: string; subtitle: string; icon: string }[] = [
     { id: 'automatic', title: '自动适配', subtitle: '根据设备能力生成基础面板', icon: 'fa-sparkles' },
@@ -52,15 +54,16 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   adjustment = '';
   summary = '';
   error = '';
+  liveError = '';
   loading = false;
   generating = false;
   generated = false;
   saving = false;
   previewCount = 0;
   progressMessage = '';
-  workflowPreview?: WorkflowPreview;
+  generationWarning?: string;
   private generationController?: AbortController;
-  private previousDraft?: { tiles: InterfaceTile[]; summary: string; generated: boolean; preview?: WorkflowPreview };
+  private previousDraft?: { tiles: InterfaceTile[]; summary: string; generated: boolean; warning?: string };
   snapshot?: DeviceUiSnapshot;
   private revision = 0;
   private layoutReady = false;
@@ -70,6 +73,16 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   private readonly subscriptions = new Subscription();
   private deviceSubscriptions = new Subscription();
   private connection?: DeviceUiConnection;
+  private connectionReady = false;
+  private pageVisible = true;
+  private appActive = true;
+  private telemetry?: DeviceUiTelemetryLease;
+
+  private telemetryDetach?: () => void;
+  private telemetryKey = '';
+  private telemetryEpoch = 0;
+  private telemetryValues = new Map<string, DeviceUiValue | undefined>();
+  private readonly previewHistory = new Map<string, HistoryPoint[]>();
   private destroyed = false;
   private legacyRecord?: DevicePanelRecord | null;
 
@@ -83,6 +96,10 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     private readonly panels: DevicePanelService) {
     this.id = route.snapshot.paramMap.get('id') || '';
     this.backHref = this.id ? `/device-manager/${encodeURIComponent(this.id)}` : '/home/device';
+    this.configurationHref = `/device-manager/${encodeURIComponent(this.id)}/uic`;
+
+    const method = route.snapshot.data['method'];
+    this.selected = method === 'automatic' || method === 'ai' ? method : null;
   }
 
   get isV2(): boolean { return this.device?.config.mode === 'bbp2'; }
@@ -92,13 +109,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     if (this.device.config.component) return this.device.config.component === 'TestDashboard';
     if (!this.layoutReady) return undefined;
 
-    return this.isV2 ? this.revision === 0 : !this.legacyRecord && !this.hasLegacyLayout;
-  }
-
-  private get hasLegacyLayout(): boolean {
-    const root = legacyRoot(this.device?.config.layouter);
-
-    return !!root['pagePanel'] || (Array.isArray(root['dashboard']) && root['dashboard'].length > 0);
+    return !this.isV2 && this.legacyRecord?.panel.view === 'debug';
   }
 
   get missingCapabilityMessage(): string {
@@ -128,11 +139,13 @@ export class DeviceUicPage implements OnInit, OnDestroy {
       const extras = widget.extraKeys?.flatMap(key => {
         const extra = this.snapshot!.endpoints.find(field => field.key === key);
 
-        return extra ? [{ field: extra, value: extra.value }] : [];
+        return extra ? [{ field: extra, value: this.previewValue(extra) }] : [];
       });
 
-      return { widget, field, value: field.value, extras, display: displayValue(field.value),
-        draft: field.value == null ? '' : String(field.value), error: '', disabled: false };
+      const value = this.previewValue(field);
+
+      return { widget, field, value, extras, history: this.previewHistory.get(field.key), display: displayValue(value),
+        draft: value == null ? '' : String(value), error: '', disabled: false };
     });
   }
 
@@ -143,15 +156,27 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.bindDevice();
     this.subscriptions.add(this.data.userDataLoader.subscribe(loaded => { if (loaded) this.bindDevice(); }));
+
+    this.subscriptions.add(this.deviceUi.appActive.subscribe(active => {
+      this.appActive = active;
+
+      this.refreshPreviewTelemetry();
+      this.render();
+    }));
   }
 
   ionViewWillEnter(): void {
+    this.pageVisible = true;
+
     this.bindDevice();
 
     if (this.selected && this.selected !== 'classic' && this.isV2 && !this.connection) void this.refreshCapabilities();
   }
 
   ionViewDidLeave(): void {
+    this.pageVisible = false;
+
+    this.releasePreviewTelemetry();
     this.cancelGeneration();
     this.epoch++;
     this.refreshVersion++;
@@ -169,6 +194,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
     this.destroyed = true;
 
+    this.releasePreviewTelemetry();
     this.epoch++;
     this.refreshVersion++;
     this.subscriptions.unsubscribe();
@@ -185,27 +211,15 @@ export class DeviceUicPage implements OnInit, OnDestroy {
       return;
     }
 
-    this.selected = method;
-
-    void this.content?.scrollToTop(0);
-
-    this.error = '';
-    this.summary = '';
-    this.generated = false;
-    this.workflowPreview = undefined;
-    this.tiles = arrangeTiles(this.sourceTiles, this.previewStyle || undefined);
-
-    if (this.isV2) void this.refreshCapabilities();
+    void this.nav.navigateForward(`${this.configurationHref}/${method}`);
   }
-
-  closeEditor(): void { if (!this.saving && !this.generating) { this.selected = null; this.error = ''; } }
 
   chooseStyle(style: UiTheme): void {
     if (this.generating || this.saving || style === this.style) return;
 
     this.style = style;
     this.generated = false;
-    this.workflowPreview = undefined;
+    this.generationWarning = undefined;
     this.summary = '';
     this.error = '';
     this.tiles = arrangeTiles(this.sourceTiles, style);
@@ -217,9 +231,12 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     if (!this.device || !this.isV2 || this.loading || this.generating || this.saving) return;
 
     try {
+      this.releasePreviewTelemetry();
       this.connection?.close();
 
       this.connection = this.deviceUi.openConnection(this.device.deviceName);
+
+      this.refreshPreviewTelemetry();
 
       // The accepted manifest is already observed through watchState. A live device
       // connection may take much longer than the layout read, or stay offline.
@@ -273,7 +290,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
     if (refining && (!this.generated || !this.isV2 || !prompt)) return;
 
-    const base = refining ? { tiles: this.tiles, summary: this.summary, preview: this.workflowPreview } : undefined;
+    const base = refining ? { tiles: this.tiles, summary: this.summary } : undefined;
 
     if (this.selected !== 'ai' || !this.device || this.device.config.isShared) return;
     if (this.generating || this.saving) return;
@@ -295,12 +312,12 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     const controller = new AbortController();
 
     this.generationController = controller;
-    this.previousDraft = { tiles: this.tiles, summary: this.summary, generated: this.generated, preview: this.workflowPreview };
+    this.previousDraft = { tiles: this.tiles, summary: this.summary, generated: this.generated, warning: this.generationWarning };
     this.previewCount = 0;
     this.progressMessage = '';
     this.generating = true;
     this.generated = false;
-    this.workflowPreview = undefined;
+    this.generationWarning = undefined;
     this.summary = '';
     this.error = '';
 
@@ -324,7 +341,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
           this.tiles = this.withLiveValues(result.tiles);
           this.previewCount = result.tiles.length;
-          this.workflowPreview = result.preview;
+          this.generationWarning = result.warning;
 
           this.render();
         },
@@ -339,10 +356,10 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
       this.tiles = this.withLiveValues(result.tiles);
       this.summary = result.summary;
-      this.workflowPreview = result.preview;
+      this.generationWarning = result.warning;
       this.generated = true;
 
-      if (refining) this.adjustment = '';
+      if (refining && !result.warning) this.adjustment = '';
 
       this.previousDraft = undefined;
     } catch (error) {
@@ -350,10 +367,8 @@ export class DeviceUicPage implements OnInit, OnDestroy {
         this.restoreDraft();
 
         const code = (error as { code?: string })?.code;
-        const feedback = (error as { feedback?: string })?.feedback || '';
 
         this.error = code === 'INTERFACE_AI_UNAVAILABLE' ? 'AI 服务尚未配置，请联系服务管理员；也可以使用自动适配或拖拽编辑。'
-          : code === 'INTERFACE_AI_REVIEW_REJECTED' ? `界面暂未通过视觉审查。${feedback} 请调整需求后重试，上一次通过的预览已保留。`
           : code === 'INTERFACE_AI_RATE_LIMIT' ? '生成请求较多，请稍后再试。'
           : code === 'INTERFACE_AI_TIMEOUT' || code === 'GATEWAY_TIMEOUT' ? '生成超时，请重试。上一次预览已保留。'
           : '生成未完成，请稍后重试。上一次预览已保留。';
@@ -380,7 +395,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
       this.tiles = this.withLiveValues(this.previousDraft.tiles);
       this.summary = this.previousDraft.summary;
       this.generated = this.previousDraft.generated;
-      this.workflowPreview = this.previousDraft.preview;
+      this.generationWarning = this.previousDraft.warning;
       this.previousDraft = undefined;
     }
   }
@@ -463,20 +478,8 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
     try {
       if (!this.isV2) {
-        if (!enabled && !await this.panels.get(this.device) && !this.hasLegacyLayout) {
-          await this.nav.navigateForward(`/device/${encodeURIComponent(this.id)}/edit`);
-
-          return;
-        }
-
         await this.panels.setView(this.device, enabled ? 'debug' : 'normal');
         await this.nav.navigateRoot(`/device/${encodeURIComponent(this.id)}`);
-
-        return;
-      }
-
-      if (!enabled && !await this.pageLayouts.get(this.device.deviceName)) {
-        await this.nav.navigateForward(`/device/${encodeURIComponent(this.id)}/edit`);
 
         return;
       }
@@ -508,23 +511,45 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     this.epoch++;
     this.connection?.close();
 
+    this.connection = undefined;
+    this.connectionReady = false;
+
+    this.releasePreviewTelemetry();
+    this.previewHistory.clear();
+
     this.device = device;
     this.snapshot = undefined;
     this.fingerprint = '';
     this.summary = '';
     this.error = '';
     this.generated = false;
-    this.workflowPreview = undefined;
+    this.generationWarning = undefined;
     this.layoutReady = false;
     this.revision = 0;
     this.loading = false;
     this.generating = false;
-    this.selected = null;
     this.sourceTiles = device ? capabilityTiles(device) : [];
     this.tiles = arrangeTiles(this.sourceTiles, this.previewStyle || undefined);
 
     if (device && !this.isV2) void this.loadLegacyPanel();
-    if (device && this.isV2 && !device.config.component) void this.readLayout();
+    if (device && this.isV2 && !device.config.component && !this.selected) void this.readLayout();
+
+    if (device && this.isV2) {
+      this.deviceSubscriptions.add(this.deviceUi.watchConnection(device.deviceName).subscribe(state => {
+        this.connectionReady = state === 'ready';
+
+        this.refreshPreviewTelemetry();
+        this.render();
+      }));
+
+      this.deviceSubscriptions.add(this.deviceUi.watchEvents(device.deviceName).subscribe(event => {
+        if (!this.pageVisible || !this.appActive || !this.selected) return;
+
+        for (const [key, value] of Object.entries(event.values)) this.recordPreviewValue(key, value);
+
+        this.render();
+      }));
+    }
 
     if (device && this.isV2) this.deviceSubscriptions.add(this.deviceUi.watchState(device.deviceName).subscribe({
       next: snapshot => {
@@ -538,24 +563,131 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
         if (changed) {
           this.cancelGeneration();
+          this.previewHistory.clear();
 
-          this.generated = false; this.summary = ''; this.workflowPreview = undefined; this.layoutReady = false;
+          this.generated = false; this.summary = ''; this.generationWarning = undefined; this.layoutReady = false;
 
-          if (fingerprint && this.selected && this.selected !== 'classic') void this.readLayout();
+          if (fingerprint && this.selected && this.connection) void this.readLayout();
         }
 
         if (!this.generated && !this.generating) this.tiles = arrangeTiles(this.sourceTiles, this.previewStyle || undefined);
         else this.tiles = this.withLiveValues(this.tiles);
 
+        if (this.pageVisible && this.appActive) {
+          for (const field of snapshot.endpoints) {
+            if (field.role !== 'event') this.recordPreviewValue(field.key, field.value, true);
+          }
+        }
+
+        this.refreshPreviewTelemetry();
         this.render();
       },
       error: () => { this.error = '无法读取设备能力，请重新连接'; this.render(); },
     }));
 
+    if (device && this.isV2 && this.selected && this.pageVisible) void this.refreshCapabilities();
+
     this.render();
   }
 
   private render(): void { if (!this.destroyed) this.cd.markForCheck(); }
+
+  private previewValue(field: DeviceUiEndpoint): DeviceUiValue | undefined {
+    if (this.telemetryValues.has(field.key)) return this.telemetryValues.get(field.key);
+
+    const event = field.role === 'event' ? this.previewHistory.get(field.key)?.at(-1) : undefined;
+
+    return event ? event.value : field.value;
+  }
+
+  private recordPreviewValue(key: string, value: DeviceUiValue | undefined, onlyChanges = false): void {
+    if (value === undefined || value instanceof Uint8Array) return;
+
+    const points = this.previewHistory.get(key) ?? [];
+
+    if (onlyChanges && points.at(-1)?.value === value) return;
+
+    this.previewHistory.set(key, [...points.slice(-(PREVIEW_HISTORY_LIMIT - 1)), { at: Date.now(), value }]);
+  }
+
+  private refreshPreviewTelemetry(): void {
+    if (this.destroyed || !this.pageVisible || !this.appActive || !this.selected || !this.isV2
+      || !this.connection || !this.connectionReady || !this.snapshot?.manifestAccepted
+      || this.deviceUi.isBleDirect(this.device!.deviceName)) {
+      this.releasePreviewTelemetry();
+
+      return;
+    }
+
+    const fields = this.snapshot.endpoints.filter(field => field.role === 'property'
+      && field.readable && !field.writable && field.telemetryMinimumIntervalMs);
+
+    if (!fields.length) {
+      this.releasePreviewTelemetry();
+
+      return;
+    }
+
+    const keys = fields.map(field => field.key).sort();
+    const interval = Math.max(1000, ...fields.map(field => field.telemetryMinimumIntervalMs!));
+    const key = JSON.stringify([this.device!.deviceName, this.fingerprint, interval, keys]);
+
+    if (key === this.telemetryKey) return;
+
+    this.releasePreviewTelemetry();
+
+    this.telemetryKey = key;
+
+    const epoch = this.telemetryEpoch;
+
+    void this.deviceUi.openTelemetry(this.device!.deviceName, keys, interval).then(lease => {
+      if (epoch !== this.telemetryEpoch || this.destroyed) {
+        void lease.close().catch(() => undefined);
+
+        return;
+      }
+
+      this.telemetry = lease;
+
+      this.telemetryDetach = lease.subscribe(snapshot => {
+        if (epoch !== this.telemetryEpoch) return;
+
+        this.telemetryValues = new Map(Object.entries(snapshot.values));
+
+        for (const [key, value] of this.telemetryValues) this.recordPreviewValue(key, value);
+
+        this.liveError = '';
+
+        this.render();
+      });
+    }).catch(() => {
+      if (epoch !== this.telemetryEpoch) return;
+
+      this.liveError = '实时读数暂不可用，请检查设备连接后刷新。';
+
+      this.render();
+    });
+  }
+
+  private releasePreviewTelemetry(): void {
+    this.telemetryEpoch++;
+
+    this.telemetryKey = '';
+
+    this.telemetryDetach?.();
+
+    this.telemetryDetach = undefined;
+
+    const lease = this.telemetry;
+
+    this.telemetry = undefined;
+
+    this.telemetryValues.clear();
+
+    this.liveError = '';
+
+    if (lease) void lease.close().catch(() => undefined);
+  }
 
   private async loadLegacyPanel(): Promise<void> {
     const device = this.device;

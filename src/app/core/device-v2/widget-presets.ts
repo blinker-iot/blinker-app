@@ -1,4 +1,6 @@
 import type { PageWidgetOptions, PageWidgetType, PageWidgetVariant } from './page-widget';
+import type { DeviceUiEndpoint } from './device-ui.port';
+import { variantsFor } from './page-layout';
 
 export interface WidgetPreset {
   type: PageWidgetType;
@@ -6,6 +8,55 @@ export interface WidgetPreset {
   width: 2 | 4 | 8;
   height: number;
   options: PageWidgetOptions;
+}
+
+// Narrow the add catalogue without invalidating previously saved layouts.
+export function presetMatchesField(preset: WidgetPreset, field: DeviceUiEndpoint): boolean {
+  if (!variantsFor(preset.type, field).includes(preset.variant)) return false;
+
+  if (variantsFor('color', field).length) return preset.type === 'color';
+
+  const numeric = field.valueType === 'integer' || field.valueType === 'number';
+
+  const bounded = Number.isFinite(field.minimum) && Number.isFinite(field.maximum)
+    && field.maximum! > field.minimum!;
+
+  if (preset.type === 'value') {
+    if (field.role === 'event') return preset.variant === 'status' || preset.variant === 'log';
+    if (field.role !== 'property') return false;
+
+    switch (preset.variant) {
+      case 'number':
+      case 'trend': return numeric;
+      case 'ring': return numeric && bounded;
+      case 'status': return numeric || field.valueType === 'boolean' || field.valueType === 'text';
+      case 'log': return field.valueType === 'text' && !field.choices?.length;
+
+      default: return false;
+    }
+  }
+
+  if (preset.type === 'slider') {
+    if (!bounded) return false;
+
+    if (preset.variant === 'levels') {
+      const step = field.step ?? 1;
+      const intervals = (field.maximum! - field.minimum!) / step;
+
+      // The levels widget displays at most twelve values, including off.
+      return Number.isInteger(step) && step > 0 && Number.isInteger(field.minimum)
+        && Number.isInteger(intervals) && intervals >= 1 && intervals < 12;
+    }
+
+    if (preset.variant === 'timer') {
+      return field.minimum === 0 && ['s', 'sec', 'second', 'seconds', '秒'].includes(field.unit?.trim().toLowerCase() ?? '');
+    }
+  }
+
+  // Enumerated text must use choices, not an unrestricted text input.
+  if (preset.type === 'input' && field.choices?.length) return false;
+
+  return true;
 }
 
 // Shared component appearances. Example readings, thresholds and device-specific

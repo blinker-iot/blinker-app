@@ -32,6 +32,7 @@ import {
 
 import {
   diffPageLayout,
+  generateDefaultPageLayout,
   migratePageLayout,
   PageLayout,
   PageLayoutDiff,
@@ -523,10 +524,13 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     }
 
     try {
-      if (this.storedLayout) {
+      if (this.storedLayout?.layout.widgets.length) {
         this.layout = this.storedLayout.manifestFingerprint === snapshot.manifestFingerprint
           ? parsePageLayout(this.storedLayout.layout, snapshot.endpoints)
           : migratePageLayout(this.storedLayout.layout, snapshot);
+      } else if (this.layout) {
+        this.layout = { ...generateDefaultPageLayout(snapshot),
+          revision: this.storedLayout?.revision ?? 1, style: this.storedLayout?.layout.style };
       }
 
       this.clearLayoutError();
@@ -556,25 +560,14 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     let validatingRecord = false;
 
     try {
-      let record = await this.pageLayouts.get(logicalDeviceId);
+      const record = await this.pageLayouts.get(logicalDeviceId);
 
       if (!this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
 
       // The live schema may have replaced an invalid preview with the same hash.
-      snapshot = this.snapshot;
+      validatingRecord = !!record;
 
-      if (!record) {
-        this.storedLayout = undefined;
-        this.layout = undefined;
-
-        return;
-      }
-
-      if (!this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
-
-      validatingRecord = true;
-
-      this.applyStoredLayout(record, this.snapshot);
+      this.applyStoredLayout(record ?? undefined, this.snapshot);
     } catch (error) {
       if (this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) {
         this.error = this.messageOf(error, '页面布局同步失败');
@@ -586,10 +579,13 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  private applyStoredLayout(record: DeviceV2PageLayoutRecord, snapshot: DeviceUiSnapshot): void {
+  private applyStoredLayout(record: DeviceV2PageLayoutRecord | undefined, snapshot: DeviceUiSnapshot): void {
     this.storedLayout = record;
 
-    if (record.manifestFingerprint === snapshot.manifestFingerprint) {
+    if (!record || !record.layout.widgets.length) {
+      this.layout = { ...generateDefaultPageLayout(snapshot), revision: record?.revision ?? 1, style: record?.layout.style };
+      this.layoutStale = undefined;
+    } else if (record.manifestFingerprint === snapshot.manifestFingerprint) {
       this.layout = parsePageLayout(record.layout, snapshot.endpoints);
       this.layoutStale = undefined;
     } else {

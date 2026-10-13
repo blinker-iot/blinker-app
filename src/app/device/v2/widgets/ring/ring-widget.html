@@ -13,11 +13,11 @@
 
 <div class="bn md" [class.warn]="alert" role="meter" [attr.aria-label]="title" [attr.aria-valuemin]="min"
   [attr.aria-valuemax]="max" [attr.aria-valuenow]="number ?? null">
-  <div class="bn-num num">{{ reading.text }}<span class="bn-u">{{ reading.unit }}</span></div>
+  <div class="bn-num num"><span [valueTransition]="displayReading.text">{{ displayReading.text }}</span><span class="bn-u">{{ displayReading.unit }}</span></div>
   @if (shape === 'segments') {
     <div class="rg-seg">
       @for (lit of segments; track $index) { <i [class.on]="lit"></i> }
     </div>
   }
-  @if (withExtras(note); as line) { <div class="bn-sub"><span>{{ line }}</span></div> }
+  @if (withExtras(note); as line) { <div class="bn-sub"><span [valueTransition]="line">{{ line }}</span></div> }
 </div>

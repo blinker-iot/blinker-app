@@ -92,7 +92,7 @@
 
   @for (key of specific; track key) {
     <div class="field" [class.top]="rule(key).kind !== 'enum' && hints[key]" [class.invalid]="invalid.has(key)">
-      <span>{{ optionLabels[key] }}</span>
+      <span>{{ variant === 'timer' && key === 'actionText' ? '结束动作文案' : optionLabels[key] }}</span>
 
       @switch (rule(key).kind) {
         @case ('boolean') {
@@ -121,7 +121,18 @@
 
         @case ('text') {
           <span class="stack">
-            <input class="input" [value]="text(key)" placeholder="默认" (change)="setOption(key, $any($event.target).value)" />
+
+            @if (variant === 'timer' && key === 'actionText') {
+              <span class="seg" role="radiogroup" aria-label="结束动作文案">
+                <button type="button" role="radio" [attr.aria-checked]="(options.actionText ?? '后关闭') === '后关闭'"
+                  (click)="setOption(key, '后关闭')">关闭</button>
+                <button type="button" role="radio" [attr.aria-checked]="options.actionText === '后开启'"
+                  (click)="setOption(key, '后开启')">开启</button>
+              </span>
+              <small>用于显示，请与设备实际的定时行为保持一致。</small>
+            } @else {
+              <input class="input" [value]="text(key)" placeholder="默认" (change)="setOption(key, $any($event.target).value)" />
+            }
 
             @if (hints[key]) { <small>{{ hints[key] }}</small> }
           </span>

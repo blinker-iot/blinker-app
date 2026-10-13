@@ -4,6 +4,8 @@ import {
   MAX_EXTRA_KEYS, PAGE_WIDGET_OPTION_RULES, PAGE_WIDGET_TONES, PAGE_WIDGET_TYPES, PAGE_WIDGET_VARIANTS, PageWidgetVariant,
   VARIANT_SIZES, acceptsExtras, widgetVariant,
 } from '../../../core/device-v2/page-widget';
+import { variantsFor } from '../../../core/device-v2/page-layout';
+import { presetForVariant } from '../../../core/device-v2/widget-presets';
 import { toPageLayout, validateProposal, type InterfaceTile } from './interface-draft';
 
 type WorkflowWidget = {
@@ -13,13 +15,6 @@ type WorkflowWidget = {
   extras?: string[];
 };
 const WORKFLOW_WIDTHS = [2, 4, 8];
-
-export interface WorkflowPreview {
-  image: string;
-  review: string;
-  passed: boolean;
-  issues: { widgetId: string; problem: string; suggestion: string }[];
-}
 
 export function workflowManifest(tiles: InterfaceTile[], snapshot: DeviceUiSnapshot) {
   return tiles.map(tile => {
@@ -31,33 +26,35 @@ export function workflowManifest(tiles: InterfaceTile[], snapshot: DeviceUiSnaps
   });
 }
 
+export function workflowDefaults(tiles: InterfaceTile[], snapshot: DeviceUiSnapshot) {
+  const variants = new Set<PageWidgetVariant>();
+
+  for (const tile of tiles) {
+    const field = snapshot.endpoints.find(endpoint => endpoint.key === tile.key);
+
+    if (!field) throw new Error('设备能力已更新，请重新生成');
+
+    for (const type of PAGE_WIDGET_TYPES) {
+      for (const variant of variantsFor(type, field)) variants.add(variant);
+    }
+  }
+
+  return [...variants].map(presetForVariant);
+}
+
 export function validateWorkflowResult(input: unknown, source: InterfaceTile[], snapshot: DeviceUiSnapshot,
-  style: UiTheme, round: unknown): ReturnType<typeof validateProposal> & { preview: WorkflowPreview } {
+  style: UiTheme, round: unknown): ReturnType<typeof validateProposal> & { warning?: string } {
   const data = input as {
     proposal?: { summary: string; widgets: WorkflowWidget[] };
-    preview?: { mimeType: string; data: string; width: number; height: number };
-    review?: { passed: boolean; summary: string; issues: unknown[] };
+    warning?: string;
   };
-  const invalid = () => new Error('生成结果未通过校验，请重新生成');
-  if (!data || !data.proposal || !data.review || typeof data.review.passed !== 'boolean'
-    || !Array.isArray(data.review.issues) || data.review.passed !== (data.review.issues.length === 0) || typeof data.review.summary !== 'string'
-    || data.review.summary.length > 500 || !Number.isInteger(round) || Number(round) < 0 || Number(round) > 3) throw invalid();
 
-  const result = validateWorkflowProposal(data.proposal, source, snapshot, style);
+  if (!data?.proposal || !Number.isInteger(round) || Number(round) < 0 || Number(round) > 1
+    || (data.warning !== undefined && (typeof data.warning !== 'string' || data.warning.length > 500))) {
+    throw new Error('生成结果未通过校验，请重新生成');
+  }
 
-  const issues = data.review.issues as WorkflowPreview['issues'];
-  if (issues.length > 24 || issues.some(issue => !issue || typeof issue.widgetId !== 'string'
-    || (issue.widgetId && !source.some(tile => tile.id === issue.widgetId))
-    || typeof issue.problem !== 'string' || issue.problem.length > 300
-    || typeof issue.suggestion !== 'string' || issue.suggestion.length > 300)) throw invalid();
-  const preview = data.preview;
-  if (data.review.passed && !preview) throw invalid();
-  if (preview && (preview.mimeType !== 'image/jpeg' || typeof preview.data !== 'string' || preview.data.length > 2 * 1024 * 1024
-    || !/^[A-Za-z0-9+/]+={0,2}$/.test(preview.data) || preview.width !== 390
-    || !Number.isInteger(preview.height) || preview.height < 1 || preview.height > 12000)) throw invalid();
-
-  return { ...result, preview: { image: preview ? `data:image/jpeg;base64,${preview.data}` : '',
-    review: data.review.summary, passed: data.review.passed, issues } };
+  return { ...validateWorkflowProposal(data.proposal, source, snapshot, style), warning: data.warning };
 }
 
 export function validateWorkflowProposal(input: unknown, source: InterfaceTile[], snapshot: DeviceUiSnapshot, style: UiTheme) {
@@ -94,11 +91,9 @@ export function validateWorkflowProposal(input: unknown, source: InterfaceTile[]
 }
 
 export function workflowProgress(stage: unknown, round: unknown): string {
-  const labels: Record<string, string> = { match: '正在识别设备字段并匹配组件', design: '正在设计布局和样式',
-    render: '正在生成界面预览图', review: '正在进行视觉审查' };
-  const label = typeof stage === 'string' ? labels[stage] : undefined;
-  if (!label || !Number.isInteger(round) || Number(round) < 0 || Number(round) > 3) throw new Error('无效的生成进度');
-  return `${label}…`;
+  if (stage !== 'generate' || round !== 1) throw new Error('无效的生成进度');
+
+  return '正在生成界面…';
 }
 
 export function draftProposal(tiles: InterfaceTile[], summary: string) {

@@ -132,6 +132,26 @@ button {
 
 .sec + .sec { margin-top: 36px; }
 
+.media-gallery {
+  display: grid;
+
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+
+  gap: 16px;
+}
+
+.media-cell {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  &.selected > :first-child {
+    outline: 2px solid var(--ui-focus);
+    outline-offset: 3px;
+  }
+}
+
 // Long press opens the inspector, so it must not select text or raise the
 // system callout; fields stay editable.
 .gallery {

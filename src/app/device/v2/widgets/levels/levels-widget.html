@@ -2,7 +2,7 @@
   <div class="hd">
     @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
     <span class="hd-t">{{ title }}</span>
-    <span class="hd-v">{{ currentName }}</span>
+    <span class="hd-v" [valueTransition]="currentName">{{ currentName }}</span>
   </div>
 }
 

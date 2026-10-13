@@ -1,0 +1,42 @@
+<header class="hd">
+  <span class="hd-ico"><app-ui-icon name="video" /></span>
+  <span class="hd-t">{{ title }}</span>
+  <span class="video-status" [class.connected]="state() === 'playing'" role="status">{{ status }}</span>
+
+</header>
+<div class="video-frame" [attr.aria-busy]="state() === 'loading'">
+  @for (session of sessions(); track session.revision) {
+    @if (session.str === 'hls') {
+      <video #video controls playsinline muted preload="metadata" data-press
+        (loadedmetadata)="ready(session.revision)" (playing)="playing(session.revision)"
+        (pause)="paused(session.revision)" (ended)="paused(session.revision)" (error)="fail(session.revision)"></video>
+    } @else {
+      <img [src]="session.url" [alt]="title" (load)="playing(session.revision)" (error)="fail(session.revision)" />
+    }
+  }
+
+  @if (state() === 'empty' || state() === 'error' || state() === 'loading') {
+    <div class="video-message" [class.loading]="state() === 'loading'">
+      <span class="video-symbol"><app-ui-icon [name]="state() === 'error' ? 'video-slash' : 'video'" /></span>
+
+      @if (state() === 'empty') {
+        <strong>画面，从这里开始</strong>
+        <p>接入摄像头，查看实时画面</p>
+        <button type="button" (click)="configure.emit()">设置视频源 <app-ui-icon name="arrow-right" /></button>
+      } @else if (state() === 'error') {
+        <strong>暂时无法连接画面</strong>
+        <p>请检查视频地址与网络连接</p>
+        <button type="button" (click)="reload()">重新连接 <app-ui-icon name="arrow-rotate-right" /></button>
+      } @else {
+        <strong>正在连接视频源</strong>
+        <p>等待第一帧画面</p>
+      }
+
+    </div>
+  }
+
+</div>
+<footer class="video-footer">
+  <span>{{ source.str === 'hls' ? 'HLS' : 'MJPEG' }} <span class="separator">·</span> 16:9</span>
+  <button type="button" (click)="configure.emit()"><app-ui-icon name="sliders" /> 视频设置</button>
+</footer>

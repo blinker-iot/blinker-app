@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { ReadingWidgetBase } from '../reading-base';
 
 const DEFAULT_ROWS = 5;
@@ -9,7 +10,7 @@ const DEFAULT_ROWS = 5;
 @Component({
   selector: 'app-log-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './log-widget.html',
   styleUrls: ['./log-widget.scss'],
 })

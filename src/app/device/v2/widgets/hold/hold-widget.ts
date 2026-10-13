@@ -1,6 +1,7 @@
 import { Component, OnDestroy, signal } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { WidgetBase } from '../widget-base';
 
 // 按住开关: a writable boolean that stays on only while held, e.g. jogging a motor.
@@ -9,7 +10,7 @@ import { WidgetBase } from '../widget-base';
 @Component({
   selector: 'app-hold-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './hold-widget.html',
   styleUrls: ['./hold-widget.scss'],
   host: {

@@ -62,6 +62,8 @@ ion-header:not(.main-tab-header):not(.opaque-page-header) {
 
   ion-toolbar {
     --min-height: var(--transparent-page-header-height) !important;
+    --padding-top: 0;
+    --padding-bottom: 0;
     --padding-start: 6px;
     --padding-end: 6px;
     min-height: var(--transparent-page-header-height) !important;

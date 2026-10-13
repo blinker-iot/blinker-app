@@ -95,7 +95,6 @@ describe('DevicePage component switching', () => {
       { detectChanges: vi.fn(), markForCheck: vi.fn() } as unknown as ChangeDetectorRef,
       { showToast: vi.fn() } as never,
       { get: vi.fn().mockResolvedValue(null) } as never,
-      { get: vi.fn().mockResolvedValue(null) } as never,
     );
 
     page.ngOnInit();
@@ -161,15 +160,15 @@ describe('DevicePage component switching', () => {
     );
   });
 
-  it('uses the debug dashboard for bbp2 devices without a saved layout or explicit component', async () => {
+  it('uses the normal control center for bbp2 devices without a saved layout or explicit component', async () => {
     device.config.mode = 'bbp2';
 
     delete device.config.component;
     await page.resolveDefaultView();
-    expect(page.usesV2DevicePage).toBe(false);
+    expect(page.usesV2DevicePage).toBe(true);
 
     expect(createComponent).toHaveBeenLastCalledWith(
-      deviceComponentDict['TestDashboard'],
+      deviceComponentDict['DeviceV2'],
     );
 
     expect(componentRefs[1].setInput).toHaveBeenCalledWith('device', device);
@@ -293,7 +292,6 @@ describe('DevicePage delayed BLE connection lifecycle', () => {
       { create: vi.fn() } as never,
       { detectChanges: vi.fn(), markForCheck: vi.fn() } as unknown as ChangeDetectorRef,
       { showToast: vi.fn() } as never,
-      { get: vi.fn().mockResolvedValue(null) } as never,
       { get: vi.fn().mockResolvedValue(null) } as never,
     );
 

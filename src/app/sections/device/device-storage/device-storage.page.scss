@@ -3,7 +3,7 @@
 @include feature.base;
 
 :host {
-  --feature-accent: #0ea5a4;
+  --feature-accent: var(--ion-color-primary);
 }
 
 .usage-card {
@@ -24,6 +24,7 @@
 
   small {
     color: var(--blinker-text-tertiary);
+
     font-size: 10px;
   }
 
@@ -33,7 +34,8 @@
   }
 
   > span {
-    color: #0ea5a4;
+    color: var(--feature-accent);
+
     font-size: 15px;
     font-weight: 700;
   }
@@ -44,20 +46,27 @@
   overflow: hidden;
   margin-top: 13px;
   border-radius: 4px;
+
   background: var(--blinker-surface-muted);
 
   span {
     display: block;
+
     height: 100%;
+
     border-radius: inherit;
-    background: linear-gradient(90deg, #2dd4bf, #0ea5a4);
+
+    background: linear-gradient(90deg, var(--ion-color-primary-tint), var(--feature-accent));
   }
 }
 
 .usage-meta {
   margin-top: 12px;
+
   color: var(--blinker-text-secondary);
+
   display: flex;
+
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -65,13 +74,16 @@
 
   i {
     margin-right: 4px;
-    color: #0ea5a4;
+
+    color: var(--feature-accent);
   }
 }
 
 .dataset-grid {
   display: grid;
+
   grid-template-columns: repeat(2, minmax(0, 1fr));
+
   gap: 9px;
 }
 
@@ -82,8 +94,11 @@
   min-width: 0;
   min-height: 86px;
   padding: 12px;
+
   color: var(--blinker-text-primary);
+
   display: flex;
+
   align-items: center;
   gap: 10px;
   text-align: left;
@@ -103,8 +118,10 @@
   height: 38px;
   flex: 0 0 38px;
   border-radius: 11px;
+
   color: var(--dataset-color);
   background: color-mix(in srgb, var(--dataset-color) 11%, transparent);
+
   display: grid;
   place-items: center;
   font-size: 16px;
@@ -118,6 +135,7 @@
 
   > small {
     color: var(--blinker-text-secondary);
+
     font-size: 10px;
   }
 
@@ -131,7 +149,9 @@
 
   em {
     margin-left: 3px;
+
     color: var(--blinker-text-tertiary);
+
     font-size: 9px;
     font-style: normal;
     font-weight: 500;
@@ -142,7 +162,9 @@
   position: absolute;
   top: 8px;
   right: 9px;
+
   color: var(--blinker-text-tertiary);
+
   font-size: 8px;
 }
 
@@ -153,6 +175,7 @@
 
   small {
     color: var(--blinker-text-tertiary);
+
     font-size: 9px;
   }
 }
@@ -165,6 +188,7 @@
 .mini-chart {
   height: 100px;
   padding: 10px 8px 0;
+
   border-bottom: 1px solid var(--blinker-divider);
   background-image: linear-gradient(var(--blinker-divider) 1px, transparent 1px);
   background-size: 100% 25%;
@@ -175,9 +199,11 @@
 
   span {
     width: 100%;
+
     max-width: 22px;
     min-height: 8px;
     border-radius: 5px 5px 2px 2px;
+
     background: linear-gradient(to top, var(--dataset-color), color-mix(in srgb, var(--dataset-color) 45%, #fff));
     opacity: 0.88;
   }
@@ -189,8 +215,11 @@
 
 .data-row {
   min-height: 42px;
+
   border-bottom: 1px solid var(--blinker-divider);
+
   display: flex;
+
   align-items: center;
   gap: 10px;
 
@@ -200,24 +229,30 @@
 
   time {
     color: var(--blinker-text-tertiary);
+
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 9px;
   }
 
   .row-line {
     height: 1px;
+
     flex: 1;
+
     background: var(--blinker-divider);
   }
 
   strong {
     color: var(--blinker-text-primary);
+
     font-size: 12px;
   }
 
   strong small {
     margin-left: 3px;
+
     color: var(--blinker-text-tertiary);
+
     font-size: 8px;
     font-weight: 500;
   }

@@ -1,0 +1,83 @@
+@use '../../../../theme/ui-theme' as theme;
+@use '../../../device/v2/panel/panel-grid' as grid;
+
+@include grid.layout;
+@include grid.compact;
+
+:host {
+  @include theme.ui-theme;
+  @include theme.ui-backdrop;
+
+  color: var(--ui-ink);
+  font-family: var(--ui-font);
+}
+
+ion-content { --background: transparent; }
+
+ion-toolbar { --ion-color-contrast: var(--ui-ink); }
+.property-page {
+  --section-main-background: transparent;
+  --section-main-accent-opacity: 0;
+
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+
+  height: 100%;
+
+  padding-top: var(--transparent-page-content-top);
+
+  overflow: hidden;
+}
+
+.preview-region {
+  flex: none;
+  max-height: 42dvh;
+  overflow-y: auto;
+
+  padding: 12px max(16px, var(--ion-safe-area-right, 0px)) 18px max(16px, var(--ion-safe-area-left, 0px));
+}
+
+.panel {
+  max-width: 720px;
+  margin: auto;
+}
+
+.property-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+
+  background: var(--ui-bg);
+}
+
+.property-settings {
+  max-width: 720px;
+  margin: auto;
+
+  padding: 12px max(16px, var(--ion-safe-area-right, 0px)) calc(24px + var(--ion-safe-area-bottom, 0px)) max(16px, var(--ion-safe-area-left, 0px));
+}
+
+.error { color: var(--ui-alert); font-size: 13px; line-height: 1.5; }
+.remove-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+
+  margin-top: 24px;
+  padding: 14px;
+
+  border: 1px solid var(--ui-line);
+
+  border-radius: 12px;
+
+  background: var(--ui-card);
+  color: var(--ui-alert);
+
+  font: inherit;
+  cursor: pointer;
+}

@@ -10,7 +10,6 @@ const deviceKeyV2Url = (logicalDeviceId: string) =>
 export const API = {
   BASE_URL: GATEWAY_BASE_URL,
   DEVICE_PANEL: (panelId: string) => API_V2_URL + '/device-panels/' + encodeURIComponent(panelId),
-  INTERFACE_PREVIEW: API_V1_URL + '/interface/preview',
   INTERFACE_REFINE: API_V1_URL + '/interface/refine',
   INTERFACE_WORKFLOW: API_V1_URL + '/interface/workflow',
   INTERFACE_GENERATE: API_V1_URL + '/interface/generate',
@@ -138,7 +137,6 @@ export const API = {
 export function isGatewayUrl(url: string): boolean {
   return url === API.INTERFACE_REFINE
     || url.startsWith(API_V2_URL + '/device-panels/')
-    || url === API.INTERFACE_PREVIEW
     || url === API.INTERFACE_WORKFLOW
     || url === API.INTERFACE_GENERATE
     || url.startsWith(API_V1_URL + '/auth/')

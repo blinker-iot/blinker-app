@@ -2,6 +2,7 @@ import { Component, OnChanges, OnDestroy, OnInit, signal } from '@angular/core';
 
 import { parseList } from '../../../../core/device-v2/page-widget';
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { RangeWidgetBase } from '../range-base';
 import { arcPath, duration, numeric } from '../widget-kit';
 
@@ -12,7 +13,7 @@ const DEFAULT_PRESETS = '15,30,60,120';
 @Component({
   selector: 'app-timer-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './timer-widget.html',
   styleUrls: ['./timer-widget.scss'],
 })

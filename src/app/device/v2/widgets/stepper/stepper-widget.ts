@@ -3,6 +3,7 @@ import { Component, OnDestroy, signal } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
 import { RangeWidgetBase } from '../range-base';
+import { ValueTransitionDirective } from '../value-transition.directive';
 
 const SENT_MS = 1200;
 
@@ -12,7 +13,7 @@ const SENT_MS = 1200;
 @Component({
   selector: 'app-stepper-widget',
   standalone: true,
-  imports: [UiIconComponent, NgTemplateOutlet],
+  imports: [ValueTransitionDirective, UiIconComponent, NgTemplateOutlet],
   templateUrl: './stepper-widget.html',
   styleUrls: ['./stepper-widget.scss'],
   host: { '[class.rowc]': 'rows === 1' },

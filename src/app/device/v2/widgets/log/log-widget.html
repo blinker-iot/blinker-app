@@ -2,7 +2,7 @@
   <div class="hd">
     @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
     <span class="hd-t">{{ title }}</span>
-    <span class="hd-v">{{ entries.length }} 条</span>
+    <span class="hd-v"><span [valueTransition]="entries.length">{{ entries.length }}</span> 条</span>
   </div>
 }
 

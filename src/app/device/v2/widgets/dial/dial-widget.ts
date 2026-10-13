@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
 import { RangeWidgetBase } from '../range-base';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { arcPath, clamp, polar } from '../widget-kit';
 
 const CENTER = 110;
@@ -14,7 +15,7 @@ const MIN_BELOW = 40;
 @Component({
   selector: 'app-dial-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './dial-widget.html',
   styleUrls: ['./dial-widget.scss'],
 })

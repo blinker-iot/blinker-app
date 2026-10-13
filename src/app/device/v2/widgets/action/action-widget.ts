@@ -1,6 +1,7 @@
 import { Component, OnDestroy, signal } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { WidgetBase } from '../widget-base';
 
 // Matches the hold progress of .act.holding and .op-hold.
@@ -15,7 +16,7 @@ type Status = 'idle' | 'run' | 'done';
 @Component({
   selector: 'app-action-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './action-widget.html',
   styleUrls: ['./action-widget.scss'],
   host: {

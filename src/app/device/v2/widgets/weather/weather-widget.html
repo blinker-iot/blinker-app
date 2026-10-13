@@ -1,0 +1,88 @@
+<header class="hd">
+  <span class="hd-ico"><app-ui-icon name="cloud-sun" /></span>
+  <span class="hd-t">{{ title }}</span>
+
+  @if (snapshot?.observedAt; as observedAt) {
+    <span class="hd-v">{{ observedAt | date:'HH:mm' }} 更新</span>
+  }
+
+</header>
+
+@if (snapshot; as weather) {
+  <div class="weather-now">
+    <div class="weather-temperature num">
+      <span [valueTransition]="weather.temperature">{{ weather.temperature || '—' }}</span><span class="degree">°</span>
+    </div>
+    <div class="weather-copy">
+      <strong>{{ weather.location || '当地天气' }}</strong>
+      <p>{{ weather.condition || '天气状况未知' }}<span> · {{ weather.region || '当前天气' }}</span></p>
+    </div>
+    <i [class]="'weather-icon ' + weather.icon" [class.night]="!weather.isDay" aria-hidden="true"></i>
+  </div>
+
+  @if (showMetrics && showForecast) {
+    <div class="weather-tabs" role="group" aria-label="天气内容">
+      <button type="button" [attr.aria-pressed]="activeTab === 'current'" (click)="tab = 'current'">实况</button>
+      <button type="button" [attr.aria-pressed]="activeTab === 'forecast'" (click)="tab = 'forecast'">逐小时预报</button>
+      <span>°C</span>
+    </div>
+  }
+
+  @if (showMetrics && activeTab === 'current') {
+    <div class="weather-metrics">
+
+      @for (metric of metrics; track metric.id) {
+        <div class="weather-metric" [title]="metric.original">
+          <span class="metric-label"><i [class]="metric.icon" aria-hidden="true"></i>{{ metric.label }}</span>
+          <span class="metric-value num"><span [valueTransition]="metric.value">{{ metric.value }}</span><small>{{ metric.unit }}</small></span>
+        </div>
+      }
+
+    </div>
+  }
+
+  @if (showForecast && activeTab === 'forecast') {
+    <section class="weather-outlook" aria-label="逐小时预报">
+
+      @if (forecastHours.length) {
+        <div class="weather-hours">
+
+          @for (hour of forecastHours; track hour.id) {
+            <div class="weather-hour">
+              <span class="hour-time">{{ hour.time | date:'HH:mm' }}</span>
+              <div class="hour-reading"><i [class]="hour.icon" aria-hidden="true"></i><strong class="num">{{ hour.temperature ?? '—' }}°</strong></div>
+              <span class="hour-condition">{{ hour.condition || '—' }}</span>
+
+              @if (hour.precipitationProbability !== null) {
+                <span class="hour-rain"><i class="fa-light fa-droplet" aria-hidden="true"></i> {{ hour.precipitationProbability }}%</span>
+              }
+            </div>
+          }
+
+        </div>
+      } @else {
+        <p class="weather-empty">暂无逐小时预报</p>
+      }
+
+    </section>
+  }
+
+  @if (showAlerts) {
+    @for (alert of alerts; track alert.id) {
+      <details class="weather-alert" [attr.data-severity]="alert.severity">
+        <summary><app-ui-icon name="triangle-exclamation" /><span>{{ alert.title || alert.type }}</span><app-ui-icon name="chevron-down" /></summary>
+        <div class="alert-body">
+          @if (alert.description) { <p>{{ alert.description }}</p> }
+          @if (alert.instruction) { <p>{{ alert.instruction }}</p> }
+          <small>{{ alert.source }} @if (alert.publishedAt) { · {{ alert.publishedAt | date:'MM-dd HH:mm' }} }</small>
+        </div>
+      </details>
+    }
+  }
+} @else {
+  <div class="weather-empty-state">
+    <app-ui-icon name="cloud" />
+    <strong>等待天气数据</strong>
+    <p>天气更新后，将显示在这里</p>
+  </div>
+}

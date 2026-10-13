@@ -9,16 +9,16 @@
   <div class="hd">
     @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
     <span class="hd-t">{{ title }}</span>
-    @if (rows === 1 && (lastEvent ? note : extras); as aside) { <span class="hd-v">{{ aside }}</span> }
+    @if (rows === 1 && (lastEvent ? note : extras); as aside) { <span class="hd-v" [valueTransition]="aside">{{ aside }}</span> }
   </div>
 }
 
 @if (style === 'pill') {
-  <span class="st-pill" role="status"><ng-container *ngTemplateOutlet="dot" />{{ reading.text }}{{ reading.unit }}</span>
+  <span class="st-pill" role="status"><ng-container *ngTemplateOutlet="dot" /><span [valueTransition]="reading.text">{{ reading.text }}</span>{{ reading.unit }}</span>
 } @else {
-  <span class="st-line" role="status"><ng-container *ngTemplateOutlet="dot" /><span>{{ reading.text }}{{ reading.unit }}</span></span>
+  <span class="st-line" role="status"><ng-container *ngTemplateOutlet="dot" /><span><span [valueTransition]="reading.text">{{ reading.text }}</span>{{ reading.unit }}</span></span>
 }
 
 @if (rows > 1 && withExtras(note); as meta) {
-  <span class="st-meta">{{ meta }}</span>
+  <span class="st-meta" [valueTransition]="meta">{{ meta }}</span>
 }

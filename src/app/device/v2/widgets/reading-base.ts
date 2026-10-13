@@ -1,11 +1,38 @@
-import { Directive, HostBinding } from '@angular/core';
+import { Directive, HostBinding, OnChanges, OnDestroy } from '@angular/core';
+import { AnimatedNumber } from './animated-number';
 
 import { WidgetBase } from './widget-base';
 import { isAlert, numeric, present, ratio } from './widget-kit';
 
 // Shared reading of read-only values (value, meter and chart families).
 @Directive()
-export abstract class ReadingWidgetBase extends WidgetBase {
+export abstract class ReadingWidgetBase extends WidgetBase implements OnChanges, OnDestroy {
+  private readonly displayed = new AnimatedNumber();
+
+  protected get displayNumber(): number | undefined { return this.displayed.value(); }
+
+  get displayReading(): { text: string; unit: string } {
+    const value = this.displayNumber;
+    if (value === undefined) return this.reading;
+
+    const plain = !this.options.format || this.options.format === 'number';
+    const decimals = this.options.decimals ?? (plain && Number.isInteger(this.number) ? 0 : undefined);
+
+    return present(value, { ...this.options, decimals }, this.card.field);
+  }
+
+  get displayLevel(): number {
+    return this.displayNumber === undefined ? this.level : ratio(this.displayNumber, this.min, this.max);
+  }
+
+  ngOnChanges(): void {
+    const raw = this.card.value;
+    const discrete = this.card.field.role === 'event' || typeof raw === 'bigint' && !Number.isSafeInteger(Number(raw));
+    this.displayed.set(discrete ? undefined : this.number);
+  }
+
+  ngOnDestroy(): void { this.displayed.destroy(); }
+
   get number(): number | undefined { return numeric(this.card.value); }
 
   @HostBinding('class.alert') get alert(): boolean { return isAlert(this.number, this.options); }

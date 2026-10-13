@@ -2,13 +2,14 @@ import { Component } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
 import { RangeWidgetBase } from '../range-base';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { formatNumber } from '../widget-kit';
 
 // 色温 / 色彩滑块: a range on a colour-temperature, hue or brightness track.
 @Component({
   selector: 'app-gradient-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './gradient-widget.html',
   styleUrls: ['./gradient-widget.scss'],
 })

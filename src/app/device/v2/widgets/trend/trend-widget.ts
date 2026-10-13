@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { ReadingWidgetBase } from '../reading-base';
 import { HistoryPoint, numeric, present } from '../widget-kit';
 
@@ -11,7 +12,7 @@ const DEFAULT_POINTS = 24;
 @Component({
   selector: 'app-trend-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './trend-widget.html',
   styleUrls: ['./trend-widget.scss'],
 })

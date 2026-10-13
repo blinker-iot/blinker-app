@@ -22,7 +22,7 @@
     @if (showRange) { <small>{{ min }}–{{ max }}{{ unit }}</small> }
   </span>
   <ng-container *ngTemplateOutlet="dec" />
-  <span class="ns-v ns-sm num">{{ reading.text }}<small>{{ reading.unit }}</small></span>
+  <span class="ns-v ns-sm num"><span [valueTransition]="reading.text">{{ reading.text }}</span><small>{{ reading.unit }}</small></span>
   <ng-container *ngTemplateOutlet="inc" />
   @if (command) { <ng-container *ngTemplateOutlet="go" /> }
 } @else {
@@ -37,7 +37,7 @@
   <ng-template #middle>
     <div class="ns-mid" role="spinbutton" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
       [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" (keydown)="key($event)" (keydown.enter)="send()">
-      <span class="ns-v num">{{ reading.text }}<small>{{ reading.unit }}</small></span>
+      <span class="ns-v num"><span [valueTransition]="reading.text">{{ reading.text }}</span><small>{{ reading.unit }}</small></span>
       @if (showRange) { <span class="ns-range">{{ min }}–{{ max }} · 步长 {{ step }}</span> }
     </div>
   </ng-template>

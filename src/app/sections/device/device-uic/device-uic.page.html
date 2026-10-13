@@ -1,15 +1,8 @@
 <ion-header class="ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-
-      @if (selected) {
-        <ion-button class="header-back" aria-label="返回界面配置" [disabled]="saving || generating" (click)="closeEditor()">
-          <i class="fa-light fa-chevron-left" aria-hidden="true"></i>
-        </ion-button>
-      } @else {
-        <ion-back-button [defaultHref]="backHref" text=""></ion-back-button>
-      }
-
+      <ion-back-button [defaultHref]="selected ? configurationHref : backHref" text=""
+        [disabled]="saving || generating"></ion-back-button>
     </ion-buttons>
     <ion-title>{{ selected === 'ai' ? 'AI 生成' : selected === 'automatic' ? '自动适配' : '界面配置' }}</ion-title>
   </ion-toolbar>
@@ -56,12 +49,12 @@
                       [disabled]="generating || saving" (click)="chooseStyle(option.id)">
                       <i [class]="'fa-light ' + (option.id === 'natural' ? 'fa-leaf' : option.id === 'dark' ? 'fa-moon' : 'fa-microchip')" aria-hidden="true"></i>
                       <span>{{ option.name }}</span>
+
                       @if (style === option.id) { <i class="fa-solid fa-check style-check" aria-hidden="true"></i> }
                     </button>
                   }
                 </div>
               </div>
-
               <label class="panel-label" for="interface-prompt">界面需求 <small>可选</small></label>
               <div class="prompt-box"><textarea id="interface-prompt" [(ngModel)]="prompt" maxlength="1200" rows="4" [disabled]="generating || saving" placeholder="例如：把常用开关放在上方，温度和湿度并排显示"></textarea><span>{{ prompt.length }} / 1200</span></div>
               <div class="suggestions">@for (suggestion of suggestions; track suggestion) { <button type="button" [disabled]="generating || saving" (click)="useSuggestion(suggestion)">{{ suggestion }}</button> }</div>
@@ -80,6 +73,9 @@
 
         <section #previewPanel class="preview-section" aria-label="界面预览" [attr.aria-busy]="generating">
           <div class="preview-heading"><span><span class="status-dot"></span>{{ generating ? '正在生成' : generated ? '生成结果' : '效果预览' }}</span><small>预览不会发送设备指令</small></div>
+
+          @if (liveError) { <p class="preview-caption" role="status">{{ liveError }}</p> }
+
           <div class="preview-canvas" [attr.data-ui-theme]="previewStyle">
             <div class="preview-content">
               <div class="preview-device"><i class="fa-light fa-microchip" aria-hidden="true"></i><strong>{{ device.config.customName || device.deviceName }}</strong><span>{{ selectedStyle.name }}</span></div>
@@ -104,28 +100,25 @@
             }
           </div>
 
-          @if (workflowPreview && !generating) {
-            <div class="generation-summary" role="status">
-              <p>{{ workflowPreview.review }}</p>
-
-              @for (issue of workflowPreview.issues; track $index) {
-                <p>{{ issue.problem }} · {{ issue.suggestion }}</p>
-              }
-            </div>
+          @if (generationWarning && !generating) {
+            <p class="generation-summary" role="status">{{ generationWarning }}</p>
           }
 
           @if (generated && isV2 && !generating) {
             <label class="panel-label" for="interface-adjustment">继续调整当前界面</label>
             <div class="prompt-box"><textarea id="interface-adjustment" [(ngModel)]="adjustment" maxlength="1200" rows="3"
               [disabled]="saving" placeholder="例如：把亮度放到开关下面，缩短数据标题…"></textarea></div>
-            <button class="generate-button" type="button" [disabled]="saving || !adjustment.trim()" (click)="generate(true)">AI 微调</button>
           }
 
-          @if (summary) { <p class="generation-summary" role="status"><i class="fa-light fa-sparkles" aria-hidden="true"></i>{{ summary }}</p> }
           @if (selected === 'ai' && !generated && !generating) { <p class="preview-caption">当前为基础预览，生成后可应用到设备。</p> }
         </section>
       </div>
       <footer class="apply-bar">
+
+        @if (generated && isV2 && !generating) {
+          <button class="apply-button" type="button" [disabled]="saving || !adjustment.trim()" (click)="generate(true)">AI 微调</button>
+        }
+
         <button type="button" class="apply-button" [disabled]="!canApply || (selected === 'automatic' && !isV2)" (click)="apply()">{{ saving ? '正在保存…' : '应用这个界面' }} <i class="fa-light fa-arrow-right" aria-hidden="true"></i></button>
       </footer>
     }

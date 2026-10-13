@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-
 import { IonicModule, NavController } from '@ionic/angular';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ActivatedRoute } from '@angular/router';
@@ -17,6 +16,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IonicModule, TranslatePipe, MenuListComponent],
 })
+
 export class GuidePage {
   readonly isReconfiguration: boolean;
   readonly backHref: string;
@@ -28,9 +28,11 @@ export class GuidePage {
   ) {
     this.isReconfiguration =
       route.snapshot.queryParamMap.get('mode') === 'reconfigure';
+
     const deviceId = route.snapshot.queryParamMap.get('deviceId');
+
     this.backHref = this.isReconfiguration && deviceId
-      ? `/device/${deviceId}`
+      ? `/device-manager/${encodeURIComponent(deviceId)}`
       : '/home/device';
   }
 
@@ -97,6 +99,7 @@ export class GuidePage {
 
   async selectMethod(method: MenuListItem): Promise<void> {
     if (!method.route) return;
+
     await this.navController.navigateForward(method.route);
   }
 

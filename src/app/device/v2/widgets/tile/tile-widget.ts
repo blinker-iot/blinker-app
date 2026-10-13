@@ -1,13 +1,14 @@
 import { Component } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { SwitchWidgetBase } from '../switch-base';
 
 // 图标开关卡: the whole card is the switch; one row high it lays out as a bar.
 @Component({
   selector: 'app-tile-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './tile-widget.html',
   styleUrls: ['./tile-widget.scss'],
   host: {

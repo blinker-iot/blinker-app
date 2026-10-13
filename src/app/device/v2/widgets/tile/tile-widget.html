@@ -3,7 +3,7 @@
 <span class="tile-copy">
   <strong>{{ title }}</strong>
   @if (options.showState !== false) {
-    <small>{{ state }}</small>
+    <small><span [valueTransition]="state">{{ state }}</span></small>
   }
 </span>
 

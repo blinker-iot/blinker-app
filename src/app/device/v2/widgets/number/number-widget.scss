@@ -26,6 +26,11 @@
 }
 
 .delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 16px;
+
   flex: none;
   padding: 1px 7px;
   border-radius: 999px;
@@ -37,4 +42,4 @@
   @include theme.electronic { border: 1px dotted var(--ui-faint); border-radius: 3px; background: none; }
 }
 
-.delta-arrow { margin-right: 4px; }
+.delta-arrow { line-height: 1; }

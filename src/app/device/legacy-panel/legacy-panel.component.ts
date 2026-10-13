@@ -3,7 +3,7 @@ import { Subscription } from 'rxjs';
 import type { BlinkerDevice } from '../../core/model/device.model';
 import { DeviceService } from '../../core/services/device.service';
 import { DevicePanelService } from '../../core/services/device-panel.service';
-import { legacyCommand, legacyField, readLegacyPanel, type LegacyPanel } from '../../core/device-v2/legacy-panel';
+import { legacyCommand, legacyField, legacyRoot, readLegacyPanel, type LegacyPanel } from '../../core/device-v2/legacy-panel';
 import { PageLayoutPanelComponent, type PanelAction, type PanelCard } from '../v2/panel/page-layout-panel';
 
 @Component({
@@ -41,7 +41,12 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
 
     this.subscription = this.device.subject.subscribe(event => {
       if (event?.key === 'component' || event?.key === 'layouter') this.load();
-      else this.refresh();
+      else {
+        // New devices can report their first readings after the page opens.
+        // Rebuild only the unsaved automatic view, without another cloud read.
+        if (this.panel && this.automatic) this.panel = readLegacyPanel(this.device);
+        this.refresh();
+      }
     });
   }
 
@@ -73,6 +78,13 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
 
       this.device.subject.next({ key: binding.field.key, value });
     } else this.devices.sendData(this.device, JSON.stringify({ [binding.field.key]: value }));
+  }
+
+  private get automatic(): boolean {
+    const root = legacyRoot(this.device.config.layouter);
+    const saved = root['pagePanel'] as { widgets?: unknown[] } | undefined;
+
+    return !saved?.widgets?.length && !(Array.isArray(root['dashboard']) && root['dashboard'].length);
   }
 
   private async load(): Promise<void> {

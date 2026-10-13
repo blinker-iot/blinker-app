@@ -5,7 +5,7 @@
 <span class="rc-copy">
   <strong>{{ title }}</strong>
   @if (caption) {
-    <small>{{ caption }}</small>
+    <small><span [valueTransition]="caption">{{ caption }}</span></small>
   }
 </span>
 

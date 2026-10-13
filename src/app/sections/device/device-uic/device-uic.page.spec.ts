@@ -37,11 +37,15 @@ describe('interface studio workflow', () => {
     close = vi.fn();
 
     page = new DeviceUicPage(
-      { snapshot: { paramMap: { get: () => 'device-1' } } } as never,
+      { snapshot: { paramMap: { get: () => 'device-1' }, data: {} } } as never,
       { navigateRoot, navigateForward } as never,
       { device: { dict: { 'device-1': device } }, userDataLoader: new BehaviorSubject(false) } as never,
       { saveDeviceConfig: saveConfig } as never, { showToast: vi.fn().mockResolvedValue(undefined) } as never,
-      { watchState: () => state, openConnection: () => ({ ready: Promise.resolve(), close }) } as never,
+      {
+        watchState: () => state, watchConnection: () => new BehaviorSubject('ready'),
+        watchEvents: () => new Subject(), appActive: new BehaviorSubject(true),
+        isBleDirect: () => false, openConnection: () => ({ ready: Promise.resolve(), close }),
+      } as never,
       { get: vi.fn().mockResolvedValue({ revision: 2 }), saveCandidate: saveLayout } as never,
       { generate } as never, { markForCheck: vi.fn() } as never,
       { get: vi.fn().mockResolvedValue(null) } as never,
@@ -52,7 +56,18 @@ describe('interface studio workflow', () => {
 
   afterEach(() => page.ngOnDestroy());
 
-  async function select(method: 'automatic' | 'ai' | 'classic') { page.selectMethod(method); await vi.waitFor(() => expect(page.loading).toBe(false)); }
+  async function select(method: 'automatic' | 'ai' | 'classic') {
+    if (method === 'classic') {
+      page.selectMethod(method);
+
+      return;
+    }
+
+    page.selected = method;
+
+    await page.refreshCapabilities();
+    await vi.waitFor(() => expect(page.loading).toBe(false));
+  }
 
   it('previews capabilities without saving or switching the device', async () => {
     await select('automatic');
@@ -111,7 +126,9 @@ describe('interface studio workflow', () => {
     let finishRead!: (value: unknown) => void;
 
     (page as any).pageLayouts.get = () => new Promise(resolve => { finishRead = resolve; });
-    page.selectMethod('ai');
+    page.selected = 'ai';
+
+    void page.refreshCapabilities();
     expect(page.loading).toBe(true);
     await page.generate();
     expect(generate).toHaveBeenCalledOnce();

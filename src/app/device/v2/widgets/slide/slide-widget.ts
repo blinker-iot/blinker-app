@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { SwitchWidgetBase } from '../switch-base';
 import { clamp } from '../widget-kit';
 
@@ -11,7 +12,7 @@ const SLIDE_THRESHOLD = 0.85;
 @Component({
   selector: 'app-slide-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './slide-widget.html',
   styleUrls: ['./slide-widget.scss'],
 })

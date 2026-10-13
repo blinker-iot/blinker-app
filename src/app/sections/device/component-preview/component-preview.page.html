@@ -12,7 +12,7 @@
     <header class="top">
       <div class="brand">
         <h1>Blinker 控件库</h1>
-        <p>{{ count }} 个组件，按 PageLayout 8 栏栅格排布。轻点组件即操作，长按（或右键）组件调整参数，下方实时生成布局片段。所有数据均为演示值，操作不连接设备。</p>
+        <p>{{ count }} 个组件，按 8 栏栅格排布。轻点组件即操作，长按（或右键）调整参数。设备控件与天气使用演示数据；视频设置地址后加载对应画面。</p>
       </div>
       <nav class="skins" aria-label="主题">
 
@@ -33,14 +33,36 @@
           </section>
         }
 
+        <section class="sec" appWidgetLongPress (widgetLongPress)="select($event)">
+          <h2 class="sec-h">视频与天气 <small>Video & Weather · 2</small></h2>
+
+          <div class="media-gallery">
+            <div class="media-cell" data-widget-id="preview-video" [class.selected]="selectedId === 'preview-video'">
+              <app-video-widget [title]="videoSettings.title" [source]="videoSettings" (configure)="select('preview-video')" />
+            </div>
+            <div class="media-cell" data-widget-id="preview-weather" [class.selected]="selectedId === 'preview-weather'">
+              <app-weather-widget [title]="weatherSettings.title" [snapshot]="weatherPreview.snapshot"
+                [forecastHours]="weatherPreview.forecastHours" [alerts]="weatherPreview.alerts"
+                [showMetrics]="weatherSettings.showMetrics" [showForecast]="weatherSettings.showForecast"
+                [showAlerts]="weatherSettings.showAlerts" />
+            </div>
+          </div>
+        </section>
       </div>
 
-      @if (selected; as card) {
+      @if (selected || selectedMedia) {
         <div class="scrim open" aria-hidden="true" (click)="closeInspector()"></div>
 
         <aside class="insp open" aria-label="组件参数">
           <button type="button" class="close" aria-label="关闭" (click)="closeInspector()">×</button>
-          <app-widget-inspector [widget]="card.widget" [field]="card.field" [extraCandidates]="extraCandidates" (widgetChange)="updateWidget($event)" />
+
+          @if (selected; as card) {
+            <app-widget-inspector [widget]="card.widget" [field]="card.field" [extraCandidates]="extraCandidates" (widgetChange)="updateWidget($event)" />
+          } @else if (selectedMedia; as kind) {
+            <app-media-preview-inspector [kind]="kind" [video]="videoSettings" [weather]="weatherSettings"
+              (videoChange)="videoSettings = $event" (weatherChange)="weatherSettings = $event" />
+          }
+
         </aside>
       } @else {
         <aside class="insp insp-idle" aria-label="组件参数">

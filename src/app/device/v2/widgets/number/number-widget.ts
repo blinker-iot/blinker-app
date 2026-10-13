@@ -1,5 +1,6 @@
 import { Component, OnChanges } from '@angular/core';
 import { UiIconComponent } from '../icon/ui-icon';
+import { ValueTransitionDirective } from '../value-transition.directive';
 import { ReadingWidgetBase } from '../reading-base';
 import { compactNumber, formatNumber, numeric } from '../widget-kit';
 
@@ -7,7 +8,7 @@ import { compactNumber, formatNumber, numeric } from '../widget-kit';
 @Component({
   selector: 'app-number-widget',
   standalone: true,
-  imports: [UiIconComponent],
+  imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './number-widget.html',
   styleUrls: ['./number-widget.scss'],
 })
@@ -18,9 +19,11 @@ export class NumberWidgetComponent extends ReadingWidgetBase implements OnChange
 
   get size(): string { return this.options.size ?? 'lg'; }
 
-  get displayReading(): { text: string; unit: string } {
-    const reading = this.reading;
-    const raw = this.card.value;
+  override get displayReading(): { text: string; unit: string } {
+    const reading = super.displayReading;
+    const original = this.card.value;
+    const precise = typeof original === 'bigint' && !Number.isSafeInteger(Number(original));
+    const raw = precise ? original : this.displayNumber ?? original;
 
     if ((this.options.format && this.options.format !== 'number')
       || (typeof raw !== 'number' && typeof raw !== 'bigint')) return reading;
@@ -58,7 +61,9 @@ export class NumberWidgetComponent extends ReadingWidgetBase implements OnChange
     return this.options.caption ?? '';
   }
 
-  ngOnChanges(): void {
+  override ngOnChanges(): void {
+    super.ngOnChanges();
+
     const value = numeric(this.card.value);
 
     if (value === undefined || value === this.latest) return;

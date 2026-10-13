@@ -4,10 +4,10 @@
     (pointerdown)="holdStart($event)" (pointerup)="holdEnd()" (pointerleave)="holdEnd()" (pointercancel)="holdEnd()"
     (contextmenu)="$event.preventDefault()">
     <span class="op-chip"><app-ui-icon [name]="icon" /></span>
-    @if (options.showCount && count()) { <span class="op-count num">×{{ count() }}</span> }
+    @if (options.showCount && count()) { <span class="op-count num">×<span [valueTransition]="count()">{{ count() }}</span></span> }
     <span class="op-copy">
       @if (showTitle) { <span class="op-t">{{ title }}</span> }
-      <span class="op-s">{{ caption }}</span>
+      <span class="op-s" [valueTransition]="caption">{{ caption }}</span>
     </span>
     <span class="op-go"><app-ui-icon [name]="status() === 'done' ? 'check' : 'arrow'" /></span>
     <i class="op-hold"></i>
@@ -21,5 +21,5 @@
   </button>
 
   <span class="act-t">{{ title }}</span>
-  @if (showCaption) { <span class="act-s">{{ caption }}</span> }
+  @if (showCaption) { <span class="act-s" [valueTransition]="caption">{{ caption }}</span> }
 }
