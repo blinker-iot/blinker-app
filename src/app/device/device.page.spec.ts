@@ -14,6 +14,7 @@ const ionicMock = vi.hoisted(() => {
     { IonicModule: IonicStub, ModalController: IonicStub,
       IonBackButton: IonicStub, IonButton: IonicStub, IonButtons: IonicStub,
       IonContent: IonicStub, IonHeader: IonicStub, IonRouterLink: IonicStub,
+      IonInput: IonicStub, IonRange: IonicStub, IonSpinner: IonicStub, IonToggle: IonicStub,
       IonRouterLinkWithHref: IonicStub, IonTitle: IonicStub, IonToolbar: IonicStub },
     {
       get: (target, property: string | symbol) => {

@@ -162,6 +162,28 @@ export function migratePageLayout(input: unknown, snapshot: DeviceUiSnapshot): P
   }, snapshot.endpoints);
 }
 
+// Upgrade recognizable generated cards only; explicit display layouts stay intact.
+export function upgradeLegacyBooleanWidgets(
+  layout: PageLayout,
+  endpoints: readonly DeviceUiEndpoint[],
+): PageLayout {
+  const endpointByKey = new Map(endpoints.map(endpoint => [endpoint.key, endpoint]));
+  let changed = false;
+  const widgets = layout.widgets.map(widget => {
+    const endpoint = endpointByKey.get(widget.endpointKey);
+    if (widget.type !== 'value' || !endpoint || defaultWidgetType(endpoint) !== 'switch'
+      || widget.widgetId !== `endpoint-${endpoint.id}`
+      || (widget.title !== undefined && widget.title !== endpoint.key)
+      || (widget.appearance !== undefined && widget.appearance !== 'default')
+      || widget.grid.x !== 0 || widget.grid.width !== PAGE_LAYOUT_COLUMNS || widget.grid.height !== 1) {
+      return widget;
+    }
+    changed = true;
+    return { ...widget, type: 'switch' as const };
+  });
+  return changed ? { ...layout, widgets } : layout;
+}
+
 function parseWidget(input: unknown, index: number): PageLayoutWidget {
   const label = `PageLayout widget ${index}`;
   const value = object(input, label);
