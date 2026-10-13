@@ -9,7 +9,19 @@ import {
   SimpleChanges,
 } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonInput,
+  IonRange,
+  IonSpinner,
+  IonTitle,
+  IonToggle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 
 import { BlinkerDevice } from '../../core/model/device.model';
@@ -64,7 +76,22 @@ function emptySnapshot(): DeviceUiSnapshot {
 @Component({
   selector: 'app-device-v2-page',
   standalone: true,
-  imports: [CommonModule, IonicModule, RouterModule, TelemetryChartComponent],
+  imports: [
+    CommonModule,
+    RouterModule,
+    TelemetryChartComponent,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonBackButton,
+    IonTitle,
+    IonButton,
+    IonContent,
+    IonSpinner,
+    IonToggle,
+    IonRange,
+    IonInput,
+  ],
   templateUrl: './device-v2.page.html',
   styleUrls: ['./device-v2.page.scss'],
 })

@@ -7,6 +7,8 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { DeviceUiConnectivitySnapshot, DeviceUiPort, DeviceUiSnapshot } from '../../core/device-v2/device-ui.port';
 import { BlinkerDevice } from '../../core/model/device.model';
 import { DeviceV2PageLayoutService } from '../../core/services/device-v2-page-layout.service';
+import { generateDefaultPageLayout } from '../../core/device-v2/page-layout';
+import { DeviceUiConnectionScope } from '../../core/device-v2/connection-scope';
 import { DeviceV2Page } from './device-v2.page';
 
 // Retain the production child/render lifecycle, with an OnPush parent reading
@@ -20,6 +22,71 @@ class EmbeddedDeviceHost {
 
 describe('embedded DeviceV2 asynchronous status rendering', () => {
   afterEach(() => TestBed.resetTestingModule());
+
+  it('registers rendered controls and sends property writes from their events', async () => {
+    const current: DeviceUiSnapshot = {
+      manifestRevision: 2,
+      manifestFingerprint: '00'.repeat(32),
+      manifestAccepted: true,
+      stateRevision: 1,
+      stateFresh: true,
+      endpoints: [
+        { id: 1, key: 'power', role: 'property', valueType: 'boolean',
+          readable: true, writable: true, notifies: true, value: false },
+        { id: 2, key: 'level', role: 'property', valueType: 'integer',
+          readable: true, writable: true, notifies: true, value: 100,
+          minimum: 0, maximum: 100, step: 1 },
+        { id: 3, key: 'statusText', role: 'property', valueType: 'text',
+          readable: true, writable: true, notifies: true, value: 'ready', maxLength: 48 },
+      ],
+    };
+    const layout = generateDefaultPageLayout(current);
+    const sendCommand = vi.fn().mockResolvedValue(undefined);
+    const connectionState = new BehaviorSubject('ready');
+    const port = {
+      appActive: new BehaviorSubject(true), isBleDirect: () => false,
+      watchConnection: () => connectionState,
+      watchConnectivity: () => new BehaviorSubject<DeviceUiConnectivitySnapshot>({
+        activeTransport: 'cloud', directConnectAllowed: false, bleAccess: false,
+        bleAdapterEnabled: null, bleState: 'idle', cloudSessionState: 'ready',
+      }),
+      watchState: () => new BehaviorSubject(current), watchEvents: () => new Subject(),
+      openConnection: (_id: string, signal: AbortSignal) =>
+        new DeviceUiConnectionScope(async () => undefined, signal),
+      sendCommand,
+    };
+    await TestBed.configureTestingModule({ imports: [EmbeddedDeviceHost], providers: [
+      provideRouter([]), provideIonicAngular({ animated: false }),
+      { provide: DeviceUiPort, useValue: port },
+      { provide: DeviceV2PageLayoutService, useValue: { get: async () => ({
+        logicalDeviceId: 'test-device', revision: 1,
+        manifestFingerprint: current.manifestFingerprint, layout, createdAt: 0, updatedAt: 0,
+      }) } },
+    ] }).compileComponents();
+    const fixture = TestBed.createComponent(EmbeddedDeviceHost);
+    fixture.autoDetectChanges();
+    const page = fixture.debugElement.query(By.directive(DeviceV2Page)).componentInstance as DeviceV2Page;
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    const toggle = fixture.nativeElement.querySelector('ion-toggle') as HTMLElement & { disabled: boolean };
+    const range = fixture.nativeElement.querySelector('ion-range') as HTMLElement & { disabled: boolean };
+    const input = fixture.nativeElement.querySelector('ion-input') as HTMLElement;
+    for (const control of [toggle, range, input]) {
+      expect(control).not.toBeNull();
+      expect(customElements.get(control.localName)).toBeDefined();
+    }
+    expect(toggle.disabled).toBe(false);
+    expect(range.disabled).toBe(false);
+    toggle.dispatchEvent(new CustomEvent('ionChange', { detail: { checked: true } }));
+    await vi.waitFor(() => expect(sendCommand).toHaveBeenCalledWith('test-device', 'power', true));
+    range.dispatchEvent(new CustomEvent('ionChange', { detail: { value: 25 } }));
+    await vi.waitFor(() => expect(sendCommand).toHaveBeenCalledWith('test-device', 'level', 25));
+    connectionState.next('stopped');
+    await vi.waitFor(() => {
+      expect(toggle.disabled).toBe(true);
+      expect(range.disabled).toBe(true);
+    });
+    fixture.destroy();
+  });
 
   it('updates the parent header after Ready finalization without a click or parent detectChanges', async () => {
     const connectionState = new BehaviorSubject('connecting');
