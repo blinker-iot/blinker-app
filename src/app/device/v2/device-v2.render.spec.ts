@@ -23,7 +23,7 @@ class EmbeddedDeviceHost {
 describe('embedded DeviceV2 asynchronous status rendering', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('registers rendered controls and sends property writes from their events', async () => {
+  it.each(['generated', 'legacy'] as const)('registers %s layout controls and sends property writes from their events', async kind => {
     const current: DeviceUiSnapshot = {
       manifestRevision: 2,
       manifestFingerprint: '00'.repeat(32),
@@ -41,7 +41,11 @@ describe('embedded DeviceV2 asynchronous status rendering', () => {
       ],
     };
     const layout = generateDefaultPageLayout(current);
+    if (kind === 'legacy') {
+      layout.widgets[0] = { ...layout.widgets[0], type: 'value', title: 'power' };
+    }
     const sendCommand = vi.fn().mockResolvedValue(undefined);
+    const saveCandidate = vi.fn();
     const connectionState = new BehaviorSubject('ready');
     const port = {
       appActive: new BehaviorSubject(true), isBleDirect: () => false,
@@ -58,7 +62,7 @@ describe('embedded DeviceV2 asynchronous status rendering', () => {
     await TestBed.configureTestingModule({ imports: [EmbeddedDeviceHost], providers: [
       provideRouter([]), provideIonicAngular({ animated: false }),
       { provide: DeviceUiPort, useValue: port },
-      { provide: DeviceV2PageLayoutService, useValue: { get: async () => ({
+      { provide: DeviceV2PageLayoutService, useValue: { saveCandidate, get: async () => ({
         logicalDeviceId: 'test-device', revision: 1,
         manifestFingerprint: current.manifestFingerprint, layout, createdAt: 0, updatedAt: 0,
       }) } },
@@ -66,6 +70,7 @@ describe('embedded DeviceV2 asynchronous status rendering', () => {
     const fixture = TestBed.createComponent(EmbeddedDeviceHost);
     fixture.autoDetectChanges();
     const page = fixture.debugElement.query(By.directive(DeviceV2Page)).componentInstance as DeviceV2Page;
+    await vi.waitFor(() => expect((page as any).storedLayout).toBeDefined());
     await vi.waitFor(() => expect(page.canControl).toBe(true));
     const toggle = fixture.nativeElement.querySelector('ion-toggle') as HTMLElement & { disabled: boolean };
     const range = fixture.nativeElement.querySelector('ion-range') as HTMLElement & { disabled: boolean };
@@ -85,6 +90,8 @@ describe('embedded DeviceV2 asynchronous status rendering', () => {
       expect(toggle.disabled).toBe(true);
       expect(range.disabled).toBe(true);
     });
+    expect(layout.widgets[0].type).toBe(kind === 'legacy' ? 'value' : 'switch');
+    expect(saveCandidate).not.toHaveBeenCalled();
     fixture.destroy();
   });
 

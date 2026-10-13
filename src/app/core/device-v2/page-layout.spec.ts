@@ -5,6 +5,7 @@ import {
   migratePageLayout,
   PAGE_LAYOUT_COLUMNS,
   parsePageLayout,
+  upgradeLegacyBooleanWidgets,
 } from './page-layout';
 
 function endpoint(overrides: Partial<DeviceUiEndpoint>): DeviceUiEndpoint {
@@ -86,6 +87,50 @@ describe('PageLayout v1', () => {
   it('requires an accepted Manifest before generating a default page', () => {
     expect(() => generateDefaultPageLayout({ ...snapshot(), manifestAccepted: false }))
       .toThrow(/accepted Manifest/);
+  });
+
+  it.each([false, true])('upgrades generated boolean value cards regardless of their value (%s)', value => {
+    const current = { ...snapshot(), endpoints: [endpoint({ value })] };
+    for (const title of [undefined, 'power']) {
+      const layout = generateDefaultPageLayout(current);
+      layout.revision = 4;
+      layout.widgets[0] = { ...layout.widgets[0], type: 'value', title };
+      const original = parsePageLayout(layout, current.endpoints);
+      const repaired = upgradeLegacyBooleanWidgets(original, current.endpoints);
+      expect(repaired).toEqual({
+        ...original, widgets: [{ ...original.widgets[0], type: 'switch' }],
+      });
+      expect(original.widgets[0].type).toBe('value');
+      expect(repaired.revision).toBe(4);
+      expect(upgradeLegacyBooleanWidgets(repaired, current.endpoints)).toBe(repaired);
+    }
+  });
+
+  it.each([
+    { writable: false },
+    { role: 'action' as const },
+    { valueType: 'integer' as const },
+  ])('keeps non-switch capabilities as value cards (%j)', overrides => {
+    const current = { ...snapshot(), endpoints: [endpoint(overrides)] };
+    const layout = generateDefaultPageLayout(current);
+    layout.widgets[0] = { ...layout.widgets[0], type: 'value' };
+    const parsed = parsePageLayout(layout, current.endpoints);
+    expect(upgradeLegacyBooleanWidgets(parsed, current.endpoints)).toBe(parsed);
+  });
+
+  it.each([
+    { widgetId: 'manual-power-status' },
+    { title: 'Power status' },
+    { appearance: 'compact' as const },
+    { appearance: 'emphasized' as const },
+    { grid: { x: 1, y: 0, width: 4, height: 1 } },
+    { grid: { x: 0, y: 0, width: 8, height: 2 } },
+  ])('preserves explicit value-card choices (%j)', overrides => {
+    const current = { ...snapshot(), endpoints: [endpoint({})] };
+    const layout = generateDefaultPageLayout(current);
+    layout.widgets[0] = { ...layout.widgets[0], type: 'value', ...overrides };
+    const parsed = parsePageLayout(layout, current.endpoints);
+    expect(upgradeLegacyBooleanWidgets(parsed, current.endpoints)).toBe(parsed);
   });
 
   it('diffs and migrates a stale layout while preserving compatible manual choices', () => {

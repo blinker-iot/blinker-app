@@ -165,6 +165,33 @@ function harness(
 }
 
 describe('DeviceV2Page UI port lifecycle', () => {
+  it.each([false, true])('upgrades saved default boolean cards without auto-saving (stale Manifest: %s)', async stale => {
+    const current = snapshot();
+    const previous = stale ? { ...current, manifestFingerprint: '11'.repeat(32) } : current;
+    const layout = { ...generateDefaultPageLayout(previous), revision: 4 };
+    layout.widgets[0] = { ...layout.widgets[0], type: 'value', title: 'power' };
+    const record = { logicalDeviceId, revision: 4, manifestFingerprint: previous.manifestFingerprint,
+      layout, createdAt: 1000, updatedAt: 1001 };
+    const layouts = { get: vi.fn().mockResolvedValue(record), saveCandidate: vi.fn() };
+    const { page, state, port } = harness(current, layouts);
+    try {
+      await vi.waitFor(() => expect((page as any).storedLayout).toBeDefined());
+      await vi.waitFor(() => expect(page.canControl).toBe(true));
+      expect(page.widgets.find(widget => widget.endpointKey === 'power')?.type).toBe('switch');
+      expect(page.layout?.revision).toBe(4);
+      expect(page.value(page.snapshot.endpoints[0])).toBe(false);
+      await page.setBoolean(page.snapshot.endpoints[0], { detail: { checked: true } } as CustomEvent);
+      expect(port.sendCommand).toHaveBeenCalledWith(logicalDeviceId, 'power', true);
+      state.next(snapshot(true));
+      expect(page.widgets.find(widget => widget.endpointKey === 'power')?.type).toBe('switch');
+      expect(page.value(page.snapshot.endpoints[0])).toBe(true);
+      expect(layout.widgets[0].type).toBe('value');
+      expect(layouts.saveCandidate).not.toHaveBeenCalled();
+    } finally {
+      page.ngOnDestroy();
+    }
+  });
+
   it('uses compatible shared labels while preserving explicit widget titles and protocol values', async () => {
     const { page } = harness();
     page.device.displayMetadata = { logicalDeviceId, revision: 1, name: '客厅灯', capabilities: [
@@ -857,6 +884,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
       endpoints: [current.endpoints[0]],
     };
     const oldLayout = { ...generateDefaultPageLayout(oldSnapshot), revision: 4 };
+    oldLayout.widgets[0] = { ...oldLayout.widgets[0], type: 'value', title: 'power' };
     const get = vi.fn().mockResolvedValue({
       logicalDeviceId,
       revision: 4,
@@ -879,6 +907,8 @@ describe('DeviceV2Page UI port lifecycle', () => {
     expect(page.layout?.widgets.map(widget => widget.endpointKey))
       .toEqual(['power', 'level', 'label', 'restart']);
     expect(page.layoutStaleText).toContain('3 个能力待加入');
+    expect(page.layout?.widgets[0].type).toBe('switch');
+    expect(saveCandidate).not.toHaveBeenCalled();
 
     await page.updateLayout();
     expect(saveCandidate).toHaveBeenCalledWith(
@@ -889,5 +919,8 @@ describe('DeviceV2Page UI port lifecycle', () => {
     );
     expect(page.layoutStale).toBeUndefined();
     expect(page.layout?.revision).toBe(5);
+    expect(saveCandidate.mock.calls[0][1].widgets[0].type).toBe('switch');
+    expect(oldLayout.widgets[0].type).toBe('value');
+    page.ngOnDestroy();
   });
 });

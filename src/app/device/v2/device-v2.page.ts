@@ -47,6 +47,7 @@ import {
   PageLayoutDiff,
   PageLayoutWidget,
   parsePageLayout,
+  upgradeLegacyBooleanWidgets,
 } from '../../core/device-v2/page-layout';
 import {
   DeviceV2PageLayoutRecord,
@@ -357,7 +358,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.layoutUpdating = true;
     this.error = '';
     try {
-      const candidate = migratePageLayout(this.storedLayout.layout, this.snapshot);
+      const candidate = upgradeLegacyBooleanWidgets(
+        migratePageLayout(this.storedLayout.layout, this.snapshot),
+        this.snapshot.endpoints,
+      );
       const record = await this.pageLayouts.saveCandidate(
         this.logicalDeviceId,
         candidate,
@@ -466,9 +470,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     }
     try {
       if (this.storedLayout) {
-        this.layout = this.storedLayout.manifestFingerprint === snapshot.manifestFingerprint
+        const parsed = this.storedLayout.manifestFingerprint === snapshot.manifestFingerprint
           ? parsePageLayout(this.storedLayout.layout, snapshot.endpoints)
           : migratePageLayout(this.storedLayout.layout, snapshot);
+        this.layout = upgradeLegacyBooleanWidgets(parsed, snapshot.endpoints);
       } else if (this.layout?.manifestFingerprint !== snapshot.manifestFingerprint) {
         this.layout = generateDefaultPageLayout(snapshot);
       }
@@ -529,11 +534,15 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private applyStoredLayout(record: DeviceV2PageLayoutRecord, snapshot: DeviceUiSnapshot): void {
     this.storedLayout = record;
     if (record.manifestFingerprint === snapshot.manifestFingerprint) {
-      this.layout = parsePageLayout(record.layout, snapshot.endpoints);
+      this.layout = upgradeLegacyBooleanWidgets(
+        parsePageLayout(record.layout, snapshot.endpoints), snapshot.endpoints,
+      );
       this.layoutStale = undefined;
     } else {
       this.layoutStale = diffPageLayout(record.layout, snapshot.endpoints);
-      this.layout = migratePageLayout(record.layout, snapshot);
+      this.layout = upgradeLegacyBooleanWidgets(
+        migratePageLayout(record.layout, snapshot), snapshot.endpoints,
+      );
     }
     this.clearLayoutError();
     this.refreshTelemetry();
