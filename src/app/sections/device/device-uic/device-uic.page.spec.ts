@@ -81,7 +81,7 @@ describe('interface studio workflow', () => {
   it('saves a validated V2 layout with the current revision before switching', async () => {
     await select('automatic'); await page.apply();
     expect(saveLayout).toHaveBeenCalledWith('device-1', expect.objectContaining({ revision: 2 }), snapshot.endpoints, 2);
-    expect(saveConfig).toHaveBeenCalledWith(device, { component: 'DeviceV2' });
+    expect(saveConfig).toHaveBeenCalledWith(device, { component: 'DeviceV2', panelMode: 'normal' });
     expect(navigateRoot).toHaveBeenCalledWith('/device/device-1');
     expect(device.config.layouter).toBe('{"dashboard":[]}');
   });

@@ -27,6 +27,8 @@ export function presetMatchesField(preset: WidgetPreset, field: DeviceUiEndpoint
 
     switch (preset.variant) {
       case 'number':
+      case 'uptime':
+      case 'memory':
       case 'trend': return numeric;
       case 'ring': return numeric && bounded;
       case 'status': return numeric || field.valueType === 'boolean' || field.valueType === 'text';
@@ -241,6 +243,16 @@ export const WIDGET_PRESETS = {
     width: 2, height: 2,
     options: { icon: 'chip', tone: 'green' },
   },
+  'device-uptime': {
+    type: 'value', variant: 'uptime',
+    width: 4, height: 2,
+    options: { icon: 'timer', tone: 'purple' },
+  },
+  'memory-usage': {
+    type: 'value', variant: 'memory',
+    width: 4, height: 3,
+    options: { icon: 'chip', tone: 'teal' },
+  },
 
   'signal-number': {
     type: 'value', variant: 'number',
@@ -341,7 +353,7 @@ export const WIDGET_PRESETS = {
 
 export type WidgetPresetId = keyof typeof WIDGET_PRESETS;
 
-const DEFAULT_WIDGET_PRESETS = {
+export const DEFAULT_WIDGET_PRESETS = {
   tile: 'relay-tile',
   toggle: 'debug-toggle',
   slide: 'pump-slide',
@@ -361,6 +373,8 @@ const DEFAULT_WIDGET_PRESETS = {
   ring: 'battery-ring',
   status: 'gpio-status',
   log: 'event-log',
+  uptime: 'device-uptime',
+  memory: 'memory-usage',
   mode: 'adc-mode',
   text: 'serial-text',
 } as const satisfies Record<PageWidgetVariant, WidgetPresetId>;

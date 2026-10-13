@@ -112,7 +112,7 @@ export class InterfaceGenerationService {
 
       // HttpClient retains the normal Bearer authentication and token-refresh chain.
       subscription.add(this.http.post(options.base ? API.INTERFACE_REFINE : options.snapshot ? API.INTERFACE_WORKFLOW : API.INTERFACE_GENERATE, {
-        prompt, style,
+        mode: 'component', prompt, style,
         ...(options.base ? { baseProposal: draftProposal(options.base.tiles, options.base.summary) } : {}),
         // Device identifiers, live values, credentials and bindings remain local.
         ...(options.snapshot ? { manifest, defaults: workflowDefaults(tiles, options.snapshot) }

@@ -1,3 +1,4 @@
+import { CustomPanelFrameComponent } from '../custom-panel/custom-panel-frame.component';
 import { EndpointHistory } from '../../core/device-v2/endpoint-history';
 import { visiblePageWidgets } from '../../core/device-v2/page-layout';
 import { PageLayoutPanelComponent, type PanelCard, type PanelAction } from './panel/page-layout-panel';
@@ -61,7 +62,7 @@ function emptySnapshot(): DeviceUiSnapshot {
 @Component({
   selector: 'app-device-v2-page',
   standalone: true,
-  imports: [CommonModule, IonicModule, RouterModule, PageLayoutPanelComponent],
+  imports: [CommonModule, IonicModule, RouterModule, PageLayoutPanelComponent, CustomPanelFrameComponent],
   templateUrl: './device-v2.page.html',
   styleUrls: ['./device-v2.page.scss'],
 })
@@ -180,12 +181,16 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.deviceSubscriptions.unsubscribe();
   }
 
+  get customPanel() { return this.device.config.panelMode === 'custom' ? this.device.config.customPanel : undefined; }
+
   get widgets(): PageLayoutWidget[] {
-    if (!this.layout) return [];
+    const layout = this.customPanel && this.snapshot.manifestAccepted ? generateDefaultPageLayout(this.snapshot) : this.layout;
 
-    const hidden = this.device.config.hiddenEndpointKeys ?? [];
+    if (!layout) return [];
 
-    return visiblePageWidgets(this.layout, hidden).map(widget => ({
+    const hidden = this.customPanel ? [] : this.device.config.hiddenEndpointKeys ?? [];
+
+    return visiblePageWidgets(layout, hidden).map(widget => ({
       ...widget,
       extraKeys: widget.extraKeys?.filter(key => !hidden.includes(key)),
     }));
@@ -240,7 +245,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   // Read by the hosting DevicePage, which applies the effective theme.
   get layoutTheme() {
-    return this.layout?.style;
+    return this.customPanel?.theme || this.layout?.style;
   }
 
   get stateLabel(): string {
@@ -676,7 +681,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private telemetryConfiguration(): { endpointKeys: string[]; intervalMs: number } | undefined {
-    if (!this.logicalDeviceId || !this.snapshot.manifestAccepted || !this.layout) return undefined;
+    if (!this.logicalDeviceId || !this.snapshot.manifestAccepted || (!this.layout && !this.customPanel)) return undefined;
 
     const fields = new Map<string, DeviceUiEndpoint>();
 

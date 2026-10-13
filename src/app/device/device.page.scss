@@ -215,6 +215,14 @@ ion-content {
   }
 }
 
+.device-view.custom-view ::ng-deep > * {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  padding: var(--transparent-page-content-top) 0 var(--ion-safe-area-bottom, 0px);
+}
+
 ion-content.offline {
   filter: grayscale(30%);
 }

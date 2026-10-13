@@ -1,6 +1,6 @@
 import type { BlinkerDevice } from '../model/device.model';
 import type { DeviceUiEndpoint, DeviceUiValue } from './device-ui.port';
-import { parsePageWidgets, type PageLayoutWidget } from './page-layout';
+import { isExtraReading, parsePageWidgets, variantsFor, type PageLayoutWidget } from './page-layout';
 import { fitSize, type PageWidgetType } from './page-widget';
 import { placeWidget, type PanelDocument } from './panel-document';
 import { normalizeUiTheme } from './ui-theme';
@@ -36,6 +36,8 @@ export function readLegacyPanel(device: BlinkerDevice): LegacyPanel {
 
     for (const widget of widgets) {
       if (saved.bindings[widget.widgetId]?.field?.key !== widget.endpointKey) throw new Error('组件字段绑定已损坏');
+
+      validateSystemBindings(widget, saved.bindings);
     }
 
     if (widgets.length) {
@@ -103,10 +105,24 @@ export function writeLegacyPanel(raw: string | undefined, document: PanelDocumen
 
   for (const widget of widgets) {
     if (bindings[widget.widgetId]?.field.key !== widget.endpointKey) throw new Error('缺少部件的字段绑定');
+
+    validateSystemBindings(widget, bindings);
   }
 
   return JSON.stringify({ ...legacyRoot(raw), pagePanel: { ...document, widgets,
     bindings } });
+}
+
+function validateSystemBindings(widget: PageLayoutWidget, bindings: Record<string, LegacyBinding>): void {
+  if (widget.variant !== 'uptime' && widget.variant !== 'memory') return;
+
+  const field = bindings[widget.widgetId]?.field;
+
+  if (!field || !variantsFor('value', field).includes(widget.variant)) throw new Error('运行状态组件需要数值属性');
+
+  if (widget.extraKeys?.some(key => !isExtraReading(
+    Object.values(bindings).find(binding => binding.field.key === key)?.field, widget.variant,
+  ))) throw new Error('总内存字段无效');
 }
 
 export function legacyField(binding: LegacyBinding, device: BlinkerDevice): DeviceUiEndpoint {

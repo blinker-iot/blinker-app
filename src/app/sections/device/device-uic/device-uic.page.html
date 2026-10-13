@@ -1,10 +1,18 @@
 <ion-header class="ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button [defaultHref]="selected ? configurationHref : backHref" text=""
-        [disabled]="saving || generating"></ion-back-button>
+
+      @if (returnToDevice) {
+        <ion-button class="header-back" aria-label="返回控制台" [disabled]="saving || generating" (click)="backToDevice()">
+          <i class="fa-light fa-chevron-left" aria-hidden="true"></i>
+        </ion-button>
+      } @else {
+        <ion-back-button [defaultHref]="selected ? configurationHref : backHref" text=""
+          [disabled]="saving || generating"></ion-back-button>
+      }
+
     </ion-buttons>
-    <ion-title>{{ selected === 'ai' ? 'AI 生成' : selected === 'automatic' ? '自动适配' : '界面配置' }}</ion-title>
+    <ion-title>{{ selected === 'custom' ? '自定义模式' : selected === 'ai' ? 'AI 生成' : selected === 'automatic' ? '自动适配' : '界面配置' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -30,12 +38,15 @@
       </section>
       <div class="debug-entry">
         <i class="fa-light fa-terminal" aria-hidden="true"></i>
-        <span><strong id="debug-mode-label">调试工具</strong><small>查看原始数据与指令</small></span>
+        <span><strong id="debug-mode-label">调试模式</strong><small>查看原始数据与指令</small></span>
         <button class="debug-switch" type="button" role="switch" aria-labelledby="debug-mode-label"
           [attr.aria-checked]="debugEnabled === true" [class.on]="debugEnabled === true"
           [disabled]="saving || loading || debugEnabled === undefined || device.config.isShared"
           (click)="setDebugMode(!debugEnabled)"><span></span></button>
       </div>
+    } @else if (selected === 'custom') {
+      <app-custom-panel-editor [device]="device" [cards]="panelCards" [ready]="customReady" [record]="customRecord"
+        (busy)="saving = $event" />
     } @else {
       <div class="workspace">
         <section class="workspace-controls" [class.generation-form]="selected === 'ai'">
@@ -72,7 +83,10 @@
         </section>
 
         <section #previewPanel class="preview-section" aria-label="界面预览" [attr.aria-busy]="generating">
-          <div class="preview-heading"><span><span class="status-dot"></span>{{ generating ? '正在生成' : generated ? '生成结果' : '效果预览' }}</span><small>预览不会发送设备指令</small></div>
+          <div class="preview-heading">
+            <span><span class="status-dot"></span>{{ generating ? '正在生成' : generated ? '生成结果' : '效果预览' }}</span>
+            <app-generation-duration [running]="generating">预览不会发送设备指令</app-generation-duration>
+          </div>
 
           @if (liveError) { <p class="preview-caption" role="status">{{ liveError }}</p> }
 

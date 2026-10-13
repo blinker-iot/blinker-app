@@ -120,6 +120,12 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/device/share-invitation/share-invitation.page').then(m => m.ShareInvitationPage),
   },
   {
+    path: 'device/:id/edit/custom',
+    data: { method: 'custom', returnToDevice: true },
+    loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+    canDeactivate: [(component: { canDeactivate(): Promise<boolean> | boolean }) => component.canDeactivate()],
+  },
+  {
     path: 'device/:id/edit/widget/:widgetId',
     loadComponent: () => import('./sections/device/panel-editor/panel-widget-editor.page').then(m => m.PanelWidgetEditorPage),
     canDeactivate: [(component: { canDeactivate(nextUrl?: string): Promise<boolean> },
@@ -164,6 +170,12 @@ export const routes: Routes = [
     path: 'device-manager/:id/uic',
     pathMatch: 'full',
     loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+  },
+  {
+    path: 'device-manager/:id/uic/custom',
+    data: { method: 'custom' },
+    loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+    canDeactivate: [(component: { canDeactivate(): Promise<boolean> | boolean }) => component.canDeactivate()],
   },
   {
     path: 'device-manager/:id/uic/automatic',

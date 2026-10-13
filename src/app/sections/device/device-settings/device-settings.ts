@@ -7,6 +7,8 @@ import {
   NavController,
 } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
+import { DevicePanelService } from 'src/app/core/services/device-panel.service';
+import type { PanelMode } from 'src/app/core/device-v2/custom-panel';
 import { UserService } from 'src/app/core/services/user.service';
 import { ActivatedRoute } from '@angular/router';
 import { DeviceIconPage } from '../../../core/pages/device-icon/device-icon';
@@ -54,6 +56,8 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   nameSaving = false;
   imageSaving = false;
+  panelModeSaving = false;
+  panelModeLoading = false;
   secretKey = '';
   keyVisible = false;
   keyOperation: KeyOperation = '';
@@ -75,6 +79,10 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   get isOwner(): boolean {
     return this.loaded && !this.isSharedDevice;
+  }
+
+  get panelMode(): PanelMode {
+    return this.device?.config.panelMode || 'normal';
   }
 
   get keyBusy(): boolean {
@@ -245,6 +253,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private readonly deviceShortcutService: DeviceShortcutService,
     private readonly noticeService: NoticeService,
     private readonly cd: ChangeDetectorRef,
+    private readonly panels: DevicePanelService,
   ) {}
 
   ngOnInit(): void {
@@ -260,6 +269,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   private bindDevice(): void {
+    const previous = this.device;
     this.device = this.dataService.getDevice(this.logicalDeviceId) as ManagedDevice;
     this.supportsWifiProvisioning = this.isOwner
       && this.hasDeviceKeyContext
@@ -270,7 +280,65 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       && this.device.deviceType === 'edge-hub'
       && Number.isSafeInteger(this.device.cloudLastSeenAt)
       && (this.device.cloudLastSeenAt ?? 0) > 0;
+
+    if (this.device && this.device !== previous && this.device.config.mode !== 'bbp2') {
+      void this.loadPanelMode();
+    }
     this.cd.markForCheck();
+  }
+
+  private async loadPanelMode(): Promise<void> {
+    const device = this.device;
+
+    this.panelModeLoading = true;
+
+    try {
+      const record = await this.panels.get(device);
+
+      if (record && !this.destroyed && this.device === device) this.panels.install(device, record);
+    } catch {
+      if (!this.destroyed) await this.noticeService.showToast('读取界面模式失败，请稍后重试');
+    } finally {
+      if (this.device === device) this.panelModeLoading = false;
+      if (!this.destroyed) this.cd.markForCheck();
+    }
+  }
+
+  async setPanelMode(mode: PanelMode): Promise<void> {
+    if (!this.device || this.isSharedDevice || this.panelModeSaving || this.panelModeLoading || mode === this.panelMode) return;
+
+    const device = this.device;
+
+    if (mode === 'custom' && !device.config.customPanel) {
+      await this.navCtrl.navigateForward(`/device-manager/${encodeURIComponent(this.id)}/uic/custom`);
+
+      return;
+    }
+
+    this.panelModeSaving = true;
+
+    try {
+      if (device.config.mode === 'bbp2') {
+        const context = device.config.isPreview ? undefined
+          : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+
+        const config = { panelMode: mode, component: 'DeviceV2' };
+
+        if (!device.config.isPreview && !await this.deviceService.saveDeviceConfig(device, config)) throw new Error('mode-save-failed');
+        if (context) assertDeviceV2AccountContext(this.dataService, context);
+
+        Object.assign(device.config, config);
+        device.subject.next({ key: 'component', value: config.component, source: 'device-settings' });
+      } else {
+        await this.panels.setView(device, mode);
+      }
+    } catch {
+      if (!this.destroyed) await this.noticeService.showToast('切换界面模式失败，请稍后重试');
+    } finally {
+      this.panelModeSaving = false;
+
+      if (!this.destroyed) this.cd.markForCheck();
+    }
   }
 
   ngOnDestroy(): void {

@@ -19,39 +19,42 @@
 
   [attr.aria-busy]="loadState() === 'loading'"
 >
-  @switch (loadState()) {
-    @case ('loading') {
-      <div class="doc-state" role="status" aria-live="polite">
-        <ion-spinner name="crescent"></ion-spinner>
-        <p>正在加载文档…</p>
-      </div>
+  <div class="doc-content">
+    @switch (loadState()) {
+      @case ('loading') {
+        <div class="doc-state" role="status" aria-live="polite">
+          <ion-spinner name="crescent"></ion-spinner>
+          <p>正在加载文档…</p>
+        </div>
+      }
+
+      @case ('error') {
+        <div class="doc-state" role="alert">
+          <h2>文档加载失败</h2>
+          <p>请检查网络连接后重新加载。</p>
+          <ion-button fill="outline" size="small" (click)="loadDocument()">
+            重新加载
+          </ion-button>
+        </div>
+      }
+
+      @case ('empty') {
+        <div class="doc-state" role="status">
+          <h2>暂无内容</h2>
+          <p>该文档当前没有可显示的内容。</p>
+          <ion-button fill="outline" size="small" (click)="loadDocument()">
+            重新加载
+          </ion-button>
+        </div>
+      }
+
+      @case ('ready') {
+        <article class="markdown-document">
+          <markdown [data]="docContent()"></markdown>
+        </article>
+      }
     }
 
-    @case ('error') {
-      <div class="doc-state" role="alert">
-        <h2>文档加载失败</h2>
-        <p>请检查网络连接后重新加载。</p>
-        <ion-button fill="outline" size="small" (click)="loadDocument()">
-          重新加载
-        </ion-button>
-      </div>
-    }
-
-    @case ('empty') {
-      <div class="doc-state" role="status">
-        <h2>暂无内容</h2>
-        <p>该文档当前没有可显示的内容。</p>
-        <ion-button fill="outline" size="small" (click)="loadDocument()">
-          重新加载
-        </ion-button>
-      </div>
-    }
-
-    @case ('ready') {
-      <article class="markdown-document">
-        <markdown [data]="docContent()"></markdown>
-      </article>
-    }
-  }
+  </div>
 
 </ion-content>

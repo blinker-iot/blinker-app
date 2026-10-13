@@ -76,10 +76,15 @@ export class DevicePage implements OnInit, OnDestroy {
   themeSaved = true;
   switchingMode = false;
   viewError = '';
+
   private defaultComponent?: string;
   private viewEpoch = 0;
 
   get debugMode(): boolean { return this.deviceComponent === 'TestDashboard'; }
+
+  get customMode(): boolean {
+    return this.device?.config.panelMode === 'custom' && !!this.device.config.customPanel && !this.debugMode;
+  }
 
   async returnToPanel(): Promise<void> {
     if (!this.device || this.switchingMode || this.device.config.isShared) return;
@@ -88,7 +93,7 @@ export class DevicePage implements OnInit, OnDestroy {
 
     try {
       if (this.device.config.mode !== 'bbp2') {
-        await this.panels.setView(this.device, 'normal');
+        await this.panels.setView(this.device, this.device.config.panelMode || 'normal');
 
         return;
       }
@@ -107,14 +112,20 @@ export class DevicePage implements OnInit, OnDestroy {
 
   // Personal choice, then the layout's own theme, then the app's light or dark mode.
   get deviceTheme(): UiTheme {
+    if (this.customMode) return this.device!.config.customPanel!.theme;
+
     return this.selectedDeviceTheme ?? this.layoutTheme ?? (this.viewService.theme === 'dark' ? 'dark' : 'natural');
   }
 
   openThemePicker(): void {
+    if (this.customMode) return;
+
     this.themePickerOpen = true;
   }
 
   selectDeviceTheme(theme: UiTheme): void {
+    if (this.customMode) return;
+
     this.selectedDeviceTheme = theme;
     this.themeSaved = saveDeviceTheme(this.id, theme);
   }
@@ -372,6 +383,10 @@ export class DevicePage implements OnInit, OnDestroy {
       } else {
         const record = await this.panels.get(device);
 
+        if (record && epoch === this.viewEpoch && this.device === device && !this.subscriptions.closed) {
+          this.panels.install(device, record);
+        }
+
         component = record ? record.panel.view === 'debug' ? 'TestDashboard' : 'Layouter2Component'
           : 'Layouter2Component';
       }
@@ -438,7 +453,7 @@ export class DevicePage implements OnInit, OnDestroy {
         this.deviceComponentRef.setInput('embedded', true);
       }
 
-      if (this.deviceComponent === 'DeviceV2' || this.deviceComponent === 'TestDashboard') {
+      if (['DeviceV2', 'TestDashboard', 'Layouter2Component', 'Layouter2'].includes(this.deviceComponent)) {
         this.deviceComponentRef.setInput('viewActive', this.viewActive);
       }
 
@@ -561,7 +576,7 @@ export class DevicePage implements OnInit, OnDestroy {
 
     this.viewActive = active;
 
-    if ((this.usesV2DevicePage || this.debugMode) && this.deviceComponentRef) {
+    if (this.deviceComponentRef && ['DeviceV2', 'TestDashboard', 'Layouter2Component', 'Layouter2'].includes(this.deviceComponent)) {
       this.deviceComponentRef.setInput('viewActive', active);
     }
 

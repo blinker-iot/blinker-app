@@ -1,0 +1,38 @@
+@use '@fontsource-variable/outfit/index.css' as outfit;
+@use '@fontsource-variable/geist-mono/index.css' as geist;
+@use '@fontsource-variable/doto/index.css' as doto;
+@use '../theme/ui-theme' as theme;
+@use '../app/device/v2/panel/panel-grid' as grid;
+
+html {
+  @include theme.ui-theme;
+
+  color: var(--ui-ink);
+  font-family: var(--ui-font);
+
+  background: transparent;
+}
+
+body { margin: 0; }
+* { box-sizing: border-box; }
+
+@include grid.layout;
+
+// Headings and nested groups occupy a complete row unless the document opts in
+// to a different layout. Atom geometry is still owned by the component library.
+.panel > :where(:not(.cell)) { grid-column: 1 / -1; }
+
+// The root panel owns the single page inset, shared with component mode.
+body > .panel {
+  width: 100%;
+
+  max-width: grid.$page-max-width;
+  margin: 0 auto;
+  padding: grid.$page-inset grid.$page-inset grid.$page-bottom-inset;
+}
+
+@media (max-width: 560px) {
+  @include grid.compact;
+}
+
+.atom-error { color: var(--ui-alert); font-size: 13px; padding: 12px; }

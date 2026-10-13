@@ -1,3 +1,4 @@
+import type { CustomPanelDocument, PanelMode } from '../device-v2/custom-panel';
 import { Subject } from "rxjs";
 
 export interface DeviceCardMetricConfig {
@@ -43,6 +44,8 @@ export interface BlinkerDevice {
         card?: DeviceCardConfig,
         authKey?: string,
         component?: string,
+        panelMode?: PanelMode,
+        customPanel?: CustomPanelDocument,
         hiddenEndpointKeys?: string[],
         headerStyle?: 'dark' | 'light'
     },

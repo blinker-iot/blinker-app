@@ -16,7 +16,7 @@ describe('style generation transport', () => {
     for (const style of UI_THEME_IDS) {
       const result = await service.generate('主控置顶', [tile], style);
 
-      expect(post.mock.lastCall?.[1]).toEqual({ prompt: '主控置顶', style, widgets: [{ id: 'power', title: '电源', type: 'switch' }] });
+      expect(post.mock.lastCall?.[1]).toEqual({ mode: 'component', prompt: '主控置顶', style, widgets: [{ id: 'power', title: '电源', type: 'switch' }] });
       expect(result.tiles[0].key).toBe('private-key'); expect(result.tiles[0].legacy).toEqual({ mode: 1 });
     }
   });

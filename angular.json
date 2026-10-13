@@ -171,6 +171,33 @@
           }
         }
       }
+    },
+    "custom-panel-runtime": {
+      "projectType": "application",
+      "root": "src/custom-panel",
+      "sourceRoot": "src/custom-panel",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": {
+              "base": "dist/custom-panel",
+              "browser": ""
+            },
+            "index": false,
+            "browser": "src/custom-panel/main.ts",
+            "tsConfig": "src/custom-panel/tsconfig.json",
+            "inlineStyleLanguage": "scss",
+            "styles": [
+              "src/custom-panel/styles.scss"
+            ],
+            "outputHashing": "none",
+            "optimization": true,
+            "extractLicenses": false,
+            "sourceMap": false
+          }
+        }
+      }
     }
   },
   "cli": {

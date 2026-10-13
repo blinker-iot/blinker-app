@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import type { PageLayoutWidget } from '../../../core/device-v2/page-layout';
 import type { UiTheme } from '../../../core/device-v2/ui-theme';
 import type { PanelCard } from '../../../device/v2/widgets/widget-kit';
+import type { DeviceUiEndpoint } from '../../../core/device-v2/device-ui.port';
 
 export interface PanelWidgetEditorContext {
   deviceId: string;
@@ -9,7 +10,7 @@ export interface PanelWidgetEditorContext {
   card: PanelCard;
   theme: UiTheme;
 
-  extraCandidates: readonly { key: string; label: string }[];
+  extraCandidates: readonly (Pick<DeviceUiEndpoint, 'key' | 'role' | 'valueType'> & { label: string })[];
 
   readonly error: string;
 

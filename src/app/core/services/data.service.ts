@@ -331,15 +331,17 @@ export class DataService {
 
       const customName = this.nonEmptyString(previousConfig['customName']) ||
         gatewayDevice.name || id;
-      const config = {
-        ...previousConfig,
+
+      // Active views and pending UI-config requests share this object. Copying
+      // it during inventory refresh would fork the device's current panel mode.
+      const config = Object.assign(previousConfig, {
         customName,
         image: this.nonEmptyString(previousConfig['image']) || 'diyarduino.png',
         broker: 'blinker',
         mode: 'bbp2',
         disabled: item.state !== 'active',
         isShared: item.shared,
-      } as BlinkerDevice['config'];
+      }) as BlinkerDevice['config'];
 
       deviceDict[id] = {
         ...gatewayDevice,

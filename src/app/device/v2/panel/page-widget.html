@@ -19,5 +19,8 @@
   @case ('ring') { <app-ring-widget [card]="card" /> }
   @case ('status') { <app-status-widget [card]="card" /> }
   @case ('log') { <app-log-widget [card]="card" /> }
+  @case ('uptime') { <app-uptime-widget [card]="card" /> }
+
+  @case ('memory') { <app-memory-widget [card]="card" /> }
   @default { <app-number-widget [card]="card" /> }
 }

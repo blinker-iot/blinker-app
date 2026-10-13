@@ -11,6 +11,7 @@ export const VARIANT_LABELS: Readonly<Record<PageWidgetVariant, string>> = {
   mode: '模式宫格',
   text: '文本输入',
   number: '大数字读数', trend: '趋势曲线', ring: '环形进度', status: '状态徽章', log: '事件记录',
+  uptime: '运行时长', memory: '内存波纹',
   picker: '色盘',
 };
 

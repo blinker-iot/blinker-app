@@ -1,0 +1,55 @@
+@use '../../../theme/ui-theme' as theme;
+
+.field-trigger {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--ui-line, var(--blinker-border));
+  border-radius: 10px;
+  background: var(--ui-card, var(--blinker-surface));
+  color: var(--ui-ink, var(--blinker-text-primary));
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  text-align: left;
+  font-size: 14px;
+
+  span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  i { flex: none; color: var(--ui-muted, var(--blinker-text-secondary)); font-size: 12px; }
+}
+
+.field-popover {
+  @include theme.ui-theme;
+
+  --background: var(--ui-bg);
+  --max-height: min(360px, 50dvh);
+  --offset-y: 6px;
+  --box-shadow: var(--blinker-shadow-soft);
+
+  &::part(content) { border: 1px solid var(--ui-line); border-radius: var(--ui-radius-sm); }
+}
+
+.field-options {
+  display: block;
+  padding: 4px;
+  overflow-y: auto;
+  color: var(--ui-ink);
+  font-family: var(--ui-font);
+
+  ion-radio {
+    --color: var(--ui-muted);
+    --color-checked: var(--ui-accent);
+
+    display: flex;
+    min-height: 44px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  ion-radio.radio-checked { background: var(--ui-well); }
+  ion-radio::part(label) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}

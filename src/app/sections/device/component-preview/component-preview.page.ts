@@ -65,12 +65,13 @@ export class ComponentPreviewPage implements OnDestroy {
   }
 
   // Fields the selected card may show as extra readings: the other display cards.
-  get extraCandidates(): { key: string; label: string }[] {
+  get extraCandidates() {
     const selected = this.selected;
 
     return this.sections.flatMap(section => section.cards)
       .filter(card => card.widget.type === 'value' && card !== selected)
-      .map(card => ({ key: card.field.key, label: card.widget.title ?? card.field.key }));
+      .map(card => ({ key: card.field.key, label: card.widget.title ?? card.field.key,
+        role: card.field.role, valueType: card.field.valueType }));
   }
 
   selectTheme(theme: UiTheme): void {

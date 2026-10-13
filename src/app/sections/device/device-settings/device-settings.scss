@@ -10,12 +10,64 @@ ion-content { --background: var(--blinker-bg); }
 
 main {
   --section-main-display: flex;
+  --content-offset-gap: 0px;
   width: min(720px, 100%);
   margin: 0 auto;
   padding: 20px 18px 40px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.panel-mode-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+
+  min-height: 64px;
+  padding: 12px 16px;
+
+  border: 1px solid var(--line);
+  border-radius: 18px;
+
+  background: var(--card);
+  color: var(--blinker-text-primary);
+
+  font: inherit;
+  text-align: left;
+
+  cursor: pointer;
+
+  .mode-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 34px;
+    height: 34px;
+    border-radius: 10px;
+
+    background: var(--blinker-surface-active);
+    color: var(--ion-color-primary);
+
+    font-size: 16px;
+  }
+
+  .mode-label { font-size: 14px; font-weight: 500; }
+  .mode-current { margin-left: auto; color: var(--muted); font-size: 12px; }
+
+  > i { color: var(--muted); font-size: 12px; }
+  ion-spinner { width: 14px; height: 14px; color: var(--muted); }
+  &:disabled { cursor: default; opacity: .5; }
+  &:focus-visible { outline: 2px solid var(--ion-color-primary); outline-offset: 2px; }
+}
+
+.panel-mode-popover {
+  --offset-y: 6px;
+  --box-shadow: var(--blinker-shadow-soft);
+
+  &::part(content) { border: 1px solid var(--blinker-border); border-radius: 16px; }
+  ion-list { padding: 4px 0; }
+  ion-radio { min-height: 44px; font-size: 14px; }
 }
 
 .device-card,

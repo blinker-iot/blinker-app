@@ -179,9 +179,10 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
   }
 
   // Fields the edited widget may show as extra readings, named as on the device page.
-  get extraCandidates(): { key: string; label: string }[] {
+  get extraCandidates() {
     return (this.snapshot?.endpoints ?? []).filter(endpoint => isExtraReading(endpoint)).map(endpoint => ({
       key: endpoint.key,
+      role: endpoint.role, valueType: endpoint.valueType,
       label: this.layout?.widgets.find(widget => widget.endpointKey === endpoint.key)?.title || endpoint.key,
     }));
   }

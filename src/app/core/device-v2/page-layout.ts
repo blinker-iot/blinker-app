@@ -170,7 +170,8 @@ export function parsePageWidgets(input: unknown, endpoints?: readonly DeviceUiEn
     if (endpointByKey && (!endpoint || !isCompatible(widget, endpoint))) {
       throw new Error(`PageLayout widget ${widget.widgetId} is incompatible with its endpoint`);
     }
-    if (endpointByKey && widget.extraKeys?.some(key => !isExtraReading(endpointByKey.get(key)))) {
+
+    if (endpointByKey && widget.extraKeys?.some(key => !isExtraReading(endpointByKey.get(key), widget.variant))) {
       throw new Error(`PageLayout widget ${widget.widgetId} has an incompatible extra reading`);
     }
     return widget;
@@ -195,7 +196,7 @@ export function diffPageLayout(
     else if (!isCompatible(widget, endpoint)) incompatibleWidgetIds.push(widget.widgetId);
     else boundEndpointKeys.add(widget.endpointKey);
     // A field shown as an extra reading is bound too, so it gets no card of its own.
-    for (const key of widget.extraKeys ?? []) if (isExtraReading(endpointByKey.get(key))) boundEndpointKeys.add(key);
+    for (const key of widget.extraKeys ?? []) if (isExtraReading(endpointByKey.get(key), widget.variant)) boundEndpointKeys.add(key);
   }
   const addedEndpointKeys = endpoints
     .filter(endpoint => defaultBinding(endpoint) && !boundEndpointKeys.has(endpoint.key))
@@ -217,7 +218,7 @@ export function migratePageLayout(input: unknown, snapshot: DeviceUiSnapshot): P
     // Extra readings that are gone or no longer readable are dropped; the card stays.
     if (!widget.extraKeys) return widget;
     const { extraKeys, ...rest } = widget;
-    const kept = extraKeys.filter(key => isExtraReading(endpointByKey.get(key)));
+    const kept = extraKeys.filter(key => isExtraReading(endpointByKey.get(key), widget.variant));
     return kept.length ? { ...rest, extraKeys: kept } : rest;
   });
   const boundEndpointKeys = new Set(widgets.flatMap(widget => [widget.endpointKey, ...widget.extraKeys ?? []]));
@@ -257,7 +258,10 @@ function parseWidget(input: unknown, index: number): PageLayoutWidget {
   const variant = parseWidgetVariant(type, value['variant'], label);
   const options = parseWidgetOptions(value['options'], label);
   const extraKeys = value['extraKeys'] === undefined ? undefined : parseExtraKeys(value['extraKeys'], endpointKey, label);
-  if (extraKeys && !acceptsExtras(type, variant)) throw new Error(`${label} extraKeys need a number, ring or status display`);
+
+  if (extraKeys && !acceptsExtras(type, variant)) throw new Error(`${label} extraKeys are not supported by this display`);
+  if (variant === 'memory' && extraKeys && extraKeys.length > 1) throw new Error(`${label} memory needs one total-memory field`);
+  if (variant === 'memory' && options?.max !== undefined && options.max <= 0) throw new Error(`${label} total memory must be positive`);
   const gridValue = object(value['grid'], `${label} grid`);
   exactKeys(gridValue, ['x', 'y', 'width', 'height'], `${label} grid`);
   const grid = {
@@ -286,8 +290,9 @@ function parseExtraKeys(value: unknown, endpointKey: string, label: string): str
 }
 
 // An extra reading is bound like a display card's own field.
-export function isExtraReading(endpoint: DeviceUiEndpoint | undefined): boolean {
-  return !!endpoint && variantsFor('value', endpoint).length > 0;
+export function isExtraReading(endpoint: DeviceUiEndpoint | undefined, variant?: PageWidgetVariant): boolean {
+  return !!endpoint && (variant === 'memory'
+    ? variantsFor('value', endpoint).includes('memory') : variantsFor('value', endpoint).length > 0);
 }
 
 // Tried in this order; the first type that binds the endpoint is its default.
@@ -330,8 +335,11 @@ export function variantsFor(type: PageWidgetType, endpoint: DeviceUiEndpoint): r
   if (type === 'input') return endpoint.writable && (numeric || endpoint.valueType === 'text') ? all : [];
 
   if (!endpoint.readable && !endpoint.notifies && endpoint.role !== 'event') return [];
+
+  const displayVariants = all.filter(variant => !['uptime', 'memory'].includes(variant)
+    || (endpoint.role === 'property' && numeric));
   // An event is an occurrence: the status card shows when it last happened.
-  return endpoint.role === 'event' ? ['status', ...all.filter(variant => variant !== 'status')] : all;
+  return endpoint.role === 'event' ? ['status', ...displayVariants.filter(variant => variant !== 'status')] : displayVariants;
 }
 
 function isCompatible(widget: Pick<PageLayoutWidget, 'type' | 'variant'>, endpoint: DeviceUiEndpoint): boolean {

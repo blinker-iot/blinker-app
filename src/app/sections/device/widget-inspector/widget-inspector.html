@@ -75,24 +75,24 @@
 
   @if (showExtras) {
     <div class="field top">
-      <span>附属读数</span>
+      <span>{{ variant === 'memory' ? '总内存字段' : '附属读数' }}</span>
       <span class="stack">
         <span class="seg wrap">
           @for (candidate of candidates; track candidate.key) {
             <button type="button" [attr.aria-pressed]="extraKeys.includes(candidate.key)"
-              [disabled]="!extraKeys.includes(candidate.key) && extraKeys.length >= maxExtras"
+              [disabled]="variant !== 'memory' && !extraKeys.includes(candidate.key) && extraKeys.length >= maxExtras"
               (click)="toggleExtra(candidate.key)">{{ candidate.label }}</button>
           }
 
         </span>
-        <small>最多 {{ maxExtras }} 个，按选择顺序显示在附注行</small>
+        <small>{{ variant === 'memory' ? '选择一个以字节计的总内存字段；主字段绑定可用内存。' : '最多 ' + maxExtras + ' 个，按选择顺序显示在附注行' }}</small>
       </span>
     </div>
   }
 
   @for (key of specific; track key) {
     <div class="field" [class.top]="rule(key).kind !== 'enum' && hints[key]" [class.invalid]="invalid.has(key)">
-      <span>{{ variant === 'timer' && key === 'actionText' ? '结束动作文案' : optionLabels[key] }}</span>
+      <span>{{ variant === 'memory' && key === 'max' ? '总内存（字节）' : variant === 'memory' && key === 'pulse' ? '波纹动画' : variant === 'timer' && key === 'actionText' ? '结束动作文案' : optionLabels[key] }}</span>
 
       @switch (rule(key).kind) {
         @case ('boolean') {
@@ -142,6 +142,8 @@
           <span class="stack">
             <input class="input" type="number" inputmode="decimal" [value]="text(key)" placeholder="默认"
               (change)="setOption(key, $any($event.target).value)" />
+
+            @if (variant === 'memory' && key === 'max') { <small>未绑定总内存字段时使用；留空表示总量未知。</small> }
 
             @if (hints[key]) { <small>{{ hints[key] }}</small> }
           </span>

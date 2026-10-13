@@ -22,8 +22,8 @@
 </ion-header>
 }
 
-<ion-content [fullscreen]="true">
-  <main class="v2-content content-under-header">
+<ion-content [fullscreen]="true" [scrollY]="!customPanel">
+  <main class="v2-content content-under-header" [class.custom-panel-view]="!!customPanel">
 
     @if (error) {
       <section class="notice error">
@@ -38,7 +38,7 @@
       </section>
     }
 
-    @if (layoutStale) {
+    @if (layoutStale && !customPanel) {
       <section class="notice">
         <span>{{ layoutStaleText }}</span>
         <ion-button
@@ -51,7 +51,10 @@
       </section>
     }
 
-    @if (!layout) {
+    @if (customPanel) {
+      <app-custom-panel-frame [document]="customPanel" [cards]="panelCards" [interactive]="true"
+        [active]="viewActive && canControl" (action)="onPanelAction($event)" />
+    } @else if (!layout) {
       <section class="empty">
         @if (waitingForCapabilities) {
           <ion-spinner name="crescent"></ion-spinner>

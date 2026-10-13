@@ -129,7 +129,9 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   get extraCandidates() {
-    return this.availableFields.filter(isExtraReading).map(field => ({ key: field.key, label: field.key }));
+    return this.availableFields.filter(field => isExtraReading(field)).map(field => ({
+      key: field.key, label: field.key, role: field.role, valueType: field.valueType,
+    }));
   }
 
   get availableFields(): DeviceUiEndpoint[] {
@@ -538,7 +540,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
 
     try {
       const component = this.isV2 ? 'DeviceV2' : 'Layouter2Component';
-      const config: { component: string; layouter?: string; hiddenEndpointKeys?: string[] } = { component };
+      const config = { component, panelMode: 'normal' as const };
 
       if (this.isV2) {
         const revision = this.record?.revision ?? 0;

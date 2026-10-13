@@ -51,8 +51,8 @@
   width: 100%;
 
   height: var(--transparent-page-content-top);
+  margin-bottom: var(--content-offset-gap, 12px);
 
-  margin-bottom: 12px;
   flex-shrink: 0;
   pointer-events: none;
 }

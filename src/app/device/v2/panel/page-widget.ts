@@ -20,6 +20,8 @@ import { TileWidgetComponent } from '../widgets/tile/tile-widget';
 import { TimerWidgetComponent } from '../widgets/timer/timer-widget';
 import { ToggleWidgetComponent } from '../widgets/toggle/toggle-widget';
 import { TrendWidgetComponent } from '../widgets/trend/trend-widget';
+import { UptimeWidgetComponent } from '../widgets/uptime/uptime-widget';
+import { MemoryWidgetComponent } from '../widgets/memory/memory-widget';
 import { variantOf, type PanelCard, type WidgetAct } from '../widgets/widget-kit';
 
 @Component({
@@ -30,7 +32,7 @@ import { variantOf, type PanelCard, type WidgetAct } from '../widgets/widget-kit
     KeysWidgetComponent, LevelWidgetComponent, LevelsWidgetComponent, LogWidgetComponent, ModeWidgetComponent,
     NumberWidgetComponent, PickerWidgetComponent, RingWidgetComponent, SlideWidgetComponent, StatusWidgetComponent,
     StepperWidgetComponent, TextWidgetComponent, TileWidgetComponent, TimerWidgetComponent, ToggleWidgetComponent,
-    TrendWidgetComponent,
+    TrendWidgetComponent, UptimeWidgetComponent, MemoryWidgetComponent,
   ],
   templateUrl: './page-widget.html',
   styles: [':host { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; }'],

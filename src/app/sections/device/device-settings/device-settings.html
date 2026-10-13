@@ -116,6 +116,34 @@
       </div>
     </section>
     }
+
+    <button type="button" class="panel-mode-picker" [id]="'panel-mode-' + id" aria-haspopup="dialog"
+      [disabled]="isSharedDevice || panelModeSaving || panelModeLoading" [attr.aria-busy]="panelModeSaving || panelModeLoading">
+      <span class="mode-icon"><i class="fa-light fa-layer-group" aria-hidden="true"></i></span>
+      <span class="mode-label">显示模式</span>
+      <span class="mode-current">{{ panelMode === 'custom' ? '自定义模式' : '组件模式' }}</span>
+
+      @if (panelModeSaving || panelModeLoading) {
+        <ion-spinner name="crescent" aria-hidden="true" />
+      } @else {
+        <i class="fa-light fa-chevron-down" aria-hidden="true"></i>
+      }
+
+    </button>
+
+    <ion-popover #modePopover class="panel-mode-popover" [trigger]="'panel-mode-' + id"
+      size="cover" side="bottom" alignment="start" [arrow]="false">
+
+      <ng-template>
+        <ion-list lines="none">
+          <ion-radio-group aria-label="显示模式" [value]="panelMode"
+            (ionChange)="setPanelMode($event.detail.value); modePopover.dismiss()">
+            <ion-item><ion-radio value="normal" labelPlacement="start" justify="space-between">组件模式</ion-radio></ion-item>
+            <ion-item><ion-radio value="custom" labelPlacement="start" justify="space-between">自定义模式</ion-radio></ion-item>
+          </ion-radio-group>
+        </ion-list>
+      </ng-template>
+    </ion-popover>
     <section class="menu-group">
       <h2 class="section-label">设备功能</h2>
       <app-menu-list [detailed]="true" [items]="deviceMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>

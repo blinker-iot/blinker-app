@@ -25,7 +25,7 @@ ion-content {
 .message-content {
   min-height: 100%;
 
-  padding: 24px 18px calc(30px + env(safe-area-inset-bottom));
+  padding: 0 18px calc(30px + env(safe-area-inset-bottom));
 
   background:
     radial-gradient(

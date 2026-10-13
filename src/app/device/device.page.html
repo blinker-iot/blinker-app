@@ -31,7 +31,7 @@
       </div>
     </ion-title>
     <ion-buttons slot="end">
-      @if (deviceComponent !== 'Customizer') {
+      @if (deviceComponent !== 'Customizer' && !customMode) {
       <ion-button aria-label="设备主题" title="设备主题" [attr.aria-expanded]="themePickerOpen" (click)="openThemePicker()">
         <i class="fa-light fa-palette"></i>
       </ion-button>
@@ -43,7 +43,8 @@
             <i class="fa-light fa-grid-2"></i>
           </ion-button>
         } @else {
-          <ion-button aria-label="编辑页面" title="编辑页面" [routerLink]="['/device', id, 'edit']">
+          <ion-button aria-label="编辑页面" title="编辑页面"
+            [routerLink]="customMode ? ['/device', id, 'edit', 'custom'] : ['/device', id, 'edit']">
             <i class="fa-light fa-pen-to-square"></i>
           </ion-button>
         }
@@ -65,7 +66,7 @@
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
-<ion-modal class="device-theme-modal" [isOpen]="themePickerOpen"
+<ion-modal class="device-theme-modal" [isOpen]="themePickerOpen && !customMode"
   (didDismiss)="themePickerOpen = false" aria-label="设备主题选择">
 
   <ng-template>
@@ -94,7 +95,7 @@
 
 @if (device && !loaded) {
 <ion-content>
-  <div class="view-loading">
+  <div class="view-loading content-under-header">
     @if (viewError) {
       <p role="alert">{{ viewError }}</p>
       <ion-button fill="clear" (click)="resolveDefaultView()">重试</ion-button>
@@ -110,8 +111,8 @@
 @if (loaded && device && usesV2DevicePage) {
 <ng-template #deviceView></ng-template>
 } @else if (loaded && device) {
-<ion-content [fullscreen]="true" [ngClass]="{'offline': device.data.state === 'offline'}">
-  <div class="device-view content-under-header" [class.debug-view]="debugMode">
+<ion-content [fullscreen]="true" [scrollY]="!customMode" [ngClass]="{'offline': device.data.state === 'offline'}">
+  <div class="device-view content-under-header" [class.debug-view]="debugMode" [class.custom-view]="customMode">
     <ng-template #deviceView></ng-template>
   </div>
 </ion-content>

@@ -66,13 +66,13 @@ function sliderLevel(value: unknown, minimum: unknown, maximum: unknown): number
   return Math.max(0, Math.min(100, (number - minimum) / (maximum - minimum) * 100));
 }
 
-export function capabilityTiles(device: BlinkerDevice, snapshot?: DeviceUiSnapshot): InterfaceTile[] {
+export function capabilityTiles(device: BlinkerDevice, snapshot?: DeviceUiSnapshot, includeHidden = false): InterfaceTile[] {
   if (device.config.mode === 'bbp2') {
     if (!snapshot?.manifestAccepted) return [];
 
     const base = generateDefaultPageLayout(snapshot);
 
-    return base.widgets.filter(widget => !device.config.hiddenEndpointKeys?.includes(widget.endpointKey)).map(widget => {
+    return base.widgets.filter(widget => includeHidden || !device.config.hiddenEndpointKeys?.includes(widget.endpointKey)).map(widget => {
       const field = snapshot.endpoints.find(endpoint => endpoint.key === widget.endpointKey)!;
       const preset = presetForVariant(widgetVariant(widget.type, widget.variant));
 

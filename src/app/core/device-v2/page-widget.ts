@@ -14,7 +14,7 @@ export const PAGE_WIDGET_VARIANTS = {
   slider: ['level', 'gradient', 'dial', 'levels', 'stepper', 'timer'],
   select: ['mode'],
   input: ['text'],
-  value: ['number', 'trend', 'ring', 'status', 'log'],
+  value: ['number', 'trend', 'ring', 'status', 'log', 'uptime', 'memory'],
   color: ['picker'],
 } as const satisfies Record<PageWidgetType, readonly string[]>;
 
@@ -44,12 +44,15 @@ export const VARIANT_SIZES: Readonly<Record<PageWidgetVariant, { widths: readonl
   ring: { widths: [2, 4], heights: [2, 3] },
   status: { widths: [2, 4, 8], heights: [1, 2] },
   log: { widths: [4, 8], heights: [2, 3, 4] },
+  uptime: { widths: [4, 8], heights: [1, 2] },
+  memory: { widths: [2, 4, 8], heights: [3, 4] },
 };
 
 // 附属读数: display cards may show up to three more read-only fields in their
 // note line, besides the field they are bound to.
 export const MAX_EXTRA_KEYS = 3;
-export const EXTRA_READING_VARIANTS: readonly PageWidgetVariant[] = ['number', 'ring', 'status'];
+
+export const EXTRA_READING_VARIANTS: readonly PageWidgetVariant[] = ['number', 'ring', 'status', 'memory'];
 
 export function acceptsExtras(type: PageWidgetType, variant?: PageWidgetVariant): boolean {
   return type === 'value' && EXTRA_READING_VARIANTS.includes(widgetVariant(type, variant));
@@ -269,6 +272,8 @@ export const VARIANT_WIDGET_OPTIONS: Readonly<Record<PageWidgetVariant, readonly
   ring: ['shape', 'min', 'max', 'warnBelow', 'warnAbove', 'decimals', 'scale'],
   status: ['style', 'states', 'pulse', 'onText', 'offText'],
   log: ['points', 'onText', 'offText', 'decimals', 'scale'],
+  uptime: ['scale'],
+  memory: ['max', 'decimals', 'pulse'],
   picker: ['mode', 'thickness', 'palette', 'showHex'],
 };
 

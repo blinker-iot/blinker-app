@@ -28,7 +28,7 @@ const OWN_COMMON: readonly PageWidgetOptionKey[] = ['caption', 'showTitle'];
 export class WidgetInspectorComponent {
   @Input({ required: true }) widget!: PageLayoutWidget;
   // Fields the host lets this widget show as extra readings (附属读数).
-  @Input() extraCandidates: readonly { key: string; label: string }[] = [];
+  @Input() extraCandidates: readonly (Pick<DeviceUiEndpoint, 'key' | 'role' | 'valueType'> & { label: string })[] = [];
   // The bound field, when known: some variants fit only some fields.
   @Input() field?: DeviceUiEndpoint;
   @Input() twoColumnLayout = false;
@@ -64,14 +64,15 @@ export class WidgetInspectorComponent {
 
   get showExtras(): boolean {
     return acceptsExtras(this.widget.type, this.variant)
-      && this.extraCandidates.some(candidate => candidate.key !== this.widget.endpointKey);
+      && this.candidates.length > 0;
   }
 
   get candidates(): readonly { key: string; label: string }[] {
-    return this.extraCandidates.filter(candidate => candidate.key !== this.widget.endpointKey);
+    return this.extraCandidates.filter(candidate => candidate.key !== this.widget.endpointKey
+      && (this.variant !== 'memory' || (candidate.role === 'property' && ['integer', 'number'].includes(candidate.valueType))));
   }
 
-  readonly maxExtras = MAX_EXTRA_KEYS;
+  get maxExtras(): number { return this.variant === 'memory' ? 1 : MAX_EXTRA_KEYS; }
 
   get heights(): readonly number[] { return VARIANT_SIZES[this.variant].heights; }
 
@@ -108,6 +109,9 @@ export class WidgetInspectorComponent {
     // Keep only the options the new variant still reads.
     const keep = new Set([...COMMON_WIDGET_OPTIONS, ...VARIANT_WIDGET_OPTIONS[variant as PageWidgetVariant]]);
     const options = Object.fromEntries(Object.entries(this.options).filter(([key]) => keep.has(key as PageWidgetOptionKey)));
+
+    // A gauge's numeric upper bound is not a RAM capacity.
+    if (variant === 'memory' && this.variant !== 'memory') delete options['max'];
     // The size moves to the nearest one the new variant allows.
     const { width, height } = fitSize(variant as PageWidgetVariant, this.widget.grid.width, this.widget.grid.height);
 
@@ -119,7 +123,8 @@ export class WidgetInspectorComponent {
       options,
       grid: { ...this.widget.grid, x: Math.min(this.widget.grid.x, 8 - width), width, height },
       // Only display cards show extra readings.
-      extraKeys: acceptsExtras(this.widget.type, variant as PageWidgetVariant) ? this.widget.extraKeys : undefined,
+      extraKeys: variant === 'memory' && this.variant !== 'memory' ? undefined
+        : acceptsExtras(this.widget.type, variant as PageWidgetVariant) ? this.widget.extraKeys : undefined,
     });
   }
 
@@ -133,9 +138,10 @@ export class WidgetInspectorComponent {
 
   // Toggle a field in or out of the extra readings, keeping the order of picking.
   toggleExtra(key: string): void {
-    const keys = this.extraKeys.includes(key) ? this.extraKeys.filter(item => item !== key) : [...this.extraKeys, key];
+    const keys = this.extraKeys.includes(key) ? this.extraKeys.filter(item => item !== key)
+      : this.variant === 'memory' ? [key] : [...this.extraKeys, key];
 
-    if (keys.length > MAX_EXTRA_KEYS) return;
+    if (keys.length > this.maxExtras) return;
 
     this.emit({ ...this.widget, extraKeys: keys.length ? keys : undefined });
   }
@@ -150,7 +156,8 @@ export class WidgetInspectorComponent {
     else if (rule.kind === 'integer' || rule.kind === 'number') value = Number(raw);
     else if (rule.kind === 'text') value = String(raw).trim() || undefined;
 
-    if (value !== undefined && !validOption(rule, value)) {
+    if (value !== undefined && (!validOption(rule, value)
+      || (this.variant === 'memory' && key === 'max' && Number(value) <= 0))) {
       this.invalid.add(key);
 
       return;
