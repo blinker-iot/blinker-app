@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "test:embedded": "npm run build && node tests/embedded-load.mjs",
+    "test:embedded": "pnpm run build && node tests/embedded-load.mjs",
     "lint": "eslint \"src/**/*.ts\" vite.config.ts",
     "preview": "vite preview"
   },
