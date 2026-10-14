@@ -39,7 +39,7 @@ ion-popover.device-add-popover {
     background: transparent;
     color: var(--blinker-text-primary);
     display: grid;
-    grid-template-columns: 38px minmax(0, 1fr) auto;
+    grid-template-columns: 38px minmax(0, 1fr);
     align-items: center;
     gap: 10px;
     text-align: left;
@@ -94,10 +94,6 @@ ion-popover.device-add-popover {
     }
   }
 
-  .menu-arrow {
-    color: var(--blinker-text-tertiary);
-    font-size: 10px;
-  }
 }
 
 .room-list-fixed {
@@ -107,20 +103,18 @@ ion-popover.device-add-popover {
   left: 0;
   z-index: 4;
   box-sizing: border-box;
-  padding: 0 17px 13px;
-  background: transparent;
+  padding: 0 18px 13px;
+  background: var(--blinker-bg);
 }
 
 .device-page {
   box-sizing: border-box;
   width: 100%;
   min-height: 100%;
-  padding: calc(var(--ion-safe-area-top, 0px) + 113px) 17px 18px;
+  padding: calc(var(--ion-safe-area-top, 0px) + 113px) 18px 18px;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(circle at 95% 3%, rgba(var(--ion-color-primary-rgb), 0.08), transparent 25%),
-    var(--blinker-bg);
+  background: var(--blinker-bg);
 }
 
 .device-zone {

@@ -8,6 +8,8 @@
       <ion-button
         class="header-action"
         [class.active]="searchVisible"
+        [attr.aria-label]="searchVisible ? '关闭搜索' : '搜索'"
+        [attr.aria-expanded]="searchVisible"
         (click)="toggleSearch()"
       >
         <i [class]="searchVisible ? 'fa-light fa-xmark' : 'fa-light fa-magnifying-glass'"></i>

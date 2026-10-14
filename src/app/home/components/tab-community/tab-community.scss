@@ -1,6 +1,6 @@
 :host {
   --page-gutter: 18px;
-  --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 127px);
+  --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 113px);
   display: block;
   height: 100%;
 }
@@ -74,15 +74,15 @@ ion-content {
 }
 
 .discover-content {
-  padding: calc(var(--ion-safe-area-top, 0px) + 127px) var(--page-gutter) 18px;
+  padding: calc(var(--ion-safe-area-top, 0px) + 113px) var(--page-gutter) 18px;
 }
 
 .discover-header.search-visible + ion-content .discover-content {
-  padding-top: calc(var(--ion-safe-area-top, 0px) + 175px);
+  padding-top: calc(var(--ion-safe-area-top, 0px) + 161px);
 }
 
 .discover-header.search-visible + ion-content .top-scroll-mask {
-  height: calc(var(--ion-safe-area-top, 0px) + 175px);
+  height: calc(var(--ion-safe-area-top, 0px) + 161px);
 }
 
 .hero-card {

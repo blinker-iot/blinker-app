@@ -1,25 +1,17 @@
 <article
   class="device-card"
-
-  [class.wide]="wide"
+  [class.wide]="wide && metrics.length > 0"
+  [class.without-metrics]="metrics.length === 0"
   [class.online]="online"
   [class.offline]="!online"
   [class.status-reachable]="status === 'reachable'"
   [class.status-ready]="status === 'ready'"
 >
+  <div class="device-visual" aria-hidden="true">
+    <b-device-img [filename]="device.config.image"></b-device-img>
+  </div>
+
   <div class="device-primary">
-    <span
-      class="device-state-icon"
-
-      role="img"
-
-      [attr.aria-label]="statusText"
-      [attr.title]="statusText"
-    ><i [class]="transportIcon" aria-hidden="true"></i></span>
-
-    <div class="device-visual">
-      <b-device-img [filename]="device.config.image"></b-device-img>
-    </div>
     <div class="device-copy">
       <div class="device-summary-row">
         <div class="device-name">
@@ -40,6 +32,7 @@
             [class.waiting]="switchWaiting"
             [disabled]="!canControl || switchWaiting"
             [attr.aria-pressed]="switchOn"
+            [attr.aria-label]="(device.config.customName || '设备') + '开关'"
             (click)="tapSwitch($event)"
           >
             <span></span>
@@ -48,13 +41,17 @@
           <div class="device-metrics" aria-label="设备数据">
             @for (metric of metrics; track metric.key) {
               <span class="device-metric">
-                <strong>{{ metric.value }}{{ metric.unit }}</strong>
-                <small>{{ metric.key }}</small>
+                <strong [attr.title]="metric.value + metric.unit">{{ metric.display }}{{ metric.unit }}</strong>
+                <small [attr.title]="metric.key">{{ metric.key }}</small>
               </span>
             }
           </div>
         }
 
+      </div>
+      <div class="device-status">
+        <i [class]="'device-state-icon ' + transportIcon" aria-hidden="true"></i>
+        <span>{{ statusText }}</span>
       </div>
     </div>
   </div>
@@ -63,9 +60,9 @@
     <aside class="device-extension">
       <div class="extension-grid" aria-label="设备详细数据">
         @for (metric of metrics; track metric.key) {
-          <div class="extension-cell extension-metric">
-            <small>{{ metric.key }}</small>
-            <strong>{{ metric.value }}<em>{{ metric.unit }}</em></strong>
+          <div class="extension-metric">
+            <small [attr.title]="metric.key">{{ metric.key }}</small>
+            <strong [attr.title]="metric.value + metric.unit">{{ metric.display }}<em>{{ metric.unit }}</em></strong>
           </div>
         }
 

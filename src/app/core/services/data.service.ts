@@ -1,3 +1,4 @@
+import { RegionSnapshot } from '../model/region.model';
 import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
@@ -45,6 +46,7 @@ export class DataService {
   device: OrderData = this.emptyOrder();
   scene: OrderData = this.emptyOrder();
   room: OrderData = this.emptyOrder();
+  roomRevision: number | null = null;
   auto: OrderData = this.emptyOrder();
   block: OrderData = this.emptyOrder();
   share: ShareDate = this.emptyShare();
@@ -287,6 +289,7 @@ export class DataService {
     this.device = this.emptyOrder();
     this.scene = this.emptyOrder();
     this.room = this.emptyOrder();
+    this.roomRevision = null;
     this.auto = this.emptyOrder();
     this.block = this.emptyOrder();
     this.share = this.emptyShare();
@@ -512,6 +515,14 @@ export class DataService {
       entitlements: currentUser.entitlements,
     };
 
+    this.userDataLoader.next(true);
+  }
+
+  loadRegions(snapshot: RegionSnapshot): void {
+    if (this.roomRevision !== null && snapshot.revision < this.roomRevision) return;
+
+    this.room = { list: [...snapshot.order], dict: structuredClone(snapshot.rooms) };
+    this.roomRevision = snapshot.revision;
     this.userDataLoader.next(true);
   }
 

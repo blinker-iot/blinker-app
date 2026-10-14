@@ -11,10 +11,12 @@ import {
   Output,
   ViewChild,
 } from '@angular/core';
+
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, NavigationStart, Router } from '@angular/router';
 import Sortable from 'sortablejs';
-
+import { ToastController } from '@ionic/angular/standalone';
+import { RoomService, roomErrorMessage } from 'src/app/sections/room/room.service';
 import { DataService } from 'src/app/core/services/data.service';
 import { DeviceUiPort } from 'src/app/core/device-v2/device-ui.port';
 import { UserService } from 'src/app/core/services/user.service';
@@ -29,18 +31,16 @@ import { getDeviceRoute } from './device-navigation';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [Deviceblock],
 })
+
 export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
   @Output() swipeEnabled = new EventEmitter<boolean>();
   @Output() refresherEnabled = new EventEmitter<boolean>();
-
   @Input() roomName?: string;
-
   @ViewChild('sortbox') sortbox: ElementRef<HTMLElement>;
 
   private cardRead?: AbortController;
   private appActive = true;
   private viewInitialized = false;
-
   private sortable: any;
   private isSorting = false;
   private suppressNavigationUntil = 0;
@@ -64,6 +64,7 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     onChoose: () => {
       this.isSorting = true;
       this.suppressNavigationUntil = Number.POSITIVE_INFINITY;
+
       this.setParentGesturesEnabled(false);
     },
     onStart: () => {
@@ -72,11 +73,13 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
       if (!this.isSorting) {
         this.isSorting = true;
         this.suppressNavigationUntil = Number.POSITIVE_INFINITY;
+
         this.setParentGesturesEnabled(false);
       }
     },
     onEnd: (event: any) => {
       if (event.oldIndex !== event.newIndex) this.saveDeviceList();
+
       this.finishSorting();
     },
     onUnchoose: () => this.finishSorting(),
@@ -86,14 +89,18 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     if (typeof this.roomName === 'undefined') {
       return this.dataService.device?.list || [];
     }
-    return this.dataService.room?.dict?.[this.roomName] || [];
+
+    return (this.dataService.room?.dict?.[this.roomName] || [])
+      .filter((id: string) => !!this.deviceDataDict[id]);
   }
 
   set deviceDataList(list: string[]) {
     if (typeof this.roomName === 'undefined') {
       if (this.dataService.device) this.dataService.device.list = list;
+
       return;
     }
+
     if (this.dataService.room?.dict) {
       this.dataService.room.dict[this.roomName] = list;
     }
@@ -105,6 +112,8 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
 
   constructor(
     private userService: UserService,
+    private rooms: RoomService,
+    private toast: ToastController,
     private router: Router,
     private dataService: DataService,
     private deviceUi: DeviceUiPort,
@@ -117,15 +126,19 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
         this.cd.markForCheck();
         this.refreshBlePresence();
       });
+
     this.dataService.deviceDataLoader
       .pipe(takeUntilDestroyed(destroyRef))
       .subscribe(() => this.refreshCardStates());
+
     this.deviceUi.appActive
       .pipe(takeUntilDestroyed(destroyRef))
       .subscribe(active => {
         this.appActive = active;
+
         this.refreshCardStates();
       });
+
     this.router.events
       .pipe(takeUntilDestroyed(destroyRef))
       .subscribe(event => {
@@ -136,10 +149,12 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit() {
     this.viewInitialized = true;
+
     this.sortable = new Sortable(
       this.sortbox.nativeElement,
       this.sortableOptions
     );
+
     this.refreshBlePresence();
     this.refreshCardStates();
   }
@@ -147,14 +162,17 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy() {
     this.cardRead?.abort();
     this.sortable?.destroy();
+
     this.sortable = undefined;
   }
 
   isWideDevice(deviceId: string) {
     const device = this.deviceDataDict[deviceId];
+
     if (!device) return false;
 
     const card = device.config?.card;
+
     if (card?.layout === 'standard') return false;
     if (card?.layout === 'wide') return true;
     // 宽卡快捷按钮暂时停用，不再因按钮配置自动切换为整行布局。
@@ -164,26 +182,51 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     const numericDataCount = Object.values(device.data || {}).filter(
       (value) => typeof value === 'number' && Number.isFinite(value)
     ).length;
+
     return numericDataCount > 2;
   }
 
   gotoDashboard(deviceId: string) {
     if (Date.now() < this.suppressNavigationUntil) return;
     if (!this.deviceDataDict[deviceId]) return;
+
     void this.router.navigate(getDeviceRoute(deviceId));
   }
 
-  private saveDeviceList() {
+  private async saveDeviceList(): Promise<void> {
     if (!this.sortable) return;
 
-    this.deviceDataList = this.sortable.toArray();
-    const userConfig =
-      typeof this.roomName === 'undefined'
-        ? { deviceList: this.deviceDataList }
-        : { roomList: this.dataService.room };
+    const order = this.sortable.toArray();
 
-    if (this.dataService.auth) {
-      void this.userService.saveUserConfig(userConfig);
+    if (typeof this.roomName === 'undefined') {
+      this.deviceDataList = order;
+
+      if (this.dataService.auth) void this.userService.saveUserConfig({ deviceList: order });
+
+      return;
+    }
+
+    const previousOrder = this.deviceDataList;
+    const revision = this.dataService.roomRevision;
+    const draft = structuredClone(this.dataService.room);
+
+    draft.dict[this.roomName] = order;
+
+    this.sortable.option('disabled', true);
+
+    try {
+      if (revision === null) throw new Error('区域尚未同步');
+
+      await this.rooms.saveData(draft, revision, this.dataService.sessionEpoch);
+    } catch (error) {
+      this.sortable?.sort(previousOrder);
+
+      const toast = await this.toast.create({ message: roomErrorMessage(error), duration: 3000 });
+
+      await toast.present();
+    } finally {
+      this.sortable?.option('disabled', false);
+      this.cd.markForCheck();
     }
   }
 
@@ -192,6 +235,7 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
 
     this.isSorting = false;
     this.suppressNavigationUntil = Date.now() + 300;
+
     this.setParentGesturesEnabled(true);
   }
 
@@ -202,11 +246,14 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
 
   private refreshCardStates(): void {
     this.cardRead?.abort();
+
     if (!this.viewInitialized || !this.appActive
       || this.router.url.split(/[?#]/, 1)[0] !== '/home/device') return;
 
     const controller = new AbortController();
+
     this.cardRead = controller;
+
     void this.deviceUi.refreshCardStates(this.deviceDataList, controller.signal)
       .finally(() => {
         if (this.cardRead === controller) this.cardRead = undefined;
