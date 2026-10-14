@@ -23,19 +23,24 @@
     @if (!device) {
       <section class="empty-state"><i class="fa-light fa-microchip"></i><h1>还没有找到这台设备</h1><p>返回设备列表，选择设备后再来设计它的界面。</p></section>
     } @else if (!selected) {
-      @if (device.config.isShared) { <p class="notice" role="status">共享设备的界面由设备所有者配置。</p> }
+      @if (device.config.isShared) { <p class="notice" role="status">{{ canEdit ? '编辑将同步更新所有人看到的控制台。' : '你可以查看此控制台，编辑权限由所有者设置。' }}</p> }
 
-      <section class="method-list" aria-label="界面配置方式">
+      @for (group of methodGroups; track group.id) {
+        <section class="method-group" [attr.aria-labelledby]="'method-group-' + group.id">
+          <h2 class="method-group-title" [id]="'method-group-' + group.id">{{ group.title }}</h2>
+          <div class="method-list">
 
-        @for (method of methods; track method.id) {
-          <button type="button" [class]="'method-item method-item--' + method.id" [disabled]="saving || device.config.isShared" (click)="selectMethod(method.id)">
-            <span class="method-icon"><i [class]="'fa-light ' + method.icon" aria-hidden="true"></i></span>
-            <span class="method-copy"><strong>{{ method.title }}</strong><span>{{ method.subtitle }}</span></span>
-            <i class="fa-light fa-chevron-right method-arrow" aria-hidden="true"></i>
-          </button>
-        }
+            @for (method of group.methods; track method.id) {
+              <button type="button" [class]="'method-item method-item--' + method.id" [disabled]="saving || !canEdit" (click)="selectMethod(method.id)">
+                <span class="method-icon"><i [class]="'fa-light ' + method.icon" aria-hidden="true"></i></span>
+                <span class="method-copy"><strong>{{ method.title }}</strong><span>{{ method.subtitle }}</span></span>
+                <i class="fa-light fa-chevron-right method-arrow" aria-hidden="true"></i>
+              </button>
+            }
+          </div>
+        </section>
+      }
 
-      </section>
       <div class="debug-entry">
         <i class="fa-light fa-terminal" aria-hidden="true"></i>
         <span><strong id="debug-mode-label">调试模式</strong><small>查看原始数据与指令</small></span>

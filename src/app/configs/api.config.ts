@@ -9,6 +9,8 @@ const deviceKeyV2Url = (logicalDeviceId: string) =>
 
 export const API = {
   BASE_URL: GATEWAY_BASE_URL,
+  CONSOLE_LINK_RESOLVE: API_V2_URL + '/console-links:resolve',
+  CONSOLE_VIEW_SESSIONS: API_V2_URL + "/console-view-sessions",
   DEVICE_PANEL: (panelId: string) => API_V2_URL + '/device-panels/' + encodeURIComponent(panelId),
   INTERFACE_REFINE: API_V1_URL + '/interface/refine',
   INTERFACE_WORKFLOW: API_V1_URL + '/interface/workflow',
@@ -46,6 +48,8 @@ export const API = {
     RESOLVE_INSTANCE: API_V2_URL + '/devices:resolve-instance',
     ENABLE_CLOUD: API_V2_URL + '/devices:enable-cloud',
     DETAIL: deviceKeyV2Url,
+    CONSOLE: (id: string) => deviceKeyV2Url(id) + "/console",
+    CONSOLE_LINK: (id: string) => deviceKeyV2Url(id) + "/console-link",
     DIRECT_ADMIN: (logicalDeviceId: string) =>
       deviceKeyV2Url(logicalDeviceId) + '/direct-access/admin',
     LOCAL_ACCESS: (logicalDeviceId: string) =>
@@ -135,7 +139,10 @@ export const API = {
 } as const;
 
 export function isGatewayUrl(url: string): boolean {
-  return url === API.INTERFACE_REFINE
+  return url === API.CONSOLE_LINK_RESOLVE
+    || url === API.CONSOLE_VIEW_SESSIONS
+    || url.startsWith(API.CONSOLE_VIEW_SESSIONS + "/")
+    || url === API.INTERFACE_REFINE
     || url.startsWith(API_V2_URL + '/device-panels/')
     || url === API.INTERFACE_WORKFLOW
     || url === API.INTERFACE_GENERATE
@@ -189,6 +196,9 @@ function isDeviceKeyManagementUrl(url: string): boolean {
       || parts[1] === 'presence-key:confirm'
       || parts[1] === 'page-layout'
       || parts[1] === 'ui-config'
+      || parts[1] === 'console'
+      || parts[1] === 'console-link'
+      || parts[1] === 'console-public-access'
       || parts[1] === 'share-invitations'
       || parts[1] === 'shares';
   }

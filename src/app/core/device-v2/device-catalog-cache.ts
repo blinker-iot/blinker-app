@@ -6,7 +6,7 @@ export interface DeviceCatalogItem {
   device: Pick<DeviceKeyLogicalDevice, 'logicalDeviceId' | 'name' | 'deviceType' | 'cloudEnabled' | 'gatewayRouted'>;
   state: string;
   shared: boolean;
-  access: Pick<DeviceV2ShareGrant, 'shareId' | 'role'> | null;
+  access: (Pick<DeviceV2ShareGrant, 'shareId' | 'role'> & Partial<Pick<DeviceV2ShareGrant, 'canEditConsole' | 'commandEndpointKeys'>>) | null;
 }
 
 const PREFIX = 'blinker-v2-catalog:';

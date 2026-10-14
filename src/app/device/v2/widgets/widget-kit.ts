@@ -89,6 +89,14 @@ export function decimalsOf(step: number | undefined): number {
   return Math.min(4, String(step).split('.')[1]?.length ?? 0);
 }
 
+export function formatValue(value?: DeviceUiValue): string {
+  if (value instanceof Uint8Array) {
+    return Array.from(value, byte => byte.toString(16).padStart(2, '0')).join(' ');
+  }
+
+  return value === undefined ? '—' : String(value);
+}
+
 export function formatNumber(value: number, decimals?: number): string {
   if (decimals !== undefined) return value.toFixed(decimals);
 

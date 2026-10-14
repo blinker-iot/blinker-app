@@ -51,10 +51,13 @@ export interface CurrentUser {
   phone: string | null;
   avatar: string | null;
   subscription_plan: GatewaySubscriptionPlan | null;
+
   permissions: string[];
   rbac_permissions: string[];
+
   entitlement_revision?: number;
   entitlements: GatewayEntitlements;
+
   [key: string]: unknown;
 }
 
@@ -108,6 +111,7 @@ export interface DeviceRemovalResponse {
 
 export interface DeviceKeyCreateResponse {
   status: number;
+
   data: {
     device: DeviceKeyLogicalDevice & DeviceKeyContext;
     replayed: boolean;
@@ -170,6 +174,7 @@ export interface DeviceCloudEnableResponse {
 
 export interface DeviceKeyListResponse {
   status: number;
+
   data: { devices: DeviceKeyLogicalDevice[] };
 }
 
@@ -178,7 +183,10 @@ export type DeviceV2ShareRole = 'viewer' | 'operator';
 export interface DeviceV2ShareGrant {
   shareId: string;
   role: DeviceV2ShareRole;
+  canEditConsole?: boolean;
+
   commandEndpointKeys: string[] | null;
+
   version: number;
   state: 'active' | 'revoked';
   createdAt: number;
@@ -197,8 +205,11 @@ export interface DeviceV2ShareMutation {
 
 export interface DeviceV2ShareInvitation {
   invitationId: string;
+
   invitationCode?: string;
   role: DeviceV2ShareRole;
+  canEditConsole?: boolean;
+
   commandEndpointKeys: string[] | null;
   state: 'pending' | 'accepted' | 'revoked' | 'expired' | 'declined';
   targeted?: boolean;
@@ -208,6 +219,7 @@ export interface DeviceV2ShareInvitation {
 
 export interface DeviceV2OwnerShares {
   logicalDeviceId: string;
+
   shares: DeviceV2ShareGrant[];
   invitations: DeviceV2ShareInvitation[];
 }
@@ -229,6 +241,7 @@ export interface DeviceV2PendingInvitation extends DeviceV2ShareInvitation {
 
 export interface DeviceV2InvitationInbox {
   items: DeviceV2PendingInvitation[];
+
   nextCursor: string | null;
 }
 
@@ -260,12 +273,14 @@ export interface FeedbackSubmitResponse {
 
 export interface FeedbackUploadResponse {
   status: number;
+
   data: {
     url: string;
     path: string;
     size: number;
     content_type: string;
   };
+
   messages?: string | null;
 }
 
@@ -296,6 +311,7 @@ export class GatewayHttpError extends Error implements NormalizedHttpError {
 
   constructor(error: NormalizedHttpError) {
     super(error.message);
+
     this.name = 'GatewayHttpError';
     this.httpStatus = error.httpStatus;
     this.code = error.code;

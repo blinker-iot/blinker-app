@@ -1,6 +1,13 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ViewService } from '../../core/services/view.service';
 import {
@@ -17,7 +24,16 @@ import { HeroCardComponent } from '../../core/components/hero-card/hero-card.com
   templateUrl: './settings.page.html',
   styleUrls: ['./settings.page.scss'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [IonicModule, TranslatePipe, HeroCardComponent],
+  imports: [
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    TranslatePipe,
+    HeroCardComponent,
+  ],
 })
 export class SettingsPage {
   readonly languageList: readonly LanguageOption[];

@@ -1,6 +1,17 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonModal,
+  IonSpinner,
+  IonTitle,
+  IonToggle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 
 import { API } from '../../../configs/api.config';
@@ -21,7 +32,20 @@ import { WidgetInspectorComponent } from '../widget-inspector/widget-inspector';
 @Component({
   selector: 'app-device-components',
   standalone: true,
-  imports: [IonicModule, PageLayoutPanelComponent, WidgetInspectorComponent],
+  imports: [
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonModal,
+    IonSpinner,
+    IonTitle,
+    IonToggle,
+    IonToolbar,
+    PageLayoutPanelComponent,
+    WidgetInspectorComponent,
+  ],
   templateUrl: './device-components.page.html',
   styleUrls: ['./device-components.page.scss'],
 })

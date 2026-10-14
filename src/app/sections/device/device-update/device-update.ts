@@ -1,6 +1,17 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule, NavController } from '@ionic/angular';
+
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+  NavController,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
@@ -22,7 +33,17 @@ interface UpdateStateMeta {
   selector: 'app-device-update',
   templateUrl: 'device-update.html',
   styleUrls: ['device-update.scss'],
-  imports: [IonicModule, HeroCardComponent],
+  imports: [
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    HeroCardComponent,
+  ],
 })
 export class DeviceUpdatePage implements OnInit, OnDestroy {
   readonly debugStates: readonly { state: UpdateState; label: string }[] = [

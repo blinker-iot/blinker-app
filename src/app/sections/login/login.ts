@@ -1,8 +1,14 @@
+import { parseConsoleLink } from '../../core/services/device-console.service';
+import { parseShareInvitation } from '../../core/device-v2/sharing/invitation-link';
+import { AlertController } from '@ionic/angular';
+import { ActivatedRoute } from '@angular/router';
+
 import {
   ChangeDetectionStrategy,
   Component,
   OnDestroy,
 } from '@angular/core';
+
 import {
   IonButton,
   IonButtons,
@@ -12,6 +18,7 @@ import {
   ModalController,
   NavController,
 } from '@ionic/angular/standalone';
+
 import { UserService } from 'src/app/core/services/user.service';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CONFIG } from 'src/app/configs/app.config';
@@ -38,6 +45,7 @@ import { DeviceV2ShareInvitationService } from 'src/app/core/services/device-v2-
     IonContent,
   ],
 })
+
 export class LoginPage implements OnDestroy {
   LOGO = CONFIG.LOGIN_LOGO;
 
@@ -47,7 +55,6 @@ export class LoginPage implements OnDestroy {
   private countdownTimer: any;
 
   showPoweredBy = true;
-
   USER_AGREEMENT = CONFIG.USER_AGREEMENT;
   PRIVACY_POLICY = CONFIG.PRIVACY_POLICY;
 
@@ -59,6 +66,7 @@ export class LoginPage implements OnDestroy {
     private modalCtrl: ModalController,
     private dataService: DataService,
     private shareInvitation: DeviceV2ShareInvitationService,
+    private route: ActivatedRoute,
   ) { }
 
   ngOnDestroy(): void {
@@ -73,13 +81,22 @@ export class LoginPage implements OnDestroy {
     });
   }
 
-  private returnAfterLogin(): void {
-    void this.navCtrl.navigateRoot(this.shareInvitation.hasPending ? '/share-invitation' : '/');
+  openSharedDevices(): void {
+    void this.navCtrl.navigateForward('/share-manager');
   }
 
+  private returnAfterLogin(): void {
+    const token = parseConsoleLink('diandeng://console/' + this.route.snapshot.queryParamMap.get('returnConsole'));
+    const invitation = parseShareInvitation(this.route.snapshot.queryParamMap.get('returnInvitation'));
+    const sharing = this.route.snapshot.queryParamMap.get('returnSharing') === '1';
+
+    void this.navCtrl.navigateRoot(token ? '/s/' + token : invitation ? '/share-invitation/' + invitation
+      : this.shareInvitation.hasPending ? '/share-invitation' : sharing ? '/share-manager' : '/');
+  }
   // 验证邮箱格式
   isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     return emailRegex.test(email);
   }
 
@@ -89,12 +106,14 @@ export class LoginPage implements OnDestroy {
 
     if (!this.email || !this.isValidEmail(this.email)) {
       this.noticeService.showToast('needValidEmail');
+
       return;
     }
 
     await this.noticeService.showLoading('sendingCode');
 
     const success = await this.authService.sendEmailCode(this.email);
+
     await this.noticeService.hideLoading();
 
     if (success) {
@@ -108,8 +127,10 @@ export class LoginPage implements OnDestroy {
   // 开始倒计时
   startCountdown() {
     this.countdown = 60;
+
     this.countdownTimer = setInterval(() => {
       this.countdown--;
+
       if (this.countdown <= 0) {
         clearInterval(this.countdownTimer);
       }
@@ -119,10 +140,13 @@ export class LoginPage implements OnDestroy {
   async login() {
     if (!this.email || !this.isValidEmail(this.email)) {
       this.noticeService.showToast('needValidEmail');
+
       return;
     }
+
     if (!this.code || this.code.length < 4) {
       this.noticeService.showToast('needVerifyCode');
+
       return;
     }
 
@@ -155,11 +179,13 @@ export class LoginPage implements OnDestroy {
         docUrl: url,
       },
     });
+
     modal.present();
   }
 
   async loginWithGithub() {
     await this.noticeService.showLoading('login');
+
     try {
       if (await this.authService.loginWithGithub()) {
         await this.userService.getAllInfo();
@@ -176,6 +202,7 @@ export class LoginPage implements OnDestroy {
 
   async loginWithWechat() {
     await this.noticeService.showLoading('login');
+
     try {
       if (await this.authService.loginWithWechat()) {
         await this.userService.getAllInfo();

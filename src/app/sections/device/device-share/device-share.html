@@ -1,90 +1,290 @@
-<ion-header class="share-detail-header">
+<ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
+      <ion-back-button text="" [defaultHref]="defaultBackHref" />
     </ion-buttons>
     <ion-title>共享管理</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content fullscreen="true">
+<ion-content [fullscreen]="true">
   <main>
-    <section class="device-hero">
-      <span class="hero-icon" aria-hidden="true"><i class="fa-light fa-share-nodes"></i></span>
-      <div>
-        <span class="eyebrow">当前设备</span>
-        <h1>{{ device?.config?.customName || '设备' }}</h1>
-        <p>通过邮箱邀请或分享链接共享查看或控制权限。</p>
-      </div>
-      <span class="member-count">{{ sharedUserCount }} 项</span>
-    </section>
+    <h1 class="device-name">{{ device?.config?.customName || '设备' }}</h1>
 
-    <div class="section-label">共享成员与待领取邀请</div>
-    @if (sharedUserCount) {
-    <section class="member-card">
-      @for (item of pendingShares; track item.invitationId) {
-      <article class="member-row">
-        <span class="avatar-box placeholder-avatar">
-          <i class="fa-light fa-ticket" aria-hidden="true"></i>
-          <span class="status-dot pending" aria-hidden="true"></span>
+    @if (supportsConsoleLink && !device?.config?.isShared) {
+    <section class="settings-card public-card" aria-label="公开访问设置">
+      <label class="public-access-row">
+        <span class="setting-copy">
+          <strong>公开访问</strong>
+          <small>{{ publicAccessEnabled ? '持链接即可查看' : '仅已授权成员可查看' }}</small>
         </span>
-        <span class="member-copy">
-          <strong>{{ item.targeted ? '定向' : '链接' }}邀请 · {{ roleLabel(item.role) }}</strong>
-          <small>{{ item.expiresAt | msToDate }} 到期</small>
-        </span>
-        <span class="member-status pending-status">待领取</span>
-        <button type="button" class="remove-action"
-          [disabled]="busyId === item.invitationId"
-          (click)="cancelInvitation(item.invitationId)">撤销</button>
-      </article>
+        <input
+          class="toggle"
+
+          type="checkbox"
+
+          role="switch"
+
+          [checked]="publicAccessEnabled"
+          [disabled]="!!busyId || linkLoading || !!linkError"
+          (change)="setPublicAccess($any($event.target).checked)"
+        />
+      </label>
+
+      @if (linkLoading) {
+      <div class="link-row muted" role="status"><ion-spinner name="crescent" />正在读取</div>
+      } @else if (linkError) {
+      <div class="link-row error" role="alert">
+        <span>{{ linkError }}</span>
+        <button type="button" class="text-action" (click)="refreshLink()">重试</button>
+      </div>
+      } @else if (publicAccessEnabled) {
+      @if (publicLink) {
+      <div class="public-link-row">
+        <div class="public-link-heading">
+          <span><i class="fa-light fa-mobile-screen" aria-hidden="true"></i>App 链接</span>
+          <button type="button" class="copy-action" aria-label="复制 App 链接" [disabled]="!!busyId" (click)="copyViewLink('app')">
+            <i class="fa-light fa-copy" aria-hidden="true"></i>复制
+          </button>
+        </div>
+        <p class="public-link">{{ publicLink }}</p>
+      </div>
+
+      @if (publicBrowserLink) {
+      <div class="public-link-row">
+        <div class="public-link-heading">
+          <span><i class="fa-light fa-globe" aria-hidden="true"></i>浏览器链接</span>
+          <button type="button" class="copy-action" aria-label="复制浏览器链接" [disabled]="!!busyId" (click)="copyViewLink('browser')">
+            <i class="fa-light fa-copy" aria-hidden="true"></i>复制
+          </button>
+        </div>
+        <p class="public-link">{{ publicBrowserLink }}</p>
+      </div>
       }
-      @for (item of activeShares; track item.shareId) {
-      <article class="member-row">
-        <span class="avatar-box placeholder-avatar">
-          <i class="fa-light fa-user-shield" aria-hidden="true"></i>
-          <span class="status-dot active" aria-hidden="true"></span>
-        </span>
-        <span class="member-copy">
-          <strong>成员 {{ item.memberRef || item.shareId }}</strong>
-          <small>{{ item.createdAt | msToDate }} 开始共享</small>
-        </span>
-        <button type="button" class="member-status active-status role-action"
-          [disabled]="busyId === item.shareId"
-          (click)="toggleRole(item.shareId, item.role)">{{ roleLabel(item.role) }}</button>
-        <button type="button" class="remove-action"
-          [disabled]="busyId === item.shareId"
-          (click)="removeShare(item.shareId)">移除</button>
-      </article>
       }
-    </section>
-    } @else {
-    <section class="empty-state">
-      <span class="empty-icon" aria-hidden="true"><i class="fa-light fa-user-plus"></i></span>
-      <strong>还没有共享成员</strong>
-      <p>邀请指定邮箱的账号，或生成链接让对方在 App 内领取。</p>
+
+      <div class="link-row">
+        <span class="link-expiry"><i class="fa-light fa-clock" aria-hidden="true"></i>{{ linkExpiryLabel }}</span>
+
+        @if (viewLink) {
+        <button
+          type="button"
+          class="text-action link-settings-action"
+          aria-label="链接设置"
+
+          [disabled]="!!busyId"
+          (click)="openLinkSettings()"
+        >
+          <i class="fa-light fa-sliders" aria-hidden="true"></i>
+          设置
+        </button>
+        }
+
+        @if (!linkActive) {
+        <button type="button" class="compact-primary" [disabled]="!!busyId" (click)="openLinkSettings()">生成链接</button>
+        }
+
+      </div>
+      }
+
     </section>
     }
 
-    <aside class="security-tip">
-      <i class="fa-light fa-shield-check" aria-hidden="true"></i>
-      <p><strong>权限随时生效</strong><span>点击角色可切换权限；移除后旧会话会失效。</span></p>
-    </aside>
+    <div class="section-heading">
+      <h2>成员@if (sharedUserCount) { <span>{{ sharedUserCount }}</span> }</h2>
+
+      @if (device && !device.config.isShared) {
+      <div class="invite-actions">
+        <button type="button" [disabled]="!!busyId" (click)="addShare()">邀请链接</button>
+      </div>
+      }
+
+    </div>
+
+    <section class="settings-card member-list">
+      @for (item of activeShares; track item.shareId) {
+      <div class="member-row">
+        <span class="member-avatar"><i class="fa-light fa-user" aria-hidden="true"></i></span>
+        <span class="member-copy">
+          <strong>成员 {{ item.memberRef || item.shareId }}</strong>
+          <small>{{ roleLabel(item.role) }}{{ item.canEditConsole ? ' · 可编辑' : '' }}</small>
+        </span>
+        <button type="button" class="text-action" [disabled]="!!busyId" (click)="editPermissions(item)">权限</button>
+
+        <button
+          type="button"
+          class="icon-action muted"
+          aria-label="移除成员"
+
+          [disabled]="!!busyId"
+          (click)="removeShare(item.shareId)"
+        >
+          <i class="fa-light fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      } @for (item of pendingShares; track item.invitationId) {
+      <div class="member-row">
+        <button type="button" class="invitation-entry" [disabled]="!!busyId || item.targeted" (click)="openInvitation(item)">
+          <span class="member-avatar"><i class="fa-light fa-link" aria-hidden="true"></i></span>
+          <span class="member-copy">
+            <strong>{{ item.targeted ? '定向邀请' : '链接邀请' }} <span class="pending-label">待接受</span></strong>
+            <small>{{ roleLabel(item.role) }}{{ item.canEditConsole ? ' · 可编辑' : '' }} · {{ item.expiresAt | date:'MM/dd HH:mm' }} 到期</small>
+          </span>
+
+          @if (busyId === item.invitationId) {
+            <ion-spinner name="crescent" />
+          } @else if (!item.targeted) {
+            <i class="fa-light fa-chevron-right invitation-chevron" aria-hidden="true"></i>
+          }
+        </button>
+        <button
+          type="button"
+          class="text-action muted"
+
+          [disabled]="!!busyId"
+          (click)="cancelInvitation(item.invitationId)"
+        >
+          撤销
+        </button>
+      </div>
+      } @if (!sharedUserCount) {
+      <p class="empty-members">暂无成员</p>
+      }
+
+    </section>
   </main>
 </ion-content>
+<ion-modal class="share-options-modal" [isOpen]="!!invitationDetails" (didDismiss)="invitationDetails = null">
+  <ng-template>
+    @if (invitationDetails; as item) {
+    <section class="share-options" aria-labelledby="invitation-link-title">
+      <div class="options-heading">
+        <h2 id="invitation-link-title">邀请链接</h2>
+        <button type="button" class="icon-action" aria-label="关闭邀请链接" (click)="invitationDetails = null">
+          <i class="fa-light fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <h3 class="invitation-device">{{ device?.config?.customName || '设备' }}</h3>
 
-@if (device && !device.config.isShared) {
-<ion-footer class="share-detail-footer ion-no-border">
-  <ion-toolbar>
-    <div class="footer-shell">
-      <button type="button" class="primary-action" [disabled]="!!busyId" (click)="inviteAccount()">
-        <i class="fa-light fa-envelope" aria-hidden="true"></i>
-        <span>邮箱邀请</span>
+      <div class="invitation-settings" [attr.aria-busy]="busyId === 'invitation-permissions'">
+        <div class="invitation-setting">
+          <span>有效期</span>
+          <span class="invitation-expiry">{{ item.expiresAt | date:'yyyy/MM/dd HH:mm' }}</span>
+        </div>
+        <label class="invitation-setting">
+          <span>控制设备</span>
+          <input class="toggle" type="checkbox" role="switch" [checked]="item.role === 'operator'" [disabled]="!!busyId"
+            (change)="updateInvitationPermission('control', $any($event.target).checked)" />
+        </label>
+        <label class="invitation-setting">
+          <span>编辑控制台</span>
+          <input class="toggle" type="checkbox" role="switch" [checked]="item.canEditConsole === true" [disabled]="!!busyId"
+            (change)="updateInvitationPermission('edit', $any($event.target).checked)" />
+        </label>
+      </div>
+      <p class="public-link invitation-link">{{ invitationLink }}</p>
+      <button type="button" class="options-save" [disabled]="!!busyId" (click)="copyInvitation()">
+        <i class="fa-light fa-copy" aria-hidden="true"></i>复制邀请链接
       </button>
-      <button type="button" class="primary-action" [disabled]="!!busyId" (click)="addShare()">
-        <i class="fa-light fa-ticket" aria-hidden="true"></i>
-        <span>生成分享链接</span>
+    </section>
+    }
+
+  </ng-template>
+</ion-modal>
+
+<ion-modal class="share-options-modal" [isOpen]="permissionsOpen" (didDismiss)="permissionsOpen = false">
+  <ng-template>
+    <section class="share-options" aria-labelledby="permissions-title">
+      <div class="options-heading">
+        <h2 id="permissions-title">{{ permissionTitle }}</h2>
+        <button type="button" class="icon-action" aria-label="关闭权限设置" (click)="permissionsOpen = false">
+          <i class="fa-light fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="permission-options">
+        <label class="permission-option">
+          <span class="setting-copy"><strong>控制设备</strong></span>
+          <input
+            class="toggle"
+
+            type="checkbox"
+
+            role="switch"
+
+            [checked]="permissionRole === 'operator'"
+            (change)="permissionRole = $any($event.target).checked ? 'operator' : 'viewer'"
+          />
+        </label>
+        <label class="permission-option">
+          <span class="setting-copy"><strong>编辑控制台</strong><small>修改对所有查看者生效</small></span>
+          <input
+            class="toggle"
+
+            type="checkbox"
+
+            role="switch"
+
+            [checked]="permissionEdit"
+            (change)="permissionEdit = $any($event.target).checked"
+          />
+        </label>
+      </div>
+      <button type="button" class="options-save" [disabled]="!!busyId" (click)="savePermissions()">
+        {{ busyId ? '正在保存…' : '确认' }}
       </button>
-    </div>
-  </ion-toolbar>
-</ion-footer>
-}
+    </section>
+  </ng-template>
+</ion-modal>
+<ion-modal class="share-options-modal" [isOpen]="linkSettingsOpen" (didDismiss)="linkSettingsOpen = false">
+  <ng-template>
+    <section class="share-options" aria-labelledby="link-title">
+      <div class="options-heading">
+        <h2 id="link-title">公开链接</h2>
+        <button type="button" class="icon-action" aria-label="关闭链接设置" (click)="linkSettingsOpen = false">
+          <i class="fa-light fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <span class="options-label">有效期</span>
+      <div class="expiry-options" role="group" aria-label="链接有效期">
+        @for (days of [1, 7, 30]; track days) {
+        <button
+          type="button"
+
+          [class.selected]="linkDays === days"
+          [attr.aria-pressed]="linkDays === days"
+          (click)="linkDays = days"
+        >
+          {{ days }} 天
+        </button>
+        }
+
+        <button
+          type="button"
+
+          [class.selected]="linkDays === null"
+          [attr.aria-pressed]="linkDays === null"
+          (click)="linkDays = null"
+        >
+          长期
+        </button>
+      </div>
+      <p class="options-note">链接可转发，请确认自定义内容适合公开。</p>
+
+      @if (linkError) {
+      <p class="error" role="alert">{{ linkError }}</p>
+      }
+
+      <button type="button" class="options-save" [disabled]="!!busyId || !publicAccessEnabled" (click)="saveViewLink()">
+        {{ busyId ? '正在保存…' : '保存' }}
+      </button>
+
+      @if (linkActive) {
+      <div class="link-management">
+        <button type="button" [disabled]="!!busyId" (click)="saveViewLink(true)">换新链接</button>
+        <button type="button" class="danger" [disabled]="!!busyId" (click)="revokeViewLink()">作废链接</button>
+      </div>
+      }
+
+    </section>
+  </ng-template>
+</ion-modal>

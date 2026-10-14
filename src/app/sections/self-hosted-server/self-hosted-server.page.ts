@@ -1,6 +1,15 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AlertController, IonicModule } from '@ionic/angular';
+
+import {
+  AlertController,
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { SelfHostedServerService } from '../../core/services/self-hosted-server.service';
 import { HeroCardComponent } from '../../core/components/hero-card/hero-card.component';
 
@@ -9,7 +18,16 @@ import { HeroCardComponent } from '../../core/components/hero-card/hero-card.com
   standalone: true,
   templateUrl: './self-hosted-server.page.html',
   styleUrls: ['./self-hosted-server.page.scss'],
-  imports: [FormsModule, IonicModule, HeroCardComponent],
+  imports: [
+    FormsModule,
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    HeroCardComponent,
+  ],
 })
 export class SelfHostedServerPage {
   serverAddress = '';

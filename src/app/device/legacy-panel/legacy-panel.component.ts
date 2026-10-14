@@ -1,4 +1,5 @@
 import { CustomPanelFrameComponent } from '../custom-panel/custom-panel-frame.component';
+import { readDevicePanelMode } from '../device-panel-mode';
 import { ChangeDetectionStrategy, Component, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { Subscription } from 'rxjs';
 import type { BlinkerDevice } from '../../core/model/device.model';
@@ -43,7 +44,7 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
 
   constructor(private readonly devices: DeviceService, private readonly panels: DevicePanelService) {}
 
-  get customPanel() { return this.device.config.panelMode === 'custom' ? this.device.config.customPanel : undefined; }
+  get customPanel() { return readDevicePanelMode(this.device) === 'custom' ? this.device.config.customPanel : undefined; }
   get layoutTheme() { return this.customPanel?.theme || this.panel?.document.style; }
 
   ngOnChanges(changes: SimpleChanges): void {

@@ -1,6 +1,13 @@
 import { ChangeDetectorRef, Component, OnDestroy, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { PageLayoutWidget, reflowPageWidgets } from '../../../core/device-v2/page-layout';
 import { UI_THEMES, UiTheme } from '../../../core/device-v2/ui-theme';
 import { readDeviceTheme } from '../../../device/device-theme';
@@ -22,8 +29,20 @@ const HISTORY_LIMIT = 120;
 @Component({
   selector: 'app-component-preview',
   standalone: true,
-  imports: [IonicModule, PageLayoutPanelComponent, WidgetInspectorComponent, WidgetLongPressDirective,
-    VideoWidgetComponent, WeatherWidgetComponent, MediaPreviewInspectorComponent],
+  imports: [
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    PageLayoutPanelComponent,
+    WidgetInspectorComponent,
+    WidgetLongPressDirective,
+    VideoWidgetComponent,
+    WeatherWidgetComponent,
+    MediaPreviewInspectorComponent,
+  ],
   templateUrl: './component-preview.page.html',
   styleUrls: ['./component-preview.page.scss'],
   host: { '[attr.data-ui-theme]': 'theme' },

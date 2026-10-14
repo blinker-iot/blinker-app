@@ -58,6 +58,8 @@
                 <data
                     android:scheme="diandeng"
                     android:host="device" />
+                <data android:scheme="diandeng" android:host="console" />
+                <data android:scheme="diandeng" android:host="share" />
             </intent-filter>
         </activity>
 

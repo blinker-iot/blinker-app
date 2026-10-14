@@ -5,7 +5,17 @@ import {
   OnInit,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { IonicModule, NavController } from '@ionic/angular';
+
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+  NavController,
+} from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
 import { FeedbackService } from './feedback.service';
 import { DataService } from 'src/app/core/services/data.service';
@@ -33,7 +43,18 @@ interface FeedbackDraft {
   templateUrl: './feedback.component.html',
   styleUrls: ['./feedback.component.scss'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule, IonicModule, TranslatePipe, HeroCardComponent],
+  imports: [
+    FormsModule,
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    TranslatePipe,
+    HeroCardComponent,
+  ],
 })
 export class FeedbackPage implements OnInit, OnDestroy {
   private readonly draftStorageKey = 'blinker_feedback_draft';

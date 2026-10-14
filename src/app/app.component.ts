@@ -1,3 +1,7 @@
+import { App } from '@capacitor/app';
+import { parseConsoleLink } from './core/services/device-console.service';
+import { parseShareInvitation } from './core/device-v2/sharing/invitation-link';
+
 import {
   Component,
   ViewChild,
@@ -8,6 +12,7 @@ import {
   ChangeDetectorRef,
   ChangeDetectionStrategy,
 } from '@angular/core';
+
 import { CommonModule } from '@angular/common';
 import { Platform, NavController } from '@ionic/angular/standalone';
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
@@ -46,9 +51,11 @@ import { MessageService } from './sections/message/message.service';
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./app.component.scss'],
 })
+
 export class AppComponent implements OnInit, AfterViewInit {
   isPWA = false;
   isPcBrowser = false;
+
   readonly routerAnimation = headerIconTransitionAnimation;
 
   get swipeEnable() {
@@ -100,6 +107,7 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   initApp() {
     void this.initService();
+
     if (this.isPcBrowser) {
       console.log('当前是PC端浏览器访问');
     }
@@ -115,19 +123,33 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   @HostListener('window:resize')
+
   onWindowResize() {
     const newIsPcBrowser = this.checkIsPcBrowser();
+
     if (this.isPcBrowser !== newIsPcBrowser) {
       this.isPcBrowser = newIsPcBrowser;
+
       // 手动触发变更检测
       this.cdr.detectChanges();
     }
   }
+
   async initService() {
     console.log('init service');
     await this.dataService.init();
     void this.messageService.init().catch(() => undefined);
-    this.checkLoginStatus();
+
+    const launch = Capacitor.isNativePlatform() ? await App.getLaunchUrl().catch(() => undefined) : undefined;
+    const consoleToken = parseConsoleLink(launch?.url);
+    const invitationCode = parseShareInvitation(launch?.url);
+
+    if (consoleToken) await this.navCtrl.navigateRoot('/s/' + consoleToken);
+    else if (invitationCode) await this.navCtrl.navigateRoot('/share-invitation/' + invitationCode);
+
+    this.checkLoginStatus(!!consoleToken || !!invitationCode || /^\/(s|share-invitation)\/[A-Za-z0-9_-]{43}$/.test(window.location.pathname)
+      || ['/share-manager', '/share-invitation', '/login'].includes(window.location.pathname));
+
     this.authService.init();
     this.deviceService.init();
     this.noticeService.init();
@@ -138,20 +160,22 @@ export class AppComponent implements OnInit, AfterViewInit {
     // 原生内容加载
     if (Capacitor.isNativePlatform()) {
       console.log('init native service');
+
       this.viewService.init(); // 适配手机样式
       this.networkService.init();
       this.updateService.init();
       await this.ntfyService.init();
+
       // 国内无法使用推送服务
       // this.pusherService.init();
     }
   }
 
-  checkLoginStatus() {
+  checkLoginStatus(publicConsole = false) {
     if (this.authService.isLogin()) {
       this.userService.getAllInfo();
     } else {
-      this.navCtrl.navigateRoot('/login');
+      if (!publicConsole) this.navCtrl.navigateRoot('/login');
     }
   }
 

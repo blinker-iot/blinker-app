@@ -13,7 +13,16 @@ import {
   type HttpResponse,
   type PluginListenerHandle,
 } from '@capacitor/core';
-import { IonicModule, ToastController } from '@ionic/angular';
+
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  ToastController,
+} from '@ionic/angular/standalone';
 import {
   Mdns,
   type MdnsErrorEvent,
@@ -62,7 +71,16 @@ const TARGET_STORAGE_KEY = 'wifiOtaTarget';
   styleUrls: ['./wifi-ota.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule, IonicModule, HeroCardComponent],
+  imports: [
+    FormsModule,
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    HeroCardComponent,
+  ],
 })
 export class WifiOtaPage implements OnInit, OnDestroy {
   firmwareFile?: File;

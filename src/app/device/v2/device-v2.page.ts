@@ -1,3 +1,8 @@
+import { Inject } from '@angular/core';
+import { readDevicePanelMode } from '../device-panel-mode';
+import { formatValue } from './widgets/widget-kit';
+import { DeviceConsoleService, cloudConsole, consoleLayout, installConsole, canEditConsole } from '../../core/services/device-console.service';
+import { DEVICE_CONSOLE_HOST, DeviceConsoleHost } from '../../core/device-v2/console-host';
 import { CustomPanelFrameComponent } from '../custom-panel/custom-panel-frame.component';
 import { EndpointHistory } from '../../core/device-v2/endpoint-history';
 import { visiblePageWidgets } from '../../core/device-v2/page-layout';
@@ -15,7 +20,19 @@ import {
 } from '@angular/core';
 
 import { RouterModule } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonRouterLink,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
+
 import { Subscription } from 'rxjs';
 import { BlinkerDevice } from '../../core/model/device.model';
 
@@ -62,7 +79,21 @@ function emptySnapshot(): DeviceUiSnapshot {
 @Component({
   selector: 'app-device-v2-page',
   standalone: true,
-  imports: [CommonModule, IonicModule, RouterModule, PageLayoutPanelComponent, CustomPanelFrameComponent],
+  imports: [
+    CommonModule,
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonRouterLink,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    RouterModule,
+    PageLayoutPanelComponent,
+    CustomPanelFrameComponent,
+  ],
   templateUrl: './device-v2.page.html',
   styleUrls: ['./device-v2.page.scss'],
 })
@@ -111,6 +142,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private layoutEpoch = 0;
   private storedLayout?: DeviceV2PageLayoutRecord;
   private layoutError = '';
+  private consoleRevision?: number;
+  private consoleTimer?: ReturnType<typeof setInterval>;
+  private consoleRefreshing = false;
   private appActive = true;
   private pageVisible = false;
   private bleReconnectNeeded = false;
@@ -140,12 +174,15 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   constructor(
     private readonly deviceUi: DeviceUiPort,
     private readonly pageLayouts: DeviceV2PageLayoutService,
+    private readonly consoles: DeviceConsoleService,
+    @Inject(DEVICE_CONSOLE_HOST) private readonly host: DeviceConsoleHost,
     private readonly changeDetector: ChangeDetectorRef = { markForCheck: () => undefined } as ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
     this.pageVisible = this.viewActive;
     this.initialized = true;
+    this.consoleTimer = setInterval(() => void this.refreshConsole(), 4000);
 
     this.subscriptions.add(this.deviceUi.appActive.subscribe(active => {
       const resumed = active && !this.appActive;
@@ -173,6 +210,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
 
+    clearInterval(this.consoleTimer);
     this.history?.flush();
     this.cancelSynchronization();
     this.cancelBleReconnect();
@@ -181,7 +219,16 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.deviceSubscriptions.unsubscribe();
   }
 
-  get customPanel() { return this.device.config.panelMode === 'custom' ? this.device.config.customPanel : undefined; }
+  get customPanel() { return readDevicePanelMode(this.device) === 'custom' ? this.device.config.customPanel : undefined; }
+  get canEdit(): boolean { return canEditConsole(this.device); }
+  get readOnly(): boolean { return this.device.config.isShared === true && this.device.data.canCommand !== true; }
+
+  private allowedEndpoint(field: DeviceUiEndpoint): boolean {
+    if (!this.device.config.isShared) return true;
+
+    return this.device.data.canCommand === true && (this.device.data.commandEndpointKeys === null
+      || this.device.data.commandEndpointKeys?.includes(field.key) === true);
+  }
 
   get widgets(): PageLayoutWidget[] {
     const layout = this.customPanel && this.snapshot.manifestAccepted ? generateDefaultPageLayout(this.snapshot) : this.layout;
@@ -218,7 +265,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       return field ? [{ widget, field, value: this.value(field), extras: this.extras(widget),
         history: this.history?.points(field.key),
         display: this.display(field), draft: this.draft(field), error: this.fieldError(field),
-        disabled: this.pending.has(field.key) || !this.canControl }] : [];
+        disabled: !this.readOnly && (this.pending.has(field.key) || !this.canControl || !this.allowedEndpoint(field)) }] : [];
     });
   }
 
@@ -233,6 +280,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   onPanelAction(action: PanelAction): void {
     const { field, value } = action;
+
+    if (!this.allowedEndpoint(field)) return;
 
     if (action.kind === 'invoke') void this.execute(field);
 
@@ -249,6 +298,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   get stateLabel(): string {
+    return this.readOnly ? `${this.connectionStateLabel} · 仅查看` : this.connectionStateLabel;
+  }
+
+  private get connectionStateLabel(): string {
     if (this.syncing) return '正在连接并同步';
     if (this.direct && this.accountState === 'ready') return '蓝牙已连接';
     if (!this.direct && this.device?.data?.cloudReachable === true) return '云端在线';
@@ -263,7 +316,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     // Both signals are scoped to the selected carrier by DeviceUiPort. Its
     // fresh snapshot already fences offline/lost cloud presence and stale
     // manifests. Inventory presence is only a hint, not LAN readiness or ACL.
-    return this.accountState === 'ready' && this.snapshot.manifestAccepted && this.snapshot.stateFresh && this.synchronized
+    return !this.readOnly && this.accountState === 'ready' && this.snapshot.manifestAccepted && this.snapshot.stateFresh && this.synchronized
       && this.connection?.signal.aborted === false && this.pageVisible && this.appActive;
   }
 
@@ -292,16 +345,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private format(value?: DeviceUiValue): string {
-    if (typeof value === 'bigint') return value.toString();
-
-    if (value instanceof Uint8Array) {
-      return Array.from(value, byte => byte.toString(16).padStart(2, '0')).join(' ');
-    }
-
-    if (value === null) return 'null';
-    if (value === undefined) return '—';
-
-    return String(value);
+    return formatValue(value);
   }
 
   unit(field: DeviceUiEndpoint): string {
@@ -363,20 +407,29 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   async updateLayout(): Promise<void> {
-    if (!this.logicalDeviceId || !this.storedLayout || !this.layoutStale || this.layoutUpdating) return;
+    if (!this.logicalDeviceId || !this.storedLayout || !this.layoutStale || this.layoutUpdating || !this.canEdit) return;
 
     this.layoutUpdating = true;
     this.error = '';
 
     try {
       const candidate = migratePageLayout(this.storedLayout.layout, this.snapshot);
+      let record: DeviceV2PageLayoutRecord;
 
-      const record = await this.pageLayouts.saveCandidate(
-        this.logicalDeviceId,
-        candidate,
-        this.snapshot.endpoints,
-        this.storedLayout.revision,
-      );
+      if (cloudConsole(this.device)) {
+        const session = this.host.sessionVersion;
+        const source = await this.consoles.save(this.logicalDeviceId, { layout: candidate });
+
+        if (session !== this.host.sessionVersion || this.destroyed) return;
+
+        this.consoleRevision = source.revision;
+
+        installConsole(this.device, source);
+
+        record = consoleLayout(source)!;
+      } else {
+        record = await this.pageLayouts.saveCandidate(this.logicalDeviceId, candidate, this.snapshot.endpoints, this.storedLayout.revision);
+      }
 
       this.applyStoredLayout(record, this.snapshot);
     } catch (error) {
@@ -565,7 +618,13 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     let validatingRecord = false;
 
     try {
-      const record = await this.pageLayouts.get(logicalDeviceId);
+      const session = this.host.sessionVersion;
+      const source = cloudConsole(this.device) ? await this.consoles.get(logicalDeviceId) : undefined;
+
+      if (session !== this.host.sessionVersion || !this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
+      if (source) { installConsole(this.device, source); this.consoleRevision = source.revision; }
+
+      const record = source ? consoleLayout(source) : await this.pageLayouts.get(logicalDeviceId);
 
       if (!this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
 
@@ -582,6 +641,41 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     } finally {
       this.requestRender();
     }
+  }
+
+  private async refreshConsole(): Promise<void> {
+    if (this.destroyed || !this.pageVisible || !this.appActive || !cloudConsole(this.device) || this.consoleRefreshing) return;
+
+    const id = this.logicalDeviceId;
+
+    if (!id) return;
+
+    const session = this.host.sessionVersion;
+
+    this.consoleRefreshing = true;
+
+    try {
+      const source = await this.consoles.get(id);
+
+      if (this.destroyed || session !== this.host.sessionVersion || id !== this.logicalDeviceId) return;
+
+      installConsole(this.device, source);
+
+      if (source.revision !== this.consoleRevision && this.snapshot.manifestAccepted) {
+        this.consoleRevision = source.revision;
+
+        this.applyStoredLayout(consoleLayout(source) ?? undefined, this.snapshot);
+      }
+    } catch (error) {
+      if (session !== this.host.sessionVersion || id !== this.logicalDeviceId) return;
+
+      if (this.device.config.isShared) {
+        this.device.data.canCommand = false;
+        this.device.config.canEditConsole = false;
+      }
+
+      this.error = '控制台权限或配置暂不可用，请重试。';
+    } finally { this.consoleRefreshing = false; this.requestRender(); }
   }
 
   private applyStoredLayout(record: DeviceV2PageLayoutRecord | undefined, snapshot: DeviceUiSnapshot): void {
@@ -913,6 +1007,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   async send(field: DeviceUiEndpoint, value: unknown): Promise<void> {
+    if (!this.allowedEndpoint(field)) return;
     if (!this.logicalDeviceId || !this.canControl) return;
 
     if (this.pending.has(field.key)) {

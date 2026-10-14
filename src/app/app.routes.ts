@@ -116,7 +116,15 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/device/device-share/device-share').then(m => m.DeviceSharePage),
   },
   {
+    path: 's/:token',
+    loadComponent: () => import('./sections/device/shared-console/shared-console.page').then(m => m.SharedConsolePage),
+  },
+  {
     path: 'share-invitation',
+    loadComponent: () => import('./sections/device/share-invitation/share-invitation.page').then(m => m.ShareInvitationPage),
+  },
+  {
+    path: 'share-invitation/:code',
     loadComponent: () => import('./sections/device/share-invitation/share-invitation.page').then(m => m.ShareInvitationPage),
   },
   {

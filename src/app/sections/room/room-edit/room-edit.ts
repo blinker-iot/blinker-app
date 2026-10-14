@@ -1,5 +1,14 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AlertController, IonicModule } from '@ionic/angular';
+
+import {
+  AlertController,
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { ActivatedRoute } from '@angular/router';
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { DataService } from 'src/app/core/services/data.service';
@@ -11,7 +20,15 @@ import { RoomService } from '../room.service';
   standalone: true,
   templateUrl: 'room-edit.html',
   styleUrls: ['room-edit.scss'],
-  imports: [IonicModule, BDeviceImgComponent],
+  imports: [
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    BDeviceImgComponent,
+  ],
 })
 export class RoomEditPage implements OnInit, OnDestroy {
   roomName = '';

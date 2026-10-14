@@ -28,18 +28,26 @@
         </span> -->
         <div class="device-name-row">
           <h1>{{ device.config.customName }}</h1>
-          @if (!isSharedDevice) {
+
+          @if (isSharedDevice) {
+          <span class="shared-device-badge" role="img" aria-label="别人共享的设备" title="别人共享的设备">
+            <i class="fa-light fa-share-nodes" aria-hidden="true"></i>
+          </span>
+          } @else {
           <button type="button" class="rename-button" (click)="changeName()" aria-label="修改设备名称">
             <i class="fa-light fa-pen"></i>
           </button>
           }
+
         </div>
         <button type="button" class="device-id" (click)="copyDeviceId()"
           [title]="device.id || device.deviceName" aria-label="复制设备 ID">
+
           ID: {{ device.id || device.deviceName }}
         </button>
       </div>
     </section>
+
     @if (hasDeviceKeyContext && isOwner) {
     <section class="access-card">
       <div class="section-heading">
@@ -49,7 +57,6 @@
         </div>
         <span>版本 {{ device.credentialVersion }}</span>
       </div>
-
       <div class="key-row">
         <code [class.revealed]="keyVisible">
           {{ keyVisible && secretKey ? secretKey : '••••••••••••••••••••••••' }}
@@ -72,12 +79,14 @@
       @if (keyError) {
       <p class="error" role="alert">{{ keyError }}</p>
       }
+
       <p class="help">Key 可长期重新查看。刷新会立即吊销旧版本，不会自动修改已经烧录的 Sketch。</p>
     </section>
 
     @if (supportsWifiProvisioning) {
     <section class="reconfigure-card">
       <span class="feature-icon"><i class="fa-light fa-wifi"></i></span>
+
       <div>
         <h2>重新配网</h2>
         <p>只重新写入 Wi-Fi；保留当前设备、控制页面、DeviceKey 和 Direct BLE 控制权。</p>
@@ -91,6 +100,7 @@
     @if (supportsGatewayEnrollment) {
     <section class="reconfigure-card">
       <span class="feature-icon"><i class="fa-light fa-router"></i></span>
+
       <div>
         <h2>添加蓝牙子设备</h2>
         <p>由当前 Edge Hub 扫描并安全认领附近的 Blinker 蓝牙设备。</p>
@@ -118,7 +128,7 @@
     }
 
     <button type="button" class="panel-mode-picker" [id]="'panel-mode-' + id" aria-haspopup="dialog"
-      [disabled]="isSharedDevice || panelModeSaving || panelModeLoading" [attr.aria-busy]="panelModeSaving || panelModeLoading">
+      [disabled]="panelModeSaving || panelModeLoading" [attr.aria-busy]="panelModeSaving || panelModeLoading">
       <span class="mode-icon"><i class="fa-light fa-layer-group" aria-hidden="true"></i></span>
       <span class="mode-label">显示模式</span>
       <span class="mode-current">{{ panelMode === 'custom' ? '自定义模式' : '组件模式' }}</span>
@@ -139,7 +149,8 @@
           <ion-radio-group aria-label="显示模式" [value]="panelMode"
             (ionChange)="setPanelMode($event.detail.value); modePopover.dismiss()">
             <ion-item><ion-radio value="normal" labelPlacement="start" justify="space-between">组件模式</ion-radio></ion-item>
-            <ion-item><ion-radio value="custom" labelPlacement="start" justify="space-between">自定义模式</ion-radio></ion-item>
+            <ion-item><ion-radio value="custom" labelPlacement="start" justify="space-between"
+              [disabled]="isSharedDevice && !device.config.customPanel">自定义模式</ion-radio></ion-item>
           </ion-radio-group>
         </ion-list>
       </ng-template>

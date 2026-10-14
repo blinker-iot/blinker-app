@@ -1,6 +1,16 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToggle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { minuteToTime } from 'src/app/core/functions/func';
@@ -101,7 +111,18 @@ const TEST_LOOP_TASKS: LoopTask[] = [
   selector: 'app-device-timer',
   templateUrl: './device-timer.page.html',
   styleUrls: ['./device-timer.page.scss'],
-  imports: [IonicModule, HeroCardComponent],
+  imports: [
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonSpinner,
+    IonTitle,
+    IonToggle,
+    IonToolbar,
+    HeroCardComponent,
+  ],
   providers: [TimerService],
 })
 export class DeviceTimerPage implements OnInit, OnDestroy {

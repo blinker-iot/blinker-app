@@ -36,6 +36,7 @@ export interface BlinkerDevice {
         layouter?: string,
         image?: string,
         isShared?: boolean,
+    canEditConsole?: boolean,
         isPreview?: boolean,
         previewNearby?: boolean,
         position?: any,

@@ -4,9 +4,6 @@ import { BlinkerDevice } from '../../../core/model/device.model';
 import { DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
 import { capabilityTiles } from './interface-draft';
 
-vi.mock('@ionic/angular', () => ({ AlertController: class {}, IonicModule: class {}, NavController: class {} }));
-vi.mock('@ionic/angular/standalone', () => ({ AlertController: class {}, LoadingController: class {}, Platform: class {}, ToastController: class {} }));
-
 const snapshot: DeviceUiSnapshot = {
   manifestAccepted: true, manifestFingerprint: 'a'.repeat(64), manifestRevision: 1, stateRevision: 1, stateFresh: true,
   endpoints: [
@@ -49,6 +46,7 @@ describe('interface studio workflow', () => {
       { get: vi.fn().mockResolvedValue({ revision: 2 }), saveCandidate: saveLayout } as never,
       { generate } as never, { markForCheck: vi.fn() } as never,
       { get: vi.fn().mockResolvedValue(null) } as never,
+      {} as never,
     );
 
     page.ngOnInit();

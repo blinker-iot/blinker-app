@@ -1,6 +1,16 @@
 import { Component, ViewChildren, QueryList, ElementRef } from '@angular/core';
 
-import { AlertController, IonicModule } from '@ionic/angular';
+import {
+  AlertController,
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonFooter,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Router } from '@angular/router';
 import { MenuListComponent } from 'src/app/core/components/menu-list/menu-list';
@@ -15,7 +25,14 @@ import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.c
   templateUrl: 'room-manager.html',
   styleUrls: ['room-manager.scss'],
   imports: [
-    IonicModule,
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonFooter,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
     TranslatePipe,
     MenuListComponent,
     MenuItemComponent,

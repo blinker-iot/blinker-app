@@ -1,7 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
@@ -68,7 +76,17 @@ function createTestDatasets(): StorageDataset[] {
   selector: 'app-device-storage',
   templateUrl: './device-storage.page.html',
   styleUrls: ['./device-storage.page.scss'],
-  imports: [CommonModule, IonicModule, HeroCardComponent],
+  imports: [
+    CommonModule,
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    HeroCardComponent,
+  ],
 })
 export class DeviceStoragePage implements OnInit, OnDestroy {
   id = '';

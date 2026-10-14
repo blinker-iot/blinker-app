@@ -1,0 +1,120 @@
+@use '../../../../theme/ui-theme' as theme;
+@use '../../../device/v2/panel/panel-grid' as grid;
+
+:host {
+  @include theme.ui-theme;
+  @include theme.ui-backdrop;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  color: var(--blinker-text-primary);
+}
+
+ion-toolbar {
+  --color: var(--blinker-text-primary);
+  --ion-color-contrast: var(--blinker-text-primary);
+  --ion-toolbar-color: var(--blinker-text-primary);
+
+  ion-title {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding-inline: 108px;
+    text-align: center;
+    pointer-events: none;
+
+    .name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 15px;
+    }
+
+    .state {
+      height: 12px;
+      font-size: 10px;
+      font-weight: 400;
+    }
+  }
+
+  ion-buttons {
+    position: relative;
+    z-index: 1;
+    margin-inline: 0;
+  }
+}
+
+ion-content {
+  min-height: 0;
+  flex: 1 1 0;
+  --background: transparent;
+}
+
+.shared-console {
+  --section-main-background: transparent;
+  --section-main-accent-opacity: 0;
+
+  box-sizing: border-box;
+  width: 100%;
+  max-width: grid.$page-max-width;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: calc(var(--transparent-page-content-top) + grid.$page-inset) grid.$page-inset grid.$page-bottom-inset;
+}
+
+// Keep the same viewport and single document inset as the normal console.
+.shared-console.custom-panel-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  max-width: none;
+  padding: 0 0 var(--ion-safe-area-bottom, 0px);
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    flex: 0 0 var(--transparent-page-content-top);
+  }
+
+  > .notice { flex-shrink: 0; margin: 0 16px 12px; }
+}
+
+.notice {
+  padding: 12px;
+  border: 1px solid var(--blinker-border);
+  border-radius: var(--blinker-radius-control);
+  background: var(--blinker-surface);
+  font-size: 12px;
+}
+
+.error { color: var(--ion-color-danger); }
+
+.console-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 42vh;
+  padding: 24px;
+  color: var(--blinker-text-secondary);
+  text-align: center;
+
+  h1 { margin: 18px 0 0; color: var(--blinker-text-primary); font-size: 18px; font-weight: 600; }
+  p { max-width: 280px; margin: 12px 0; font-size: 13px; line-height: 1.8; }
+  > i { font-size: 28px; }
+}
+
+.retry-button {
+  margin-top: 12px;
+  min-height: 40px;
+  padding: 0 22px;
+  border: 1px solid var(--blinker-border);
+  border-radius: 12px;
+  background: var(--blinker-surface);
+  color: var(--blinker-text-primary);
+  font-size: 13px;
+}

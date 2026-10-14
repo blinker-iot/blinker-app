@@ -10,7 +10,17 @@ import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@capacitor/clipboard';
 import { Capacitor } from '@capacitor/core';
 import { bleScanner } from '../../core/bluetooth/scan';
-import { IonicModule, ToastController } from '@ionic/angular';
+
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  ToastController,
+} from '@ionic/angular/standalone';
 import {
   BleCharacteristic,
   BleDescriptor,
@@ -107,7 +117,16 @@ const STANDARD_NAMES: Record<string, string> = {
   styleUrls: ['./ble-debug.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule, IonicModule],
+  imports: [
+    FormsModule,
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+  ],
 })
 export class BleDebugPage implements OnInit, OnDestroy {
   devices: DebugDevice[] = [];

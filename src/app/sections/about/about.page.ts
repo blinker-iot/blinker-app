@@ -1,6 +1,15 @@
 import { Component } from '@angular/core';
 import { CONFIG } from 'src/app/configs/app.config';
-import { IonicModule, ModalController } from '@ionic/angular';
+
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  ModalController,
+} from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
@@ -10,7 +19,16 @@ import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.c
     standalone: true,
     templateUrl: './about.page.html',
     styleUrls: ['./about.page.scss'],
-    imports: [IonicModule, TranslatePipe, HeroCardComponent],
+    imports: [
+      IonBackButton,
+      IonButtons,
+      IonContent,
+      IonHeader,
+      IonTitle,
+      IonToolbar,
+      TranslatePipe,
+      HeroCardComponent,
+    ],
 })
 export class AboutPage {
 

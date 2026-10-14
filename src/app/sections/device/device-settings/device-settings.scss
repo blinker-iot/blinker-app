@@ -7,11 +7,11 @@
 }
 
 ion-content { --background: var(--blinker-bg); }
-
 main {
   --section-main-display: flex;
   --content-offset-gap: 0px;
   width: min(720px, 100%);
+
   margin: 0 auto;
   padding: 20px 18px 40px;
   display: flex;
@@ -75,7 +75,9 @@ main {
 .reconfigure-card,
 .notice {
   border: 1px solid var(--line);
+
   border-radius: 20px;
+
   background: var(--card);
   box-shadow: var(--blinker-shadow-soft);
 }
@@ -105,6 +107,7 @@ main {
   b-device-img {
     width: 100%;
     height: 100%;
+
     min-width: 0;
     min-height: 0;
     border-radius: 50%;
@@ -123,6 +126,7 @@ main {
   margin-bottom: 16px;
 
   small { color: var(--ion-color-primary); font-weight: 750; letter-spacing: .12em; }
+
   h2 { margin: 4px 0 0; color: var(--blinker-text-primary); font-size: 19px; }
   > span { color: var(--muted); font-size: 12px; }
 }
@@ -133,15 +137,19 @@ main {
   align-items: center;
   gap: 8px;
   padding: 8px 9px 8px 14px;
+
   border: 1px solid var(--line);
   border-radius: 14px;
+
   background: var(--blinker-bg-elevated);
 
   code {
     min-width: 0;
     flex: 1;
     overflow: hidden;
+
     color: var(--blinker-text-secondary);
+
     font-size: 13px;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -161,7 +169,9 @@ main {
     border: 0;
     border-radius: 11px;
     background: transparent;
+
     color: var(--blinker-text-secondary);
+
     font-size: 16px;
   }
 
@@ -172,8 +182,11 @@ main {
 .help,
 .reconfigure-card p {
   margin: 13px 0 0;
+
   color: var(--muted);
+
   font-size: 13px;
+
   line-height: 1.55;
 }
 
@@ -187,13 +200,16 @@ main {
   gap: 13px;
 
   h2 { margin: 0; color: var(--blinker-text-primary); font-size: 17px; }
-  p { margin-top: 4px; }
 
+  p { margin-top: 4px; }
   > button {
     border: 0;
+
     padding: 10px 4px 10px 12px;
     background: transparent;
+
     color: var(--ion-color-primary);
+
     font-weight: 700;
   }
 
@@ -206,8 +222,10 @@ main {
   display: grid;
   place-items: center;
   border-radius: 13px;
+
   background: var(--blinker-surface-active);
   color: var(--ion-color-primary);
+
   font-size: 18px;
 }
 
@@ -219,7 +237,9 @@ main {
 
 .section-label {
   margin: 0 0 10px;
+
   color: var(--muted);
+
   font-size: 13px;
   font-weight: 600;
 }
@@ -237,21 +257,35 @@ main {
 
 .device-summary {
   flex: 1;
+
   min-width: 0;
 }
 
 .device-name-row {
   display: flex;
+
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 2px;
 
   h1 {
     min-width: 0;
+
     margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .shared-device-badge {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 22px;
+    height: 22px;
+
+    color: var(--blinker-text-primary);
+    opacity: 0.55;
+
+    font-size: 12px;
   }
 }
 
@@ -261,23 +295,34 @@ main {
   flex: 0 0 28px;
   height: 28px;
   padding: 0;
+
+  margin-inline-start: auto;
   border: 0;
   border-radius: 10px;
   background: transparent;
+
   color: var(--blinker-text-primary);
+
   font-size: 13px;
 }
 
 .device-id {
   display: block;
+
   width: 100%;
+
   margin-top: 2px;
+
   padding: 0;
+
   line-height: 18px;
   overflow: hidden;
   border: 0;
+
   background: transparent;
+
   color: var(--muted);
+
   font-size: 12px;
   text-align: start;
   text-overflow: ellipsis;

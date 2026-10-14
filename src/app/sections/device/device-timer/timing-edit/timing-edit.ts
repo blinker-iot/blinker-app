@@ -1,7 +1,19 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule, ModalController, NavController } from '@ionic/angular';
+
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToggle,
+  IonToolbar,
+  ModalController,
+  NavController,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import {
@@ -45,7 +57,14 @@ type ActionTarget = 'primary' | 'secondary';
   templateUrl: 'timing-edit.html',
   styleUrls: ['timing-edit.scss'],
   imports: [
-    IonicModule,
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonSpinner,
+    IonTitle,
+    IonToggle,
+    IonToolbar,
     FormsModule,
     Days2TextPipe,
     HeroCardComponent,

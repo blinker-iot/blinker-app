@@ -1,5 +1,16 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AlertController, IonicModule, ModalController } from '@ionic/angular';
+
+import {
+  AlertController,
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonFooter,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  ModalController,
+} from '@ionic/angular/standalone';
 import { ActivatedRoute } from '@angular/router';
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { IconListPage } from 'src/app/core/pages/icon-list/icon-list';
@@ -14,7 +25,17 @@ import { SceneService } from '../scene.service';
   standalone: true,
   templateUrl: 'scene-edit.html',
   styleUrls: ['scene-edit.scss'],
-  imports: [IonicModule, Act2TextPipe, BDeviceImgComponent],
+  imports: [
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonFooter,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    Act2TextPipe,
+    BDeviceImgComponent,
+  ],
 })
 export class SceneEditor implements OnInit, OnDestroy {
   sceneName = '';

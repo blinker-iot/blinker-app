@@ -7,24 +7,6 @@ import { DataService } from '../core/services/data.service';
 import { DebugService } from '../debug/debug.service';
 import { DevicePage } from './device.page';
 
-const ionicMock = vi.hoisted(() => {
-  class IonicStub {}
-
-  return new Proxy(
-    { IonicModule: IonicStub, ModalController: IonicStub },
-    {
-      get: (target, property: string | symbol) => {
-        if (property === 'then' || typeof property === 'symbol') return undefined;
-
-        return target[property as keyof typeof target] ?? IonicStub;
-      },
-    },
-  );
-});
-
-vi.mock('@ionic/angular', () => ionicMock);
-vi.mock('@ionic/angular/standalone', () => ionicMock);
-
 describe('DevicePage component switching', () => {
   let device: BlinkerDevice;
   let page: DevicePage;
@@ -77,7 +59,7 @@ describe('DevicePage component switching', () => {
 
     const dataService = {
       device: { dict: { 'device-1': device } },
-      initCompleted: new BehaviorSubject(false),
+      deviceDataLoader: new BehaviorSubject(false),
     } as unknown as DataService;
 
     page = new DevicePage(
@@ -285,7 +267,7 @@ describe('DevicePage delayed BLE connection lifecycle', () => {
       { connectDevice, disconnectDevice, queryDevice } as never,
       {
         device: { dict: deviceDict },
-        initCompleted: new BehaviorSubject(false),
+        deviceDataLoader: new BehaviorSubject(false),
       } as unknown as DataService,
       { devicePageIsRoot: false } as never,
       { init: vi.fn(), end: vi.fn() } as unknown as DebugService,

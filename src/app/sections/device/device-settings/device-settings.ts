@@ -1,11 +1,24 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { Clipboard } from '@capacitor/clipboard';
+
 import {
   AlertController,
-  IonicModule,
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonItem,
+  IonList,
+  IonPopover,
+  IonRadio,
+  IonRadioGroup,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
   ModalController,
   NavController,
-} from '@ionic/angular';
+} from '@ionic/angular/standalone';
+
 import { DeviceService } from 'src/app/core/services/device.service';
 import { DevicePanelService } from 'src/app/core/services/device-panel.service';
 import type { PanelMode } from 'src/app/core/device-v2/custom-panel';
@@ -14,17 +27,19 @@ import { ActivatedRoute } from '@angular/router';
 import { DeviceIconPage } from '../../../core/pages/device-icon/device-icon';
 import { DataService } from 'src/app/core/services/data.service';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
+
 import {
   DeviceKeyContext,
   DeviceKeyLogicalDevice,
   GatewayHttpError,
 } from 'src/app/core/model/response.model';
+
 import { TranslatePipe } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { DeviceShortcutService } from 'src/app/core/services/device-shortcut.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
-
+import { readDevicePanelMode, saveSharedDevicePanelMode } from 'src/app/device/device-panel-mode';
 import { DeviceV2SharingService } from 'src/app/core/services/device-v2-sharing.service';
 import { DeviceV2ManagementService } from 'src/app/core/services/device-v2-management.service';
 import { API } from 'src/app/configs/api.config';
@@ -32,12 +47,14 @@ import { assertDeviceV2AccountContext, captureDeviceV2AccountContext } from 'src
 import { CapacitorWiFiProvAllocationStore } from 'src/app/core/device-v2/provisioning/wifiprov-allocation-store';
 import { CapacitorBleControllerCredentialStore } from 'src/app/core/device-v2/ble-direct/credential-store';
 import { WiFiProvRetirement } from 'src/app/core/device-v2/provisioning/wifiprov-retirement';
+
 import {
   MenuListComponent,
   MenuListItem,
 } from 'src/app/core/components/menu-list/menu-list';
 
 type KeyOperation = '' | 'reveal' | 'rotate';
+
 type ManagedDevice = BlinkerDevice
   & Partial<DeviceKeyLogicalDevice>
   & Partial<DeviceKeyContext>;
@@ -47,11 +64,29 @@ type ManagedDevice = BlinkerDevice
   standalone: true,
   templateUrl: 'device-settings.html',
   styleUrls: ['device-settings.scss'],
-  imports: [IonicModule, BDeviceImgComponent, MenuListComponent, TranslatePipe],
+  imports: [
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonItem,
+    IonList,
+    IonPopover,
+    IonRadio,
+    IonRadioGroup,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    BDeviceImgComponent,
+    MenuListComponent,
+    TranslatePipe,
+  ],
 })
+
 export class DeviceSettingsPage implements OnInit, OnDestroy {
   id = '';
   logicalDeviceId = '';
+
   device!: ManagedDevice;
 
   nameSaving = false;
@@ -60,11 +95,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   panelModeLoading = false;
   secretKey = '';
   keyVisible = false;
+
   keyOperation: KeyOperation = '';
   keyError = '';
   supportsWifiProvisioning = false;
   supportsGatewayEnrollment = false;
-
   showKey = false;
   revealingKey = false;
   private revealedAuthKey = '';
@@ -82,7 +117,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   get panelMode(): PanelMode {
-    return this.device?.config.panelMode || 'normal';
+    return readDevicePanelMode(this.device);
   }
 
   get keyBusy(): boolean {
@@ -111,6 +146,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         return true;
       }
     }
+
     return false;
   }
 
@@ -187,6 +223,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         route: `/device-manager/${this.id}/uic`,
       },
     ];
+
     if (this.device?.config.mode === 'bbp2') {
       items.push({
         id: 'component-preview',
@@ -229,6 +266,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         showChevron: false,
       },
     );
+
     return items;
   }
 
@@ -240,6 +278,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     'AddShortcut',
     'UpdateFirmware',
   ];
+
   constructor(
     private readonly activatedRoute: ActivatedRoute,
     private readonly userService: UserService,
@@ -260,9 +299,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     this.subscriptions.add(this.activatedRoute.paramMap.subscribe(params => {
       this.id = params.get('id') ?? '';
       this.logicalDeviceId = this.id;
+
       this.clearSecret();
       this.bindDevice();
     }));
+
     this.subscriptions.add(this.dataService.deviceDataLoader.subscribe(loaded => {
       if (loaded) this.bindDevice();
     }));
@@ -270,11 +311,14 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   private bindDevice(): void {
     const previous = this.device;
+
     this.device = this.dataService.getDevice(this.logicalDeviceId) as ManagedDevice;
+
     this.supportsWifiProvisioning = this.isOwner
       && this.hasDeviceKeyContext
       && this.device.state === 'active'
       && this.device.cloudEnabled === true;
+
     this.supportsGatewayEnrollment = this.isOwner
       && this.hasDeviceKeyContext
       && this.device.deviceType === 'edge-hub'
@@ -284,6 +328,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     if (this.device && this.device !== previous && this.device.config.mode !== 'bbp2') {
       void this.loadPanelMode();
     }
+
     this.cd.markForCheck();
   }
 
@@ -305,11 +350,13 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   async setPanelMode(mode: PanelMode): Promise<void> {
-    if (!this.device || this.isSharedDevice || this.panelModeSaving || this.panelModeLoading || mode === this.panelMode) return;
+    if (!this.device || this.panelModeSaving || this.panelModeLoading || mode === this.panelMode) return;
 
     const device = this.device;
 
     if (mode === 'custom' && !device.config.customPanel) {
+      if (this.isSharedDevice) return;
+
       await this.navCtrl.navigateForward(`/device-manager/${encodeURIComponent(this.id)}/uic/custom`);
 
       return;
@@ -318,7 +365,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     this.panelModeSaving = true;
 
     try {
-      if (device.config.mode === 'bbp2') {
+      if (this.isSharedDevice) {
+        if (!saveSharedDevicePanelMode(device, mode)) throw new Error('mode-save-failed');
+
+        device.subject.next({ key: 'component', value: device.config.component, source: 'device-settings' });
+      } else if (device.config.mode === 'bbp2') {
         const context = device.config.isPreview ? undefined
           : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
 
@@ -343,6 +394,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+
     this.subscriptions.unsubscribe();
     this.clearSecret();
     void this.confirmDialog?.dismiss();
@@ -351,27 +403,37 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   async toggleKey(): Promise<void> {
     if (this.secretKey) {
       this.keyVisible = !this.keyVisible;
+
       this.cd.markForCheck();
+
       return;
     }
+
     await this.revealKey();
   }
 
   async revealKey(): Promise<void> {
     const context = this.deviceKeyContext;
+
     if (!context || this.keyBusy) return;
+
     this.keyOperation = 'reveal';
     this.keyError = '';
+
     this.cd.markForCheck();
+
     try {
       const response = await this.management.revealDeviceKeyV2(context);
+
       this.secretKey = response.data.deviceKey;
       this.keyVisible = true;
     } catch (error) {
       this.clearSecret();
+
       this.keyError = this.keyErrorMessage(error, '无法读取设备 Key，请稍后重试');
     } finally {
       this.keyOperation = '';
+
       this.cd.markForCheck();
     }
   }
@@ -380,6 +442,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     if (this.keyBusy) return;
     if (!this.secretKey) await this.revealKey();
     if (!this.secretKey) return;
+
     try {
       await this.writeClipboard(this.secretKey);
       await this.noticeService.showToast('设备 Key 已复制；请勿发送给不信任的人');
@@ -390,28 +453,36 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   async refreshKey(): Promise<void> {
     const context = this.deviceKeyContext;
+
     if (!context || this.keyBusy) return;
+
     const confirmed = await this.confirmAction(
       '刷新设备 Key？',
       '刷新后，使用旧 Key 的设备会立即离线且无法重新连接。你需要把新 Key 写入代码，或随后执行重新配网。',
       '确认刷新',
     );
+
     if (!confirmed) return;
 
     this.rotateIdempotencyKey ||= this.requestId('device-key-rotate');
     this.keyOperation = 'rotate';
     this.keyError = '';
+
     this.clearSecret();
     this.cd.markForCheck();
+
     try {
       const response = await this.management.rotateDeviceKeyV2(
         context,
         this.rotateIdempotencyKey,
       );
+
       this.applyContext(response.data);
+
       this.secretKey = response.data.deviceKey;
       this.keyVisible = true;
       this.rotateIdempotencyKey = '';
+
       await this.userService.getAllInfo().catch(() => false);
       this.bindDevice();
       await this.noticeService.showToast('设备 Key 已刷新，旧 Key 已失效');
@@ -420,18 +491,22 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       this.keyError = this.keyErrorMessage(error, '刷新失败；重试会继续同一笔刷新事务');
     } finally {
       this.keyOperation = '';
+
       this.cd.markForCheck();
     }
   }
 
   async startReconfigure(): Promise<void> {
     if (!this.isOwner || !this.supportsWifiProvisioning || this.keyBusy) return;
+
     const confirmed = await this.confirmAction(
       '先重置设备网络',
       '请先在设备上触发 Blinker.resetNetwork()（或产品定义的网络重置操作），并确认设备开始广播 BLINKER_。仅重置网络时保留 Key 与 BLE 控制权；若清除了全部接入信息，重新配网将刷新 Key 并重建本地权限，仍保留原设备和控制页面。',
       '我已重置网络',
     );
+
     if (!confirmed) return;
+
     await this.navCtrl.navigateForward('/tools/esp32-provision', {
       queryParams: {
         mode: 'reconfigure',
@@ -442,6 +517,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   async startGatewayEnrollment(): Promise<void> {
     if (!this.supportsGatewayEnrollment || this.keyBusy) return;
+
     await this.navCtrl.navigateForward(
       `/device/${encodeURIComponent(this.logicalDeviceId)}/gateway-enrollment`,
     );
@@ -453,9 +529,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   private get deviceKeyContext(): DeviceKeyContext | null {
     if (!this.device || this.device.config.mode !== 'bbp2') return null;
+
     const logicalDeviceId = this.device.logicalDeviceId
       || this.device.id
       || this.device.deviceName;
+
     if (
       logicalDeviceId !== this.logicalDeviceId
       || !Number.isSafeInteger(this.device.credentialVersion)
@@ -464,6 +542,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     ) {
       return null;
     }
+
     return {
       logicalDeviceId,
       credentialVersion: this.device.credentialVersion!,
@@ -474,14 +553,19 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   async showAuthKey(): Promise<void> {
     if (this.device.config.authKey) {
       this.showKey = true;
+
       return;
     }
+
     const context = this.deviceKeyContext;
+
     if (!context || this.revealingKey) return;
 
     this.revealingKey = true;
+
     try {
       const response = await this.management.revealDeviceKeyV2(context);
+
       this.revealedAuthKey = response.data.deviceKey;
       this.showKey = true;
     } catch (error) {
@@ -513,80 +597,104 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         },
       ],
     });
+
     await this.confirmDialog.present();
   }
 
   async saveName(customName: unknown): Promise<boolean> {
     if (this.nameSaving || this.isSharedDevice) return false;
+
     const name = typeof customName === 'string' ? customName.trim() : '';
+
     if (!name) {
       await this.noticeService.showToast('设备名称不能为空');
+
       return false;
     }
 
     const device = this.device;
+
     this.nameSaving = true;
+
     try {
       const context = device.config.isPreview ? undefined
         : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+
       if (!device.config.isPreview && !await this.deviceService.saveDeviceConfig(device, { customName: name })) {
         throw new Error('name-save-failed');
       }
+
       if (context) assertDeviceV2AccountContext(this.dataService, context);
       if (this.destroyed) return true;
 
       device.config.customName = name;
+
       const current = this.dataService.getDevice(device.deviceName);
+
       if (current) current.config.customName = name;
+
       device.subject.next({ key: 'customName', value: name });
       this.cd.detectChanges();
       await this.noticeService.showToast('设备名称已更新');
+
       return true;
     } catch {
       if (!this.destroyed) await this.noticeService.showToast('保存设备名称失败，请稍后重试');
+
       return false;
     } finally {
       this.nameSaving = false;
+
       if (!this.destroyed) this.cd.markForCheck();
     }
   }
 
   async selectIcon(): Promise<void> {
     if (this.isSharedDevice || this.imageSaving) return;
+
     const device = this.device;
+
     this.imageSaving = true;
 
     try {
       const context = device.config.isPreview ? undefined
         : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+
       const modal = await this.modalCtrl.create({
         component: DeviceIconPage,
         componentProps: { currentImage: device.config.image },
       });
+
       await modal.present();
+
       const { data: image } = await modal.onDidDismiss<string>();
+
       if (typeof image !== 'string' || image === device.config.image || this.destroyed) return;
       if (context) assertDeviceV2AccountContext(this.dataService, context);
 
       if (!device.config.isPreview && !await this.deviceService.saveDeviceConfig(device, { image })) {
         throw new Error('image-save-failed');
       }
+
       if (context) assertDeviceV2AccountContext(this.dataService, context);
       if (this.destroyed) return;
 
       device.config.image = image;
+
       device.subject.next({ key: 'image', value: image });
       this.cd.markForCheck();
     } catch {
       if (!this.destroyed) await this.noticeService.showToast('保存设备图片失败，请稍后重试');
     } finally {
       this.imageSaving = false;
+
       if (!this.destroyed) this.cd.markForCheck();
     }
   }
 
   async copyDeviceId(): Promise<void> {
     const id = this.device.id || this.device.deviceName;
+
     try {
       await this.writeClipboard(id);
       await this.noticeService.showToast('设备 ID 已复制');
@@ -615,12 +723,14 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
             if (this.isSharedDevice) {
               try {
                 const result = await this.sharing.leaveShare(this.device.id);
+
                 await this.noticeService.showToast(result.realtimeRefreshPending
                   ? '已退出分享，通信权限同步中' : '已退出分享');
                 this.navCtrl.navigateRoot('/');
               } catch (error) {
                 console.error('Failed to leave Device V2 share', error);
               }
+
               this.userService.getAllInfo();
             } else if (await this.removeOwnedDevice()) {
               this.navCtrl.navigateRoot('/');
@@ -630,6 +740,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         },
       ],
     });
+
     await this.confirmDialog.present();
   }
 
@@ -637,34 +748,48 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     try {
       if (this.device.config.mode === 'bbp2') {
         const id = this.device.id || this.device.deviceName;
+
         if (!id) throw new Error('设备标识无效');
+
         const expected = captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+
         const current = () => {
           if (this.destroyed || this.logicalDeviceId !== id) throw Error('DEVICE_REMOVAL_CONTEXT_CHANGED');
+
           assertDeviceV2AccountContext(this.dataService, expected);
+
           return expected;
         };
+
         const retirement = new WiFiProvRetirement(new CapacitorWiFiProvAllocationStore(current),
           new CapacitorBleControllerCredentialStore(current), this.management, current);
+
         const { response: result, allocationCleanupPending } = await retirement.removeOwned(id);
+
         this.clearSecret();
+
         await this.noticeService.showToast(allocationCleanupPending
           ? '云端授权已撤销，本机配网记录清理未完成；重置设备后再次配网可重试清理'
           : result.data.brokerCleanupPending || result.data.realtimeRefreshPending
           ? '云端授权已撤销，通信清理中；本地权限尚未确认清除'
           : '设备已从云端移除；本地权限尚未确认清除');
+
         return true;
       }
+
       await this.noticeService.showToast('当前仅支持 V2 设备移除，请先确认设备接入类型');
+
       return false;
     } catch (error) {
       // No raw HTTP error bodies or secret-bearing request objects in logs.
       const code = error instanceof GatewayHttpError ? error.code : undefined;
+
       await this.noticeService.showToast(code === 'DEVICE_V2_REMOVAL_LOCAL_LIFECYCLE_REQUIRED'
         ? '该接入类型的移除流程尚未开放，设备未被移除'
         : code === 'DEVICE_V2_REMOVAL_ROUTE_CHANGING'
           ? '设备通信路由正在调整，请稍后重试'
           : '设备移除未确认，请刷新设备列表后重试');
+
       return false;
     }
   }
@@ -696,31 +821,39 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         { text: confirmText, role: 'confirm' },
       ],
     });
+
     await this.confirmDialog.present();
+
     const result = await this.confirmDialog.onDidDismiss();
+
     this.confirmDialog = undefined;
+
     return result.role === 'confirm';
   }
 
   private keyErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof GatewayHttpError) {
       if (error.httpStatus === 403) return '只有设备所有者可以管理设备 Key';
+
       if (error.code === 'DEVICE_KEY_STEP_UP_UNAVAILABLE') {
         return '当前登录状态不能查看或刷新设备 Key';
       }
     }
+
     return fallback;
   }
 
   private requestId(prefix: string): string {
     const suffix = globalThis.crypto?.randomUUID?.()
       ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
     return `${prefix}-${suffix}`;
   }
 
   async addShortcut() {
     try {
       const result = await this.deviceShortcutService.pinDevice(this.device);
+
       if (result === 'requested') {
         await this.noticeService.showToast('已提交添加桌面快捷方式请求');
       } else {
@@ -744,16 +877,19 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   selectMenuItem(item: MenuListItem): void {
     if (item.route) {
       void this.navCtrl.navigateForward(item.route);
+
       return;
     }
 
     if (item.id === 'shortcut') {
       void this.addShortcut();
+
       return;
     }
 
     if (item.id === 'guide') {
       this.showGuide();
+
       return;
     }
 

@@ -2,7 +2,15 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
@@ -28,7 +36,18 @@ const TEST_LOCATION: LocationPreset = {
   selector: 'app-device-location',
   templateUrl: './device-location.page.html',
   styleUrls: ['./device-location.page.scss'],
-  imports: [CommonModule, FormsModule, IonicModule, HeroCardComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    HeroCardComponent,
+  ],
 })
 export class DeviceLocationPage implements OnInit, OnDestroy {
   readonly presets: readonly LocationPreset[] = [

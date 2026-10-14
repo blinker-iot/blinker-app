@@ -1,9 +1,9 @@
 import { of } from 'rxjs';
-
 import { API, isGatewayUrl } from '../../configs/api.config';
 import { DeviceV2SharingService } from './device-v2-sharing.service';
 
 const deviceId = 'device one';
+
 const grant = {
   shareId: 'share-one',
   role: 'operator' as const,
@@ -32,12 +32,14 @@ describe('DeviceV2SharingService', () => {
           manifestUpdatedAt: null,
           share: grant,
         }] } }
+
         : { status: 200, data: {
           logicalDeviceId: deviceId,
           shares: [{ ...grant, memberRef: 'member-one' }],
           invitations: [],
         } },
     ));
+
     const post = vi.fn((url: string) => of(
       url === API.DEVICE_V2.ACCEPT_SHARE
         ? { status: 200, data: {
@@ -56,6 +58,7 @@ describe('DeviceV2SharingService', () => {
           replayed: false,
         } },
     ));
+
     const http = { get, post } as any;
     const service = new DeviceV2SharingService(http);
 
@@ -63,17 +66,20 @@ describe('DeviceV2SharingService', () => {
       logicalDeviceId: deviceId,
       shares: [{ memberRef: 'member-one' }],
     });
+
     await expect(service.listReceived()).resolves.toMatchObject([{
       logicalDeviceId: deviceId,
       share: { role: 'operator' },
     }]);
+
     await expect(service.createInvitation(
       deviceId,
       'operator',
       'share-operation-one',
     )).resolves.toMatchObject({ invitationCode: 'A'.repeat(43) });
+
     await expect(service.acceptInvitation('A'.repeat(43)))
-      .resolves.toMatchObject({ shareId: 'share-one' });
+      .resolves.toMatchObject({ share: { shareId: 'share-one' } });
 
     const urls = [
       API.DEVICE_V2.SHARES(deviceId),
@@ -84,6 +90,7 @@ describe('DeviceV2SharingService', () => {
       API.DEVICE_V2.SHARE(deviceId, 'share-one'),
       API.DEVICE_V2.RECEIVED_SHARE(deviceId),
     ];
+
     expect(urls.every(isGatewayUrl)).toBe(true);
   });
 
@@ -102,30 +109,38 @@ describe('DeviceV2SharingService', () => {
       replayed: false,
       realtimeRefreshPending: false,
     } });
+
     const patch = vi.fn(() => of(mutation(2)));
+
     const remove = vi.fn((url: string) => of(
       url === API.DEVICE_V2.SHARE(deviceId, grant.shareId)
         ? mutation(3)
-        : { status: 200, data: {} },
+        : mutation(4),
     ));
+
     const service = new DeviceV2SharingService({ patch, delete: remove } as any);
 
     await expect(service.updateShare(deviceId, grant.shareId, 'viewer'))
-      .resolves.toMatchObject({ role: 'viewer', version: 2 });
+      .resolves.toMatchObject({ share: { role: 'viewer', version: 2 } });
+
     await expect(service.revokeShare(deviceId, grant.shareId))
-      .resolves.toMatchObject({ state: 'revoked', version: 3 });
-    await expect(service.leaveShare(deviceId)).resolves.toBeUndefined();
+      .resolves.toMatchObject({ share: { state: 'revoked', version: 3 } });
+
+    await expect(service.leaveShare(deviceId))
+      .resolves.toMatchObject({ share: { state: 'revoked', version: 4 } });
 
     expect(patch).toHaveBeenCalledWith(
       API.DEVICE_V2.SHARE(deviceId, grant.shareId),
       { role: 'viewer' },
     );
+
     expect(remove).toHaveBeenCalledWith(API.DEVICE_V2.RECEIVED_SHARE(deviceId));
   });
 
   it('rejects malformed invitation codes before an HTTP request', async () => {
     const post = vi.fn();
     const service = new DeviceV2SharingService({ post } as any);
+
     await expect(service.acceptInvitation('short')).rejects.toThrow(/邀请码/);
     expect(post).not.toHaveBeenCalled();
   });

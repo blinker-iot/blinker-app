@@ -13,12 +13,14 @@ const SAVE_DELAY_MS = 5000;
 // Device V2 has server-side time series.
 export class EndpointHistory {
   private readonly series = new Map<string, HistoryPoint[]>();
-  private readonly storageKey: string;
+  private readonly storageKey?: string;
   private saveTimer?: ReturnType<typeof setTimeout>;
 
-  constructor(logicalDeviceId: string) {
-    this.storageKey = `blinker-history:${logicalDeviceId}`;
-    this.load();
+  constructor(logicalDeviceId?: string) {
+    if (logicalDeviceId) {
+      this.storageKey = `blinker-history:${logicalDeviceId}`;
+      this.load();
+    }
   }
 
   points(key: string): readonly HistoryPoint[] {
@@ -45,6 +47,8 @@ export class EndpointHistory {
   flush(): void {
     clearTimeout(this.saveTimer);
     this.saveTimer = undefined;
+    if (!this.storageKey) return;
+
     try {
       localStorage.setItem(this.storageKey, JSON.stringify(Object.fromEntries(
         [...this.series].map(([key, points]) => [key, points.map(point => [point.at, point.value])]),
@@ -55,10 +59,12 @@ export class EndpointHistory {
   }
 
   private scheduleSave(): void {
-    if (!this.saveTimer) this.saveTimer = setTimeout(() => this.flush(), SAVE_DELAY_MS);
+    if (this.storageKey && !this.saveTimer) this.saveTimer = setTimeout(() => this.flush(), SAVE_DELAY_MS);
   }
 
   private load(): void {
+    if (!this.storageKey) return;
+
     try {
       const stored = JSON.parse(localStorage.getItem(this.storageKey) ?? '{}') as Record<string, unknown>;
       const oldest = Date.now() - MAX_AGE_MS;

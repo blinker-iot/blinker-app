@@ -171,7 +171,7 @@ function harness(
     })),
   };
 
-  const page = new DeviceV2Page(port as any, localPageLayouts);
+  const page = new DeviceV2Page(port as any, localPageLayouts, {} as never, { sessionVersion: 0 } as never);
 
   page.device = device();
   page.viewActive = viewActive;

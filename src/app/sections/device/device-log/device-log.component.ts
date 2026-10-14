@@ -2,7 +2,16 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
@@ -77,7 +86,19 @@ function createTestLogs(): RuntimeLog[] {
   selector: 'app-device-log',
   templateUrl: './device-log.component.html',
   styleUrls: ['./device-log.component.scss'],
-  imports: [CommonModule, FormsModule, IonicModule, HeroCardComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    HeroCardComponent,
+  ],
 })
 export class DeviceLogComponent implements OnInit, OnDestroy {
   readonly filters: readonly LogFilter[] = [

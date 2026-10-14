@@ -1,3 +1,5 @@
+import { canEditConsole } from '../core/services/device-console.service';
+
 import {
   ChangeDetectorRef,
   Component,
@@ -19,7 +21,21 @@ import {
   RouterModule,
 } from '@angular/router';
 
-import { IonicModule, ModalController } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonModal,
+  IonRouterLink,
+  IonRouterLinkWithHref,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+  ModalController,
+} from '@ionic/angular/standalone';
+
 import { TranslatePipe } from '@ngx-translate/core';
 import { Observable, Subscription } from 'rxjs';
 import { deviceComponentDict } from '../configs/components.config';
@@ -33,6 +49,7 @@ import { NoticeService } from '../core/services/notice.service';
 import { DevicePanelService } from '../core/services/device-panel.service';
 import { normalizeUiTheme, UI_THEMES, UiTheme } from '../core/device-v2/ui-theme';
 import { readDeviceTheme, saveDeviceTheme } from './device-theme';
+import { readDevicePanelMode } from './device-panel-mode';
 
 interface LoadedDeviceComponent {
   device?: BlinkerDevice;
@@ -51,7 +68,17 @@ interface LoadedDeviceComponent {
   standalone: true,
   imports: [
     CommonModule,
-    IonicModule,
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonModal,
+    IonRouterLink,
+    IonRouterLinkWithHref,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
     RouterModule,
     TranslatePipe,
   ],
@@ -80,10 +107,11 @@ export class DevicePage implements OnInit, OnDestroy {
   private defaultComponent?: string;
   private viewEpoch = 0;
 
+  get canEdit(): boolean { return canEditConsole(this.device); }
   get debugMode(): boolean { return this.deviceComponent === 'TestDashboard'; }
 
   get customMode(): boolean {
-    return this.device?.config.panelMode === 'custom' && !!this.device.config.customPanel && !this.debugMode;
+    return readDevicePanelMode(this.device) === 'custom' && !!this.device?.config.customPanel && !this.debugMode;
   }
 
   async returnToPanel(): Promise<void> {
@@ -220,8 +248,8 @@ export class DevicePage implements OnInit, OnDestroy {
     }));
 
     this.subscriptions.add(
-      this.dataService.initCompleted.subscribe((completed) => {
-        if (completed) this.bindDevice();
+      this.dataService.deviceDataLoader.subscribe((loaded) => {
+        if (loaded) this.bindDevice();
       }),
     );
 

@@ -1,6 +1,16 @@
 import { Component } from '@angular/core';
 
-import { AlertController, IonicModule } from '@ionic/angular';
+import {
+  AlertController,
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonFooter,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DataService } from 'src/app/core/services/data.service';
@@ -15,7 +25,14 @@ import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.c
   templateUrl: 'scene-manager.html',
   styleUrls: ['scene-manager.scss'],
   imports: [
-    IonicModule,
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonFooter,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
     TranslatePipe,
     MenuListComponent,
     MenuItemComponent,

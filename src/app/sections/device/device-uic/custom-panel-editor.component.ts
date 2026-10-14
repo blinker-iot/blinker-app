@@ -1,5 +1,7 @@
+import { DEVICE_CONSOLE_HOST, DeviceConsoleHost } from '../../../core/device-v2/console-host';
+import { DeviceConsoleService, cloudConsole, canEditConsole, installConsole } from '../../../core/services/device-console.service';
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, OnDestroy, Output } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Inject, Input, OnChanges, OnDestroy, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AlertController, IonicModule, NavController } from '@ionic/angular';
 import { Subscription, timeout } from 'rxjs';
@@ -40,19 +42,22 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
   message = '';
   private html = CUSTOM_PANEL_TEMPLATE;
   private initialized = false;
+  private destroyed = false;
   private savedState = '';
   private capabilityKey = '';
   private generation?: Subscription;
 
   constructor(private readonly http: HttpClient, private readonly devices: DeviceService,
     private readonly panels: DevicePanelService, private readonly nav: NavController,
-    private readonly alerts: AlertController, private readonly cd: ChangeDetectorRef) {}
+    private readonly alerts: AlertController, private readonly cd: ChangeDetectorRef,
+    private readonly consoles: DeviceConsoleService,
+    @Inject(DEVICE_CONSOLE_HOST) private readonly host: DeviceConsoleHost) {}
 
   get selectedTheme() { return this.themes.find(option => option.id === this.theme)!; }
   get themeTriggerId() { return `custom-theme-${this.device.id || this.device.deviceName}`; }
 
   get canApply(): boolean {
-    return this.ready && !!this.preview && !this.generating && !this.saving && !this.device.config.isShared;
+    return this.ready && !!this.preview && !this.generating && !this.saving && canEditConsole(this.device);
   }
 
   ngOnChanges(): void {
@@ -76,7 +81,7 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
     if (saved) this.refreshPreview();
   }
 
-  ngOnDestroy(): void { this.generation?.unsubscribe(); }
+  ngOnDestroy(): void { this.destroyed = true; this.generation?.unsubscribe(); }
 
   private refreshPreview(): void {
     try {
@@ -94,7 +99,7 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
   }
 
   generate(): void {
-    if (this.generating || this.saving || !this.ready || this.device.config.isShared) return;
+    if (this.generating || this.saving || !this.ready || !canEditConsole(this.device)) return;
     if (this.device.config.isPreview) { this.error = '请登录并选择自己的设备后使用 AI 生成。'; return; }
 
     this.generating = true;
@@ -141,6 +146,7 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
 
   async apply(): Promise<void> {
     if (!this.canApply) return;
+    const session = this.host.sessionVersion;
 
     this.saving = true;
     this.error = '';
@@ -152,7 +158,14 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
       if (this.device.config.mode === 'bbp2') {
         const config = { customPanel, component: 'DeviceV2', panelMode: 'custom' as const };
 
-        if (!this.device.config.isPreview && !await this.devices.saveDeviceConfig(this.device, config)) throw new Error('保存失败，请重试。');
+        if (cloudConsole(this.device)) {
+          const source = await this.consoles.save(this.device.deviceName,
+            { uiConfig: { customPanel, panelMode: 'custom' } });
+          if (session !== this.host.sessionVersion || this.destroyed) return;
+          installConsole(this.device, source);
+        } else if (!this.device.config.isPreview && !await this.devices.saveDeviceConfig(this.device, config)) {
+          throw new Error('保存失败，请重试。');
+        }
 
         Object.assign(this.device.config, config);
       } else {
@@ -161,6 +174,7 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
         this.panels.install(this.device, this.record);
       }
 
+      if (session !== this.host.sessionVersion || this.destroyed) return;
       this.savedState = this.serialize();
       this.message = '自定义界面已应用。';
       this.device.subject.next({ key: 'component', value: this.device.config.component, source: 'custom-panel' });
@@ -170,7 +184,7 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
 
       await this.nav.navigateRoot(`/device/${encodeURIComponent(this.device.id || this.device.deviceName)}`);
     } catch (error) {
-      this.error = (error as { code?: string })?.code === 'DEVICE_PANEL_CONFLICT'
+      this.error = ['DEVICE_PANEL_CONFLICT'].includes((error as { code?: string })?.code || '')
         ? '界面已在其他位置更新，请重新打开后再生成。当前预览尚未保存。'
         : error instanceof Error ? error.message : '保存失败，请重试。';
     } finally { this.saving = false; this.busy.emit(false); this.cd.markForCheck(); }

@@ -13,6 +13,13 @@ html {
   background: transparent;
 }
 
+html[data-readonly-scroll] {
+  scrollbar-width: none;
+  scroll-behavior: auto;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
 body { margin: 0; }
 * { box-sizing: border-box; }
 
@@ -36,3 +43,15 @@ body > .panel {
 }
 
 .atom-error { color: var(--ui-alert); font-size: 13px; padding: 12px; }
+
+.atom-unavailable {
+  justify-content: center;
+  padding: 16px;
+  border: var(--ui-card-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-card);
+  color: var(--ui-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
