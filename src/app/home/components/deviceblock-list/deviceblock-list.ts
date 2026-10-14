@@ -12,10 +12,11 @@ import {
   ViewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { NavigationEnd, NavigationStart, Router } from '@angular/router';
 import Sortable from 'sortablejs';
 
 import { DataService } from 'src/app/core/services/data.service';
+import { DeviceUiPort } from 'src/app/core/device-v2/device-ui.port';
 import { UserService } from 'src/app/core/services/user.service';
 import { Deviceblock } from '../deviceblock/deviceblock';
 import { getDeviceRoute } from './device-navigation';
@@ -35,6 +36,10 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
   @Input() roomName?: string;
 
   @ViewChild('sortbox') sortbox: ElementRef<HTMLElement>;
+
+  private cardRead?: AbortController;
+  private appActive = true;
+  private viewInitialized = false;
 
   private sortable: any;
   private isSorting = false;
@@ -102,6 +107,7 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     private userService: UserService,
     private router: Router,
     private dataService: DataService,
+    private deviceUi: DeviceUiPort,
     private cd: ChangeDetectorRef,
     destroyRef: DestroyRef
   ) {
@@ -110,16 +116,34 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
       .subscribe(() => {
         this.cd.markForCheck();
       });
+    this.dataService.deviceDataLoader
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe(() => this.refreshCardStates());
+    this.deviceUi.appActive
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe(active => {
+        this.appActive = active;
+        this.refreshCardStates();
+      });
+    this.router.events
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe(event => {
+        if (event instanceof NavigationStart) this.cardRead?.abort();
+        if (event instanceof NavigationEnd) this.refreshCardStates();
+      });
   }
 
   ngAfterViewInit() {
+    this.viewInitialized = true;
     this.sortable = new Sortable(
       this.sortbox.nativeElement,
       this.sortableOptions
     );
+    this.refreshCardStates();
   }
 
   ngOnDestroy() {
+    this.cardRead?.abort();
     this.sortable?.destroy();
     this.sortable = undefined;
   }
@@ -174,4 +198,19 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     this.refresherEnabled.emit(enabled);
   }
 
+  private refreshCardStates(): void {
+    this.cardRead?.abort();
+    if (!this.viewInitialized || !this.appActive
+      || this.router.url.split(/[?#]/, 1)[0] !== '/home/device') return;
+
+    const controller = new AbortController();
+    this.cardRead = controller;
+    void this.deviceUi.refreshCardStates(this.deviceDataList, controller.signal)
+      .finally(() => {
+        if (this.cardRead === controller) this.cardRead = undefined;
+      });
+  }
+
+  // The parent tab owns cancellable BLE discovery for the whole inventory.
+  // Lists only read cached Cloud state; room lists must not start extra scans.
 }

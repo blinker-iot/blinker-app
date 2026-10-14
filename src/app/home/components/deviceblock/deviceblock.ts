@@ -30,6 +30,7 @@ export class Deviceblock {
   private snapshot?: DeviceUiSnapshot;
   private unsubscribe?: () => void;
   private connection?: Subscription;
+  private deviceChanges?: Subscription;
   private connectivity: DeviceUiConnectivitySnapshot = {
     activeTransport: 'cloud',
     directConnectAllowed: true,
@@ -46,6 +47,7 @@ export class Deviceblock {
     this.snapshot = undefined;
     this.unsubscribe?.();
     this.connection?.unsubscribe();
+    this.deviceChanges?.unsubscribe();
     this.connectivity = {
       activeTransport: this.directOnly ? 'ble' : 'cloud',
       directConnectAllowed: true,
@@ -56,6 +58,10 @@ export class Deviceblock {
     };
     const id = device?.deviceName;
     if (!id) return;
+    this.deviceChanges = device.subject.subscribe(event => {
+      if (event.key === 'customName' || event.key === 'image') device.config[event.key] = event.value;
+      this.cd.markForCheck();
+    });
     const subscription = this.deviceUi.watchState(id).subscribe(snapshot => {
       this.snapshot = snapshot;
       this.cd.markForCheck();
@@ -165,6 +171,7 @@ export class Deviceblock {
     destroyRef.onDestroy(() => {
       this.unsubscribe?.();
       this.connection?.unsubscribe();
+      this.deviceChanges?.unsubscribe();
     });
   }
 

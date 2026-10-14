@@ -430,7 +430,11 @@ export class ServerInterceptor implements HttpInterceptor {
       });
     }
 
-    const body = this.isRecord(error.error) ? error.error : {};
+    let payload = error.error;
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload); } catch { /* Keep plain-text error responses. */ }
+    }
+    const body = this.isRecord(payload) ? payload : {};
     const responseText = typeof error.error === 'string' ? error.error.trim() : '';
     const codeValue = body['errorCode'] ?? body['code'];
     const messageValue = body['errorMessage'] ?? body['message'];
@@ -537,6 +541,8 @@ export class ServerInterceptor implements HttpInterceptor {
   }
 
   private gatewayTimeoutMs(url: string): number {
+    if (url === API.INTERFACE_GENERATE) return 55_000;
+    if (url === API.INTERFACE_WORKFLOW || url === API.INTERFACE_REFINE) return 420_000;
     return url === API.FEEDBACK.UPLOAD_IMAGE
       ? GATEWAY_UPLOAD_TIMEOUT_MS
       : GATEWAY_REQUEST_TIMEOUT_MS;

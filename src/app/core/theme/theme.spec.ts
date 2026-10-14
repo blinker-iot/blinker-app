@@ -26,6 +26,33 @@ describe('app theme', () => {
     expect(document.documentElement.dataset['theme']).toBe('dark');
   });
 
+  it('uses the selected theme surface for Ionic alerts', () => {
+    applyThemeToDocument('dark');
+    const alert = document.createElement('ion-alert');
+    document.body.append(alert);
+
+    expect(
+      getComputedStyle(alert)
+        .getPropertyValue('--ion-overlay-background-color')
+        .trim(),
+    ).toBe('var(--blinker-surface)');
+    expect(
+      getComputedStyle(alert).getPropertyValue('--ion-color-step-100').trim(),
+    ).toBe('var(--blinker-surface-active)');
+    expect(
+      getComputedStyle(document.documentElement)
+        .getPropertyValue('--blinker-surface')
+        .trim(),
+    ).toBe('#102b43');
+    expect(
+      getComputedStyle(document.documentElement)
+        .getPropertyValue('--blinker-surface-active')
+        .trim(),
+    ).toBe('#0f395f');
+
+    alert.remove();
+  });
+
   it('persists and restores the selected theme', () => {
     saveTheme('dark');
 

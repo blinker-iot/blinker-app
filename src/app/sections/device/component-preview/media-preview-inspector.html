@@ -1,0 +1,67 @@
+<header class="head">
+  <h2>{{ kind === 'video' ? '视频' : '天气' }}</h2>
+  <p>全宽组件 · 组件库预览</p>
+</header>
+
+<section class="group">
+  <h3>通用</h3>
+  <label class="field">
+    <span>标题</span>
+    <input class="input" maxlength="32" [value]="title" (change)="setTitle($any($event.target).value)" />
+
+  </label>
+  <div class="field"><span>宽度</span><span>全宽 · 8 栏</span></div>
+</section>
+
+@if (kind === 'video') {
+  <section class="group">
+    <h3>视频源</h3>
+    <div class="field">
+      <span>视频格式</span>
+      <div class="seg" role="radiogroup" aria-label="视频格式">
+        <button type="button" role="radio" [attr.aria-checked]="video.str === 'mjpg'" (click)="setVideo({ str: 'mjpg' })">MJPEG</button>
+        <button type="button" role="radio" [attr.aria-checked]="video.str === 'hls'" (click)="setVideo({ str: 'hls' })">HLS</button>
+      </div>
+    </div>
+    <label class="field top">
+      <span>视频地址</span>
+      <span class="stack">
+        <input class="input" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"
+          [value]="video.url" placeholder="https://…" (change)="setVideo({ url: $any($event.target).value.trim() })" />
+        <small>输入后会加载该地址；摄像头需允许当前页面访问。</small>
+      </span>
+    </label>
+
+    @if (video.str === 'hls') {
+      <div class="field">
+        <span>播放方式</span>
+        <div class="seg" role="radiogroup" aria-label="播放方式">
+          <button type="button" role="radio" [attr.aria-checked]="video.mode === 1" (click)="setVideo({ mode: 1 })">手动</button>
+          <button type="button" role="radio" [attr.aria-checked]="video.mode === 0" (click)="setVideo({ mode: 0 })">自动</button>
+        </div>
+      </div>
+    }
+
+  </section>
+} @else {
+  <section class="group">
+    <h3>显示内容</h3>
+
+    @for (option of weatherOptions; track option.key) {
+      <div class="field">
+        <span>{{ option.label }}</span>
+        <div class="seg" role="radiogroup" [attr.aria-label]="option.label">
+          <button type="button" role="radio" [attr.aria-checked]="weather[option.key]" (click)="setWeather(option.key, true)">显示</button>
+          <button type="button" role="radio" [attr.aria-checked]="!weather[option.key]" (click)="setWeather(option.key, false)">隐藏</button>
+        </div>
+      </div>
+    }
+
+    <p class="note">使用本地示例天气，不访问定位或天气服务。</p>
+  </section>
+}
+
+<section class="group">
+  <h3>预览配置</h3>
+  <pre class="json">{{ json }}</pre>
+</section>

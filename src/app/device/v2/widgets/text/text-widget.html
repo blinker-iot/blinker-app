@@ -1,0 +1,25 @@
+<div class="hd">
+  @if (showTitle) {
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ title }}</span>
+  }
+  <span class="hd-v tx-last">{{ last }}</span>
+</div>
+
+<div class="tx-box" [class.multi]="multiline">
+  @if (multiline) {
+    <textarea class="tx-in" rows="2" [attr.maxlength]="limit" [attr.aria-label]="title" [placeholder]="options.placeholder ?? ''"
+      [value]="card.draft" [disabled]="card.disabled" (input)="draft($any($event.target).value)"
+      (keydown.meta.enter)="send()" (keydown.control.enter)="send()"></textarea>
+  } @else {
+    <input class="tx-in" [type]="numeric ? 'number' : 'text'" [attr.maxlength]="limit" [attr.aria-label]="title"
+      [attr.min]="numeric ? card.field.minimum : null" [attr.max]="numeric ? card.field.maximum : null"
+      [attr.step]="numeric ? card.field.step : null" [placeholder]="options.placeholder ?? ''" [value]="card.draft"
+      [disabled]="card.disabled" (input)="draft($any($event.target).value)" (keydown.enter)="send()" />
+  }
+  <div class="tx-foot">
+    @if (options.showCounter !== false && !numeric) { <span class="tx-count">{{ counter }}</span> }
+    <button type="button" class="tx-send" [attr.aria-label]="options.actionText ?? '发送'" [title]="options.actionText ?? '发送'"
+      [disabled]="card.disabled || !card.draft.trim()" (click)="send()"><app-ui-icon name="send" /></button>
+  </div>
+</div>

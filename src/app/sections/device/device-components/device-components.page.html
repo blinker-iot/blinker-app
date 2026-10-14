@@ -1,0 +1,60 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text="" [defaultHref]="'/device-manager/' + id"></ion-back-button>
+    </ion-buttons>
+    <ion-title>组件配置中心</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <main>
+    <p class="hint">选择控制页面显示的字段。隐藏不会影响设备运行，可随时重新开启。</p>
+
+    @if (error) {
+      <div class="error" role="alert">
+        <span>{{ error }}</span>
+        <ion-button fill="clear" size="small" [disabled]="saving || loading" (click)="load()">重新读取</ion-button>
+      </div>
+    }
+
+    @if (loading) {
+      <div class="empty"><ion-spinner name="crescent"></ion-spinner></div>
+    } @else {
+      <section class="components" aria-label="字段显示设置" [attr.aria-busy]="saving">
+        @for (row of rows; track row.key) {
+          <div class="row">
+            <ion-toggle justify="space-between" [checked]="row.visible" [disabled]="saving || !configReady"
+              (ionChange)="setVisible(row.key, $event)">{{ row.title }}</ion-toggle>
+            <button type="button" class="style" [disabled]="saving || !configReady || !row.visible"
+              (click)="openStyle(row.key)">样式</button>
+          </div>
+        } @empty {
+          <p class="empty">尚未读取到可配置的设备字段。</p>
+        }
+      </section>
+    }
+  </main>
+</ion-content>
+
+<ion-modal [isOpen]="!!editing" (didDismiss)="editing = undefined" aria-label="组件样式">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-buttons slot="start"><ion-button (click)="editing = undefined">取消</ion-button></ion-buttons>
+        <ion-title>组件样式</ion-title>
+        <ion-buttons slot="end">
+          <ion-button [disabled]="saving" (click)="saveStyle()">{{ saving ? '保存中…' : '保存' }}</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content>
+      <div class="editor" [attr.data-ui-theme]="theme">
+        <app-page-layout-panel class="editor-preview" [cards]="previewCards" />
+        @if (editing) {
+          <app-widget-inspector [widget]="editing.widget" [field]="previewCards[0]?.field" [extraCandidates]="extraCandidates" (widgetChange)="editing.widget = $event" />
+        }
+      </div>
+    </ion-content>
+  </ng-template>
+</ion-modal>

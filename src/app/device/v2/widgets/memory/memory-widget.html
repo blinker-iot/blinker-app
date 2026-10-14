@@ -1,0 +1,35 @@
+@if (showTitle) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+
+    <span class="hd-t">{{ title }}</span>
+  </div>
+}
+
+<div class="memory-body">
+  <div class="orb" [class.unknown]="level === undefined" [class.still]="options.pulse === false"
+    [class.empty]="!level" [style.--level]="level ?? 0"
+    [attr.role]="level === undefined ? 'img' : 'meter'" [attr.aria-label]="level === undefined ? title + '，可用比例未知，可用 ' + bytes(free) : title + '可用比例'"
+    [attr.aria-valuemin]="level === undefined ? null : 0" [attr.aria-valuemax]="level === undefined ? null : 100"
+    [attr.aria-valuenow]="level === undefined ? null : percent">
+
+    <svg class="wave back" viewBox="0 0 200 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 8 Q12.5 0 25 8 T50 8 T75 8 T100 8 T125 8 T150 8 T175 8 T200 8 V100 H0Z" />
+    </svg>
+    <svg class="wave front" viewBox="0 0 200 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 8 Q12.5 0 25 8 T50 8 T75 8 T100 8 T125 8 T150 8 T175 8 T200 8 V100 H0Z" />
+    </svg>
+    <div class="orb-value">
+      <strong class="num">{{ percent }}@if (level !== undefined) { <small>%</small> }</strong>
+      <span>可用</span>
+    </div>
+  </div>
+</div>
+<div class="memory-stats">
+  <div><span>可用</span><strong class="num">{{ bytes(free) }}</strong></div>
+  <div><span>总计</span><strong class="num">{{ bytes(total) }}</strong></div>
+</div>
+
+@if (total === undefined || options.caption) {
+  <p class="caption">{{ total === undefined ? '总量未配置' : options.caption }}</p>
+}

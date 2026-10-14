@@ -8,6 +8,8 @@ import {
   NavController,
 } from '@ionic/angular';
 import { DeviceService } from 'src/app/core/services/device.service';
+import { DevicePanelService } from 'src/app/core/services/device-panel.service';
+import type { PanelMode } from 'src/app/core/device-v2/custom-panel';
 import { UserService } from 'src/app/core/services/user.service';
 import { ActivatedRoute } from '@angular/router';
 import { DeviceIconPage } from '../../../core/pages/device-icon/device-icon';
@@ -56,6 +58,9 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   logicalDeviceId = '';
   device!: ManagedDevice;
 
+  imageSaving = false;
+  panelModeSaving = false;
+  panelModeLoading = false;
   secretKey = '';
   keyVisible = false;
   keyOperation: KeyOperation = '';
@@ -86,6 +91,10 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
   get canEditDisplay(): boolean { return this.isOwner && this.device.config.mode === 'bbp2'
     && !this.device.config.disabled && !this.device.config.isPreview; }
+
+  get panelMode(): PanelMode {
+    return this.device?.config.panelMode || 'normal';
+  }
 
   get keyBusy(): boolean {
     return this.keyOperation !== '';
@@ -182,6 +191,26 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         route: `/device-manager/${this.id}/uic`,
       },
     ];
+    if (this.device?.config.mode === 'bbp2') {
+      items.push({
+        id: 'component-preview',
+        title: '组件预览',
+        description: '查看所有组件与主题效果',
+        icon: 'fa-eye',
+        route: `/device-manager/${this.id}/component-preview`,
+      });
+    }
+
+    if (this.device?.config.mode === 'bbp2' && !this.isSharedDevice) {
+      items.push({
+        id: 'components',
+        title: '组件配置中心',
+        description: '选择控制页面显示的设备字段',
+        icon: 'fa-sliders',
+        route: `/device-manager/${this.id}/components`,
+      });
+    }
+
     if (!this.isSharedDevice) {
       items.push({
         id: 'sharing',
@@ -229,6 +258,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private readonly noticeService: NoticeService,
     private readonly cd: ChangeDetectorRef,
     private readonly manifests?: DeviceV2ManifestCache,
+    private readonly panels?: DevicePanelService,
   ) {}
 
   ngOnInit(): void {
@@ -251,6 +281,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   private bindDevice(): void {
+    const previous = this.device;
     this.device = this.dataService.getDevice(this.logicalDeviceId) as ManagedDevice;
     this.supportsWifiProvisioning = this.isOwner
       && this.hasDeviceKeyContext
@@ -261,7 +292,65 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       && this.device.deviceType === 'edge-hub'
       && Number.isSafeInteger(this.device.cloudLastSeenAt)
       && (this.device.cloudLastSeenAt ?? 0) > 0;
+
+    if (this.device && this.device !== previous && this.device.config.mode !== 'bbp2') {
+      void this.loadPanelMode();
+    }
     this.cd.markForCheck();
+  }
+
+  private async loadPanelMode(): Promise<void> {
+    const device = this.device;
+
+    this.panelModeLoading = true;
+
+    try {
+      const record = await this.panels!.get(device);
+
+      if (record && !this.destroyed && this.device === device) this.panels!.install(device, record);
+    } catch {
+      if (!this.destroyed) await this.noticeService.showToast('读取界面模式失败，请稍后重试');
+    } finally {
+      if (this.device === device) this.panelModeLoading = false;
+      if (!this.destroyed) this.cd.markForCheck();
+    }
+  }
+
+  async setPanelMode(mode: PanelMode): Promise<void> {
+    if (!this.device || this.isSharedDevice || this.panelModeSaving || this.panelModeLoading || mode === this.panelMode) return;
+
+    const device = this.device;
+
+    if (mode === 'custom' && !device.config.customPanel) {
+      await this.navCtrl.navigateForward(`/device-manager/${encodeURIComponent(this.id)}/uic/custom`);
+
+      return;
+    }
+
+    this.panelModeSaving = true;
+
+    try {
+      if (device.config.mode === 'bbp2') {
+        const context = device.config.isPreview ? undefined
+          : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+
+        const config = { panelMode: mode, component: 'DeviceV2' };
+
+        if (!device.config.isPreview && !await this.deviceService.saveDeviceConfig(device, config)) throw new Error('mode-save-failed');
+        if (context) assertDeviceV2AccountContext(this.dataService, context);
+
+        Object.assign(device.config, config);
+        device.subject.next({ key: 'component', value: config.component, source: 'device-settings' });
+      } else {
+        await this.panels!.setView(device, mode);
+      }
+    } catch {
+      if (!this.destroyed) await this.noticeService.showToast('切换界面模式失败，请稍后重试');
+    } finally {
+      this.panelModeSaving = false;
+
+      if (!this.destroyed) this.cd.markForCheck();
+    }
   }
 
   ngOnDestroy(): void {
@@ -533,28 +622,48 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       : '尚未确认保存结果，请重新加载核对；不会自动重发。';
   }
 
-  async selectIcon() {
-    let modal = await this.modalCtrl.create({
-      component: DeviceIconPage,
-      componentProps: {
-        currentImage: this.device.config.image,
-      },
-    });
-    modal.onDidDismiss().then(async (image) => {
-      if (typeof image.data == 'undefined') return;
-      let newConfig = {
-        image: image.data,
-      };
-      if (this.device.config.isPreview) {
-        this.device.config.image = image.data;
-        this.device.subject.next({ key: 'image', value: image.data });
-        return;
+  async selectIcon(): Promise<void> {
+    if (this.isSharedDevice || this.imageSaving) return;
+    const device = this.device;
+    this.imageSaving = true;
+
+    try {
+      const context = device.config.isPreview ? undefined
+        : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+      const modal = await this.modalCtrl.create({
+        component: DeviceIconPage,
+        componentProps: { currentImage: device.config.image },
+      });
+      await modal.present();
+      const { data: image } = await modal.onDidDismiss<string>();
+      if (typeof image !== 'string' || image === device.config.image || this.destroyed) return;
+      if (context) assertDeviceV2AccountContext(this.dataService, context);
+
+      if (!device.config.isPreview && !await this.deviceService.saveDeviceConfig(device, { image })) {
+        throw new Error('image-save-failed');
       }
-      if (await this.deviceService.saveDeviceConfig(this.device, newConfig)) {
-        this.device.config.image = image.data;
-      }
-    });
-    modal.present();
+      if (context) assertDeviceV2AccountContext(this.dataService, context);
+      if (this.destroyed) return;
+
+      device.config.image = image;
+      device.subject.next({ key: 'image', value: image });
+      this.cd.markForCheck();
+    } catch {
+      if (!this.destroyed) await this.noticeService.showToast('保存设备图片失败，请稍后重试');
+    } finally {
+      this.imageSaving = false;
+      if (!this.destroyed) this.cd.markForCheck();
+    }
+  }
+
+  async copyDeviceId(): Promise<void> {
+    const id = this.device.id || this.device.deviceName;
+    try {
+      await this.writeClipboard(id);
+      await this.noticeService.showToast('设备 ID 已复制');
+    } catch {
+      await this.noticeService.showToast('复制失败，请重试');
+    }
   }
 
   unbind() {

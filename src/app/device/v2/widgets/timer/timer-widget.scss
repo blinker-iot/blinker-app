@@ -1,0 +1,149 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+@use '../dial/arc';
+
+@include c.base;
+@include arc.strokes;
+
+.tm-presets {
+  display: grid;
+
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+
+  gap: 8px;
+
+  margin-top: auto;
+}
+
+.tm-p {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-block: 10px;
+
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-well);
+  color: var(--ui-muted);
+
+  font-size: 11px;
+
+  b {
+    color: var(--ui-ink);
+    font-family: var(--ui-font-num);
+    font-size: 20px;
+    font-weight: 500;
+
+    @include theme.electronic { font-weight: 800; }
+  }
+
+  @include theme.electronic { border: 1px dotted var(--ui-faint); background: none; }
+}
+
+.tm-run {
+  flex: 1 1 220px;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+  contain-intrinsic-block-size: 220px;
+}
+
+.tm-dial {
+  position: relative;
+  flex: none;
+
+  width: min(220px, 100cqw, 100cqh);
+
+  aspect-ratio: 1;
+  container-type: inline-size;
+}
+
+.tm-ring {
+  --thick: 3;
+
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.tm-center {
+  position: absolute;
+  inset: 15%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+
+  text-align: center;
+  .tm-act {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    font-size: clamp(10px, 7cqw, 14px);
+  }
+}
+
+.tm-countdown {
+  font-size: 22cqw;
+  line-height: 1;
+  white-space: nowrap;
+
+  letter-spacing: -0.04em;
+
+  &.long { font-size: 15cqw; }
+}
+
+.tm-copy {
+  flex: 1;
+
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &.tm-end { justify-content: flex-end; }
+}
+
+.tm-time { font-size: 34px; line-height: 1; }
+.tm-act { color: var(--ui-muted); font-size: 12px; }
+.tm-bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+
+  background: var(--ui-track);
+
+  span {
+    display: block;
+
+    height: 100%;
+
+    border-radius: inherit;
+
+    background: var(--ui-accent);
+
+    transition: width 0.9s linear;
+  }
+
+  @include theme.electronic {
+    border-radius: 0;
+
+    background: radial-gradient(circle, var(--ui-faint) 1.5px, transparent 2px) left center / 6px 6px;
+    span { background: radial-gradient(circle, var(--ui-accent) 1.8px, transparent 2.3px) left center / 6px 6px; }
+  }
+}
+
+.tm-x {
+  flex: none;
+  padding: 4px 2px;
+
+  color: var(--ui-accent);
+
+  font-size: 12px;
+}

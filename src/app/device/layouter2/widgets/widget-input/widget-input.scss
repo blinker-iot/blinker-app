@@ -1,50 +1,59 @@
 .inputbox {
+    width: 100%;
     height: 100%;
+    padding: 10px 12px;
+    box-sizing: border-box;
+}
 
-    .send-box {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-        flex-shrink: 0;
-    }
+.send-box {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+}
 
-    .send {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        width: 95%;
-        height: 3rem;
-        background-color: color-mix(in srgb, var(--blinker-surface) 82%, transparent);
-        box-shadow: var(--blinker-shadow-soft);
-        border: 1px solid var(--blinker-border);
-        border-radius: 1.5rem;
-        margin: 6px 0 5px 0;
+.send {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    padding: 3px 4px 3px 14px;
+    border: 1px solid var(--blinker-border);
+    border-radius: 999px;
+    background: var(--blinker-surface-muted);
 
-        .input {
-            flex-grow: 9;
-            height: 90%;
-            border: 0;
-            margin-left: 16px;
-            margin-right: 8px;
-            font-size: 1.2rem;
-            color: var(--blinker-text-primary);
-            background: transparent;
-        }
+    &:focus-within { border-color: var(--ion-color-primary); }
+}
 
-        .btn {
-            width: 2.6rem;
-            height: 2.6rem;
-            margin-right: 2px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            border: 1px solid color-mix(in srgb, var(--ion-color-primary) 32%, var(--blinker-border));
-            color: var(--ion-color-primary);
-            background: var(--blinker-surface-active);
-            font-size: 1.5rem;
-        }
-    }
+.input {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--blinker-text-primary);
+    background: transparent;
+    &::placeholder { color: var(--blinker-text-secondary); }
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 34px;
+    height: 34px;
+    border-radius: 50%;
+    color: var(--ion-color-primary-contrast);
+    background: var(--ion-color-primary);
+    font-size: 18px;
+    cursor: pointer;
+    &:disabled { color: var(--blinker-text-tertiary); background: var(--blinker-divider); cursor: default; }
+    &:focus-visible { outline: 2px solid var(--ion-color-primary); outline-offset: 3px; }
 }

@@ -1,0 +1,77 @@
+@use '../../../../theme/ui-theme' as theme;
+
+:host {
+  color: var(--blinker-text-primary);
+}
+
+.hint {
+  margin: 0 0 20px;
+  color: var(--blinker-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.components {
+  overflow: hidden;
+  border: 1px solid var(--blinker-border);
+  border-radius: var(--blinker-radius-card);
+  background: var(--blinker-surface);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+
+  & + .row { border-top: 1px solid var(--blinker-border); }
+}
+
+.style {
+  flex: 0 0 auto;
+  margin-right: 12px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--blinker-surface-muted);
+  color: var(--ion-color-primary);
+  font: inherit;
+  font-size: 12px;
+
+  &:disabled { opacity: 0.4; }
+}
+
+ion-toggle {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 16px;
+  font-size: 14px;
+
+  &::part(label) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+.empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--blinker-text-secondary);
+}
+
+.error {
+  margin-bottom: 16px;
+  color: var(--ion-color-danger);
+  font-size: 13px;
+}
+
+.editor {
+  @include theme.ui-theme;
+  min-height: 100%;
+  padding: 0 16px 16px;
+  background: var(--ui-bg);
+}
+
+.editor-preview {
+  display: block;
+  margin-bottom: 20px;
+}

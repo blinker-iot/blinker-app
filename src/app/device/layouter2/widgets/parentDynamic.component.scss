@@ -21,6 +21,7 @@
   widget-input,
   widget-video,
   widget-image,
+  widget-air,
   widget-weather {
     position: relative;
     width: 100%;
@@ -49,9 +50,9 @@
       color: inherit;
       background: transparent;
       display: flex;
-      flex-direction: column;
+      flex-direction: var(--widget-direction, column);
       align-items: center;
-      justify-content: center;
+      justify-content: var(--widget-justify, center);
     }
 
     [widget-name] {

@@ -1,5 +1,4 @@
 import '@angular/compiler';
-
 import { SimpleChange, SimpleChanges } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -12,8 +11,10 @@ import {
   DeviceUiTelemetryLease,
   DeviceUiTelemetrySnapshot,
 } from '../../core/device-v2/device-ui.port';
+
 import { BlinkerDevice } from '../../core/model/device.model';
 import { generateDefaultPageLayout } from '../../core/device-v2/page-layout';
+import { EndpointHistory } from '../../core/device-v2/endpoint-history';
 import { DeviceUiConnectionScope } from '../../core/device-v2/connection-scope';
 import { DeviceV2Page } from './device-v2.page';
 
@@ -92,6 +93,7 @@ function harness(
   const state = new BehaviorSubject(initial);
   const events = new Subject<DeviceUiEvent>();
   const appActive = new BehaviorSubject(true);
+
   const telemetry = new BehaviorSubject<DeviceUiTelemetrySnapshot>({
     active: true,
     source: 'cloud',
@@ -101,9 +103,11 @@ function harness(
     missedSamples: 0,
     values: {},
   });
+
   const connectionState = new BehaviorSubject<
     'idle' | 'scanning' | 'nearby' | 'connecting' | 'ready' | 'retrying' | 'stopped'
   >('ready');
+
   const connectivity = new BehaviorSubject<DeviceUiConnectivitySnapshot>({
     activeTransport: 'ble',
     directConnectAllowed: true,
@@ -112,12 +116,14 @@ function harness(
     bleState: 'ready',
     cloudSessionState: 'idle',
   });
+
   const telemetryLease = {
     get snapshot(): DeviceUiTelemetrySnapshot {
       return telemetry.value;
     },
     subscribe: vi.fn((listener: (value: DeviceUiTelemetrySnapshot) => void) => {
       const subscription = telemetry.subscribe(listener);
+
       return () => subscription.unsubscribe();
     }),
     setVisible: vi.fn(async (visible: boolean) => {
@@ -127,6 +133,7 @@ function harness(
     }),
     close: vi.fn().mockResolvedValue(undefined),
   };
+
   const port = {
     isBleDirect: vi.fn(() => true),
     appActive: appActive.asObservable(),
@@ -147,7 +154,14 @@ function harness(
     openTelemetry: vi.fn(openTelemetry ?? (async () => telemetryLease)),
   };
   const localPageLayouts = pageLayouts ?? {
-    get: vi.fn().mockResolvedValue(null),
+    get: vi.fn().mockResolvedValue({
+      logicalDeviceId,
+      revision: 1,
+      manifestFingerprint: initial.manifestFingerprint,
+      layout: { ...generateDefaultPageLayout(initial), revision: 1 },
+      createdAt: 0,
+      updatedAt: 0,
+    }),
     saveCandidate: vi.fn(async (_id, candidate, _endpoints, expectedRevision) => ({
       logicalDeviceId,
       revision: expectedRevision + 1,
@@ -157,14 +171,85 @@ function harness(
       updatedAt: 0,
     })),
   };
+
   const page = new DeviceV2Page(port as any, localPageLayouts);
+
   page.device = device();
   page.viewActive = viewActive;
+
   page.ngOnInit();
+
   return { page, port, state, events, appActive, connectivity, telemetry, telemetryLease };
 }
 
 describe('DeviceV2Page UI port lifecycle', () => {
+  it('preserves a queued release only after the press is confirmed', async () => {
+    const { page, port } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    let finish!: () => void;
+    port.sendCommand.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+    const field = page.snapshot.endpoints[0]!;
+    const press = page.send(field, true);
+    await page.send(field, false);
+    expect(port.sendCommand).toHaveBeenCalledOnce();
+    finish(); await press;
+    await vi.waitFor(() => expect(port.sendCommand).toHaveBeenCalledTimes(2));
+    expect(port.sendCommand.mock.lastCall).toEqual([logicalDeviceId, 'power', false]);
+    page.ngOnDestroy();
+  });
+
+  it('does not continue a queued command after an unknown result', async () => {
+    const { page, port } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    let fail!: (reason: unknown) => void;
+    port.sendCommand.mockImplementationOnce(() => new Promise<void>((_, reject) => { fail = reject; }));
+    const field = page.snapshot.endpoints[0]!;
+    const press = page.send(field, true);
+    await page.send(field, false);
+    fail({ code: 'DEVICE_V2_COMMAND_OUTCOME_UNKNOWN' }); await press;
+    expect(port.sendCommand).toHaveBeenCalledOnce();
+    expect(page.fieldError(field)).toContain('勿重复操作');
+    page.ngOnDestroy();
+  });
+
+  it.each(['hidden', 'changed-device'] as const)('retires queued commands when %s', async boundary => {
+    const { page, port } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    let finish!: () => void;
+    port.sendCommand.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+    const field = page.snapshot.endpoints[0]!;
+    const press = page.send(field, true);
+    await page.send(field, false);
+    if (boundary === 'hidden') page.viewActive = false;
+    else {
+      page.device = { ...device(), deviceName: logicalDeviceId.replace(/1/g, '2') };
+      page.ngOnChanges(changed('device'));
+      await vi.waitFor(() => expect(page.canControl).toBe(true));
+    }
+    finish(); await press;
+    expect(port.sendCommand).toHaveBeenCalledOnce();
+    expect(page.pending.size).toBe(0);
+    page.ngOnDestroy();
+  });
+
+  it('keeps widget trends bounded to the current page without storage access', () => {
+    const storage = vi.spyOn(Storage.prototype, 'setItem');
+    const trend = new EndpointHistory();
+    try {
+      for (let index = 0; index < 300; index++) trend.record('temperature', index, false, index);
+      expect(trend.points('temperature')).toHaveLength(240);
+      expect(trend.points('temperature')[0]).toEqual({ at: 60, value: 60 });
+      for (let index = 0; index < 40; index++) trend.record(`field-${index}`, index, false, 1000);
+      expect(trend.points('field-30')).toHaveLength(1);
+      expect(trend.points('field-31')).toHaveLength(0);
+      trend.record('large-integer', 9007199254740993n, false);
+      expect(trend.points('large-integer')).toHaveLength(0);
+      expect(storage).not.toHaveBeenCalled();
+      trend.reset();
+      expect(trend.points('temperature')).toHaveLength(0);
+    } finally { storage.mockRestore(); }
+  });
+
   it('uses compatible shared labels while preserving explicit widget titles and protocol values', async () => {
     const { page } = harness();
     page.device.displayMetadata = { logicalDeviceId, revision: 1, name: '客厅灯', capabilities: [
@@ -251,7 +336,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
     page.device.data.cloudReachable = null;
     await vi.waitFor(() => expect(page.canControl).toBe(true));
     expect(page.stateLabel).toBe(activeTransport === 'lan' ? '局域网已连接' : '云端已连接');
-    await page.setBoolean(page.snapshot.endpoints[0]!, { detail: { checked: true } } as CustomEvent);
+    await page.send(page.snapshot.endpoints[0]!, true);
     expect(port.sendCommand).toHaveBeenCalledOnce();
     // Inventory becoming online cannot re-enable a stale live snapshot.
     page.device.data.cloudReachable = true;
@@ -394,11 +479,12 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
     expect(port.connect).toHaveBeenCalledWith(logicalDeviceId, expect.any(AbortSignal));
     expect(page.widgets.map(widget => widget.type)).toEqual(['switch', 'slider', 'input', 'button']);
+
     const fields = page.widgets.map(widget => page.endpoint(widget)!);
 
-    await page.setBoolean(fields[0], { detail: { checked: true } } as CustomEvent);
-    await page.setSlider(fields[1], { detail: { value: 42 } } as CustomEvent);
-    page.updateDraft(fields[2], { detail: { value: 'lamp' } } as CustomEvent);
+    await page.send(fields[0], true);
+    await page.send(fields[1], 42);
+    page.onPanelAction({ kind: 'draft', field: fields[2], value: 'lamp' });
     await page.commit(fields[2]);
     await page.execute(fields[3]);
 
@@ -420,7 +506,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
     try {
       await vi.waitFor(() => expect(page.canControl).toBe(true));
       const field = page.snapshot.endpoints.find(candidate => candidate.key === 'level')!;
-      page.updateDraft(field, { detail: { value: input } } as CustomEvent);
+      page.onPanelAction({ kind: 'draft', field, value: input });
       await page.commit(field);
       expect(page.fieldError(field)).toBe('请输入有效数值');
       expect(port.sendCommand).not.toHaveBeenCalled();
@@ -434,7 +520,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
       await vi.waitFor(() => expect(page.canControl).toBe(true));
       const field = page.snapshot.endpoints.find(candidate => candidate.key === 'level')!;
       for (const value of ['', '0', '42', '1.5']) {
-        page.updateDraft(field, { detail: { value } } as CustomEvent);
+        page.onPanelAction({ kind: 'draft', field, value });
         await page.commit(field);
       }
       expect(port.sendCommand.mock.calls).toEqual([
@@ -465,12 +551,15 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
   it('surfaces synchronization failure and retries when the account reconnects', async () => {
     const { page, port } = harness();
+
     port.connect.mockRejectedValueOnce(new Error('connection lost'));
+
     page.device = { ...device(), deviceName: logicalDeviceId.replace(/1/g, '2') };
+
     page.ngOnChanges(changed('device'));
     await vi.waitFor(() => expect(page.error).toContain('connection lost'));
-
     port.connectionState.next('ready');
+
     await vi.waitFor(() => {
       expect(port.connect).toHaveBeenCalledTimes(3);
       expect(page.error).toBe('');
@@ -479,6 +568,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
   it('detaches page subscriptions without stopping the shared account connection', () => {
     const { page, state, events } = harness();
+
     page.ngOnDestroy();
     expect(state.observed).toBe(false);
     expect(events.observed).toBe(false);
@@ -486,8 +576,10 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
   it('retries a stopped BLE session only within the visible foreground budget', async () => {
     vi.useFakeTimers();
+
     try {
       const { page, port, connectivity } = harness();
+
       await Promise.resolve();
       port.connect.mockClear();
 
@@ -495,6 +587,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
         ...connectivity.value,
         bleState: 'stopped',
       });
+
       await vi.advanceTimersByTimeAsync(1000);
       expect(port.connect).toHaveBeenCalledTimes(1);
       await vi.advanceTimersByTimeAsync(2500);
@@ -505,8 +598,11 @@ describe('DeviceV2Page UI port lifecycle', () => {
       expect(port.connect).toHaveBeenCalledTimes(3);
 
       page.viewActive = false;
+
       page.ngOnChanges(changed('viewActive'));
+
       page.viewActive = true;
+
       page.ngOnChanges(changed('viewActive'));
       await vi.advanceTimersByTimeAsync(1000);
       expect(port.connect).toHaveBeenCalledTimes(5);
@@ -518,14 +614,14 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
   it('connects a nearby BLE device within the same bounded foreground budget', async () => {
     vi.useFakeTimers();
+
     try {
       const { page, port, connectivity } = harness();
+
       await Promise.resolve();
       port.connect.mockClear();
-
       connectivity.next({ ...connectivity.value, bleState: 'nearby' });
       await vi.advanceTimersByTimeAsync(1000);
-
       expect(port.connect).toHaveBeenCalledTimes(1);
       page.ngOnDestroy();
     } finally {
@@ -535,8 +631,10 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
   it('waits for gateway route release before retrying Direct BLE', async () => {
     vi.useFakeTimers();
+
     try {
       const { page, port, connectivity } = harness();
+
       await Promise.resolve();
       port.connect.mockClear();
 
@@ -545,6 +643,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
         directConnectAllowed: false,
         bleState: 'nearby',
       });
+
       await vi.advanceTimersByTimeAsync(30_000);
       expect(port.connect).not.toHaveBeenCalled();
 
@@ -552,6 +651,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
         ...connectivity.value,
         directConnectAllowed: true,
       });
+
       await vi.advanceTimersByTimeAsync(1000);
       expect(port.connect).toHaveBeenCalledOnce();
       page.ngOnDestroy();
@@ -562,8 +662,10 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
   it('starts a fresh reconnect budget when Bluetooth is enabled again', async () => {
     vi.useFakeTimers();
+
     try {
       const { page, port, connectivity } = harness();
+
       await Promise.resolve();
       port.connect.mockClear();
 
@@ -572,9 +674,9 @@ describe('DeviceV2Page UI port lifecycle', () => {
         bleAdapterEnabled: false,
         bleState: 'stopped',
       });
+
       await vi.advanceTimersByTimeAsync(30_000);
       expect(port.connect).not.toHaveBeenCalled();
-
       connectivity.next({ ...connectivity.value, bleAdapterEnabled: true });
       await vi.advanceTimersByTimeAsync(1000);
       expect(port.connect).toHaveBeenCalledOnce();
@@ -586,19 +688,25 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
   it('cancels a pending BLE reconnect when the page leaves or the session recovers', async () => {
     vi.useFakeTimers();
+
     try {
       const { page, port, connectivity } = harness();
+
       await Promise.resolve();
       port.connect.mockClear();
       connectivity.next({ ...connectivity.value, bleState: 'stopped' });
+
       page.viewActive = false;
+
       page.ngOnChanges(changed('viewActive'));
       await vi.advanceTimersByTimeAsync(10_000);
       expect(port.connect).not.toHaveBeenCalled();
 
       page.viewActive = true;
+
       page.ngOnChanges(changed('viewActive'));
       connectivity.next({ ...connectivity.value, bleState: 'ready' });
+
       await vi.advanceTimersByTimeAsync(10_000);
       expect(port.connect).toHaveBeenCalledTimes(1);
       page.ngOnDestroy();
@@ -609,15 +717,16 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
   it('pauses BLE reconnect while backgrounded and starts a fresh foreground budget', async () => {
     vi.useFakeTimers();
+
     try {
       const { page, port, appActive, connectivity } = harness();
+
       await Promise.resolve();
       port.connect.mockClear();
       connectivity.next({ ...connectivity.value, bleState: 'stopped' });
       appActive.next(false);
       await vi.advanceTimersByTimeAsync(10_000);
       expect(port.connect).not.toHaveBeenCalled();
-
       appActive.next(true);
       await Promise.resolve();
       expect(port.connect).toHaveBeenCalledTimes(1);
@@ -631,6 +740,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
   it('opens realtime fields only while the page is visible and releases the lease', async () => {
     const realtime = snapshot();
+
     realtime.endpoints.push(endpoint({
       id: 5,
       key: 'temperature',
@@ -639,6 +749,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
       writable: false,
       telemetryMinimumIntervalMs: 250,
     }));
+
     const { page, port, appActive, telemetry, telemetryLease } = harness(realtime);
 
     await vi.waitFor(() => expect(port.openTelemetry).toHaveBeenCalledWith(
@@ -646,6 +757,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
       ['temperature'],
       1000,
     ));
+
     telemetry.next({
       active: true,
       source: 'cloud',
@@ -659,19 +771,22 @@ describe('DeviceV2Page UI port lifecycle', () => {
       missedSamples: 0,
       values: { temperature: 21.5 },
     });
+
     const field = page.snapshot.endpoints.find(candidate => candidate.key === 'temperature')!;
+
     expect(page.value(field)).toBe(21.5);
 
     page.viewActive = false;
+
     page.ngOnChanges(changed('viewActive'));
     await vi.waitFor(() => expect(telemetryLease.setVisible).toHaveBeenCalledWith(false));
     expect(page.value(field)).toBe(20);
-
     appActive.next(false);
     appActive.next(true);
     expect(telemetryLease.setVisible.mock.calls.some(call => call[0] === true)).toBe(false);
 
     page.viewActive = true;
+
     page.ngOnChanges(changed('viewActive'));
     await vi.waitFor(() => expect(telemetryLease.setVisible).toHaveBeenCalledWith(true));
     appActive.next(false);
@@ -689,6 +804,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
   it('closes an in-flight open when the page leaves and opens a fresh lease on return', async () => {
     const realtime = snapshot();
+
     realtime.endpoints.push(endpoint({
       id: 5,
       key: 'temperature',
@@ -696,17 +812,21 @@ describe('DeviceV2Page UI port lifecycle', () => {
       writable: false,
       telemetryMinimumIntervalMs: 1000,
     }));
+
     let resolveOpen!: (lease: DeviceUiTelemetryLease) => void;
     const pendingOpen = new Promise<DeviceUiTelemetryLease>(resolve => resolveOpen = resolve);
     const result = harness(realtime, undefined, () => pendingOpen);
 
     await vi.waitFor(() => expect(result.port.openTelemetry).toHaveBeenCalledOnce());
+
     result.page.viewActive = false;
+
     result.page.ngOnChanges(changed('viewActive'));
     resolveOpen(result.telemetryLease);
     await vi.waitFor(() => expect(result.telemetryLease.close).toHaveBeenCalledOnce());
 
     result.page.viewActive = true;
+
     result.page.ngOnChanges(changed('viewActive'));
     await vi.waitFor(() => expect(result.port.openTelemetry).toHaveBeenCalledTimes(2));
     result.page.ngOnDestroy();
@@ -850,13 +970,16 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
   it('keeps a stale cloud layout as a migration preview until the user accepts it', async () => {
     const current = snapshot();
+
     const oldSnapshot = {
       ...current,
       manifestRevision: 1,
       manifestFingerprint: '11'.repeat(32),
       endpoints: [current.endpoints[0]],
     };
+
     const oldLayout = { ...generateDefaultPageLayout(oldSnapshot), revision: 4 };
+
     const get = vi.fn().mockResolvedValue({
       logicalDeviceId,
       revision: 4,
@@ -865,6 +988,7 @@ describe('DeviceV2Page UI port lifecycle', () => {
       createdAt: 1000,
       updatedAt: 1001,
     });
+
     const saveCandidate = vi.fn(async (_id, candidate) => ({
       logicalDeviceId,
       revision: 5,
@@ -873,20 +997,24 @@ describe('DeviceV2Page UI port lifecycle', () => {
       createdAt: 1000,
       updatedAt: 1002,
     }));
+
     const { page } = harness(current, { get, saveCandidate });
 
     await vi.waitFor(() => expect(page.layoutStale).toBeDefined());
+
     expect(page.layout?.widgets.map(widget => widget.endpointKey))
       .toEqual(['power', 'level', 'label', 'restart']);
-    expect(page.layoutStaleText).toContain('3 个能力待加入');
 
+    expect(page.layoutStaleText).toContain('3 个能力待加入');
     await page.updateLayout();
+
     expect(saveCandidate).toHaveBeenCalledWith(
       logicalDeviceId,
       expect.objectContaining({ manifestFingerprint: current.manifestFingerprint }),
       current.endpoints,
       4,
     );
+
     expect(page.layoutStale).toBeUndefined();
     expect(page.layout?.revision).toBe(5);
   });

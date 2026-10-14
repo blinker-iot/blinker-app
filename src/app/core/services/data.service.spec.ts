@@ -3,8 +3,10 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { Subject } from 'rxjs';
 import { API } from '../../configs/api.config';
 import { loadDeviceCatalog, saveDeviceCatalog } from '../device-v2/device-catalog-cache';
+import { environment } from '../../../environments/environment';
 import {
   AUTH_INVALIDATED_STORAGE_KEY,
+  DEV_WEB_AUTH_STORAGE_KEY,
   DataService,
 } from './data.service';
 
@@ -23,6 +25,7 @@ describe('DataService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    sessionStorage.clear();
     vi.mocked(SecureStorage.setKeyPrefix).mockResolvedValue(undefined);
     vi.mocked(SecureStorage.get).mockResolvedValue(null);
     vi.mocked(SecureStorage.set).mockResolvedValue(undefined);
@@ -104,13 +107,20 @@ describe('DataService', () => {
     const device = { ...item.device, logicalDeviceId: 'device_a', name: metadata.name, displayMetadata: metadata, state: 'active' };
     service.loadGatewayData({ id: 'user-a' } as any, [device as any]);
     const current = service.getDevice('device_a');
+    const sharedConfig = current.config;
+    const panel = { html: '<main>Control</main>' };
+    Object.assign(sharedConfig, { panelMode: 'custom', customPanel: panel });
     current.config.customName = 'Stale local name';
     service.loadGatewayData({ id: 'user-a' } as any, [device as any]);
+    expect(service.getDevice('device_a').config).toBe(sharedConfig);
+    expect(service.getDevice('device_a').config.panelMode).toBe('custom');
+    expect(service.getDevice('device_a').config.customPanel).toBe(panel);
     expect(service.getDevice('device_a').config.customName).toBe('Server name');
     const saved = { ...metadata, revision: 2, name: '客厅灯',
       capabilities: [{ key: 'power', kind: 0, type: 0, displayName: '电源开关' }] };
     service.updateDeviceV2DisplayMetadata(saved);
     service.loadGatewayData({ id: 'user-a' } as any, [device as any]);
+    expect(service.getDevice('device_a').config).toBe(sharedConfig);
     expect(service.getDevice('device_a').displayMetadata).toEqual(saved);
     expect(service.getDevice('device_a').config.customName).toBe('客厅灯');
     expect(loadDeviceCatalog(scope())?.[0].device.displayMetadata).toEqual(saved);
@@ -142,6 +152,88 @@ describe('DataService', () => {
       token: 'access-token',
     });
     expect(localStorage.getItem('auth')).toBeNull();
+  });
+
+  it('persists and restores a development Web session in the current tab', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(false);
+
+    await expect(service.setAuthData({
+      accessToken: 'web-access',
+      refreshToken: 'web-refresh',
+      tokenType: 'bearer',
+      uuid: 'web-user',
+    })).resolves.toBe(true);
+
+    expect(JSON.parse(sessionStorage.getItem(DEV_WEB_AUTH_STORAGE_KEY) ?? '')).toEqual({
+      accessToken: 'web-access',
+      refreshToken: 'web-refresh',
+      tokenType: 'bearer',
+      uuid: 'web-user',
+    });
+    expect(localStorage.getItem(DEV_WEB_AUTH_STORAGE_KEY)).toBeNull();
+
+    const restarted = new DataService();
+    await restarted.loadAuthData();
+
+    expect(restarted.auth).toEqual({
+      accessToken: 'web-access',
+      refreshToken: 'web-refresh',
+      tokenType: 'bearer',
+      uuid: 'web-user',
+      token: 'web-access',
+    });
+  });
+
+  it('removes malformed development Web sessions instead of restoring them', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(false);
+    sessionStorage.setItem(DEV_WEB_AUTH_STORAGE_KEY, '{not-json');
+
+    await service.loadAuthData();
+
+    expect(service.auth).toBeNull();
+    expect(sessionStorage.getItem(DEV_WEB_AUTH_STORAGE_KEY)).toBeNull();
+  });
+
+  it('clears the development Web session when local auth is removed', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(false);
+    await service.setAuthData({
+      accessToken: 'web-access',
+      refreshToken: 'web-refresh',
+      tokenType: 'bearer',
+    });
+
+    await service.removeAuthData();
+
+    expect(service.auth).toBeNull();
+    expect(sessionStorage.getItem(DEV_WEB_AUTH_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(AUTH_INVALIDATED_STORAGE_KEY)).toBe('1');
+  });
+
+  it('does not persist or restore the development Web session in production', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(false);
+    const previousProduction = environment.production;
+    environment.production = true;
+    sessionStorage.setItem(DEV_WEB_AUTH_STORAGE_KEY, JSON.stringify({
+      accessToken: 'stale-access',
+      refreshToken: 'stale-refresh',
+      tokenType: 'bearer',
+    }));
+
+    try {
+      await expect(service.setAuthData({
+        accessToken: 'production-access',
+        refreshToken: 'production-refresh',
+        tokenType: 'bearer',
+      })).resolves.toBe(true);
+
+      expect(sessionStorage.getItem(DEV_WEB_AUTH_STORAGE_KEY)).toBeNull();
+
+      const restarted = new DataService();
+      await restarted.loadAuthData();
+      expect(restarted.auth).toBeNull();
+    } finally {
+      environment.production = previousProduction;
+    }
   });
 
   it('restores a valid native token pair and never restores through a logout tombstone', async () => {

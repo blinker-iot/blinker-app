@@ -27,6 +27,7 @@ log.txt
 /build
 /dist
 /device-template/dist
+/public/custom-panel-runtime
 /tmp
 /out-tsc
 /bazel-out

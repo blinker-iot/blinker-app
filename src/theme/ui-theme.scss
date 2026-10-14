@@ -1,0 +1,252 @@
+// The only device UI theme source: page chrome (--blinker-*, Ionic) and widgets (--ui-*).
+// Values are those of docs/2026-10-10/设备组件库设计稿.html (natural, dark, electro).
+// Apply with [data-ui-theme]; nested attributes override their ancestors.
+// Electronic differences beyond colour (dotted outlines, dot fields) are explicit
+// overrides in each widget, as in the design.
+
+$_sans: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Noto Sans SC', 'Helvetica Neue', sans-serif;
+$_num: 'Outfit Variable', 'Helvetica Neue', Arial, sans-serif;
+$_mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+$_dots: 'Doto Variable', 'Geist Mono Variable', ui-monospace, monospace;
+
+@mixin ui-theme {
+  &[data-ui-theme] {
+    --ui-backdrop-blur: 28px;
+    --ui-header-blur: 16px;
+  }
+
+  &[data-ui-theme='natural'] {
+    color-scheme: light;
+
+    --ui-bg: #f2f3f5;
+    --ui-card: rgba(255, 255, 255, 0.9);
+    --ui-well: #f4f5f7;
+    --ui-track: #eceef1;
+    --ui-ink: #17191c;
+    --ui-muted: #868b93;
+    --ui-faint: #bdc1c7;
+    --ui-line: #e8eaee;
+    --ui-on-accent: #ffffff;
+    --ui-knob: #ffffff;
+    --ui-knob-shadow: 0 1px 3px rgba(23, 25, 28, 0.16);
+    --ui-card-border: 1px solid transparent;
+    --ui-shadow: 0 1px 2px rgba(23, 25, 28, 0.03), 0 8px 24px rgba(23, 25, 28, 0.04);
+    --ui-focus: #3482ff;
+    --ui-radius: 22px;
+    --ui-radius-sm: 14px;
+    --ui-font: #{$_sans};
+    --ui-font-num: #{$_num};
+    --ui-font-mono: #{$_mono};
+    --ui-num-weight: 300;
+    --ui-case: none;
+    --ui-tracking: 0;
+    --ui-heading-prefix: '';
+    --ui-icon-stroke: 1.8;
+    --ui-icon-dash: none;
+    --ui-backdrop: url('/img/ui-theme/natural.jpg') center / cover no-repeat;
+    --ui-veil: rgba(242, 243, 245, 0.62);
+
+    --ui-blue: #3482ff;
+    --ui-orange: #ff9a1f;
+    --ui-green: #22b573;
+    --ui-purple: #7f63f4;
+    --ui-teal: #10b3be;
+    --ui-red: #ff5146;
+    --ui-ok: #22b573;
+    --ui-alert: #ff5146;
+    --ui-off: #b4b8bf;
+    --ui-info: #3482ff;
+
+    --blinker-bg: #f2f3f5;
+    --blinker-bg-elevated: #f8f9fa;
+    --blinker-surface: #ffffff;
+    --blinker-surface-muted: #f4f5f7;
+    --blinker-surface-active: #e7f0ff;
+    --blinker-text-primary: #17191c;
+    --blinker-text-secondary: #5f646c;
+    --blinker-text-tertiary: #868b93;
+    --blinker-border: #e8eaee;
+    --blinker-divider: #eceef1;
+    --ion-color-primary: #3482ff;
+    --ion-color-primary-rgb: 52, 130, 255;
+    --ion-color-primary-contrast: #ffffff;
+    --blinker-shadow-soft: 0 8px 24px rgba(23, 25, 28, 0.04);
+    --blinker-radius-card: 22px;
+    --blinker-radius-control: 14px;
+  }
+
+  &[data-ui-theme='dark'] {
+    color-scheme: dark;
+
+    --ui-bg: #0c0d0f;
+    --ui-card: rgba(27, 28, 32, 0.86);
+    --ui-well: #26272c;
+    --ui-track: #2c2e34;
+    --ui-ink: #eef0f3;
+    --ui-muted: #8c9099;
+    --ui-faint: #50545b;
+    --ui-line: #2b2d32;
+    --ui-on-accent: #ffffff;
+    --ui-knob: #f4f5f7;
+    --ui-knob-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    --ui-card-border: 1px solid rgba(255, 255, 255, 0.035);
+    --ui-shadow: none;
+    --ui-focus: #4d93ff;
+    --ui-radius: 22px;
+    --ui-radius-sm: 14px;
+    --ui-font: #{$_sans};
+    --ui-font-num: #{$_num};
+    --ui-font-mono: #{$_mono};
+    --ui-num-weight: 300;
+    --ui-case: none;
+    --ui-tracking: 0;
+    --ui-heading-prefix: '';
+    --ui-icon-stroke: 1.8;
+    --ui-icon-dash: none;
+    --ui-backdrop: url('/img/ui-theme/dark.jpg') center / cover no-repeat;
+    --ui-backdrop-blur: 14px;
+    --ui-veil: rgba(12, 13, 15, 0.28);
+    --ui-header-blur: 8px;
+    --ui-header-tint: 40%;
+
+    --ui-blue: #4d93ff;
+    --ui-orange: #ffa53d;
+    --ui-green: #35c987;
+    --ui-purple: #937bff;
+    --ui-teal: #26c4ce;
+    --ui-red: #ff6459;
+    --ui-ok: #35c987;
+    --ui-alert: #ff6459;
+    --ui-off: #5e626a;
+    --ui-info: #4d93ff;
+
+    --blinker-bg: #0c0d0f;
+    --blinker-bg-elevated: #131417;
+    --blinker-surface: #1b1c20;
+    --blinker-surface-muted: #26272c;
+    --blinker-surface-active: #1c2b45;
+    --blinker-text-primary: #eef0f3;
+    --blinker-text-secondary: #b2b6bd;
+    --blinker-text-tertiary: #8c9099;
+    --blinker-border: #2b2d32;
+    --blinker-divider: #26272c;
+    --ion-color-primary: #4d93ff;
+    --ion-color-primary-rgb: 77, 147, 255;
+    --ion-color-primary-contrast: #ffffff;
+    --blinker-shadow-soft: none;
+    --blinker-radius-card: 22px;
+    --blinker-radius-control: 14px;
+  }
+
+  // One signal colour: every tone uses fluorescent green, as on an OLED instrument.
+  &[data-ui-theme='electronic'] {
+    color-scheme: dark;
+
+    --ui-bg: #070809;
+    --ui-card: #0f1113;
+    --ui-well: #15181b;
+    --ui-track: #2a2d31;
+    --ui-ink: #e8e8e6;
+    --ui-muted: #8b8e91;
+    --ui-faint: #45484c;
+    --ui-line: #24272b;
+    --ui-on-accent: #070809;
+    --ui-knob: #e8e8e6;
+    --ui-knob-shadow: none;
+    --ui-card-border: 1px solid #2a2d31;
+    --ui-shadow: none;
+    --ui-focus: #39ff14;
+    --ui-radius: 14px;
+    --ui-radius-sm: 8px;
+    --ui-font: #{$_mono};
+    --ui-font-num: #{$_dots};
+    --ui-font-mono: #{$_mono};
+    --ui-num-weight: 800;
+    --ui-case: uppercase;
+    --ui-tracking: 0.06em;
+    --ui-heading-prefix: '## ';
+    --ui-icon-stroke: 2.1;
+    --ui-icon-dash: 0.01 3.1;
+    --ui-backdrop: radial-gradient(circle, rgba(255, 255, 255, 0.045) 1px, transparent 1.3px) 0 0 / 16px 16px;
+    --ui-veil: transparent;
+
+    --ui-blue: #39ff14;
+    --ui-orange: #39ff14;
+    --ui-green: #39ff14;
+    --ui-purple: #39ff14;
+    --ui-teal: #39ff14;
+    --ui-red: #39ff14;
+    --ui-ok: #e8e8e6;
+    --ui-alert: #ff3b30;
+    --ui-off: #45484c;
+    --ui-info: #e8e8e6;
+
+    --blinker-bg: #070809;
+    --blinker-bg-elevated: #0b0c0e;
+    --blinker-surface: #0f1113;
+    --blinker-surface-muted: #15181b;
+    --blinker-surface-active: #11200f;
+    --blinker-text-primary: #e8e8e6;
+    --blinker-text-secondary: #a3a6a9;
+    --blinker-text-tertiary: #8b8e91;
+    --blinker-border: #2a2d31;
+    --blinker-divider: #24272b;
+    --ion-color-primary: #39ff14;
+    --ion-color-primary-rgb: 57, 255, 20;
+    --ion-color-primary-contrast: #070809;
+    --blinker-shadow-soft: none;
+    --blinker-radius-card: 14px;
+    --blinker-radius-control: 8px;
+  }
+
+  &[data-ui-theme] {
+    --ui-accent: var(--ui-blue);
+    --transparent-page-mask-color: var(--blinker-bg);
+    --ion-background-color: var(--blinker-bg);
+    --ion-text-color: var(--blinker-text-primary);
+    --ion-toolbar-color: var(--blinker-text-primary);
+    --ion-toolbar-background: transparent;
+    --ion-card-background: var(--blinker-surface);
+    --ion-card-color: var(--blinker-text-primary);
+    --ion-item-background: var(--blinker-surface);
+    --ion-border-color: var(--blinker-border);
+  }
+}
+
+// Electronic-only rules in a component: `.x { @include electronic { … } }`, or
+// `@include electronic-host('.on') { … }` for the host in a state. Host states
+// must follow :host-context directly; `:host(.on)` there loses the ancestor match.
+@mixin electronic {
+  :host-context([data-ui-theme='electronic']) & { @content; }
+}
+
+@mixin electronic-host($state: '') {
+  :host-context([data-ui-theme='electronic'])#{$state} { @content; }
+}
+
+// Atmosphere behind a themed page: the theme's picture, blurred, under a veil.
+// Hosts are Ionic pages, which are already positioned (absolute, full size);
+// changing their position collapses the page, so this mixin never sets it.
+@mixin ui-backdrop($position: fixed) {
+  isolation: isolate;
+
+  background: var(--ui-bg);
+  &::before,
+  &::after {
+    content: '';
+    position: $position;
+    inset: 0;
+
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  &::before {
+    inset: -48px;
+
+    background: var(--ui-backdrop);
+    filter: blur(var(--ui-backdrop-blur)) saturate(1.1);
+  }
+
+  &::after { background: var(--ui-veil); }
+}

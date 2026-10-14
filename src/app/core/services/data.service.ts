@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { BehaviorSubject, Subject } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { API } from '../../configs/api.config';
 import { deviceV2AccountCacheScope } from '../device-v2/account-scope';
 import { DeviceDisplayMetadata, parseDeviceDisplayMetadata } from '../device-v2/display-metadata';
@@ -18,6 +19,7 @@ import {
 
 const AUTH_STORAGE_KEY = 'session';
 export const AUTH_INVALIDATED_STORAGE_KEY = 'blinker-auth-invalidated';
+export const DEV_WEB_AUTH_STORAGE_KEY = 'blinker-dev-web-session';
 const INSTALLATION_ID_KEY = 'blinker-installation-id';
 const FEEDBACK_DRAFT_STORAGE_KEY = 'blinker_feedback_draft';
 
@@ -155,7 +157,12 @@ export class DataService {
   }
 
   async loadAuthData(): Promise<void> {
-    if (!Capacitor.isNativePlatform()) return;
+    const isNative = Capacitor.isNativePlatform();
+    const isDevWeb = this.isDevWebSessionEnabled();
+    if (!isNative && !isDevWeb) {
+      this.clearDevWebAuthData();
+      return;
+    }
     const epoch = this._sessionEpoch;
     if (this.authIsInvalidated()) {
       const cleanupError = await this.clearPersistedAuthData();
@@ -167,25 +174,17 @@ export class DataService {
       this.authStorageCleanupError.next(cleanupError);
       return;
     }
+    if (isDevWeb) {
+      this.loadDevWebAuthData();
+      return;
+    }
     try {
       await this.configureSecureStorage();
       if (this._sessionEpoch !== epoch) return;
       const saved = await SecureStorage.get(AUTH_STORAGE_KEY);
       if (this._sessionEpoch !== epoch) return;
       if (this.isValidAuth(saved)) {
-        this._sessionEpoch += 1;
-        this._auth = {
-          accessToken: saved.accessToken,
-          refreshToken: saved.refreshToken,
-          tokenType: saved.tokenType,
-          ...(this.nonEmptyString(saved.uuid) ? { uuid: saved.uuid } : {}),
-          token: this.nonEmptyString(saved.token)
-            ? saved.token
-            : saved.accessToken,
-        };
-        this.authDataLoader.next(true);
-        this.authDataChanged.next();
-        this.restoreDeviceCatalog();
+        this.restoreAuthData(saved);
       } else if (saved !== null) {
         await SecureStorage.remove(AUTH_STORAGE_KEY);
         if (this._sessionEpoch !== epoch) await this.persistCurrentAuth();
@@ -349,15 +348,16 @@ export class DataService {
         displayMetadata = previousDisplay;
       }
       const customName = displayMetadata?.name || gatewayDevice.name || id;
-      const config = {
-        ...previousConfig,
+      // Active views and pending UI-config requests share this object. Copying
+      // it during inventory refresh would fork the device's current panel mode.
+      const config = Object.assign(previousConfig, {
         customName,
         image: this.nonEmptyString(previousConfig['image']) || 'diyarduino.png',
         broker: 'blinker',
         mode: 'bbp2',
         disabled: item.state !== 'active',
         isShared: item.shared,
-      } as BlinkerDevice['config'];
+      }) as BlinkerDevice['config'];
 
       deviceDict[id] = {
         ...gatewayDevice,
@@ -485,7 +485,11 @@ export class DataService {
 
   private async persistAuthData(auth: AuthData): Promise<void> {
     this.removeLegacyAuthData();
-    if (!Capacitor.isNativePlatform()) return;
+    if (!Capacitor.isNativePlatform()) {
+      if (this.isDevWebSessionEnabled()) this.persistDevWebAuthData(auth);
+      else this.clearDevWebAuthData();
+      return;
+    }
     await this.configureSecureStorage();
     await SecureStorage.set(
       AUTH_STORAGE_KEY,
@@ -494,7 +498,14 @@ export class DataService {
   }
 
   private async persistCurrentAuth(): Promise<void> {
-    if (!Capacitor.isNativePlatform()) return;
+    if (!Capacitor.isNativePlatform()) {
+      if (this.isDevWebSessionEnabled() && this._auth) {
+        this.persistDevWebAuthData(this._auth);
+      } else {
+        this.clearDevWebAuthData();
+      }
+      return;
+    }
     const current = this._auth;
     if (current) {
       await this.persistAuthData(current);
@@ -505,7 +516,7 @@ export class DataService {
   }
 
   private async clearPersistedAuthData(): Promise<unknown | null> {
-    if (!Capacitor.isNativePlatform()) return null;
+    if (!Capacitor.isNativePlatform()) return this.clearDevWebAuthData();
     try {
       await this.configureSecureStorage();
     } catch (error) {
@@ -569,6 +580,67 @@ export class DataService {
     }
   }
 
+  private isDevWebSessionEnabled(): boolean {
+    return !environment.production && !Capacitor.isNativePlatform();
+  }
+
+  private loadDevWebAuthData(): void {
+    const storage = this.getSessionStorage();
+    if (!storage) return;
+    try {
+      const raw = storage.getItem(DEV_WEB_AUTH_STORAGE_KEY);
+      if (!raw) return;
+      const saved: unknown = JSON.parse(raw);
+      if (!this.isValidAuth(saved)) {
+        storage.removeItem(DEV_WEB_AUTH_STORAGE_KEY);
+        return;
+      }
+      this.restoreAuthData(saved);
+    } catch {
+      try {
+        storage.removeItem(DEV_WEB_AUTH_STORAGE_KEY);
+      } catch {
+        // The app remains signed out when session storage is unavailable.
+      }
+    }
+  }
+
+  private persistDevWebAuthData(auth: AuthData): void {
+    const storage = this.getSessionStorage();
+    if (!storage) throw new Error('Session storage is unavailable.');
+    storage.setItem(DEV_WEB_AUTH_STORAGE_KEY, JSON.stringify({
+      accessToken: auth.accessToken,
+      refreshToken: auth.refreshToken,
+      tokenType: auth.tokenType,
+      ...(this.nonEmptyString(auth.uuid) ? { uuid: auth.uuid } : {}),
+    }));
+  }
+
+  private clearDevWebAuthData(): unknown | null {
+    try {
+      this.getSessionStorage()?.removeItem(DEV_WEB_AUTH_STORAGE_KEY);
+      return null;
+    } catch (error) {
+      return error;
+    }
+  }
+
+  private restoreAuthData(saved: AuthData): void {
+    this._sessionEpoch += 1;
+    this._auth = {
+      accessToken: saved.accessToken,
+      refreshToken: saved.refreshToken,
+      tokenType: saved.tokenType,
+      ...(this.nonEmptyString(saved.uuid) ? { uuid: saved.uuid } : {}),
+      token: this.nonEmptyString(saved.token)
+        ? saved.token
+        : saved.accessToken,
+    };
+    this.authDataLoader.next(true);
+    this.authDataChanged.next();
+    this.restoreDeviceCatalog();
+  }
+
   private isValidAuth(value: unknown): value is AuthData {
     if (!this.isRecord(value)) return false;
     return this.nonEmptyString(value['accessToken']) !== '' &&
@@ -600,6 +672,14 @@ export class DataService {
   private getLocalStorage(): Storage | null {
     try {
       return typeof localStorage === 'undefined' ? null : localStorage;
+    } catch {
+      return null;
+    }
+  }
+
+  private getSessionStorage(): Storage | null {
+    try {
+      return typeof sessionStorage === 'undefined' ? null : sessionStorage;
     } catch {
       return null;
     }

@@ -25,7 +25,7 @@ const layout = {
     widgetId: 'power',
     type: 'switch' as const,
     endpointKey: 'power',
-    grid: { x: 0, y: 0, width: 8, height: 1 },
+    grid: { x: 0, y: 0, width: 2, height: 2 },
   }],
 };
 

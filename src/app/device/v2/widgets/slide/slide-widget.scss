@@ -1,0 +1,96 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+
+:host { justify-content: space-between; }
+
+// A knob dragged along a pill. The accent builds up behind it as it travels
+// (--slide 0…1): plain at rest, solid when on. The knob sits in the padding,
+// so the ring around it is --gap on every side.
+.slide {
+  --gap: 4px;
+  --knob: 40px;
+  --ease: 0.32s cubic-bezier(0.3, 0.7, 0.4, 1);
+  // Width of the accent behind the knob, shared by the fill and the lit hint.
+  --fill-w: calc(var(--knob) + 2 * var(--gap) + (100% - var(--knob) - 2 * var(--gap)) * var(--slide));
+  position: relative;
+  isolation: isolate;
+  padding: var(--gap);
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ui-track);
+
+  @include theme.electronic { border: 1.5px dotted var(--ui-muted); background: none; }
+}
+
+.slide-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: var(--fill-w);
+  border-radius: inherit;
+  background: var(--ui-accent);
+  opacity: var(--slide);
+  transition: width var(--ease), opacity var(--ease);
+
+  @include theme.electronic {
+    background: radial-gradient(circle, var(--ui-accent) 1.8px, transparent 2.3px) left center / 6px 6px;
+  }
+}
+
+// The hint sits in the free part of the track and fades out mid-travel.
+.slide-hint {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  display: grid;
+  place-items: center;
+  padding-left: calc(var(--knob) + var(--gap));
+  color: var(--ui-muted);
+  font-size: 12px;
+  letter-spacing: var(--ui-tracking);
+  text-transform: var(--ui-case);
+  opacity: max(1 - 2 * var(--slide), 2 * var(--slide) - 1);
+  pointer-events: none;
+  transition: opacity var(--ease);
+}
+
+.slide.on .slide-hint { padding: 0 calc(var(--knob) + var(--gap)) 0 0; }
+
+// A second copy of the hint in the on-accent colour, cut to the fill, so each
+// glyph changes colour exactly where the accent passes under it.
+.slide-hint.lit {
+  color: var(--ui-on-accent);
+  clip-path: inset(0 calc(100% - var(--fill-w)) 0 0);
+  transition: opacity var(--ease), clip-path var(--ease);
+
+  @include theme.electronic { color: var(--ui-ink); }
+}
+
+.slide-knob {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--knob);
+  height: var(--knob);
+  margin-left: calc((100% - var(--knob)) * var(--slide));
+  padding: 11px;
+  border-radius: 50%;
+  background: var(--ui-knob);
+  box-shadow: var(--ui-knob-shadow);
+  color: var(--ui-accent);
+  cursor: grab;
+  touch-action: none;
+  transition: margin-left var(--ease);
+
+  &:active { cursor: grabbing; }
+
+  app-ui-icon { transition: transform var(--ease); }
+  .flip { transform: rotate(180deg); }
+
+  @include theme.electronic { background: var(--ui-ink); color: var(--ui-bg); }
+}
+
+// Follow the pointer exactly while dragging; ease only on release.
+.slide.dragging :is(.slide-fill, .slide-hint, .slide-knob) { transition: none; }

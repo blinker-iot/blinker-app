@@ -756,6 +756,13 @@ export class DeviceService {
 
   //saveDeviceConfig后需要调用loadConifg更新本地的config
   saveDeviceConfig(device, deviceConfig) {
+    if (device.config.mode === 'bbp2'
+      && Object.keys(deviceConfig).length > 0
+      && Object.keys(deviceConfig).every(key => ['component', 'panelMode', 'customPanel', 'layouter', 'customName', 'hiddenEndpointKeys', 'image'].includes(key))) {
+      return this.http.patch<{ status: number }>(API.DEVICE_V2.UI_CONFIG(device.deviceName), deviceConfig)
+        .toPromise().then(response => response?.status === 200).catch(() => false);
+    }
+    if (device.config.mode === 'bbp2') return Promise.resolve(false);
     return this.http
       .post(API.DEVICE.SAVE_CONFIG,
         {
@@ -778,6 +785,10 @@ export class DeviceService {
   }
 
   loadDeviceConfig(device) {
+    if (device.config.mode === 'bbp2') {
+      return this.http.get<{ data: Record<string, unknown> }>(API.DEVICE_V2.UI_CONFIG(device.deviceName))
+        .toPromise().then(response => response?.data).catch(() => undefined);
+    }
     return this.http.get(API.DEVICE.LOAD_CONFIG, {
       params: {
         uuid: this.uuid,

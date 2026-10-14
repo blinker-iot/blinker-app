@@ -1,22 +1,17 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AlertController } from '@ionic/angular';
-
+import { NavController } from '@ionic/angular';
 import { BDeviceImgComponent } from '../../core/components/b-device-img/b-device-img.component';
-import { HeroCardComponent } from '../../core/components/hero-card/hero-card.component';
 import { BlinkerDevice } from '../../core/model/device.model';
 import { DeviceService } from '../../core/services/device.service';
-import { NoticeService } from '../../core/services/notice.service';
-
-type DeviceInterfaceComponent = 'Customizer' | 'Layouter2Component';
+import { Subscription } from 'rxjs';
+import { DeviceUiConnection, DeviceUiConnectionState, DeviceUiEndpoint, DeviceUiPort, DeviceUiSnapshot, DeviceUiTransport, DeviceUiValue } from '../../core/device-v2/device-ui.port';
 
 interface DeviceInterfaceAction {
   id: 'ai' | 'layouter';
   title: string;
   description: string;
   icon: string;
-  componentName: DeviceInterfaceComponent;
-  confirmName: string;
 }
 
 interface DeviceMetric {
@@ -48,83 +43,170 @@ const METRIC_METADATA: Record<string, { label: string; unit: string }> = {
 @Component({
   selector: 'app-test-device-dashboard',
   standalone: true,
-  imports: [CommonModule, BDeviceImgComponent, HeroCardComponent],
+  imports: [CommonModule, BDeviceImgComponent],
   templateUrl: './test-device-dashboard.component.html',
   styleUrls: ['./test-device-dashboard.component.scss'],
   changeDetection: ChangeDetectionStrategy.Eager,
 })
-export class TestDeviceDashboardComponent {
+
+export class TestDeviceDashboardComponent implements OnInit, OnChanges, OnDestroy {
   @Input({ required: true }) device!: BlinkerDevice;
 
   readonly interfaceActions: readonly DeviceInterfaceAction[] = [
     {
       id: 'ai',
-      title: '使用AI生成界面',
-      description: '进入 AI 生成的设备控制界面',
+      title: 'AI 生成',
+      description: '用 AI 生成和调整面板',
       icon: 'fa-wand-magic-sparkles',
-      componentName: 'Customizer',
-      confirmName: 'AI生成界面',
     },
     {
       id: 'layouter',
-      title: '使用拖拽编辑器界面',
-      description: '切换到经典拖拽编辑器',
+      title: '手动编辑',
+      description: '添加部件，调整布局与属性',
       icon: 'fa-grid-4',
-      componentName: 'Layouter2Component',
-      confirmName: '拖拽编辑器界面',
     },
   ];
 
   refreshedAt = new Date();
-  switchingComponent: DeviceInterfaceComponent | null = null;
+  error = '';
+  snapshot?: DeviceUiSnapshot;
 
-  constructor(
-    public readonly deviceService: DeviceService,
-    private readonly alertController: AlertController,
-    private readonly noticeService: NoticeService,
-  ) {}
+  pending = new Set<string>();
+  private initialized = false;
+  private visible = true;
+  private appActive = false;
+  private accountState: DeviceUiConnectionState = 'idle';
+  private transport: DeviceUiTransport = 'cloud';
+  private connection?: DeviceUiConnection;
+  private connecting?: DeviceUiConnection;
+  private subscriptions = new Subscription();
+  private deviceSubscriptions = new Subscription();
+  private legacySwitchTimer?: ReturnType<typeof setTimeout>;
 
-  get isPreview(): boolean {
-    return !!this.device?.config?.isPreview;
+  @Input() get viewActive(): boolean { return this.visible; }
+
+  set viewActive(value: boolean) {
+    this.visible = value;
+
+    if (this.initialized) this.updateConnection();
+  }
+
+  constructor(public readonly deviceService: DeviceService, private readonly nav: NavController,
+    private readonly deviceUi: DeviceUiPort, private readonly cd: ChangeDetectorRef) {}
+
+  get isPreview(): boolean { return !!this.device?.config?.isPreview; }
+  get usesV2Data(): boolean { return this.device?.config.mode === 'bbp2' && !this.isPreview; }
+
+  ngOnInit(): void {
+    this.initialized = true;
+
+    this.bindDevice();
+
+    this.subscriptions.add(this.deviceUi.appActive.subscribe(active => {
+      this.appActive = active;
+
+      this.updateConnection();
+    }));
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (this.initialized && changes['device']) this.bindDevice();
+  }
+
+  ngOnDestroy(): void {
+    this.initialized = false;
+
+    this.closeConnection();
+    this.subscriptions.unsubscribe();
+    this.deviceSubscriptions.unsubscribe();
+    clearTimeout(this.legacySwitchTimer);
   }
 
   get isOnline(): boolean {
-    if (!this.device) return false;
-    if (this.device.config.mode === 'ble') {
-      return this.deviceService.islocalDevice(this.device);
+    if (this.usesV2Data) {
+      return this.accountState === 'ready' && !!this.snapshot?.stateFresh;
     }
-    return !!this.device.data?.enable;
+
+    if (this.device?.config.mode === 'ble') return this.device.data?.state === 'connected';
+
+    return !!this.device?.data?.enable;
+  }
+
+  get canControl(): boolean {
+    if (!this.usesV2Data) return this.isOnline;
+
+    return this.visible && this.appActive && this.accountState === 'ready'
+      && !!this.snapshot?.manifestAccepted && this.snapshot.stateFresh
+      && this.connection?.signal.aborted === false;
+  }
+
+  get stateLabel(): string {
+    if (!this.usesV2Data) return this.isOnline ? '在线' : '离线';
+
+    if (this.isOnline) {
+      if (!this.canControl) return '在线 · 同步中';
+
+      return this.transport === 'ble' ? '蓝牙已连接' : this.transport === 'lan' ? '局域网已连接' : '在线';
+    }
+
+    if (this.connecting || this.accountState === 'connecting') return '正在连接';
+    if (this.accountState === 'retrying') return '正在重连';
+    if (this.transport === 'cloud' && this.device.data?.cloudReachable !== false) return '状态待同步';
+
+    return '离线';
   }
 
   get statusText(): string {
-    if (this.isPreview) return this.isOnline ? '测试数据 · 在线' : '测试数据 · 离线';
-    if (this.device?.config.mode === 'ble' && this.isOnline) return '附近可连接';
-    return this.isOnline ? '在线' : '离线';
+    return this.isPreview ? this.isOnline ? '测试数据 · 在线' : '测试数据 · 离线' : this.stateLabel;
+  }
+
+  private isSwitchField(field: DeviceUiEndpoint): boolean {
+    return field.role === 'property' && field.writable && field.valueType === 'boolean';
+  }
+
+  get switchField(): DeviceUiEndpoint | undefined {
+    const candidates = this.snapshot?.endpoints.filter(field => this.isSwitchField(field)) ?? [];
+    const configured = candidates.filter(field => this.device.config.card?.actions?.some(action => action.key === field.key));
+
+    return configured.length === 1 ? configured[0] : candidates.length === 1 ? candidates[0] : undefined;
   }
 
   get hasSwitch(): boolean {
-    return typeof this.device?.data?.switch !== 'undefined';
+    return this.usesV2Data ? !!this.switchField : this.device?.data?.switch !== undefined;
+  }
+
+  get switchKnown(): boolean {
+    return this.usesV2Data ? typeof this.switchField?.value === 'boolean'
+      : [true, false, 'on', 'off'].includes(this.device?.data?.switch);
   }
 
   get switchOn(): boolean {
-    return this.device?.data?.switch === 'on';
+    return this.usesV2Data ? this.switchField?.value === true : this.device?.data?.switch === 'on' || this.device?.data?.switch === true;
   }
 
   get switchWaiting(): boolean {
-    return this.device?.data?.switch === 'waiting';
+    return this.usesV2Data ? this.pending.has(this.switchField?.key || '') : this.device?.data?.switch === 'waiting';
   }
 
   get metrics(): DeviceMetric[] {
     if (!this.device) return [];
 
+    if (this.usesV2Data) return (this.snapshot?.endpoints ?? []).map(field => ({
+      key: field.key,
+      label: this.device.config.card?.metrics?.find(metric => metric.key === field.key)?.label || field.key,
+      value: this.formatValue(field.value), unit: field.unit || '',
+    }));
+
     const configured = this.device.config.card?.metrics || [];
     const configuredByKey = new Map(configured.map((item) => [item.key, item]));
+
     const orderedKeys = [
       ...configured.map((item) => item.key),
       ...Object.keys(this.device.data || {}).filter(
         (key) => !configuredByKey.has(key),
       ),
     ];
+
     const ignoredKeys = new Set([
       'enable',
       'state',
@@ -140,6 +222,7 @@ export class TestDeviceDashboardComponent {
       .filter((key) => !ignoredKeys.has(key))
       .map((key) => {
         const value = this.device.data?.[key];
+
         if (
           (typeof value !== 'number' || !Number.isFinite(value)) &&
           typeof value !== 'string'
@@ -149,6 +232,7 @@ export class TestDeviceDashboardComponent {
 
         const config = configuredByKey.get(key);
         const metadata = METRIC_METADATA[key];
+
         return {
           key,
           label: config?.label || metadata?.label || key,
@@ -164,77 +248,172 @@ export class TestDeviceDashboardComponent {
 
   refresh(): void {
     this.refreshedAt = new Date();
-    if (!this.isPreview) this.deviceService.queryDevice(this.device);
+
+    if (this.usesV2Data) void this.synchronize();
+    else if (!this.isPreview) this.deviceService.queryDevice(this.device);
   }
 
   async selectInterface(action: DeviceInterfaceAction): Promise<void> {
-    if (this.switchingComponent) return;
+    if (this.device.config.isShared) return;
 
-    const alert = await this.alertController.create({
-      header: `确定切换到${action.confirmName}？`,
-      message: '确认后将修改当前设备使用的界面组件。',
-      buttons: [
-        { text: '取消', role: 'cancel' },
-        {
-          text: '确定',
-          handler: () => this.applyInterface(action),
-        },
-      ],
-    });
-    await alert.present();
+    const id = encodeURIComponent(this.device.id || this.device.deviceName);
+
+    await this.nav.navigateForward(action.id === 'ai' ? `/device-manager/${id}/uic` : `/device/${id}/edit`);
   }
 
   toggleSwitch(): void {
-    if (!this.hasSwitch || !this.isOnline || this.switchWaiting) return;
+    if (!this.hasSwitch || !this.canControl || !this.switchKnown || this.switchWaiting) return;
+
+    if (this.usesV2Data && this.switchField) {
+      void this.toggleField(this.switchField);
+
+      return;
+    }
 
     const nextState = this.switchOn ? 'off' : 'on';
+
     if (this.isPreview) {
       this.device.data.switch = nextState;
+
       this.device.subject.next({ key: 'switch', value: nextState });
+
       this.refreshedAt = new Date();
+
       return;
     }
 
     const previousState = this.device.data.switch;
+
     this.device.data.switch = 'waiting';
-    this.deviceService.pubMessage(
+
+    this.deviceService.sendData(
       this.device,
       JSON.stringify({ switch: nextState }),
     );
-    window.setTimeout(() => {
+
+    this.legacySwitchTimer = setTimeout(() => {
       if (this.device.data?.switch === 'waiting') {
         this.device.data.switch = previousState;
       }
     }, 3000);
   }
 
-  private async applyInterface(action: DeviceInterfaceAction): Promise<void> {
-    if (!this.device || this.switchingComponent) return;
+  async toggleField(field: DeviceUiEndpoint): Promise<void> {
+    if (!this.canControl || !this.isSwitchField(field) || typeof field.value !== 'boolean' || this.pending.has(field.key)) return;
 
-    this.switchingComponent = action.componentName;
+    this.pending.add(field.key);
+
+    this.error = '';
+
+    try { await this.deviceUi.sendCommand(this.device.deviceName, field.key, !field.value); }
+
+    catch { this.error = '开关操作失败，请确认设备连接后重试。'; }
+    finally { this.pending.delete(field.key); this.cd.markForCheck(); }
+  }
+
+  private bindDevice(): void {
+    this.closeConnection();
+    this.deviceSubscriptions.unsubscribe();
+
+    this.deviceSubscriptions = new Subscription();
+    this.snapshot = undefined;
+    this.accountState = 'idle';
+
+    this.pending.clear();
+
+    this.error = '';
+
+    this.deviceSubscriptions.add(this.device.subject.subscribe(() => this.cd.markForCheck()));
+
+    if (!this.usesV2Data) return;
+
+    const id = this.device.deviceName;
+
+    this.deviceSubscriptions.add(this.deviceUi.watchState(id).subscribe({
+      next: snapshot => {
+        this.snapshot = snapshot;
+        this.refreshedAt = new Date();
+
+        this.cd.markForCheck();
+      },
+      error: () => { this.error = '设备状态读取失败，请重试。'; this.cd.markForCheck(); },
+    }));
+
+    this.deviceSubscriptions.add(this.deviceUi.watchConnectivity(id).subscribe(connectivity => {
+      this.transport = connectivity.activeTransport;
+
+      this.cd.markForCheck();
+    }));
+
+    this.deviceSubscriptions.add(this.deviceUi.watchConnection(id).subscribe(state => {
+      this.accountState = state;
+
+      if (state === 'ready' && !this.connection) this.updateConnection();
+
+      this.cd.markForCheck();
+    }));
+
+    this.updateConnection();
+  }
+
+  private updateConnection(): void {
+    if (!this.visible || !this.appActive) this.closeConnection();
+    else if (this.usesV2Data && !this.connection && !this.connecting) void this.synchronize();
+  }
+
+  private async synchronize(): Promise<void> {
+    if (!this.initialized || !this.visible || !this.appActive || this.connecting || !this.usesV2Data) return;
+
+    const device = this.device;
+    const next = this.deviceUi.openConnection(device.deviceName);
+
+    this.connecting = next;
+    this.error = '';
+
+    void next.closed.then(() => {
+      if (this.connection !== next) return;
+
+      this.connection = undefined;
+
+      this.cd.markForCheck();
+    });
+
     try {
-      const saved = this.isPreview
-        ? true
-        : await this.deviceService.saveDeviceConfig(this.device, {
-            component: action.componentName,
-          });
+      await next.ready;
 
-      if (!saved) {
-        await this.noticeService.showToast('界面配置保存失败，请稍后重试');
-        return;
-      }
+      if (this.connecting !== next || next.signal.aborted || !this.visible || !this.appActive || this.device !== device) return;
 
-      this.device.config.component = action.componentName;
-      await this.noticeService.showToast('界面配置已更新');
-      this.device.subject.next({
-        key: 'component',
-        value: action.componentName,
-        source: 'test-dashboard',
-      });
+      const previous = this.connection;
+
+      this.connection = next;
+
+      previous?.close();
     } catch {
-      await this.noticeService.showToast('界面配置保存失败，请稍后重试');
+      if (this.connecting === next && this.visible && this.appActive && !this.connection) {
+        this.error = '设备同步失败，请检查连接后刷新。';
+      }
     } finally {
-      this.switchingComponent = null;
+      if (this.connecting === next) this.connecting = undefined;
+
+      this.cd.markForCheck();
     }
+  }
+
+  private closeConnection(): void {
+    const pending = this.connecting;
+    const current = this.connection;
+
+    this.connecting = undefined;
+    this.connection = undefined;
+
+    pending?.close();
+    current?.close();
+  }
+
+  private formatValue(value: DeviceUiValue | undefined): string {
+    if (value === undefined || value === null) return '—';
+    if (value instanceof Uint8Array) return [...value].map(byte => byte.toString(16).padStart(2, '0')).join(' ');
+
+    return String(value);
   }
 }

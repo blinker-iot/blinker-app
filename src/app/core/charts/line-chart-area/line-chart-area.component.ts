@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import {
   createChart,
+  ColorType,
   AreaSeries,
   AreaSeriesPartialOptions,
   IChartApi,
@@ -31,12 +32,21 @@ export class LineChartAreaComponent {
   @ViewChild('chart') chartContainer: ElementRef;
   private chart: IChartApi;
   private areaSeries: ISeriesApi<'Area'>;
+  private themeObserver?: MutationObserver;
 
   ngAfterViewInit(): void {
     this.darwChart();
+    this.themeObserver = new MutationObserver(() => this.applyChartTheme());
+    // Theme changes may come from the app, a device preference, or a saved panel.
+    let ancestor: Element | null = this.chartContainer.nativeElement;
+    while (ancestor) {
+      this.themeObserver.observe(ancestor, { attributes: true, attributeFilter: ['class', 'data-ui-theme'] });
+      ancestor = ancestor.parentElement;
+    }
   }
 
   ngOnDestroy(): void {
+    this.themeObserver?.disconnect();
     if (this.chart) {
       this.chart.remove();
     }
@@ -56,7 +66,7 @@ export class LineChartAreaComponent {
       height: this.chartContainer.nativeElement.offsetHeight,
       autoSize: true,
       layout: {
-        textColor: 'rgba(0, 0, 0, 0.45)',
+        background: { type: ColorType.Solid, color: 'transparent' },
         fontSize: 10,
       },
       grid: {
@@ -78,7 +88,22 @@ export class LineChartAreaComponent {
     });
     const areaSeriesOptions: AreaSeriesPartialOptions = {};
     this.areaSeries = this.chart.addSeries(AreaSeries, areaSeriesOptions);
+    this.applyChartTheme();
     this.updateData();
+  }
+
+  private applyChartTheme(): void {
+    if (!this.chart) return;
+    const style = getComputedStyle(this.chartContainer.nativeElement);
+    const text = style.getPropertyValue('--blinker-text-secondary').trim() || '#526780';
+    const line = style.getPropertyValue('--blinker-divider').trim() || '#e4ebf4';
+    const border = style.getPropertyValue('--blinker-border').trim() || '#d8e2ef';
+    this.chart.applyOptions({
+      layout: { textColor: text },
+      grid: { vertLines: { color: line }, horzLines: { color: line } },
+      timeScale: { borderColor: border },
+      rightPriceScale: { borderColor: border },
+    });
   }
 
   updateData() {
@@ -94,7 +119,7 @@ export class LineChartAreaComponent {
     this.areaSeries.applyOptions({
       lineColor: color,
       topColor: color2Rgba(color, 0.6),
-      bottomColor: '#fff',
+      bottomColor: color2Rgba(color, 0),
       lineWidth: 2,
     });
     this.areaSeries.setData(dataList);

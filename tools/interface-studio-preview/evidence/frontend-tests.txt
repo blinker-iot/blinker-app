@@ -1,0 +1,19 @@
+Using Vitest configuration file: /Users/downey/Projects/ZCK/blinker-app/vitest.config.ts
+❯ Building...
+✔ Building...
+Application bundle generation complete. [3.116 seconds] - 2026-09-29T04:41:44.986Z
+
+
+ RUN  v4.1.10 /Users/downey/Projects/ZCK/blinker-app
+
+ ✓ |app| src/app/core/device-v2/page-layout.spec.ts (4 tests) 4ms
+ ✓ |app| src/app/sections/device/device-uic/interface-draft.spec.ts (8 tests) 6ms
+ ✓ |app| src/app/sections/device/device-uic/interface-generation.service.spec.ts (6 tests) 6ms
+ ✓ |app| src/app/core/injectable/server.interceptor.spec.ts (29 tests) 58ms
+ ✓ |app| src/app/sections/device/device-uic/device-uic.page.spec.ts (18 tests) 784ms
+
+ Test Files  5 passed (5)
+      Tests  65 passed (65)
+   Start at  12:41:45
+   Duration  2.16s (transform 1.70s, setup 992ms, import 2.13s, tests 858ms, environment 3.14s)
+

@@ -1,0 +1,48 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+@use '../dial/arc';
+
+@include c.base;
+@include c.readout;
+@include arc.strokes;
+
+// The indicator closes the head, opposite the title, at the size of the
+// head icon so it reads as part of the head rather than a second visual.
+.rg-ind {
+  --thick: 4;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  overflow: visible;
+
+  // The half ring's viewBox hugs its ink, so the arch is centred on the
+  // title and its weight sits just above the middle.
+  &.half { width: 25px; height: 14px; }
+}
+
+// Segments: a row of blocks under the value.
+.rg-seg {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+
+  i {
+    flex: 1;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--ui-track);
+    transition: background-color 0.3s;
+
+    &.on { background: var(--ui-accent); }
+
+    @include theme.electronic {
+      border: 1px dotted var(--ui-faint);
+      background: none;
+
+      &.on { border-color: transparent; background: var(--ui-accent); }
+    }
+  }
+}
+
+:host(.alert) .rg-seg i.on { background: var(--ui-alert); }

@@ -1,0 +1,30 @@
+
+> aily-iot-gateway@1.0.1 test:interface-studio
+> node --test test-interface-studio.js test-interface-stream.js
+
+✔ streams validated partial widgets before the model finishes, including UTF-8 and escaped titles (15.352875ms)
+✔ rejects interrupted streams after partial preview and never sends complete (0.483ms)
+✔ rejects model-invented widgets and duplicate ids before streaming them (0.513583ms)
+✔ keeps compatibility with providers returning a non-streaming JSON response (0.633625ms)
+✔ propagates cancellation upstream and releases per-account concurrency (0.954125ms)
+✔ bounds upstream output and rejects token-truncated completions (361.009416ms)
+✔ AI requires authentication before model access (0.545208ms)
+✔ AI reports unconfigured service honestly without generating a fake layout (0.175667ms)
+✔ AI sends only bounded component descriptors and validates the model response (10.801792ms)
+✔ AI rejects unbounded requests and model-invented widgets (0.111958ms)
+✔ AI rejects malformed upstream results and upstream redirects (0.283666ms)
+✔ AI limits repeated requests per account (0.735458ms)
+✔ AI admits only one concurrent request per account after shared rate I/O (0.284625ms)
+✔ UI config scopes reads and writes to the current active owner and tenant (0.262541ms)
+✔ UI config rejects transport configuration and malformed classic layouts (0.090209ms)
+﹣ UI config migration and persistence on PostgreSQL (0.057083ms) # SKIP
+✔ AI selects the runtime style skill and rejects unknown styles before model access (1.027417ms)
+✔ PageLayout preserves the selected style when serialized and validates its enum (1.253334ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 419.938834

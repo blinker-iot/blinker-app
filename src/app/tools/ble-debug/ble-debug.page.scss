@@ -14,14 +14,7 @@
       text-align: left;
     }
 
-    ion-buttons[slot="end"] { margin-inline-end: 10px; }
-
     .nav-icon {
-      width: 34px;
-      height: 34px;
-      margin: 0;
-      --padding-start: 0;
-      --padding-end: 0;
       --border-radius: 50%;
       --color: var(--blinker-text-primary);
 

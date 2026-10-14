@@ -100,6 +100,7 @@ export class WidgetRangeComponent implements Layouter2Widget {
 
   canSend = true;
   sendData(senddata) {
+    if (this.isDemo) return;
     this.LayouterService.send(`{"${this.key}":${senddata}}\n`);
   }
 
@@ -110,14 +111,21 @@ export class WidgetRangeComponent implements Layouter2Widget {
   }
 
   jia() {
-    if (typeof this.value == 'undefined') this.value = 0;
-    if (this.value < this.max) this.value++;
-    this.sendData(this.value);
+    this.adjustValue(1);
   }
 
   jian() {
-    if (typeof this.value == 'undefined') this.value = 0;
-    if (this.value > this.min) this.value--;
-    this.sendData(this.value);
+    this.adjustValue(-1);
+  }
+
+  private adjustValue(delta: number): void {
+    const min = Number(this.min ?? 0);
+    const max = Number(this.max ?? 100);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max < min) return;
+    const raw = Number(this.value ?? min);
+    const current = Number.isFinite(raw) ? Math.min(max, Math.max(min, raw)) : min;
+    const next = Math.min(max, Math.max(min, current + delta));
+    this.value = next;
+    if (next !== current) this.sendData(next);
   }
 }

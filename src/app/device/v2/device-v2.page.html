@@ -8,6 +8,7 @@
       <div class="name">{{ device.config.customName }}</div>
       <div class="state">{{ stateLabel }}</div>
     </ion-title>
+
     @if (!device.config.isShared) {
       <ion-buttons slot="end">
         <ion-button
@@ -16,12 +17,14 @@
         ><i class="fa-light fa-gear"></i></ion-button>
       </ion-buttons>
     }
+
   </ion-toolbar>
 </ion-header>
 }
 
-<ion-content [fullscreen]="true">
-  <main class="v2-content content-under-header">
+<ion-content [fullscreen]="true" [scrollY]="!customPanel">
+  <main class="v2-content content-under-header" [class.custom-panel-view]="!!customPanel">
+
     @if (error) {
       <section class="notice error">
         <span>{{ error }}</span>
@@ -35,27 +38,32 @@
       </section>
     }
 
-    @if (layoutStale) {
+    @if (layoutStale && !customPanel) {
       <section class="notice">
         <span>{{ layoutStaleText }}</span>
         <ion-button
           size="small"
           fill="clear"
+
           [disabled]="layoutUpdating"
           (click)="updateLayout()"
         >更新页面</ion-button>
       </section>
     }
 
-    @if (!layout) {
+    @if (customPanel) {
+      <app-custom-panel-frame [document]="customPanel" [cards]="panelCards" [interactive]="true"
+        [active]="viewActive && canControl" (action)="onPanelAction($event)" />
+    } @else if (!layout) {
       <section class="empty">
         @if (waitingForCapabilities) {
           <ion-spinner name="crescent"></ion-spinner>
           <p>正在获取设备能力…</p>
         } @else {
-          <p>尚未缓存设备能力，首次连接后将自动生成控制页面。</p>
-          <ion-button size="small" fill="clear" (click)="retry()">重新连接</ion-button>
+          <p>尚未配置组件面板，可以先添加部件或使用 AI 生成界面。</p>
+          <ion-button size="small" fill="clear" [routerLink]="['/device', device.id || device.deviceName, 'edit']">编辑页面</ion-button>
         }
+
       </section>
     } @else {
       @if (telemetryActive) {
@@ -65,79 +73,26 @@
         </section>
       }
 
-      <section class="fields">
+      <app-page-layout-panel [cards]="panelCards" [interactive]="true"
+        (action)="onPanelAction($event)"></app-page-layout-panel>
+
+      <section class="live-fields" aria-label="本页实时数据">
         @for (widget of widgets; track widget.widgetId) {
           @if (endpoint(widget); as field) {
-            <article
-              class="field"
-              [class.compact]="widget.appearance === 'compact'"
-              [class.emphasized]="widget.appearance === 'emphasized'"
-              [style.grid-column]="(widget.grid.x + 1) + ' / span ' + widget.grid.width"
-              [style.grid-row]="(widget.grid.y + 1) + ' / span ' + widget.grid.height"
-            >
-              <div class="field-copy">
-                <strong>{{ fieldTitle(widget, field) }}</strong>
-                <span>{{ display(field) }}{{ unit(field) ? ' ' + unit(field) : '' }}</span>
-                @if (telemetryField(field); as live) {
+            @if (telemetryField(field); as live) {
+              <article class="field">
+                <div class="field-copy">
+                  <strong>{{ fieldTitle(widget, field) }}</strong>
+                  <span>{{ display(field) }}{{ unit(field) ? ' ' + unit(field) : '' }}</span>
                   <small class="telemetry-freshness" [class.stale]="live.status === 'stale'">{{ telemetryFreshness(live) }}</small>
-                }
-              </div>
-
-              @if (widget.type === 'switch') {
-                <ion-toggle
-                  aria-label="设置 {{ fieldTitle(widget, field) }}"
-                  [checked]="value(field) === true"
-                  [disabled]="pending.has(field.key) || !canControl"
-                  (ionChange)="setBoolean(field, $event)"
-                ></ion-toggle>
-              } @else if (widget.type === 'button') {
-                <ion-button
-                  size="small"
-                  [disabled]="pending.has(field.key) || !canControl"
-                  (click)="execute(field)"
-                >执行</ion-button>
-              } @else if (widget.type === 'slider') {
-                <ion-range
-                  class="slider"
-                  [min]="field.minimum!"
-                  [max]="field.maximum!"
-                  [step]="field.step ?? 1"
-                  [value]="value(field)"
-                  [pin]="true"
-                  [disabled]="pending.has(field.key) || !canControl"
-                  (ionChange)="setSlider(field, $event)"
-                ></ion-range>
-              } @else if (widget.type === 'input') {
-                <div class="editor">
-                  <ion-input
-                    [type]="inputType(field)"
-                    [value]="draft(field)"
-                    [maxlength]="field.maxLength"
-                    [disabled]="pending.has(field.key) || !canControl"
-                    (ionInput)="updateDraft(field, $event)"
-                  ></ion-input>
-                  <ion-button
-                    size="small"
-                    [disabled]="pending.has(field.key) || !canControl"
-                    (click)="commit(field)"
-                  >发送</ion-button>
                 </div>
-              }
-
-              @if (telemetryField(field); as live) {
                 @if (field.valueType === 'integer' || field.valueType === 'number') {
                   <app-telemetry-chart class="telemetry-chart" [points]="live.points"
                     [label]="fieldTitle(widget, field) + '实时变化'" [unit]="unit(field)" />
                 }
-              }
-
-              @if (fieldError(field)) {
-                <p class="field-error">{{ fieldError(field) }}</p>
-              }
-            </article>
+              </article>
+            }
           }
-        } @empty {
-          <div class="empty"><p>设备未声明可用能力。</p></div>
         }
       </section>
 
@@ -148,5 +103,6 @@
         </section>
       }
     }
+
   </main>
 </ion-content>

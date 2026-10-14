@@ -1,0 +1,18 @@
+@if (showTitle) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ title }}</span>
+    <span class="hd-v" [valueTransition]="state">{{ state }}</span>
+  </div>
+}
+
+<div class="slide" [class.on]="on" [class.dragging]="position() !== null" [style.--slide]="thumb">
+  <span class="slide-fill"></span>
+  <span class="slide-hint">{{ on ? '向左滑动 · ' + offText : '向右滑动 · ' + onText }}</span>
+  <span class="slide-hint lit" aria-hidden="true">{{ on ? '向左滑动 · ' + offText : '向右滑动 · ' + onText }}</span>
+  <span class="slide-knob" role="switch" tabindex="0" [attr.aria-checked]="on" [attr.aria-label]="title"
+    (pointerdown)="start($event)" (pointermove)="move($event)" (pointerup)="end($event)" (pointercancel)="end($event)"
+    (keydown.enter)="toggle(!on, true)" (keydown.space)="$event.preventDefault(); toggle(!on, true)">
+    <app-ui-icon name="chevron" [class.flip]="on" />
+  </span>
+</div>

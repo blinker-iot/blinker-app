@@ -1,17 +1,73 @@
 :host {
-  --card: rgba(255, 255, 255, 0.92);
-  --line: rgba(28, 38, 58, 0.09);
-  --muted: #738095;
+  --card: var(--blinker-surface);
+  --line: var(--blinker-border);
+  --muted: var(--blinker-text-secondary);
+  color: var(--blinker-text-primary);
+  background: var(--blinker-bg);
 }
 
-ion-content { --background: #f5f7fb; }
+ion-content { --background: var(--blinker-bg); }
 
 main {
+  --section-main-display: flex;
+  --content-offset-gap: 0px;
   width: min(720px, 100%);
   margin: 0 auto;
   padding: 20px 18px 40px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
+}
+
+.panel-mode-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+
+  min-height: 64px;
+  padding: 12px 16px;
+
+  border: 1px solid var(--line);
+  border-radius: 18px;
+
+  background: var(--card);
+  color: var(--blinker-text-primary);
+
+  font: inherit;
+  text-align: left;
+
+  cursor: pointer;
+
+  .mode-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 34px;
+    height: 34px;
+    border-radius: 10px;
+
+    background: var(--blinker-surface-active);
+    color: var(--ion-color-primary);
+
+    font-size: 16px;
+  }
+
+  .mode-label { font-size: 14px; font-weight: 500; }
+  .mode-current { margin-left: auto; color: var(--muted); font-size: 12px; }
+
+  > i { color: var(--muted); font-size: 12px; }
+  ion-spinner { width: 14px; height: 14px; color: var(--muted); }
+  &:disabled { cursor: default; opacity: .5; }
+  &:focus-visible { outline: 2px solid var(--ion-color-primary); outline-offset: 2px; }
+}
+
+.panel-mode-popover {
+  --offset-y: 6px;
+  --box-shadow: var(--blinker-shadow-soft);
+
+  &::part(content) { border: 1px solid var(--blinker-border); border-radius: 16px; }
+  ion-list { padding: 4px 0; }
+  ion-radio { min-height: 44px; font-size: 14px; }
 }
 
 .device-card,
@@ -21,7 +77,7 @@ main {
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--card);
-  box-shadow: 0 12px 30px rgba(28, 38, 58, 0.06);
+  box-shadow: var(--blinker-shadow-soft);
 }
 
 .device-card {
@@ -30,19 +86,31 @@ main {
   align-items: center;
   gap: 14px;
 
-  h1 { margin: 0 0 5px; font-size: 20px; }
+  h1 { margin: 0 0 5px; color: var(--blinker-text-primary); font-size: 20px; }
   span { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 }
 
 .device-image-shell {
+  box-sizing: border-box;
   width: 58px;
   height: 58px;
   flex: 0 0 58px;
   display: grid;
   place-items: center;
-  border-radius: 17px;
-  background: #eef3ff;
+  padding: 4px;
+  border-radius: 50%;
+  background: #f1f4f8;
   overflow: hidden;
+
+  b-device-img {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    border-radius: 50%;
+    background: #f1f4f8;
+    overflow: hidden;
+  }
 }
 
 .access-card { padding: 20px; }
@@ -54,8 +122,8 @@ main {
   gap: 12px;
   margin-bottom: 16px;
 
-  small { color: #5d72e8; font-weight: 750; letter-spacing: .12em; }
-  h2 { margin: 4px 0 0; font-size: 19px; }
+  small { color: var(--ion-color-primary); font-weight: 750; letter-spacing: .12em; }
+  h2 { margin: 4px 0 0; color: var(--blinker-text-primary); font-size: 19px; }
   > span { color: var(--muted); font-size: 12px; }
 }
 
@@ -67,19 +135,19 @@ main {
   padding: 8px 9px 8px 14px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: #f8faff;
+  background: var(--blinker-bg-elevated);
 
   code {
     min-width: 0;
     flex: 1;
     overflow: hidden;
-    color: #566174;
+    color: var(--blinker-text-secondary);
     font-size: 13px;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
 
-  code.revealed { color: #182033; }
+  code.revealed { color: var(--blinker-text-primary); }
 }
 
 .key-actions {
@@ -93,12 +161,12 @@ main {
     border: 0;
     border-radius: 11px;
     background: transparent;
-    color: #465269;
+    color: var(--blinker-text-secondary);
     font-size: 16px;
   }
 
   button:disabled { opacity: .45; }
-  .refresh-key { color: #e15c53; }
+  .refresh-key { color: var(--ion-color-danger); }
 }
 
 .help,
@@ -109,7 +177,7 @@ main {
   line-height: 1.55;
 }
 
-.error { margin: 12px 0 0; color: #c43d36; font-size: 13px; }
+.error { margin: 12px 0 0; color: var(--ion-color-danger); font-size: 13px; }
 
 .reconfigure-card {
   padding: 18px;
@@ -118,14 +186,14 @@ main {
   align-items: center;
   gap: 13px;
 
-  h2 { margin: 0; font-size: 17px; }
+  h2 { margin: 0; color: var(--blinker-text-primary); font-size: 17px; }
   p { margin-top: 4px; }
 
   > button {
     border: 0;
     padding: 10px 4px 10px 12px;
     background: transparent;
-    color: #4e63dc;
+    color: var(--ion-color-primary);
     font-weight: 700;
   }
 
@@ -138,8 +206,8 @@ main {
   display: grid;
   place-items: center;
   border-radius: 13px;
-  background: #eaf0ff;
-  color: #5369e3;
+  background: var(--blinker-surface-active);
+  color: var(--ion-color-primary);
   font-size: 18px;
 }
 
@@ -159,4 +227,82 @@ main {
   .display-field { display: grid; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
   .boolean-labels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .display-save { margin-top: 14px; }
+}
+
+.menu-group {
+  margin-top: 8px;
+}
+
+.section-label {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.device-image-button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.device-summary {
+  flex: 1;
+  min-width: 0;
+}
+
+.device-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  h1 {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.rename-button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--blinker-text-primary);
+  font-size: 13px;
+}
+
+.device-id {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+  padding: 0;
+  line-height: 18px;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rename-button:focus-visible,
+.device-id:focus-visible {
+  outline: 2px solid var(--ion-color-primary);
+  outline-offset: 2px;
 }

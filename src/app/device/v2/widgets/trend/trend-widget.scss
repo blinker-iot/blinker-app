@@ -1,0 +1,100 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+@include c.fills-rows;
+
+.sp-last {
+  flex: none;
+  font-size: 24px;
+  line-height: 1;
+
+  small {
+    margin-left: 2px;
+    color: var(--ui-muted);
+    font-family: var(--ui-font);
+    font-size: 12px;
+    font-weight: 400;
+  }
+}
+
+.sp-plot { position: relative; flex: 1; min-height: 0; }
+
+.sp-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+
+  @include theme.electronic { display: none; }
+}
+
+.sp-grid { stroke: var(--ui-line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+
+.sp-line {
+  fill: none;
+  stroke: var(--ui-accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sp-area { fill: color-mix(in srgb, var(--ui-accent) 15%, transparent); }
+.sp-bar { fill: color-mix(in srgb, var(--ui-accent) 45%, transparent); }
+.sp-bar.last { fill: var(--ui-accent); }
+
+.sp-end {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: var(--ui-accent);
+  box-shadow: 0 0 0 3px var(--ui-card);
+
+  @include theme.electronic { display: none; }
+}
+
+// Electronic: one dot column per reading.
+
+.sp-cols {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: flex-end;
+  gap: 1px;
+
+  &.wide { gap: 4px; }
+
+  @include theme.electronic { display: flex; }
+}
+
+.sp-col {
+  flex: 1;
+  height: calc(var(--h) * 1%);
+  background: radial-gradient(circle, var(--ui-muted) 1.5px, transparent 2px) center bottom / 100% 6px;
+
+  &.peak {
+    background:
+      radial-gradient(circle, var(--ui-ink) 2px, transparent 2.5px) center top / 100% 6px no-repeat,
+      radial-gradient(circle, var(--ui-faint) 1.3px, transparent 1.8px) center bottom / 100% 6px;
+  }
+
+  &.last { background: radial-gradient(circle, var(--ui-accent) 2px, transparent 2.5px) center bottom / 100% 6px; }
+
+  &.peak.last {
+    background:
+      radial-gradient(circle, var(--ui-accent) 2.4px, transparent 2.9px) center top / 100% 6px no-repeat,
+      radial-gradient(circle, var(--ui-faint) 1.3px, transparent 1.8px) center bottom / 100% 6px;
+  }
+}
+
+.sp-ax {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ui-muted);
+  font-family: var(--ui-font-mono);
+  font-size: 10px;
+}

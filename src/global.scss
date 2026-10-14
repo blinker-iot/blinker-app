@@ -8,22 +8,24 @@
  * For more information on global stylesheets, visit the documentation:
  * https://ionicframework.com/docs/layout/global-stylesheets
  */
-
 /* Core CSS required for Ionic components to work properly */
 @use "@ionic/angular/css/core.css";
-
 /* Basic CSS for apps built with Ionic */
 @use "@ionic/angular/css/normalize.css";
 @use "@ionic/angular/css/structure.css";
 @use "@ionic/angular/css/typography.css";
 @use "@ionic/angular/css/display.css";
-
 /* Optional CSS utils that can be commented out */
 @use "@ionic/angular/css/padding.css";
 @use "@ionic/angular/css/float-elements.css";
 @use "@ionic/angular/css/text-alignment.css";
 @use "@ionic/angular/css/text-transformation.css";
 @use "@ionic/angular/css/flex-utils.css";
+
+// Number and electronic-theme faces of the device component library.
+@use "@fontsource-variable/outfit/index.css" as outfit;
+@use "@fontsource-variable/geist-mono/index.css" as geist-mono;
+@use "@fontsource-variable/doto/index.css" as doto;
 @use "./blinker.scss";
 @use "./app/tools/tool-page-layout";
 @use "./tool-pages.scss";
@@ -45,7 +47,9 @@ html {
 body {
   margin: 0;
   padding: 0;
+
   overflow: hidden;
+
   background: var(--blinker-bg);
   color: var(--blinker-text-primary);
 }
@@ -87,6 +91,20 @@ ion-header ion-toolbar {
   --border-color: var(--blinker-divider);
 }
 
+// Ionic's iOS alert theme falls back to a fixed light surface when the
+// optional step-color palette is not present. Bind alerts to the app surface
+// so overlays follow the selected Blinker theme as well.
+ion-alert {
+  --ion-overlay-background-color: var(--blinker-surface);
+  --ion-color-step-100: var(--blinker-surface-active);
+  --ion-color-step-150: var(--blinker-border);
+  --ion-color-step-250: var(--blinker-border);
+  --ion-color-step-400: var(--blinker-text-tertiary);
+  --ion-color-step-550: var(--blinker-text-secondary);
+  --ion-color-step-600: var(--blinker-text-secondary);
+  --ion-color-step-850: var(--blinker-text-primary);
+}
+
 // Ionic limits desktop modals to 500/600px by default. The widget editor is a
 // full-height editing surface on every viewport while retaining Ionic's
 // desktop modal width.
@@ -100,6 +118,7 @@ ion-header.main-tab-header {
   top: 0;
   right: 0;
   left: 0;
+
   z-index: 10;
   background: transparent;
 
@@ -112,6 +131,7 @@ ion-header.main-tab-header {
     --border-color: transparent;
     --border-width: 0;
     min-height: 56px;
+
     padding:
       calc(var(--ion-safe-area-top, 0px) + 4px)
       max(8px, var(--ion-safe-area-right, 0px))
@@ -121,10 +141,14 @@ ion-header.main-tab-header {
 
   ion-title {
     padding-inline: 10px;
+
     color: var(--blinker-text-primary);
+
     font-size: 23px;
     font-weight: 600;
+
     letter-spacing: -0.03em;
+
     text-align: left;
   }
 
@@ -135,8 +159,7 @@ ion-header.main-tab-header {
 
   ion-button.header-action {
     position: relative;
-    width: 38px;
-    height: 38px;
+
     margin: 0;
     --padding-start: 0;
     --padding-end: 0;
@@ -147,10 +170,6 @@ ion-header.main-tab-header {
     --border-style: solid;
     --border-width: 1px;
     --color: var(--blinker-text-primary);
-
-    i {
-      font-size: 17px;
-    }
 
     &.active {
       --background: var(--blinker-surface-active);

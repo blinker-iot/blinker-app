@@ -1,0 +1,25 @@
+@if (showTitle) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+
+    <span class="hd-t">{{ title }}</span>
+  </div>
+}
+
+@let time = parts;
+
+<div class="clock" role="timer" [attr.aria-label]="title + ' ' + time.join(':')"
+  [style.--digits]="time.join(':').length">
+
+  @for (part of time; track $index) {
+    @if ($index > 0) { <span class="separator num" [style.grid-column]="$index * 2" aria-hidden="true">:</span> }
+
+    <div class="time-part" [style.--time-column]="$index * 2 + 1">
+      <strong class="num">{{ part }}</strong>
+      <small>{{ units[$index] }}</small>
+    </div>
+  }
+
+</div>
+
+@if (options.caption && rows > 1) { <p class="caption">{{ options.caption }}</p> }

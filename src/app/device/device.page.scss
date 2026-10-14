@@ -1,25 +1,154 @@
+@use '../../theme/ui-theme' as theme;
+
 :host {
+  @include theme.ui-theme;
+  @include theme.ui-backdrop;
   display: flex;
   min-height: 0;
   flex-direction: column;
+
   color: var(--blinker-text-primary);
-  background: var(--blinker-bg);
+
+  // Let the themed backdrop show through every device view.
+  ion-content { --background: transparent; }
 }
 
-ion-header {
+.device-theme-modal {
+  --width: 340px;
+  --max-width: calc(100% - 32px);
+  --height: auto;
+  --max-height: calc(100% - 48px);
+  --border-radius: 20px;
+  --backdrop-opacity: 0.32;
+
+  ::ng-deep .ion-page {
+    position: relative;
+    display: block;
+    contain: content;
+    overflow-y: auto;
+  }
+}
+
+.theme-picker {
+  @include theme.ui-theme;
+  padding: 18px;
+
+  background: var(--blinker-surface);
+  color: var(--blinker-text-primary);
+}
+
+.theme-picker-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+
+  h2 { margin: 0; font-size: 16px; font-weight: 650; }
+
+  p { margin: 5px 0 16px; color: var(--blinker-text-secondary); font-size: 12px; }
+}
+
+.theme-close {
+  flex: 0 0 32px;
+  height: 32px;
+  border-radius: 50%;
+
+  background: var(--blinker-surface-muted);
+  color: var(--blinker-text-secondary);
+
+  font-size: 22px;
+}
+
+.theme-options { display: grid; gap: 8px; }
+
+.theme-option {
+  display: flex;
+
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+
+  padding: 12px;
+
+  border: 1px solid var(--blinker-border);
+  border-radius: 12px;
+
+  background: var(--blinker-bg);
+  color: var(--blinker-text-primary);
+
+  text-align: left;
+  cursor: pointer;
+
+  &[aria-pressed='true'] { border-color: var(--ion-color-primary); box-shadow: inset 0 0 0 1px var(--ion-color-primary); }
+  &:hover { background: var(--blinker-surface-muted); }
+}
+
+.theme-option:focus-visible, .theme-close:focus-visible {
+  outline: 2px solid var(--ion-color-primary);
+  outline-offset: 3px;
+}
+
+// A miniature of the target theme; the option itself follows the current one.
+.theme-swatch {
+  @include theme.ui-theme;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  flex: 0 0 44px;
+  height: 40px;
+  padding: 3px;
+
+  border: 1px solid var(--blinker-border);
+  border-radius: 8px;
+
+  background: var(--blinker-bg);
+
+  span { border-radius: 3px; background: var(--blinker-surface); border: 1px solid var(--blinker-border); }
+  span:first-child { grid-row: span 2; background: var(--ion-color-primary); border: 0; }
+}
+
+.theme-copy {
+  display: grid;
+
+  flex: 1;
+  gap: 4px;
+
+  strong { font-size: 13px; }
+  small { color: var(--blinker-text-secondary); font-size: 10px; }
+}
+
+.theme-check { width: 16px; color: var(--ion-color-primary); font-weight: 700; }
+.theme-save-hint { margin: 14px 0 0; font-size: 11px; text-align: center; color: var(--blinker-text-secondary); }
+
+ion-header:not(.main-tab-header):not(.opaque-page-header) {
   ion-toolbar {
+    --color: var(--blinker-text-primary);
+    --ion-color-contrast: var(--blinker-text-primary);
+    --ion-toolbar-color: var(--blinker-text-primary);
+
     ion-title {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      padding-inline: 108px;
+      text-align: center;
+      pointer-events: none;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
 
+      justify-content: center;
       .name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         font-size: 15px;
       }
 
       .state {
         height: 0;
+
         font-size: 10px;
         font-weight: 400;
         opacity: 0;
@@ -27,6 +156,7 @@ ion-header {
         flex-direction: row;
         align-items: center;
         justify-content: center;
+
         transition: height 0.6s, opacity 1.2s;
 
         i {
@@ -36,18 +166,16 @@ ion-header {
 
       .showState {
         height: 12px;
+
         opacity: 1;
       }
     }
 
-    ion-buttons ion-button {
-      width: 2.2rem;
-
-      i {
-        font-size: 1.4rem;
-      }
+    ion-buttons {
+      position: relative;
+      z-index: 1;
+      margin-inline: 0;
     }
-
   }
 }
 
@@ -66,7 +194,6 @@ ion-content {
 .device-view {
   box-sizing: border-box;
   height: 100%;
-
   ::ng-deep > * {
     // Keep the component host full-height. Flow content respects this inset;
     // full-screen iframe components apply the reported header height inside.
@@ -77,6 +204,23 @@ ion-content {
     height: 100%;
     padding-top: var(--transparent-page-content-top);
   }
+}
+
+.device-view.debug-view {
+  --section-main-background: transparent;
+  --section-main-accent-opacity: 0;
+
+  ::ng-deep > * {
+    padding-top: calc(var(--transparent-page-content-top) + 12px);
+  }
+}
+
+.device-view.custom-view ::ng-deep > * {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  padding: var(--transparent-page-content-top) 0 var(--ion-safe-area-bottom, 0px);
 }
 
 ion-content.offline {
@@ -91,7 +235,9 @@ ion-content.offline {
 .device-not-found {
   min-height: 70vh;
   padding: 24px;
+
   color: var(--blinker-text-tertiary);
+
   text-align: center;
   display: flex;
   align-items: center;
@@ -100,30 +246,51 @@ ion-content.offline {
 
   > i {
     color: var(--ion-color-primary);
+
     font-size: 38px;
   }
 
   h1 {
     margin: 16px 0 6px;
+
     color: var(--blinker-text-primary);
+
     font-size: 18px;
   }
 
   p {
     max-width: 360px;
     margin: 0 0 18px;
+
     color: var(--blinker-text-secondary);
+
     font-size: 12px;
+
     line-height: 1.6;
   }
 
   a {
     padding: 10px 18px;
+
     border-radius: var(--blinker-radius-control);
     background: var(--ion-color-primary);
     color: var(--ion-color-primary-contrast);
+
     font-size: 12px;
     text-decoration: none;
+
     box-shadow: 0 8px 20px rgba(var(--ion-color-primary-rgb), 0.22);
   }
+}
+
+.view-loading {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: 50vh;
+
+  padding: var(--transparent-page-content-top) 24px 24px;
+  color: var(--blinker-text-secondary);
+
+  font-size: 13px;
 }

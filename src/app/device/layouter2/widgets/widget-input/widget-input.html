@@ -2,9 +2,10 @@
   <div class="inputbox">
     <div class="send-box">
       <form class="send" (ngSubmit)="send()" #formBox="ngForm">
-        <!-- <input input-zone type="text" [(ngModel)]="sendmess" name="sendmess" #myInput> -->
-        <div class="input" (click)="showInputModal()">{{sendmess}}</div>
-        <button class="btn" type="submit">
+        <input class="input" type="text" [(ngModel)]="sendmess" name="sendmess"
+          [attr.aria-label]="t0 || '发送内容'" [placeholder]="t0 || '输入要发送的内容'"
+          autocomplete="off" enterkeyhint="send">
+        <button class="btn" type="submit" aria-label="发送内容" [disabled]="!sendmess.trim()">
           <i class="fal fa-arrow-up"></i>
         </button>
       </form>

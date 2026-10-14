@@ -1,0 +1,48 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+
+.lg {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding-block: 7px;
+    border-top: 1px solid var(--ui-line);
+    color: var(--ui-muted);
+    font-size: 13px;
+
+    &:first-child { border-top: 0; }
+
+    @include theme.electronic { border-top-style: dotted; border-top-color: var(--ui-faint); }
+  }
+
+  li.new { color: var(--ui-ink); }
+  li.new span { font-weight: 500; }
+
+  time {
+    flex: none;
+    color: var(--ui-muted);
+    font-family: var(--ui-font-mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-transform: var(--ui-case);
+    letter-spacing: var(--ui-tracking);
+  }
+
+  .empty { justify-content: center; border: 0; }
+}

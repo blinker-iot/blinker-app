@@ -1,0 +1,13 @@
+@if (iconStyle !== 'none') {
+  <span class="rc-ico" [class.plain]="iconStyle === 'plain'"><app-ui-icon [name]="options.icon || 'power'" /></span>
+}
+
+<span class="rc-copy">
+  <strong>{{ title }}</strong>
+  @if (caption) {
+    <small><span [valueTransition]="caption">{{ caption }}</span></small>
+  }
+</span>
+
+<button type="button" class="sw" [class.sm]="options.size === 'sm'" [class.lg]="options.size === 'lg'" [class.on]="on" role="switch"
+  [attr.aria-checked]="on" [attr.aria-label]="title" [disabled]="card.disabled" (click)="toggle()"><i></i></button>

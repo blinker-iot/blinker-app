@@ -1,20 +1,26 @@
 <ng-template #headerActions>
   @if (canEditLayout) {
   @if (mode != 'edit') {
-  <ion-button class="layouter-action" (click)="unlock()">
+  <ion-button class="layouter-action" aria-label="编辑布局" (click)="unlock()">
     <i class="fa-light fa-pen-to-square"></i>
   </ion-button>
   } @else {
-  <ion-button class="layouter-action" (click)="cleanWidgets()">
+  <ion-button class="layouter-action" aria-label="清空组件" [disabled]="savingLayout" (click)="cleanWidgets()">
     <i class="fa-light fa-trash-can"></i>
   </ion-button>
-  <ion-button class="layouter-action" (click)="lock()">
+  <ion-button class="layouter-action" aria-label="保存布局" [disabled]="savingLayout" (click)="lock()">
     <i class="fa-light fa-lock"></i>
   </ion-button>
   }
   }
+
 </ng-template>
 <div device-box #gridsterBox [class.is-editing]="mode == 'edit'">
+  @if (loaded && dashboard.length === 0 && mode == 'default' && canEditLayout) {
+  <div class="empty-layout">
+    <ion-button [routerLink]="['/device-manager', id, 'uic']">控制中心配置</ion-button>
+  </div>
+  } @else {
   <gridster [options]="options">
     @for (widget of dashboard; track widget) {
     <gridster-item [item]="widget">
@@ -27,8 +33,12 @@
       ></widget-dynamic>
     </gridster-item>
     }
+
   </gridster>
+  }
+
 </div>
+
 @if (mode == 'edit') {
 <div class="animated slideInUp faster layouter-bar">
   <widget-listbar></widget-listbar>

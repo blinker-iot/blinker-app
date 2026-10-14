@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.spec.json",
+  "include": [
+    "../../src/app/device/device-theme.spec.ts",
+    "../../src/app/device/device.page.spec.ts",
+    "../../src/app/device/layouter2/widgets/widget-input/widget-input.spec.ts",
+    "../../src/app/device/layouter2/widgets/widget-range/widget-range.spec.ts",
+    "../../src/app/device/layouter2/layouter2-save.spec.ts",
+    "../../src/app/core/charts/line-chart-area/line-chart-area.component.spec.ts",
+    "../../src/**/*.d.ts",
+    "../../src/test-setup.ts",
+    "../../src/app/device/layouter2/widgets/widget-tab/widget-tab.component.spec.ts"
+  ]
+}

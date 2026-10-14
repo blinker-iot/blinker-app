@@ -1,6 +1,8 @@
 :host {
   display: block;
+
   height: 100%;
+
   background: var(--blinker-bg);
 }
 
@@ -13,14 +15,6 @@
   ion-button {
     --color: var(--blinker-text-primary);
 
-    i {
-      font-size: 17px;
-    }
-
-    ion-spinner {
-      width: 17px;
-      height: 17px;
-    }
   }
 }
 
@@ -30,7 +24,9 @@ ion-content {
 
 .message-content {
   min-height: 100%;
-  padding: 24px 18px calc(30px + env(safe-area-inset-bottom));
+
+  padding: 0 18px calc(30px + env(safe-area-inset-bottom));
+
   background:
     radial-gradient(
       circle at 90% 4%,
@@ -44,22 +40,28 @@ ion-content {
   min-height: 42px;
   margin: 4px 0 12px;
   padding: 9px 11px;
+
   border: 1px solid rgba(var(--ion-color-primary-rgb), 0.2);
   border-radius: 12px;
+
   background: rgba(var(--ion-color-primary-rgb), 0.08);
   color: var(--blinker-text-secondary);
+
   display: flex;
+
   align-items: center;
   gap: 8px;
   font-size: 11px;
 
   i {
     color: var(--ion-color-primary);
+
     font-size: 14px;
   }
 
   span {
     min-width: 0;
+
     flex: 1;
   }
 
@@ -67,7 +69,9 @@ ion-content {
     padding: 5px 8px;
     border: 0;
     border-radius: 9px;
+
     background: var(--ion-color-primary);
+
     color: white;
     font-size: 11px;
   }
@@ -85,8 +89,11 @@ ion-content {
 .message-summary {
   min-height: 28px;
   padding: 0 3px 8px;
+
   color: var(--blinker-text-tertiary);
+
   display: flex;
+
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -94,6 +101,7 @@ ion-content {
 
   strong {
     color: var(--ion-color-primary);
+
     font-size: 11px;
     font-weight: 600;
   }
@@ -110,9 +118,12 @@ ion-content {
   height: 19px;
   padding: 0 7px;
   border-radius: 10px;
+
   background: rgba(var(--ion-color-primary-rgb), 0.1);
   color: var(--ion-color-primary);
+
   display: inline-flex;
+
   align-items: center;
   justify-content: center;
   font-size: 9px;
@@ -121,19 +132,28 @@ ion-content {
 
 .message-list {
   overflow: hidden;
+
   border: 1px solid var(--blinker-border);
+
   border-radius: 16px;
+
   background: var(--blinker-surface);
   box-shadow: var(--blinker-shadow-soft);
 }
 
 .message-item {
   width: 100%;
+
   min-height: 86px;
+
   border-bottom: 1px solid var(--blinker-divider);
+
   background: transparent;
+
   color: var(--blinker-text-primary);
+
   display: flex;
+
   align-items: stretch;
 
   &:last-child {
@@ -142,7 +162,6 @@ ion-content {
 
   &.is-unread {
     background: rgba(var(--ion-color-primary-rgb), 0.025);
-
     .message-title {
       font-weight: 700;
     }
@@ -160,10 +179,10 @@ ion-content {
   align-items: center;
   gap: 12px;
   text-align: left;
-
   &:active,
   &:focus-visible {
     outline: none;
+
     background: var(--blinker-surface-active);
   }
 }
@@ -174,8 +193,10 @@ ion-content {
   height: 43px;
   flex: 0 0 auto;
   border-radius: 50%;
+
   background: linear-gradient(145deg, #6f8297, #45576b);
   box-shadow: 0 7px 16px rgba(49, 66, 84, 0.2);
+
   color: white;
   display: flex;
   align-items: center;
@@ -197,25 +218,34 @@ ion-content {
 
 .message-category {
   color: var(--ion-color-primary);
+
   font-size: 9px;
   font-weight: 600;
 }
 
 .message-title {
   overflow: hidden;
+
   color: var(--blinker-text-primary);
+
   font-size: 13px;
   font-weight: 600;
+
   line-height: 1.35;
+
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .message-preview {
   overflow: hidden;
+
   color: var(--blinker-text-secondary);
+
   font-size: 10px;
+
   line-height: 1.4;
+
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -224,7 +254,9 @@ ion-content {
   width: 60px;
   flex: 0 0 auto;
   align-self: stretch;
+
   color: var(--blinker-text-tertiary);
+
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -240,6 +272,7 @@ ion-content {
   height: 7px;
   margin-top: 10px;
   border-radius: 50%;
+
   background: var(--ion-color-primary);
   box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.1);
 }
@@ -249,15 +282,18 @@ ion-content {
   flex: 0 0 38px;
   padding: 0;
   border: 0;
+
   background: transparent;
+
   color: var(--blinker-text-tertiary);
+
   display: grid;
   place-items: center;
   font-size: 12px;
-
   &:active,
   &:focus-visible {
     outline: none;
+
     background: rgba(var(--ion-color-danger-rgb), 0.07);
     color: var(--ion-color-danger);
   }
@@ -274,8 +310,11 @@ ion-content {
 
 .inbox-hint {
   min-height: 60px;
+
   color: var(--blinker-text-secondary);
+
   display: flex;
+
   align-items: center;
   justify-content: center;
   gap: 7px;
@@ -294,7 +333,9 @@ ion-content {
 .message-state {
   min-height: 430px;
   padding: 30px;
+
   color: var(--blinker-text-tertiary);
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -304,17 +345,20 @@ ion-content {
 
   > i {
     color: var(--blinker-text-tertiary);
+
     font-size: 42px;
   }
 
   ion-spinner {
     width: 28px;
     height: 28px;
+
     color: var(--ion-color-primary);
   }
 
   strong {
     color: var(--blinker-text-secondary);
+
     font-size: 13px;
     font-weight: 600;
   }
@@ -329,8 +373,10 @@ ion-content {
     padding: 0 15px;
     border: 0;
     border-radius: 17px;
+
     background: var(--ion-color-primary);
     box-shadow: 0 6px 14px rgba(var(--ion-color-primary-rgb), 0.2);
+
     color: white;
     font-size: 12px;
   }
@@ -344,11 +390,13 @@ ion-content {
   max-width: 680px;
   margin: 8px auto 0;
   padding: 28px 22px 24px;
+
   border: 1px solid var(--blinker-border);
   border-radius: 18px;
-  background: var(--blinker-surface);
-  box-shadow: var(--blinker-shadow-soft);
 
+  background: var(--blinker-surface);
+
+  box-shadow: var(--blinker-shadow-soft);
   .detail-icon {
     width: 50px;
     height: 50px;
@@ -358,28 +406,37 @@ ion-content {
 
   .detail-category {
     color: var(--ion-color-primary);
+
     font-size: 11px;
     font-weight: 600;
   }
 
   h1 {
     margin: 8px 0 7px;
+
     color: var(--blinker-text-primary);
+
     font-size: 21px;
     font-weight: 650;
+
     line-height: 1.35;
   }
 
   time {
     color: var(--blinker-text-tertiary);
+
     font-size: 10px;
   }
 
   p {
     margin: 24px 0 0;
+
     color: var(--blinker-text-primary);
+
     font-size: 14px;
+
     line-height: 1.75;
+
     overflow-wrap: anywhere;
     white-space: pre-wrap;
   }
@@ -388,14 +445,17 @@ ion-content {
 .detail-status {
   margin-top: 28px;
   padding-top: 14px;
+
   border-top: 1px solid var(--blinker-divider);
   color: var(--blinker-text-tertiary);
+
   display: flex;
   justify-content: flex-end;
-  font-size: 10px;
 
+  font-size: 10px;
   .is-unread {
     color: var(--ion-color-primary);
+
     font-weight: 600;
   }
 }

@@ -19,14 +19,6 @@ ion-modal.avatar-crop-modal {
   ion-button {
     --color: rgba(255, 255, 255, 0.9);
 
-    i {
-      font-size: 20px;
-    }
-  }
-
-  ion-spinner {
-    width: 18px;
-    height: 18px;
   }
 }
 
@@ -36,37 +28,55 @@ ion-modal.avatar-crop-modal {
 }
 
 .avatar-cropper-page {
+  --section-main-background: #090a0d;
+  --section-main-accent-opacity: 0;
   box-sizing: border-box;
   position: relative;
+
   height: 100%;
+
   min-height: 0;
-  padding-top: 12px;
+
   padding-bottom: max(12px, var(--ion-safe-area-bottom));
+
   display: grid;
+
   grid-template-rows: minmax(0, 1fr);
+
   background: #090a0d;
 }
 
 .gesture-hint {
   position: absolute;
+
   top: calc(var(--ion-safe-area-top, 0px) + 70px);
   left: 50%;
+
   z-index: 4;
   width: max-content;
+
   max-width: calc(100% - 32px);
+
   min-height: 32px;
   padding: 0 13px;
+
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
+
   background: rgba(8, 10, 14, 0.58);
   color: rgba(255, 255, 255, 0.62);
+
   display: flex;
+
   align-items: center;
   justify-content: center;
   gap: 8px;
   font-size: 12px;
+
   letter-spacing: 0.01em;
+
   pointer-events: none;
+
   transform: translateX(-50%);
 }
 
@@ -74,14 +84,17 @@ ion-modal.avatar-crop-modal {
   position: relative;
   min-height: 0;
   overflow: hidden;
+
   background: #030405;
   touch-action: none;
-
   .source-image {
     display: block;
+
     width: 100%;
     height: 100%;
+
     object-fit: contain;
+
     opacity: 0;
   }
 
@@ -92,13 +105,16 @@ ion-modal.avatar-crop-modal {
 
   .cropper-modal {
     background-color: #030405;
+
     opacity: 0.7;
   }
 
   .cropper-view-box {
     border-radius: 50%;
+
     outline: 2px solid rgba(255, 255, 255, 0.96);
     outline-offset: -2px;
+
     box-shadow:
       inset 0 0 0 1px rgba(0, 0, 0, 0.18),
       0 0 22px rgba(255, 255, 255, 0.12);
@@ -118,20 +134,27 @@ ion-modal.avatar-crop-modal {
 
 .crop-confirm-button {
   position: absolute;
+
   bottom: max(24px, calc(var(--ion-safe-area-bottom, 0px) + 14px));
   left: 50%;
+
   z-index: 4;
   width: 56px;
   height: 56px;
   padding: 0;
   border: 0;
   border-radius: 50%;
+
   background: var(--ion-color-primary);
   box-shadow: 0 10px 26px rgba(var(--ion-color-primary-rgb), 0.38);
+
   color: #fff;
   display: grid;
+
   place-items: center;
+
   transform: translateX(-50%);
+
   transition: opacity 150ms ease, transform 150ms ease;
 
   i {
@@ -155,9 +178,12 @@ ion-modal.avatar-crop-modal {
 .cropper-status {
   position: absolute;
   inset: 0;
+
   z-index: 2;
   pointer-events: none;
+
   color: rgba(255, 255, 255, 0.68);
+
   display: flex;
   flex-direction: column;
   align-items: center;

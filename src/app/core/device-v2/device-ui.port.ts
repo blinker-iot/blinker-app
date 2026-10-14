@@ -715,6 +715,25 @@ export class DeviceUiPort {
     }
   }
 
+  async refreshCardStates(logicalDeviceIds: readonly string[], signal: AbortSignal): Promise<void> {
+    const accountEpoch = this.data.sessionEpoch;
+    const ids = [...new Set(logicalDeviceIds)].filter(id => {
+      const device = this.data.device?.dict?.[id];
+      return device?.config.mode === 'bbp2' && device.cloudEnabled === true
+        && !device.config.disabled && !device.config.isPreview
+        && device.data?.cloudReachable !== false;
+    });
+
+    // Read the broker's cached manifest/state with the account's existing grants.
+    // Do not use openConnection: list reads must not initiate BLE or Hub demand.
+    for (let offset = 0; offset < ids.length; offset += 4) {
+      if (signal.aborted || !this.active || this.data.sessionEpoch !== accountEpoch) return;
+      await Promise.allSettled(ids.slice(offset, offset + 4).map(id =>
+        this.deviceV2.waitUntilReady(id, signal),
+      ));
+    }
+  }
+
   watchState(logicalDeviceId: string): Observable<DeviceUiSnapshot> {
     return new Observable(subscriber => {
       let selected = this.transport(logicalDeviceId).value;

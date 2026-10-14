@@ -1,0 +1,182 @@
+// Card base shared by every widget: .card, .hd, .rbtn and .num of
+// docs/2026-10-10/设备组件库设计稿.html. A widget's host is its card.
+@use '../../../../theme/ui-theme' as theme;
+
+@mixin base {
+  :host {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-sizing: border-box;
+    padding: 14px 16px;
+    overflow: hidden;
+
+    border: var(--ui-card-border);
+    border-radius: var(--ui-radius);
+    background: var(--ui-card);
+    box-shadow: var(--ui-shadow);
+    color: var(--ui-ink);
+    font-family: var(--ui-font);
+
+    text-align: left;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.25s, border-color 0.25s, color 0.25s;
+  }
+
+  :host([aria-disabled='true']) { opacity: 0.55; pointer-events: none; }
+  * { box-sizing: border-box; }
+  button {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  :focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+  // Head: icon, title and an optional value on the right.
+
+  .hd {
+    display: flex;
+
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .hd-ico {
+    flex: none;
+    width: 20px;
+    height: 20px;
+
+    color: var(--ui-accent);
+  }
+
+  .hd-t {
+    flex: 1;
+
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    text-transform: var(--ui-case);
+    letter-spacing: var(--ui-tracking);
+  }
+
+  .hd-v {
+    flex: none;
+
+    color: var(--ui-muted);
+
+    font-size: 12px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .num {
+    font-family: var(--ui-font-num);
+    font-weight: var(--ui-num-weight);
+    font-variant-numeric: tabular-nums;
+
+    @include theme.electronic { letter-spacing: 0.03em; }
+  }
+
+  // Round − / + buttons.
+
+  .rbtn {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+
+    background: var(--ui-well);
+    color: var(--ui-ink);
+
+    touch-action: manipulation;
+
+    transition: transform 0.15s, opacity 0.2s;
+
+    app-ui-icon { width: 18px; height: 18px; }
+    &:active { transform: scale(0.92); }
+    &:disabled { opacity: 0.35; cursor: default; }
+
+    @include theme.electronic {
+      border: 1.5px dotted var(--ui-faint);
+
+      background: none;
+    }
+  }
+}
+
+// For widgets that fill their box (a chart, a dial, a wheel): no content
+// height of their own, so on a row of their own they keep the height of their
+// rows instead of collapsing. The panel sets --fill-h on each cell.
+@mixin fills-rows {
+  :host { min-height: var(--fill-h, 0px); }
+}
+
+// The big reading at the foot of a display card (number, ring): value with
+// its unit, and a muted line under it.
+@mixin readout {
+  .bn {
+    flex: 1;
+
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .bn-num {
+    display: flex;
+    align-items: flex-start;
+    gap: 3px;
+
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+
+    white-space: nowrap;
+  }
+
+  .bn.md .bn-num { font-size: 34px; }
+  .bn.lg .bn-num { font-size: 48px; }
+  .bn.xl .bn-num { font-size: 66px; }
+  .bn.warn .bn-num { color: var(--ui-alert); }
+  .bn-u {
+    margin-top: 0.2em;
+    color: var(--ui-muted);
+    font-family: var(--ui-font);
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 0;
+
+    &.base { align-self: flex-end; margin: 0 0 0.25em; }
+  }
+
+  .bn-sub {
+    display: flex;
+
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+
+    color: var(--ui-muted);
+
+    font-size: 12px;
+
+    span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  }
+}
