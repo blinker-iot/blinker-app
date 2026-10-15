@@ -17,9 +17,18 @@ function loadRuntime() {
   selector: 'app-custom-panel-frame', standalone: true,
   template: `
     @if (error) { <p role="alert">{{ error }}</p><button type="button" (click)="prepare()">重试加载</button> }
+    @if (sizeError) { <p role="alert">{{ sizeError }}</p> }
     @if (source) {
-      <iframe #frame title="自定义控制面板" sandbox="allow-scripts" referrerpolicy="no-referrer"
-        [srcdoc]="source" (load)="loaded()"></iframe>
+      <div class="frame-viewport">
+        <iframe #frame title="自定义控制面板" sandbox="allow-scripts" referrerpolicy="no-referrer" [attr.inert]="!interactive ? '' : null"
+          [srcdoc]="source" (load)="loaded()"></iframe>
+        @if (readOnlyScroll) {
+          <div class="read-only-scroll" tabindex="0" role="region" aria-label="滚动查看控制台"
+            (scroll)="scrollDocument($event)">
+            <div [style.height.px]="contentHeight"></div>
+          </div>
+        }
+      </div>
     }
   `,
   styles: [`
@@ -30,6 +39,10 @@ function loadRuntime() {
       height: var(--custom-panel-height, 100%);
       min-height: var(--custom-panel-min-height, 0px);
     }
+
+    .frame-viewport { position: relative; display: flex; flex: 1; min-height: 0; }
+    .read-only-scroll { position: absolute; inset: 0; overflow-y: auto; touch-action: pan-y; }
+    .read-only-scroll > div { min-height: 100%; pointer-events: none; }
 
     iframe {
       display: block;
@@ -49,6 +62,8 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) document!: CustomPanelDocument;
   @Input() cards: PanelCard[] = [];
   @Input() interactive = false;
+  @Input() restricted = false;
+  @Input() readOnlyScroll = false;
   @Input() active = true;
   @Input() theme?: string;
   @Output() action = new EventEmitter<PanelAction>();
@@ -57,6 +72,8 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
   source?: SafeHtml;
 
   error = '';
+  sizeError = '';
+  contentHeight = 0;
 
   private channel = '';
   private html?: string;
@@ -71,7 +88,7 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['document'] && this.document?.html !== this.html) void this.prepare();
+    if ((changes['document'] && this.document?.html !== this.html) || changes['restricted']) void this.prepare();
     else this.push();
   }
 
@@ -96,6 +113,8 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
     this.channel = channel;
     this.ready = false;
     this.source = undefined;
+    this.contentHeight = 0;
+    this.sizeError = '';
 
     this.drafts.clear();
 
@@ -113,9 +132,12 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
       const csp = parsed.createElement('meta');
 
       csp.httpEquiv = 'Content-Security-Policy';
+
       // No app origin, storage, credentials, nested browsing contexts or external scripts.
       // HTTPS media remains available for the video atom and user supplied images.
-      csp.content = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src data:; img-src data: blob: https:; media-src blob: https:; connect-src https:; base-uri 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; worker-src blob:";
+      csp.content = this.restricted
+        ? "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src data:; img-src data: blob:; media-src blob:; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'"
+        : "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src data:; img-src data: blob: https:; media-src blob: https:; connect-src https:; base-uri 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; worker-src blob:";
 
       parsed.head.prepend(csp);
 
@@ -151,6 +173,14 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
     this.cd.markForCheck();
   }
 
+  scrollDocument(event: Event): void {
+    if (!this.ready || !this.readOnlyScroll) return;
+
+    const top = (event.target as HTMLElement).scrollTop;
+
+    this.frame?.nativeElement.contentWindow?.postMessage({ channel: this.channel, type: 'scroll', top }, '*');
+  }
+
   private get effectiveTheme(): string {
     return this.theme || this.document.theme;
   }
@@ -160,6 +190,7 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
 
     this.frame?.nativeElement.contentWindow?.postMessage({ channel: this.channel, type: 'state', state: {
       cards: this.cards, interactive: this.interactive && this.active, theme: this.effectiveTheme,
+      readOnlyScroll: this.readOnlyScroll,
     } }, '*');
   }
 
@@ -178,12 +209,30 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
       return;
     }
 
+    if (event.data.type === 'height' && this.ready && this.readOnlyScroll) {
+      const height = event.data.height;
+
+      if (!Number.isSafeInteger(height) || height < 1) return;
+
+      const sizeError = height > 262144 ? '页面内容过长，无法完整显示。' : '';
+      const next = Math.min(height, 262144);
+
+      if (next !== this.contentHeight || sizeError !== this.sizeError) {
+        this.contentHeight = next;
+        this.sizeError = sizeError;
+
+        this.cd.markForCheck();
+      }
+
+      return;
+    }
+
     if (!this.ready || !this.active || !this.interactive || event.data.type !== 'action') return;
 
     // Never accept field metadata or bindings supplied by the frame.
     const card = this.cards.find(item => item.field.key === event.data.key);
 
-    if (!card || !card.field.writable) return;
+    if (!card || !card.field.writable || card.disabled) return;
 
     const action = this.validateAction(card, event.data);
 

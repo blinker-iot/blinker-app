@@ -10,10 +10,6 @@ ion-content {
   --section-main-padding-bottom: 34px;
 }
 
-app-hero-card {
-  margin-bottom: 14px;
-}
-
 .add-task-button {
   width: 100%;
   margin: 0;
@@ -25,6 +21,9 @@ app-hero-card {
   font-size: 12px;
   line-height: 1.6;
 }
+
+.device-context { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+.task-execution-note { margin: 0 0 12px; color: var(--blinker-text-secondary); font-size: 12px; line-height: 1.6; }
 
 .task-list,
 .empty-state {

@@ -1,5 +1,4 @@
-import { Component } from '@angular/core';
-
+import { Component, Input } from '@angular/core';
 import { UiIconComponent } from '../icon/ui-icon';
 import { WidgetBase } from '../widget-base';
 
@@ -12,13 +11,18 @@ import { WidgetBase } from '../widget-base';
   templateUrl: './text-widget.html',
   styleUrls: ['./text-widget.scss'],
 })
+
 export class TextWidgetComponent extends WidgetBase {
+  @Input() readOnly = false;
+
   get numeric(): boolean { return this.card.field.valueType !== 'text'; }
   get limit(): number | null { return this.card.field.maxLength ?? null; }
 
   get last(): string {
     const value = this.card.value;
+
     if (value === undefined || value === null || value === '') return '尚未发送';
+
     return `当前 ${this.card.display}`;
   }
 
@@ -26,14 +30,15 @@ export class TextWidgetComponent extends WidgetBase {
 
   get counter(): string {
     const length = [...this.card.draft].length;
+
     return this.limit ? `${length}/${this.limit}` : String(length);
   }
 
   draft(value: string): void {
-    this.act.emit({ kind: 'draft', value });
+    if (!this.readOnly) this.act.emit({ kind: 'draft', value });
   }
 
   send(): void {
-    if (!this.card.disabled) this.act.emit({ kind: 'commit' });
+    if (!this.readOnly && !this.card.disabled) this.act.emit({ kind: 'commit' });
   }
 }

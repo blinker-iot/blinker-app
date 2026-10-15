@@ -9,13 +9,6 @@
 
 <ion-content class="method-ble" fullscreen="true">
   <main>
-    <app-hero-card
-      iconClass="fa-brands fa-bluetooth-b"
-      [eyebrow]="'DEVICE_GUIDE.BLE_PAGE_EYEBROW' | translate"
-      [heading]="'DEVICE_GUIDE.BLE_PAGE_HEADING' | translate"
-      [description]="'DEVICE_GUIDE.BLE_PAGE_DESCRIPTION' | translate"
-    />
-
     @if (phase !== 'ready') {
     @if (pendingEnrollments.length) {
       <section class="setup-card ble-recovery" aria-labelledby="ble-recovery-heading">

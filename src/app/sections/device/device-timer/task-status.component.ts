@@ -1,10 +1,10 @@
 import { Component, Input } from '@angular/core';
-import { AlertController, IonicModule } from '@ionic/angular';
+import { AlertController, IonButton, IonSpinner } from '@ionic/angular/standalone';
 import { TimerService } from './timer.service';
 import { taskOperationText } from './device-timer.models';
 
 @Component({
-  selector: 'app-task-status', imports: [IonicModule],
+  selector: 'app-task-status', imports: [IonButton, IonSpinner],
   template: `
     <section class="task-summary" aria-label="任务容量与来源">
       <strong class="capacity-text">{{ timer.capacityText }}</strong>

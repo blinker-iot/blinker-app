@@ -8,8 +8,16 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Capacitor } from '@capacitor/core';
 import { bleScanner } from '../../core/bluetooth/scan';
-import { IonicModule, ToastController } from '@ionic/angular';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
+
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  ToastController,
+} from '@ionic/angular/standalone';
 import {
   BleClient,
   BleDevice,
@@ -84,7 +92,15 @@ const SECTOR_ACK_TIMEOUT = 15000;
   styleUrls: ['./ble-ota.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule, IonicModule, HeroCardComponent],
+  imports: [
+    FormsModule,
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+  ],
 })
 export class BleOtaPage implements OnDestroy {
   devices: OtaDevice[] = [];

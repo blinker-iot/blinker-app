@@ -1,6 +1,7 @@
 @use '../../device-feature-page' as feature;
 @include feature.base;
 :host { --feature-accent: #f59e0b; }
+.device-context { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
 ion-content { --section-main-padding-bottom: 92px; }
 fieldset { min-width: 0; border: 0; padding: 0; }
 .setting-card { padding: 16px; margin-top: 12px; }

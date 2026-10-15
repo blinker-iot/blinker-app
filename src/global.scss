@@ -112,15 +112,17 @@ ion-modal.widget-editor-modal {
   --height: 100%;
 }
 
-// 首页四个主标签共用的顶部导航：左侧标题，右侧圆形操作按钮。
+// 四个主标签共用标题、操作区和安全区尺寸。
 ion-header.main-tab-header {
   position: absolute;
   top: 0;
   right: 0;
   left: 0;
-
   z-index: 10;
-  background: transparent;
+
+  background: var(--blinker-bg);
+
+  box-shadow: none;
 
   &::after {
     display: none;
@@ -130,57 +132,76 @@ ion-header.main-tab-header {
     --background: transparent;
     --border-color: transparent;
     --border-width: 0;
-    min-height: 56px;
+    --min-height: 56px;
+    --padding-start: 0;
+    --padding-end: 0;
 
     padding:
       calc(var(--ion-safe-area-top, 0px) + 4px)
-      max(8px, var(--ion-safe-area-right, 0px))
+      max(18px, var(--ion-safe-area-right, 0px))
       0
-      max(8px, var(--ion-safe-area-left, 0px));
+      max(18px, var(--ion-safe-area-left, 0px));
   }
 
   ion-title {
-    padding-inline: 10px;
+    position: static;
+    width: auto;
+    padding-inline: 0;
 
     color: var(--blinker-text-primary);
 
-    font-size: 23px;
+    font-size: 20px;
     font-weight: 600;
-
-    letter-spacing: -0.03em;
-
-    text-align: left;
+    letter-spacing: 0;
+    text-align: start;
   }
 
   ion-buttons {
-    gap: 8px;
-    margin-inline-end: 5px;
+    gap: 2px;
+    margin: 0 -10px 0 12px;
   }
 
   ion-button.header-action {
     position: relative;
+    width: 44px;
+    height: 44px;
 
     margin: 0;
     --padding-start: 0;
     --padding-end: 0;
-    --background: rgba(var(--ion-color-primary-rgb), 0.04);
+    --background: transparent;
     --background-activated: var(--blinker-surface-active);
-    --border-color: var(--blinker-border);
-    --border-radius: 50%;
-    --border-style: solid;
-    --border-width: 1px;
-    --color: var(--blinker-text-primary);
+    --background-hover: var(--blinker-surface-muted);
+    --border-radius: 12px;
+    --border-width: 0;
+    --box-shadow: none;
+    --color: var(--blinker-text-secondary);
+
+    i {
+      font-size: 18px;
+      line-height: 1;
+    }
 
     &.active {
       --background: var(--blinker-surface-active);
-      --border-color: rgba(var(--ion-color-primary-rgb), 0.35);
       --color: var(--ion-color-primary);
+    }
+
+    &::part(native):focus-visible {
+      outline: 2px solid var(--ion-color-primary);
+      outline-offset: -3px;
     }
   }
 }
 
 ion-tab-bar {
   --border: 1px solid var(--blinker-divider);
+}
+
+ion-card {
+  border: 1px solid var(--blinker-border);
+
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

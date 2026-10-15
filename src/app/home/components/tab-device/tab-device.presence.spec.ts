@@ -16,7 +16,7 @@ describe('home BLE presence lifetime', () => {
     const refresh = vi.fn(async (_ids: readonly string[], _signal: AbortSignal) => undefined);
     const watchAdapter = vi.fn(() => adapter);
     const component = new TabDeviceComponent(data as any, { url: '/home/device', events } as any,
-      {} as any, {} as any, {} as any, { refreshBlePresence: refresh, watchBleAdapterEnabled: watchAdapter } as any,
+      {} as any, { refreshBlePresence: refresh, watchBleAdapterEnabled: watchAdapter } as any,
       { markForCheck: vi.fn() } as any,
       { onDestroy: (cb: () => void) => { callbacks.add(cb); return () => callbacks.delete(cb); } } as any,
       { active } as any);

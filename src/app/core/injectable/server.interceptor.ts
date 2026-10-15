@@ -24,6 +24,8 @@ import {
   timeout,
 } from 'rxjs';
 import { API, isGatewayUrl } from 'src/app/configs/api.config';
+import { getServiceRegion, isServiceRegion } from 'src/app/configs/service-region.config';
+
 import {
   AilyResponse,
   AuthTokenPair,
@@ -99,6 +101,15 @@ export class ServerInterceptor implements HttpInterceptor {
     request: HttpRequest<unknown>,
     next: HttpHandler,
   ): Observable<HttpEvent<unknown>> {
+    if (request.url.startsWith(API.BASE_URL + '/api/')) {
+      const requestedRegion = request.headers.get('x-region');
+
+      const region = this.isConsoleViewUrl(request.url) && isServiceRegion(requestedRegion)
+        ? requestedRegion : getServiceRegion();
+
+      request = request.clone({ setHeaders: { 'x-region': region } });
+    }
+
     if (!isGatewayUrl(request.url)) return next.handle(request);
 
     const prepared = this.prepareGatewayRequest(request);
@@ -111,6 +122,7 @@ export class ServerInterceptor implements HttpInterceptor {
           error instanceof HttpErrorResponse &&
           error.status === 401 &&
           this.isProtected(prepared.url) &&
+          !this.isConsoleViewUrl(prepared.url) &&
           !this.isAccountDeletionTokenMissing(prepared.url, error) &&
           !prepared.context.get(REQUEST_RETRIED) &&
           !!this.dataService.auth?.refreshToken
@@ -173,6 +185,10 @@ export class ServerInterceptor implements HttpInterceptor {
     );
   }
 
+  private isConsoleViewUrl(url: string): boolean {
+    return url === API.CONSOLE_VIEW_SESSIONS || url.startsWith(API.CONSOLE_VIEW_SESSIONS + '/');
+  }
+
   private prepareGatewayRequest(
     request: HttpRequest<unknown>,
   ): HttpRequest<unknown> {
@@ -184,7 +200,11 @@ export class ServerInterceptor implements HttpInterceptor {
       : this.createRequestId();
     headers = headers.set('X-Request-ID', requestId);
 
-    if (this.isPublic(request.url)) {
+    if (this.isConsoleViewUrl(request.url)) {
+      if (request.url === API.CONSOLE_VIEW_SESSIONS || !/^ConsoleView [A-Za-z0-9_-]{43}$/.test(headers.get('Authorization') || '')) {
+        headers = headers.delete('Authorization');
+      }
+    } else if (this.isPublic(request.url)) {
       headers = headers.delete('Authorization');
     } else {
       const auth = this.dataService.auth;
@@ -193,7 +213,8 @@ export class ServerInterceptor implements HttpInterceptor {
       sessionRefreshToken = auth?.refreshToken || '';
     }
 
-    const body = this.stripLegacyAuthBody(request.body);
+    const body = this.isConsoleViewUrl(request.url) || request.url === API.CONSOLE_LINK_RESOLVE
+      ? request.body : this.stripLegacyAuthBody(request.body);
     if (this.shouldUseJsonContentType(request, body)) {
       headers = headers.set('Content-Type', 'application/json');
     }
@@ -236,6 +257,7 @@ export class ServerInterceptor implements HttpInterceptor {
           headers: {
             'Content-Type': 'application/json',
             'X-Request-ID': this.createRequestId(),
+            'x-region': getServiceRegion(),
           },
         },
       ),

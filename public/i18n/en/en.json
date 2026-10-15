@@ -39,6 +39,8 @@
     "ABOUT_US": "About Us"
   },
   "SETTINGS": {
+    "SERVICE_REGION": "Service region",
+    "SERVICE_REGION_HINT": "Changing the service region requires signing in again",
     "TITLE": "Settings",
     "APPEARANCE": "Appearance",
     "THEME_HINT": "Choose the appearance that suits your environment",

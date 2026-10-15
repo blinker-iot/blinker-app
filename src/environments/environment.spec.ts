@@ -7,7 +7,7 @@ import { environment as priorityTest } from './environment.ble-priority-test';
 
 describe('build-time device communication profiles', () => {
   it('keeps browser local and Android hardware authorities explicit and separate', () => {
-    expect(local.gatewayBaseUrl).toBe('http://127.0.0.1:7000');
+    expect(local.gatewayBaseUrl).toBe('http://127.0.0.1:17000');
     expect(device).toEqual({ ...local, gatewayBaseUrl: 'https://127.0.0.1:17000' });
     expect(device.production).toBe(false);
   });

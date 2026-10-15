@@ -204,7 +204,7 @@ export function diffPageLayout(
   return { removedWidgetIds, incompatibleWidgetIds, addedEndpointKeys };
 }
 
-export function migratePageLayout(input: unknown, snapshot: DeviceUiSnapshot): PageLayout {
+export function migratePageLayout(input: unknown, snapshot: DeviceUiSnapshot, addMissingWidgets = true): PageLayout {
   if (!snapshot.manifestAccepted || !snapshot.manifestFingerprint) {
     throw new Error('accepted Manifest is required to migrate PageLayout');
   }
@@ -226,7 +226,7 @@ export function migratePageLayout(input: unknown, snapshot: DeviceUiSnapshot): P
     maximum,
     widget.grid.y + widget.grid.height,
   ), 0);
-  for (const generated of generateDefaultPageLayout(snapshot).widgets) {
+  for (const generated of addMissingWidgets ? generateDefaultPageLayout(snapshot).widgets : []) {
     if (boundEndpointKeys.has(generated.endpointKey) || widgets.length >= PAGE_LAYOUT_MAX_WIDGETS) continue;
     if (y > 65535) break;
     const widgetId = uniqueWidgetId(generated.widgetId, widgetIds);

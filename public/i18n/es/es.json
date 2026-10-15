@@ -39,6 +39,8 @@
     "ABOUT_US": "Acerca de"
   },
   "SETTINGS": {
+    "SERVICE_REGION": "Región del servicio",
+    "SERVICE_REGION_HINT": "Cambiar la región del servicio requiere iniciar sesión de nuevo",
     "TITLE": "Ajustes",
     "APPEARANCE": "Apariencia",
     "THEME_HINT": "Elige la apariencia adecuada para tu entorno",

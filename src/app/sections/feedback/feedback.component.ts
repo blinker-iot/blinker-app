@@ -5,12 +5,20 @@ import {
   OnInit,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { IonicModule, NavController } from '@ionic/angular';
+
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+  NavController,
+} from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
 import { FeedbackService } from './feedback.service';
 import { DataService } from 'src/app/core/services/data.service';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
-
 type FeedbackTypeId = 'device' | 'account' | 'feature' | 'other';
 
 interface FeedbackTypeOption {
@@ -33,7 +41,17 @@ interface FeedbackDraft {
   templateUrl: './feedback.component.html',
   styleUrls: ['./feedback.component.scss'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule, IonicModule, TranslatePipe, HeroCardComponent],
+  imports: [
+    FormsModule,
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    TranslatePipe,
+  ],
 })
 export class FeedbackPage implements OnInit, OnDestroy {
   private readonly draftStorageKey = 'blinker_feedback_draft';

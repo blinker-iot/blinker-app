@@ -1,11 +1,23 @@
+import { DeviceConsoleService, cloudConsole, canEditConsole, consoleLayout, installConsole } from '../../../core/services/device-console.service';
 import { CustomPanelEditorComponent } from './custom-panel-editor.component';
 import { GenerationDurationComponent } from './generation-duration.component';
 import type { PanelMode } from '../../../core/device-v2/custom-panel';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule, NavController } from '@ionic/angular';
-import type { IonContent } from '@ionic/angular';
+
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+  NavController,
+} from '@ionic/angular/standalone';
+
 import { Subscription } from 'rxjs';
 import { BlinkerDevice } from '../../../core/model/device.model';
 import { DataService } from '../../../core/services/data.service';
@@ -15,10 +27,12 @@ import { DeviceUiConnection, DeviceUiEndpoint, DeviceUiPort, DeviceUiSnapshot, D
 import { DeviceV2PageLayoutService } from '../../../core/services/device-v2-page-layout.service';
 import type { HistoryPoint } from '../../../core/device-v2/endpoint-history';
 import { arrangeTiles, capabilityTiles, displayValue, InterfaceTile, toPageLayout } from './interface-draft';
+import { generateAutomaticPageLayout } from '../../../core/device-v2/automatic-page-layout';
 import { readLegacyPanel } from '../../../core/device-v2/legacy-panel';
 import { DevicePanelRecord, DevicePanelService } from '../../../core/services/device-panel.service';
 import { PageLayoutPanelComponent, type PanelCard } from '../../../device/v2/panel/page-layout-panel';
 import { InterfaceGenerationService, type InterfaceGenerationOptions } from './interface-generation.service';
+import { interfaceGenerationErrorMessage } from './interface-generation-error';
 import { UI_THEMES, UiTheme } from '../../../core/device-v2/ui-theme';
 import { legacyPreviewCards } from './legacy-preview-cards';
 
@@ -26,7 +40,20 @@ type Method = 'automatic' | 'ai' | 'classic' | 'custom';
 const PREVIEW_HISTORY_LIMIT = 240;
 
 @Component({
-  selector: 'app-device-uic', standalone: true, imports: [IonicModule, FormsModule, PageLayoutPanelComponent, CustomPanelEditorComponent, GenerationDurationComponent],
+  selector: 'app-device-uic', standalone: true, imports: [
+                                                  IonBackButton,
+                                                  IonButton,
+                                                  IonButtons,
+                                                  IonContent,
+                                                  IonHeader,
+                                                  IonSpinner,
+                                                  IonTitle,
+                                                  IonToolbar,
+                                                  FormsModule,
+                                                  PageLayoutPanelComponent,
+                                                  CustomPanelEditorComponent,
+                                                  GenerationDurationComponent,
+                                                ],
   templateUrl: './device-uic.page.html', styleUrls: ['./device-uic.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -37,11 +64,27 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   readonly configurationHref: string;
   readonly returnToDevice: boolean;
 
-  readonly methods: { id: Method; title: string; subtitle: string; icon: string }[] = [
-    { id: 'automatic', title: '自动适配', subtitle: '根据设备能力生成基础面板', icon: 'fa-sparkles' },
-    { id: 'ai', title: 'AI 生成', subtitle: '描述需求，生成个性化面板', icon: 'fa-wand-magic-sparkles' },
-    { id: 'custom', title: '自定义 HTML', subtitle: '用原子组件与 HTML 自由设计独立面板', icon: 'fa-code' },
-    { id: 'classic', title: '手动编辑', subtitle: '添加部件，调整布局与属性', icon: 'fa-grid-4' },
+  readonly methodGroups: {
+    id: string;
+    title: string;
+    methods: { id: Method; title: string; subtitle: string; icon: string }[];
+  }[] = [
+    {
+      id: 'component',
+      title: '组件模式',
+      methods: [
+        { id: 'automatic', title: '自动适配', subtitle: '根据设备能力生成基础面板', icon: 'fa-sparkles' },
+        { id: 'ai', title: 'AI 生成', subtitle: '描述需求，生成个性化面板', icon: 'fa-wand-magic-sparkles' },
+        { id: 'classic', title: '手动编辑', subtitle: '添加部件，调整布局与属性', icon: 'fa-grid-4' },
+      ],
+    },
+    {
+      id: 'custom',
+      title: '自定义模式',
+      methods: [
+        { id: 'custom', title: '自定义 HTML', subtitle: '用原子组件与 HTML 自由设计独立面板', icon: 'fa-code' },
+      ],
+    },
   ];
 
   readonly styles = UI_THEMES;
@@ -94,7 +137,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   @ViewChild(CustomPanelEditorComponent) private customEditor?: CustomPanelEditorComponent;
   get customReady() { return this.layoutReady; }
   get customRecord() { return this.legacyRecord; }
-  get panelMode(): PanelMode { return this.device?.config.panelMode || 'normal'; }
+
   canDeactivate(): Promise<boolean> | boolean { return this.customEditor?.canDeactivate() ?? !this.saving; }
   @ViewChild('studioContent') private content?: IonContent;
   @ViewChild('previewPanel') private previewPanel?: ElementRef<HTMLElement>;
@@ -103,7 +146,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     private readonly devices: DeviceService, private readonly notice: NoticeService,
     private readonly deviceUi: DeviceUiPort, private readonly pageLayouts: DeviceV2PageLayoutService,
     private readonly generation: InterfaceGenerationService, private readonly cd: ChangeDetectorRef,
-    private readonly panels: DevicePanelService) {
+    private readonly panels: DevicePanelService, private readonly consoles: DeviceConsoleService) {
     this.id = route.snapshot.paramMap.get('id') || '';
     this.returnToDevice = route.snapshot.data['returnToDevice'] === true;
     this.backHref = this.id ? `/device-manager/${encodeURIComponent(this.id)}` : '/home/device';
@@ -113,18 +156,12 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     this.selected = method === 'automatic' || method === 'ai' || method === 'custom' ? method : null;
   }
 
+  get canEdit(): boolean { return canEditConsole(this.device); }
+
   get isV2(): boolean { return this.device?.config.mode === 'bbp2'; }
 
   backToDevice(): void {
     void this.nav.navigateBack(`/device/${encodeURIComponent(this.id)}`);
-  }
-
-  get debugEnabled(): boolean | undefined {
-    if (!this.device) return undefined;
-    if (this.device.config.component) return this.device.config.component === 'TestDashboard';
-    if (!this.layoutReady) return undefined;
-
-    return !this.isV2 && this.legacyRecord?.panel.view === 'debug';
   }
 
   get missingCapabilityMessage(): string {
@@ -136,7 +173,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   }
 
   get canApply(): boolean {
-    return !!this.selected && !!this.device && !this.device.config.isShared && !this.saving && !this.generating
+    return !!this.selected && !!this.device && this.canEdit && !this.saving && !this.generating
       && (this.selected === 'classic' || (!!this.tiles.length && this.layoutReady
         && ((this.selected === 'automatic' && this.isV2) || this.generated)));
   }
@@ -146,7 +183,9 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     if (!this.isV2) return legacyPreviewCards(this.tiles, this.device);
     if (!this.snapshot?.manifestAccepted) return [];
 
-    const layout = toPageLayout(this.tiles, this.snapshot, 1, this.previewStyle || undefined);
+    const layout = this.selected === 'automatic'
+      ? generateAutomaticPageLayout(this.snapshot, this.style, this.device.config.hiddenEndpointKeys)
+      : toPageLayout(this.tiles, this.snapshot, 1, this.previewStyle || undefined);
 
     return layout.widgets.map(widget => {
       const field = this.snapshot!.endpoints.find(field => field.key === widget.endpointKey)!;
@@ -218,7 +257,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   }
 
   selectMethod(method: Method): void {
-    if (!this.device || this.saving || this.generating || this.device.config.isShared) return;
+    if (!this.device || this.saving || this.generating || !this.canEdit) return;
 
     if (method === 'classic') {
       void this.nav.navigateForward(`/device/${encodeURIComponent(this.id)}/edit`);
@@ -277,7 +316,8 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
   private async readLayout(): Promise<void> {
     if (!this.device || !this.isV2) return;
-    if (this.selected === 'custom') { this.layoutReady = true; this.render(); return; }
+
+    if (this.selected === 'custom' && !cloudConsole(this.device)) { this.layoutReady = true; this.render(); return; }
 
     const version = ++this.refreshVersion;
 
@@ -288,7 +328,14 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     this.render();
 
     try {
-      const record = await this.pageLayouts.get(this.device.deviceName);
+      const device = this.device;
+      const epoch = this.data.sessionEpoch;
+      const source = cloudConsole(device) ? await this.consoles.get(device.deviceName) : undefined;
+
+      if (version !== this.refreshVersion || epoch !== this.data.sessionEpoch) return;
+      if (source) installConsole(device, source);
+
+      const record = source ? consoleLayout(source) : await this.pageLayouts.get(device.deviceName);
 
       if (version !== this.refreshVersion) return;
 
@@ -308,7 +355,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
     const base = refining ? { tiles: this.tiles, summary: this.summary } : undefined;
 
-    if (this.selected !== 'ai' || !this.device || this.device.config.isShared) return;
+    if (this.selected !== 'ai' || !this.device || !this.canEdit) return;
     if (this.generating || this.saving) return;
 
     if (!this.sourceTiles.length) {
@@ -382,12 +429,8 @@ export class DeviceUicPage implements OnInit, OnDestroy {
       if (epoch === this.epoch) {
         this.restoreDraft();
 
-        const code = (error as { code?: string })?.code;
-
-        this.error = code === 'INTERFACE_AI_UNAVAILABLE' ? 'AI 服务尚未配置，请联系服务管理员；也可以使用自动适配或拖拽编辑。'
-          : code === 'INTERFACE_AI_RATE_LIMIT' ? '生成请求较多，请稍后再试。'
-          : code === 'INTERFACE_AI_TIMEOUT' || code === 'GATEWAY_TIMEOUT' ? '生成超时，请重试。上一次预览已保留。'
-          : '生成未完成，请稍后重试。上一次预览已保留。';
+        this.error = interfaceGenerationErrorMessage(error)
+          + (this.generated ? '上一次预览已保留。' : '');
       }
     } finally { if (epoch === this.epoch) { this.generating = false; this.generationController = undefined; this.render(); } }
   }
@@ -451,10 +494,31 @@ export class DeviceUicPage implements OnInit, OnDestroy {
       const config: { component: string; layouter?: string; panelMode: PanelMode } = { component, panelMode: 'normal' };
 
       if (this.isV2) {
-        const record = await this.pageLayouts.saveCandidate(device.deviceName,
-          toPageLayout(this.tiles, this.snapshot!, this.revision, this.previewStyle || undefined), this.snapshot!.endpoints, this.revision);
+        const candidate = this.selected === 'automatic'
+          ? {
+              ...generateAutomaticPageLayout(this.snapshot!, this.style, device.config.hiddenEndpointKeys),
+              revision: Math.max(1, this.revision),
+            }
 
-        this.revision = record.revision;
+          : toPageLayout(this.tiles, this.snapshot!, this.revision, this.previewStyle || undefined);
+
+        if (cloudConsole(device)) {
+          const epoch = this.data.sessionEpoch;
+
+          const source = await this.consoles.save(device.deviceName,
+            { layout: candidate, uiConfig: { panelMode: 'normal' } });
+
+          if (epoch !== this.data.sessionEpoch) throw new Error('账号已切换');
+
+          this.revision = source.layout?.revision || 0;
+
+          installConsole(device, source);
+        } else {
+          const record = await this.pageLayouts.saveCandidate(device.deviceName, candidate, this.snapshot!.endpoints, this.revision);
+
+          this.revision = record.revision;
+        }
+
         layoutSaved = true;
       } else {
         const legacy = readLegacyPanel(device);
@@ -466,7 +530,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
         this.panels.install(device, this.legacyRecord);
       }
 
-      const saved = !this.isV2 || device.config.isPreview || await this.devices.saveDeviceConfig(device, config);
+      const saved = !this.isV2 || cloudConsole(device) || device.config.isPreview || await this.devices.saveDeviceConfig(device, config);
 
       if (!saved) throw new Error('config-save-failed');
 
@@ -482,35 +546,6 @@ export class DeviceUicPage implements OnInit, OnDestroy {
         this.error = '设备能力或布局已在其他位置更新，请刷新后重新预览。';
       } else this.error = layoutSaved ? '布局已保存，但界面切换失败，请重试应用。' : '保存失败，当前界面未切换。请重试应用。';
     } finally { this.saving = false; this.render(); }
-  }
-
-  async setDebugMode(enabled: boolean): Promise<void> {
-    if (!this.device || this.saving || this.device.config.isShared) return;
-
-    this.saving = true;
-    this.error = '';
-
-    this.render();
-
-    try {
-      if (!this.isV2) {
-        await this.panels.setView(this.device, enabled ? 'debug' : this.panelMode);
-        await this.nav.navigateRoot(`/device/${encodeURIComponent(this.id)}`);
-
-        return;
-      }
-
-      const component = enabled ? 'TestDashboard' : 'DeviceV2';
-
-      if (!this.device.config.isPreview && !await this.devices.saveDeviceConfig(this.device, { component })) throw new Error();
-
-      this.device.config.component = component;
-
-      this.device.subject.next({ key: 'component', value: component, source: 'device-uic' });
-      await this.nav.navigateRoot(`/device/${encodeURIComponent(this.id)}`);
-    } catch { this.error = '界面配置保存失败，请稍后重试'; }
-
-    finally { this.saving = false; this.render(); }
   }
 
   private bindDevice(): void {

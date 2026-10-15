@@ -54,6 +54,22 @@ function inventory() {
 }
 
 describe('DeviceUiPort', () => {
+  it('does not mark a residual BLE ready state online when the adapter is disabled', () => {
+    let enabled: boolean | null = true;
+    const device = { data: { cloudReachable: false } };
+    const ble = { adapterEnabledSnapshot: vi.fn(() => enabled), connectionSnapshot: vi.fn(() => 'ready'),
+      watchAdapterEnabled: vi.fn(), ensureReady: vi.fn() };
+    const port = new DeviceUiPort({} as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, { getDevice: () => device } as any);
+    expect(port.isOnline(logicalDeviceId)).toBe(true);
+    enabled = false;
+    expect(port.isOnline(logicalDeviceId)).toBe(false);
+    device.data.cloudReachable = true;
+    expect(port.isOnline(logicalDeviceId)).toBe(true);
+    expect(ble.watchAdapterEnabled).not.toHaveBeenCalled();
+    expect(ble.ensureReady).not.toHaveBeenCalled();
+  });
+
   it.each(['credential', 'radio'])('does not block a ready Cloud page on pending BLE %s', async phase => {
     let finish!: (value?: any) => void;
     const pending = new Promise<any>(resolve => { finish = resolve; });

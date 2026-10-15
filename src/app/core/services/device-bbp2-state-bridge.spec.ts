@@ -117,6 +117,7 @@ function createHarness(devices: BlinkerDevice[] = [makeDevice()]) {
     {} as never,
     {} as never,
     deviceUi as never,
+    {} as never,
   );
 
   return {

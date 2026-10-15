@@ -30,6 +30,7 @@ function createHarness() {
     {} as never,
     {} as never,
     deviceUi as never,
+    {} as never,
   );
 
   return { deviceUi, service };

@@ -2,32 +2,35 @@
 // docs/2026-10-10/设备组件库设计稿.html. A widget's host is its card.
 @use '../../../../theme/ui-theme' as theme;
 
+// Also used by plain HTML cards in the custom panel runtime.
+@mixin surface {
+  position: relative;
+
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  overflow: hidden;
+
+  border: var(--ui-card-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-card);
+  box-shadow: var(--ui-shadow);
+  color: var(--ui-ink);
+  font-family: var(--ui-font);
+
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.25s, border-color 0.25s, color 0.25s;
+}
+
 @mixin base {
-  :host {
-    position: relative;
-    flex: 1;
-    min-width: 0;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    box-sizing: border-box;
-    padding: 14px 16px;
-    overflow: hidden;
-
-    border: var(--ui-card-border);
-    border-radius: var(--ui-radius);
-    background: var(--ui-card);
-    box-shadow: var(--ui-shadow);
-    color: var(--ui-ink);
-    font-family: var(--ui-font);
-
-    text-align: left;
-    -webkit-font-smoothing: antialiased;
-    -webkit-tap-highlight-color: transparent;
-    transition: background-color 0.25s, border-color 0.25s, color 0.25s;
-  }
-
+  :host { @include surface; }
   :host([aria-disabled='true']) { opacity: 0.55; pointer-events: none; }
   * { box-sizing: border-box; }
   button {

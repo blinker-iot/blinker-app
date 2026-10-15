@@ -39,6 +39,8 @@
     "ABOUT_US": "关于我们"
   },
   "SETTINGS": {
+    "SERVICE_REGION": "服务区域",
+    "SERVICE_REGION_HINT": "切换服务区域后需要重新登录",
     "TITLE": "设置",
     "APPEARANCE": "外观",
     "THEME_HINT": "选择适合当前环境的显示风格",

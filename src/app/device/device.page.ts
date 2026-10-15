@@ -1,3 +1,5 @@
+import { canEditConsole } from '../core/services/device-console.service';
+
 import {
   ChangeDetectorRef,
   Component,
@@ -18,6 +20,7 @@ import {
   Router,
   RouterModule,
 } from '@angular/router';
+
 import {
   IonBackButton,
   IonButton,
@@ -32,6 +35,7 @@ import {
   IonToolbar,
   ModalController,
 } from '@ionic/angular/standalone';
+
 import { TranslatePipe } from '@ngx-translate/core';
 import { Observable, Subscription } from 'rxjs';
 import { deviceComponentDict } from '../configs/components.config';
@@ -45,6 +49,7 @@ import { NoticeService } from '../core/services/notice.service';
 import { DevicePanelService } from '../core/services/device-panel.service';
 import { normalizeUiTheme, UI_THEMES, UiTheme } from '../core/device-v2/ui-theme';
 import { readDeviceTheme, saveDeviceTheme } from './device-theme';
+import { readDevicePanelMode } from './device-panel-mode';
 
 interface LoadedDeviceComponent {
   device?: BlinkerDevice;
@@ -102,10 +107,11 @@ export class DevicePage implements OnInit, OnDestroy {
   private defaultComponent?: string;
   private viewEpoch = 0;
 
+  get canEdit(): boolean { return canEditConsole(this.device); }
   get debugMode(): boolean { return this.deviceComponent === 'TestDashboard'; }
 
   get customMode(): boolean {
-    return this.device?.config.panelMode === 'custom' && !!this.device.config.customPanel && !this.debugMode;
+    return readDevicePanelMode(this.device) === 'custom' && !this.debugMode;
   }
 
   async returnToPanel(): Promise<void> {
@@ -134,7 +140,7 @@ export class DevicePage implements OnInit, OnDestroy {
 
   // Personal choice, then the layout's own theme, then the app's light or dark mode.
   get deviceTheme(): UiTheme {
-    if (this.customMode) return this.device!.config.customPanel!.theme;
+    if (this.customMode && this.device?.config.customPanel) return this.device.config.customPanel.theme;
 
     return this.selectedDeviceTheme ?? this.layoutTheme ?? (this.viewService.theme === 'dark' ? 'dark' : 'natural');
   }
@@ -242,8 +248,8 @@ export class DevicePage implements OnInit, OnDestroy {
     }));
 
     this.subscriptions.add(
-      this.dataService.initCompleted.subscribe((completed) => {
-        if (completed) this.bindDevice();
+      this.dataService.deviceDataLoader.subscribe((loaded) => {
+        if (loaded) this.bindDevice();
       }),
     );
 

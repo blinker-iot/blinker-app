@@ -8,7 +8,8 @@ describe('DeviceSharePage sharing contract', () => {
     const alerts = { create: vi.fn().mockResolvedValue({ present: async () => {} }) };
     const notices = { showToast: vi.fn() };
     const page = new DeviceSharePage({} as any, data as any, sharing as any,
-      { canManagePresenceCredential: async () => false } as any, alerts as any, notices as any);
+      { canManagePresenceCredential: async () => false } as any, alerts as any, notices as any,
+      {} as any, { sessionVersion: 1 } as any, { markForCheck: vi.fn() } as any);
     page.id = 'device-one';
     return { page, sharing, alerts, notices, data };
   }
@@ -17,8 +18,9 @@ describe('DeviceSharePage sharing contract', () => {
     const f = fixture();
     vi.spyOn(f.page, 'sharedUserCount', 'get').mockReturnValue(10);
     await f.page.addShare();
-    expect(f.alerts.create).toHaveBeenCalledOnce();
-    expect(f.alerts.create.mock.calls[0][0].inputs.find((i: any) => i.checked).value).toBe('viewer');
+    expect(f.page.permissionsOpen).toBe(true);
+    expect(f.page.permissionRole).toBe('viewer');
+    expect(f.page.permissionEdit).toBe(false);
   });
 
   it('reuses the invitation operation key after a lost response', async () => {
@@ -33,10 +35,10 @@ describe('DeviceSharePage sharing contract', () => {
   it('creates a directed invitation without a bearer link or a false notification success', async () => {
     const f = fixture(); f.sharing.createInvitation.mockResolvedValue({ targeted: true });
     await f.page.addShare('reader@example.com');
-    expect(f.alerts.create.mock.calls[0][0].inputs.find((i: any) => i.checked).value).toBe('viewer');
-    f.alerts.create.mockClear();
+    expect(f.page.permissionRole).toBe('viewer');
+    expect(f.page.permissionEdit).toBe(false);
     await (f.page as any).createInvitation('viewer', 'reader@example.com');
-    expect(f.sharing.createInvitation).toHaveBeenCalledWith('device-one', 'viewer', expect.any(String), undefined, 'reader@example.com');
+    expect(f.sharing.createInvitation).toHaveBeenCalledWith('device-one', 'viewer', expect.any(String), undefined, 'reader@example.com', false);
     expect(f.alerts.create).not.toHaveBeenCalled();
     expect(f.notices.showToast).toHaveBeenCalledWith(expect.stringContaining('系统通知尚未接通'));
   });
@@ -81,10 +83,31 @@ describe('DeviceSharePage sharing contract', () => {
 
   it('does not report pending Broker delivery or offline local retirement as complete', async () => {
     const f = fixture(); f.sharing.updateShare.mockResolvedValue({ realtimeRefreshPending: true });
-    await f.page.toggleRole('share', 'operator');
+    f.page.editPermissions({ shareId: 'share', role: 'operator', commandEndpointKeys: null } as any);
+    f.page.permissionRole = 'viewer';
+    await f.page.savePermissions();
     expect(f.notices.showToast).toHaveBeenCalledWith('权限已保存，通信权限同步中');
     f.sharing.revokeShare.mockResolvedValue({ realtimeRefreshPending: false });
     await f.page.removeShare('share');
     expect(f.notices.showToast).toHaveBeenLastCalledWith(expect.stringContaining('离线本地凭据'));
+  });
+
+  it('keeps console editing independent of control for directed and open invitations', async () => {
+    const f = fixture();
+    f.sharing.createInvitation.mockResolvedValue({ targeted: true });
+    await f.page.addShare('reader@example.com');
+    f.page.permissionEdit = true;
+    await f.page.savePermissions();
+    expect(f.sharing.createInvitation).toHaveBeenLastCalledWith(
+      'device-one', 'viewer', expect.any(String), undefined, 'reader@example.com', true);
+    expect(f.page.invitationDetails).toBeNull();
+
+    f.sharing.createInvitation.mockResolvedValue({ invitationCode: 'A'.repeat(43) });
+    await f.page.addShare();
+    expect(f.page.permissionEdit).toBe(false);
+    await f.page.savePermissions();
+    expect(f.sharing.createInvitation).toHaveBeenLastCalledWith(
+      'device-one', 'viewer', expect.any(String), undefined, undefined, false);
+    expect(f.page.invitationLink).toContain('A'.repeat(43));
   });
 });

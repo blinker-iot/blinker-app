@@ -38,30 +38,39 @@
       </section>
     }
 
-    @if (layoutStale && !customPanel) {
+    @if (layoutStale && !customMode) {
       <section class="notice">
         <span>{{ layoutStaleText }}</span>
         <ion-button
           size="small"
           fill="clear"
-
-          [disabled]="layoutUpdating"
+          [disabled]="layoutUpdating || !canEdit"
           (click)="updateLayout()"
         >更新页面</ion-button>
       </section>
     }
 
     @if (customPanel) {
-      <app-custom-panel-frame [document]="customPanel" [cards]="panelCards" [interactive]="true"
-        [active]="viewActive && canControl" (action)="onPanelAction($event)" />
+      <app-custom-panel-frame [document]="customPanel" [cards]="panelCards" [interactive]="!readOnly"
+        [readOnlyScroll]="readOnly" [active]="viewActive" (action)="onPanelAction($event)" />
+    } @else if (customMode) {
+      <section class="empty">
+        <p>{{ canEdit ? '还没有自定义界面，创建后即可在这里使用。' : '还没有自定义界面，请联系设备所有者配置。' }}</p>
+
+        @if (canEdit) {
+          <ion-button [routerLink]="['/device', device.id || device.deviceName, 'edit', 'custom']">自定义 HTML</ion-button>
+        }
+
+      </section>
     } @else if (!layout) {
       <section class="empty">
         @if (waitingForCapabilities) {
           <ion-spinner name="crescent"></ion-spinner>
           <p>正在获取设备能力…</p>
+        } @else if (error) {
+          <p>暂时无法读取已保存的组件面板。</p>
         } @else {
-          <p>尚未配置组件面板，可以先添加部件或使用 AI 生成界面。</p>
-          <ion-button size="small" fill="clear" [routerLink]="['/device', device.id || device.deviceName, 'edit']">编辑页面</ion-button>
+          <p>设备能力尚未就绪，连接设备后将自动适配组件。</p>
         }
 
       </section>
@@ -73,7 +82,7 @@
         </section>
       }
 
-      <app-page-layout-panel [cards]="panelCards" [interactive]="true"
+      <app-page-layout-panel [cards]="panelCards" [interactive]="!readOnly"
         (action)="onPanelAction($event)"></app-page-layout-panel>
 
       <section class="live-fields" aria-label="本页实时数据">

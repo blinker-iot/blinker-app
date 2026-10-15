@@ -8,6 +8,7 @@ import { openMqttDeviceV2Channel } from '../device-v2/mqtt-channel';
 import { AccountConnectionResponse } from '../model/response.model';
 import {
   DeviceV2Ack,
+  DeviceV2Manifest,
   DeviceV2Store,
   DeviceV2TargetSnapshot,
   DeviceV2TelemetryLease,
@@ -27,10 +28,10 @@ export class DeviceV2Service {
   private accountId?: string;
 
   constructor(
-    http: HttpClient,
-    data: DataService,
+    private readonly http: HttpClient,
+    private readonly data: DataService,
     zone: NgZone,
-    manifestCache: DeviceV2ManifestCache,
+    private readonly manifestCache: DeviceV2ManifestCache,
   ) {
     this.client = new DeviceV2AccountClient(
       () => firstValueFrom(http.get<AccountConnectionResponse>(API.ACCOUNT.CONNECTION, {
@@ -106,6 +107,27 @@ export class DeviceV2Service {
 
   snapshot(logicalDeviceId: string): DeviceV2TargetSnapshot {
     return this.client.snapshot(logicalDeviceId);
+  }
+
+  async readStoredManifest(logicalDeviceId: string): Promise<DeviceV2Manifest> {
+    const epoch = this.data.sessionEpoch;
+    const response = await firstValueFrom(this.http.get<{
+      status: number;
+      data: DeviceV2Manifest & { logicalDeviceId: string };
+    }>(API.DEVICE_V2.MANIFEST(logicalDeviceId)));
+
+    if (epoch !== this.data.sessionEpoch) throw new Error('登录状态已变化');
+    if (response.status !== 200 || response.data?.logicalDeviceId !== logicalDeviceId
+      || !this.manifestCache.valid(response.data)) {
+      throw new Error('设备能力快照无效');
+    }
+
+    const live = this.store.snapshot(logicalDeviceId);
+    const manifest = live.manifestAccepted && live.manifest ? live.manifest : response.data;
+
+    this.manifestCache.save(logicalDeviceId, manifest);
+
+    return manifest;
   }
 
   private watchInventoryPresence(data: DataService): void {

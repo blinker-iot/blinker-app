@@ -16,27 +16,34 @@
       [disabled]="item.disabled"
       (click)="select(item)"
     >
-      <span
-        class="menu-icon"
-        aria-hidden="true"
-        [style.color]="item.iconColor || null"
-      >
-        <i [class]="'fa-light ' + item.icon"></i>
-      </span>
+      @if (item.icon) {
+        <span
+          class="menu-icon"
+          aria-hidden="true"
+
+          [style.color]="item.iconColor || null"
+        >
+          <i [class]="'fa-light ' + item.icon"></i>
+        </span>
+      }
 
       <span class="menu-copy">
         <span class="menu-title">{{ item.title }}</span>
+
         @if (item.description) {
           <span class="menu-description">{{ item.description }}</span>
         }
+
       </span>
 
       @if (item.value) {
         <span class="menu-value">{{ item.value }}</span>
       }
+
       @if (item.badge) {
         <span class="menu-badge">{{ item.badge }}</span>
       }
+
       @if (item.showChevron !== false) {
         <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
       }

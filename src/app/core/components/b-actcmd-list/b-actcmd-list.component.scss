@@ -4,7 +4,6 @@
     overflow: auto;
     z-index: 0;
     padding: 5px;
-
 }
 
 [demo-box] {
@@ -17,7 +16,10 @@
 
     [demo-item] {
         margin-right: 8px;
-        box-shadow: 0 0 10px #0000001f;
+
+        border: 1px solid var(--blinker-border);
+
+        box-shadow: none;
         border-radius: 5px;
         background-color: #FFF;
         display: flex;
@@ -35,6 +37,6 @@
     }
 
     .selected {
-        box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8) !important;
+        border-color: var(--ion-color-primary);
     }
 }

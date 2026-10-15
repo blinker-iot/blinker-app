@@ -602,6 +602,10 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     return this.adapterEnabled.asObservable();
   }
 
+  adapterEnabledSnapshot(): boolean | null {
+    return this.adapterEnabled.value;
+  }
+
   connectionSnapshot(logicalDeviceId: string): DeviceV2BleConnectionState {
     return this.connectionState(logicalDeviceId).value;
   }

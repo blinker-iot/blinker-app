@@ -8,11 +8,21 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Capacitor, PluginListenerHandle } from '@capacitor/core';
-import { AlertController, IonicModule, NavController, ToastController } from '@ionic/angular';
+
+import {
+  AlertController,
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  NavController,
+  ToastController,
+} from '@ionic/angular/standalone';
 import { ActivatedRoute } from '@angular/router';
 import { API } from 'src/app/configs/api.config';
 import { bleScanner } from 'src/app/core/bluetooth/scan';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { assertDeviceV2AccountContext, captureDeviceV2AccountContext,
   DeviceV2AccountContext } from 'src/app/core/device-v2/account-scope';
 import {
@@ -100,7 +110,15 @@ type DeviceAllocation =
   styleUrls: ['./esp32-provision.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule, IonicModule, HeroCardComponent],
+  imports: [
+    FormsModule,
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+  ],
 })
 export class Esp32ProvisionPage implements OnInit, OnDestroy {
   transport: WiFiProvTransport = 'ble';

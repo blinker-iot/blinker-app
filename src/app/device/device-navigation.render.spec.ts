@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { IonBackButton, IonRouterLink, IonRouterOutlet, ModalController, NavController, provideIonicAngular } from '@ionic/angular/standalone';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { BlinkerDevice } from '../core/model/device.model';
 import { DataService } from '../core/services/data.service';
 import { DebugService } from '../debug/debug.service';
@@ -22,7 +22,7 @@ async function render() {
   await TestBed.configureTestingModule({ imports: [DeviceNavigationHost], providers: [
     provideRouter([]), provideIonicAngular({ animated: false }),
     { provide: DeviceService, useValue: deviceService },
-    { provide: DataService, useValue: { device: { dict: {} }, initCompleted: new BehaviorSubject(false) } },
+    { provide: DataService, useValue: { device: { dict: {} }, deviceDataLoader: new BehaviorSubject(false) } },
     { provide: ViewService, useValue: { devicePageIsRoot: false } },
     { provide: DebugService, useValue: { init: vi.fn(), end: vi.fn() } },
   ] }).compileComponents();
@@ -32,7 +32,8 @@ async function render() {
   const shell = shellElement.componentInstance as DevicePage;
   vi.spyOn(shell as any, 'loadDevice').mockImplementation(() => undefined);
   shell.id = 'device-one';
-  shell.device = { id: shell.id, deviceName: shell.id, config: { mode: 'bbp2', customName: '测试设备' }, data: {} } as BlinkerDevice;
+  shell.device = { id: shell.id, deviceName: shell.id, config: { mode: 'bbp2', customName: '测试设备' },
+    data: {}, subject: new Subject() } as BlinkerDevice;
   shell.deviceComponent = 'DeviceV2'; shell.loaded = true;
   shellElement.injector.get(ChangeDetectorRef).markForCheck();
   fixture.detectChanges();
@@ -68,8 +69,9 @@ describe('DevicePage production navigation under the standalone App outlet', () 
 
   it('retains the existing forward RouterLink direction for the real settings button', async () => {
     const f = await render();
-    const settings = f.fixture.debugElement.query(By.directive(IonRouterLink));
+    const settings = f.fixture.debugElement.query(By.css('ion-button[aria-label="设备设置"]'));
     expect(settings.nativeElement.tagName).toBe('ION-BUTTON');
+    expect(settings.injector.get(IonRouterLink)).toBeInstanceOf(IonRouterLink);
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     const direction = vi.spyOn(f.nav, 'setDirection');
     settings.nativeElement.click(); await f.fixture.whenStable();

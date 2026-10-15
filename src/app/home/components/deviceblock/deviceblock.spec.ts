@@ -1,4 +1,4 @@
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { Deviceblock } from './deviceblock';
 import type { DeviceUiConnectivitySnapshot } from '../../../core/device-v2/device-ui.port';
@@ -12,7 +12,8 @@ describe('device card presence evidence', () => {
     const state = new BehaviorSubject<any>({ stateFresh: true, endpoints: [] });
     const card = new Deviceblock({ watchState: () => state, watchConnectivity: () => connectivity } as any,
       { markForCheck: vi.fn() } as any, { onDestroy: vi.fn() } as any);
-    card.device = { deviceName: 'device', cloudEnabled: cloud, config: {}, data: { cloudReachable: cloud } } as any;
+    card.device = { deviceName: 'device', cloudEnabled: cloud, config: {}, data: { cloudReachable: cloud },
+      subject: new Subject() } as any;
     const set = (value: Partial<DeviceUiConnectivitySnapshot>) => connectivity.next({ ...connectivity.value, ...value });
     return { card, set };
   };

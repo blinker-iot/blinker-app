@@ -1,11 +1,23 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+
 import {
   InfiniteScrollCustomEvent,
-  IonicModule,
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonInfiniteScroll,
+  IonInfiniteScrollContent,
+  IonRefresher,
+  IonRefresherContent,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
   RefresherCustomEvent,
-} from '@ionic/angular';
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 
 import { normalizeMessageId } from 'src/app/core/services/message-deep-link';
@@ -20,7 +32,22 @@ import { MessageService } from './message.service';
   standalone: true,
   // MessageService exposes mutable state; match the existing profile badge.
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [DatePipe, IonicModule, RouterModule],
+  imports: [
+    DatePipe,
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonInfiniteScroll,
+    IonInfiniteScrollContent,
+    IonRefresher,
+    IonRefresherContent,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    RouterModule,
+  ],
 })
 export class MessagePage implements OnInit, OnDestroy {
   private currentDetail: MessageItem | null = null;

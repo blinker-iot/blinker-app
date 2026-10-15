@@ -1,20 +1,23 @@
 <div class="room-filter">
-  <div class="room-scroll" #roombox>
+  <div class="room-scroll" #roombox role="group" aria-label="设备区域">
     <button
       type="button"
       class="room-chip"
       [attr.data-room-id]="-1"
       [class.selected]="roomid === -1"
+      [attr.aria-pressed]="roomid === -1"
       (click)="selectRoom(-1)"
     >
       {{ 'HOME.ALL' | translate }}
     </button>
+
     @for (room of roomDataList; track room; let i = $index) {
     <button
       type="button"
       class="room-chip"
       [attr.data-room-id]="i"
       [class.selected]="roomid === i"
+      [attr.aria-pressed]="roomid === i"
       (click)="selectRoom(i)"
     >
       {{ room }}

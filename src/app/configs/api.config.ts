@@ -9,6 +9,8 @@ const deviceKeyV2Url = (logicalDeviceId: string) =>
 
 export const API = {
   BASE_URL: GATEWAY_BASE_URL,
+  CONSOLE_LINK_RESOLVE: API_V2_URL + '/console-links:resolve',
+  CONSOLE_VIEW_SESSIONS: API_V2_URL + "/console-view-sessions",
   DEVICE_PANEL: (panelId: string) => API_V2_URL + '/device-panels/' + encodeURIComponent(panelId),
   INTERFACE_REFINE: API_V1_URL + '/interface/refine',
   INTERFACE_WORKFLOW: API_V1_URL + '/interface/workflow',
@@ -39,6 +41,7 @@ export const API = {
     ROOT: API_V1_URL + '/account',
     DELETION_CODE: API_V1_URL + '/account/deletion-code',
     CONNECTION: API_V2_URL + '/account/connection',
+    REGIONS: API_V2_URL + '/account/regions',
   },
   AUTOMATION: {
     LIST: API_V2_URL + '/automations',
@@ -53,6 +56,9 @@ export const API = {
     DISPLAY_METADATA: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/display-metadata',
     STATE_HISTORY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/state-history',
     TASKS: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/tasks:execute',
+    MANIFEST: (id: string) => deviceKeyV2Url(id) + '/manifest',
+    CONSOLE: (id: string) => deviceKeyV2Url(id) + "/console",
+    CONSOLE_LINK: (id: string) => deviceKeyV2Url(id) + "/console-link",
     DIRECT_ADMIN: (logicalDeviceId: string) =>
       deviceKeyV2Url(logicalDeviceId) + '/direct-access/admin',
     LOCAL_ACCESS: (logicalDeviceId: string) =>
@@ -142,7 +148,10 @@ export const API = {
 } as const;
 
 export function isGatewayUrl(url: string): boolean {
-  return url === API.INTERFACE_REFINE
+  return url === API.CONSOLE_LINK_RESOLVE
+    || url === API.CONSOLE_VIEW_SESSIONS
+    || url.startsWith(API.CONSOLE_VIEW_SESSIONS + "/")
+    || url === API.INTERFACE_REFINE
     || url.startsWith(API_V2_URL + '/device-panels/')
     || url === API.INTERFACE_WORKFLOW
     || url === API.INTERFACE_GENERATE
@@ -150,6 +159,7 @@ export function isGatewayUrl(url: string): boolean {
     || url === API_V1_URL + '/account'
     || url.startsWith(API_V1_URL + '/account/')
     || url === API_V2_URL + '/account/connection'
+    || url === API.ACCOUNT.REGIONS
     || url.startsWith(API_V1_URL + '/feedback/')
     || url === API.DEVICE_V2.ACCEPT_SHARE
     || url === API.DEVICE_V2.PREVIEW_SHARE
@@ -197,7 +207,8 @@ function isDeviceKeyManagementUrl(url: string): boolean {
   if (parts.length === 1) return true;
 
   if (parts.length === 2) {
-    return parts[1] === 'device-key:reveal'
+    return parts[1] === 'manifest'
+      || parts[1] === 'device-key:reveal'
       || parts[1] === 'tasks:execute'
       || parts[1] === 'local-access'
       || parts[1] === 'device-key:rotate'
@@ -210,6 +221,9 @@ function isDeviceKeyManagementUrl(url: string): boolean {
       || parts[1] === 'display-metadata'
       || parts[1] === 'state-history'
       || parts[1] === 'ui-config'
+      || parts[1] === 'console'
+      || parts[1] === 'console-link'
+      || parts[1] === 'console-public-access'
       || parts[1] === 'share-invitations'
       || parts[1] === 'shares';
   }

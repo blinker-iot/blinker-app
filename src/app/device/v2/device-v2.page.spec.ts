@@ -172,7 +172,7 @@ function harness(
     })),
   };
 
-  const page = new DeviceV2Page(port as any, localPageLayouts);
+  const page = new DeviceV2Page(port as any, localPageLayouts, {} as never, { sessionVersion: 0 } as never);
 
   page.device = device();
   page.viewActive = viewActive;
@@ -964,6 +964,34 @@ describe('DeviceV2Page UI port lifecycle', () => {
       expect(page.telemetryField(field)?.points).toHaveLength(0);
     } finally {
       page.ngOnDestroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it('owns console polling only while a cloud console is visible in the foreground', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const { page, appActive } = harness();
+    try {
+      await vi.waitFor(() => expect(page.canControl).toBe(true));
+      expect(vi.getTimerCount()).toBe(0);
+      page.device.config.mode = 'bbp2';
+      page.device.cloudEnabled = true;
+      page.ngOnChanges(changed('device'));
+      expect(vi.getTimerCount()).toBe(1);
+      page.viewActive = false;
+      expect(vi.getTimerCount()).toBe(0);
+      page.viewActive = true;
+      expect(vi.getTimerCount()).toBe(1);
+      appActive.next(false);
+      expect(vi.getTimerCount()).toBe(0);
+      appActive.next(true);
+      expect(vi.getTimerCount()).toBe(1);
+      page.device.cloudEnabled = false;
+      page.ngOnChanges(changed('device'));
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      page.ngOnDestroy();
+      expect(vi.getTimerCount()).toBe(0);
       vi.useRealTimers();
     }
   });

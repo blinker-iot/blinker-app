@@ -12,6 +12,7 @@ interface FrameState {
   cards: PanelCard[];
   interactive: boolean;
   theme: string;
+  readOnlyScroll?: boolean;
 }
 
 declare global {
@@ -36,6 +37,59 @@ async function start(): Promise<void> {
   const subscribers = new Set<(values: Record<string, unknown>) => void>();
   const values = () => Object.fromEntries(state.cards.map(card => [card.field.key, card.value]));
   const post = (message: object) => parent.postMessage({ channel, ...message }, '*');
+  let heightFrame = 0;
+  let lastHeight = 0;
+  let sizeObserver: ResizeObserver | undefined;
+
+  function reportHeight(): void {
+    if (!state.readOnlyScroll || heightFrame) return;
+
+    heightFrame = requestAnimationFrame(() => {
+      heightFrame = 0;
+
+      if (!state.readOnlyScroll) return;
+
+      const height = Math.ceil(Math.max(document.body.scrollHeight, document.documentElement.scrollHeight));
+
+      if (height !== lastHeight) {
+        lastHeight = height;
+
+        post({ type: 'height', height });
+      }
+    });
+  }
+
+  function syncReadOnlyScroll(): void {
+    document.documentElement.toggleAttribute('data-readonly-scroll', state.readOnlyScroll === true);
+
+    if (state.readOnlyScroll && !sizeObserver) {
+      sizeObserver = new ResizeObserver(reportHeight);
+
+      sizeObserver.observe(document.body);
+      sizeObserver.observe(document.documentElement);
+    } else if (!state.readOnlyScroll) {
+      cancelAnimationFrame(heightFrame);
+
+      heightFrame = 0;
+
+      sizeObserver?.disconnect();
+
+      sizeObserver = undefined;
+      lastHeight = 0;
+    }
+
+    reportHeight();
+  }
+
+  window.addEventListener('pagehide', () => {
+    sizeObserver?.disconnect();
+
+    sizeObserver = undefined;
+
+    cancelAnimationFrame(heightFrame);
+
+    heightFrame = 0;
+  }, { once: true });
 
   function act(key: string, action: WidgetAct): void {
     if (state.interactive) post({ type: 'action', key, ...action });
@@ -83,25 +137,33 @@ async function start(): Promise<void> {
 
     render(): void {
       const variant = this.localName.slice('blinker-'.length) as PageWidgetVariant;
-      const source = state.cards.find(card => card.field.key === this.getAttribute('field'));
+      const defaultPreset = presetForVariant(variant);
 
-      if (!source) { this.clear('等待字段：' + (this.getAttribute('field') || '未指定')); return; }
-
-      if (!variantsFor(presetForVariant(variant).type, source.field).includes(variant)) {
-        this.clear('此组件不适用于字段：' + source.field.key);
-
-        return;
-      }
+      geometry(this, defaultPreset.width, defaultPreset.height);
 
       try {
         const presetId = this.getAttribute('preset') as WidgetPresetId | null;
-        const preset = presetId ? WIDGET_PRESETS[presetId] : presetForVariant(variant);
+        const preset = presetId ? WIDGET_PRESETS[presetId] : defaultPreset;
 
         if (!preset || preset.variant !== variant) throw new Error('组件预置不匹配');
 
-        const options = parseWidgetOptions({ ...preset.options, ...JSON.parse(this.getAttribute('options') || '{}') }, variant);
         const width = dimension(this.getAttribute('span'), preset.width, 8);
         const height = dimension(this.getAttribute('rows'), preset.height, 12);
+
+        // Unavailable fields still occupy the atom's declared space in the grid.
+        geometry(this, width, height);
+
+        const source = state.cards.find(card => card.field.key === this.getAttribute('field'));
+
+        if (!source) { this.clear('数据暂不可用'); return; }
+
+        if (!variantsFor(preset.type, source.field).includes(variant)) {
+          this.clear('此组件不适用于字段：' + source.field.key);
+
+          return;
+        }
+
+        const options = parseWidgetOptions({ ...preset.options, ...JSON.parse(this.getAttribute('options') || '{}') }, variant);
         const extraKeys: unknown = JSON.parse(this.getAttribute('extra-keys') || '[]');
 
         if (!Array.isArray(extraKeys) || extraKeys.some(key => typeof key !== 'string')) throw new Error('附属读数字段无效');
@@ -126,7 +188,7 @@ async function start(): Promise<void> {
           }),
         };
 
-        geometry(this, width, height);
+        this.classList.remove('atom-unavailable');
 
         if (!this.ref) {
           this.replaceChildren();
@@ -167,7 +229,7 @@ async function start(): Promise<void> {
       this.mount = undefined;
       this.textContent = message;
 
-      this.classList.add('cell');
+      this.classList.add('cell', 'atom-unavailable');
     }
   }
 
@@ -234,12 +296,22 @@ async function start(): Promise<void> {
       return;
     }
 
+    if (event.data.type === 'scroll') {
+      const top = event.data.top;
+
+      if (state.readOnlyScroll && Number.isFinite(top) && top >= 0) window.scrollTo(0, top);
+
+      return;
+    }
+
     if (event.data.type !== 'state') return;
 
     state = event.data.state;
     document.documentElement.dataset['uiTheme'] = state.theme;
 
     for (const atom of atoms) atom.render();
+
+    syncReadOnlyScroll();
 
     for (const listener of subscribers) {
       try { listener(values()); } catch (error) { console.error(error); }

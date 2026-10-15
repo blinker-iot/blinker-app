@@ -1,8 +1,7 @@
 import { Component, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { AlertController, IonicModule, NavController } from '@ionic/angular';
-import { HeroCardComponent } from '../../../../core/components/hero-card/hero-card.component';
+import { AlertController, IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, NavController } from '@ionic/angular/standalone';
 import { TaskDefinition, TaskRecord, TaskSchedule, taskDefinition } from '../../../../core/device-v2/tasks/contract';
 import { TaskTarget, taskErrorText, taskValue } from '../device-timer.models';
 import { TaskStatusComponent } from '../task-status.component';
@@ -19,7 +18,7 @@ function countdownMillis(seconds: number): number {
 
 @Component({
   selector: 'app-timing-edit', templateUrl: 'timing-edit.html', styleUrls: ['timing-edit.scss'],
-  imports: [IonicModule, FormsModule, HeroCardComponent, TaskStatusComponent], providers: [TimerService],
+  imports: [IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, FormsModule, TaskStatusComponent], providers: [TimerService],
 })
 export class TimingEditPage implements OnDestroy {
   id = ''; taskId?: number; invalidRoute = false;

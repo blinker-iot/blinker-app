@@ -12,13 +12,15 @@ import {
   QueryList,
   ViewChild,
 } from '@angular/core';
+
 import Sortable from 'sortablejs';
 import { MenuItemComponent } from './menu-item/menu-item';
 
 export interface MenuListItem {
   id: string;
   title: string;
-  icon: string;
+  icon?: string;
+
   iconColor?: string;
   description?: string;
   value?: string;
@@ -44,11 +46,13 @@ export class MenuListComponent
   private _editMode = false;
   private _enableSort = true;
   private viewInitialized = false;
+
   private sortable?: { destroy(): void; toArray(): string[] };
 
   @Input()
   set items(value: readonly MenuListItem[] | undefined) {
     this._items = value;
+
     this.updateSortable();
   }
 
@@ -57,10 +61,10 @@ export class MenuListComponent
   }
 
   @Input() detailed = false;
-
   @Input()
   set editMode(value: boolean) {
     this._editMode = value;
+
     this.updateItemEditMode();
     this.updateSortable();
   }
@@ -72,6 +76,7 @@ export class MenuListComponent
   @Input()
   set enableSort(value: boolean) {
     this._enableSort = value;
+
     this.updateSortable();
   }
 
@@ -81,7 +86,6 @@ export class MenuListComponent
 
   @Output() readonly itemSelected = new EventEmitter<MenuListItem>();
   @Output() readonly sortChange = new EventEmitter<string[]>();
-
   @ViewChild('sortbox') private sortbox?: ElementRef<HTMLElement>;
   @ContentChildren(MenuItemComponent)
   private menuItems?: QueryList<MenuItemComponent>;
@@ -93,6 +97,7 @@ export class MenuListComponent
 
   ngAfterViewInit(): void {
     this.viewInitialized = true;
+
     this.updateSortable();
   }
 
@@ -140,7 +145,9 @@ export class MenuListComponent
     if (!this.sortable) return;
 
     const order = this.sortable.toArray();
+
     this.sortable.destroy();
+
     this.sortable = undefined;
 
     if (emitChange) {

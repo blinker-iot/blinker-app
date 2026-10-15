@@ -1,6 +1,17 @@
 import { ChangeDetectionStrategy, Component, HostBinding } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule, NavController } from '@ionic/angular';
+
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+  NavController,
+} from '@ionic/angular/standalone';
 import type { PageLayoutWidget } from '../../../core/device-v2/page-layout';
 import { PageWidgetComponent } from '../../../device/v2/panel/page-widget';
 import type { PanelCard } from '../../../device/v2/widgets/widget-kit';
@@ -10,7 +21,18 @@ import { PanelWidgetEditorContext, PanelWidgetEditorContextService } from './pan
 @Component({
   selector: 'app-panel-widget-editor',
   standalone: true,
-  imports: [IonicModule, PageWidgetComponent, WidgetInspectorComponent],
+  imports: [
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    PageWidgetComponent,
+    WidgetInspectorComponent,
+  ],
   templateUrl: './panel-widget-editor.page.html',
   styleUrls: ['./panel-widget-editor.page.scss'],
   changeDetection: ChangeDetectionStrategy.Eager,

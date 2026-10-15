@@ -16,12 +16,14 @@
 // them in a row; several lines put the counter and key under the text.
 .tx-box {
   display: flex;
+
   align-items: center;
   gap: 8px;
   margin-top: auto;
   padding: 6px 6px 6px 14px;
   border: 1px solid transparent;
   border-radius: 14px;
+
   background: var(--ui-well);
   transition: border-color 0.2s, background-color 0.2s;
 
@@ -46,12 +48,15 @@
 
 .tx-in {
   flex: 1;
+
   min-width: 0;
   min-height: 0;
   padding: 0;
   border: 0;
   background: none;
+
   color: var(--ui-ink);
+
   font: inherit;
   font-size: 14px;
   outline: none;
@@ -65,6 +70,7 @@
 .tx-foot {
   flex: none;
   display: flex;
+
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
@@ -78,23 +84,35 @@
 
 .multi .tx-count { margin-right: auto; }
 
+.tx-readonly {
+  padding: 8px;
+
+  color: var(--ui-muted);
+
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .tx-send {
   display: grid;
+
   place-items: center;
   width: 32px;
   height: 32px;
   padding: 8px;
   border-radius: 50%;
+
   background: var(--ui-accent);
   color: var(--ui-on-accent);
   transition: opacity 0.2s, transform 0.15s;
-
   &:active { transform: scale(0.92); }
   &:disabled { opacity: 0.35; cursor: default; }
 
   @include theme.electronic {
     border: 1.5px dotted var(--ui-accent);
+
     background: none;
+
     color: var(--ui-accent);
   }
 }

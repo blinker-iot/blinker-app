@@ -1,3 +1,6 @@
+import { DEVICE_CONSOLE_API_BASE, DEVICE_CONSOLE_HOST } from './core/device-v2/console-host';
+import { AppDeviceConsoleHost } from './core/services/device-console-host.service';
+import { API } from './configs/api.config';
 import { ApplicationConfig } from '@angular/core';
 import {
   RouteReuseStrategy,
@@ -36,6 +39,8 @@ import { StaticTranslationLoader } from './core/services/translation.loader';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: DEVICE_CONSOLE_HOST, useExisting: AppDeviceConsoleHost },
+    { provide: DEVICE_CONSOLE_API_BASE, useValue: API.BASE_URL },
     provideRouter(routes),
     provideIonicAngular({
       mode: 'ios',

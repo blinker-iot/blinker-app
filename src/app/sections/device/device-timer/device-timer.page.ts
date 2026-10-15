@@ -1,7 +1,6 @@
 import { Component, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertController, IonicModule } from '@ionic/angular';
-import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
+import { AlertController, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
 import { TaskRecord } from '../../../core/device-v2/tasks/contract';
 import { taskProgressText, taskScheduleText } from './device-timer.models';
 import { TaskStatusComponent } from './task-status.component';
@@ -9,7 +8,7 @@ import { TimerService } from './timer.service';
 
 @Component({
   selector: 'app-device-timer', templateUrl: './device-timer.page.html', styleUrls: ['./device-timer.page.scss'],
-  imports: [IonicModule, HeroCardComponent, TaskStatusComponent], providers: [TimerService],
+  imports: [IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, TaskStatusComponent], providers: [TimerService],
 })
 export class DeviceTimerPage implements OnDestroy {
   id = '';

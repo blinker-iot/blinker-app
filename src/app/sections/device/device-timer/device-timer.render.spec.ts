@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
-import { AlertController, NavController } from '@ionic/angular';
-import { provideIonicAngular } from '@ionic/angular/standalone';
+import { AlertController, NavController, provideIonicAngular } from '@ionic/angular/standalone';
 import { Subject } from 'rxjs';
 import { TaskRecord } from '../../../core/device-v2/tasks/contract';
 import { DeviceTimerPage } from './device-timer.page';
@@ -73,7 +72,10 @@ describe('task pages production template rendering', () => {
     expect(f.element.querySelector('.source-text')?.textContent).toContain('云端管理');
     expect(f.element.querySelector('.task-detail strong')?.textContent).toBe('电源开关：亮');
     expect(f.element.querySelector('details')?.textContent).toContain('当前查询修订 2');
-    expect(f.element.querySelector('.hero-card')?.textContent).not.toContain('修订');
+    const executionNote = f.element.querySelector('.task-execution-note')?.textContent;
+    expect(executionNote).toContain('由设备执行');
+    expect(executionNote).toContain('退出 App 不会取消');
+    expect(executionNote).not.toContain('修订');
     expect(f.timer.write).not.toHaveBeenCalled(); expect(f.timer.retry).not.toHaveBeenCalled();
   });
 
@@ -150,7 +152,7 @@ describe('task pages production template rendering', () => {
       ? { kind, utcMillis: Date.now() + 60000 }
       : { kind, minuteOfDay: 485, weekdays: 65, utcOffsetMinutes: 480 };
     const f = await render('edit', timer);
-    expect(f.element.querySelector('.hero-card')?.textContent).toContain('本页无法确认校时状态及来源');
+    expect(f.element.querySelector('.task-clock-note')?.textContent).toContain('本页无法确认校时状态及来源');
     expect(f.element.textContent).not.toContain('已授时');
     expect(f.element.querySelector<HTMLButtonElement>('.save-action')?.disabled).toBe(false);
     expect((f.fixture.componentInstance as TimingEditPage).canSave).toBe(true);

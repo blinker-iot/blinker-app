@@ -1,180 +1,153 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AlertController, IonicModule } from '@ionic/angular';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+
+import {
+  AlertController, IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, NavController,
+} from '@ionic/angular/standalone';
+
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
+import { OrderData } from 'src/app/core/model/data.model';
 import { DataService } from 'src/app/core/services/data.service';
-import { NoticeService } from 'src/app/core/services/notice.service';
-import { RoomService } from '../room.service';
+import { RoomService, roomErrorMessage } from '../room.service';
 
 @Component({
   selector: 'page-room-edit',
   standalone: true,
   templateUrl: 'room-edit.html',
   styleUrls: ['room-edit.scss'],
-  imports: [IonicModule, BDeviceImgComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, BDeviceImgComponent],
 })
-export class RoomEditPage implements OnInit, OnDestroy {
+
+export class RoomEditPage implements OnInit {
   roomName = '';
-  tempRoomName = 'unknown';
-  alert;
   loaded = false;
-  private originalRoomData = '';
-  private subscription;
-
-  get roomDataDict() {
-    return this.dataService.room?.dict ?? {};
-  }
-
-  get roomDataList() {
-    return this.dataService.room?.list ?? [];
-  }
+  saving = false;
+  error = '';
+  private draft: OrderData = { list: [], dict: {} };
+  private revision = 0;
+  private sessionEpoch = -1;
 
   get deviceDataDict() {
-    return this.dataService.device?.dict ?? {};
+    return this.dataService.device.dict;
   }
 
-  get deviceDataList() {
-    return this.dataService.device?.list ?? [];
+  get deviceDataList(): string[] {
+    return this.dataService.device.list;
   }
 
-  get availableDeviceDataList(): string[] {
-    return this.deviceDataList.filter((deviceId) => !this.isExist(deviceId));
-  }
-
-  get currentRoomData() {
-    return this.roomDataDict[this.roomName] ?? [];
-  }
-
-  set currentRoomData(data: string[]) {
-    if (this.dataService.room?.dict) {
-      this.dataService.room.dict[this.roomName] = data;
-    }
+  get currentRoomData(): string[] {
+    return this.draft.dict[this.roomName] ?? [];
   }
 
   constructor(
-    private dataService: DataService,
-    private roomService: RoomService,
-    private alertCtrl: AlertController,
-    private noticeService: NoticeService,
-    private activatedRoute: ActivatedRoute
+    private readonly dataService: DataService,
+    private readonly roomService: RoomService,
+    private readonly alertCtrl: AlertController,
+    private readonly activatedRoute: ActivatedRoute,
+    private readonly nav: NavController,
   ) {}
 
   ngOnInit(): void {
-    this.subscription = this.dataService.userDataLoader.subscribe(() => {
-      this.bindRoom();
-    });
+    void this.load();
   }
 
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
-    this.alert?.dismiss();
+  async load(): Promise<void> {
+    this.loaded = false;
+    this.error = '';
 
-    if (
-      !this.loaded ||
-      this.originalRoomData === JSON.stringify(this.dataService.room)
-    ) {
-      return;
-    }
-    void this.roomService.saveData(this.dataService.room);
-  }
+    try {
+      const snapshot = await this.roomService.load();
+      const name = this.activatedRoute.snapshot.params['room'];
 
-  private bindRoom(): void {
-    const roomName = this.activatedRoute.snapshot.params['room'];
-    const room = this.dataService.room;
-    if (
-      !room?.dict ||
-      !Array.isArray(room.dict[roomName]) ||
-      !this.dataService.device
-    ) {
-      return;
-    }
+      if (!Object.hasOwn(snapshot.rooms, name)) {
+        this.error = '该区域已被删除，请返回区域列表。';
 
-    this.roomName = roomName;
-    this.tempRoomName = roomName;
-    this.originalRoomData = JSON.stringify(room);
-    this.removeInvalidDevice();
-    this.loaded = true;
-  }
-
-  // 移除已解绑设备
-  removeInvalidDevice() {
-    const newRoomData: string[] = [];
-    for (const deviceId of this.currentRoomData) {
-      if (typeof this.deviceDataDict[deviceId] !== 'undefined') {
-        newRoomData.push(deviceId);
+        return;
       }
+
+      this.draft = { list: [...snapshot.order], dict: structuredClone(snapshot.rooms) };
+      this.revision = snapshot.revision;
+      this.sessionEpoch = this.dataService.sessionEpoch;
+      this.roomName = name;
+      this.loaded = true;
+    } catch (error) {
+      this.error = roomErrorMessage(error);
     }
-    this.currentRoomData = newRoomData;
   }
 
-  async changeRoomName() {
-    this.alert = await this.alertCtrl.create({
-      header: '修改房间名称',
-      inputs: [
-        {
-          name: 'newRoomName',
-          value: this.tempRoomName,
-          placeholder: this.tempRoomName,
-        },
-      ],
+  async changeRoomName(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: '区域名称',
+      inputs: [{ name: 'name', value: this.roomName, attributes: { maxlength: 10 } }],
       buttons: [
+        { text: '取消', role: 'cancel' },
         {
-          text: '取消',
-          role: 'cancel',
-        },
-        {
-          text: '确认修改',
+          text: '确定',
           handler: (data) => {
-            const newRoomName = data.newRoomName?.trim();
-            if (!newRoomName || newRoomName === this.roomName) return;
-            if (newRoomName.length > 10) {
-              this.noticeService.showToast('tooLongRoomName');
-              return;
+            const name = String(data.name ?? '').trim();
+
+            if (!name || name.length > 10 || ['__proto__', 'constructor', 'prototype'].includes(name)) {
+              alert.message = '请输入 1–10 个字的有效区域名称。';
+
+              return false;
             }
-            if (this.roomIsExist(newRoomName)) {
-              this.noticeService.showToast('sameRoomName');
-              return;
+
+            if (name === this.roomName) return true;
+
+            if (this.draft.list.includes(name)) {
+              alert.message = '该区域名称已存在。';
+
+              return false;
             }
-            this.renameRoom(newRoomName);
+
+            const index = this.draft.list.indexOf(this.roomName);
+
+            this.draft.list[index] = name;
+            this.draft.dict[name] = this.currentRoomData;
+
+            delete this.draft.dict[this.roomName];
+
+            this.roomName = name;
+
+            return true;
           },
         },
       ],
     });
-    await this.alert.present();
+
+    await alert.present();
   }
 
-  renameRoom(newRoomName: string): void {
-    const oldRoomName = this.roomName;
-    // 使用新名字新建room
-    const index = this.roomDataList.indexOf(oldRoomName);
-    if (index < 0) return;
-
-    this.roomDataList.splice(index, 1, newRoomName);
-    this.roomDataDict[newRoomName] = this.roomDataDict[oldRoomName];
-    this.roomName = newRoomName;
-    this.tempRoomName = newRoomName;
-    // 删除原本的room
-    delete this.roomDataDict[oldRoomName];
+  isSelected(deviceId: string): boolean {
+    return this.currentRoomData.includes(deviceId);
   }
 
-  isExist(deviceName: string): boolean {
-    return this.currentRoomData.includes(deviceName);
+  toggleDevice(deviceId: string): void {
+    if (this.saving) return;
+
+    this.draft.dict[this.roomName] = this.isSelected(deviceId)
+      ? this.currentRoomData.filter(id => id !== deviceId)
+      : [...this.currentRoomData, deviceId];
   }
 
-  roomIsExist(roomName: string): boolean {
-    return this.roomDataList.includes(roomName);
-  }
+  async save(): Promise<void> {
+    if (!this.loaded || this.saving) return;
 
-  delDevice(deviceName: string): void {
-    const index = this.currentRoomData.indexOf(deviceName);
-    if (index > -1) {
-      this.currentRoomData.splice(index, 1);
+    this.saving = true;
+    this.error = '';
+
+    try {
+      await this.roomService.saveData(this.draft, this.revision, this.sessionEpoch);
+      await this.nav.navigateBack('/room-manager');
+    } catch (error) {
+      this.error = roomErrorMessage(error);
+    } finally {
+      this.saving = false;
     }
   }
 
-  addDevice(deviceName: string): void {
-    if (!this.isExist(deviceName)) {
-      this.currentRoomData.push(deviceName);
-    }
+  cancel(): void {
+    if (!this.saving) void this.nav.navigateBack('/room-manager');
   }
 }

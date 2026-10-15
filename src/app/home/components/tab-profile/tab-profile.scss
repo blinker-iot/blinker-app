@@ -13,10 +13,7 @@ ion-content {
 .profile-content {
   min-height: 100%;
   padding: calc(var(--ion-safe-area-top, 0px) + 64px) 18px 18px;
-  background:
-    radial-gradient(circle at 85% 4%, rgba(var(--ion-color-primary-rgb), 0.13), transparent 27%),
-    radial-gradient(circle at 8% 32%, rgba(var(--ion-color-primary-rgb), 0.05), transparent 24%),
-    var(--blinker-bg);
+  background: var(--blinker-bg);
 }
 
 .summary-dot,
@@ -30,8 +27,8 @@ ion-content {
 
 .notice-badge {
   position: absolute;
-  top: 0;
-  right: -4px;
+  top: 3px;
+  right: 1px;
   min-width: 17px;
   height: 17px;
   padding: 0 4px;

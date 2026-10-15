@@ -2,9 +2,16 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
-import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
 import { assertDeviceV2AccountContext, captureDeviceV2AccountContext, DeviceV2AccountContext } from '../../../core/device-v2/account-scope';
 import { capabilityBooleanLabel, capabilityDisplayName, deviceDisplayName } from '../../../core/device-v2/display-metadata';
 import { StateHistoryItem, StateHistoryQuery, STATE_HISTORY_PAGE_LIMIT, STATE_HISTORY_RECORDED_TYPES,
@@ -20,8 +27,20 @@ const DAY = 24 * 60 * 60 * 1000;
 const TYPE_LABELS = ['开关', '整数', '非负整数', '数值', '数值', '文字'];
 
 @Component({
-  selector: 'app-device-storage', templateUrl: './device-storage.page.html', styleUrls: ['./device-storage.page.scss'],
-  imports: [CommonModule, FormsModule, IonicModule, HeroCardComponent],
+  selector: 'app-device-storage',
+  templateUrl: './device-storage.page.html',
+  styleUrls: ['./device-storage.page.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+  ],
 })
 export class DeviceStoragePage implements OnDestroy {
   id = '';

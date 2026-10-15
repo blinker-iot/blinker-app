@@ -125,7 +125,15 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/scene/automation/automation.page').then(m => m.AutomationPage),
   },
   {
+    path: 's/:token',
+    loadComponent: () => import('./sections/device/shared-console/shared-console.page').then(m => m.SharedConsolePage),
+  },
+  {
     path: 'share-invitation',
+    loadComponent: () => import('./sections/device/share-invitation/share-invitation.page').then(m => m.ShareInvitationPage),
+  },
+  {
+    path: 'share-invitation/:code',
     loadComponent: () => import('./sections/device/share-invitation/share-invitation.page').then(m => m.ShareInvitationPage),
   },
   {

@@ -6,8 +6,7 @@
 </ion-header>
 <ion-content [fullscreen]="true">
   <main>
-    <app-hero-card iconClass="fa-light fa-clock-rotate-left" eyebrow="STATE HISTORY" [heading]="deviceName"
-      description="查看服务器实际收到的开关、数值与文字状态，不代表用户操作记录。" />
+    <h1 class="device-context">{{ deviceName }}</h1>
     <p class="source-note">仅记录服务器已确认的开关、数值与文字属性状态。未送达服务器的蓝牙或局域网本地变化不补录；实时采样、字节、容器与空值暂不归档。时间为服务器确认时间（UTC），不是设备采集或实际发生时间。</p>
     <section class="surface-card query-form" aria-label="历史查询范围">
       <label>时间范围

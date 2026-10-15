@@ -22,10 +22,11 @@ describe('share entry routing', () => {
   });
   it('returns a successful login to the pending confirmation, otherwise preserves the normal home route', () => {
     const navCtrl = { navigateRoot: vi.fn() }, shareInvitation = { hasPending: true };
-    (LoginPage.prototype as any).returnAfterLogin.call({ navCtrl, shareInvitation });
+    const route = { snapshot: { queryParamMap: { get: () => null } } };
+    (LoginPage.prototype as any).returnAfterLogin.call({ navCtrl, shareInvitation, route });
     expect(navCtrl.navigateRoot).toHaveBeenLastCalledWith('/share-invitation');
     shareInvitation.hasPending = false;
-    (LoginPage.prototype as any).returnAfterLogin.call({ navCtrl, shareInvitation });
+    (LoginPage.prototype as any).returnAfterLogin.call({ navCtrl, shareInvitation, route });
     expect(navCtrl.navigateRoot).toHaveBeenLastCalledWith('/');
   });
 });

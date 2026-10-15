@@ -1,95 +1,154 @@
-<ion-header class="share-header">
+<ion-header>
   <ion-toolbar>
-    <ion-buttons slot="start"><ion-back-button text="" defaultHref="/home/profile"></ion-back-button></ion-buttons>
+    <ion-buttons slot="start">
+      <ion-back-button text="" [defaultHref]="authenticated ? '/home/profile' : '/login'" />
+    </ion-buttons>
     <ion-title>{{ 'MENU.DEVICE_SHARING' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button aria-label="打开分享链接" title="打开分享链接" (click)="showAcceptInvitation()">
+        <i class="fa-light fa-plus" aria-hidden="true"></i>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content fullscreen="true">
+<ion-content [fullscreen]="true">
   <main>
-    <app-hero-card iconClass="fa-light fa-user-group" eyebrow="DEVICE SHARING"
-      heading="与信任的人共享设备" description="分享链接，确认后授予查看或控制权限。"
-      [meta]="sharedByMeCount" />
-
-    <app-tab-selector ariaLabel="设备共享分类" [options]="shareTabs" [value]="tab"
-      (valueChange)="changeTab($event)" />
-
-    @if (loadError) { <p role="alert">{{ loadError }} <button type="button" (click)="loadShares()">重试</button></p> }
-
-    @if (loaded) {
-      @if (tab === 'sharing') {
-      <div class="section-label">可共享设备</div>
-      @if (shareableDeviceList.length) {
-      <section class="device-card">
-        @for (deviceId of shareableDeviceList; track deviceId) {
-        <button type="button" class="device-row" [routerLink]="['/share-manager', deviceId]">
-          <span class="device-image"><b-device-img [deviceId]="deviceId"></b-device-img></span>
-          <span class="device-copy">
-            <strong>{{ deviceDataDict[deviceId]?.config?.customName }}</strong>
-            <small>{{ activeShareCount(deviceId) ? '已共享给 ' + activeShareCount(deviceId) + ' 位成员' : '尚未共享' }}</small>
-          </span>
-          <span class="row-status" [class.active]="activeShareCount(deviceId)">
-            {{ activeShareCount(deviceId) ? '共享中' : '可共享' }}
-          </span>
-          <i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i>
-        </button>
-        }
-      </section>
-      } @else {
-      <section class="empty-state">
-        <span class="empty-icon" aria-hidden="true"><i class="fa-light fa-box-open"></i></span>
-        <strong>暂无可共享设备</strong><p>添加并绑定设备后，即可生成分享链接。</p>
-      </section>
-      }
-      } @else {
-      <div class="section-label">待处理邀请（{{ pendingInvitations.length }}{{ invitationCursor ? '+' : '' }}）</div>
-      @if (invitationError) {
-        <p role="alert">{{ invitationError }} <button type="button" (click)="loadPendingInvitations()">重试</button></p>
-      }
-      @if (pendingInvitations.length) {
-        <section class="device-card">
-          @for (item of pendingInvitations; track item.invitationId) {
-            <button type="button" class="device-row" (click)="openPendingInvitation(item.invitationId)">
-              <span class="device-copy"><strong>{{ item.deviceName }}</strong><small>{{ roleLabel(item.role) }} · 核对后接受或拒绝</small></span>
-              <i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i>
-            </button>
+    @if (authenticated) {
+      <div class="share-categories" role="group" aria-label="设备共享分类">
+        <button type="button" [class.selected]="tab === 'sharing'"
+          [attr.aria-pressed]="tab === 'sharing'" (click)="changeTab('sharing')">我的设备</button>
+        <button type="button" [class.selected]="tab === 'received'"
+          [attr.aria-pressed]="tab === 'received'" (click)="changeTab('received')">
+          分享给我
+          @if (pendingInvitations.length) {
+            <span class="invitation-count" [attr.aria-label]="pendingInvitations.length + ' 条待处理邀请'">
+              {{ pendingInvitations.length }}{{ invitationCursor ? '+' : '' }}
+            </span>
           }
-        </section>
-      } @else if (!invitationsLoading && !invitationError) { <p>暂无待处理邀请</p> }
-      @if (invitationsLoading) { <ion-spinner name="crescent"></ion-spinner> }
-      @if (invitationCursor) {
-        <ion-button fill="clear" [disabled]="invitationsLoading" (click)="loadPendingInvitations(true)">加载更多邀请</ion-button>
-      }
-      <div class="received-heading">
-        <div class="section-label">已接收设备</div>
-        <button type="button" class="accept-code-action" (click)="showAcceptInvitation()">
-          <i class="fa-light fa-link" aria-hidden="true"></i> 粘贴分享链接
         </button>
       </div>
-      @if (receivedDevices.length) {
-      <section class="device-card received-card">
-        @for (item of receivedDevices; track item.logicalDeviceId) {
-        <article class="device-row received-row">
-          <span class="device-image"><b-device-img [deviceId]="item.logicalDeviceId"></b-device-img></span>
-          <a class="device-copy received-link" [routerLink]="['/device', item.logicalDeviceId]">
-            <strong>{{ item.name }}</strong>
-            <small>{{ roleLabel(item.share.role) }}</small>
-          </a>
-          <button type="button" class="cancel-action"
-            [disabled]="busyDeviceId === item.logicalDeviceId"
-            (click)="leaveShare(item.logicalDeviceId)">退出</button>
-        </article>
+    }
+
+    @if (loadError) {
+      <p class="error-notice" role="alert">
+        {{ loadError }} <button type="button" class="text-action" (click)="loadShares()">重试</button>
+      </p>
+    }
+
+    @if (loaded) {
+      @if (authenticated && tab === 'sharing') {
+        @if (shareableDeviceList.length) {
+          <section class="device-list" aria-label="我的设备">
+            @for (deviceId of shareableDeviceList; track deviceId) {
+              @let memberCount = activeShareCount(deviceId);
+              <a class="device-row" [routerLink]="['/share-manager', deviceId]">
+                <span class="device-image"><b-device-img [deviceId]="deviceId" /></span>
+                <span class="device-copy">
+                  <strong>{{ deviceDataDict[deviceId]?.config?.customName }}</strong>
+                  <small [class.has-members]="memberCount">{{ memberCount ? memberCount + ' 位成员' : '未添加成员' }}</small>
+                </span>
+                <i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i>
+              </a>
+            }
+          </section>
+        } @else {
+          <div class="empty-state"><p>暂无可共享设备</p><small>绑定设备后可在这里管理共享</small></div>
         }
-      </section>
       } @else {
-      <section class="empty-state">
-        <span class="empty-icon received-empty-icon" aria-hidden="true"><i class="fa-light fa-inbox"></i></span>
-        <strong>暂无接收的设备</strong><p>粘贴所有者发来的分享链接，核对后领取设备。</p>
-      </section>
-      }
+        @if (authenticated) {
+          @if (pendingInvitations.length || invitationsLoading || invitationError) {
+            <section class="share-section">
+              <div class="section-heading"><h2>待处理邀请</h2></div>
+
+              @if (invitationError) {
+                <p class="error-notice" role="alert">
+                  {{ invitationError }} <button type="button" class="text-action" (click)="loadPendingInvitations()">重试</button>
+                </p>
+              }
+
+              @if (pendingInvitations.length) {
+                <div class="device-list">
+                  @for (item of pendingInvitations; track item.invitationId) {
+                    <button type="button" class="device-row" (click)="openPendingInvitation(item.invitationId)">
+                      <span class="device-image invitation-icon"><i class="fa-light fa-envelope" aria-hidden="true"></i></span>
+                      <span class="device-copy">
+                        <strong>{{ item.deviceName }}</strong>
+                        <small>{{ roleLabel(item.role) }}{{ item.canEditConsole ? ' · 可编辑' : '' }}</small>
+                      </span>
+                      <span class="invitation-action">查看</span>
+                      <i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i>
+                    </button>
+                  }
+                </div>
+              }
+
+              @if (invitationsLoading) { <div class="inline-loading" role="status" aria-label="正在加载邀请"><ion-spinner name="crescent" /></div> }
+              @if (invitationCursor) {
+                <button type="button" class="text-action load-more" [disabled]="invitationsLoading"
+                  (click)="loadPendingInvitations(true)">加载更多</button>
+              }
+            </section>
+          }
+
+          <section class="share-section">
+            <div class="section-heading"><h2>已接收设备</h2></div>
+            @if (receivedDevices.length) {
+              <div class="device-list">
+                @for (item of receivedDevices; track item.logicalDeviceId) {
+                  <div class="device-entry">
+                    <a class="device-row" [routerLink]="['/device', item.logicalDeviceId]">
+                      <span class="device-image"><b-device-img [deviceId]="item.logicalDeviceId" /></span>
+                      <span class="device-copy">
+                        <strong>{{ item.name }}</strong>
+                        <small>{{ roleLabel(item.share.role) }}{{ item.share.canEditConsole ? ' · 可编辑' : '' }}</small>
+                      </span>
+                    </a>
+                    <button type="button" class="text-action leave-action" [disabled]="busyDeviceId === item.logicalDeviceId"
+                      [attr.aria-label]="'退出 ' + item.name + ' 的共享'" (click)="leaveShare(item.logicalDeviceId)">退出</button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="empty-state"><p>暂无接收的设备</p><small>点击右上角 + 打开分享链接</small></div>
+            }
+          </section>
+        }
+
+        <section class="share-section">
+          <div class="section-heading">
+            <h2>本机收藏 <span>仅保存在本机</span></h2>
+            @if (!authenticated) { <button type="button" class="text-action" (click)="login()">登录</button> }
+          </div>
+
+          @if (bookmarks.error()) {
+            <p class="error-notice" role="alert">
+              {{ bookmarks.error() }} <button type="button" class="text-action" (click)="bookmarks.load()">重试</button>
+            </p>
+          } @else if (bookmarks.loading()) {
+            <div class="inline-loading" role="status" aria-label="正在加载收藏"><ion-spinner name="crescent" /></div>
+          } @else if (bookmarks.items().length) {
+            <div class="device-list">
+              @for (item of bookmarks.items(); track item.region + ':' + item.logicalDeviceId) {
+                <div class="device-entry">
+                  <a class="device-row" [routerLink]="['/s', item.token]" [queryParams]="{ region: item.region }">
+                    <span class="device-image"><i class="fa-light fa-bookmark" aria-hidden="true"></i></span>
+                    <span class="device-copy"><strong>{{ item.name }}</strong><small>{{ item.region }} · 公开设备 · 仅查看</small></span>
+                  </a>
+                  <button type="button" class="remove-action" (click)="removePublicDevice(item.logicalDeviceId, item.region)"
+                    [attr.aria-label]="'移除 ' + item.region + ' ' + item.name + ' 的本机收藏'">
+                    <i class="fa-light fa-xmark" aria-hidden="true"></i>
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="empty-state"><p>暂无收藏</p></div>
+          }
+        </section>
       }
     } @else {
-    <section class="loading-state"><ion-spinner name="crescent"></ion-spinner><span>正在加载共享信息…</span></section>
+      <div class="loading-state" role="status"><ion-spinner name="crescent" /><span>正在加载…</span></div>
     }
   </main>
 </ion-content>

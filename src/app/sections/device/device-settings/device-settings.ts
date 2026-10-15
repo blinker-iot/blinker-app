@@ -1,12 +1,25 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@capacitor/clipboard';
+
 import {
   AlertController,
-  IonicModule,
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonItem,
+  IonList,
+  IonPopover,
+  IonRadio,
+  IonRadioGroup,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
   ModalController,
   NavController,
-} from '@ionic/angular';
+} from '@ionic/angular/standalone';
+
 import { DeviceService } from 'src/app/core/services/device.service';
 import { DevicePanelService } from 'src/app/core/services/device-panel.service';
 import type { PanelMode } from 'src/app/core/device-v2/custom-panel';
@@ -15,11 +28,13 @@ import { ActivatedRoute } from '@angular/router';
 import { DeviceIconPage } from '../../../core/pages/device-icon/device-icon';
 import { DataService } from 'src/app/core/services/data.service';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
+
 import {
   DeviceKeyContext,
   DeviceKeyLogicalDevice,
   GatewayHttpError,
 } from 'src/app/core/model/response.model';
+
 import { TranslatePipe } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
@@ -27,6 +42,7 @@ import { DeviceShortcutService } from 'src/app/core/services/device-shortcut.ser
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { taskEntryState } from '../device-timer/device-timer.models';
 
+import { readDevicePanelMode, saveSharedDevicePanelMode } from 'src/app/device/device-panel-mode';
 import { DeviceV2SharingService } from 'src/app/core/services/device-v2-sharing.service';
 import { DeviceV2ManagementService } from 'src/app/core/services/device-v2-management.service';
 import { DeviceV2ManifestCache } from 'src/app/core/services/device-v2-manifest-cache.service';
@@ -36,12 +52,15 @@ import { assertDeviceV2AccountContext, captureDeviceV2AccountContext } from 'src
 import { CapacitorWiFiProvAllocationStore } from 'src/app/core/device-v2/provisioning/wifiprov-allocation-store';
 import { CapacitorBleControllerCredentialStore } from 'src/app/core/device-v2/ble-direct/credential-store';
 import { WiFiProvRetirement } from 'src/app/core/device-v2/provisioning/wifiprov-retirement';
+import { RoomService, roomErrorMessage } from '../../room/room.service';
+
 import {
   MenuListComponent,
   MenuListItem,
 } from 'src/app/core/components/menu-list/menu-list';
 
 type KeyOperation = '' | 'reveal' | 'rotate';
+
 type ManagedDevice = BlinkerDevice
   & Partial<DeviceKeyLogicalDevice>
   & Partial<DeviceKeyContext>;
@@ -51,18 +70,40 @@ type ManagedDevice = BlinkerDevice
   standalone: true,
   templateUrl: 'device-settings.html',
   styleUrls: ['device-settings.scss'],
-  imports: [IonicModule, FormsModule, BDeviceImgComponent, MenuListComponent, TranslatePipe],
+  imports: [
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonItem,
+    IonList,
+    IonPopover,
+    IonRadio,
+    IonRadioGroup,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    FormsModule,
+    BDeviceImgComponent,
+    MenuListComponent,
+    TranslatePipe,
+  ],
 })
+
 export class DeviceSettingsPage implements OnInit, OnDestroy {
   id = '';
   logicalDeviceId = '';
+
   device!: ManagedDevice;
 
   imageSaving = false;
   panelModeSaving = false;
   panelModeLoading = false;
+  debugModeSaving = false;
+  roomSelectionBusy = false;
   secretKey = '';
   keyVisible = false;
+
   keyOperation: KeyOperation = '';
   keyError = '';
   supportsWifiProvisioning = false;
@@ -73,12 +114,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   displayRows: (CapabilityDisplayMetadata & { displayName: string; trueLabel: string; falseLabel: string })[] = [];
   private displayMetadata?: DeviceDisplayMetadata;
   private displayGeneration = 0;
-
   showKey = false;
   revealingKey = false;
   private revealedAuthKey = '';
   private rotateIdempotencyKey = '';
   private confirmDialog?: HTMLIonAlertElement;
+  private roomDialog?: HTMLIonAlertElement;
   private readonly subscriptions = new Subscription();
   private destroyed = false;
 
@@ -93,7 +134,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     && !this.device.config.disabled && !this.device.config.isPreview; }
 
   get panelMode(): PanelMode {
-    return this.device?.config.panelMode || 'normal';
+    return readDevicePanelMode(this.device);
+  }
+
+  get debugEnabled(): boolean {
+    return this.device?.config.component === 'TestDashboard';
   }
 
   get keyBusy(): boolean {
@@ -116,6 +161,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     return this.revealedAuthKey || this.device?.config?.authKey || '';
   }
 
+
   get hasNewVersion() {
     return this.device?.data?.hasNewVersion;
   }
@@ -136,14 +182,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'location',
         title: '设备位置',
         description: '查看并更新设备所在位置',
-        icon: 'fa-location-dot',
         route: `/device-manager/${this.id}/location`,
       },
       {
         id: 'logs',
         title: '运行日志',
         description: '查看设备事件、操作和系统记录',
-        icon: 'fa-rectangle-list',
         route: `/device-manager/${this.id}/logs`,
       },
       {
@@ -160,7 +204,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'shortcut',
         title: '添加桌面快捷方式',
         description: '使用设备图片创建直达该设备的桌面图标',
-        icon: 'fa-grid-2-plus',
       });
     }
 
@@ -168,12 +211,22 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   get managementMenuItems(): readonly MenuListItem[] {
+    const rooms = this.dataService.room.list.filter(name => this.dataService.room.dict[name].includes(this.id));
+
     const items: MenuListItem[] = [
+      {
+        id: 'rooms',
+        title: '所属区域',
+        description: this.device?.config.isPreview ? '预览设备不支持分配区域'
+          : this.roomSelectionBusy ? '正在设置区域…'
+          : this.dataService.roomRevision === null ? '选择设备所属区域'
+          : rooms.join('、') || '未分配区域',
+        disabled: this.roomSelectionBusy || Boolean(this.device?.config.isPreview),
+      },
       {
         id: 'update',
         title: '固件更新',
         description: '检查版本并更新设备固件',
-        icon: 'fa-cloud-arrow-up',
         badge: this.hasNewVersion ? '有新版本' : undefined,
         route: `/device-manager/${this.id}/update`,
       },
@@ -181,22 +234,20 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'guide',
         title: '设备配置',
         description: '重新配置该设备网络和密钥',
-        icon: 'fa-screwdriver-wrench',
       },
       {
         id: 'uic',
         title: '界面配置',
         description: '配置该设备的界面',
-        icon: 'fa-grid-4',
         route: `/device-manager/${this.id}/uic`,
       },
     ];
+
     if (this.device?.config.mode === 'bbp2') {
       items.push({
         id: 'component-preview',
         title: '组件预览',
         description: '查看所有组件与主题效果',
-        icon: 'fa-eye',
         route: `/device-manager/${this.id}/component-preview`,
       });
     }
@@ -206,7 +257,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'components',
         title: '组件配置中心',
         description: '选择控制页面显示的设备字段',
-        icon: 'fa-sliders',
         route: `/device-manager/${this.id}/components`,
       });
     }
@@ -216,7 +266,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'sharing',
         title: '设备共享',
         description: '邀请其他用户共同控制这台设备',
-        icon: 'fa-user-group',
         route: `/share-manager/${this.id}?from=device-settings`,
       });
     }
@@ -228,11 +277,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         description: this.isSharedDevice
           ? '移除这台由其他用户共享的设备'
           : '从账户中移除设备及其关联自动化',
-        icon: 'fa-link-slash',
         danger: true,
         showChevron: false,
       },
     );
+
     return items;
   }
 
@@ -244,6 +293,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     'AddShortcut',
     'UpdateFirmware',
   ];
+
   constructor(
     private readonly activatedRoute: ActivatedRoute,
     private readonly userService: UserService,
@@ -259,6 +309,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private readonly cd: ChangeDetectorRef,
     private readonly manifests?: DeviceV2ManifestCache,
     private readonly panels?: DevicePanelService,
+    private readonly roomService?: RoomService,
   ) {}
 
   ngOnInit(): void {
@@ -270,6 +321,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       this.clearSecret();
       this.bindDevice();
     }));
+
     this.subscriptions.add(this.dataService.deviceDataLoader.subscribe(loaded => {
       if (loaded) this.bindDevice();
     }));
@@ -278,15 +330,21 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       this.displayMetadata = undefined; this.displayRows = []; this.displayError = '';
       this.bindDevice();
     }));
+    this.subscriptions.add(this.dataService.userDataLoader?.subscribe(() => {
+      this.cd.markForCheck();
+    }));
   }
 
   private bindDevice(): void {
     const previous = this.device;
+
     this.device = this.dataService.getDevice(this.logicalDeviceId) as ManagedDevice;
+
     this.supportsWifiProvisioning = this.isOwner
       && this.hasDeviceKeyContext
       && this.device.state === 'active'
       && this.device.cloudEnabled === true;
+
     this.supportsGatewayEnrollment = this.isOwner
       && this.hasDeviceKeyContext
       && this.device.deviceType === 'edge-hub'
@@ -296,6 +354,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     if (this.device && this.device !== previous && this.device.config.mode !== 'bbp2') {
       void this.loadPanelMode();
     }
+
     this.cd.markForCheck();
   }
 
@@ -317,11 +376,13 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   async setPanelMode(mode: PanelMode): Promise<void> {
-    if (!this.device || this.isSharedDevice || this.panelModeSaving || this.panelModeLoading || mode === this.panelMode) return;
+    if (!this.device || this.panelModeSaving || this.panelModeLoading || this.debugModeSaving || mode === this.panelMode) return;
 
     const device = this.device;
 
     if (mode === 'custom' && !device.config.customPanel) {
+      if (this.isSharedDevice) return;
+
       await this.navCtrl.navigateForward(`/device-manager/${encodeURIComponent(this.id)}/uic/custom`);
 
       return;
@@ -330,7 +391,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     this.panelModeSaving = true;
 
     try {
-      if (device.config.mode === 'bbp2') {
+      if (this.isSharedDevice) {
+        if (!saveSharedDevicePanelMode(device, mode)) throw new Error('mode-save-failed');
+
+        device.subject.next({ key: 'component', value: device.config.component, source: 'device-settings' });
+      } else if (device.config.mode === 'bbp2') {
         const context = device.config.isPreview ? undefined
           : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
 
@@ -353,38 +418,187 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     }
   }
 
+  async setDebugMode(enabled: boolean): Promise<void> {
+    if (!this.device || this.isSharedDevice || this.debugModeSaving || this.panelModeSaving
+      || this.panelModeLoading || enabled === this.debugEnabled) return;
+
+    const device = this.device;
+
+    this.debugModeSaving = true;
+
+    this.cd.markForCheck();
+
+    try {
+      if (device.config.mode !== 'bbp2') {
+        await this.panels!.setView(device, enabled ? 'debug' : this.panelMode);
+      } else {
+        const context = device.config.isPreview ? undefined
+          : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+
+        const component = enabled ? 'TestDashboard' : 'DeviceV2';
+
+        if (!device.config.isPreview && !await this.deviceService.saveDeviceConfig(device, { component })) throw new Error('mode-save-failed');
+        if (context) assertDeviceV2AccountContext(this.dataService, context);
+
+        device.config.component = component;
+        device.subject.next({ key: 'component', value: component, source: 'device-settings' });
+      }
+
+      if (!this.destroyed && this.device === device) {
+        await this.navCtrl.navigateRoot(`/device/${encodeURIComponent(this.id)}`);
+      }
+    } catch {
+      if (!this.destroyed) await this.noticeService.showToast('切换调试模式失败，请稍后重试');
+    } finally {
+      this.debugModeSaving = false;
+
+      if (!this.destroyed) this.cd.markForCheck();
+    }
+  }
+
   ngOnDestroy(): void {
     this.destroyed = true;
     ++this.displayGeneration;
     this.subscriptions.unsubscribe();
     this.clearSecret();
     void this.confirmDialog?.dismiss();
+    void this.roomDialog?.dismiss();
+  }
+
+  async selectRooms(): Promise<void> {
+    const roomService = this.roomService;
+    if (!this.loaded || !roomService || this.roomSelectionBusy || this.device.config.isPreview) return;
+
+    const deviceId = this.id;
+    const sessionEpoch = this.dataService.sessionEpoch;
+
+    this.roomSelectionBusy = true;
+
+    this.cd.markForCheck();
+
+    try {
+      const snapshot = await roomService.load();
+
+      if (this.destroyed || this.id !== deviceId) return;
+
+      let saving = false;
+
+      const alert = await this.alertCtrl.create({
+        header: '所属区域',
+        message: snapshot.order.length ? '可选择多个区域，全部取消即为未分配。' : '还没有区域，请先创建区域。',
+        backdropDismiss: false,
+        inputs: snapshot.order.map(name => ({
+          type: 'checkbox',
+          label: name,
+          value: name,
+          checked: snapshot.rooms[name].includes(deviceId),
+        })),
+        buttons: [
+          { text: '取消', role: 'cancel', handler: () => !saving },
+          snapshot.order.length ? {
+            text: '保存',
+            handler: async (selected: string[]) => {
+              if (saving || this.destroyed || this.id !== deviceId) return false;
+
+              const selectedRooms = new Set(selected);
+
+              const changed = snapshot.order.some(name =>
+                selectedRooms.has(name) !== snapshot.rooms[name].includes(deviceId));
+
+              if (!changed) return true;
+
+              const draft = { list: [...snapshot.order], dict: structuredClone(snapshot.rooms) };
+
+              for (const name of draft.list) {
+                const devices = draft.dict[name];
+
+                if (selectedRooms.has(name)) {
+                  if (!devices.includes(deviceId)) devices.push(deviceId);
+                } else {
+                  draft.dict[name] = devices.filter(id => id !== deviceId);
+                }
+              }
+
+              saving = true;
+              alert.message = '正在保存…';
+
+              try {
+                await roomService.saveData(draft, snapshot.revision, sessionEpoch);
+
+                return true;
+              } catch (error) {
+                alert.message = roomErrorMessage(error);
+
+                return false;
+              } finally {
+                saving = false;
+              }
+            },
+          } : { text: '管理区域', role: 'manage' },
+        ],
+      });
+
+      this.roomDialog = alert;
+
+      if (this.destroyed || this.id !== deviceId) {
+        alert.remove();
+
+        return;
+      }
+
+      await alert.present();
+
+      const result = await alert.onDidDismiss();
+
+      if (result.role === 'manage' && !this.destroyed && this.id === deviceId) {
+        await this.navCtrl.navigateForward('/room-manager', {
+          state: { backHref: `/device/${deviceId}/settings` },
+        });
+      }
+    } catch (error) {
+      if (!this.destroyed) await this.noticeService.showToast(roomErrorMessage(error));
+    } finally {
+      this.roomDialog = undefined;
+      this.roomSelectionBusy = false;
+
+      if (!this.destroyed) this.cd.markForCheck();
+    }
   }
 
   async toggleKey(): Promise<void> {
     if (this.secretKey) {
       this.keyVisible = !this.keyVisible;
+
       this.cd.markForCheck();
+
       return;
     }
+
     await this.revealKey();
   }
 
   async revealKey(): Promise<void> {
     const context = this.deviceKeyContext;
+
     if (!context || this.keyBusy) return;
+
     this.keyOperation = 'reveal';
     this.keyError = '';
+
     this.cd.markForCheck();
+
     try {
       const response = await this.management.revealDeviceKeyV2(context);
+
       this.secretKey = response.data.deviceKey;
       this.keyVisible = true;
     } catch (error) {
       this.clearSecret();
+
       this.keyError = this.keyErrorMessage(error, '无法读取设备 Key，请稍后重试');
     } finally {
       this.keyOperation = '';
+
       this.cd.markForCheck();
     }
   }
@@ -393,6 +607,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     if (this.keyBusy) return;
     if (!this.secretKey) await this.revealKey();
     if (!this.secretKey) return;
+
     try {
       await this.writeClipboard(this.secretKey);
       await this.noticeService.showToast('设备 Key 已复制；请勿发送给不信任的人');
@@ -403,28 +618,36 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   async refreshKey(): Promise<void> {
     const context = this.deviceKeyContext;
+
     if (!context || this.keyBusy) return;
+
     const confirmed = await this.confirmAction(
       '刷新设备 Key？',
       '刷新后，使用旧 Key 的设备会立即离线且无法重新连接。你需要把新 Key 写入代码，或随后执行重新配网。',
       '确认刷新',
     );
+
     if (!confirmed) return;
 
     this.rotateIdempotencyKey ||= this.requestId('device-key-rotate');
     this.keyOperation = 'rotate';
     this.keyError = '';
+
     this.clearSecret();
     this.cd.markForCheck();
+
     try {
       const response = await this.management.rotateDeviceKeyV2(
         context,
         this.rotateIdempotencyKey,
       );
+
       this.applyContext(response.data);
+
       this.secretKey = response.data.deviceKey;
       this.keyVisible = true;
       this.rotateIdempotencyKey = '';
+
       await this.userService.getAllInfo().catch(() => false);
       this.bindDevice();
       await this.noticeService.showToast('设备 Key 已刷新，旧 Key 已失效');
@@ -433,18 +656,22 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       this.keyError = this.keyErrorMessage(error, '刷新失败；重试会继续同一笔刷新事务');
     } finally {
       this.keyOperation = '';
+
       this.cd.markForCheck();
     }
   }
 
   async startReconfigure(): Promise<void> {
     if (!this.isOwner || !this.supportsWifiProvisioning || this.keyBusy) return;
+
     const confirmed = await this.confirmAction(
       '先重置设备网络',
       '请先在设备上触发 Blinker.resetNetwork()（或产品定义的网络重置操作），并确认设备开始广播 BLINKER_。仅重置网络时保留 Key 与 BLE 控制权；若清除了全部接入信息，重新配网将刷新 Key 并重建本地权限，仍保留原设备和控制页面。',
       '我已重置网络',
     );
+
     if (!confirmed) return;
+
     await this.navCtrl.navigateForward('/tools/esp32-provision', {
       queryParams: {
         mode: 'reconfigure',
@@ -455,6 +682,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   async startGatewayEnrollment(): Promise<void> {
     if (!this.supportsGatewayEnrollment || this.keyBusy) return;
+
     await this.navCtrl.navigateForward(
       `/device/${encodeURIComponent(this.logicalDeviceId)}/gateway-enrollment`,
     );
@@ -466,9 +694,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   private get deviceKeyContext(): DeviceKeyContext | null {
     if (!this.device || this.device.config.mode !== 'bbp2') return null;
+
     const logicalDeviceId = this.device.logicalDeviceId
       || this.device.id
       || this.device.deviceName;
+
     if (
       logicalDeviceId !== this.logicalDeviceId
       || !Number.isSafeInteger(this.device.credentialVersion)
@@ -477,6 +707,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     ) {
       return null;
     }
+
     return {
       logicalDeviceId,
       credentialVersion: this.device.credentialVersion!,
@@ -487,14 +718,19 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   async showAuthKey(): Promise<void> {
     if (this.device.config.authKey) {
       this.showKey = true;
+
       return;
     }
+
     const context = this.deviceKeyContext;
+
     if (!context || this.revealingKey) return;
 
     this.revealingKey = true;
+
     try {
       const response = await this.management.revealDeviceKeyV2(context);
+
       this.revealedAuthKey = response.data.deviceKey;
       this.showKey = true;
     } catch (error) {
@@ -624,40 +860,50 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   async selectIcon(): Promise<void> {
     if (this.isSharedDevice || this.imageSaving) return;
+
     const device = this.device;
+
     this.imageSaving = true;
 
     try {
       const context = device.config.isPreview ? undefined
         : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+
       const modal = await this.modalCtrl.create({
         component: DeviceIconPage,
         componentProps: { currentImage: device.config.image },
       });
+
       await modal.present();
+
       const { data: image } = await modal.onDidDismiss<string>();
+
       if (typeof image !== 'string' || image === device.config.image || this.destroyed) return;
       if (context) assertDeviceV2AccountContext(this.dataService, context);
 
       if (!device.config.isPreview && !await this.deviceService.saveDeviceConfig(device, { image })) {
         throw new Error('image-save-failed');
       }
+
       if (context) assertDeviceV2AccountContext(this.dataService, context);
       if (this.destroyed) return;
 
       device.config.image = image;
+
       device.subject.next({ key: 'image', value: image });
       this.cd.markForCheck();
     } catch {
       if (!this.destroyed) await this.noticeService.showToast('保存设备图片失败，请稍后重试');
     } finally {
       this.imageSaving = false;
+
       if (!this.destroyed) this.cd.markForCheck();
     }
   }
 
   async copyDeviceId(): Promise<void> {
     const id = this.device.id || this.device.deviceName;
+
     try {
       await this.writeClipboard(id);
       await this.noticeService.showToast('设备 ID 已复制');
@@ -686,12 +932,14 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
             if (this.isSharedDevice) {
               try {
                 const result = await this.sharing.leaveShare(this.device.id);
+
                 await this.noticeService.showToast(result.realtimeRefreshPending
                   ? '已退出分享，通信权限同步中' : '已退出分享');
                 this.navCtrl.navigateRoot('/');
               } catch (error) {
                 console.error('Failed to leave Device V2 share', error);
               }
+
               this.userService.getAllInfo();
             } else if (await this.removeOwnedDevice()) {
               this.navCtrl.navigateRoot('/');
@@ -701,6 +949,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         },
       ],
     });
+
     await this.confirmDialog.present();
   }
 
@@ -708,34 +957,48 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     try {
       if (this.device.config.mode === 'bbp2') {
         const id = this.device.id || this.device.deviceName;
+
         if (!id) throw new Error('设备标识无效');
+
         const expected = captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+
         const current = () => {
           if (this.destroyed || this.logicalDeviceId !== id) throw Error('DEVICE_REMOVAL_CONTEXT_CHANGED');
+
           assertDeviceV2AccountContext(this.dataService, expected);
+
           return expected;
         };
+
         const retirement = new WiFiProvRetirement(new CapacitorWiFiProvAllocationStore(current),
           new CapacitorBleControllerCredentialStore(current), this.management, current);
+
         const { response: result, allocationCleanupPending } = await retirement.removeOwned(id);
+
         this.clearSecret();
+
         await this.noticeService.showToast(allocationCleanupPending
           ? '云端授权已撤销，本机配网记录清理未完成；重置设备后再次配网可重试清理'
           : result.data.brokerCleanupPending || result.data.realtimeRefreshPending
           ? '云端授权已撤销，通信清理中；本地权限尚未确认清除'
           : '设备已从云端移除；本地权限尚未确认清除');
+
         return true;
       }
+
       await this.noticeService.showToast('当前仅支持 V2 设备移除，请先确认设备接入类型');
+
       return false;
     } catch (error) {
       // No raw HTTP error bodies or secret-bearing request objects in logs.
       const code = error instanceof GatewayHttpError ? error.code : undefined;
+
       await this.noticeService.showToast(code === 'DEVICE_V2_REMOVAL_LOCAL_LIFECYCLE_REQUIRED'
         ? '该接入类型的移除流程尚未开放，设备未被移除'
         : code === 'DEVICE_V2_REMOVAL_ROUTE_CHANGING'
           ? '设备通信路由正在调整，请稍后重试'
           : '设备移除未确认，请刷新设备列表后重试');
+
       return false;
     }
   }
@@ -767,31 +1030,39 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         { text: confirmText, role: 'confirm' },
       ],
     });
+
     await this.confirmDialog.present();
+
     const result = await this.confirmDialog.onDidDismiss();
+
     this.confirmDialog = undefined;
+
     return result.role === 'confirm';
   }
 
   private keyErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof GatewayHttpError) {
       if (error.httpStatus === 403) return '只有设备所有者可以管理设备 Key';
+
       if (error.code === 'DEVICE_KEY_STEP_UP_UNAVAILABLE') {
         return '当前登录状态不能查看或刷新设备 Key';
       }
     }
+
     return fallback;
   }
 
   private requestId(prefix: string): string {
     const suffix = globalThis.crypto?.randomUUID?.()
       ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
     return `${prefix}-${suffix}`;
   }
 
   async addShortcut() {
     try {
       const result = await this.deviceShortcutService.pinDevice(this.device);
+
       if (result === 'requested') {
         await this.noticeService.showToast('已提交添加桌面快捷方式请求');
       } else {
@@ -814,18 +1085,26 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   selectMenuItem(item: MenuListItem): void {
     if (item.disabled || (item.id === 'timer' && !taskEntryState(this.device).available)) return;
+    if (item.id === 'rooms') {
+      void this.selectRooms();
+
+      return;
+    }
     if (item.route) {
       void this.navCtrl.navigateForward(item.route);
+
       return;
     }
 
     if (item.id === 'shortcut') {
       void this.addShortcut();
+
       return;
     }
 
     if (item.id === 'guide') {
       this.showGuide();
+
       return;
     }
 

@@ -1,3 +1,4 @@
+import { DeviceConsoleService, cloudConsole, installConsole } from './device-console.service';
 // 需修复 12.27
 
 import { Injectable } from '@angular/core';
@@ -108,6 +109,7 @@ export class DeviceService {
     private noticeService: NoticeService,
     private toastService: ToastService,
     private deviceUi: DeviceUiPort,
+    private consoles: DeviceConsoleService,
   ) { }
 
   init() {
@@ -785,6 +787,14 @@ export class DeviceService {
   }
 
   loadDeviceConfig(device) {
+    if (cloudConsole(device) && device.config.isShared) {
+      const epoch = this.dataService.sessionEpoch;
+      return this.consoles.get(device.deviceName).then(record => {
+        if (epoch !== this.dataService.sessionEpoch) return undefined;
+        installConsole(device, record);
+        return { ...record.uiConfig, component: 'DeviceV2' };
+      }).catch(() => undefined);
+    }
     if (device.config.mode === 'bbp2') {
       return this.http.get<{ data: Record<string, unknown> }>(API.DEVICE_V2.UI_CONFIG(device.deviceName))
         .toPromise().then(response => response?.data).catch(() => undefined);

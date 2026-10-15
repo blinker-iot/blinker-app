@@ -1,0 +1,67 @@
+<ion-header>
+  <ion-toolbar color="transparent">
+    <ion-buttons slot="start"><ion-back-button text="" [defaultHref]="host.homeHref" /></ion-buttons>
+
+    <ion-title>
+      <div class="name">{{ console?.name || '共享控制台' }}</div>
+
+      @if (console && !loading && !error) { <div class="state">{{ status }} · 仅查看</div> }
+    </ion-title>
+
+    @if (console && !loading && !error) {
+      <ion-buttons slot="end">
+        @if (console.availableModes.length > 1) {
+          <ion-button [attr.aria-label]="nextModeLabel" [title]="nextModeLabel" (click)="toggleMode()">
+            <i [class]="mode === 'custom' ? 'fa-light fa-grid-2' : 'fa-light fa-code'" aria-hidden="true"></i>
+          </ion-button>
+        }
+
+        <ion-button [disabled]="savingBookmark || bookmarked" (click)="addBookmark()"
+          [title]="bookmarked ? '已加入本机列表' : '加入本机列表'"
+          [attr.aria-label]="bookmarked ? '已加入本机列表' : '加入本机列表'">
+          <i [class]="bookmarked ? 'fa-solid fa-bookmark' : 'fa-light fa-bookmark'" aria-hidden="true"></i>
+        </ion-button>
+
+        @if (!host.authenticated) {
+          <ion-button aria-label="登录查看权限" title="登录查看权限" (click)="login()">
+            <i class="fa-light fa-right-to-bracket" aria-hidden="true"></i>
+          </ion-button>
+        }
+
+      </ion-buttons>
+    }
+
+  </ion-toolbar>
+</ion-header>
+<ion-content [fullscreen]="true" [scrollY]="!customPanel">
+  <div class="shared-console content-under-header" [class.custom-panel-view]="!!customPanel">
+
+    @if (loading) {
+      <section class="console-empty" role="status"><ion-spinner name="crescent" /><p>正在读取共享配置…</p></section>
+    } @else if (error) {
+      <section class="console-empty" role="alert">
+        <i class="fa-light fa-link-slash" aria-hidden="true"></i>
+        <h1>暂时无法查看</h1>
+        <p>{{ error }}</p>
+
+        @if (!host.authenticated) { <button type="button" class="retry-button" (click)="login()">登录查看</button> }
+
+        <button type="button" class="retry-button" (click)="load()">重新打开</button>
+      </section>
+    } @else if (console) {
+      @if (bookmarkError) { <p class="notice error" role="alert">{{ bookmarkError }}</p> }
+
+      @if (customPanel) {
+        <app-custom-panel-frame [document]="customPanel" [cards]="cards"
+          [interactive]="false" [restricted]="true" [readOnlyScroll]="true" [theme]="theme" />
+      } @else if (mode === 'custom') {
+        <section class="console-empty"><p>还没有自定义界面，请联系设备所有者配置。</p></section>
+      } @else if (cards.length) {
+        <app-page-layout-panel [cards]="cards" [interactive]="false" />
+      } @else {
+        <section class="console-empty"><i class="fa-light fa-grid-2" aria-hidden="true"></i><p>等待设备同步组件数据</p></section>
+      }
+    }
+
+  </div>
+</ion-content>

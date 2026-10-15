@@ -49,13 +49,15 @@ describe('UserService API contracts', () => {
 
   function inventoryRequests() {
     return { user: httpTesting.expectOne(API.AUTH.ME), owned: httpTesting.expectOne(API.DEVICE_V2.LIST),
-      shared: httpTesting.expectOne(API.DEVICE_V2.RECEIVED_SHARES) };
+      shared: httpTesting.expectOne(API.DEVICE_V2.RECEIVED_SHARES),
+      regions: httpTesting.expectOne(API.ACCOUNT.REGIONS) };
   }
   function flushInventory(requests: ReturnType<typeof inventoryRequests>, present: boolean) {
     requests.user.flush({ data: { id: 'legacy-uuid', nickname: 'User' } });
     requests.owned.flush({ data: { devices: present ? [{ logicalDeviceId: 'ble_one', name: 'Sensor',
       deviceType: 'ble', cloudEnabled: true, state: 'active' }] : [] } });
     requests.shared.flush({ data: { devices: [] } });
+    requests.regions.flush({ data: { revision: 0, order: [], rooms: {} } });
   }
 
   it.each(['logout', 'account-switch'])('does not refill a successor after a late inventory %s', async action => {
@@ -77,6 +79,17 @@ describe('UserService API contracts', () => {
     await expect(old).resolves.toBe(false);
     expect(dataService.device.list).toEqual([]);
     expect(loadDeviceCatalog({ authority: API.BASE_URL, accountId: 'legacy-uuid' })).toEqual([]);
+  });
+
+  it('keeps the device inventory usable when optional region metadata is unavailable', async () => {
+    const loading = service.getAllInfo(), requests = inventoryRequests();
+    requests.regions.flush({ message: 'Unavailable' }, { status: 503, statusText: 'Unavailable' });
+    requests.user.flush({ data: { id: 'legacy-uuid', nickname: 'User' } });
+    requests.owned.flush({ data: { devices: [] } });
+    requests.shared.flush({ data: { devices: [] } });
+    await expect(loading).resolves.toBe(true);
+    expect(dataService.configLoadError.value).toMatchObject({ status: 503 });
+    expect(dataService.auth?.uuid).toBe('legacy-uuid');
   });
 
   it('loads the V2 device inventory without Legacy JSON subresource requests', async () => {
@@ -145,6 +158,7 @@ describe('UserService API contracts', () => {
       }] },
     });
 
+    httpTesting.expectOne(API.ACCOUNT.REGIONS).flush({ data: { revision: 0, order: [], rooms: {} } });
     await expect(loading).resolves.toBe(true);
     expect(dataService.user.id).toBe('user-1');
     expect(dataService.device.list).toEqual([deviceId, 'device_shared']);

@@ -63,7 +63,7 @@ export class DeviceV2ManifestCache {
     return deviceV2AccountStoragePrefix(PREFIX, scope) + encodeURIComponent(logicalDeviceId);
   }
 
-  private valid(manifest: DeviceV2Manifest): boolean {
+  valid(manifest: DeviceV2Manifest): boolean {
     if (!manifest || !Number.isSafeInteger(manifest.revision) || manifest.revision < 0
       || !/^[0-9a-f]{64}$/.test(manifest.fingerprint)
       || !Array.isArray(manifest.fields) || manifest.fields.length > 256) return false;

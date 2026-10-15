@@ -4,6 +4,7 @@
     <ion-buttons slot="end">
       <ion-button
         class="header-action notice-button"
+        aria-label="消息通知"
         [routerLink]="['/message']"
       >
         <i class="fa-light fa-bell"></i>
@@ -12,6 +13,7 @@
         #deviceAddMenuTrigger
         id="device-add-menu-trigger"
         class="header-action add-button"
+        [attr.aria-label]="'HOME.ADD_DEVICE' | translate"
         aria-haspopup="menu"
       >
         <i class="fa-light fa-plus"></i>
@@ -58,7 +60,8 @@
   alignment="end"
   [dismissOnSelect]="false"
   [showBackdrop]="true"
-  (willPresent)="prepareAddMenuPosition()"
+  [arrow]="false"
+  (willPresent)="scheduleAddMenuPosition()"
   (didPresent)="scheduleAddMenuPosition()"
 >
   <ng-template>
@@ -72,7 +75,6 @@
           <strong>{{ 'TAB_DEVICE.ADD_DEVICE' | translate }}</strong>
           <small>{{ 'TAB_DEVICE.ADD_DEVICE_DESCRIPTION' | translate }}</small>
         </span>
-        <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
       </button>
 
       <button type="button" role="menuitem" (click)="openAddPage('/room-manager')">
@@ -81,17 +83,8 @@
           <strong>{{ 'TAB_DEVICE.ADD_ROOM' | translate }}</strong>
           <small>{{ 'TAB_DEVICE.ADD_ROOM_DESCRIPTION' | translate }}</small>
         </span>
-        <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
       </button>
 
-      <button type="button" role="menuitem" (click)="showComponentPending()">
-        <span class="menu-icon"><i class="fa-light fa-puzzle-piece"></i></span>
-        <span class="menu-copy">
-          <strong>{{ 'TAB_DEVICE.ADD_COMPONENT' | translate }}</strong>
-          <small>{{ 'TAB_DEVICE.ADD_COMPONENT_DESCRIPTION' | translate }}</small>
-        </span>
-        <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
-      </button>
     </nav>
   </ng-template>
 </ion-popover>

@@ -3,27 +3,30 @@
     position: relative;
     overflow: auto;
     z-index: 0;
+
     padding: 5px;
 
     .widgetitem {
         margin: auto 10px;
         position: relative;
         background-color: #fff;
-        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
+
+        border: 1px solid var(--blinker-border);
+
+        box-shadow: none;
         border-radius: 5px;
     }
 }
-
 
 [demo-box] {
     position: absolute;
     display: flex;
     flex-direction: row;
     align-items: center;
-    padding: 0 10px 0 15px;
 
+    padding: 0 10px 0 15px;
     .selected {
-        box-shadow: 0 0 5px 3px rgba(60, 150, 255, 0.8) !important;
+        border-color: var(--ion-color-primary);
     }
 }
 

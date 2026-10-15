@@ -12,6 +12,7 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { DataService } from 'src/app/core/services/data.service';
@@ -21,8 +22,8 @@ import { DataService } from 'src/app/core/services/data.service';
   templateUrl: 'room-list.html',
   styleUrls: ['room-list.scss'],
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RoomListComponent implements AfterViewInit, OnDestroy {
   private _roomid = -1;

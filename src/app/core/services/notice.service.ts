@@ -79,7 +79,6 @@ export class NoticeService {
   }
 
   async showLoading(content) {
-    console.log('showLoading');
     this.hideLoading();
     this.loading = await this.loadingCtrl.create(this.loadingMess[content])
     await this.loading.present();

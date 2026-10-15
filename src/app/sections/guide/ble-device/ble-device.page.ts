@@ -17,7 +17,6 @@ import {
 } from '@ionic/angular/standalone';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
-import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
 import {
   BleDirectSession,
   BleDirectTarget,
@@ -52,7 +51,6 @@ type BleEnrollmentPhase =
     IonContent,
     FormsModule,
     TranslatePipe,
-    HeroCardComponent,
   ],
 })
 export class BleDeviceGuidePage implements OnDestroy {

@@ -39,6 +39,8 @@
     "ABOUT_US": "關於我們"
   },
   "SETTINGS": {
+    "SERVICE_REGION": "服務區域",
+    "SERVICE_REGION_HINT": "切換服務區域後需要重新登入",
     "TITLE": "設定",
     "APPEARANCE": "外觀",
     "THEME_HINT": "選擇適合當前環境的顯示風格",

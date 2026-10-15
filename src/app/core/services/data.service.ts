@@ -1,3 +1,4 @@
+import { RegionSnapshot } from '../model/region.model';
 import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
@@ -10,6 +11,7 @@ import { DeviceCatalogItem, loadDeviceCatalog, removeDeviceCatalog, saveDeviceCa
 import { createGuestDevicePreview } from '../data/guest-device-preview.data';
 import { AuthData, OrderData, ShareDate, UserData } from '../model/data.model';
 import { BlinkerDevice } from '../model/device.model';
+
 import {
   CurrentUser,
   DeviceKeyLogicalDevice,
@@ -24,6 +26,7 @@ const INSTALLATION_ID_KEY = 'blinker-installation-id';
 const FEEDBACK_DRAFT_STORAGE_KEY = 'blinker_feedback_draft';
 
 @Injectable({ providedIn: 'root' })
+
 export class DataService {
   readonly authDataLoader = new BehaviorSubject(false);
   readonly userDataLoader = new BehaviorSubject(false);
@@ -36,17 +39,15 @@ export class DataService {
   readonly deviceLoadError = new BehaviorSubject<unknown>(null);
   readonly configLoadError = new BehaviorSubject<unknown>(null);
   readonly authStorageCleanupError = new BehaviorSubject<unknown>(null);
-
   firstBoot = true;
-
   private _auth: AuthData | null = null;
   private _sessionEpoch = 0;
   private secureStorageReady: Promise<void> | null = null;
-
   user: UserData = this.emptyUser();
   device: OrderData = this.emptyOrder();
   scene: OrderData = this.emptyOrder();
   room: OrderData = this.emptyOrder();
+  roomRevision: number | null = null;
   auto: OrderData = this.emptyOrder();
   block: OrderData = this.emptyOrder();
   share: ShareDate = this.emptyShare();
@@ -55,12 +56,16 @@ export class DataService {
 
   set auth(auth: AuthData | null) {
     this._sessionEpoch += 1;
+
     this.resetBlinkerMemory();
+
     this._auth = auth
       ? { ...auth, token: auth.token || auth.accessToken }
       : null;
+
     this.authDataLoader.next(!!auth);
     this.authDataChanged.next();
+
     if (this._auth) void this.persistAuthData(this._auth);
   }
 
@@ -76,6 +81,7 @@ export class DataService {
     if (!force && this.auth?.uuid && this.auth?.token) return;
 
     const preview = createGuestDevicePreview();
+
     this.device = preview.device;
     this.room = preview.room;
   }
@@ -89,34 +95,48 @@ export class DataService {
     if (!this.isValidAuth(auth)) {
       throw new Error('The Gateway did not return a complete token pair.');
     }
+
     const previous = this._auth ? { ...this._auth } : null;
+
     this._sessionEpoch += 1;
+
     this.resetBlinkerMemory();
+
     const next = { ...auth, token: auth.token || auth.accessToken };
+
     this._auth = next;
+
     this.authDataLoader.next(true);
     this.authDataChanged.next();
+
     try {
       await this.persistAuthData(next);
+
       if (!this.authMatches(next)) {
         await this.persistCurrentAuth();
+
         return false;
       }
+
       this.authDataExpire.next(true);
       this.restoreDeviceCatalog();
+
       try {
         this.getLocalStorage()?.removeItem(FEEDBACK_DRAFT_STORAGE_KEY);
         this.getLocalStorage()?.removeItem(AUTH_INVALIDATED_STORAGE_KEY);
       } catch {
         // Authentication still succeeds when local storage is unavailable.
       }
+
       return true;
     } catch (error) {
       if (this.authMatches(next)) {
         this._auth = previous;
+
         this.authDataLoader.next(!!previous);
         this.authDataChanged.next();
       }
+
       throw error;
     }
   }
@@ -128,30 +148,40 @@ export class DataService {
     if (!this.isValidAuth(auth)) {
       throw new Error('The Gateway did not return a complete token pair.');
     }
+
     if (!this.authMatches(expected)) return false;
 
     const previous = this._auth ? { ...this._auth } : null;
+
     const next = {
       ...auth,
       ...(previous?.uuid ? { uuid: previous.uuid } : {}),
       token: auth.token || auth.accessToken,
     };
+
     this._auth = next;
+
     this.authDataLoader.next(true);
     this.authDataChanged.next();
+
     try {
       await this.persistAuthData(next);
+
       if (!this.authMatches(next)) {
         await this.persistCurrentAuth();
+
         return false;
       }
+
       return true;
     } catch (error) {
       if (this.authMatches(next)) {
         this._auth = previous;
+
         this.authDataLoader.next(!!previous);
         this.authDataChanged.next();
       }
+
       throw error;
     }
   }
@@ -159,40 +189,58 @@ export class DataService {
   async loadAuthData(): Promise<void> {
     const isNative = Capacitor.isNativePlatform();
     const isDevWeb = this.isDevWebSessionEnabled();
+
     if (!isNative && !isDevWeb) {
       this.clearDevWebAuthData();
+
       return;
     }
+
     const epoch = this._sessionEpoch;
+
     if (this.authIsInvalidated()) {
       const cleanupError = await this.clearPersistedAuthData();
+
       if (this._sessionEpoch !== epoch) { await this.persistCurrentAuth(); return; }
+
       this._auth = null;
+
       this.resetBlinkerMemory();
       this.authDataLoader.next(false);
       this.authDataChanged.next();
       this.authStorageCleanupError.next(cleanupError);
+
       return;
     }
+
     if (isDevWeb) {
       this.loadDevWebAuthData();
+
       return;
     }
+
     try {
       await this.configureSecureStorage();
+
       if (this._sessionEpoch !== epoch) return;
+
       const saved = await SecureStorage.get(AUTH_STORAGE_KEY);
+
       if (this._sessionEpoch !== epoch) return;
+
       if (this.isValidAuth(saved)) {
         this.restoreAuthData(saved);
       } else if (saved !== null) {
         await SecureStorage.remove(AUTH_STORAGE_KEY);
+
         if (this._sessionEpoch !== epoch) await this.persistCurrentAuth();
       }
     } catch {
       if (this._sessionEpoch !== epoch) return;
+
       this._sessionEpoch += 1;
       this._auth = null;
+
       this.resetBlinkerMemory();
       this.authDataLoader.next(false);
       this.authDataChanged.next();
@@ -201,14 +249,19 @@ export class DataService {
 
   async removeAuthData(): Promise<void> {
     const scope = deviceV2AccountCacheScope(this, API.BASE_URL);
+
     if (scope) removeDeviceCatalog(scope);
+
     this._sessionEpoch += 1;
     this._auth = null;
+
     this.authDataLoader.next(false);
     this.authDataChanged.next();
     this.clearBlinkerData();
+
     let cleanupError = this.markAuthInvalidated();
     cleanupError = (await this.clearPersistedAuthData()) || cleanupError;
+
     if (this._auth) {
       try {
         await this.persistCurrentAuth();
@@ -216,16 +269,19 @@ export class DataService {
         cleanupError = error;
       }
     }
+
     this.authStorageCleanupError.next(cleanupError);
   }
 
   clearBlinkerData(): void {
     try {
       const storage = this.getLocalStorage();
+
       storage?.removeItem(FEEDBACK_DRAFT_STORAGE_KEY);
     } catch {
       // Memory cleanup still proceeds when local storage is unavailable.
     }
+
     this.resetBlinkerMemory();
   }
 
@@ -234,23 +290,29 @@ export class DataService {
     this.device = this.emptyOrder();
     this.scene = this.emptyOrder();
     this.room = this.emptyOrder();
+    this.roomRevision = null;
     this.auto = this.emptyOrder();
     this.block = this.emptyOrder();
     this.share = this.emptyShare();
     this.brokers = this.emptyOrder();
+
     this.userDataLoader.next(false);
     this.deviceDataLoader.next(false);
     this.initCompleted.next(false);
+
     this.firstBoot = true;
   }
 
   getInstallationId(): string {
     const storage = this.getLocalStorage();
     const saved = storage?.getItem(INSTALLATION_ID_KEY);
+
     if (saved) return saved;
 
     const generated = this.createInstallationId();
+
     storage?.setItem(INSTALLATION_ID_KEY, generated);
+
     return generated;
   }
 
@@ -261,7 +323,9 @@ export class DataService {
     complete = true,
   ): void {
     this.loadGatewayUser(currentUser);
+
     const ownedIds = new Set(devices.map((device) => device.logicalDeviceId));
+
     const inventory = [
       ...devices.map((device) => ({
         device,
@@ -280,11 +344,15 @@ export class DataService {
     ];
 
     this.applyDeviceInventory(inventory);
+
     this.share.byDevice = Object.fromEntries(
       Object.entries(this.share.byDevice).filter(([deviceId]) => ownedIds.has(deviceId)),
     );
+
     this.share.received = received.filter(device => device.share.state === 'active');
+
     const scope = deviceV2AccountCacheScope(this, API.BASE_URL);
+
     if (scope) {
       if (complete) saveDeviceCatalog(scope, inventory.map(item => {
         const current = this.device.dict[item.device.logicalDeviceId];
@@ -298,6 +366,7 @@ export class DataService {
   private restoreDeviceCatalog(): void {
     const scope = deviceV2AccountCacheScope(this, API.BASE_URL);
     const inventory = scope && loadDeviceCatalog(scope);
+
     if (inventory) this.applyDeviceInventory(inventory);
   }
 
@@ -308,13 +377,17 @@ export class DataService {
     for (const item of inventory) {
       const gatewayDevice = item.device;
       const id = gatewayDevice.logicalDeviceId;
+
       if (!id) continue;
+
       const previousConfig = this.isRecord(previousDevices[id]?.config)
         ? previousDevices[id].config
         : {};
+
       const previousData = this.isRecord(previousDevices[id]?.data)
         ? previousDevices[id].data
         : {};
+
       const data: Record<string, unknown> = {
         ...previousData,
         state: item.state === 'active'
@@ -331,6 +404,7 @@ export class DataService {
           shareId: item.access.shareId,
           // This is a display role only; current protocol authorization controls writes.
           canCommand: item.access.role === 'operator',
+          commandEndpointKeys: item.access.commandEndpointKeys,
         } : {}),
       };
 
@@ -357,6 +431,7 @@ export class DataService {
         mode: 'bbp2',
         disabled: item.state !== 'active',
         isShared: item.shared,
+        canEditConsole: !item.shared || item.access?.canEditConsole === true,
       }) as BlinkerDevice['config'];
 
       deviceDict[id] = {
@@ -379,16 +454,21 @@ export class DataService {
             !!deviceDict[deviceId] && list.indexOf(deviceId) === index,
         )
       : [];
+
     const deviceList = [
       ...previousDeviceList,
       ...Object.keys(deviceDict).filter(
         (deviceId) => !previousDeviceList.includes(deviceId),
       ),
     ];
+
     this.device = { dict: deviceDict, list: deviceList };
+
     this.deviceDataLoader.next(true);
+
     if (this.firstBoot) {
       this.initCompleted.next(true);
+
       this.firstBoot = false;
     }
   }
@@ -399,12 +479,15 @@ export class DataService {
     cloudLastSeenAt: number | null,
   ): void {
     const device = this.device?.dict?.[logicalDeviceId];
+
     if (!device) return;
+
     device.data = {
       ...(this.isRecord(device.data) ? device.data : {}),
       cloudReachable,
       cloudLastSeenAt,
     };
+
     device.subject?.next({ cloudReachable, cloudLastSeenAt });
   }
 
@@ -431,23 +514,30 @@ export class DataService {
   loadGatewayUser(currentUser: CurrentUser): void {
     if (this._auth) {
       const changed = this._auth.uuid !== currentUser.id;
+
       if (this._auth.uuid && changed) {
         this._sessionEpoch += 1;
+
         this.resetBlinkerMemory();
       }
+
       this._auth = {
         ...this._auth,
         uuid: currentUser.id,
         token: this._auth.accessToken,
       };
+
       if (changed) {
         this.authDataChanged.next();
+
         const resolved = this._auth;
+
         void this.persistAuthData(resolved).then(() => {
           if (this._auth !== resolved) return this.persistCurrentAuth();
         }).catch(() => undefined);
       }
     }
+
     this.user = {
       id: currentUser.id,
       nickname: currentUser.nickname,
@@ -461,6 +551,15 @@ export class DataService {
       entitlementRevision: currentUser.entitlement_revision,
       entitlements: currentUser.entitlements,
     };
+
+    this.userDataLoader.next(true);
+  }
+
+  loadRegions(snapshot: RegionSnapshot): void {
+    if (this.roomRevision !== null && snapshot.revision < this.roomRevision) return;
+
+    this.room = { list: [...snapshot.order], dict: structuredClone(snapshot.rooms) };
+    this.roomRevision = snapshot.revision;
     this.userDataLoader.next(true);
   }
 
@@ -480,17 +579,22 @@ export class DataService {
 
   updateAvatarCache(): void {
     if (!this.user?.avatar) return;
+
     this.user.avatar = this.user.avatar.split('?')[0] + '?date=' + Date.now();
   }
 
   private async persistAuthData(auth: AuthData): Promise<void> {
     this.removeLegacyAuthData();
+
     if (!Capacitor.isNativePlatform()) {
       if (this.isDevWebSessionEnabled()) this.persistDevWebAuthData(auth);
       else this.clearDevWebAuthData();
+
       return;
     }
+
     await this.configureSecureStorage();
+
     await SecureStorage.set(
       AUTH_STORAGE_KEY,
       auth as unknown as Record<string, unknown>,
@@ -504,19 +608,25 @@ export class DataService {
       } else {
         this.clearDevWebAuthData();
       }
+
       return;
     }
+
     const current = this._auth;
+
     if (current) {
       await this.persistAuthData(current);
+
       return;
     }
+
     await this.configureSecureStorage();
     await SecureStorage.remove(AUTH_STORAGE_KEY);
   }
 
   private async clearPersistedAuthData(): Promise<unknown | null> {
     if (!Capacitor.isNativePlatform()) return this.clearDevWebAuthData();
+
     try {
       await this.configureSecureStorage();
     } catch (error) {
@@ -524,9 +634,11 @@ export class DataService {
     }
 
     let lastError: unknown = null;
+
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await SecureStorage.remove(AUTH_STORAGE_KEY);
+
         return null;
       } catch (error) {
         lastError = error;
@@ -538,8 +650,10 @@ export class DataService {
     } catch (error) {
       return error;
     }
+
     try {
       await SecureStorage.remove(AUTH_STORAGE_KEY);
+
       return null;
     } catch (error) {
       return error || lastError;
@@ -557,8 +671,11 @@ export class DataService {
   private markAuthInvalidated(): unknown | null {
     try {
       const storage = this.getLocalStorage();
+
       if (!storage) return new Error('Persistent invalidation storage is unavailable.');
+
       storage.setItem(AUTH_INVALIDATED_STORAGE_KEY, '1');
+
       return null;
     } catch (error) {
       return error;
@@ -569,6 +686,7 @@ export class DataService {
     if (!this.secureStorageReady) {
       this.secureStorageReady = SecureStorage.setKeyPrefix('blinker_');
     }
+
     return this.secureStorageReady;
   }
 
@@ -586,15 +704,22 @@ export class DataService {
 
   private loadDevWebAuthData(): void {
     const storage = this.getSessionStorage();
+
     if (!storage) return;
+
     try {
       const raw = storage.getItem(DEV_WEB_AUTH_STORAGE_KEY);
+
       if (!raw) return;
+
       const saved: unknown = JSON.parse(raw);
+
       if (!this.isValidAuth(saved)) {
         storage.removeItem(DEV_WEB_AUTH_STORAGE_KEY);
+
         return;
       }
+
       this.restoreAuthData(saved);
     } catch {
       try {
@@ -607,7 +732,9 @@ export class DataService {
 
   private persistDevWebAuthData(auth: AuthData): void {
     const storage = this.getSessionStorage();
+
     if (!storage) throw new Error('Session storage is unavailable.');
+
     storage.setItem(DEV_WEB_AUTH_STORAGE_KEY, JSON.stringify({
       accessToken: auth.accessToken,
       refreshToken: auth.refreshToken,
@@ -619,6 +746,7 @@ export class DataService {
   private clearDevWebAuthData(): unknown | null {
     try {
       this.getSessionStorage()?.removeItem(DEV_WEB_AUTH_STORAGE_KEY);
+
       return null;
     } catch (error) {
       return error;
@@ -627,6 +755,7 @@ export class DataService {
 
   private restoreAuthData(saved: AuthData): void {
     this._sessionEpoch += 1;
+
     this._auth = {
       accessToken: saved.accessToken,
       refreshToken: saved.refreshToken,
@@ -636,6 +765,7 @@ export class DataService {
         ? saved.token
         : saved.accessToken,
     };
+
     this.authDataLoader.next(true);
     this.authDataChanged.next();
     this.restoreDeviceCatalog();
@@ -643,6 +773,7 @@ export class DataService {
 
   private isValidAuth(value: unknown): value is AuthData {
     if (!this.isRecord(value)) return false;
+
     return this.nonEmptyString(value['accessToken']) !== '' &&
       this.nonEmptyString(value['refreshToken']) !== '' &&
       this.nonEmptyString(value['tokenType']) !== '';
@@ -659,11 +790,16 @@ export class DataService {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
       return crypto.randomUUID();
     }
+
     const bytes = new Uint8Array(16);
+
     crypto.getRandomValues(bytes);
+
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
     const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, '0'));
+
     return hex.slice(0, 4).join('') + '-' + hex.slice(4, 6).join('') + '-' +
       hex.slice(6, 8).join('') + '-' + hex.slice(8, 10).join('') + '-' +
       hex.slice(10).join('');

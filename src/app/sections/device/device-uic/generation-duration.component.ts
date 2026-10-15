@@ -5,7 +5,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnChanges
   standalone: true,
   template: `
     @if (seconds !== undefined) {
-      <span aria-label="生成耗时">{{ minutes }}m {{ seconds % 60 }}s</span>
+      <span aria-label="生成耗时">{{ minutes ? minutes + 'm ' : '' }}{{ seconds % 60 }}s</span>
     } @else {
       <ng-content />
     }

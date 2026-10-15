@@ -1,7 +1,24 @@
+import { DeviceConsoleService, cloudConsole, canEditConsole, consoleLayout, installConsole } from '../../../core/services/device-console.service';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostBinding, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { AlertController, IonicModule, NavController } from '@ionic/angular';
+
+import {
+  AlertController,
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonModal,
+  IonPopover,
+  IonRadio,
+  IonRadioGroup,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+  NavController,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import { DeviceUiConnection, DeviceUiConnectionState, DeviceUiPort, DeviceUiEndpoint, DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
 import { legacyCommand, legacyField, readLegacyPanel, LegacyBinding } from '../../../core/device-v2/legacy-panel';
@@ -27,7 +44,24 @@ type EditorMode = 'edit' | 'layout' | 'preview';
 
 @Component({
   selector: 'app-panel-editor', standalone: true,
-  imports: [IonicModule, FormsModule, PageWidgetComponent, PanelSortableDirective, PanelSortItemDirective],
+  imports: [
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonModal,
+    IonPopover,
+    IonRadio,
+    IonRadioGroup,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
+    FormsModule,
+    PageWidgetComponent,
+    PanelSortableDirective,
+    PanelSortItemDirective,
+  ],
   templateUrl: './panel-editor.page.html', styleUrls: ['./panel-editor.page.scss'],
   changeDetection: ChangeDetectionStrategy.Eager,
 })
@@ -87,7 +121,8 @@ export class PanelEditorPage implements OnInit, OnDestroy {
     private readonly alerts: AlertController, private readonly notice: NoticeService,
     private readonly view: ViewService, private readonly cd: ChangeDetectorRef,
     private readonly panels: DevicePanelService,
-    private readonly propertyContexts: PanelWidgetEditorContextService) {
+    private readonly propertyContexts: PanelWidgetEditorContextService,
+    private readonly consoles: DeviceConsoleService) {
     this.id = route.snapshot.paramMap.get('id') || '';
   }
 
@@ -99,6 +134,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   get canUndo(): boolean { return this.previous.length > 0; }
 
   private get canControl(): boolean {
+    if (this.device?.config.isShared && this.device.data.canCommand !== true) return false;
     if (!this.device || this.destroyed || !this.pageVisible || !this.appActive || this.saving || this.stale) return false;
 
     if (!this.isV2) {
@@ -195,7 +231,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
     const device = this.data.device?.dict?.[this.id];
 
     if (!device) { this.loading = false; this.error = '未找到设备，请等待设备列表加载后重试。'; return; }
-    if (device.config.isShared) { this.loading = false; this.error = '共享设备不能修改组件面板。'; return; }
+    if (device.config.isShared && !cloudConsole(device)) { this.loading = false; this.error = '此设备不支持共享编辑。'; return; }
 
     const version = ++this.loadVersion;
 
@@ -222,7 +258,12 @@ export class PanelEditorPage implements OnInit, OnDestroy {
 
         this.connect();
 
-        const record = await this.layouts.get(device.deviceName);
+        const epoch = this.data.sessionEpoch;
+        const source = cloudConsole(device) ? await this.consoles.get(device.deviceName) : undefined;
+        if (epoch !== this.data.sessionEpoch || this.destroyed || version !== this.loadVersion) return;
+        if (source && !source.capabilities.canEditConsole) throw new Error('你没有编辑此控制台的权限。');
+        if (source) installConsole(device, source);
+        const record = source ? consoleLayout(source) : await this.layouts.get(device.deviceName);
 
         if (this.destroyed || version !== this.loadVersion) return;
 
@@ -464,6 +505,8 @@ export class PanelEditorPage implements OnInit, OnDestroy {
 
   private async sendPreview(field: DeviceUiEndpoint, value: unknown): Promise<void> {
     if (!this.device || !this.canControl) return;
+    if (this.device.config.isShared && this.device.data.commandEndpointKeys !== null
+      && !this.device.data.commandEndpointKeys?.includes(field.key)) return;
 
     if (this.pending.has(field.key)) {
       this.queued.set(field.key, { field, value });
@@ -528,7 +571,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   async save(returnToDevice = true): Promise<boolean> {
-    if (!this.document || !this.device || this.saving) return false;
+    if (!this.document || !this.device || this.saving || !canEditConsole(this.device)) return false;
     if (this.stale) {
       this.error = '设备字段已改变，请返回编辑页重新读取。';
       return false;
@@ -545,9 +588,19 @@ export class PanelEditorPage implements OnInit, OnDestroy {
       if (this.isV2) {
         const revision = this.record?.revision ?? 0;
 
-        this.record = await this.layouts.saveCandidate(this.device.deviceName, {
+        const candidate = {
           ...this.document, revision: Math.max(1, revision), manifestFingerprint: this.loadedFingerprint,
-        }, this.snapshot!.endpoints, revision);
+        };
+        if (cloudConsole(this.device)) {
+          const epoch = this.data.sessionEpoch;
+          const source = await this.consoles.save(this.device.deviceName,
+            { layout: candidate, uiConfig: { panelMode: 'normal' } });
+          if (epoch !== this.data.sessionEpoch) throw new Error('账号已切换');
+          this.record = consoleLayout(source);
+          installConsole(this.device, source);
+        } else {
+          this.record = await this.layouts.saveCandidate(this.device.deviceName, candidate, this.snapshot!.endpoints, revision);
+        }
 
         layoutSaved = true;
       } else {
@@ -556,7 +609,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
         this.panels.install(this.device, this.legacyRecord);
       }
 
-      if (this.isV2 && !this.device.config.isPreview && !await this.devices.saveDeviceConfig(this.device, config)) throw new Error('config-save-failed');
+      if (this.isV2 && !cloudConsole(this.device) && !this.device.config.isPreview && !await this.devices.saveDeviceConfig(this.device, config)) throw new Error('config-save-failed');
 
       Object.assign(this.device.config, config);
       this.device.subject.next({ key: 'component', value: component, source: 'panel-editor' });
@@ -680,7 +733,9 @@ export class PanelEditorPage implements OnInit, OnDestroy {
 
         return extra ? [{ field: extra, value: extra.value }] : [];
       }), error: this.fieldErrors.get(field.key) ?? '',
-      disabled: this.mode === 'preview' && (this.pending.has(field.key) || !this.canControl) };
+      disabled: this.mode === 'preview' && (this.pending.has(field.key) || !this.canControl
+        || (this.device?.config.isShared && this.device.data.commandEndpointKeys !== null
+          && !this.device.data.commandEndpointKeys?.includes(field.key))) };
   }
 
   private refreshCards(): void {

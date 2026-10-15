@@ -1,8 +1,16 @@
 import { ChangeDetectorRef, Component, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { AlertController, IonicModule } from '@ionic/angular';
-import { HeroCardComponent } from '../../core/components/hero-card/hero-card.component';
+
+import {
+  AlertController,
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { GeocodingService } from '../../core/services/geocoding.service';
 import {
   DEFAULT_GEOLOCATION_SERVICE_PROVIDER,
@@ -31,7 +39,15 @@ interface ServiceProvider<TId extends string> {
   standalone: true,
   templateUrl: './third-party-services.page.html',
   styleUrls: ['./third-party-services.page.scss'],
-  imports: [FormsModule, IonicModule, HeroCardComponent],
+  imports: [
+    FormsModule,
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+  ],
 })
 export class ThirdPartyServicesPage {
   readonly weatherProviders: readonly ServiceProvider<

@@ -6,8 +6,8 @@
   </ion-button></ion-buttons>
 </ion-toolbar></ion-header>
 <ion-content [fullscreen]="true"><main>
-  <app-hero-card iconClass="fa-light fa-timer" eyebrow="设备定时" [heading]="timer.deviceName"
-    description="定时/延时由设备执行，退出 App 不会取消已安装任务。" />
+  <h1 class="device-context">{{ timer.deviceName }}</h1>
+  <p class="task-execution-note">定时/延时由设备执行，退出 App 不会取消已安装任务。</p>
   <app-task-status [timer]="timer" />
   @if (timer.ready) {
     <button class="add-task-button primary-action" type="button"

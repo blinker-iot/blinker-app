@@ -6,7 +6,16 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule, NavController } from '@ionic/angular';
+
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  NavController,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 
 import { BleDirectTarget } from '../../../core/device-v2/ble-direct';
@@ -35,7 +44,15 @@ type EnrollmentPhase =
 @Component({
   selector: 'app-edge-gateway-enrollment',
   standalone: true,
-  imports: [IonicModule, FormsModule],
+  imports: [
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    FormsModule,
+  ],
   templateUrl: './edge-gateway-enrollment.page.html',
   styleUrls: ['./edge-gateway-enrollment.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
