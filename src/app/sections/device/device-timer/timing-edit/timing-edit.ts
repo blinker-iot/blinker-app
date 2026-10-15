@@ -8,6 +8,15 @@ import { TaskTarget, taskErrorText, taskValue } from '../device-timer.models';
 import { TaskStatusComponent } from '../task-status.component';
 import { TimerService } from '../timer.service';
 
+function countdownMillis(seconds: number): number {
+  const millis = Math.round(seconds * 1000);
+  // Round-trip only an exact millisecond input, not a fractional millisecond.
+  // Multiplication alone rejects valid decimals such as 1.001 seconds.
+  if (typeof seconds !== 'number' || !Number.isInteger(millis) || millis < 1 || millis > 0x7fffffff
+    || seconds !== millis / 1000) throw new Error('TASK_CONTRACT_INVALID');
+  return millis;
+}
+
 @Component({
   selector: 'app-timing-edit', templateUrl: 'timing-edit.html', styleUrls: ['timing-edit.scss'],
   imports: [IonicModule, FormsModule, HeroCardComponent, TaskStatusComponent], providers: [TimerService],
@@ -16,7 +25,7 @@ export class TimingEditPage implements OnDestroy {
   id = ''; taskId?: number; invalidRoute = false;
   kind: TaskSchedule['kind'] = 'countdown';
   seconds = 1800; dateTime = ''; time = '08:00'; weekdays = 31;
-  utcOffsetMinutes = -new Date().getTimezoneOffset();
+  utcOffsetMinutes = 0 - new Date().getTimezoneOffset();
   key = ''; value: string | boolean = ''; enabled = true; revision = 0; error = '';
   readonly days = ['一', '二', '三', '四', '五', '六', '日'];
   private generation = 0;
@@ -76,15 +85,17 @@ export class TimingEditPage implements OnDestroy {
   definition(): TaskDefinition {
     const target = this.target; if (!target) throw new Error('TASK_TARGET_UNAVAILABLE');
     let schedule: TaskSchedule;
-    if (this.kind === 'countdown') schedule = { kind: 'countdown', durationMillis: this.seconds * 1000 };
+    if (this.kind === 'countdown') schedule = { kind: 'countdown', durationMillis: countdownMillis(this.seconds) };
     else if (this.kind === 'once') {
       const utcMillis = new Date(this.dateTime).getTime();
       if (!this.dateTime || !Number.isFinite(utcMillis) || utcMillis <= Date.now()) throw new Error('TASK_CONTRACT_INVALID');
       schedule = { kind: 'once', utcMillis };
     } else {
-      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(this.time)) throw new Error('TASK_CONTRACT_INVALID');
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(this.time)
+        || typeof this.utcOffsetMinutes !== 'number' || !Number.isInteger(this.utcOffsetMinutes))
+        throw new Error('TASK_CONTRACT_INVALID');
       const [hour, minute] = this.time.split(':').map(Number);
-      schedule = { kind: 'weekly', minuteOfDay: hour * 60 + minute, utcOffsetMinutes: Number(this.utcOffsetMinutes), weekdays: this.weekdays };
+      schedule = { kind: 'weekly', minuteOfDay: hour * 60 + minute, utcOffsetMinutes: this.utcOffsetMinutes, weekdays: this.weekdays };
     }
     return taskDefinition({ schedule, key: target.key, valueType: target.valueType, value: taskValue(target, this.value), enabled: this.enabled });
   }

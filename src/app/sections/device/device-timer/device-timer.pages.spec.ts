@@ -115,6 +115,58 @@ describe('V2 task pages', () => {
     expect(f.editor.daySelected(1)).toBe(false);
     f.editor.time = '25:00'; expect(() => f.editor.definition()).toThrow();
   });
+  it.each([[0.001, 1], [1.001, 1001], [1.003, 1003], [1.015, 1015], [2147483.647, 0x7fffffff]])
+    ('preserves exact millisecond countdown input %s seconds as %s milliseconds', async (seconds, millis) => {
+      const f = setup('new'); await f.editor.ionViewWillEnter(); f.editor.seconds = seconds;
+      expect(f.editor.definition().schedule).toEqual({ kind: 'countdown', durationMillis: millis });
+      await f.editor.save();
+      expect(f.timer.write).toHaveBeenCalledExactlyOnceWith({ operation: 'create', expectedRevision: 2,
+        definition: { ...record.definition, schedule: { kind: 'countdown', durationMillis: millis }, value: false } }, false);
+    });
+  it.each([0, -1, 0.0001, 1.0001, 1.0000000000001, 2147483.648, NaN, Infinity, null, '', '1.001'])
+    ('rejects invalid/sub-millisecond countdown %s without sending or changing the table', async seconds => {
+      const f = setup('new'); await f.editor.ionViewWillEnter(); f.editor.seconds = seconds as any;
+      expect(() => f.editor.definition()).toThrow('TASK_CONTRACT_INVALID');
+      await f.editor.save();
+      expect(f.timer.write).not.toHaveBeenCalled(); expect(f.timer.ready).toBe(true);
+      expect(f.timer.records).toEqual([record]); expect(f.nav.navigateBack).not.toHaveBeenCalled();
+    });
+  it.each([null, undefined, '', ' ', '0', NaN, Infinity, 0.5, -721, 841])
+    ('rejects missing/non-numeric/out-of-range weekly offset %s instead of assuming UTC', async offset => {
+      const f = setup('new'); await f.editor.ionViewWillEnter(); f.editor.kind = 'weekly';
+      f.editor.utcOffsetMinutes = offset as any;
+      expect(() => f.editor.definition()).toThrow('TASK_CONTRACT_INVALID');
+      await f.editor.save(); expect(f.timer.write).not.toHaveBeenCalled(); expect(f.timer.ready).toBe(true);
+      expect(f.nav.navigateBack).not.toHaveBeenCalled();
+    });
+  it.each([-720, 0, 840])('accepts an explicit fixed weekly UTC offset %s', async offset => {
+    const f = setup('new'); await f.editor.ionViewWillEnter(); f.editor.kind = 'weekly';
+    f.editor.utcOffsetMinutes = offset;
+    expect(f.editor.definition().schedule).toEqual({ kind: 'weekly', minuteOfDay: 480, weekdays: 31, utcOffsetMinutes: offset });
+  });
+  it('UTC default offset creates a valid weekly definition without editing the timezone', async () => {
+    const offset = vi.spyOn(Date.prototype, 'getTimezoneOffset').mockReturnValue(0);
+    try {
+      const f = setup('new'); await f.editor.ionViewWillEnter(); f.editor.kind = 'weekly';
+      expect(Object.is(f.editor.utcOffsetMinutes, -0)).toBe(false);
+      expect(f.editor.definition().schedule).toEqual({ kind: 'weekly', minuteOfDay: 480, weekdays: 31, utcOffsetMinutes: 0 });
+      f.editor.utcOffsetMinutes = -0;
+      expect(() => f.editor.definition()).toThrow('TASK_CONTRACT_INVALID');
+      expect(f.timer.write).not.toHaveBeenCalled();
+    } finally { offset.mockRestore(); }
+  });
+  it('UTC default offset saves the original typed weekly intent without changing the table or starting it', async () => {
+    const offset = vi.spyOn(Date.prototype, 'getTimezoneOffset').mockReturnValue(0);
+    try {
+      const f = setup('new'); await f.editor.ionViewWillEnter(); f.editor.kind = 'weekly';
+      await f.editor.save();
+      expect(f.editor.error).toBe('');
+      expect(f.timer.write).toHaveBeenCalledExactlyOnceWith({ operation: 'create', expectedRevision: 2,
+        definition: { ...record.definition, schedule: { kind: 'weekly', minuteOfDay: 480, weekdays: 31, utcOffsetMinutes: 0 }, value: false } }, false);
+      expect(f.nav.navigateBack).toHaveBeenCalledExactlyOnceWith('/device-manager/device_a/timer');
+      expect(f.timer.records).toEqual([record]);
+    } finally { offset.mockRestore(); }
+  });
   it('preserves once UTC and weekly fixed offset through editing, and deletion leaves the sole read to the list', async () => {
     const f = setup();
     const utcMillis = Date.now() + 86400000;

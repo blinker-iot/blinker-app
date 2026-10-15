@@ -231,6 +231,8 @@ export class BleDirectClient {
       if (directSession) await directSession.close().catch(() => undefined);
       else await this.link.disconnect().catch(() => undefined);
       throw error;
+    } finally {
+      try { this.link.finishBootstrap?.(); } catch { /* Optional carrier hint. */ }
     }
   }
 
@@ -251,7 +253,7 @@ export class BleDirectClient {
     } finally {
       // synchronize() includes Manifest acceptance and fresh State. The native
       // link owns the optional hint, its deadline and generation/close fences.
-      this.link.finishBootstrap?.();
+      try { this.link.finishBootstrap?.(); } catch { /* Optional carrier hint. */ }
       clearBleControllerCredentialSecrets(credential);
     }
   }
@@ -271,6 +273,8 @@ export class BleDirectClient {
     } catch (error) {
       await this.link.disconnect().catch(() => undefined);
       throw error;
+    } finally {
+      try { this.link.finishBootstrap?.(); } catch { /* Optional carrier hint. */ }
     }
   }
 
@@ -298,6 +302,7 @@ export class BleDirectClient {
       else await this.link.disconnect().catch(() => undefined);
       throw error;
     } finally {
+      try { this.link.finishBootstrap?.(); } catch { /* Optional carrier hint. */ }
       clearBleControllerCredentialSecrets(credential);
     }
   }

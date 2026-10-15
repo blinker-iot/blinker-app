@@ -25,12 +25,12 @@ const bytes = (size: number, value: number) => new Uint8Array(size).fill(value);
 describe('BLE reconnect bootstrap hint boundary', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  for (const fails of [false, true]) {
-    it(`finishes the optional hint only after fresh synchronization ${fails ? 'fails' : 'completes'}`, async () => {
+  for (const fails of [false, true]) for (const hintThrows of [false, true]) {
+    it(`finishes the optional hint after synchronization ${fails ? 'fails' : 'completes'}; hint throws=${hintThrows}`, async () => {
       const credential = { state: 'active', logicalDeviceId: 'ble_test', deviceInstanceId: bytes(16, 1),
         accessEpoch: 7, controllerId: bytes(16, 2), controllerSecret: bytes(32, 3),
         credentialVersion: 1, permissions: 15 } as const;
-      const link = { finishBootstrap: vi.fn(), disconnect: vi.fn() };
+      const link = { finishBootstrap: vi.fn(() => { if (hintThrows) throw Error('OPTIONAL_HINT_FAILED'); }), disconnect: vi.fn() };
       const store = { load: vi.fn().mockResolvedValue(credential) };
       let settle!: () => void;
       const syncError = Error('STATE_FAILED');
@@ -59,6 +59,118 @@ describe('BLE reconnect bootstrap hint boundary', () => {
         .toBeLessThan(link.finishBootstrap.mock.invocationCallOrder[0]!);
     });
   }
+
+  for (const fails of [false, true]) {
+    it(`finishes ephemeral synchronization ${fails ? 'failure' : 'success'} without wiping its caller-owned credential`, async () => {
+      const credential = { accessEpoch: 7, controllerId: bytes(16, 2), controllerSecret: bytes(32, 3),
+        credentialVersion: 1, permissions: 15 };
+      const link = { finishBootstrap: vi.fn(() => { throw Error('OPTIONAL_HINT_FAILED'); }),
+        disconnect: vi.fn(async () => undefined) };
+      let settle!: () => void;
+      const error = Error('EPHEMERAL_STATE_FAILED');
+      const session = { synchronize: vi.fn(() => new Promise<void>((resolve, reject) => {
+        settle = () => fails ? reject(error) : resolve();
+      })), close: vi.fn() };
+      const client = new BleDirectClient(link as unknown as BleDirectRecordLink,
+        {} as BleEnrollmentApi, {} as BleControllerCredentialStore);
+      vi.spyOn(client as any, 'connectWithCredential').mockResolvedValue(session);
+      const result = client.connectEphemeral('ble_test', {} as BleDirectTarget, credential).catch(value => value);
+      await vi.waitFor(() => expect(session.synchronize).toHaveBeenCalledOnce());
+      expect(link.finishBootstrap).not.toHaveBeenCalled();
+      settle();
+      expect(await result).toBe(fails ? error : session);
+      expect(link.finishBootstrap).toHaveBeenCalledOnce();
+      expect(link.disconnect).toHaveBeenCalledTimes(fails ? 1 : 0);
+      expect(session.close).not.toHaveBeenCalled();
+      expect(credential.controllerSecret).toEqual(bytes(32, 3));
+      if (fails) expect(link.disconnect.mock.invocationCallOrder[0])
+        .toBeLessThan(link.finishBootstrap.mock.invocationCallOrder[0]!);
+    });
+  }
+
+  it('does not finish a window on synchronous ephemeral credential rejection', async () => {
+    const link = { finishBootstrap: vi.fn(), disconnect: vi.fn() };
+    const client = new BleDirectClient(link as unknown as BleDirectRecordLink,
+      {} as BleEnrollmentApi, {} as BleControllerCredentialStore);
+    const connect = vi.spyOn(client as any, 'connectWithCredential');
+    await expect(client.connectEphemeral('ble_test', {} as BleDirectTarget, {
+      accessEpoch: 0, controllerId: bytes(16, 2), controllerSecret: bytes(32, 3),
+      credentialVersion: 1, permissions: 15,
+    })).rejects.toThrow('BLE_DIRECT_AUTH_CREDENTIAL_INVALID');
+    expect(connect).not.toHaveBeenCalled();
+    expect(link.disconnect).not.toHaveBeenCalled();
+    expect(link.finishBootstrap).not.toHaveBeenCalled();
+  });
+
+  it('does not finish a window if stored credentials cannot be loaded', async () => {
+    const link = { finishBootstrap: vi.fn(), disconnect: vi.fn() };
+    const error = Error('STORAGE_FAILED');
+    const client = new BleDirectClient(link as unknown as BleDirectRecordLink,
+      {} as BleEnrollmentApi, { load: vi.fn().mockRejectedValue(error) } as any);
+    await expect(client.connect('ble_test', {} as BleDirectTarget)).rejects.toBe(error);
+    await expect(client.resume('ble_test', {} as BleDirectTarget)).rejects.toBe(error);
+    expect(link.disconnect).not.toHaveBeenCalled();
+    expect(link.finishBootstrap).not.toHaveBeenCalled();
+  });
+
+  for (const fails of [false, true]) {
+    it(`finishes resumed synchronization ${fails ? 'failure' : 'success'} after commit and active save`, async () => {
+      const credential: BleControllerCredential = {
+        state: 'pending', logicalDeviceId: 'ble_test', deviceInstanceId: bytes(16, 1),
+        accessEpoch: 7, controllerId: bytes(16, 2), controllerSecret: bytes(32, 3),
+        credentialVersion: 1, permissions: 15, intentId: bytes(16, 4), commitId: bytes(16, 5),
+        receipt: bytes(32, 6), presenceKeys: [{ state: 'current', accessEpoch: 7, version: 1, key: bytes(16, 7) }],
+      };
+      const link = { finishBootstrap: vi.fn(() => { throw Error('OPTIONAL_HINT_FAILED'); }), disconnect: vi.fn() };
+      let saved: BleControllerCredential | undefined;
+      const store = { load: vi.fn().mockResolvedValue(credential),
+        save: vi.fn(async (value: BleControllerCredential) => { saved = structuredClone(value); }) };
+      const api = { issue: vi.fn(), cancel: vi.fn(), commit: vi.fn(async () => ({ logicalDeviceId: 'ble_test', accessEpoch: 7,
+        controllerId: credential.controllerId.slice(), presenceKeyVersion: 1, state: 'active' as const, replayed: false })) };
+      let settle!: () => void;
+      const error = Error('RESUMED_STATE_FAILED');
+      const session = { synchronize: vi.fn(() => new Promise<void>((resolve, reject) => {
+        settle = () => fails ? reject(error) : resolve();
+      })), close: vi.fn(async () => undefined) };
+      const client = new BleDirectClient(link as unknown as BleDirectRecordLink,
+        api as BleEnrollmentApi, store as unknown as BleControllerCredentialStore);
+      vi.spyOn(client as any, 'connectWithCredential').mockResolvedValue(session);
+      const result = client.resume('ble_test', { profile: { mode: BleApplicationMode.Direct } } as BleDirectTarget)
+        .catch(value => value);
+      await vi.waitFor(() => expect(session.synchronize).toHaveBeenCalledOnce());
+      expect(api.commit).toHaveBeenCalledOnce();
+      expect(store.save).toHaveBeenCalledOnce();
+      expect(saved?.state).toBe('active');
+      expect(saved?.controllerSecret).toBeDefined();
+      expect(Array.from(saved!.controllerSecret)).toEqual(Array.from(bytes(32, 3)));
+      expect(saved!.controllerSecret.buffer).not.toBe(credential.controllerSecret.buffer);
+      expect(api.commit.mock.invocationCallOrder[0]).toBeLessThan(store.save.mock.invocationCallOrder[0]!);
+      expect(store.save.mock.invocationCallOrder[0]).toBeLessThan(session.synchronize.mock.invocationCallOrder[0]!);
+      expect(link.finishBootstrap).not.toHaveBeenCalled();
+      settle();
+      expect(await result).toEqual(fails ? error : { logicalDeviceId: 'ble_test', session });
+      expect(link.finishBootstrap).toHaveBeenCalledOnce();
+      expect(session.close).toHaveBeenCalledTimes(fails ? 1 : 0);
+      expect(link.disconnect).not.toHaveBeenCalled();
+      expect(credential.controllerSecret).toEqual(bytes(32, 0));
+      expect(credential.presenceKeys![0].key).toEqual(bytes(16, 0));
+      if (fails) expect(session.close.mock.invocationCallOrder[0])
+        .toBeLessThan(link.finishBootstrap.mock.invocationCallOrder[0]!);
+    });
+  }
+
+  it('does not acquire or finish a window when enrollment input is rejected', async () => {
+    const link = { finishBootstrap: vi.fn(), connect: vi.fn(), disconnect: vi.fn() };
+    const client = new BleDirectClient(link as unknown as BleDirectRecordLink,
+      {} as BleEnrollmentApi, {} as BleControllerCredentialStore);
+    await expect(client.enroll({ profile: { mode: BleApplicationMode.Direct } } as BleDirectTarget,
+      { displayName: 'Test child' })).rejects.toThrow('BLE_DIRECT_PROVISIONING_MODE_REQUIRED');
+    await expect(client.enroll({ profile: { mode: BleApplicationMode.Provisioning } } as BleDirectTarget,
+      { displayName: '' })).rejects.toThrow('BLE_DIRECT_DISPLAY_NAME_INVALID');
+    expect(link.connect).not.toHaveBeenCalled();
+    expect(link.disconnect).not.toHaveBeenCalled();
+    expect(link.finishBootstrap).not.toHaveBeenCalled();
+  });
 });
 
 describe('BLE enrollment client commit boundary', () => {
@@ -108,7 +220,8 @@ describe('BLE enrollment client commit boundary', () => {
     const error = new GatewayHttpError({ httpStatus: status, code, message: 'Enrollment unavailable' });
     const api: BleEnrollmentApi = { issue: vi.fn(), cancel: vi.fn(), commit: vi.fn().mockRejectedValue(error) };
     const session = { synchronize: vi.fn(), close: vi.fn().mockResolvedValue(undefined) };
-    const client = new BleDirectClient({} as BleDirectRecordLink, api, store);
+    const link = { finishBootstrap: vi.fn(() => { throw Error('OPTIONAL_HINT_FAILED'); }) };
+    const client = new BleDirectClient(link as unknown as BleDirectRecordLink, api, store);
     vi.spyOn(client as any, 'connectWithCredential').mockResolvedValue(session);
     await expect(client.resume(pending.logicalDeviceId, {
       profile: { mode: BleApplicationMode.Direct },
@@ -119,6 +232,8 @@ describe('BLE enrollment client commit boundary', () => {
     expect(api.issue).not.toHaveBeenCalled();
     expect(api.cancel).not.toHaveBeenCalled();
     expect(session.close).toHaveBeenCalledOnce();
+    expect(link.finishBootstrap).toHaveBeenCalledOnce();
+    expect(session.close.mock.invocationCallOrder[0]).toBeLessThan(link.finishBootstrap.mock.invocationCallOrder[0]!);
     expect(session.synchronize).not.toHaveBeenCalled();
     expect(store.save).not.toHaveBeenCalled();
     expect(store.remove).not.toHaveBeenCalled();
@@ -139,7 +254,7 @@ describe('BLE enrollment client commit boundary', () => {
     expect(session.close).toHaveBeenCalledOnce(); expect(credential.controllerSecret).toEqual(bytes(32, 0));
   });
 
-  it.each(['grantContext', 'receiptProof', 'receiptEpoch', 'exactReceipt'] as const)(
+  it.each(['grantContext', 'receiptProof', 'receiptEpoch', 'exactReceipt', 'commit', 'synchronize', 'complete'] as const)(
     'keeps %s on the correct side of durable save, Method 2 and cloud commit', async fault => {
       const crypto = new BleDirectCrypto();
       const instance = bytes(16, 0x21);
@@ -176,13 +291,20 @@ describe('BLE enrollment client commit boundary', () => {
             presenceKeyVersion: 1, presenceKey: presenceKey.slice(), expiresAt: 1600,
             securityProfile: 1, serverKeyId: 1, signatureAlgorithm: 1, replayed: false };
         }),
-        commit: vi.fn(), cancel: vi.fn(),
+        commit: vi.fn(async () => {
+          if (fault === 'commit') throw Error('COMMIT_FAILED');
+          return { logicalDeviceId: pending!.logicalDeviceId, accessEpoch: pending!.accessEpoch,
+            controllerId: pending!.controllerId, presenceKeyVersion: 1, state: 'active' as const, replayed: false };
+        }), cancel: vi.fn(),
       };
       const link: BleDirectRecordLink = {
         connect: vi.fn().mockResolvedValue(undefined),
         sendRecord: vi.fn().mockResolvedValue(undefined),
         disconnect: vi.fn().mockResolvedValue(undefined),
-        waitForMode: vi.fn().mockRejectedValue(new Error('METHOD_2_BOUNDARY')),
+        waitForMode: ['commit', 'synchronize', 'complete'].includes(fault)
+          ? vi.fn().mockResolvedValue({ ...target, profile: { ...target.profile, mode: BleApplicationMode.Direct } })
+          : vi.fn().mockRejectedValue(new Error('METHOD_2_BOUNDARY')),
+        finishBootstrap: vi.fn(() => { throw Error('OPTIONAL_HINT_FAILED'); }),
         receiveRecord: vi.fn()
           .mockResolvedValueOnce(encodeLocalSecureRecord(
             LocalSecureRecordType.ResponderHandshake, bytes(48, 1),
@@ -213,24 +335,45 @@ describe('BLE enrollment client commit boundary', () => {
       vi.spyOn(NoiseNnInitiator, 'create')
         .mockResolvedValue(noise as unknown as NoiseNnInitiator);
 
-      const error = fault === 'grantContext' ? 'BLE_DIRECT_GRANT_CONTEXT_MISMATCH'
-        : fault === 'exactReceipt' ? 'METHOD_2_BOUNDARY' : 'BLE_DIRECT_RECEIPT_MISMATCH';
-      await expect(new BleDirectClient(link, api, store, crypto)
-        .enroll(target, { displayName: 'Test child' })).rejects.toThrow(error);
-      expect(api.commit).not.toHaveBeenCalled();
+      const session = { synchronize: fault === 'synchronize'
+        ? vi.fn().mockRejectedValue(Error('ENROLLMENT_STATE_FAILED')) : vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined) };
+      const client = new BleDirectClient(link, api, store, crypto);
+      const authenticate = vi.spyOn(client as any, 'authenticate').mockResolvedValue(session);
+      const result = client.enroll(target, { displayName: 'Test child' });
+      if (fault === 'complete') {
+        await expect(result).resolves.toEqual({ logicalDeviceId: 'ble_test', session });
+      } else {
+        const error = fault === 'grantContext' ? 'BLE_DIRECT_GRANT_CONTEXT_MISMATCH'
+          : fault === 'exactReceipt' ? 'METHOD_2_BOUNDARY'
+          : fault === 'commit' ? 'COMMIT_FAILED'
+          : fault === 'synchronize' ? 'ENROLLMENT_STATE_FAILED' : 'BLE_DIRECT_RECEIPT_MISMATCH';
+        await expect(result).rejects.toThrow(error);
+      }
+      const reachesDirect = ['commit', 'synchronize', 'complete'].includes(fault);
+      expect(api.commit).toHaveBeenCalledTimes(reachesDirect ? 1 : 0);
+      expect(authenticate).toHaveBeenCalledTimes(reachesDirect ? 1 : 0);
+      expect(link.connect).toHaveBeenCalledTimes(reachesDirect ? 2 : 1);
+      expect(link.finishBootstrap).toHaveBeenCalledOnce();
       expect(link.disconnect).toHaveBeenCalled();
       expect(noise.clear).toHaveBeenCalled();
       if (fault === 'grantContext') {
         expect(store.save).not.toHaveBeenCalled();
         expect(link.sendRecord).toHaveBeenCalledTimes(1);
       } else {
-        expect(store.save).toHaveBeenCalledOnce();
-        expect(pending?.state).toBe('pending');
+        expect(store.save).toHaveBeenCalledTimes(fault === 'synchronize' || fault === 'complete' ? 2 : 1);
+        expect(pending?.state).toBe(fault === 'synchronize' || fault === 'complete' ? 'active' : 'pending');
         expect(pending?.controllerSecret.some(byte => byte !== 0)).toBe(true);
         expect(temporarySecret?.every(byte => byte === 0)).toBe(true);
       }
-      if (fault === 'exactReceipt') expect(link.waitForMode).toHaveBeenCalledOnce();
+      if (fault === 'exactReceipt' || reachesDirect) expect(link.waitForMode).toHaveBeenCalledOnce();
       else expect(link.waitForMode).not.toHaveBeenCalled();
+      expect(session.synchronize).toHaveBeenCalledTimes(fault === 'synchronize' || fault === 'complete' ? 1 : 0);
+      expect(session.close).toHaveBeenCalledTimes(fault === 'commit' || fault === 'synchronize' ? 1 : 0);
+      if (fault === 'complete') expect(session.synchronize.mock.invocationCallOrder[0])
+        .toBeLessThan(vi.mocked(link.finishBootstrap!).mock.invocationCallOrder[0]!);
+      if (fault === 'commit' || fault === 'synchronize') expect(session.close.mock.invocationCallOrder[0])
+        .toBeLessThan(vi.mocked(link.finishBootstrap!).mock.invocationCallOrder[0]!);
     },
   );
 });
