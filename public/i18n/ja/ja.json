@@ -39,6 +39,8 @@
     "ABOUT_US": "このアプリについて"
   },
   "SETTINGS": {
+    "SERVICE_REGION": "サービス地域",
+    "SERVICE_REGION_HINT": "サービス地域を変更すると、再ログインが必要です",
     "TITLE": "設定",
     "APPEARANCE": "外観",
     "THEME_HINT": "環境に適した表示を選択してください",

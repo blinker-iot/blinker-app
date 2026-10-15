@@ -14,7 +14,7 @@ import { compactNumber } from 'src/app/device/v2/widgets/widget-kit';
 
 interface CardMetric {
   key: string;
-  value: string | number;
+  value: string | number | boolean;
   display: string;
   unit: string;
 }
@@ -46,8 +46,6 @@ export class Deviceblock {
     bleState: 'idle',
     cloudSessionState: 'idle',
   };
-
-  switchWaiting = false;
 
   @Input()
   set device(device: BlinkerDevice) {
@@ -99,8 +97,7 @@ export class Deviceblock {
   @Input() wide = false;
 
   get online(): boolean {
-    return this.connectivity.bleState === 'ready'
-      || this.current?.data?.cloudReachable === true;
+    return !!this.current && this.deviceUi.isOnline(this.current.deviceName);
   }
 
   get canControl(): boolean {
@@ -154,30 +151,19 @@ export class Deviceblock {
     return this.current?.data?.cloudReachable === null ? '状态未知' : '离线';
   }
 
-  get showSwitch(): boolean {
-    return !!this.snapshot?.endpoints.some(field => (
-      field.key === 'switch'
-      && field.valueType === 'boolean'
-      && field.writable
-    ));
-  }
-
-  get switchOn(): boolean {
-    return this.snapshot?.endpoints.find(field => field.key === 'switch')?.value === true;
-  }
-
   get metrics(): CardMetric[] {
     return (this.snapshot?.endpoints ?? []).flatMap(field => {
       const value = field.value;
 
-      if (typeof value !== 'number' && typeof value !== 'string' && typeof value !== 'bigint') {
+      if (typeof value !== 'number' && typeof value !== 'string'
+        && typeof value !== 'bigint' && typeof value !== 'boolean') {
         return [];
       }
 
       return [{
         key: field.key,
         value: typeof value === 'bigint' ? value.toString() : value,
-        display: typeof value === 'string' || (value > -1000 && value < 1000)
+        display: typeof value === 'string' || typeof value === 'boolean' || (value > -1000 && value < 1000)
           ? String(value)
           : compactNumber(value),
         unit: field.unit ?? '',
@@ -210,25 +196,5 @@ export class Deviceblock {
       this.connection?.unsubscribe();
       this.deviceChanges?.unsubscribe();
     });
-  }
-
-  async tapSwitch(event: Event): Promise<void> {
-    event.stopPropagation();
-
-    const logicalDeviceId = this.current?.deviceName;
-
-    if (!logicalDeviceId || !this.canControl || !this.showSwitch || this.switchWaiting) return;
-
-    this.switchWaiting = true;
-
-    this.cd.markForCheck();
-
-    try {
-      await this.deviceUi.sendCommand(logicalDeviceId, 'switch', !this.switchOn);
-    } finally {
-      this.switchWaiting = false;
-
-      this.cd.markForCheck();
-    }
   }
 }

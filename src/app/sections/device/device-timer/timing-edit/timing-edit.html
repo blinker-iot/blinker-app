@@ -10,13 +10,6 @@
 <ion-content [fullscreen]="true">
   @if (loaded && !taskNotFound) {
   <main>
-    <app-hero-card
-      [iconClass]="editorIcon"
-      eyebrow="TASK EDITOR"
-      [heading]="heroTitle"
-      [description]="editorDescription"
-    />
-
     @if (usingTestData) {
     <p class="test-data-note">
       <i class="fa-light fa-flask" aria-hidden="true"></i>

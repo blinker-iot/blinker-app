@@ -16,6 +16,7 @@ import { CustomPanelDocument, parseCustomPanel } from '../../../core/device-v2/c
 import { CUSTOM_PANEL_TEMPLATE } from '../../../device/custom-panel/custom-panel-template';
 import { ATOM_GUIDE } from '../../../device/custom-panel/atom-catalog';
 import { GenerationDurationComponent } from './generation-duration.component';
+import { interfaceGenerationError, interfaceGenerationErrorMessage } from './interface-generation-error';
 import type { PanelCard } from '../../../device/v2/widgets/widget-kit';
 
 @Component({
@@ -24,6 +25,7 @@ import type { PanelCard } from '../../../device/v2/widgets/widget-kit';
   templateUrl: './custom-panel-editor.component.html', styleUrls: ['./custom-panel-editor.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
+
 export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) device!: BlinkerDevice;
   @Input() cards: PanelCard[] = [];
@@ -35,7 +37,9 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
   readonly suggestions = ['把常用开关放在最上面', '以监测数据为主，布局紧凑', '大按钮，方便家人使用'];
   theme: UiTheme = 'natural';
   prompt = '';
+
   preview?: CustomPanelDocument;
+
   generating = false;
   saving = false;
   error = '';
@@ -65,6 +69,7 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
 
     if (this.generating && key !== this.capabilityKey) {
       this.cancel();
+
       this.error = '设备能力已变化，生成已取消。请使用最新字段重新生成。';
     }
 
@@ -73,6 +78,7 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
     if (!this.ready || this.initialized) return;
 
     this.initialized = true;
+
     const saved = this.device.config.customPanel;
     this.html = saved?.html || CUSTOM_PANEL_TEMPLATE;
     this.theme = saved?.theme || 'natural';
@@ -100,11 +106,13 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
 
   generate(): void {
     if (this.generating || this.saving || !this.ready || !canEditConsole(this.device)) return;
+
     if (this.device.config.isPreview) { this.error = '请登录并选择自己的设备后使用 AI 生成。'; return; }
 
     this.generating = true;
     this.error = '';
     this.message = '';
+
     this.busy.emit(true);
 
     this.generation = this.http.post(API.INTERFACE_WORKFLOW, {
@@ -114,26 +122,33 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
     }, { responseType: 'text', headers: { Accept: 'application/x-ndjson' } }).pipe(timeout(190000)).subscribe({
       next: response => {
         try {
-          if (response.length > 2 * 1024 * 1024) throw new Error('生成结果过大');
+          if (response.length > 2 * 1024 * 1024) throw interfaceGenerationError('INTERFACE_AI_OUTPUT_TOO_LARGE');
 
           const events = response.split('\n').filter(line => line.trim()).map(line => JSON.parse(line));
+          const failure = events.find(event => event.type === 'error');
           const complete = events.filter(event => event.type === 'complete' && event.mode === 'custom');
 
-          if (events.some(event => event.type === 'error') || complete.length !== 1) throw new Error('生成未完成');
+          if (failure) throw interfaceGenerationError(failure.code);
+          if (complete.length === 0) throw interfaceGenerationError('INTERFACE_AI_INCOMPLETE');
+          if (complete.length !== 1) throw interfaceGenerationError('INTERFACE_AI_INVALID_RESPONSE');
 
           const draft = parseCustomPanel({ version: 1, html: complete[0].data.html, theme: this.theme });
+
           this.html = draft.html;
           this.preview = draft;
           this.prompt = '';
           this.message = '界面已生成，可以继续描述需求调整。';
-        } catch { this.error = '生成结果暂不可用，请重试。当前预览已保留。'; }
+        } catch (error) {
+          this.error = interfaceGenerationErrorMessage((error as { code?: string })?.code
+            ? error : interfaceGenerationError('INTERFACE_AI_INVALID_RESPONSE'))
+            + (this.preview ? '当前预览已保留。' : '');
+        }
 
         this.finishGeneration();
       },
       error: error => {
-        this.error = error?.code === 'INTERFACE_AI_UNAVAILABLE' ? 'AI 服务尚未配置，请联系服务管理员。'
-          : error?.code === 'INTERFACE_AI_RATE_LIMIT' ? '生成请求较多，请稍后重试。'
-          : '生成未完成，请稍后重试。当前草稿已保留。';
+        this.error = interfaceGenerationErrorMessage(error) + (this.preview ? '当前预览已保留。' : '');
+
         this.finishGeneration();
       },
     });
@@ -146,10 +161,12 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
 
   async apply(): Promise<void> {
     if (!this.canApply) return;
+
     const session = this.host.sessionVersion;
 
     this.saving = true;
     this.error = '';
+
     this.busy.emit(true);
 
     try {
@@ -161,7 +178,9 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
         if (cloudConsole(this.device)) {
           const source = await this.consoles.save(this.device.deviceName,
             { uiConfig: { customPanel, panelMode: 'custom' } });
+
           if (session !== this.host.sessionVersion || this.destroyed) return;
+
           installConsole(this.device, source);
         } else if (!this.device.config.isPreview && !await this.devices.saveDeviceConfig(this.device, config)) {
           throw new Error('保存失败，请重试。');
@@ -170,18 +189,22 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
         Object.assign(this.device.config, config);
       } else {
         const legacy = this.record?.panel || readLegacyPanel(this.device);
+
         this.record = await this.panels.save(this.device, legacy.document, legacy.bindings, this.record?.revision ?? 0, 'custom', customPanel);
+
         this.panels.install(this.device, this.record);
       }
 
       if (session !== this.host.sessionVersion || this.destroyed) return;
+
       this.savedState = this.serialize();
       this.message = '自定义界面已应用。';
+
       this.device.subject.next({ key: 'component', value: this.device.config.component, source: 'custom-panel' });
 
       this.saving = false;
-      this.busy.emit(false);
 
+      this.busy.emit(false);
       await this.nav.navigateRoot(`/device/${encodeURIComponent(this.device.id || this.device.deviceName)}`);
     } catch (error) {
       this.error = ['DEVICE_PANEL_CONFLICT'].includes((error as { code?: string })?.code || '')
@@ -204,6 +227,7 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
 
     const alert = await this.alerts.create({ header: '放弃未应用的界面？', message: '当前调整尚未应用，离开后将保留原来的界面。',
       buttons: [{ text: '继续编辑', role: 'cancel' }, { text: '放弃修改', role: 'discard' }] });
+
     await alert.present();
 
     return (await alert.onDidDismiss()).role === 'discard';
@@ -219,6 +243,7 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
   private finishGeneration(): void {
     this.generating = false;
     this.generation = undefined;
+
     this.busy.emit(false);
     this.cd.markForCheck();
   }

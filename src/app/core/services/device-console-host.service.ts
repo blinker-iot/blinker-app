@@ -4,6 +4,7 @@ import { NavController } from '@ionic/angular/standalone';
 import { Clipboard } from '@capacitor/clipboard';
 import { environment } from '../../../environments/environment';
 import { Observable } from 'rxjs';
+import { getServiceRegion } from '../../configs/service-region.config';
 import { DataService } from './data.service';
 import { UserService } from './user.service';
 import { AppVisibilityService } from './app-visibility.service';
@@ -42,8 +43,8 @@ export class AppDeviceConsoleHost implements DeviceConsoleHost {
     return environment.consoleWebBaseUrl;
   }
 
-  async requestLogin(token: string): Promise<void> {
-    await this.nav.navigateForward('/login', { queryParams: { returnConsole: token } });
+  async requestLogin(token: string, region = getServiceRegion()): Promise<void> {
+    await this.nav.navigateForward('/login', { queryParams: { returnConsole: token, returnConsoleRegion: region } });
   }
 
   async openDevice(deviceId: string, sessionVersion: number): Promise<boolean> {

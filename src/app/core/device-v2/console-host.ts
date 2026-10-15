@@ -1,7 +1,9 @@
 import { InjectionToken } from '@angular/core';
 import { Observable } from 'rxjs';
+import { ServiceRegion } from '../../configs/service-region.config';
 
 export interface PublicConsoleBookmark {
+  region: ServiceRegion;
   logicalDeviceId: string;
   name: string;
   token: string;
@@ -17,7 +19,7 @@ export interface DeviceConsoleHost {
   readonly homeHref: string;
   readonly consoleWebBaseUrl: string;
 
-  requestLogin(token: string): Promise<void>;
+  requestLogin(token: string, region?: ServiceRegion): Promise<void>;
   openDevice(deviceId: string, sessionVersion: number): Promise<boolean>;
   copyText(text: string): Promise<void>;
   readPublicDevices(): Promise<unknown>;

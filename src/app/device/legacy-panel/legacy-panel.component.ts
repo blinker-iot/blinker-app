@@ -2,16 +2,19 @@ import { CustomPanelFrameComponent } from '../custom-panel/custom-panel-frame.co
 import { readDevicePanelMode } from '../device-panel-mode';
 import { ChangeDetectionStrategy, Component, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { Subscription } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { IonButton, IonRouterLink } from '@ionic/angular/standalone';
 import type { BlinkerDevice } from '../../core/model/device.model';
 import { DeviceService } from '../../core/services/device.service';
 import { DevicePanelService } from '../../core/services/device-panel.service';
+import { canEditConsole } from '../../core/services/device-console.service';
 import { legacyCommand, legacyField, legacyRoot, readLegacyPanel, type LegacyPanel } from '../../core/device-v2/legacy-panel';
 import { PageLayoutPanelComponent, type PanelAction, type PanelCard } from '../v2/panel/page-layout-panel';
 
 @Component({
   selector: 'app-legacy-panel',
   standalone: true,
-  imports: [PageLayoutPanelComponent, CustomPanelFrameComponent],
+  imports: [PageLayoutPanelComponent, CustomPanelFrameComponent, IonButton, IonRouterLink, RouterLink],
   changeDetection: ChangeDetectionStrategy.Eager,
   host: { '[class.custom-panel]': '!!customPanel' },
   template: `
@@ -19,6 +22,14 @@ import { PageLayoutPanelComponent, type PanelAction, type PanelCard } from '../v
     @if (customPanel) {
       <app-custom-panel-frame [document]="customPanel" [cards]="cards" [interactive]="true"
         [active]="viewActive" (action)="act($event)" />
+    } @else if (customMode) {
+      <section class="empty">
+        <p>{{ canEdit ? '还没有自定义界面，创建后即可在这里使用。' : '还没有自定义界面，请联系设备所有者配置。' }}</p>
+
+        @if (canEdit) {
+          <ion-button [routerLink]="['/device', device.id || device.deviceName, 'edit', 'custom']">自定义 HTML</ion-button>
+        }
+      </section>
     } @else if (panel) {
       <app-page-layout-panel [cards]="cards" [interactive]="true" (action)="act($event)" />
     }
@@ -27,6 +38,16 @@ import { PageLayoutPanelComponent, type PanelAction, type PanelCard } from '../v
     :host { display: block; padding: 16px; }
     :host.custom-panel { display: flex; flex-direction: column; min-height: 0; padding: 0; }
     .error { flex-shrink: 0; color: var(--ui-alert); padding: 16px; }
+
+    .empty {
+      min-height: 42vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--blinker-text-secondary);
+      text-align: center;
+    }
   `],
 })
 
@@ -44,7 +65,15 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
 
   constructor(private readonly devices: DeviceService, private readonly panels: DevicePanelService) {}
 
-  get customPanel() { return readDevicePanelMode(this.device) === 'custom' ? this.device.config.customPanel : undefined; }
+  get customMode(): boolean { return readDevicePanelMode(this.device) === 'custom'; }
+  get canEdit(): boolean { return canEditConsole(this.device); }
+
+  get customPanel() {
+    const panel = this.device.config.customPanel;
+
+    return this.customMode && panel?.html.trim() ? panel : undefined;
+  }
+
   get layoutTheme() { return this.customPanel?.theme || this.panel?.document.style; }
 
   ngOnChanges(changes: SimpleChanges): void {

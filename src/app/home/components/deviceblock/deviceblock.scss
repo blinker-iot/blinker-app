@@ -4,6 +4,8 @@
 }
 
 .device-card {
+  --device-card-radius: 18px;
+
   position: relative;
   isolation: isolate;
 
@@ -11,12 +13,10 @@
 
   overflow: hidden;
 
-  border: 1px solid color-mix(in srgb, var(--blinker-border) 60%, transparent);
-
-  border-radius: 18px;
-
+  border: 1px solid var(--blinker-border);
+  border-radius: var(--device-card-radius);
   background: var(--blinker-surface);
-  box-shadow: var(--blinker-shadow-soft);
+  box-shadow: var(--blinker-device-card-shadow);
   color: var(--blinker-text-primary);
 }
 
@@ -53,6 +53,11 @@
   background: color-mix(in srgb, var(--blinker-surface) 58%, transparent);
   -webkit-backdrop-filter: blur(16px) saturate(1.15);
   backdrop-filter: blur(16px) saturate(1.15);
+}
+
+.device-copy,
+.device-extension {
+  border-radius: 0 0 calc(var(--device-card-radius) - 1px) calc(var(--device-card-radius) - 1px);
 }
 
 .device-summary-row {
@@ -113,49 +118,6 @@
 
 .device-card.status-ready .device-state-icon {
   color: var(--ui-ok, var(--ion-color-success));
-}
-
-.device-switch {
-  flex: 0 0 auto;
-  width: 37px;
-  height: 21px;
-  padding: 2px;
-  border: 0;
-  border-radius: 12px;
-
-  background: var(--blinker-border);
-
-  transition: background 160ms ease;
-
-  span {
-    display: block;
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-
-    background: var(--ui-knob, #fff);
-    box-shadow: 0 1px 3px rgba(14, 30, 48, 0.16);
-
-    transition: transform 160ms ease;
-  }
-
-  &.checked {
-    background: var(--ion-color-primary);
-
-    span {
-      transform: translateX(16px);
-    }
-  }
-
-  &.waiting span,
-  &:disabled {
-    opacity: 0.5;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--ion-color-primary);
-    outline-offset: 3px;
-  }
 }
 
 .device-metrics {
@@ -319,11 +281,4 @@
 .device-card.offline .device-visual {
   filter: saturate(0.45);
   opacity: 0.78;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .device-switch,
-  .device-switch span {
-    transition: none;
-  }
 }

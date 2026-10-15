@@ -29,7 +29,6 @@ import {
   type MdnsService,
   type MdnsWatchEvent,
 } from 'capacitor-mdns';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { formatBytes } from '../ota/ota-protocol';
 
 type WifiOtaState =
@@ -79,7 +78,6 @@ const TARGET_STORAGE_KEY = 'wifiOtaTarget';
     IonHeader,
     IonTitle,
     IonToolbar,
-    HeroCardComponent,
   ],
 })
 export class WifiOtaPage implements OnInit, OnDestroy {

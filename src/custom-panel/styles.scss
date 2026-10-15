@@ -3,6 +3,7 @@
 @use '@fontsource-variable/doto/index.css' as doto;
 @use '../theme/ui-theme' as theme;
 @use '../app/device/v2/panel/panel-grid' as grid;
+@use '../app/device/v2/widgets/card' as card;
 
 html {
   @include theme.ui-theme;
@@ -24,10 +25,10 @@ body { margin: 0; }
 * { box-sizing: border-box; }
 
 @include grid.layout;
-
 // Headings and nested groups occupy a complete row unless the document opts in
 // to a different layout. Atom geometry is still owned by the component library.
 .panel > :where(:not(.cell)) { grid-column: 1 / -1; }
+.panel > .custom-card { align-self: start; }
 
 // The root panel owns the single page inset, shared with component mode.
 body > .panel {
@@ -38,20 +39,101 @@ body > .panel {
   padding: grid.$page-inset grid.$page-inset grid.$page-bottom-inset;
 }
 
+// Plain HTML data cards share the built-in surface and reading hierarchy.
+// Scope helpers to custom cards so sibling atoms keep their own geometry.
+.custom-card {
+  @include card.surface;
+  @include card.readout;
+
+  // Built-in cards fill prescribed grid cells; custom cards size to content.
+  container-type: inline-size;
+
+  flex: 0 1 auto;
+
+  .custom-title {
+    margin: 0;
+
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 500;
+
+    text-transform: var(--ui-case);
+    letter-spacing: var(--ui-tracking);
+
+    overflow-wrap: anywhere;
+  }
+
+  .num {
+    font-family: var(--ui-font-num);
+    font-weight: var(--ui-num-weight);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bn {
+    flex: 0 1 auto;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .bn-num {
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .bn-sub { margin: 0; }
+  .custom-body {
+    display: grid;
+
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    align-items: center;
+    gap: 16px;
+  }
+
+  .custom-visual {
+    display: grid;
+    place-items: center;
+
+    width: clamp(48px, 24cqi, 80px);
+    height: clamp(48px, 24cqi, 80px);
+    color: var(--ui-accent);
+  }
+
+  .custom-chart {
+    width: 100%;
+
+    height: clamp(80px, 32cqi, 144px);
+    color: var(--ui-accent);
+  }
+
+  :is(.custom-visual, .custom-chart) > :is(svg, canvas) {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+  }
+}
+
+[data-ui-theme='electronic'] .custom-card .num { letter-spacing: 0.03em; }
+
 @media (max-width: 560px) {
   @include grid.compact;
 }
 
 .atom-error { color: var(--ui-alert); font-size: 13px; padding: 12px; }
-
 .atom-unavailable {
   justify-content: center;
   padding: 16px;
+
   border: var(--ui-card-border);
   border-radius: var(--ui-radius);
   background: var(--ui-card);
   color: var(--ui-muted);
+
   font-size: 12px;
+
   line-height: 1.6;
+
   text-align: center;
 }

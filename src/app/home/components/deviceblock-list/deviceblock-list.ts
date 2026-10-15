@@ -43,6 +43,7 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
   private viewInitialized = false;
   private sortable: any;
   private isSorting = false;
+  private sortingOrder?: string[];
   private suppressNavigationUntil = 0;
 
   private readonly sortableOptions = {
@@ -62,6 +63,7 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     preventOnFilter: false,
     dataIdAttr: 'data-id',
     onChoose: () => {
+      this.sortingOrder = this.deviceDataList;
       this.isSorting = true;
       this.suppressNavigationUntil = Number.POSITIVE_INFINITY;
 
@@ -71,6 +73,7 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
       // `onChoose` reserves the gesture as soon as the long-press delay ends.
       // Keep this as a fallback in case Sortable changes that event ordering.
       if (!this.isSorting) {
+        this.sortingOrder = this.deviceDataList;
         this.isSorting = true;
         this.suppressNavigationUntil = Number.POSITIVE_INFINITY;
 
@@ -78,20 +81,32 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
       }
     },
     onEnd: (event: any) => {
-      if (event.oldIndex !== event.newIndex) this.saveDeviceList();
+      if (event.oldIndex !== event.newIndex) {
+        const order = this.sortable.toArray();
+        const container = this.sortbox.nativeElement;
+
+        // Restore Angular's previous DOM order before it applies the sorted list.
+        event.item.remove();
+        container.insertBefore(event.item, container.children[event.oldIndex] ?? null);
+        void this.saveDeviceList(order);
+      }
 
       this.finishSorting();
     },
-    onUnchoose: () => this.finishSorting(),
+    // Sortable emits unchoose before end, including when a press is cancelled.
+    onUnchoose: () => queueMicrotask(() => this.finishSorting()),
   };
 
   get deviceDataList(): string[] {
-    if (typeof this.roomName === 'undefined') {
-      return this.dataService.device?.list || [];
-    }
+    if (this.sortingOrder) return this.sortingOrder;
 
-    return (this.dataService.room?.dict?.[this.roomName] || [])
-      .filter((id: string) => !!this.deviceDataDict[id]);
+    const list: string[] = typeof this.roomName === 'undefined'
+      ? this.dataService.device?.list || []
+      : this.dataService.room?.dict?.[this.roomName] || [];
+
+    return list.filter(id => !!this.deviceDataDict[id]).sort((left, right) => (
+      Number(this.deviceUi.isOnline(right)) - Number(this.deviceUi.isOnline(left))
+    ));
   }
 
   set deviceDataList(list: string[]) {
@@ -129,7 +144,10 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
 
     this.dataService.deviceDataLoader
       .pipe(takeUntilDestroyed(destroyRef))
-      .subscribe(() => this.refreshCardStates());
+      .subscribe(() => {
+        this.cd.markForCheck();
+        this.refreshCardStates();
+      });
 
     this.deviceUi.appActive
       .pipe(takeUntilDestroyed(destroyRef))
@@ -193,10 +211,8 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     void this.router.navigate(getDeviceRoute(deviceId));
   }
 
-  private async saveDeviceList(): Promise<void> {
+  private async saveDeviceList(order: string[]): Promise<void> {
     if (!this.sortable) return;
-
-    const order = this.sortable.toArray();
 
     if (typeof this.roomName === 'undefined') {
       this.deviceDataList = order;
@@ -206,7 +222,6 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    const previousOrder = this.deviceDataList;
     const revision = this.dataService.roomRevision;
     const draft = structuredClone(this.dataService.room);
 
@@ -219,8 +234,6 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
 
       await this.rooms.saveData(draft, revision, this.dataService.sessionEpoch);
     } catch (error) {
-      this.sortable?.sort(previousOrder);
-
       const toast = await this.toast.create({ message: roomErrorMessage(error), duration: 3000 });
 
       await toast.present();
@@ -234,9 +247,11 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     if (!this.isSorting) return;
 
     this.isSorting = false;
+    this.sortingOrder = undefined;
     this.suppressNavigationUntil = Date.now() + 300;
 
     this.setParentGesturesEnabled(true);
+    this.cd.markForCheck();
   }
 
   private setParentGesturesEnabled(enabled: boolean) {

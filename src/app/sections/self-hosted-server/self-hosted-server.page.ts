@@ -11,7 +11,6 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { SelfHostedServerService } from '../../core/services/self-hosted-server.service';
-import { HeroCardComponent } from '../../core/components/hero-card/hero-card.component';
 
 @Component({
   selector: 'app-self-hosted-server',
@@ -26,7 +25,6 @@ import { HeroCardComponent } from '../../core/components/hero-card/hero-card.com
     IonHeader,
     IonTitle,
     IonToolbar,
-    HeroCardComponent,
   ],
 })
 export class SelfHostedServerPage {

@@ -1,4 +1,5 @@
 import { parseConsoleLink } from '../../../core/services/device-console.service';
+import { ServiceRegion } from '../../../configs/service-region.config';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
@@ -137,9 +138,9 @@ export class ShareManagerPage implements OnInit, OnDestroy {
     void this.nav.navigateForward('/login', { queryParams: { returnSharing: '1' } });
   }
 
-  async removePublicDevice(deviceId: string): Promise<void> {
+  async removePublicDevice(deviceId: string, region: ServiceRegion): Promise<void> {
     try {
-      await this.bookmarks.remove(deviceId);
+      await this.bookmarks.remove(deviceId, region);
     } catch {
       await this.notices.showToast('未能移除本机设备，请重试');
     }

@@ -6,6 +6,8 @@ import { firstValueFrom } from 'rxjs';
 import { solveChallenge } from 'altcha-lib/v1';
 import { Wechat } from 'capacitor-wechat';
 import { API } from 'src/app/configs/api.config';
+import { ServiceRegion, setServiceRegion } from 'src/app/configs/service-region.config';
+
 import {
   AilyResponse,
   AltchaChallenge,
@@ -273,7 +275,7 @@ export class AuthService {
     }
   }
 
-  async logout(): Promise<void> {
+  async logout(nextRegion?: ServiceRegion): Promise<void> {
     const expectedEpoch = this.dataService.sessionEpoch;
     try {
       await this.ntfyService.revoke();
@@ -288,12 +290,13 @@ export class AuthService {
     } catch {
       // Local cleanup is required even when the server session is unavailable.
     } finally {
-      await this.clearLocalSession(expectedEpoch);
+      await this.clearLocalSession(expectedEpoch, nextRegion);
     }
   }
 
   async clearLocalSession(
     expectedEpoch = this.dataService.sessionEpoch,
+    nextRegion?: ServiceRegion,
   ): Promise<boolean> {
     if (this.dataService.sessionEpoch !== expectedEpoch) return false;
     this.pendingWechatBind = null;
@@ -305,6 +308,9 @@ export class AuthService {
     ) {
       return false;
     }
+
+    if (nextRegion) setServiceRegion(nextRegion);
+
     await this.navCtrl.navigateRoot('/login');
     return true;
   }

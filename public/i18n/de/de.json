@@ -39,6 +39,8 @@
     "ABOUT_US": "Über uns"
   },
   "SETTINGS": {
+    "SERVICE_REGION": "Serviceregion",
+    "SERVICE_REGION_HINT": "Nach dem Wechsel der Serviceregion müssen Sie sich erneut anmelden",
     "TITLE": "Einstellungen",
     "APPEARANCE": "Darstellung",
     "THEME_HINT": "Wählen Sie die passende Darstellung für Ihre Umgebung",

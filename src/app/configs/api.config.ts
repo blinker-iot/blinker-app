@@ -49,6 +49,7 @@ export const API = {
     RESOLVE_INSTANCE: API_V2_URL + '/devices:resolve-instance',
     ENABLE_CLOUD: API_V2_URL + '/devices:enable-cloud',
     DETAIL: deviceKeyV2Url,
+    MANIFEST: (id: string) => deviceKeyV2Url(id) + '/manifest',
     CONSOLE: (id: string) => deviceKeyV2Url(id) + "/console",
     CONSOLE_LINK: (id: string) => deviceKeyV2Url(id) + "/console-link",
     DIRECT_ADMIN: (logicalDeviceId: string) =>
@@ -188,7 +189,8 @@ function isDeviceKeyManagementUrl(url: string): boolean {
   if (parts.length === 1) return true;
 
   if (parts.length === 2) {
-    return parts[1] === 'device-key:reveal'
+    return parts[1] === 'manifest'
+      || parts[1] === 'device-key:reveal'
       || parts[1] === 'local-access'
       || parts[1] === 'device-key:rotate'
       || parts[1] === 'presence-key'

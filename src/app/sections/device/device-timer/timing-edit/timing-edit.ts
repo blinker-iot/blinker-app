@@ -15,7 +15,6 @@ import {
   NavController,
 } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import {
   TabSelectorComponent,
   TabSelectorOption,
@@ -67,7 +66,6 @@ type ActionTarget = 'primary' | 'secondary';
     IonToolbar,
     FormsModule,
     Days2TextPipe,
-    HeroCardComponent,
     TabSelectorComponent,
   ],
   providers: [TimerService],
@@ -112,26 +110,6 @@ export class TimingEditPage implements OnInit, OnDestroy {
 
   get pageTitle(): string {
     return `${this.mode === 'new' ? '新建' : '编辑'}${TIMER_TYPE_LABELS[this.selectedType]}`;
-  }
-
-  get heroTitle(): string {
-    return `${this.mode === 'new' ? '创建' : '编辑'}${TIMER_TYPE_LABELS[this.selectedType]}`;
-  }
-
-  get editorDescription(): string {
-    if (this.selectedType === 'loop') {
-      return `${this.deviceName} 将按两个阶段交替执行动作。`;
-    }
-    if (this.selectedType === 'countdown') {
-      return `${this.deviceName} 将在倒计时结束后执行一次动作。`;
-    }
-    return `${this.deviceName} 将在指定时间和日期执行动作。`;
-  }
-
-  get editorIcon(): string {
-    if (this.selectedType === 'loop') return 'fa-light fa-arrows-repeat';
-    if (this.selectedType === 'countdown') return 'fa-light fa-hourglass-clock';
-    return 'fa-light fa-calendar-clock';
   }
 
   get countdownDuration(): number {

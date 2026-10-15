@@ -12,7 +12,6 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { minuteToTime } from 'src/app/core/functions/func';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { Days2TextPipe } from 'src/app/core/pipes/days2text';
@@ -121,7 +120,6 @@ const TEST_LOOP_TASKS: LoopTask[] = [
     IonTitle,
     IonToggle,
     IonToolbar,
-    HeroCardComponent,
   ],
   providers: [TimerService],
 })

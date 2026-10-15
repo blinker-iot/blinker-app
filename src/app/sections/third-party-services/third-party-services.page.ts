@@ -11,7 +11,6 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
-import { HeroCardComponent } from '../../core/components/hero-card/hero-card.component';
 import { GeocodingService } from '../../core/services/geocoding.service';
 import {
   DEFAULT_GEOLOCATION_SERVICE_PROVIDER,
@@ -48,7 +47,6 @@ interface ServiceProvider<TId extends string> {
     IonHeader,
     IonTitle,
     IonToolbar,
-    HeroCardComponent,
   ],
 })
 export class ThirdPartyServicesPage {

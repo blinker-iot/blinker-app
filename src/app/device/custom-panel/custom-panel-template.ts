@@ -4,7 +4,7 @@ export const CUSTOM_PANEL_TEMPLATE = `<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>自定义控制面板</title>
-  <!-- 根面板的边距和最大宽度由运行时统一提供，可自由添加内部布局与普通 HTML 样式。 -->
+  <!-- 根面板边距、字体和主题由运行时提供。普通 HTML 卡片使用 catalog.design 中的 custom-card 与读数样式，保持与原子组件一致；仅定制内部布局和数据表达。 -->
 </head>
 <body>
   <main class="panel" aria-label="设备控制面板">

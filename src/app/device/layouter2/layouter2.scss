@@ -57,7 +57,7 @@ gridster {
     background: var(--blinker-surface);
     box-shadow: var(--blinker-shadow-soft);
 
-    transition: border-color 160ms ease, box-shadow 160ms ease;
+    transition: border-color 160ms ease;
   }
 
   gridster-item.gridster-item-moving {
@@ -68,7 +68,8 @@ gridster {
 
 .is-editing gridster gridster-item {
   border-color: color-mix(in srgb, var(--ion-color-primary) 28%, var(--blinker-border));
-  box-shadow: 0 8px 22px rgba(var(--ion-color-primary-rgb), 0.09);
+
+  box-shadow: none;
 }
 
 .layouter-bar {

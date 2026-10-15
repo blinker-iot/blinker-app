@@ -21,7 +21,7 @@ export function readDevicePanelMode(device?: BlinkerDevice): PanelMode {
     // Storage may be unavailable; the owner's default remains usable.
   }
 
-  return mode === 'custom' && !device.config.customPanel ? 'normal' : mode;
+  return mode;
 }
 
 export function saveSharedDevicePanelMode(device: BlinkerDevice, mode: PanelMode): boolean {

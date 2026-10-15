@@ -1,6 +1,7 @@
 import { legacyField, readLegacyPanel } from '../../../core/device-v2/legacy-panel';
 import type { BlinkerDevice } from '../../../core/model/device.model';
 import type { DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
+import { generateAutomaticPageLayout } from '../../../core/device-v2/automatic-page-layout';
 
 import {
   generateDefaultPageLayout, PageLayout, PageWidgetOptions, PageWidgetType, PageWidgetVariant, parsePageLayout, reflowPageWidgets,
@@ -42,11 +43,6 @@ export interface InterfaceProposal {
   widgets: { id: string; title: string; width: InterfaceTile['width']; emphasized: boolean }[];
 }
 
-const labels: Record<string, string> = {
-  switch: '电源开关', temperature: '温度', humidity: '湿度', brightness: '亮度',
-  soilMoisture: '土壤湿度', co2: '二氧化碳', power: '功率', voltage: '电压',
-};
-
 const units: Record<string, string> = { temperature: '°C', humidity: '%', brightness: '%', soilMoisture: '%', co2: 'ppm', power: 'W', voltage: 'V' };
 
 export function displayValue(value: unknown): string {
@@ -70,13 +66,13 @@ export function capabilityTiles(device: BlinkerDevice, snapshot?: DeviceUiSnapsh
   if (device.config.mode === 'bbp2') {
     if (!snapshot?.manifestAccepted) return [];
 
-    const base = generateDefaultPageLayout(snapshot);
+    const base = generateAutomaticPageLayout(snapshot);
 
     return base.widgets.filter(widget => includeHidden || !device.config.hiddenEndpointKeys?.includes(widget.endpointKey)).map(widget => {
       const field = snapshot.endpoints.find(endpoint => endpoint.key === widget.endpointKey)!;
       const preset = presetForVariant(widgetVariant(widget.type, widget.variant));
 
-      return { id: widget.widgetId, key: field.key, title: labels[field.key] || field.key,
+      return { id: widget.widgetId, key: field.key, title: widget.title || field.key,
         type: widget['type'], value: displayValue(field.value), level: sliderLevel(field.value, field.minimum, field.maximum), unit: field.unit || units[field.key] || '',
         width: preset.width, height: preset.height,
         variant: preset.variant, emphasized: false };

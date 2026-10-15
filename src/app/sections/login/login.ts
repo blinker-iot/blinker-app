@@ -1,4 +1,5 @@
 import { parseConsoleLink } from '../../core/services/device-console.service';
+import { isServiceRegion } from '../../configs/service-region.config';
 import { parseShareInvitation } from '../../core/device-v2/sharing/invitation-link';
 import { AlertController } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
@@ -87,11 +88,14 @@ export class LoginPage implements OnDestroy {
 
   private returnAfterLogin(): void {
     const token = parseConsoleLink('diandeng://console/' + this.route.snapshot.queryParamMap.get('returnConsole'));
+    const region = this.route.snapshot.queryParamMap.get('returnConsoleRegion');
     const invitation = parseShareInvitation(this.route.snapshot.queryParamMap.get('returnInvitation'));
     const sharing = this.route.snapshot.queryParamMap.get('returnSharing') === '1';
 
     void this.navCtrl.navigateRoot(token ? '/s/' + token : invitation ? '/share-invitation/' + invitation
-      : this.shareInvitation.hasPending ? '/share-invitation' : sharing ? '/share-manager' : '/');
+      : this.shareInvitation.hasPending ? '/share-invitation' : sharing ? '/share-manager' : '/', {
+        queryParams: token && isServiceRegion(region) ? { region } : undefined,
+      });
   }
   // 验证邮箱格式
   isValidEmail(email: string): boolean {

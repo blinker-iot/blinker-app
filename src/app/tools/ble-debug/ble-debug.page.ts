@@ -6,6 +6,7 @@ import {
   OnDestroy,
   OnInit,
 } from '@angular/core';
+
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@capacitor/clipboard';
 import { Capacitor } from '@capacitor/core';
@@ -21,6 +22,7 @@ import {
   IonToolbar,
   ToastController,
 } from '@ionic/angular/standalone';
+
 import {
   BleCharacteristic,
   BleDescriptor,
@@ -36,6 +38,7 @@ import {
 type DataMode = 'hex' | 'text' | 'decimal';
 type DeviceSort = 'signal' | 'name' | 'recent';
 type LogFilter = 'all' | 'data' | 'system' | 'error';
+
 type BleScreen =
   | 'scanner'
   | 'advertisement'
@@ -44,6 +47,7 @@ type BleScreen =
   | 'characteristic'
   | 'chart'
   | 'log';
+
 type BlePermissionProblem = 'permission' | 'location' | undefined;
 
 interface DebugDevice extends BleDevice {
@@ -55,6 +59,7 @@ interface DebugDevice extends BleDevice {
   rawAdvertisement?: DataView;
   lastSeen: number;
   seenCount: number;
+
   rssiHistory: number[];
 }
 
@@ -128,17 +133,20 @@ const STANDARD_NAMES: Record<string, string> = {
     IonToolbar,
   ],
 })
+
 export class BleDebugPage implements OnInit, OnDestroy {
   devices: DebugDevice[] = [];
+
   connectedDevice?: DebugDevice;
+
   services: BleService[] = [];
   logs: DebugLog[] = [];
   screen: BleScreen = 'scanner';
   selectedDevice?: DebugDevice;
   selectedService?: BleService;
   selectedCharacteristic?: BleCharacteristic;
-  showMoreMenu = false;
 
+  showMoreMenu = false;
   isScanning = false;
   isRefreshingGatt = false;
   connectingId = '';
@@ -154,7 +162,6 @@ export class BleDebugPage implements OnInit, OnDestroy {
   notifyingCharacteristics = new Set<string>();
   favoriteDeviceIds = new Set<string>();
   busyOperations = new Set<string>();
-
   activeTab: 'gatt' | 'log' = 'gatt';
   valueMode: DataMode = 'hex';
   logFilter: LogFilter = 'all';
@@ -162,10 +169,12 @@ export class BleDebugPage implements OnInit, OnDestroy {
   connectionMtu?: number;
   connectionRssi?: number;
   bonded?: boolean;
+
   connectionPriorityLabel = '默认';
   connectedRssiHistory: number[] = [];
-  scanElapsedSeconds = 0;
+
   permissionProblem: BlePermissionProblem;
+
   permissionMessage = '';
 
   writeTarget?: { service: BleService; characteristic: BleCharacteristic };
@@ -176,13 +185,11 @@ export class BleDebugPage implements OnInit, OnDestroy {
   writeHistory: WriteHistoryItem[] = [];
   characteristicValues: Record<string, CharacteristicValue> = {};
   characteristicHistories: Record<string, CharacteristicValue[]> = {};
-
   readonly isWeb = Capacitor.getPlatform() === 'web';
   readonly isAndroid = Capacitor.getPlatform() === 'android';
   private initialized = false;
   private scanAbort?: AbortController;
   private scanWork?: Promise<void>;
-  private scanElapsedTimer?: ReturnType<typeof setInterval>;
   private rssiMonitorTimer?: ReturnType<typeof setInterval>;
   private logSequence = 0;
   private destroyed = false;
@@ -197,10 +204,12 @@ export class BleDebugPage implements OnInit, OnDestroy {
     this.favoriteDeviceIds = new Set(
       this.readStorage<string[]>('bleDebugFavorites', [])
     );
+
     this.writeHistory = this.readStorage<WriteHistoryItem[]>(
       'bleDebugWriteHistory',
       []
     );
+
     this.addLog(
       'system',
       'BLE 调试器已就绪',
@@ -212,6 +221,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   get visibleDevices(): DebugDevice[] {
     const keyword = this.searchKeyword.trim().toLowerCase();
+
     return this.devices
       .filter((device) => this.showUnnamed || !!this.deviceName(device))
       .filter((device) => !this.showFavoritesOnly || this.isFavorite(device))
@@ -220,6 +230,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
       )
       .filter((device) => {
         if (!keyword) return true;
+
         const haystack = [
           this.deviceName(device),
           device.deviceId,
@@ -227,6 +238,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
         ]
           .join(' ')
           .toLowerCase();
+
         return haystack.includes(keyword);
       })
       .sort((left, right) => {
@@ -235,15 +247,19 @@ export class BleDebugPage implements OnInit, OnDestroy {
             this.deviceName(right),
             'zh-CN'
           );
+
         if (this.deviceSort === 'recent') return right.lastSeen - left.lastSeen;
+
         return (right.rssi ?? -999) - (left.rssi ?? -999);
       });
   }
 
   get filteredLogs(): DebugLog[] {
     if (this.logFilter === 'all') return this.logs;
+
     if (this.logFilter === 'data')
       return this.logs.filter((log) => log.type === 'rx' || log.type === 'tx');
+
     return this.logs.filter((log) => log.type === this.logFilter);
   }
 
@@ -261,6 +277,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
       chart: 'RSSI 图表',
       log: '诊断记录',
     };
+
     return titles[this.screen];
   }
 
@@ -270,16 +287,9 @@ export class BleDebugPage implements OnInit, OnDestroy {
       : this.connectedDevice;
   }
 
-  get scanDuration(): string {
-    const minutes = Math.floor(this.scanElapsedSeconds / 60)
-      .toString()
-      .padStart(2, '0');
-    const seconds = (this.scanElapsedSeconds % 60).toString().padStart(2, '0');
-    return `00:${minutes}:${seconds}`;
-  }
-
   get currentCharacteristicValue(): CharacteristicValue | undefined {
     if (!this.selectedService || !this.selectedCharacteristic) return undefined;
+
     return this.characteristicValue(
       this.selectedService,
       this.selectedCharacteristic
@@ -288,6 +298,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   get currentCharacteristicHistory(): CharacteristicValue[] {
     if (!this.selectedService || !this.selectedCharacteristic) return [];
+
     return (
       this.characteristicHistories[
         this.characteristicKey(
@@ -316,11 +327,13 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   get scanButtonLabel(): string {
     if (this.isScanning) return '停止';
+
     return this.isWeb ? '选择设备' : '扫描';
   }
 
   get writeByteLength(): number {
     if (!this.writeValue) return 0;
+
     try {
       return this.encodeWriteValue().byteLength;
     } catch {
@@ -339,55 +352,72 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   async startScan(): Promise<void> {
     if (this.scanAbort) return;
+
     const abort = new AbortController(); this.scanAbort = abort;
+
     try {
       await this.ensureInitialized();
+
       if (abort.signal.aborted) return;
+
       this.clearPermissionProblem();
+
       this.devices = [];
 
       if (this.isWeb) {
         const device = await BleClient.requestDevice();
+
         this.upsertDevice({ device });
+
         this.addLog(
           'system',
           '已选择设备',
           `${device.name || '未命名设备'} · ${device.deviceId}`
         );
+
         return;
       }
 
       this.isScanning = true;
       this.screen = 'scanner';
-      this.scanElapsedSeconds = 0;
+
       this.addLog('system', '开始扫描', '低延迟模式 · 自动停止 15 秒');
-      this.clearScanTimer();
-      this.scanElapsedTimer = setInterval(() => {
-        this.scanElapsedSeconds += 1;
-        this.markForCheck();
-      }, 1000);
+      this.markForCheck();
+
       this.scanWork = bleScanner.run([], 15000, abort.signal, result => this.zone.run(() => this.upsertDevice(result)));
+
       try { await this.scanWork; }
       catch (error) { if (!abort.signal.aborted) throw error; }
     } catch (error) {
       this.isScanning = false;
+
       this.capturePermissionProblem(error);
+
       const message = this.errorMessage(error);
+
       this.addLog('error', '扫描失败', message);
       await this.showToast(message);
     } finally {
-      if (this.scanAbort === abort) { this.scanAbort = undefined; this.scanWork = undefined; this.isScanning = false; this.clearScanTimer(); }
+      if (this.scanAbort === abort) {
+        this.scanAbort = undefined;
+        this.scanWork = undefined;
+        this.isScanning = false;
+
+        this.markForCheck();
+      }
     }
   }
 
   async stopScan(): Promise<void> {
-    this.clearScanTimer();
     this.scanAbort?.abort();
+
     if (!this.isScanning) return;
 
     this.isScanning = false;
+
     try {
       await this.scanWork?.catch(() => undefined);
+
       this.addLog(
         'system',
         '扫描已停止',
@@ -401,20 +431,27 @@ export class BleDebugPage implements OnInit, OnDestroy {
   async connect(device: DebugDevice): Promise<void> {
     if (this.connectedDevice?.deviceId === device.deviceId) {
       this.screen = 'overview';
+
       return;
     }
+
     if (this.connectingId) return;
+
     await this.stopScan();
+
     if (this.connectedDevice) await this.disconnect();
 
     this.connectingId = device.deviceId;
+
     this.addLog(
       'system',
       '正在连接',
       this.deviceName(device) || device.deviceId
     );
+
     try {
       await this.ensureInitialized();
+
       await BleClient.connect(
         device.deviceId,
         (disconnectedId) =>
@@ -426,9 +463,11 @@ export class BleDebugPage implements OnInit, OnDestroy {
       this.selectedDevice = device;
       this.screen = 'overview';
       this.services = await BleClient.getServices(device.deviceId);
+
       const customService = this.services.find(
         (service) => this.uuidName(service.uuid) === '自定义 UUID'
       );
+
       this.expandedServices = new Set(
         customService
           ? [customService.uuid]
@@ -436,45 +475,56 @@ export class BleDebugPage implements OnInit, OnDestroy {
           ? [this.services[0].uuid]
           : []
       );
+
       this.addLog(
         'system',
         '连接成功',
         `发现 ${this.services.length} 个 GATT 服务`
       );
+
       await this.loadConnectionInfo();
     } catch (error) {
       this.connectedDevice = undefined;
       this.services = [];
+
       this.addLog('error', '连接失败', this.errorMessage(error));
       await this.showToast(this.errorMessage(error));
     } finally {
       this.connectingId = '';
+
       this.markForCheck();
     }
   }
 
   async disconnect(): Promise<void> {
     const device = this.connectedDevice;
+
     if (!device) return;
 
     await this.stopAllNotifications();
+
     try {
       await BleClient.disconnect(device.deviceId);
     } catch (error) {
       this.addLog('error', '断开连接失败', this.errorMessage(error));
     }
+
     this.handleDisconnect(device.deviceId);
   }
 
   async refreshGatt(): Promise<void> {
     if (!this.connectedDevice || this.isRefreshingGatt) return;
+
     this.isRefreshingGatt = true;
+
     try {
       if (!this.isWeb)
         await BleClient.discoverServices(this.connectedDevice.deviceId);
+
       this.services = await BleClient.getServices(
         this.connectedDevice.deviceId
       );
+
       this.addLog(
         'system',
         '服务已刷新',
@@ -485,19 +535,25 @@ export class BleDebugPage implements OnInit, OnDestroy {
       await this.showToast(this.errorMessage(error));
     } finally {
       this.isRefreshingGatt = false;
+
       this.markForCheck();
     }
   }
 
   async refreshConnectionRssi(): Promise<void> {
     if (!this.connectedDevice || this.isWeb) return;
+
     const key = `rssi|${this.connectedDevice.deviceId}`;
+
     if (this.isBusy(key)) return;
+
     this.setBusy(key, true);
+
     try {
       this.connectionRssi = await BleClient.readRssi(
         this.connectedDevice.deviceId
       );
+
       this.pushConnectedRssi(this.connectionRssi);
       this.addLog('system', 'RSSI 已更新', `${this.connectionRssi} dBm`);
     } catch (error) {
@@ -509,13 +565,18 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   async createBond(): Promise<void> {
     if (!this.connectedDevice || !this.isAndroid || this.bonded) return;
+
     const key = `bond|${this.connectedDevice.deviceId}`;
+
     this.setBusy(key, true);
+
     try {
       await BleClient.createBond(this.connectedDevice.deviceId, {
         timeout: 30000,
       });
+
       this.bonded = await BleClient.isBonded(this.connectedDevice.deviceId);
+
       this.addLog('system', '设备配对成功', this.connectedDevice.deviceId);
     } catch (error) {
       this.addLog('error', '设备配对失败', this.errorMessage(error));
@@ -527,12 +588,15 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   async setHighPriority(): Promise<void> {
     if (!this.connectedDevice || !this.isAndroid) return;
+
     try {
       await BleClient.requestConnectionPriority(
         this.connectedDevice.deviceId,
         ConnectionPriority.CONNECTION_PRIORITY_HIGH
       );
+
       this.connectionPriorityLabel = '高性能';
+
       this.addLog('system', '连接优先级已更新', '高性能 / 低延迟');
       await this.showToast('已请求高性能连接参数');
     } catch (error) {
@@ -542,6 +606,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   async openAdvertisement(device: DebugDevice): Promise<void> {
     await this.stopScan();
+
     this.selectedDevice = device;
     this.screen = 'advertisement';
     this.showMoreMenu = false;
@@ -549,12 +614,14 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   openOverview(): void {
     if (!this.connectedDevice) return;
+
     this.screen = 'overview';
     this.showMoreMenu = false;
   }
 
   openConnectedScreen(screen: 'gatt' | 'chart' | 'log'): void {
     if (!this.connectedDevice) return;
+
     this.screen = screen;
     this.showMoreMenu = false;
   }
@@ -568,6 +635,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
     this.valueMode = 'hex';
     this.screen = 'characteristic';
     this.showMoreMenu = false;
+
     if (this.canWrite(characteristic)) this.openWriter(service, characteristic);
     else this.writeTarget = undefined;
   }
@@ -578,12 +646,15 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   async copyCurrentDeviceId(): Promise<void> {
     if (!this.currentDevice) return;
+
     this.showMoreMenu = false;
+
     await this.copyText(this.currentDevice.deviceId, '设备标识已复制');
   }
 
   async openBleSettings(): Promise<void> {
     if (!this.isAndroid) return;
+
     try {
       if (this.permissionProblem === 'location')
         await BleClient.openLocationSettings();
@@ -595,6 +666,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   async retryBlePermission(): Promise<void> {
     this.initialized = false;
+
     this.clearPermissionProblem();
     await this.startScan();
   }
@@ -612,10 +684,12 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   toggleFavorite(event: Event, device: DebugDevice): void {
     event.stopPropagation();
+
     this.favoriteDeviceIds = this.toggledSet(
       this.favoriteDeviceIds,
       device.deviceId
     );
+
     localStorage.setItem(
       'bleDebugFavorites',
       JSON.stringify([...this.favoriteDeviceIds])
@@ -631,13 +705,16 @@ export class BleDebugPage implements OnInit, OnDestroy {
       0,
       Math.round((Date.now() - device.lastSeen) / 1000)
     );
+
     if (seconds <= 1) return '刚刚';
     if (seconds < 60) return `${seconds} 秒前`;
+
     return `${Math.floor(seconds / 60)} 分钟前`;
   }
 
   averageRssi(values: number[]): number | undefined {
     if (!values.length) return undefined;
+
     return Math.round(
       values.reduce((sum, value) => sum + value, 0) / values.length
     );
@@ -648,11 +725,13 @@ export class BleDebugPage implements OnInit, OnDestroy {
       values.length > 1
         ? values.slice(-30)
         : [values[0] ?? -60, values[0] ?? -60];
+
     return source
       .map((value, index) => {
         const x = source.length === 1 ? 0 : (index / (source.length - 1)) * 300;
         const normalized = Math.max(-100, Math.min(-20, value));
         const y = ((-20 - normalized) / 80) * 88;
+
         return `${x.toFixed(1)},${y.toFixed(1)}`;
       })
       .join(' ');
@@ -674,6 +753,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
     characteristic: BleCharacteristic
   ): void {
     const key = this.characteristicKey(service, characteristic);
+
     this.expandedCharacteristics = this.toggledSet(
       this.expandedCharacteristics,
       key
@@ -691,6 +771,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   expandAllServices(): void {
     const shouldExpand = this.expandedServices.size !== this.services.length;
+
     this.expandedServices = new Set(
       shouldExpand ? this.services.map((service) => service.uuid) : []
     );
@@ -701,15 +782,20 @@ export class BleDebugPage implements OnInit, OnDestroy {
     characteristic: BleCharacteristic
   ): Promise<void> {
     if (!this.connectedDevice) return;
+
     const key = `read|${this.characteristicKey(service, characteristic)}`;
+
     if (this.isBusy(key)) return;
+
     this.setBusy(key, true);
+
     try {
       const value = await BleClient.read(
         this.connectedDevice.deviceId,
         service.uuid,
         characteristic.uuid
       );
+
       this.rememberValue(service, characteristic, value);
       this.addValueLog('rx', '读取响应', service, characteristic, value);
     } catch (error) {
@@ -729,9 +815,13 @@ export class BleDebugPage implements OnInit, OnDestroy {
     descriptor: BleDescriptor
   ): Promise<void> {
     if (!this.connectedDevice) return;
+
     const key = `descriptor|${service.uuid}|${characteristic.uuid}|${descriptor.uuid}`;
+
     if (this.isBusy(key)) return;
+
     this.setBusy(key, true);
+
     try {
       const value = await BleClient.readDescriptor(
         this.connectedDevice.deviceId,
@@ -739,7 +829,9 @@ export class BleDebugPage implements OnInit, OnDestroy {
         characteristic.uuid,
         descriptor.uuid
       );
+
       const detail = this.valueDetails(value);
+
       this.addLog(
         'rx',
         `描述符 ${this.shortUuid(descriptor.uuid)}`,
@@ -761,9 +853,12 @@ export class BleDebugPage implements OnInit, OnDestroy {
     characteristic: BleCharacteristic
   ): Promise<void> {
     if (!this.connectedDevice) return;
+
     const characteristicKey = this.characteristicKey(service, characteristic);
     const busyKey = `notify|${characteristicKey}`;
+
     if (this.isBusy(busyKey)) return;
+
     this.setBusy(busyKey, true);
 
     try {
@@ -773,14 +868,19 @@ export class BleDebugPage implements OnInit, OnDestroy {
           service.uuid,
           characteristic.uuid
         );
+
         const next = new Set(this.notifyingCharacteristics);
+
         next.delete(characteristicKey);
+
         this.notifyingCharacteristics = next;
+
         this.addLog(
           'system',
           '通知已停止',
           this.characteristicLabel(characteristic)
         );
+
         return;
       }
 
@@ -791,6 +891,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
         (value) =>
           this.zone.run(() => {
             this.rememberValue(service, characteristic, value);
+
             this.addValueLog(
               'rx',
               characteristic.properties.indicate
@@ -802,10 +903,12 @@ export class BleDebugPage implements OnInit, OnDestroy {
             );
           })
       );
+
       this.notifyingCharacteristics = new Set([
         ...this.notifyingCharacteristics,
         characteristicKey,
       ]);
+
       this.addLog(
         'system',
         '通知已开启',
@@ -826,9 +929,11 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   openWriter(service: BleService, characteristic: BleCharacteristic): void {
     this.writeTarget = { service, characteristic };
+
     this.writeWithoutResponse =
       !characteristic.properties.write &&
       characteristic.properties.writeWithoutResponse;
+
     this.expandedCharacteristics = new Set([
       ...this.expandedCharacteristics,
       this.characteristicKey(service, characteristic),
@@ -847,12 +952,17 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   async send(): Promise<void> {
     if (!this.connectedDevice || !this.writeTarget) return;
+
     const { service, characteristic } = this.writeTarget;
     const key = `write|${this.characteristicKey(service, characteristic)}`;
+
     if (this.isBusy(key)) return;
+
     this.setBusy(key, true);
+
     try {
       const value = this.encodeWriteValue();
+
       if (
         this.maximumWriteLength &&
         value.byteLength > this.maximumWriteLength
@@ -861,6 +971,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
           `当前 MTU 建议单次最多写入 ${this.maximumWriteLength} 字节`
         );
       }
+
       if (this.writeWithoutResponse) {
         await BleClient.writeWithoutResponse(
           this.connectedDevice.deviceId,
@@ -876,8 +987,10 @@ export class BleDebugPage implements OnInit, OnDestroy {
           value
         );
       }
+
       this.rememberValue(service, characteristic, value);
       this.rememberWriteHistory();
+
       this.addValueLog(
         'tx',
         this.writeWithoutResponse ? '无响应写入' : '写入响应成功',
@@ -896,6 +1009,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
   characteristicProperties(characteristic: BleCharacteristic): string[] {
     const properties = characteristic.properties;
     const labels: string[] = [];
+
     if (properties.read) labels.push('READ');
     if (properties.write) labels.push('WRITE');
     if (properties.writeWithoutResponse) labels.push('WRITE NO RESP');
@@ -903,6 +1017,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
     if (properties.indicate) labels.push('INDICATE');
     if (properties.broadcast) labels.push('BROADCAST');
     if (properties.authenticatedSignedWrites) labels.push('SIGNED WRITE');
+
     return labels;
   }
 
@@ -921,6 +1036,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
     if (device.rssi === undefined) return 'unknown';
     if (device.rssi >= -60) return 'strong';
     if (device.rssi >= -78) return 'medium';
+
     return 'weak';
   }
 
@@ -960,11 +1076,13 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   shortUuid(uuid: string): string {
     const short = this.uuid16(uuid);
+
     return short ? `0x${short.toUpperCase()}` : uuid.toUpperCase();
   }
 
   uuidName(uuid: string): string {
     const short = this.uuid16(uuid);
+
     return short
       ? STANDARD_NAMES[short] || 'Bluetooth SIG 标准 UUID'
       : '自定义 UUID';
@@ -996,7 +1114,9 @@ export class BleDebugPage implements OnInit, OnDestroy {
     characteristic: BleCharacteristic
   ): string {
     const value = this.characteristicValue(service, characteristic);
+
     if (!value) return '';
+
     return value[this.valueMode];
   }
 
@@ -1043,6 +1163,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   async copyLogs(): Promise<void> {
     if (!this.filteredLogs.length) return;
+
     const text = [...this.filteredLogs]
       .reverse()
       .map(
@@ -1052,11 +1173,13 @@ export class BleDebugPage implements OnInit, OnDestroy {
           }`
       )
       .join('\n');
+
     await this.copyText(text, `已复制 ${this.filteredLogs.length} 条日志`);
   }
 
   async exportLogs(): Promise<void> {
     if (!this.timelineLogs.length) return;
+
     const text = this.timelineLogs
       .map(
         (log) =>
@@ -1065,14 +1188,18 @@ export class BleDebugPage implements OnInit, OnDestroy {
           }`
       )
       .join('\n');
+
     try {
       const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
+
       anchor.href = url;
+
       anchor.download = `ble-debug-${new Date()
         .toISOString()
         .replace(/[:.]/g, '-')}.log`;
+
       anchor.click();
       URL.revokeObjectURL(url);
       await this.showToast('诊断日志已导出');
@@ -1083,7 +1210,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
-    this.clearScanTimer();
+
     this.stopRssiMonitor();
     void this.cleanup();
   }
@@ -1096,14 +1223,17 @@ export class BleDebugPage implements OnInit, OnDestroy {
         // 本工具不通过 BLE 扫描结果推导用户位置。Android 12+ 因此只需
         // “附近的设备”权限；Android 11 及以下仍由系统请求定位权限。
         await BleClient.initialize({ androidNeverForLocation: true });
+
         this.initialized = true;
       } catch (error) {
         this.capturePermissionProblem(error);
+
         throw error;
       }
     }
 
     const enabled = await BleClient.isEnabled();
+
     if (!enabled && this.isAndroid) await BleClient.requestEnable();
     else if (!enabled) throw new Error('请先开启系统蓝牙');
 
@@ -1111,10 +1241,13 @@ export class BleDebugPage implements OnInit, OnDestroy {
       const locationEnabled = await BleClient.isLocationEnabled().catch(
         () => true
       );
+
       if (!locationEnabled) {
         this.permissionProblem = 'location';
+
         this.permissionMessage =
           'Android 11 及以下需要同时开启系统定位服务，才能发现 BLE 设备。';
+
         throw new Error(this.permissionMessage);
       }
     }
@@ -1122,8 +1255,10 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   private async loadConnectionInfo(): Promise<void> {
     if (!this.connectedDevice) return;
+
     const deviceId = this.connectedDevice.deviceId;
     const tasks: Promise<void>[] = [];
+
     if (!this.isWeb) {
       tasks.push(
         BleClient.getMtu(deviceId)
@@ -1138,6 +1273,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
           .catch(() => undefined)
       );
     }
+
     if (this.isAndroid) {
       tasks.push(
         BleClient.isBonded(deviceId)
@@ -1147,9 +1283,12 @@ export class BleDebugPage implements OnInit, OnDestroy {
           .catch(() => undefined)
       );
     }
+
     await Promise.all(tasks);
+
     if (this.connectionRssi !== undefined)
       this.pushConnectedRssi(this.connectionRssi);
+
     this.startRssiMonitor();
     this.markForCheck();
   }
@@ -1158,7 +1297,9 @@ export class BleDebugPage implements OnInit, OnDestroy {
     const index = this.devices.findIndex(
       (device) => device.deviceId === result.device.deviceId
     );
+
     const previous = index >= 0 ? this.devices[index] : undefined;
+
     const incoming: DebugDevice = {
       ...previous,
       ...result.device,
@@ -1176,20 +1317,26 @@ export class BleDebugPage implements OnInit, OnDestroy {
           ? previous?.rssiHistory || []
           : [...(previous?.rssiHistory || []), result.rssi].slice(-30),
     };
+
     const next = [...this.devices];
+
     if (index >= 0) next[index] = incoming;
     else next.push(incoming);
+
     this.devices = next;
+
     this.markForCheck();
   }
 
   private handleDisconnect(deviceId: string): void {
     if (this.connectedDevice?.deviceId !== deviceId) return;
+
     this.addLog(
       'system',
       '设备已断开',
       this.deviceName(this.connectedDevice) || deviceId
     );
+
     this.connectedDevice = undefined;
     this.services = [];
     this.writeTarget = undefined;
@@ -1200,8 +1347,11 @@ export class BleDebugPage implements OnInit, OnDestroy {
     this.bonded = undefined;
     this.connectionPriorityLabel = '默认';
     this.connectedRssiHistory = [];
+
     this.stopRssiMonitor();
+
     this.screen = 'scanner';
+
     if (!this.destroyed) this.markForCheck();
   }
 
@@ -1209,10 +1359,12 @@ export class BleDebugPage implements OnInit, OnDestroy {
     if (this.writeMode === 'text') {
       const text = this.writeValue + (this.appendNewline ? '\n' : '');
       const bytes = new TextEncoder().encode(text);
+
       return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     }
 
     const cleaned = this.writeValue.replace(/0x/gi, '').replace(/[\s,:-]/g, '');
+
     if (
       !cleaned ||
       !/^[0-9a-fA-F]+$/.test(cleaned) ||
@@ -1220,9 +1372,11 @@ export class BleDebugPage implements OnInit, OnDestroy {
     ) {
       throw new Error('HEX 数据应由完整的十六进制字节组成，例如 01 A0 FF');
     }
+
     const bytes = Uint8Array.from(cleaned.match(/.{2}/g) || [], (item) =>
       parseInt(item, 16)
     );
+
     return new DataView(bytes.buffer);
   }
 
@@ -1231,12 +1385,14 @@ export class BleDebugPage implements OnInit, OnDestroy {
       mode: this.writeMode,
       value: this.writeValue,
     };
+
     this.writeHistory = [
       item,
       ...this.writeHistory.filter(
         (history) => history.mode !== item.mode || history.value !== item.value
       ),
     ].slice(0, 6);
+
     localStorage.setItem(
       'bleDebugWriteHistory',
       JSON.stringify(this.writeHistory)
@@ -1250,10 +1406,12 @@ export class BleDebugPage implements OnInit, OnDestroy {
   ): void {
     const key = this.characteristicKey(service, characteristic);
     const snapshot = this.valueSnapshot(value);
+
     this.characteristicValues = {
       ...this.characteristicValues,
       [key]: snapshot,
     };
+
     this.characteristicHistories = {
       ...this.characteristicHistories,
       [key]: [snapshot, ...(this.characteristicHistories[key] || [])].slice(
@@ -1269,7 +1427,9 @@ export class BleDebugPage implements OnInit, OnDestroy {
       value.byteOffset,
       value.byteLength
     );
+
     let text = '';
+
     try {
       text = dataViewToText(value).replace(
         /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,
@@ -1278,6 +1438,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
     } catch {
       text = '';
     }
+
     return {
       hex: this.hexValue(value) || '—',
       text: text || '—',
@@ -1289,6 +1450,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   private valueDetails(value: DataView): string {
     const snapshot = this.valueSnapshot(value);
+
     return `HEX  ${snapshot.hex}\nTEXT ${snapshot.text}\nDEC  ${snapshot.decimal}`;
   }
 
@@ -1302,11 +1464,13 @@ export class BleDebugPage implements OnInit, OnDestroy {
     const detail = `${this.serviceLabel(service)} / ${this.characteristicLabel(
       characteristic
     )}\n${this.valueDetails(value)}`;
+
     this.addLog(type, title, detail);
   }
 
   private addLog(type: DebugLog['type'], title: string, value?: string): void {
     const now = new Date();
+
     this.logs = [
       {
         id: ++this.logSequence,
@@ -1318,6 +1482,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
       },
       ...this.logs,
     ].slice(0, 300);
+
     if (!this.destroyed) this.markForCheck();
   }
 
@@ -1330,10 +1495,13 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   private uuid16(uuid: string): string | undefined {
     const normalized = uuid.toLowerCase();
+
     const standardMatch = normalized.match(
       /^0000([0-9a-f]{4})-0000-1000-8000-00805f9b34fb$/
     );
+
     if (standardMatch) return standardMatch[1];
+
     return /^[0-9a-f]{4}$/.test(normalized) ? normalized : undefined;
   }
 
@@ -1346,12 +1514,17 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   private async stopAllNotifications(): Promise<void> {
     if (!this.connectedDevice) return;
+
     const deviceId = this.connectedDevice.deviceId;
+
     const tasks = [...this.notifyingCharacteristics].map((key) => {
       const [service, characteristic] = key.split('|');
+
       return BleClient.stopNotifications(deviceId, service, characteristic);
     });
+
     await Promise.allSettled(tasks);
+
     this.notifyingCharacteristics = new Set();
   }
 
@@ -1362,14 +1535,19 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   private startRssiMonitor(): void {
     this.stopRssiMonitor();
+
     if (!this.connectedDevice || this.isWeb) return;
+
     this.rssiMonitorTimer = setInterval(() => {
       const deviceId = this.connectedDevice?.deviceId;
+
       if (!deviceId) return;
+
       void BleClient.readRssi(deviceId)
         .then((value) =>
           this.zone.run(() => {
             this.connectionRssi = value;
+
             this.pushConnectedRssi(value);
             this.markForCheck();
           })
@@ -1380,6 +1558,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   private stopRssiMonitor(): void {
     if (this.rssiMonitorTimer) clearInterval(this.rssiMonitorTimer);
+
     this.rssiMonitorTimer = undefined;
   }
 
@@ -1391,26 +1570,27 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   private setBusy(key: string, busy: boolean): void {
     const next = new Set(this.busyOperations);
+
     if (busy) next.add(key);
     else next.delete(key);
+
     this.busyOperations = next;
+
     this.markForCheck();
   }
 
   private toggledSet(source: Set<string>, key: string): Set<string> {
     const next = new Set(source);
+
     if (next.has(key)) next.delete(key);
     else next.add(key);
-    return next;
-  }
 
-  private clearScanTimer(): void {
-    if (this.scanElapsedTimer) clearInterval(this.scanElapsedTimer);
-    this.scanElapsedTimer = undefined;
+    return next;
   }
 
   private preciseTime(date: Date): string {
     const base = date.toLocaleTimeString('zh-CN', { hour12: false });
+
     return `${base}.${date.getMilliseconds().toString().padStart(3, '0')}`;
   }
 
@@ -1424,23 +1604,29 @@ export class BleDebugPage implements OnInit, OnDestroy {
 
   private androidNeedsLegacyLocation(): boolean {
     const match = navigator.userAgent.match(/Android\s([0-9]+)/i);
+
     return !!match && Number(match[1]) < 12;
   }
 
   private capturePermissionProblem(error: unknown): void {
     if (!this.isAndroid) return;
+
     const rawMessage =
       error instanceof Error ? error.message : String(error || '');
+
     if (
       !/permission|denied|fine[ _-]?location|bluetooth_scan|bluetooth_connect/i.test(
         rawMessage
       )
     )
       return;
+
     this.permissionProblem = 'permission';
+
     this.permissionMessage = this.androidNeedsLegacyLocation()
       ? '请允许“位置信息”权限。Android 11 及以下使用 BLE 扫描时由系统强制要求该权限。'
       : '请允许“附近的设备”权限；Android 12 及以上不再需要位置信息权限。';
+
     this.markForCheck();
   }
 
@@ -1456,6 +1642,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
         : typeof error === 'string'
         ? error
         : '';
+
     if (
       /permission|denied|fine[ _-]?location|bluetooth_scan|bluetooth_connect/i.test(
         message
@@ -1465,7 +1652,9 @@ export class BleDebugPage implements OnInit, OnDestroy {
         this.permissionMessage || '缺少蓝牙扫描权限，请在系统设置中授权后重试'
       );
     }
+
     if (message) return message;
+
     return '操作失败，请检查蓝牙权限后重试';
   }
 
@@ -1479,6 +1668,7 @@ export class BleDebugPage implements OnInit, OnDestroy {
       duration: 2200,
       position: 'bottom',
     });
+
     await toast.present();
   }
 }

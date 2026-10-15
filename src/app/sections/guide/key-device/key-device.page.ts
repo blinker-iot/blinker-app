@@ -21,7 +21,6 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 
-import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
 import {
   DeviceKeyContext,
   DeviceKeyCreateResponse,
@@ -66,7 +65,6 @@ type KeyDevicePhase =
     IonContent,
     IonSpinner,
     TranslatePipe,
-    HeroCardComponent,
   ],
 })
 export class KeyDeviceGuidePage implements OnDestroy {

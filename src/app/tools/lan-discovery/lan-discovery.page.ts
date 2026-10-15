@@ -22,7 +22,6 @@ import {
   IonToolbar,
   ToastController,
 } from '@ionic/angular/standalone';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import {
   Mdns,
   type MdnsErrorEvent,
@@ -62,7 +61,6 @@ interface ConnectionStatus {
     IonHeader,
     IonTitle,
     IonToolbar,
-    HeroCardComponent,
   ],
 })
 export class LanDiscoveryPage implements OnInit, OnDestroy {

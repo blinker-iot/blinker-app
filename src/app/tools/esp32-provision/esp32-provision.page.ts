@@ -23,7 +23,6 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import { API } from 'src/app/configs/api.config';
 import { bleScanner } from 'src/app/core/bluetooth/scan';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { assertDeviceV2AccountContext, captureDeviceV2AccountContext,
   DeviceV2AccountContext } from 'src/app/core/device-v2/account-scope';
 import {
@@ -119,7 +118,6 @@ type DeviceAllocation =
     IonHeader,
     IonTitle,
     IonToolbar,
-    HeroCardComponent,
   ],
 })
 export class Esp32ProvisionPage implements OnInit, OnDestroy {

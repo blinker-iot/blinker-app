@@ -18,7 +18,6 @@ import {
   IonToolbar,
   ToastController,
 } from '@ionic/angular/standalone';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import {
   BleClient,
   BleDevice,
@@ -101,7 +100,6 @@ const SECTOR_ACK_TIMEOUT = 15000;
     IonHeader,
     IonTitle,
     IonToolbar,
-    HeroCardComponent,
   ],
 })
 export class BleOtaPage implements OnDestroy {

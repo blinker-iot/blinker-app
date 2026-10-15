@@ -19,8 +19,6 @@ import {
 import { TranslatePipe } from '@ngx-translate/core';
 import { FeedbackService } from './feedback.service';
 import { DataService } from 'src/app/core/services/data.service';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
-
 type FeedbackTypeId = 'device' | 'account' | 'feature' | 'other';
 
 interface FeedbackTypeOption {
@@ -53,7 +51,6 @@ interface FeedbackDraft {
     IonTitle,
     IonToolbar,
     TranslatePipe,
-    HeroCardComponent,
   ],
 })
 export class FeedbackPage implements OnInit, OnDestroy {

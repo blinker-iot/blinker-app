@@ -10,21 +10,6 @@
 </ion-header>
 <ion-content fullscreen="true">
   <main>
-    <section class="action-intro">
-      <span class="intro-icon" aria-hidden="true">
-        <i
-          [class]="selectedType.value === 'delay' ? 'fa-light fa-clock' : 'fa-light fa-bolt'"
-        ></i>
-      </span>
-      <div>
-        <h1>{{ selectedType.text }}</h1>
-        <p>
-          {{ selectedType.value === 'delay' ? '在前后动作之间加入等待时间。' :
-          '选择设备和需要执行的控制动作。' }}
-        </p>
-      </div>
-    </section>
-
     <div class="section-label">步骤设置</div>
     <section class="selector-card">
       <button

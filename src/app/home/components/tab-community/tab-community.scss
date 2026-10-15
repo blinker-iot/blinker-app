@@ -85,55 +85,6 @@ ion-content {
   height: calc(var(--ion-safe-area-top, 0px) + 161px);
 }
 
-.hero-card {
-  position: relative;
-  min-height: 230px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 18px;
-  background: linear-gradient(135deg, #123e63 0%, #2879ae 58%, #88bfdc 100%);
-  box-shadow: var(--blinker-shadow);
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  padding: 24px 22px;
-  color: white;
-
-  h1 {
-    margin: 6px 0 0;
-    font-size: 26px;
-    font-weight: 600;
-    line-height: 1.23;
-    letter-spacing: -0.04em;
-  }
-
-  p {
-    margin: 10px 0 19px;
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 12px;
-  }
-
-  button {
-    padding: 10px 14px;
-    border: 0;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.94);
-    color: #152338;
-    font-size: 11px;
-    font-weight: 600;
-
-    i {
-      margin-left: 5px;
-    }
-  }
-}
-
-.content-section {
-  margin-top: 25px;
-}
-
 .section-heading {
   display: flex;
   align-items: flex-end;
@@ -319,9 +270,5 @@ ion-content {
 @media (max-width: 360px) {
   .category-tabs {
     gap: 17px;
-  }
-
-  .hero-card {
-    min-height: 215px;
   }
 }

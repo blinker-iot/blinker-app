@@ -1,20 +1,29 @@
 .menu-list {
   overflow: hidden;
+
   border: 1px solid var(--blinker-border);
+
   border-radius: 16px;
+
   background: var(--blinker-surface);
-  box-shadow: var(--blinker-shadow-soft);
+
+  box-shadow: none;
 }
 
 .menu-row {
   width: 100%;
+
   min-height: 55px;
   padding: 0 13px;
   border: 0;
   border-bottom: 1px solid var(--blinker-divider);
+
   background: transparent;
+
   color: var(--blinker-text-primary);
+
   display: flex;
+
   align-items: center;
   gap: 11px;
   text-align: left;
@@ -39,7 +48,9 @@
 .menu-icon {
   width: 26px;
   flex: 0 0 26px;
+
   color: var(--blinker-text-primary);
+
   display: flex;
   justify-content: center;
   font-size: 17px;
@@ -59,13 +70,17 @@
 .menu-description,
 .menu-value {
   overflow: hidden;
+
   color: var(--blinker-text-secondary);
+
   text-overflow: ellipsis;
+
   white-space: nowrap;
 }
 
 .menu-description {
   font-size: 12px;
+
   line-height: 1.35;
 }
 
@@ -84,20 +99,23 @@
 .menu-badge {
   padding: 3px 6px;
   border-radius: 6px;
+
   background: var(--blinker-surface-muted);
   color: var(--blinker-text-tertiary);
+
   font-size: 9px;
 }
 
 .menu-arrow {
   margin-left: auto;
+
   color: var(--blinker-text-tertiary);
+
   font-size: 11px;
 }
 
 .menu-row--danger {
   color: var(--ion-color-danger);
-
   .menu-icon {
     color: inherit;
   }
@@ -116,6 +134,7 @@
     flex-basis: 42px;
     display: grid;
     place-items: center;
+
     color: var(--ion-color-primary);
 
     i {
@@ -133,7 +152,9 @@
     overflow: hidden;
     font-size: 15px;
     font-weight: 600;
+
     line-height: 1.35;
+
     text-overflow: ellipsis;
     white-space: nowrap;
   }

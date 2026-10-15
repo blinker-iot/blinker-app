@@ -9,6 +9,8 @@ import {
 } from '@angular/core';
 
 import { ActivatedRoute } from '@angular/router';
+import { getServiceRegion, isServiceRegion, ServiceRegion } from '../../../configs/service-region.config';
+
 import {
   IonBackButton,
   IonButton,
@@ -19,10 +21,12 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
+
 import { DeviceUiEndpoint, DeviceUiSnapshot, DeviceUiValue } from '../../../core/device-v2/device-ui.port';
 import { EndpointHistory } from '../../../core/device-v2/endpoint-history';
 import { PanelMode } from '../../../core/device-v2/custom-panel';
 import { generateDefaultPageLayout, migratePageLayout, visiblePageWidgets } from '../../../core/device-v2/page-layout';
+import { generateAutomaticPageLayout } from '../../../core/device-v2/automatic-page-layout';
 
 import {
   DeviceV2EndpointAccess as Access,
@@ -97,6 +101,7 @@ export class SharedConsolePage implements OnDestroy {
   private session?: ConsoleViewSession;
   private source?: ViewSnapshot;
   private token = '';
+  private region: ServiceRegion = getServiceRegion();
   private modeChosen = false;
   private history = new EndpointHistory();
   private controller?: AbortController;
@@ -133,7 +138,9 @@ export class SharedConsolePage implements OnDestroy {
   }
 
   get customPanel() {
-    return !this.loading && !this.error && this.mode === 'custom' ? this.console?.uiConfig.customPanel : undefined;
+    const panel = this.console?.uiConfig.customPanel;
+
+    return !this.loading && !this.error && this.mode === 'custom' && panel?.html.trim() ? panel : undefined;
   }
 
   get nextModeLabel(): string {
@@ -152,10 +159,13 @@ export class SharedConsolePage implements OnDestroy {
     this.visible = true;
 
     const token = this.route.snapshot.paramMap.get('token') || '';
+    const requestedRegion = this.route.snapshot.queryParamMap.get('region');
+    const region = isServiceRegion(requestedRegion) ? requestedRegion : getServiceRegion();
 
-    if (token !== this.token) this.modeChosen = false;
+    if (token !== this.token || region !== this.region) this.modeChosen = false;
 
     this.token = token;
+    this.region = region;
 
     void this.load();
   }
@@ -182,6 +192,8 @@ export class SharedConsolePage implements OnDestroy {
     this.stop();
 
     const epoch = ++this.epoch;
+    const token = this.token;
+    const region = this.region;
 
     if (!this.visible || !this.hostActive || this.destroyed || document.hidden) return;
 
@@ -195,13 +207,13 @@ export class SharedConsolePage implements OnDestroy {
     this.cd.markForCheck();
 
     try {
-      if (!parseConsoleLink(`diandeng://console/${this.token}`)) throw new Error('控制台链接无效');
+      if (!parseConsoleLink(`diandeng://console/${token}`)) throw new Error('控制台链接无效');
 
-      if (this.host.authenticated) {
+      if (this.host.authenticated && region === getServiceRegion()) {
         const sessionVersion = this.host.sessionVersion;
 
         try {
-          const member = await this.consoles.resolveLink(this.token);
+          const member = await this.consoles.resolveLink(token);
 
           if (!this.current(epoch) || this.host.sessionVersion !== sessionVersion) return;
           if (await this.host.openDevice(member.logicalDeviceId, sessionVersion)) return;
@@ -210,10 +222,12 @@ export class SharedConsolePage implements OnDestroy {
         }
       }
 
-      const session = await this.consoles.openView(this.token);
+      if (!this.current(epoch)) return;
+
+      const session = await this.consoles.openView(token, region);
 
       if (!this.current(epoch)) {
-        void this.consoles.closeView(session.sessionToken).catch(() => undefined);
+        void this.consoles.closeView(session.sessionToken, session.region).catch(() => undefined);
 
         return;
       }
@@ -262,7 +276,7 @@ export class SharedConsolePage implements OnDestroy {
   }
 
   get bookmarked(): boolean {
-    return !!this.console && this.bookmarks.has(this.console.logicalDeviceId, this.token);
+    return !!this.console && this.bookmarks.has(this.console.logicalDeviceId, this.token, this.region);
   }
 
   async addBookmark(): Promise<void> {
@@ -274,7 +288,7 @@ export class SharedConsolePage implements OnDestroy {
     this.bookmarkError = '';
 
     try {
-      await this.bookmarks.add(this.console, this.token);
+      await this.bookmarks.add(this.console, this.token, this.region);
     } catch {
       if (this.current(epoch)) this.bookmarkError = '未能保存到本机，请重试';
     } finally {
@@ -285,7 +299,7 @@ export class SharedConsolePage implements OnDestroy {
   }
 
   login(): void {
-    void this.host.requestLogin(this.token);
+    void this.host.requestLogin(this.token, this.region);
   }
 
   private async connect(epoch: number): Promise<void> {
@@ -320,7 +334,7 @@ export class SharedConsolePage implements OnDestroy {
         }
 
         this.cd.markForCheck();
-      });
+      }, this.session.region);
     } catch {
       /* Reconnect obtains a full snapshot; no partial patch is replayed. */
     }
@@ -353,7 +367,7 @@ export class SharedConsolePage implements OnDestroy {
     this.refreshPending = false;
 
     try {
-      const record = await this.consoles.refreshView(this.session.sessionToken);
+      const record = await this.consoles.refreshView(this.session.sessionToken, this.session.region);
 
       if (!this.current(epoch)) return;
 
@@ -441,9 +455,10 @@ export class SharedConsolePage implements OnDestroy {
       endpoints,
     };
 
-    const layout =
-      this.mode === 'custom' || !this.console.layout
-        ? generateDefaultPageLayout(snapshot)
+    const layout = this.mode === 'custom'
+      ? generateDefaultPageLayout(snapshot)
+      : !this.console.layout?.widgets.length
+        ? generateAutomaticPageLayout(snapshot, this.console.layout?.style ?? 'natural', this.console.uiConfig.hiddenEndpointKeys)
         : migratePageLayout(this.console.layout, snapshot, false);
 
     const fields = new Map(endpoints.map((field) => [field.key, field]));
@@ -489,7 +504,7 @@ export class SharedConsolePage implements OnDestroy {
     clearTimeout(this.retryTimer);
     this.controller?.abort();
 
-    if (this.session) void this.consoles.closeView(this.session.sessionToken).catch(() => undefined);
+    if (this.session) void this.consoles.closeView(this.session.sessionToken, this.session.region).catch(() => undefined);
 
     this.session = undefined;
     this.console = undefined;

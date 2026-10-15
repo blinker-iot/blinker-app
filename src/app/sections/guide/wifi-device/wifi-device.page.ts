@@ -10,7 +10,6 @@ import {
   NavController,
 } from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
-import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
 
 @Component({
   selector: 'app-wifi-device-guide',
@@ -26,7 +25,6 @@ import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.
     IonTitle,
     IonContent,
     TranslatePipe,
-    HeroCardComponent,
   ],
 })
 export class WifiDeviceGuidePage {

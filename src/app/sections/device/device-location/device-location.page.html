@@ -10,13 +10,6 @@
 <ion-content [fullscreen]="true">
   @if (loaded) {
   <main>
-    <app-hero-card
-      iconClass="fa-light fa-location-dot"
-      eyebrow="DEVICE LOCATION"
-      [heading]="deviceName"
-      description="设置设备坐标，便于按区域管理和调试位置相关功能。"
-    />
-
     <section class="map-preview surface-card" aria-label="当前选择的设备位置">
       <div class="map-grid" aria-hidden="true"></div>
       <span class="map-pin" aria-hidden="true">

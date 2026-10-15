@@ -24,6 +24,8 @@ import {
   timeout,
 } from 'rxjs';
 import { API, isGatewayUrl } from 'src/app/configs/api.config';
+import { getServiceRegion, isServiceRegion } from 'src/app/configs/service-region.config';
+
 import {
   AilyResponse,
   AuthTokenPair,
@@ -99,6 +101,15 @@ export class ServerInterceptor implements HttpInterceptor {
     request: HttpRequest<unknown>,
     next: HttpHandler,
   ): Observable<HttpEvent<unknown>> {
+    if (request.url.startsWith(API.BASE_URL + '/api/')) {
+      const requestedRegion = request.headers.get('x-region');
+
+      const region = this.isConsoleViewUrl(request.url) && isServiceRegion(requestedRegion)
+        ? requestedRegion : getServiceRegion();
+
+      request = request.clone({ setHeaders: { 'x-region': region } });
+    }
+
     if (!isGatewayUrl(request.url)) return next.handle(request);
 
     const prepared = this.prepareGatewayRequest(request);
@@ -246,6 +257,7 @@ export class ServerInterceptor implements HttpInterceptor {
           headers: {
             'Content-Type': 'application/json',
             'X-Request-ID': this.createRequestId(),
+            'x-region': getServiceRegion(),
           },
         },
       ),

@@ -6,6 +6,7 @@ import { InterfaceTile, validateProposal } from './interface-draft';
 import { UiTheme } from '../../../core/device-v2/ui-theme';
 import type { DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
 import { draftProposal, validateWorkflowResult, workflowDefaults, workflowManifest, workflowProgress } from './interface-workflow';
+import { interfaceGenerationError as fail } from './interface-generation-error';
 
 export type InterfaceGenerationResult = ReturnType<typeof validateProposal> & { warning?: string };
 
@@ -22,7 +23,6 @@ export interface InterfaceGenerationOptions {
 @Injectable({ providedIn: 'root' })
 export class InterfaceGenerationService {
   constructor(private readonly http: HttpClient) {}
-
   refine(prompt: string, tiles: InterfaceTile[], style: UiTheme,
     options: InterfaceGenerationOptions & { base: NonNullable<InterfaceGenerationOptions['base']>; snapshot: DeviceUiSnapshot }) {
     return this.generate(prompt, tiles, style, options);
@@ -40,7 +40,6 @@ export class InterfaceGenerationService {
       let draftConfiguration: unknown;
       let settled = false;
       let ignoreProgress = false;
-      const fail = (code: string) => Object.assign(new Error(code), { code });
 
       const finish = (error?: unknown) => {
         if (settled) return;
@@ -51,11 +50,8 @@ export class InterfaceGenerationService {
         options.signal?.removeEventListener('abort', abort);
         subscription.unsubscribe();
 
-        if ((error || !result) && draft && (error as { code?: string } | undefined)?.code !== 'INTERFACE_AI_CANCELLED') {
-          resolve({ ...draft, warning: '生成未完成，当前草稿已保留，可继续微调。' });
-        }
+        if (error) reject(error);
 
-        else if (error) reject(error);
         else if (result) resolve(result);
         else reject(fail('INTERFACE_AI_INCOMPLETE'));
       };
@@ -93,7 +89,6 @@ export class InterfaceGenerationService {
 
               options.onPreview?.(draft);
             }
-
             else if (event.type === 'complete') {
               if (!draft || JSON.stringify(event.data?.proposal) !== JSON.stringify(draftConfiguration)) throw fail('INTERFACE_AI_INVALID_RESPONSE');
 
@@ -123,7 +118,9 @@ export class InterfaceGenerationService {
             if (event.type === HttpEventType.ResponseHeader) ignoreProgress = event.status >= 400;
             if (event.type === HttpEventType.DownloadProgress && !ignoreProgress && event.partialText) consume(event.partialText, false);
             if (event.type === HttpEventType.Response) { consume(event.body || '', true); finish(); }
-          } catch (error) { finish(error); }
+          } catch (error) {
+            finish((error as { code?: string })?.code ? error : fail('INTERFACE_AI_INVALID_RESPONSE'));
+          }
         },
         error: error => finish(error),
         complete: () => finish(),

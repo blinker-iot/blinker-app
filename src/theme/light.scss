@@ -83,7 +83,7 @@ body.light {
   --ion-tab-bar-background: #ffffff;
   --ion-tab-bar-color: #6b7280;
   --ion-tab-bar-color-selected: #087eff;
-  --ion-border-color: #d9e1ec;
+  --ion-border-color: var(--blinker-border);
 
   --blinker-bg: #f7f9fc;
   --blinker-bg-elevated: #fbfcfe;
@@ -93,10 +93,11 @@ body.light {
   --blinker-text-primary: #10213a;
   --blinker-text-secondary: #6f7b91;
   --blinker-text-tertiary: #98a4b7;
-  --blinker-border: #d9e1ec;
+  --blinker-border: rgba(217, 225, 236, 0.6);
   --blinker-divider: #e8edf4;
-  --blinker-shadow: 0 10px 32px rgba(17, 24, 39, 0.07);
-  --blinker-shadow-soft: 0 4px 18px rgba(17, 24, 39, 0.05);
+  --blinker-shadow: none;
+  --blinker-shadow-soft: none;
+  --blinker-device-card-shadow: 0 4px 18px rgba(17, 24, 39, 0.05);
   --blinker-radius-card: 16px;
   --blinker-radius-control: 12px;
 }

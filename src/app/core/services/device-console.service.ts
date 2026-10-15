@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { getServiceRegion, ServiceRegion } from '../../configs/service-region.config';
 import { DEVICE_CONSOLE_API_BASE } from '../device-v2/console-host';
 import { CustomPanelDocument, PanelMode, parseCustomPanel } from '../device-v2/custom-panel';
 import { PageLayout, parsePageLayout } from '../device-v2/page-layout';
@@ -45,6 +46,7 @@ export interface ConsoleSharingSettings {
 }
 
 export interface ConsoleViewSession {
+  region: ServiceRegion;
   sessionToken: string;
   expiresAt: number;
   console: DeviceConsole;
@@ -162,8 +164,10 @@ export class DeviceConsoleService {
     await firstValueFrom(this.http.delete(this.consoleUrl(id) + '-link'));
   }
 
-  async openView(token: string): Promise<ConsoleViewSession> {
-    const value = (await firstValueFrom(this.http.post<{ data: ConsoleViewSession }>(this.viewUrl, { token }))).data;
+  async openView(token: string, region = getServiceRegion()): Promise<ConsoleViewSession> {
+    const value = (await firstValueFrom(this.http.post<{ data: Omit<ConsoleViewSession, 'region'> }>(
+      this.viewUrl, { token }, { headers: { 'x-region': region } }
+    ))).data;
 
     if (
       !value ||
@@ -173,28 +177,37 @@ export class DeviceConsoleService {
       throw new Error('观看会话无效');
     }
 
-    return { ...value, console: this.record(value.console) };
+    return { ...value, region, console: this.record(value.console) };
   }
 
-  async refreshView(token: string): Promise<DeviceConsole> {
+  async refreshView(token: string, region = getServiceRegion()): Promise<DeviceConsole> {
     const result = await firstValueFrom(
       this.http.get<{ data: DeviceConsole }>(`${this.viewUrl}/current/console`, {
-        headers: { Authorization: `ConsoleView ${token}` },
+        headers: { Authorization: `ConsoleView ${token}`, 'x-region': region },
       })
     );
 
     return this.record(result.data);
   }
 
-  async closeView(token: string): Promise<void> {
+  async closeView(token: string, region = getServiceRegion()): Promise<void> {
     await firstValueFrom(
-      this.http.delete(`${this.viewUrl}/current`, { headers: { Authorization: `ConsoleView ${token}` } })
+      this.http.delete(`${this.viewUrl}/current`, { headers: { Authorization: `ConsoleView ${token}`, 'x-region': region } })
     );
   }
 
-  async events(token: string, signal: AbortSignal, receive: (type: string, value: unknown) => void): Promise<void> {
+  async events(
+    token: string,
+    signal: AbortSignal,
+    receive: (type: string, value: unknown) => void,
+    region = getServiceRegion()
+  ): Promise<void> {
     const response = await fetch(`${this.viewUrl}/current/events`, {
-      headers: { Authorization: `ConsoleView ${token}`, Accept: 'text/event-stream' },
+      headers: {
+        Authorization: `ConsoleView ${token}`,
+        Accept: 'text/event-stream',
+        'x-region': region,
+      },
       signal,
       credentials: 'omit',
       cache: 'no-store',

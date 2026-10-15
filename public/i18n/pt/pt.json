@@ -39,6 +39,8 @@
     "ABOUT_US": "Sobre nós"
   },
   "SETTINGS": {
+    "SERVICE_REGION": "Região do serviço",
+    "SERVICE_REGION_HINT": "Alterar a região do serviço requer iniciar sessão novamente",
     "TITLE": "Definições",
     "APPEARANCE": "Aspeto",
     "THEME_HINT": "Escolha o aspeto adequado ao seu ambiente",

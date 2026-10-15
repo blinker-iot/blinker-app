@@ -9,18 +9,10 @@
 
 <ion-content fullscreen="true">
   <main>
-    <app-hero-card
-      iconClass="fa-light fa-sliders"
-      eyebrow="APP PREFERENCES"
-      [heading]="'SETTINGS.TITLE' | translate"
-      [description]="'SETTINGS.SAVED_HINT' | translate"
-    />
-
     @if (languageList.length) {
     <div class="section-label">
       {{ 'SETTINGS.LANGUAGE_SECTION' | translate }}
     </div>
-
     <section class="settings-card" aria-labelledby="language-heading">
       <div class="card-heading">
         <div>
@@ -28,7 +20,6 @@
         </div>
         <i class="fa-light fa-language" aria-hidden="true"></i>
       </div>
-
       <div class="language-options" role="radiogroup">
         @for (language of languageList; track language.code) {
         <button type="button" class="language-option" [class.selected]="currentLanguage === language.code" role="radio"
@@ -39,6 +30,7 @@
             [class.fa-circle]="currentLanguage !== language.code" aria-hidden="true"></i>
         </button>
         }
+
       </div>
     </section>
     }
@@ -46,7 +38,6 @@
     <div class="section-label appearance-section-label">
       {{ 'SETTINGS.APPEARANCE' | translate }}
     </div>
-
     <section class="settings-card" aria-labelledby="theme-heading">
       <div class="card-heading">
         <div>
@@ -54,7 +45,6 @@
         </div>
         <i class="fa-light fa-moon-over-sun" aria-hidden="true"></i>
       </div>
-
       <div class="theme-options" role="radiogroup">
         <button type="button" class="theme-option" [class.selected]="currentTheme === 'light'" role="radio"
           [attr.aria-checked]="currentTheme === 'light'" (click)="selectTheme('light')">
@@ -74,7 +64,6 @@
           <i class="selection-icon fa-solid" [class.fa-circle-check]="currentTheme === 'light'"
             [class.fa-circle]="currentTheme !== 'light'" aria-hidden="true"></i>
         </button>
-
         <button type="button" class="theme-option" [class.selected]="currentTheme === 'dark'" role="radio"
           [attr.aria-checked]="currentTheme === 'dark'" (click)="selectTheme('dark')">
           <div class="theme-preview preview-dark" aria-hidden="true">
@@ -95,10 +84,26 @@
         </button>
       </div>
     </section>
+    <div id="service-region-heading" class="section-label service-region-section-label">
+      {{ 'SETTINGS.SERVICE_REGION' | translate }}
+    </div>
+    <section class="settings-card" aria-labelledby="service-region-heading">
+      <div class="card-heading">
+        <p id="service-region-hint">{{ 'SETTINGS.SERVICE_REGION_HINT' | translate }}</p>
+        <i class="fa-light fa-globe" aria-hidden="true"></i>
+      </div>
+      <div class="service-region-options" role="radiogroup" aria-labelledby="service-region-heading"
+        aria-describedby="service-region-hint" [attr.aria-busy]="switchingRegion">
 
-    <p class="saved-hint">
-      <i class="fa-light fa-circle-info" aria-hidden="true"></i>
-      {{ 'SETTINGS.SAVED_HINT' | translate }}
-    </p>
+        @for (region of serviceRegions; track region) {
+        <label class="service-region-option" [class.selected]="currentRegion === region">
+          <input type="radio" name="service-region" [value]="region" [checked]="currentRegion === region"
+            [disabled]="switchingRegion" (change)="selectRegion(region)" />
+          <span>{{ region }}</span>
+        </label>
+        }
+
+      </div>
+    </section>
   </main>
 </ion-content>

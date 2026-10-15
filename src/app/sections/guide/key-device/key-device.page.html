@@ -9,13 +9,6 @@
 
 <ion-content fullscreen="true">
   <main>
-    <app-hero-card
-      iconClass="fa-light fa-key"
-      [eyebrow]="'DEVICE_GUIDE.KEY_EYEBROW' | translate"
-      [heading]="'DEVICE_GUIDE.KEY_HERO_TITLE' | translate"
-      [description]="'DEVICE_GUIDE.KEY_HERO_DESCRIPTION' | translate"
-    />
-
     @if (showsCreateForm) {
     <form class="key-form" (ngSubmit)="createKeyDevice()" novalidate>
       <label class="form-label" for="key-device-name">

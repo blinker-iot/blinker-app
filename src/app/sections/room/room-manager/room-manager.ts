@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Router } from '@angular/router';
+
 import {
   AlertController,
   IonBackButton,
@@ -10,6 +11,7 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
+
 import { MenuListComponent } from 'src/app/core/components/menu-list/menu-list';
 import { MenuItemComponent } from 'src/app/core/components/menu-list/menu-item/menu-item';
 import { OrderData } from 'src/app/core/model/data.model';
@@ -20,20 +22,22 @@ import { RoomService, roomErrorMessage } from '../room.service';
   selector: 'room-manager',
   templateUrl: 'room-manager.html',
   styleUrls: ['room-manager.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar,
     MenuListComponent, MenuItemComponent,
   ],
 })
+
 export class RoomManagerPage {
   loaded = false;
   saving = false;
   editMode = false;
   error = '';
   defaultBackHref = '/home/device';
+
   private revision = 0;
   private sessionEpoch = -1;
-  private createRequested = false;
 
   get roomDataList(): string[] {
     return this.dataService.room.list;
@@ -51,17 +55,11 @@ export class RoomManagerPage {
   ) {
     const state = this.router.getCurrentNavigation()?.extras.state;
 
-    this.createRequested = state?.['createRegion'] === true;
     if (typeof state?.['backHref'] === 'string') this.defaultBackHref = state['backHref'];
   }
 
   async ionViewDidEnter(): Promise<void> {
     await this.load();
-
-    if (this.loaded && this.createRequested) {
-      this.createRequested = false;
-      await this.addRoom();
-    }
   }
 
   async load(): Promise<void> {
@@ -95,6 +93,7 @@ export class RoomManagerPage {
           text: '创建',
           handler: async (data) => {
             const name = String(data.name ?? '').trim();
+
             const invalid = !name ? '请输入区域名称。'
               : name.length > 10 ? '区域名称最多 10 个字。'
               : this.roomDataList.includes(name) ? '该区域已存在。'
@@ -103,20 +102,24 @@ export class RoomManagerPage {
 
             if (invalid) {
               alert.message = invalid;
+
               return false;
             }
 
             const draft = structuredClone(this.dataService.room);
 
             draft.list.push(name);
+
             draft.dict[name] = [];
 
             if (!await this.save(draft)) {
               alert.message = this.error;
+
               return false;
             }
 
             this.editRoom(name);
+
             return true;
           },
         },
@@ -143,6 +146,7 @@ export class RoomManagerPage {
             const draft = structuredClone(this.dataService.room);
 
             draft.list = draft.list.filter(room => room !== name);
+
             delete draft.dict[name];
 
             return this.save(draft);
@@ -170,9 +174,11 @@ export class RoomManagerPage {
       const snapshot = await this.roomService.saveData(draft, this.revision, this.sessionEpoch);
 
       this.revision = snapshot.revision;
+
       return true;
     } catch (error) {
       this.error = roomErrorMessage(error);
+
       return false;
     } finally {
       this.saving = false;

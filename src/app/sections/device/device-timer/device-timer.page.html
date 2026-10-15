@@ -17,14 +17,6 @@
 <ion-content [fullscreen]="true">
   @if (loaded) {
   <main>
-    <app-hero-card
-      iconClass="fa-light fa-timer"
-      eyebrow="AUTOMATION"
-      [heading]="deviceName"
-      description="按时间、循环周期或倒计时自动执行设备动作。"
-      [meta]="timerItems.length"
-    />
-
     <button type="button" class="add-task-button primary-action" (click)="addTask()">
       <i class="fa-light fa-calendar-plus"></i>
       新建任务

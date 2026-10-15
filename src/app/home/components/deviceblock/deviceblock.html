@@ -24,20 +24,7 @@
           }
         </div>
 
-        @if (showSwitch) {
-          <button
-            type="button"
-            class="device-switch"
-            [class.checked]="switchOn"
-            [class.waiting]="switchWaiting"
-            [disabled]="!canControl || switchWaiting"
-            [attr.aria-pressed]="switchOn"
-            [attr.aria-label]="(device.config.customName || '设备') + '开关'"
-            (click)="tapSwitch($event)"
-          >
-            <span></span>
-          </button>
-        } @else if (!wide && metrics.length > 0) {
+        @if (!wide && metrics.length > 0) {
           <div class="device-metrics" aria-label="设备数据">
             @for (metric of metrics; track metric.key) {
               <span class="device-metric">

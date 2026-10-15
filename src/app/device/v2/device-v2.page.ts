@@ -6,6 +6,7 @@ import { DEVICE_CONSOLE_HOST, DeviceConsoleHost } from '../../core/device-v2/con
 import { CustomPanelFrameComponent } from '../custom-panel/custom-panel-frame.component';
 import { EndpointHistory } from '../../core/device-v2/endpoint-history';
 import { visiblePageWidgets } from '../../core/device-v2/page-layout';
+import { generateAutomaticPageLayout } from '../../core/device-v2/automatic-page-layout';
 import { PageLayoutPanelComponent, type PanelCard, type PanelAction } from './panel/page-layout-panel';
 import { CommonModule } from '@angular/common';
 
@@ -142,6 +143,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private layoutEpoch = 0;
   private storedLayout?: DeviceV2PageLayoutRecord;
   private layoutError = '';
+  private storedCapabilitiesLoading = false;
   private consoleRevision?: number;
   private consoleTimer?: ReturnType<typeof setInterval>;
   private consoleRefreshing = false;
@@ -219,7 +221,14 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.deviceSubscriptions.unsubscribe();
   }
 
-  get customPanel() { return readDevicePanelMode(this.device) === 'custom' ? this.device.config.customPanel : undefined; }
+  get customMode(): boolean { return readDevicePanelMode(this.device) === 'custom'; }
+
+  get customPanel() {
+    const panel = this.device.config.customPanel;
+
+    return this.customMode && panel?.html.trim() ? panel : undefined;
+  }
+
   get canEdit(): boolean { return canEditConsole(this.device); }
   get readOnly(): boolean { return this.device.config.isShared === true && this.device.data.canCommand !== true; }
 
@@ -231,6 +240,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   get widgets(): PageLayoutWidget[] {
+    if (this.customMode && !this.customPanel) return [];
+
     const layout = this.customPanel && this.snapshot.manifestAccepted ? generateDefaultPageLayout(this.snapshot) : this.layout;
 
     if (!layout) return [];
@@ -321,8 +332,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   get waitingForCapabilities(): boolean {
-    return !this.snapshot.manifestAccepted
-      && (this.accountState === 'connecting' || this.accountState === 'retrying');
+    return this.storedCapabilitiesLoading || (!this.snapshot.manifestAccepted
+      && (this.accountState === 'connecting' || this.accountState === 'retrying'));
   }
 
   value(field: DeviceUiEndpoint): DeviceUiValue | undefined {
@@ -470,6 +481,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.layoutStale = undefined;
     this.layoutUpdating = false;
     this.storedLayout = undefined;
+    this.storedCapabilitiesLoading = false;
     this.layoutError = '';
     this.layoutLoadKey = '';
     this.layoutEpoch += 1;
@@ -586,9 +598,12 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
         this.layout = this.storedLayout.manifestFingerprint === snapshot.manifestFingerprint
           ? parsePageLayout(this.storedLayout.layout, snapshot.endpoints)
           : migratePageLayout(this.storedLayout.layout, snapshot);
-      } else if (this.layout) {
-        this.layout = { ...generateDefaultPageLayout(snapshot),
-          revision: this.storedLayout?.revision ?? 1, style: this.storedLayout?.layout.style };
+      } else {
+        this.layout = {
+          ...generateAutomaticPageLayout(snapshot, this.storedLayout?.layout.style ?? 'natural',
+            this.device.config.hiddenEndpointKeys),
+          revision: this.storedLayout?.revision ?? 1,
+        };
       }
 
       this.clearLayoutError();
@@ -682,7 +697,11 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.storedLayout = record;
 
     if (!record || !record.layout.widgets.length) {
-      this.layout = { ...generateDefaultPageLayout(snapshot), revision: record?.revision ?? 1, style: record?.layout.style };
+      this.layout = {
+        ...generateAutomaticPageLayout(snapshot, record?.layout.style ?? 'natural', this.device.config.hiddenEndpointKeys),
+        revision: record?.revision ?? 1,
+      };
+
       this.layoutStale = undefined;
     } else if (record.manifestFingerprint === snapshot.manifestFingerprint) {
       this.layout = parsePageLayout(record.layout, snapshot.endpoints);
@@ -838,6 +857,35 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       && this.layoutEpoch === epoch;
   }
 
+  private async loadStoredCapabilities(logicalDeviceId: string): Promise<void> {
+    if (this.storedCapabilitiesLoading || this.snapshot.manifestAccepted
+      || !cloudConsole(this.device) || this.device.config.isShared) return;
+
+    const session = this.host.sessionVersion;
+
+    this.storedCapabilitiesLoading = true;
+
+    this.requestRender();
+
+    try {
+      const snapshot = await this.deviceUi.readStoredSnapshot(logicalDeviceId);
+
+      if (this.destroyed || session !== this.host.sessionVersion || logicalDeviceId !== this.logicalDeviceId) return;
+      if (snapshot && !this.snapshot.manifestAccepted) this.applySnapshot(snapshot);
+    } catch (error) {
+      if (!this.destroyed && session === this.host.sessionVersion && logicalDeviceId === this.logicalDeviceId
+        && !this.snapshot.manifestAccepted) {
+        this.error = this.messageOf(error, '已保存的设备能力读取失败');
+      }
+    } finally {
+      if (!this.destroyed && logicalDeviceId === this.logicalDeviceId) {
+        this.storedCapabilitiesLoading = false;
+
+        this.requestRender();
+      }
+    }
+  }
+
   private synchronize(): Promise<void> {
     const logicalDeviceId = this.logicalDeviceId;
 
@@ -846,6 +894,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     }
 
     if (this.syncing) return this.syncing;
+
+    void this.loadStoredCapabilities(logicalDeviceId);
 
     // Refresh through the existing connection group. The ready scope owns
     // StateInterest until its replacement succeeds; a BLE scan must not

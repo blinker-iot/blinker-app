@@ -40,15 +40,6 @@
           </div>
         </section>
       }
-
-      <div class="debug-entry">
-        <i class="fa-light fa-terminal" aria-hidden="true"></i>
-        <span><strong id="debug-mode-label">调试模式</strong><small>查看原始数据与指令</small></span>
-        <button class="debug-switch" type="button" role="switch" aria-labelledby="debug-mode-label"
-          [attr.aria-checked]="debugEnabled === true" [class.on]="debugEnabled === true"
-          [disabled]="saving || loading || debugEnabled === undefined || device.config.isShared"
-          (click)="setDebugMode(!debugEnabled)"><span></span></button>
-      </div>
     } @else if (selected === 'custom') {
       <app-custom-panel-editor [device]="device" [cards]="panelCards" [ready]="customReady" [record]="customRecord"
         (busy)="saving = $event" />
@@ -82,7 +73,6 @@
               <button class="generate-button" type="button" [disabled]="generating || saving" (click)="generate()"><i [class]="generating ? 'fa-light fa-spinner-third spinning' : 'fa-light fa-wand-magic-sparkles'" aria-hidden="true"></i>{{ generating ? '正在生成…' : generated ? '重新生成' : '生成界面' }}</button>
 
               @if (!sourceTiles.length && !error) { <p class="generate-requirement" role="status">{{ missingCapabilityMessage }}@if (!isV2 || !loading) { <button type="button" (click)="isV2 ? refreshCapabilities() : selectMethod('classic')">{{ isV2 ? '重新读取' : '打开编辑页面' }}</button> }</p> }
-              @if (error) { <p class="generate-feedback" role="alert">{{ error }}@if (!sourceTiles.length && (!isV2 || !loading)) { <button type="button" (click)="isV2 ? refreshCapabilities() : selectMethod('classic')">{{ isV2 ? '重新读取' : '打开编辑页面' }}</button> }</p> }
             }
 
         </section>
@@ -93,6 +83,7 @@
             <app-generation-duration [running]="generating">预览不会发送设备指令</app-generation-duration>
           </div>
 
+          @if (selected === 'ai' && error) { <p class="generate-feedback" role="alert">{{ error }}@if (!sourceTiles.length && (!isV2 || !loading)) { <button type="button" (click)="isV2 ? refreshCapabilities() : selectMethod('classic')">{{ isV2 ? '重新读取' : '打开编辑页面' }}</button> }</p> }
           @if (liveError) { <p class="preview-caption" role="status">{{ liveError }}</p> }
 
           <div class="preview-canvas" [attr.data-ui-theme]="previewStyle">

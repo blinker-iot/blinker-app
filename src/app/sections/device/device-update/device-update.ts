@@ -13,7 +13,6 @@ import {
   NavController,
 } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { DataService } from 'src/app/core/services/data.service';
 import { DeviceService } from 'src/app/core/services/device.service';
@@ -42,7 +41,6 @@ interface UpdateStateMeta {
     IonSpinner,
     IonTitle,
     IonToolbar,
-    HeroCardComponent,
   ],
 })
 export class DeviceUpdatePage implements OnInit, OnDestroy {
@@ -69,10 +67,6 @@ export class DeviceUpdatePage implements OnInit, OnDestroy {
 
   get defaultBackHref(): string {
     return `/device-manager/${this.id}`;
-  }
-
-  get deviceName(): string {
-    return this.device?.config?.customName || '设备';
   }
 
   get currentVersion(): string {

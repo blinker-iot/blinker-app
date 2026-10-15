@@ -47,6 +47,7 @@ import { assertDeviceV2AccountContext, captureDeviceV2AccountContext } from 'src
 import { CapacitorWiFiProvAllocationStore } from 'src/app/core/device-v2/provisioning/wifiprov-allocation-store';
 import { CapacitorBleControllerCredentialStore } from 'src/app/core/device-v2/ble-direct/credential-store';
 import { WiFiProvRetirement } from 'src/app/core/device-v2/provisioning/wifiprov-retirement';
+import { RoomService, roomErrorMessage } from '../../room/room.service';
 
 import {
   MenuListComponent,
@@ -93,6 +94,8 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   imageSaving = false;
   panelModeSaving = false;
   panelModeLoading = false;
+  debugModeSaving = false;
+  roomSelectionBusy = false;
   secretKey = '';
   keyVisible = false;
 
@@ -105,6 +108,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   private revealedAuthKey = '';
   private rotateIdempotencyKey = '';
   private confirmDialog?: HTMLIonAlertElement;
+  private roomDialog?: HTMLIonAlertElement;
   private readonly subscriptions = new Subscription();
   private destroyed = false;
 
@@ -118,6 +122,10 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   get panelMode(): PanelMode {
     return readDevicePanelMode(this.device);
+  }
+
+  get debugEnabled(): boolean {
+    return this.device?.config.component === 'TestDashboard';
   }
 
   get keyBusy(): boolean {
@@ -160,7 +168,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'timer',
         title: '定时任务',
         description: '设置设备按计划自动执行',
-        icon: 'fa-timer',
         badge: this.hasTimerTask ? '已启用' : undefined,
         route: `/device-manager/${this.id}/timer`,
       },
@@ -168,21 +175,18 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'location',
         title: '设备位置',
         description: '查看并更新设备所在位置',
-        icon: 'fa-location-dot',
         route: `/device-manager/${this.id}/location`,
       },
       {
         id: 'logs',
         title: '运行日志',
         description: '查看设备事件、操作和系统记录',
-        icon: 'fa-rectangle-list',
         route: `/device-manager/${this.id}/logs`,
       },
       {
         id: 'storage',
         title: '数据存储',
         description: '查看设备上报的数据与存储用量',
-        icon: 'fa-database',
         route: `/device-manager/${this.id}/storage`,
       },
     ];
@@ -192,7 +196,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'shortcut',
         title: '添加桌面快捷方式',
         description: '使用设备图片创建直达该设备的桌面图标',
-        icon: 'fa-grid-2-plus',
       });
     }
 
@@ -200,12 +203,22 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   get managementMenuItems(): readonly MenuListItem[] {
+    const rooms = this.dataService.room.list.filter(name => this.dataService.room.dict[name].includes(this.id));
+
     const items: MenuListItem[] = [
+      {
+        id: 'rooms',
+        title: '所属区域',
+        description: this.device?.config.isPreview ? '预览设备不支持分配区域'
+          : this.roomSelectionBusy ? '正在设置区域…'
+          : this.dataService.roomRevision === null ? '选择设备所属区域'
+          : rooms.join('、') || '未分配区域',
+        disabled: this.roomSelectionBusy || Boolean(this.device?.config.isPreview),
+      },
       {
         id: 'update',
         title: '固件更新',
         description: '检查版本并更新设备固件',
-        icon: 'fa-cloud-arrow-up',
         badge: this.hasNewVersion ? '有新版本' : undefined,
         route: `/device-manager/${this.id}/update`,
       },
@@ -213,13 +226,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'guide',
         title: '设备配置',
         description: '重新配置该设备网络和密钥',
-        icon: 'fa-screwdriver-wrench',
       },
       {
         id: 'uic',
         title: '界面配置',
         description: '配置该设备的界面',
-        icon: 'fa-grid-4',
         route: `/device-manager/${this.id}/uic`,
       },
     ];
@@ -229,7 +240,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'component-preview',
         title: '组件预览',
         description: '查看所有组件与主题效果',
-        icon: 'fa-eye',
         route: `/device-manager/${this.id}/component-preview`,
       });
     }
@@ -239,7 +249,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'components',
         title: '组件配置中心',
         description: '选择控制页面显示的设备字段',
-        icon: 'fa-sliders',
         route: `/device-manager/${this.id}/components`,
       });
     }
@@ -249,7 +258,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         id: 'sharing',
         title: '设备共享',
         description: '邀请其他用户共同控制这台设备',
-        icon: 'fa-user-group',
         route: `/share-manager/${this.id}?from=device-settings`,
       });
     }
@@ -261,7 +269,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         description: this.isSharedDevice
           ? '移除这台由其他用户共享的设备'
           : '从账户中移除设备及其关联自动化',
-        icon: 'fa-link-slash',
         danger: true,
         showChevron: false,
       },
@@ -293,6 +300,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private readonly noticeService: NoticeService,
     private readonly cd: ChangeDetectorRef,
     private readonly panels: DevicePanelService,
+    private readonly roomService: RoomService,
   ) {}
 
   ngOnInit(): void {
@@ -306,6 +314,10 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
     this.subscriptions.add(this.dataService.deviceDataLoader.subscribe(loaded => {
       if (loaded) this.bindDevice();
+    }));
+
+    this.subscriptions.add(this.dataService.userDataLoader.subscribe(() => {
+      this.cd.markForCheck();
     }));
   }
 
@@ -350,7 +362,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   async setPanelMode(mode: PanelMode): Promise<void> {
-    if (!this.device || this.panelModeSaving || this.panelModeLoading || mode === this.panelMode) return;
+    if (!this.device || this.panelModeSaving || this.panelModeLoading || this.debugModeSaving || mode === this.panelMode) return;
 
     const device = this.device;
 
@@ -392,12 +404,150 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     }
   }
 
+  async setDebugMode(enabled: boolean): Promise<void> {
+    if (!this.device || this.isSharedDevice || this.debugModeSaving || this.panelModeSaving
+      || this.panelModeLoading || enabled === this.debugEnabled) return;
+
+    const device = this.device;
+
+    this.debugModeSaving = true;
+
+    this.cd.markForCheck();
+
+    try {
+      if (device.config.mode !== 'bbp2') {
+        await this.panels.setView(device, enabled ? 'debug' : this.panelMode);
+      } else {
+        const context = device.config.isPreview ? undefined
+          : captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+
+        const component = enabled ? 'TestDashboard' : 'DeviceV2';
+
+        if (!device.config.isPreview && !await this.deviceService.saveDeviceConfig(device, { component })) throw new Error('mode-save-failed');
+        if (context) assertDeviceV2AccountContext(this.dataService, context);
+
+        device.config.component = component;
+        device.subject.next({ key: 'component', value: component, source: 'device-settings' });
+      }
+
+      if (!this.destroyed && this.device === device) {
+        await this.navCtrl.navigateRoot(`/device/${encodeURIComponent(this.id)}`);
+      }
+    } catch {
+      if (!this.destroyed) await this.noticeService.showToast('切换调试模式失败，请稍后重试');
+    } finally {
+      this.debugModeSaving = false;
+
+      if (!this.destroyed) this.cd.markForCheck();
+    }
+  }
+
   ngOnDestroy(): void {
     this.destroyed = true;
 
     this.subscriptions.unsubscribe();
     this.clearSecret();
     void this.confirmDialog?.dismiss();
+    void this.roomDialog?.dismiss();
+  }
+
+  async selectRooms(): Promise<void> {
+    if (!this.loaded || this.roomSelectionBusy || this.device.config.isPreview) return;
+
+    const deviceId = this.id;
+    const sessionEpoch = this.dataService.sessionEpoch;
+
+    this.roomSelectionBusy = true;
+
+    this.cd.markForCheck();
+
+    try {
+      const snapshot = await this.roomService.load();
+
+      if (this.destroyed || this.id !== deviceId) return;
+
+      let saving = false;
+
+      const alert = await this.alertCtrl.create({
+        header: '所属区域',
+        message: snapshot.order.length ? '可选择多个区域，全部取消即为未分配。' : '还没有区域，请先创建区域。',
+        backdropDismiss: false,
+        inputs: snapshot.order.map(name => ({
+          type: 'checkbox',
+          label: name,
+          value: name,
+          checked: snapshot.rooms[name].includes(deviceId),
+        })),
+        buttons: [
+          { text: '取消', role: 'cancel', handler: () => !saving },
+          snapshot.order.length ? {
+            text: '保存',
+            handler: async (selected: string[]) => {
+              if (saving || this.destroyed || this.id !== deviceId) return false;
+
+              const selectedRooms = new Set(selected);
+
+              const changed = snapshot.order.some(name =>
+                selectedRooms.has(name) !== snapshot.rooms[name].includes(deviceId));
+
+              if (!changed) return true;
+
+              const draft = { list: [...snapshot.order], dict: structuredClone(snapshot.rooms) };
+
+              for (const name of draft.list) {
+                const devices = draft.dict[name];
+
+                if (selectedRooms.has(name)) {
+                  if (!devices.includes(deviceId)) devices.push(deviceId);
+                } else {
+                  draft.dict[name] = devices.filter(id => id !== deviceId);
+                }
+              }
+
+              saving = true;
+              alert.message = '正在保存…';
+
+              try {
+                await this.roomService.saveData(draft, snapshot.revision, sessionEpoch);
+
+                return true;
+              } catch (error) {
+                alert.message = roomErrorMessage(error);
+
+                return false;
+              } finally {
+                saving = false;
+              }
+            },
+          } : { text: '管理区域', role: 'manage' },
+        ],
+      });
+
+      this.roomDialog = alert;
+
+      if (this.destroyed || this.id !== deviceId) {
+        alert.remove();
+
+        return;
+      }
+
+      await alert.present();
+
+      const result = await alert.onDidDismiss();
+
+      if (result.role === 'manage' && !this.destroyed && this.id === deviceId) {
+        await this.navCtrl.navigateForward('/room-manager', {
+          state: { backHref: `/device/${deviceId}/settings` },
+        });
+      }
+    } catch (error) {
+      if (!this.destroyed) await this.noticeService.showToast(roomErrorMessage(error));
+    } finally {
+      this.roomDialog = undefined;
+      this.roomSelectionBusy = false;
+
+      if (!this.destroyed) this.cd.markForCheck();
+    }
   }
 
   async toggleKey(): Promise<void> {
@@ -875,6 +1025,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   selectMenuItem(item: MenuListItem): void {
+    if (item.id === 'rooms') {
+      void this.selectRooms();
+
+      return;
+    }
+
     if (item.route) {
       void this.navCtrl.navigateForward(item.route);
 

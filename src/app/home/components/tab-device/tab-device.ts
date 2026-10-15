@@ -112,7 +112,7 @@ export class TabDeviceComponent implements OnInit {
     await this.dismissAddMenu();
 
     await this.navController.navigateForward(url, {
-      state: url === '/room-manager' ? { createRegion: true, backHref: '/home/device' } : undefined,
+      state: url === '/room-manager' ? { backHref: '/home/device' } : undefined,
     });
   }
 

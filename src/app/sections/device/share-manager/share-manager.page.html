@@ -129,14 +129,14 @@
             <div class="inline-loading" role="status" aria-label="正在加载收藏"><ion-spinner name="crescent" /></div>
           } @else if (bookmarks.items().length) {
             <div class="device-list">
-              @for (item of bookmarks.items(); track item.logicalDeviceId) {
+              @for (item of bookmarks.items(); track item.region + ':' + item.logicalDeviceId) {
                 <div class="device-entry">
-                  <a class="device-row" [routerLink]="['/s', item.token]">
+                  <a class="device-row" [routerLink]="['/s', item.token]" [queryParams]="{ region: item.region }">
                     <span class="device-image"><i class="fa-light fa-bookmark" aria-hidden="true"></i></span>
-                    <span class="device-copy"><strong>{{ item.name }}</strong><small>公开设备 · 仅查看</small></span>
+                    <span class="device-copy"><strong>{{ item.name }}</strong><small>{{ item.region }} · 公开设备 · 仅查看</small></span>
                   </a>
-                  <button type="button" class="remove-action" (click)="removePublicDevice(item.logicalDeviceId)"
-                    [attr.aria-label]="'移除 ' + item.name + ' 的本机收藏'">
+                  <button type="button" class="remove-action" (click)="removePublicDevice(item.logicalDeviceId, item.region)"
+                    [attr.aria-label]="'移除 ' + item.region + ' ' + item.name + ' 的本机收藏'">
                     <i class="fa-light fa-xmark" aria-hidden="true"></i>
                   </button>
                 </div>

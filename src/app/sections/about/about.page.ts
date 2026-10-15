@@ -12,7 +12,6 @@ import {
 } from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DocPage } from 'src/app/core/pages/doc/doc.page';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 
 @Component({
     selector: 'app-about',
@@ -27,12 +26,10 @@ import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.c
       IonTitle,
       IonToolbar,
       TranslatePipe,
-      HeroCardComponent,
     ],
 })
 export class AboutPage {
 
-  LOGO = CONFIG.LOGIN_LOGO;
   TELEPHONE = CONFIG.TELEPHONE;
   ABOUT_US = CONFIG.ABOUT_US;
   USER_AGREEMENT = CONFIG.USER_AGREEMENT;

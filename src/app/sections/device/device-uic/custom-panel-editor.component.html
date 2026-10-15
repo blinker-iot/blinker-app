@@ -54,7 +54,7 @@
         </div>
 
         @if (preview) {
-          <app-custom-panel-frame [document]="preview" [cards]="cards" [theme]="theme" />
+          <app-custom-panel-frame [document]="preview" [cards]="cards" [theme]="theme" [readOnlyScroll]="true" />
         } @else {
           <div class="preview-empty">
             <i class="fa-light fa-wave-pulse" aria-hidden="true"></i>

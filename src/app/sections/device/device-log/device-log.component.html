@@ -17,14 +17,6 @@
 <ion-content [fullscreen]="true">
   @if (loaded) {
   <main>
-    <app-hero-card
-      iconClass="fa-light fa-rectangle-list"
-      eyebrow="RUNTIME LOG"
-      [heading]="deviceName"
-      description="集中查看设备状态、数据上报和用户操作记录。"
-      [meta]="logs.length"
-    />
-
     <section class="summary-grid" aria-label="日志概览">
       <div class="summary-card surface-card">
         <span class="summary-icon blue"><i class="fa-light fa-wave-pulse"></i></span>

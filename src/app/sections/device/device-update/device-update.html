@@ -17,13 +17,6 @@
 <ion-content [fullscreen]="true">
   @if (loaded) {
   <main>
-    <app-hero-card
-      iconClass="fa-light fa-microchip"
-      eyebrow="FIRMWARE UPDATE"
-      [heading]="deviceName"
-      description="检查并安装设备固件，更新期间请保持设备联网和供电。"
-    />
-
     <section [class]="'update-status surface-card tone-' + stateMeta.tone">
       <span class="status-icon" aria-hidden="true">
         <i class="fa-light" [class]="'fa-light ' + stateMeta.icon" [class.fa-spin]="updateState === 1"></i>

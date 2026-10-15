@@ -1,8 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+
 import {
   AlertController, IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, NavController,
 } from '@ionic/angular/standalone';
+
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { OrderData } from 'src/app/core/model/data.model';
 import { DataService } from 'src/app/core/services/data.service';
@@ -13,8 +15,10 @@ import { RoomService, roomErrorMessage } from '../room.service';
   standalone: true,
   templateUrl: 'room-edit.html',
   styleUrls: ['room-edit.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, BDeviceImgComponent],
 })
+
 export class RoomEditPage implements OnInit {
   roomName = '';
   loaded = false;
@@ -58,6 +62,7 @@ export class RoomEditPage implements OnInit {
 
       if (!Object.hasOwn(snapshot.rooms, name)) {
         this.error = '该区域已被删除，请返回区域列表。';
+
         return;
       }
 
@@ -84,11 +89,15 @@ export class RoomEditPage implements OnInit {
 
             if (!name || name.length > 10 || ['__proto__', 'constructor', 'prototype'].includes(name)) {
               alert.message = '请输入 1–10 个字的有效区域名称。';
+
               return false;
             }
+
             if (name === this.roomName) return true;
+
             if (this.draft.list.includes(name)) {
               alert.message = '该区域名称已存在。';
+
               return false;
             }
 
@@ -96,8 +105,11 @@ export class RoomEditPage implements OnInit {
 
             this.draft.list[index] = name;
             this.draft.dict[name] = this.currentRoomData;
+
             delete this.draft.dict[this.roomName];
+
             this.roomName = name;
+
             return true;
           },
         },

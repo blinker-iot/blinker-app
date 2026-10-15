@@ -111,7 +111,7 @@ export class DevicePage implements OnInit, OnDestroy {
   get debugMode(): boolean { return this.deviceComponent === 'TestDashboard'; }
 
   get customMode(): boolean {
-    return readDevicePanelMode(this.device) === 'custom' && !!this.device?.config.customPanel && !this.debugMode;
+    return readDevicePanelMode(this.device) === 'custom' && !this.debugMode;
   }
 
   async returnToPanel(): Promise<void> {
@@ -140,7 +140,7 @@ export class DevicePage implements OnInit, OnDestroy {
 
   // Personal choice, then the layout's own theme, then the app's light or dark mode.
   get deviceTheme(): UiTheme {
-    if (this.customMode) return this.device!.config.customPanel!.theme;
+    if (this.customMode && this.device?.config.customPanel) return this.device.config.customPanel.theme;
 
     return this.selectedDeviceTheme ?? this.layoutTheme ?? (this.viewService.theme === 'dark' ? 'dark' : 'natural');
   }

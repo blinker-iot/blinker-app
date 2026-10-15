@@ -11,7 +11,6 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
 import { BlinkerDevice } from 'src/app/core/model/device.model';
 import { DataService } from 'src/app/core/services/data.service';
 
@@ -85,7 +84,6 @@ function createTestDatasets(): StorageDataset[] {
     IonSpinner,
     IonTitle,
     IonToolbar,
-    HeroCardComponent,
   ],
 })
 export class DeviceStoragePage implements OnInit, OnDestroy {
@@ -103,10 +101,6 @@ export class DeviceStoragePage implements OnInit, OnDestroy {
 
   get defaultBackHref(): string {
     return `/device-manager/${this.id}`;
-  }
-
-  get deviceName(): string {
-    return this.device?.config?.customName || '设备';
   }
 
   get selectedDataset(): StorageDataset | undefined {

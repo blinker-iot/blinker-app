@@ -54,6 +54,8 @@
       @if (customPanel) {
         <app-custom-panel-frame [document]="customPanel" [cards]="cards"
           [interactive]="false" [restricted]="true" [readOnlyScroll]="true" [theme]="theme" />
+      } @else if (mode === 'custom') {
+        <section class="console-empty"><p>还没有自定义界面，请联系设备所有者配置。</p></section>
       } @else if (cards.length) {
         <app-page-layout-panel [cards]="cards" [interactive]="false" />
       } @else {

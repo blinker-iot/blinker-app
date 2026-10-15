@@ -60,24 +60,6 @@ export class GuidePage {
       : 'DEVICE_GUIDE.TITLE';
   }
 
-  get eyebrowKey(): string {
-    return this.isReconfiguration
-      ? 'DEVICE_GUIDE.RECONFIGURE_EYEBROW'
-      : 'DEVICE_GUIDE.EYEBROW';
-  }
-
-  get heroTitleKey(): string {
-    return this.isReconfiguration
-      ? 'DEVICE_GUIDE.RECONFIGURE_TITLE'
-      : 'DEVICE_GUIDE.HERO_TITLE';
-  }
-
-  get heroDescriptionKey(): string {
-    return this.isReconfiguration
-      ? 'DEVICE_GUIDE.RECONFIGURE_DESCRIPTION'
-      : 'DEVICE_GUIDE.HERO_DESCRIPTION';
-  }
-
   get sectionTitleKey(): string {
     return this.isReconfiguration
       ? 'DEVICE_GUIDE.RECONFIGURE_SECTION_TITLE'
