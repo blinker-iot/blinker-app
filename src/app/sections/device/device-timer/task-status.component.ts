@@ -10,10 +10,16 @@ import { taskOperationText } from './device-timer.models';
       <strong class="capacity-text">{{ timer.capacityText }}</strong>
       <p class="source-text">{{ timer.sourceText }}</p>
     </section>
-    @if (timer.busy) { <p role="status"><ion-spinner name="crescent" />正在等待设备确认/读取任务…</p> }
+    @if (timer.busy) { <p role="status"><ion-spinner name="crescent" />{{ timer.statusText }}</p> }
     @if (timer.error) { <p role="alert">{{ timer.error }}</p> }
     @if (error) { <p role="alert">{{ error }}</p> }
     @if (timer.notice) { <p role="status">{{ timer.notice }}</p> }
+    @if (timer.timingText) {
+      <details class="task-timing-details"><summary>客户端操作耗时</summary>
+        <p>{{ timer.timingText }}</p>
+        <p>提交准备包含本地请求记录和发送节拍；确认段包含响应校验和请求记录整理。HTTP开始不是设备收到指令的时刻，确认也不代表到期动作已执行。</p>
+      </details>
+    }
     @if (timer.ready) {
       <details class="task-query-details"><summary>查询与操作说明</summary>
         <p>当前查询修订 {{ timer.revision }}。设备有写入配额和开始冷却；被限流时稍后手动核对，不连续点击或自动重试。</p>

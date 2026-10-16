@@ -1,7 +1,7 @@
 import '@angular/compiler';
 import { Component, Input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { API } from '../../../configs/api.config';
 import { DeviceTaskClient, TaskApi } from '../../../core/device-v2/tasks/client';
 import { TaskRecord, TaskRequest, TaskResponse } from '../../../core/device-v2/tasks/contract';
@@ -47,14 +47,150 @@ function fixture({ capacity = 4, targetCount = 1 } = {}) {
   }, () => ({ authority: API.BASE_URL, accountId: data.auth.uuid, sessionEpoch: data.sessionEpoch }),
   () => new Uint8Array(16).fill(serial++));
   const manifests = { load: vi.fn(() => undefined) };
-  const page = () => new TimerService(client, data as any, manifests as any);
-  return { data, records, storage, execute, client, page, manifests,
+  const visibility = { active: new BehaviorSubject(true) };
+  const page = () => new TimerService(client, data as any, manifests as any, visibility as any);
+  return { data, records, storage, execute, client, page, manifests, visibility,
     setInitialized: (v: boolean) => { initialized = v; }, setRevision: (v: number) => { revision = v; } };
 }
 const definition = { schedule: { kind: 'countdown' as const, durationMillis: 3000 }, enabled: true,
   key: 'power', valueType: 'boolean' as const, value: false };
 
 describe('V2 task page lifecycle and original intent', () => {
+  it('returns confirmed before a deferred refresh and keeps stale revision unavailable for writes', async () => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    const execute = f.execute.getMockImplementation()!;
+    let finish!: () => void;
+    f.execute.mockImplementation(async (device, request, signal, onDispatch) => {
+      if (request.operation === 'catalog') return new Promise(resolve => {
+        finish = () => { void execute(device, request, signal, onDispatch).then(resolve); };
+      });
+      return execute(device, request, signal, onDispatch);
+    });
+    expect(await page.write({ operation: 'create', expectedRevision: 0, definition })).toBe(true);
+    expect(page.notice).toContain('设备已确认本次管理操作');
+    expect(page.phase).toBe('refreshing'); expect(page.busy).toBe(true); expect(page.ready).toBe(false);
+    expect(page.revision).toBe(0); expect(page.canWrite).toBe(false); expect(page.pending).toBeUndefined();
+    finish(); await vi.waitFor(() => expect(page.ready).toBe(true));
+    expect(page.records).toHaveLength(1); expect(page.revision).toBe(1); page.ngOnDestroy();
+  });
+  it('does not withdraw confirmation or replay a write when its later list read fails', async () => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    const execute = f.execute.getMockImplementation()!;
+    f.execute.mockImplementation(async (device, request, signal, onDispatch) => {
+      if (request.operation === 'catalog') throw new Error('TASK_DEVICE_OFFLINE');
+      return execute(device, request, signal, onDispatch);
+    });
+    expect(await page.write({ operation: 'create', expectedRevision: 0, definition })).toBe(true);
+    await vi.waitFor(() => expect(page.busy).toBe(false));
+    expect(page.notice).toContain('设备已确认本次管理操作'); expect(page.error).toContain('云端连接');
+    expect(page.ready).toBe(false); expect(page.capacity).toBeNull(); expect(page.records).toEqual([]);
+    expect(page.pending).toBeUndefined(); expect(f.storage.size).toBe(0);
+    expect(f.execute.mock.calls.filter(([, request]) => request.operation === 'create')).toHaveLength(1);
+    page.ngOnDestroy();
+  });
+  it('separates local dispatch wait, verified confirmation and list read without inventing device RX time', async () => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    const execute = f.execute.getMockImplementation()!; let now = 1000, finish!: () => void;
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => now);
+    try {
+      f.execute.mockImplementation(async (device, request, signal, onDispatch) => {
+        if (request.operation === 'create') { now = 1050; onDispatch?.(); now = 1200; }
+        if (request.operation === 'catalog') return new Promise(resolve => {
+          finish = () => { now = 1600; void execute(device, request, signal, onDispatch).then(resolve); };
+        });
+        return execute(device, request, signal, onDispatch);
+      });
+      expect(await page.write({ operation: 'create', expectedRevision: 0, definition })).toBe(true);
+      expect(page.timings).toMatchObject({ submissionMs: 200, dispatchWaitMs: 50, confirmationMs: 150,
+        refreshMs: null, evidence: 'fresh' });
+      expect(page.timingText).toContain('HTTP开始至设备确认 150 ms');
+      expect(page.timingText).not.toContain('设备接收耗时');
+      finish(); await vi.waitFor(() => expect(page.busy).toBe(false));
+      expect(page.timings.refreshMs).toBe(400); expect(page.timingText).toContain('列表读取 400 ms');
+    } finally { clock.mockRestore(); page.ngOnDestroy(); }
+  });
+  it('keeps historical confirmation distinct from a new device ACK', async () => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    f.execute.mockImplementationOnce(async (_, request) => ({ contract: 'device-tasks/1', logicalDeviceId: id,
+      requestId: request.requestId, state: 'verified', evidence: 'historical', result: null }));
+    expect(await page.write({ operation: 'create', expectedRevision: 0, definition }, false)).toBe(true);
+    expect(page.timings.evidence).toBe('historical'); expect(page.timingText).toContain('历史确认');
+    expect(page.notice).toContain('原请求已有历史确认'); expect(page.notice).not.toContain('设备已确认本次');
+    expect(page.ready).toBe(false); page.ngOnDestroy();
+  });
+  it('saves target page reads after a write but still fetches changed progress at the same revision', async () => {
+    const f = fixture(), page = f.page(); await page.open(id); f.execute.mockClear();
+    expect(await page.write({ operation: 'create', expectedRevision: 0, definition })).toBe(true);
+    await vi.waitFor(() => expect(page.ready).toBe(true));
+    expect(f.execute.mock.calls.map(([, r]) => r.operation)).toEqual(['create', 'catalog', 'read']);
+    expect(f.execute.mock.calls.flatMap(([, r]) => r.operation === 'catalog' ? [r.index] : [])).toEqual([null]);
+    f.records[0].progress = 3; f.execute.mockClear(); await page.refresh();
+    expect(page.revision).toBe(1); expect(page.records[0].progress).toBe(3);
+    expect(f.execute.mock.calls.map(([, r]) => r.operation)).toEqual(['catalog', 'read']);
+    page.ngOnDestroy();
+  });
+  it('keeps confirmation when the fresh row read fails, without replaying or publishing the old CAS', async () => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    const execute = f.execute.getMockImplementation()!; f.execute.mockClear();
+    f.execute.mockImplementation(async (device, request, signal, onDispatch) => {
+      if (request.operation === 'read') throw new Error('TASK_DEVICE_OFFLINE');
+      return execute(device, request, signal, onDispatch);
+    });
+    expect(await page.write({ operation: 'create', expectedRevision: 0, definition })).toBe(true);
+    await vi.waitFor(() => expect(page.busy).toBe(false));
+    expect(page.notice).toContain('设备已确认本次管理操作'); expect(page.error).toContain('云端连接');
+    expect(page.ready).toBe(false); expect(page.canWrite).toBe(false); expect(page.revision).toBe(0);
+    expect(page.records).toEqual([]); expect(page.pending).toBeUndefined(); expect(f.storage.size).toBe(0);
+    expect(f.execute.mock.calls.map(([, r]) => r.operation)).toEqual(['create', 'catalog', 'read']);
+    page.ngOnDestroy();
+  });
+  it('rejects a table changed after its fresh catalog anchor and leaves recovery to an explicit query', async () => {
+    const f = fixture(), page = f.page(); f.setRevision(1);
+    f.records.push({ taskId: 7, definitionRevision: 1, consumedUtcMillis: 0,
+      progress: 0, startSequence: 0, definition });
+    await page.open(id); const execute = f.execute.getMockImplementation()!; f.execute.mockClear();
+    f.execute.mockImplementation(async (device, request, signal, onDispatch) => {
+      const result = await execute(device, request, signal, onDispatch);
+      if (request.operation === 'catalog') f.setRevision(2);
+      return result;
+    });
+    await page.refresh();
+    expect(page.ready).toBe(false); expect(page.revision).toBe(0); expect(page.canWrite).toBe(false);
+    expect(page.records).toEqual([]); expect(f.storage.size).toBe(0);
+    expect(f.execute.mock.calls.map(([, r]) => r.operation)).toEqual(['catalog', 'read']);
+    expect(f.execute.mock.calls[1][1]).toMatchObject({ expectedRevision: 1, index: 0 });
+    f.execute.mockImplementation(execute); await page.refresh();
+    expect(page.ready).toBe(true); expect(page.revision).toBe(2);
+    await expect(page.write({ operation: 'start', taskId: 7, expectedRevision: 1 })).rejects.toThrow('TASK_TABLE_CHANGED');
+    expect(f.execute.mock.calls.every(([, r]) => r.operation === 'catalog' || r.operation === 'read')).toBe(true);
+    page.ngOnDestroy();
+  });
+  it('background cancellation preserves an uncertain write and resumes only fresh reads', async () => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    const execute = f.execute.getMockImplementation()!; let finish!: () => void, observed!: AbortSignal;
+    f.execute.mockImplementation(async (device, request, signal, onDispatch) => {
+      if (request.operation === 'create') return new Promise(resolve => {
+        observed = signal; finish = () => { void execute(device, request, signal, onDispatch).then(resolve); };
+      });
+      return execute(device, request, signal, onDispatch);
+    });
+    const work = page.write({ operation: 'create', expectedRevision: 0, definition });
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
+    f.visibility.active.next(false); expect(observed.aborted).toBe(true);
+    finish(); expect(await work).toBe(false); expect(page.ready).toBe(false); expect(page.notice).toBe('');
+    expect(f.storage.size).toBe(1);
+    f.visibility.active.next(true); await vi.waitFor(() => expect(page.ready).toBe(true));
+    expect(page.pending?.operation).toBe('create'); expect(page.canWrite).toBe(false);
+    expect(f.execute.mock.calls.filter(([, r]) => r.operation === 'create')).toHaveLength(1);
+    page.ngOnDestroy();
+  });
+  it('does not reopen an Ionic view that was left while the app was in background', async () => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    f.visibility.active.next(false); page.close(); const calls = f.execute.mock.calls.length;
+    f.visibility.active.next(true); await Promise.resolve();
+    expect(f.execute).toHaveBeenCalledTimes(calls); expect(page.ready).toBe(false);
+    expect(page.phase).toBe('idle'); expect(page.timingText).toBe(''); page.ngOnDestroy();
+  });
   it('uses compatible shared capability names/value labels without adding a scheduling target or changing definitions', async () => {
     const f = fixture(), page = f.page();
     Object.assign(f.data.device.dict[id], { displayMetadata: { logicalDeviceId: id, revision: 1, name: '客厅灯', capabilities: [
@@ -135,7 +271,8 @@ describe('V2 task page lifecycle and original intent', () => {
   it('shows a verified attempt restriction without clearing intent, reporting success or retrying', async () => {
     for (const reason of ['write-budget', 'start-cooldown']) {
       const f = fixture(), page = f.page(); await page.open(id);
-      await page.write({ operation: 'create', expectedRevision: 0, definition }); f.execute.mockClear();
+      await page.write({ operation: 'create', expectedRevision: 0, definition });
+      await vi.waitFor(() => expect(page.ready).toBe(true)); f.execute.mockClear();
       f.execute.mockImplementationOnce(async (_, request) => ({ contract: 'device-tasks/1', logicalDeviceId: id,
         requestId: request.requestId, state: 'rejected', evidence: 'fresh', result: {
           kind: 'rejection', tableRevision: 1, count: 1, reason } }) as unknown as TaskResponse);
@@ -167,6 +304,7 @@ describe('V2 task page lifecycle and original intent', () => {
     const f = fixture(), page = f.page(); await page.open(id);
     expect(page.ready).toBe(true); expect(page.capacity).toBe(4); expect(page.targets[0].key).toBe('power');
     expect(await page.write({ operation: 'create', expectedRevision: 0, definition })).toBe(true);
+    await vi.waitFor(() => expect(page.ready).toBe(true));
     expect(page.records[0].taskId).toBe(7); expect(page.revision).toBe(1); expect(page.pending).toBeUndefined();
     expect(f.execute.mock.calls.filter(c => !['read', 'catalog'].includes(c[1].operation)).map(c => c[1].operation)).toEqual(['create']);
     page.ngOnDestroy();
@@ -217,6 +355,7 @@ describe('V2 task page lifecycle and original intent', () => {
   it('clears old table, targets, revision and capacity as soon as refresh starts and retains unknown state on failure', async () => {
     const f = fixture(), page = f.page(); await page.open(id);
     await page.write({ operation: 'create', expectedRevision: 0, definition });
+    await vi.waitFor(() => expect(page.ready).toBe(true));
     expect(page.revision).toBe(1); expect(page.records).toHaveLength(1);
     let reject!: (error: unknown) => void;
     f.execute.mockImplementationOnce(async () => new Promise((_, r) => { reject = r; }));
@@ -233,6 +372,7 @@ describe('V2 task page lifecycle and original intent', () => {
   it('an unknown mutation clears confirmed capacity/table but preserves its exact pending journal and creation block', async () => {
     const f = fixture(), page = f.page(); await page.open(id);
     await page.write({ operation: 'create', expectedRevision: 0, definition });
+    await vi.waitFor(() => expect(page.ready).toBe(true));
     f.execute.mockRejectedValueOnce(new Error('TASK_OUTCOME_UNKNOWN'));
     expect(await page.write({ operation: 'start', expectedRevision: 1, taskId: 7 })).toBe(false);
     expect(page.capacity).toBeNull(); expect(page.revision).toBe(0); expect(page.records).toEqual([]); expect(page.targets).toEqual([]);
@@ -243,6 +383,7 @@ describe('V2 task page lifecycle and original intent', () => {
   it('closing a populated fresh table removes its revision/capacity rather than exposing an empty confirmed table', async () => {
     const f = fixture(), page = f.page(); await page.open(id);
     await page.write({ operation: 'create', expectedRevision: 0, definition });
+    await vi.waitFor(() => expect(page.ready).toBe(true));
     expect(page.ready).toBe(true); expect(page.revision).toBe(1); expect(page.capacity).toBe(4); expect(page.records).toHaveLength(1);
     page.close(); expect(page.capacity).toBeNull(); expect(page.revision).toBe(0);
     expect(page.ready).toBe(false); expect(page.targets).toEqual([]); expect(page.records).toEqual([]);
@@ -254,6 +395,7 @@ describe('V2 task page lifecycle and original intent', () => {
     expect(page.ready).toBe(false); expect(page.canInitialize).toBe(true);
     expect(f.execute.mock.calls.map(c => c[1].operation)).toEqual(['catalog']);
     expect(await page.write({ operation: 'initialize' })).toBe(true);
+    await vi.waitFor(() => expect(page.ready).toBe(true));
     expect(page.ready).toBe(true); expect(page.canInitialize).toBe(false); page.ngOnDestroy();
   });
   it('requires explicit authority synchronization after a Key change instead of auto-rebinding on read', async () => {
@@ -263,6 +405,7 @@ describe('V2 task page lifecycle and original intent', () => {
     expect(page.ready).toBe(false); expect(page.canWrite).toBe(false); expect(page.canInitialize).toBe(true);
     expect(f.execute.mock.calls.map(c => c[1].operation)).toEqual(['catalog']);
     expect(await page.write({ operation: 'initialize' })).toBe(true);
+    await vi.waitFor(() => expect(page.ready).toBe(true));
     expect(page.ready).toBe(true); expect(page.canInitialize).toBe(false);
     expect(f.execute.mock.calls.filter(c => c[1].operation === 'initialize')).toHaveLength(1);
     page.ngOnDestroy();
@@ -273,7 +416,7 @@ describe('V2 task page lifecycle and original intent', () => {
     expect(f.execute.mock.calls.map(c => c[1].operation)).toEqual(['create']);
     expect(editor.ready).toBe(false); expect(editor.pending).toBeUndefined(); expect(editor.canWrite).toBe(false);
     editor.close(); const list = f.page(); await list.open(id);
-    expect(f.execute.mock.calls.map(c => c[1].operation)).toEqual(['create', 'catalog', 'catalog', 'read', 'read']);
+    expect(f.execute.mock.calls.map(c => c[1].operation)).toEqual(['create', 'catalog', 'read']);
     expect(list.ready).toBe(true); expect(list.records[0].taskId).toBe(7);
     editor.ngOnDestroy(); list.ngOnDestroy();
   });
@@ -288,10 +431,11 @@ describe('V2 task page lifecycle and original intent', () => {
     const calls = f.execute.mock.calls.length;
     expect(await page.retry()).toBe(false); expect(f.execute).toHaveBeenCalledTimes(calls);
     expect(await page.write({ operation: 'initialize' })).toBe(true);
+    await vi.waitFor(() => expect(page.ready).toBe(true));
     expect(page.ready).toBe(true); expect(page.pending).toEqual(original); expect(page.journal.held).toBe(true);
     expect(page.notice).toBe('设备已确认授权同步；原操作仍需核对，不会自动重提。');
     expect(page.canWrite).toBe(false); expect(page.canRetry).toBe(false); expect(page.canReviewPending).toBe(true);
-    expect(f.execute.mock.calls.slice(calls).map(c => c[1].operation)).toEqual(['initialize', 'catalog', 'catalog', 'read']);
+    expect(f.execute.mock.calls.slice(calls).map(c => c[1].operation)).toEqual(['initialize', 'catalog', 'catalog']);
     page.close(); await page.open(id);
     expect(page.canRetry).toBe(false); expect(page.pending).toEqual(original);
     await page.forget(page.journal); expect(page.canWrite).toBe(true); page.ngOnDestroy();

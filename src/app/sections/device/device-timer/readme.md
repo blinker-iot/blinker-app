@@ -1,15 +1,19 @@
 # Device V2 本机定时页面接线
 
-更新：2026-09-28，第四十五批最小设备源码独立重建/安装编译通过；第四十七批A1-1纯规则/判定软件已完成，当前下一步为设备主线§6第20项Broker有界观察。云规则页面边界另见[scene说明](../../scene/README.md)，不修改本机任务journal或把本页当云执行器。本批App只同步文档，没有新APK/ADB；未知根恢复、已分享operator实物和T2正式准入仍未完成。
+更新：2026-10-16。当前源码优化取[任务执行方案§11.32](../../../../../../blinker-library/docs/DEVICE_V2_TASK_AND_SKETCH_TIMER_EXECUTION_PLAN.md#1132-列表刷新冗余表头的有限优化)：复用本次认证Catalog／Target表头，省掉重复Read(metadata)，任务行／进度仍新鲜读取，550 ms、CAS及UNKNOWN保持。173项有限回归及类型／模板检查通过；匹配新APK及COM11单任务只读差异已按[§11.33](../../../../../../blinker-library/docs/DEVICE_V2_TASK_AND_SKETCH_TIMER_EXECUTION_PLAN.md#1133-com11受限临时试点的只读列表差异短验)完成：保存确认520.8 ms，随后列表2028.7 ms；唯一手动刷新2个HTTP、1791.3 ms。停用／sequence 0／progress 0、无Start，fresh读取与刷新期禁写通过，不宣称进度迁移或真实stale写挑战。临时设备认证退休，原固件／授权、账号／journal、准入／额度及配置已恢复；新APK保留。此处README是验收后的文档同步，不重建已验APK；Git交付状态另取主方案§11.34。R4／Wio正式任务仍关闭，Error 8待定位；云规则另见[scene说明](../../scene/README.md)，本页不是云执行器，下方旧批次只作历史。
 
 ## 当前状态与职责
 
 - 原设置→任务列表→编辑路由、HeroCard/主题保留；TimerService换成页面状态/取消适配器，根级TASK_CLIENT唯一持有HttpTaskApi及账号隔离的原意图存储。没有新增MQTT连接、后台调度器或定时服务。
-- 列表读取设备认证目标目录→任务metadata→同revision记录，使用稳定taskId，不再将数组下标当任务身份。刷新失败不会显示“空表成功”。编辑器新建/替换/删除经设备回执确认后直接返回，由列表执行唯一的新鲜查询；留在本页的启停/Start/原ID恢复仍在本页确认后查询。不乐观改device.data，不把旧表标ready；未知写不能导航假报成功。
+- 列表经`DeviceTaskClient.snapshot()`读取设备认证目标目录及其本次表头→同revision的fresh记录，不再额外读取一次相同metadata；冷目录以最后一份认证Target的表头为锚点。使用稳定taskId，不将数组下标当身份。刷新失败不显示“空表成功”。编辑器新建/替换/删除经设备回执确认后直接返回，由列表执行唯一的新鲜查询；留在本页的启停/Start/原ID恢复仍在本页确认后查询。不乐观改device.data，不把旧表标ready；未知写不能导航假报成功。
 - 创建/替换定义不Start；enable不恢复倒计时。列表单独确认“开始新倒计时”，已运行/Claimed状态不再显示可直接重开。倒计时、一次日期和固定UTC偏移的星期任务只赋值一个固件明确允许的标量Property；周一为bit0，手机时区的一次日期转UTC；固定偏移不自动跟随夏令时。
 - 首次进入只读，不自动Initialize；明确SCOPE_REQUIRED/AUTHORITY_REQUIRED才可新建同步，已有未确认同步只恢复其原ID。正确读取原拦截器的GatewayHttpError.code；未知失败不被当作未初始化。服务端owner/白名单/profile仍权威，页面不扩大权限；服务默认关闭。
 - 删除旧JSON timing/loop/countdown发送、160ms先开始再暂停、900ms假刷新结束、默认switch/toggle动作、20条/数组索引假设及不再使用的样式/模型。旧loop和演示任务不伪装为V2支持，旧timing-0等链接拒绝并引导返回新列表。
 - 设置页移除基于旧data.timer的“已启用”徽标；目录/表才是V2依据，预览、分享、BLE与网关任务不冒充当前普通WiFi owner试点。
+
+设备管理回执确认后先显示结果，不等待整表读取；编辑器经现有NoticeService保留fresh／historical提示并返回列表，由列表负责唯一一套新鲜查询。读取完成前不开放旧revision写入；后续读取失败不撤回确认、不伪装成未执行、不自动重发。倒计时只在设备接受并持久化Start后起算，保存定义不开始，手机点击时间不能代替设备起点。
+
+状态区分别显示准备提交、等待确认和刷新列表；折叠的“客户端操作耗时”区分本地journal／节拍、HTTP开始至验证及journal整理、列表读取。没有设备RX时戳，不能把HTTP开始称为实际下发或设备收到指令；fresh管理确认也不代表到期物理动作完成。
 
 ## 能力、持久化和生命周期
 
@@ -17,7 +21,7 @@ TaskPropertyTarget的真实目录是调度目标的唯一来源。普通Manifest
 
 统一的`IndexedDbIntentStorage`使用WebView原生IndexedDB，不新增插件/凭据库；原requestId＋完整typed意图的`durability: strict`事务 **oncomplete后才允许HTTP**，不是request.onsuccess。第六十批将原`IndexedDbTaskJournal`原样抽为共享存储适配器，任务仍使用原`blinker-device-tasks`数据库、intents表及键，不迁移或丢弃历史；自动化使用独立数据库，业务意图及恢复逻辑不混用。真实Android force-stop证明localStorage.setItem返回不能当作此持久屏障，已删除该适配器，不保留静默回退。存储端口为异步、按API authority/account/device隔离，每设备最多一个未决业务意图及一个显式授权同步，同一键原子保存且仍限2048字符，不存Key/Grant。写入或清理无法确认都显示日志错误；旧WebView不支持strict、容量满或损坏时拒绝新写，5秒有界失败，不以另一个requestId补发。
 
-根级客户端在首次异步存储前取得设备锁，协调Ionic保留的列表/编辑页；跨await重新核对账号/取消及完整原意图，清理也等待事务提交。页面各自拥有AbortController，离开、销毁和账号sessionEpoch变化取消查询并清旧显示；普通token续期不误判换账号。TimerService只用一个signal状态和现有访问器驱动列表及状态子组件，不依赖手工detectChanges/假等待；旧响应/旧确认弹窗不得操作新页面/账号。
+根级客户端在首次异步存储前取得设备锁，协调Ionic保留的列表/编辑页；跨await重新核对账号/取消及完整原意图，清理也等待事务提交。页面各自拥有AbortController，离开、销毁和账号sessionEpoch变化取消查询并清旧显示；普通token续期不误判换账号。复用AppVisibilityService在后台取消UI请求，返回前台只重新读取，不重发未确认写；若后台期间已离页，不重新打开保留的Ionic视图。TimerService只用一个signal状态和现有访问器驱动列表及状态子组件，不依赖手工detectChanges/假等待；旧响应/旧确认弹窗不得操作新页面/账号。
 
 这不是卸载、清应用数据、操作系统存储驱逐、磁盘损坏或多窗口并发的保证；未发布试点的旧localStorage记录不自动迁移。事务语义参考[IndexedDB durability](https://developer.mozilla.org/en-US/docs/Web/API/IDBDatabase/transaction)，真实证据仅覆盖本次Android/WebView。读取新鲜表不能替代未知Start原意图，恢复必须用户明确确认。
 
@@ -33,7 +37,13 @@ Pending/Unknown的显式入口：
 
 现有Broker按物理连接最多4次任务交换/秒，每个管理调用通常含Prepare和Commit两次。HttpTaskApi在上一HTTP结束后至下一请求开始保留550ms可取消间隔，使本App的顺序分页不以突发请求消耗该预算；不是延时后猜成功，也不放宽Broker。其他消费者竞争、未知延迟和总体账本额度仍可能拒绝，展示错误后由用户处理。
 
-目录最多32目标、任务表最多10项，每页独立认证查询；没有无限扫描/自动回收客户端记录。大目录的完整加载需要多次往返，短期重复刷新仍可能用尽64条服务账本直到只读TTL回收，页面明确报告额度而非重连绕过。尚未优化目录缓存命中或宣称32目标连续快速编辑已真机通过；T2c先使用COM3实际小目录，不能据此宣称最大规模长期可用。
+目录最多32目标、任务表最多10项，每页独立认证查询；没有无限扫描/自动回收客户端记录。根级DeviceTaskClient内存只保留最近8个完整能力目录，按authority／账号／sessionEpoch及设备隔离；每次仍新鲜校验metadata的capacity／total／fingerprint，命中才省去targets分页。初始化、上下文变化、目录失败／取消均不使用旧目录兜底；不持久化缓存或保存Grant。任务rows始终新鲜读取：自主执行的进度可能改变而tableRevision不变，不能按revision复用旧任务表。大目录首次加载及未命中仍有多次往返，短期重复查询可能耗尽64条服务账本；不宣称32目标连续快速编辑已真机通过，不放宽预算或重连绕过。
+
+本次snapshot的`tableRevision/count`仅为调用内局部值，不放入目录缓存；即使空表也必须重取认证头，并在返回前复核取消、账号／authority／sessionEpoch。热目录T条任务仅`1+T`次HTTP，冷目录F个目标为`1+F+T`；所有行保留expectedRevision／count／index／重复taskId校验，失败不自动换revision重读，不发布部分表，也不影响已确认操作或原journal。跨多行不承诺同一时刻的原子进度快照。原独立catalog／table入口复用同一读取实现，没有第二套协议或执行器。
+
+§11.32当前有限回归共173项通过（客户端49、服务38、页面51、真实模板16、模型19，无skip）：新增10项snapshot及2项页面服务用例，保留全部旧测试。首轮2处旧请求序列断言失败后按省去metadata更新，重跑受影响两组87项通过；不把重跑再累计。覆盖空表鲜读、冷末页头、同revision进度、混表拒绝、取消／账号及UNKNOWN，确认仍先于刷新且刷新失败不撤回确认。§11.30原161项仅作历史；软件结果不是新APK、射频性能或R4／Wio正式任务准入证据。
+
+历史§11.30真实App短验：启用／停用提交至确认约526／576 ms，列表随后约3.2／3.0 s；当时热目录一次写＋三次读取共4个HTTP，保存后读取窗口漏抓、未Start的限制仍保留。§11.31独立完成一次保存／Start／到期回调及完整窗口，原固件／授权和准入／额度已恢复。随后§11.32只做软件修正，当时尚未部署；新读取路径实物现取上方§11.33。旧“未提交／推送”属于各当批历史状态，交付以§11.34为准，不把旧耗时套用成新路径的严格A/B结果。
 
 ## 第二十九批软件证据（历史）
 

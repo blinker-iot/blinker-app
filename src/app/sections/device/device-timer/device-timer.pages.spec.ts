@@ -10,20 +10,41 @@ const record: TaskRecord = { taskId: 7, definitionRevision: 2, consumedUtcMillis
 function setup(routeId = 'task-7') {
   const timer = { generation: 1, id: 'device_a', ready: true, busy: false, canWrite: true, capacity: 4 as number | null, revision: 2,
     targets: [{ key: 'power', valueType: 'boolean' }, { key: 'level', valueType: 'uint' }],
-    records: structuredClone([record]), deviceName: 'test', open: vi.fn(async () => undefined),
+    records: structuredClone([record]), deviceName: 'test', notice: '设备已确认本次管理操作；不代表到期动作或物理输出已完成。', open: vi.fn(async () => undefined),
     close: vi.fn(), write: vi.fn(async () => true), retry: vi.fn(async () => true), forget: vi.fn(),
     canInitialize: false, canReviewPending: false, canRetry: true, pending: undefined as any, journal: { held: false } as any,
     get canCreate() { return this.canWrite && this.capacity !== null && !!this.targets.length && this.records.length < this.capacity; } };
   const nav = { navigateBack: vi.fn(async () => true) }, router = { navigate: vi.fn(async () => true) };
   const route = { snapshot: { paramMap: { get: (name: string) => name === 'id' ? 'device_a' : routeId } } };
   const dismissal = vi.fn(async () => ({ role: 'confirm' }));
-  const alerts = { create: vi.fn(async () => ({ present: vi.fn(async () => undefined), onDidDismiss: dismissal })) };
-  return { timer, nav, router, route, alerts, dismissal,
-    editor: new TimingEditPage(timer as any, route as any, nav as any, alerts as any),
+  const alerts = { create: vi.fn(async (_options: { header: string; message: string; buttons: unknown[] }) => ({ present: vi.fn(async () => undefined), onDidDismiss: dismissal })) };
+  const notices = { showToast: vi.fn(async () => undefined) };
+  return { timer, nav, router, route, alerts, dismissal, notices,
+    editor: new TimingEditPage(timer as any, route as any, nav as any, alerts as any, notices as any),
     list: new DeviceTimerPage(timer as any, route as any, router as any, alerts as any) };
 }
 
 describe('V2 task pages', () => {
+  it('keeps the exact confirmed feedback visible through editor navigation without waiting for list reads', async () => {
+    for (const notice of ['设备已确认本次管理操作；不代表到期动作或物理输出已完成。', '原请求已有历史确认；仍需新鲜查询核对当前任务。']) {
+      const f = setup('new'); await f.editor.ionViewWillEnter(); f.timer.notice = notice;
+      await f.editor.save();
+      expect(f.notices.showToast).toHaveBeenCalledExactlyOnceWith(notice, 3000);
+      expect(f.nav.navigateBack).toHaveBeenCalledOnce();
+      expect(f.timer.write).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ operation: 'create' }), false);
+    }
+  });
+  it('does not show confirmation or navigate on an unconfirmed write, and a toast failure cannot retry a confirmed write', async () => {
+    const unknown = setup('new'); await unknown.editor.ionViewWillEnter(); unknown.timer.write.mockResolvedValueOnce(false);
+    await unknown.editor.save(); expect(unknown.notices.showToast).not.toHaveBeenCalled(); expect(unknown.nav.navigateBack).not.toHaveBeenCalled();
+    const confirmed = setup('new'); await confirmed.editor.ionViewWillEnter(); confirmed.notices.showToast.mockRejectedValueOnce(new Error('presentation'));
+    await confirmed.editor.save(); expect(confirmed.nav.navigateBack).toHaveBeenCalledOnce(); expect(confirmed.timer.write).toHaveBeenCalledOnce();
+  });
+  it('explains that countdown starts at device acceptance and persistence rather than the phone click', async () => {
+    const f = setup(); await f.list.change(record, 'start');
+    expect(f.alerts.create.mock.calls[0][0]).toMatchObject({ message: expect.stringContaining('设备接受并持久化开始请求后才起算') });
+    expect(f.alerts.create.mock.calls[0][0].message).not.toContain('从现在重新计时');
+  });
   it('uses the service creation gate and keeps full-table editing/removal available', async () => {
     const f = setup('new'); await f.editor.ionViewWillEnter();
     f.timer.capacity = null; f.list.addTask(); await f.editor.save();

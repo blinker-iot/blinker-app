@@ -8,6 +8,7 @@ import { IndexedDbIntentStorage } from '../../../core/device-v2/intent-storage';
 import { TaskIntent, TaskRecord, TaskResponse } from '../../../core/device-v2/tasks/contract';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceV2ManifestCache } from '../../../core/services/device-v2-manifest-cache.service';
+import { AppVisibilityService } from '../../../core/services/app-visibility.service';
 import { capabilityBooleanLabel, capabilityDisplayName, deviceDisplayName } from '../../../core/device-v2/display-metadata';
 import { TaskTarget, taskEntryState, taskErrorCode, taskErrorText, taskTargets } from './device-timer.models';
 
@@ -24,6 +25,13 @@ export const TASK_CLIENT = new InjectionToken<DeviceTaskClient>('task client', {
   },
 });
 type Mutation = Exclude<TaskIntent, { operation: 'read' | 'catalog' }>;
+type TaskPhase = 'idle' | 'submitting' | 'confirming' | 'confirmed' | 'refreshing';
+interface TaskTimings {
+  submissionMs: number | null; dispatchWaitMs: number | null; confirmationMs: number | null;
+  refreshMs: number | null; evidence: 'fresh' | 'historical' | null;
+}
+const emptyTimings = (): TaskTimings => ({ submissionMs: null, dispatchWaitMs: null,
+  confirmationMs: null, refreshMs: null, evidence: null });
 
 @Injectable()
 export class TimerService implements OnDestroy {
@@ -31,6 +39,7 @@ export class TimerService implements OnDestroy {
   // template event. Signal-backed accessors notify every consuming page/status
   // view without injecting a view's ChangeDetectorRef into this service.
   private readonly state = signal({ id: '', busy: false, ready: false, error: '', notice: '',
+    phase: 'idle' as TaskPhase, timings: emptyTimings(),
     capacity: null as number | null, revision: 0, records: [] as TaskRecord[], targets: [] as TaskTarget[], journal: { held: false } as TaskPendingState });
   get id(): string { return this.state().id; }
   set id(value: string) { this.state.update(s => ({ ...s, id: value })); }
@@ -53,18 +62,50 @@ export class TimerService implements OnDestroy {
   get journal(): TaskPendingState { return this.state().journal; }
   private set journal(value: TaskPendingState) { this.state.update(s => ({ ...s, journal: value })); }
   get pending() { return this.journal.pending; }
+  get phase(): TaskPhase { return this.state().phase; }
+  private set phase(value: TaskPhase) { this.state.update(s => ({ ...s, phase: value })); }
+  get timings(): Readonly<TaskTimings> { return this.state().timings; }
+  private set timings(value: TaskTimings) { this.state.update(s => ({ ...s, timings: value })); }
+  get statusText(): string {
+    switch (this.phase) {
+      case 'submitting': return '正在准备提交任务请求…';
+      case 'confirming': return '请求已提交，等待设备确认…';
+      case 'confirmed': return this.timings.evidence === 'historical' ? '已收到历史确认，正在整理请求记录…' : '设备已确认，正在整理请求记录…';
+      case 'refreshing': return '正在更新任务目录与列表；不会重复下发已确认的操作…';
+      default: return this.busy ? '正在更新本地请求记录…' : '';
+    }
+  }
+  get timingText(): string {
+    const t = this.timings, parts: string[] = [];
+    const confirmation = t.evidence === 'historical' ? '历史确认' : '设备确认';
+    if (t.dispatchWaitMs !== null) parts.push(`提交准备 ${Math.round(t.dispatchWaitMs)} ms`);
+    if (t.confirmationMs !== null) parts.push(`HTTP开始至${confirmation} ${Math.round(t.confirmationMs)} ms`);
+    else if (t.submissionMs !== null) parts.push(`提交至${t.evidence ? confirmation : '本次请求结束'} ${Math.round(t.submissionMs)} ms`);
+    if (t.refreshMs !== null) parts.push(`列表读取 ${Math.round(t.refreshMs)} ms`);
+    return parts.join('；');
+  }
   private controller?: AbortController;
+  private resumeId?: string;
   private account?: DeviceV2AccountContext;
   private readonly subscription: Subscription;
   private viewGeneration = 0;
   get generation(): number { return this.viewGeneration; }
   constructor(@Inject(TASK_CLIENT) private readonly client: DeviceTaskClient,
-    private readonly data: DataService, private readonly manifests: DeviceV2ManifestCache) {
+    private readonly data: DataService, private readonly manifests: DeviceV2ManifestCache,
+    @Inject(AppVisibilityService) private readonly visibility: AppVisibilityService | null = null) {
     this.subscription = data.authDataChanged.subscribe(() => {
       if (this.account && (data.auth?.uuid !== this.account.accountId || data.sessionEpoch !== this.account.sessionEpoch)) {
         this.close(); this.error = taskErrorText(new Error('TASK_ACCOUNT_CHANGED'));
       }
     });
+    if (visibility) this.subscription.add(visibility.active.subscribe(active => {
+      if (!active && this.controller) {
+        const id = this.id; this.close(); this.resumeId = id;
+      } else if (active && this.resumeId) {
+        const id = this.resumeId; this.resumeId = undefined;
+        void this.open(id); // Read only. Never resume/retry an unresolved write.
+      }
+    }));
   }
   get deviceName(): string { return deviceDisplayName(this.data.device?.dict?.[this.id]); }
   targetLabel(key: string, valueType?: TaskRecord['definition']['valueType']): string {
@@ -83,7 +124,8 @@ export class TimerService implements OnDestroy {
     return expected && this.manifests.load(this.id)?.fields.find(field => field.key === key
       && field.kind === 0 && types[field.type] === expected);
   }
-  get canWrite(): boolean { return this.ready && !this.busy && !this.pending; }
+  private get foreground(): boolean { return this.visibility?.active.value ?? true; }
+  get canWrite(): boolean { return this.foreground && this.ready && !this.busy && !this.pending; }
   get canCreate(): boolean {
     return this.canWrite && this.targets.length > 0 && this.capacity !== null && this.records.length < this.capacity;
   }
@@ -100,7 +142,7 @@ export class TimerService implements OnDestroy {
   }
   get sourceText(): string { return '设备本地执行，通过云端查询和管理；查询与管理需要设备云端连接。'; }
   get canInitialize(): boolean {
-    return !this.busy && !!this.controller && !this.recoveryUnsupported
+    return this.foreground && !this.busy && !!this.controller && !this.recoveryUnsupported
       && (!!this.journal.authority || ['TASK_SCOPE_REQUIRED', 'TASK_AUTHORITY_REQUIRED'].includes(this.lastCode));
   }
   get canRetry(): boolean { return !!this.pending && !this.busy && !this.journal.held && !this.canInitialize && !this.recoveryUnsupported; }
@@ -108,6 +150,7 @@ export class TimerService implements OnDestroy {
   private lastCode = '';
   async open(id: string): Promise<void> {
     this.close(); this.id = id; this.notice = '';
+    if (!this.foreground) { this.resumeId = id; return; }
     const generation = this.viewGeneration;
     try {
       this.account = context(this.data);
@@ -121,8 +164,10 @@ export class TimerService implements OnDestroy {
   }
   close(): void {
     ++this.viewGeneration;
+    this.resumeId = undefined;
     this.controller?.abort(); this.controller = undefined;
     this.clearTable(); this.busy = false;
+    this.phase = 'idle'; this.timings = emptyTimings(); this.notice = '';
     this.journal = { held: false };
     this.lastCode = '';
   }
@@ -131,12 +176,13 @@ export class TimerService implements OnDestroy {
   }
   ngOnDestroy(): void { this.close(); this.subscription.unsubscribe(); }
   async refresh(): Promise<void> {
-    if (this.busy) return;
+    if (this.busy || !this.foreground) return;
     if (!this.controller) { if (this.id) await this.open(this.id); return; }
-    const controller = this.controller; this.busy = true; this.clearTable(); this.error = ''; this.lastCode = '';
+    const controller = this.controller, started = performance.now();
+    this.busy = true; this.phase = 'refreshing'; this.clearTable(); this.error = ''; this.lastCode = '';
+    this.timings = { ...this.timings, refreshMs: null };
     try {
-      const catalog = await this.client.catalog(this.id, controller.signal);
-      const table = await this.client.table(this.id, controller.signal);
+      const { catalog, table } = await this.client.snapshot(this.id, controller.signal);
       const journal = await this.client.inspect(this.id);
       this.assertCurrent(controller);
       if (table.records.length > catalog.capacity) throw new Error('TASK_CONTRACT_INVALID');
@@ -144,7 +190,12 @@ export class TimerService implements OnDestroy {
       this.capacity = catalog.capacity; this.revision = table.revision; this.records = table.records;
       this.journal = journal; this.ready = true;
     } catch (error) { if (this.controller === controller) this.fail(error); }
-    finally { if (this.controller === controller) this.busy = false; }
+    finally {
+      if (this.controller === controller) {
+        this.timings = { ...this.timings, refreshMs: Math.max(0, performance.now() - started) };
+        this.busy = false; this.phase = 'idle';
+      }
+    }
   }
   async write(intent: Mutation, refreshAfter = true): Promise<boolean> {
     if (intent.operation === 'initialize' ? !this.canInitialize : !this.canWrite) return false;
@@ -154,13 +205,13 @@ export class TimerService implements OnDestroy {
       throw new Error('TASK_TARGET_UNAVAILABLE');
     const expected = this.journal;
     const authorityRecovery = intent.operation === 'initialize' && !!expected.pending;
-    return this.mutate(signal => authorityRecovery
-      ? this.client.synchronizeAuthority(this.id, expected, signal)
-      : this.client.submit(this.id, intent, signal), refreshAfter, authorityRecovery);
+    return this.mutate((signal, onDispatch) => authorityRecovery
+      ? this.client.synchronizeAuthority(this.id, expected, signal, onDispatch)
+      : this.client.submit(this.id, intent, signal, onDispatch), refreshAfter, authorityRecovery);
   }
   async retry(): Promise<boolean> {
     if (!this.canRetry) return false;
-    return this.mutate(signal => this.client.retry(this.id, signal));
+    return this.mutate((signal, onDispatch) => this.client.retry(this.id, signal, onDispatch));
   }
   // UI must first show the fresh table and explicitly explain that this is NOT
   // a device cancellation. Exact request comparison prevents clearing a new intent.
@@ -173,12 +224,23 @@ export class TimerService implements OnDestroy {
     } finally { if (this.controller === controller) this.busy = false; }
   }
   get canReviewPending(): boolean { return this.ready && !!this.pending && !this.busy; }
-  private async mutate(send: (signal: AbortSignal) => Promise<TaskResponse>, refreshAfter = true, authorityRecovery = false): Promise<boolean> {
+  private async mutate(send: (signal: AbortSignal, onDispatch: () => void) => Promise<TaskResponse>, refreshAfter = true, authorityRecovery = false): Promise<boolean> {
     const controller = this.controller; if (!controller) return false;
-    this.busy = true; this.clearTable(); this.error = ''; this.notice = ''; let confirmed = false;
+    const started = performance.now(); let dispatched: number | undefined;
+    this.busy = true; this.phase = 'submitting'; this.timings = emptyTimings();
+    this.clearTable(); this.error = ''; this.notice = ''; let confirmed = false;
     try {
-      const response = await send(controller.signal); this.assertCurrent(controller);
+      const response = await send(controller.signal, () => {
+        if (this.controller !== controller || controller.signal.aborted || confirmed || dispatched !== undefined) return;
+        dispatched = performance.now(); this.phase = 'confirming';
+        this.timings = { ...this.timings, dispatchWaitMs: Math.max(0, dispatched - started) };
+      });
+      this.assertCurrent(controller);
       confirmed = true;
+      const now = performance.now();
+      this.timings = { ...this.timings, submissionMs: Math.max(0, now - started),
+        confirmationMs: dispatched === undefined ? null : Math.max(0, now - dispatched), evidence: response.evidence };
+      this.phase = 'confirmed';
       this.notice = authorityRecovery
         ? (response.evidence === 'historical' ? '授权同步已有历史确认；原操作仍需核对，不会自动重提。'
           : '设备已确认授权同步；原操作仍需核对，不会自动重提。')
@@ -191,12 +253,17 @@ export class TimerService implements OnDestroy {
           const journal = await this.client.inspect(this.id);
           if (this.controller === controller) this.journal = journal;
         } catch (error) { if (this.controller === controller) this.fail(error); }
-        if (this.controller === controller) this.busy = false;
+        if (this.controller === controller) {
+          if (!confirmed) this.timings = { ...this.timings, submissionMs: Math.max(0, performance.now() - started) };
+          this.busy = false; this.phase = 'idle';
+        }
       }
     }
     // An editor returning to the list leaves the fresh read to that view. Do
     // not read the entire catalog/table twice or mark this stale view ready.
-    if (confirmed && refreshAfter && this.controller === controller) await this.refresh();
+    // Confirmation is complete before this read. Its eventual failure cannot
+    // turn the confirmed mutation into an unknown write or delay feedback.
+    if (confirmed && refreshAfter && this.controller === controller && this.foreground) void this.refresh();
     return confirmed && this.controller === controller;
   }
   private assertCurrent(controller: AbortController): void {

@@ -19,7 +19,7 @@
         </select></label>
         @if (kind === 'countdown') {
           <label>倒计时秒数<input type="number" min="0.001" max="2147483.647" step="0.001" [(ngModel)]="seconds" /></label>
-          <p>保存后请返回列表，明确点击“开始新倒计时”。重启后中止，不自动续跑。</p>
+          <p>保存定义不会开始计时。请返回列表点击“开始新倒计时”，设备接受并持久化开始请求后起算，不以手机点击时刻为准。重启后中止，不自动续跑。</p>
         }
         @if (kind === 'once') { <label>执行日期（手机当前时区）<input type="datetime-local" step="0.001" [(ngModel)]="dateTime" /></label> }
         @if (kind === 'weekly') {

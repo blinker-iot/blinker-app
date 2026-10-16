@@ -205,7 +205,149 @@ describe('DeviceTaskClient intent journal', () => {
     f.execute.mockImplementationOnce(async (_, r) => response(r, true));
     expect((await f.client.retry(id)).evidence).toBe('historical'); expect(f.data.size).toBe(0);
   });
+  it('passes optional dispatch observations through submit, exact retry and authority sync without changing journal outcomes', async () => {
+    const f = setup(), observed = vi.fn(() => { throw new Error('diagnostic failure'); });
+    f.execute.mockImplementationOnce(async (_, _request, _signal, onDispatch) => {
+      onDispatch?.(); throw new Error('TASK_OUTCOME_UNKNOWN');
+    });
+    await expect(f.client.submit(id, start, new AbortController().signal, observed)).rejects.toThrow('TASK_OUTCOME_UNKNOWN');
+    const pending = await f.client.pending(id); expect(observed).toHaveBeenCalledTimes(1);
+    f.execute.mockImplementationOnce(async (_, request, _signal, onDispatch) => { onDispatch?.(); return response(request); });
+    await f.client.retry(id, new AbortController().signal, observed);
+    expect(f.execute.mock.calls.at(-1)![1]).toEqual(pending);
+    expect(await f.client.pending(id)).toBeUndefined(); expect(observed).toHaveBeenCalledTimes(2);
+    const g = setup(); g.execute.mockRejectedValueOnce(new Error('TASK_OUTCOME_UNKNOWN'));
+    await expect(g.client.submit(id, start)).rejects.toThrow('TASK_OUTCOME_UNKNOWN');
+    const original = await g.client.inspect(id);
+    g.execute.mockImplementationOnce(async (_, request, _signal, onDispatch) => { onDispatch?.(); return response(request); });
+    await g.client.synchronizeAuthority(id, original, new AbortController().signal, observed);
+    expect(await g.client.inspect(id)).toEqual({ ...original, authority: undefined, held: true });
+    expect(observed).toHaveBeenCalledTimes(3);
+  });
 });
+describe('fresh metadata validated capability cache', () => {
+  function catalogs() {
+    const f = setup();
+    const answer = (deviceId: string, request: TaskRequest) => ({ ...response(request), logicalDeviceId: deviceId });
+    f.execute.mockImplementation(async (deviceId, request) => answer(deviceId, request));
+    return { ...f, answer };
+  }
+  it('reuses only complete immutable targets after a new metadata transaction, never the task table or intent', async () => {
+    const f = catalogs(), first = await f.client.catalog(id);
+    expect(f.execute).toHaveBeenCalledTimes(3);
+    expect(await f.client.catalog(id)).toBe(first);
+    expect(f.execute).toHaveBeenCalledTimes(4);
+    expect(f.execute.mock.calls.at(-1)![1]).toMatchObject({ operation: 'catalog', index: null, fingerprint: null });
+    expect(Object.isFrozen(first)).toBe(true); expect(Object.isFrozen(first.targets)).toBe(true);
+    expect(first.targets.every(Object.isFrozen)).toBe(true); expect(f.data.size).toBe(0);
+    await f.client.read(id); await f.client.read(id);
+    expect(f.execute).toHaveBeenCalledTimes(6);
+  });
+  it('refetches all targets when capacity, total or fingerprint changes', async () => {
+    for (const patch of [{ capacity: 5 }, { total: 1 }, { fingerprint: base64UrlEncode(new Uint8Array(32).fill(9)) }]) {
+      const f = catalogs(); await f.client.catalog(id); f.execute.mockClear();
+      f.execute.mockImplementation(async (deviceId, request) => {
+        const answer = f.answer(deviceId, request);
+        if (answer.result?.kind === 'catalog' || answer.result?.kind === 'target') Object.assign(answer.result, patch);
+        return answer;
+      });
+      const result = await f.client.catalog(id);
+      expect(result).toMatchObject({ capacity: patch.capacity ?? 4, fingerprint: patch.fingerprint ?? catalogHash });
+      expect(f.execute).toHaveBeenCalledTimes(1 + (patch.total ?? 2));
+    }
+  });
+  it('drops failed metadata validation and never publishes partially collected pages', async () => {
+    const f = catalogs(); await f.client.catalog(id); f.execute.mockRejectedValueOnce(new Error('offline'));
+    await expect(f.client.catalog(id)).rejects.toThrow('offline'); f.execute.mockClear();
+    await f.client.catalog(id); expect(f.execute).toHaveBeenCalledTimes(3);
+    const g = catalogs();
+    g.execute.mockImplementationOnce(async (deviceId, request) => g.answer(deviceId, request))
+      .mockImplementationOnce(async (deviceId, request) => g.answer(deviceId, request))
+      .mockRejectedValueOnce(new Error('page failed'));
+    await expect(g.client.catalog(id)).rejects.toThrow('page failed'); g.execute.mockClear();
+    await g.client.catalog(id); expect(g.execute).toHaveBeenCalledTimes(3);
+  });
+  it('rejects late cancellation on a cache hit and during pagination without retaining a fallback', async () => {
+    for (const cached of [false, true]) {
+      const f = catalogs(), aborter = new AbortController();
+      if (cached) await f.client.catalog(id);
+      f.execute.mockClear(); f.execute.mockImplementationOnce(async (deviceId, request) => {
+        if (cached) aborter.abort();
+        return f.answer(deviceId, request);
+      });
+      if (!cached) f.execute.mockImplementationOnce(async (deviceId, request) => {
+        aborter.abort(); return f.answer(deviceId, request);
+      });
+      await expect(f.client.catalog(id, aborter.signal)).rejects.toThrow(); f.execute.mockClear();
+      await f.client.catalog(id); expect(f.execute).toHaveBeenCalledTimes(3);
+    }
+  });
+  it('rejects cancellation after fresh metadata settles but before a cached directory can be returned', async () => {
+    const f = catalogs(), aborter = new AbortController();
+    f.execute.mockRejectedValueOnce(new Error('TASK_OUTCOME_UNKNOWN'));
+    await expect(f.client.submit(id, start)).rejects.toThrow('TASK_OUTCOME_UNKNOWN');
+    const pending = await f.client.pending(id); await f.client.catalog(id); f.execute.mockClear();
+    const internals = f.client as unknown as {
+      query(deviceId: string, intent: { operation: 'catalog'; fingerprint: string | null; index: number | null }, signal: AbortSignal): Promise<TaskResponse>;
+    };
+    const original = internals.query.bind(f.client), query = vi.spyOn(internals, 'query');
+    query.mockImplementationOnce(async (...args) => {
+      const metadata = await original(...args);
+      queueMicrotask(() => aborter.abort()); return metadata;
+    });
+    await expect(f.client.catalog(id, aborter.signal)).rejects.toThrow();
+    expect(f.execute).toHaveBeenCalledTimes(1); expect(await f.client.pending(id)).toEqual(pending);
+    query.mockRestore(); f.execute.mockClear(); await f.client.catalog(id);
+    expect(f.execute).toHaveBeenCalledTimes(3); expect(await f.client.pending(id)).toEqual(pending);
+  });
+  it('isolates account, authority and session transitions, including a late page from the previous account', async () => {
+    const f = catalogs(), authorityDescriptor = Object.getOwnPropertyDescriptor(API, 'BASE_URL')!;
+    try {
+      await f.client.catalog(id);
+      for (const update of [() => { f.account.accountId = 'other'; }, () => { ++f.account.sessionEpoch; },
+        () => {
+          Object.defineProperty(API, 'BASE_URL', { ...authorityDescriptor, value: 'https://another.example' });
+          f.account.authority = API.BASE_URL;
+        }]) {
+        update(); f.execute.mockClear(); await f.client.catalog(id); expect(f.execute).toHaveBeenCalledTimes(3);
+      }
+    } finally { Object.defineProperty(API, 'BASE_URL', authorityDescriptor); }
+    const g = catalogs();
+    g.execute.mockImplementationOnce(async (deviceId, request) => g.answer(deviceId, request))
+      .mockImplementationOnce(async (deviceId, request) => { g.account.accountId = 'other'; return g.answer(deviceId, request); });
+    await expect(g.client.catalog(id)).rejects.toThrow('TASK_ACCOUNT_CHANGED'); g.execute.mockClear();
+    await g.client.catalog(id); expect(g.execute).toHaveBeenCalledTimes(3);
+  });
+  it('bounds the complete-directory cache to eight LRU entries', async () => {
+    const f = catalogs();
+    for (let index = 0; index < 8; ++index) await f.client.catalog(`device_${index}`);
+    f.execute.mockClear(); await f.client.catalog('device_0'); expect(f.execute).toHaveBeenCalledTimes(1);
+    await f.client.catalog('device_8'); f.execute.mockClear();
+    await f.client.catalog('device_0'); expect(f.execute).toHaveBeenCalledTimes(1);
+    f.execute.mockClear(); await f.client.catalog('device_1'); expect(f.execute).toHaveBeenCalledTimes(3);
+  });
+  it('invalidates targets before authority I/O even on UNKNOWN, without releasing its durable intent', async () => {
+    const f = catalogs(); await f.client.catalog(id);
+    f.execute.mockRejectedValueOnce(new Error('TASK_OUTCOME_UNKNOWN'));
+    await expect(f.client.submit(id, { operation: 'initialize' })).rejects.toThrow('TASK_OUTCOME_UNKNOWN');
+    const pending = await f.client.pending(id); f.execute.mockClear();
+    await f.client.catalog(id); expect(f.execute).toHaveBeenCalledTimes(3);
+    expect(await f.client.pending(id)).toEqual(pending);
+  });
+  it('does not let a directory already in flight repopulate the cache after authority recovery', async () => {
+    const f = catalogs(); let release!: () => void;
+    f.execute.mockImplementation(async (deviceId, request) => {
+      if (request.operation === 'catalog' && request.index === 0) await new Promise<void>(resolve => { release = resolve; });
+      return f.answer(deviceId, request);
+    });
+    const work = f.client.catalog(id);
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+    await f.client.submit('another_device', { operation: 'initialize' }); release(); await work;
+    f.execute.mockImplementation(async (deviceId, request) => f.answer(deviceId, request)); f.execute.mockClear();
+    await f.client.catalog(id); expect(f.execute).toHaveBeenCalledTimes(3);
+  });
+});
+
 describe('HttpTaskApi', () => {
   it('paces sequential Prepare/Commit transactions and cancels a wait without sending HTTP', async () => {
     vi.useFakeTimers();
@@ -214,12 +356,12 @@ describe('HttpTaskApi', () => {
       const post = vi.fn(() => of({ status: 200, headers: { get: () => 'no-store' }, body: { status: 200, data: response(request) } }));
       const api = new HttpTaskApi({ post } as any);
       await api.execute(id, request, new AbortController().signal);
-      const aborter = new AbortController(), waiting = api.execute(id, request, aborter.signal);
+      const observed = vi.fn(), aborter = new AbortController(), waiting = api.execute(id, request, aborter.signal, observed);
       const rejected = expect(waiting).rejects.toThrow();
-      aborter.abort(); await rejected; expect(post).toHaveBeenCalledTimes(1);
-      const next = api.execute(id, request, new AbortController().signal);
-      await vi.advanceTimersByTimeAsync(549); expect(post).toHaveBeenCalledTimes(1);
-      await vi.advanceTimersByTimeAsync(1); await next; expect(post).toHaveBeenCalledTimes(2);
+      aborter.abort(); await rejected; expect(post).toHaveBeenCalledTimes(1); expect(observed).not.toHaveBeenCalled();
+      const next = api.execute(id, request, new AbortController().signal, observed);
+      await vi.advanceTimersByTimeAsync(549); expect(post).toHaveBeenCalledTimes(1); expect(observed).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1); await next; expect(post).toHaveBeenCalledTimes(2); expect(observed).toHaveBeenCalledTimes(1);
     } finally { vi.useRealTimers(); }
   });
   it('uses existing authenticated Gateway resource, validates no-store and correlation, no raw device secret', async () => {
@@ -237,6 +379,26 @@ describe('HttpTaskApi', () => {
     const work = api.execute(id, taskRequest({ contract: 'device-tasks/1', requestId, ...start }), aborter.signal);
     expect(subject.observed).toBe(true); aborter.abort(); await expect(work).rejects.toThrow();
     expect(subject.observed).toBe(false); expect(post).toHaveBeenCalledTimes(1);
+  });
+  it('observes HTTP start before sending and ignores observation errors, without claiming device delivery', async () => {
+    const request = taskRequest({ contract: 'device-tasks/1', requestId, ...start }), events: string[] = [];
+    const post = vi.fn(() => {
+      events.push('http');
+      return of({ status: 200, headers: { get: () => 'no-store' }, body: { status: 200, data: response(request) } });
+    });
+    const api = new HttpTaskApi({ post } as unknown as ConstructorParameters<typeof HttpTaskApi>[0]);
+    const result = await api.execute(id, request, new AbortController().signal, () => {
+      events.push('observer'); throw new Error('diagnostic failure');
+    });
+    expect(result.evidence).toBe('fresh'); expect(events).toEqual(['observer', 'http']); expect(post).toHaveBeenCalledTimes(1);
+  });
+  it('does not subscribe HTTP after synchronous observation cancellation and preserves the committed intent', async () => {
+    const f = setup(), aborter = new AbortController(), post = vi.fn(() => of());
+    const api = new HttpTaskApi({ post } as unknown as ConstructorParameters<typeof HttpTaskApi>[0]);
+    const client = new DeviceTaskClient(api, f.storage, () => f.account);
+    await expect(client.submit(id, start, aborter.signal, () => aborter.abort())).rejects.toThrow();
+    expect(post).not.toHaveBeenCalled(); expect((await client.pending(id))?.operation).toBe('start');
+    expect(f.data.size).toBe(1);
   });
 });
 
@@ -283,6 +445,167 @@ describe('bounded fresh task table', () => {
     });
     await f.client.read(id); const calls = f.execute.mock.calls.length;
     await f.client.forgetPending(id, expected); expect(await f.client.pending(id)).toBeUndefined(); expect(f.execute).toHaveBeenCalledTimes(calls);
+  });
+});
+
+describe('fresh catalog anchored task snapshot', () => {
+  function snapshotFixture(count = 1, total = 2) {
+    const f = setup(), state = { revision: count ? 3 : 0, count, total, progress: 1 };
+    const answer = (request: TaskRequest): TaskResponse => {
+      const r = response(request);
+      if (request.operation === 'catalog') {
+        const head = { tableRevision: state.revision, count: state.count, capacity: 4,
+          total: state.total, fingerprint: catalogHash };
+        r.result = request.index === null ? { kind: 'catalog', ...head }
+          : { kind: 'target', ...head, index: request.index,
+              key: request.index === 0 ? 'power' : 'level', valueType: request.index === 0 ? 'boolean' : 'uint' };
+      } else if (request.operation === 'read') {
+        if (request.index === null) throw new Error('redundant task metadata read');
+        r.result = { kind: 'record', tableRevision: state.revision, count: state.count, index: request.index,
+          record: { taskId: 7 + request.index, definitionRevision: 2, consumedUtcMillis: 0,
+            startSequence: 1, progress: state.progress,
+            definition: { enabled: true, key: 'power', valueType: 'boolean', value: false,
+              schedule: { kind: 'countdown', durationMillis: 3000 } } } };
+      }
+      return r;
+    };
+    f.execute.mockImplementation(async (_, request) => answer(request));
+    return { ...f, state, answer };
+  }
+  it('reads a cold directory and every current row without a second metadata exchange', async () => {
+    const f = snapshotFixture(), snapshot = await f.client.snapshot(id);
+    expect(snapshot.catalog).toMatchObject({ capacity: 4, fingerprint: catalogHash });
+    expect(snapshot.catalog.targets.map(t => t.key)).toEqual(['power', 'level']);
+    expect(snapshot.table.revision).toBe(3); expect(snapshot.table.records.map(r => r.taskId)).toEqual([7]);
+    expect(f.execute.mock.calls.map(([, r]) => [r.operation, 'index' in r ? r.index : null]))
+      .toEqual([['catalog', null], ['catalog', 0], ['catalog', 1], ['read', 0]]);
+    expect(f.execute.mock.calls.at(-1)![1]).toMatchObject({ expectedRevision: 3, index: 0 });
+    expect(new Set(f.execute.mock.calls.map(([, r]) => r.requestId)).size).toBe(4);
+  });
+  it('reuses only warm targets while each snapshot anchors its rows to new authenticated metadata', async () => {
+    const f = snapshotFixture(), catalog = await f.client.catalog(id); f.execute.mockClear();
+    const first = await f.client.snapshot(id);
+    expect(first.catalog).toBe(catalog); expect(first.table.revision).toBe(3);
+    expect(f.execute.mock.calls.map(([, r]) => r.operation)).toEqual(['catalog', 'read']);
+    f.state.revision = 4; f.state.count = 2; f.execute.mockClear();
+    const next = await f.client.snapshot(id);
+    expect(next.catalog).toBe(catalog); expect(next.table.revision).toBe(4);
+    expect(next.table.records.map(r => r.taskId)).toEqual([7, 8]);
+    expect(f.execute.mock.calls.map(([, r]) => r.operation)).toEqual(['catalog', 'read', 'read']);
+    expect(f.execute.mock.calls.slice(1).every(([, r]) => 'expectedRevision' in r && r.expectedRevision === 4)).toBe(true);
+    expect(catalog).not.toHaveProperty('tableRevision'); expect(catalog).not.toHaveProperty('count');
+  });
+  it('requires a new catalog exchange for every empty snapshot and never reuses an old empty header', async () => {
+    const f = snapshotFixture(0, 0);
+    for (const revision of [0, 4]) {
+      f.state.revision = revision; f.execute.mockClear();
+      expect((await f.client.snapshot(id)).table).toEqual({ revision, records: [] });
+      expect(f.execute.mock.calls).toHaveLength(1);
+      expect(f.execute.mock.calls[0][1]).toMatchObject({ operation: 'catalog', fingerprint: null, index: null });
+    }
+  });
+  it('uses the last authenticated target page header when the table changes during a cold directory read', async () => {
+    const f = snapshotFixture(0);
+    f.execute.mockImplementation(async (_, request) => {
+      if (request.operation === 'catalog' && request.index === 0) { f.state.revision = 3; f.state.count = 1; }
+      if (request.operation === 'catalog' && request.index === 1) { f.state.revision = 4; f.state.count = 2; }
+      return f.answer(request);
+    });
+    const snapshot = await f.client.snapshot(id);
+    expect(snapshot.table.revision).toBe(4); expect(snapshot.table.records.map(r => r.taskId)).toEqual([7, 8]);
+    const reads = f.execute.mock.calls.map(([, r]) => r).filter(r => r.operation === 'read');
+    expect(reads).toHaveLength(2);
+    expect(reads.every(r => r.operation === 'read' && r.expectedRevision === 4 && r.index !== null)).toBe(true);
+  });
+  it('reads changed progress again even when table revision and cached targets are unchanged', async () => {
+    const f = snapshotFixture(), first = await f.client.snapshot(id); f.execute.mockClear(); f.state.progress = 3;
+    const next = await f.client.snapshot(id);
+    expect(next.table.revision).toBe(first.table.revision); expect(next.catalog).toBe(first.catalog);
+    expect(first.table.records[0].progress).toBe(1); expect(next.table.records[0].progress).toBe(3);
+    expect(next.table.records[0]).not.toBe(first.table.records[0]);
+    expect(f.execute.mock.calls.map(([, r]) => [r.operation, 'index' in r ? r.index : null]))
+      .toEqual([['catalog', null], ['read', 0]]);
+  });
+  it('rejects changed row revisions, counts or duplicate task IDs rather than publishing a mixed table', async () => {
+    for (const mismatch of ['revision', 'count', 'duplicate']) {
+      const f = snapshotFixture(mismatch === 'duplicate' ? 2 : 1);
+      f.execute.mockImplementation(async (_, request) => {
+        const r = f.answer(request);
+        if (r.result?.kind === 'record') {
+          if (mismatch === 'revision') r.result.tableRevision++;
+          if (mismatch === 'count') r.result.count++;
+          if (mismatch === 'duplicate') r.result.record.taskId = 7;
+        }
+        return r;
+      });
+      await expect(f.client.snapshot(id)).rejects.toThrow();
+      expect(f.execute.mock.calls.filter(([, r]) => r.operation === 'read')
+        .every(([, r]) => r.operation === 'read' && r.expectedRevision === 3 && r.index !== null)).toBe(true);
+    }
+  });
+  it('rejects historical, invalid or failed metadata without falling back to a prior table or warm directory', async () => {
+    for (const invalid of ['historical', 'capacity', 'offline']) {
+      const f = snapshotFixture(); await f.client.snapshot(id); f.execute.mockClear();
+      f.execute.mockImplementationOnce(async (_, request) => {
+        if (invalid === 'offline') throw new Error('TASK_DEVICE_OFFLINE');
+        if (invalid === 'historical') return response(request, true);
+        const r = f.answer(request);
+        if (r.result?.kind === 'catalog') r.result.count = 5;
+        return r;
+      });
+      await expect(f.client.snapshot(id)).rejects.toThrow();
+      expect(f.execute.mock.calls).toHaveLength(1);
+      f.execute.mockClear(); await f.client.snapshot(id);
+      expect(f.execute.mock.calls).toHaveLength(4);
+    }
+  });
+  it('rejects cancellation after an empty catalog has settled but before its snapshot can return', async () => {
+    const f = snapshotFixture(0, 0), aborter = new AbortController();
+    const internals = f.client as unknown as { readCatalog: (...args: unknown[]) => Promise<unknown> };
+    const readCatalog = internals.readCatalog.bind(f.client), spy = vi.spyOn(internals, 'readCatalog');
+    spy.mockImplementationOnce(async (...args) => {
+      const snapshot = await readCatalog(...args); queueMicrotask(() => aborter.abort()); return snapshot;
+    });
+    try {
+      await expect(f.client.snapshot(id, aborter.signal)).rejects.toThrow();
+      expect(f.execute.mock.calls).toHaveLength(1); expect(f.data.size).toBe(0);
+    } finally { spy.mockRestore(); }
+  });
+  it('rejects account, epoch and authority changes after an empty catalog settles', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(API, 'BASE_URL')!;
+    try {
+      for (const transition of ['account', 'epoch', 'authority']) {
+        const f = snapshotFixture(0, 0);
+        const internals = f.client as unknown as { readCatalog: (...args: unknown[]) => Promise<unknown> };
+        const readCatalog = internals.readCatalog.bind(f.client), spy = vi.spyOn(internals, 'readCatalog');
+        spy.mockImplementationOnce(async (...args) => {
+          const snapshot = await readCatalog(...args);
+          queueMicrotask(() => {
+            if (transition === 'account') f.account.accountId = 'other';
+            else if (transition === 'epoch') f.account.sessionEpoch++;
+            else {
+              Object.defineProperty(API, 'BASE_URL', { ...descriptor, value: 'https://another.example' });
+              f.account.authority = API.BASE_URL;
+            }
+          });
+          return snapshot;
+        });
+        try {
+          await expect(f.client.snapshot(id)).rejects.toThrow('TASK_ACCOUNT_CHANGED');
+          expect(f.execute.mock.calls).toHaveLength(1); expect(f.data.size).toBe(0);
+        } finally { spy.mockRestore(); Object.defineProperty(API, 'BASE_URL', descriptor); }
+      }
+    } finally { Object.defineProperty(API, 'BASE_URL', descriptor); }
+  });
+  it('keeps an unknown Start byte-for-byte across fresh snapshots without replay or journal writes', async () => {
+    const f = snapshotFixture(); f.execute.mockRejectedValueOnce(new Error('TASK_OUTCOME_UNKNOWN'));
+    await expect(f.client.submit(id, start)).rejects.toThrow('TASK_OUTCOME_UNKNOWN');
+    const pending = await f.client.pending(id), original = [...f.data]; f.execute.mockClear();
+    await f.client.snapshot(id); f.state.progress = 3;
+    expect((await f.client.snapshot(id)).table.records[0].progress).toBe(3);
+    expect([...f.data]).toEqual(original); expect(await f.client.pending(id)).toEqual(pending);
+    expect(f.execute.mock.calls.every(([, r]) => r.operation === 'catalog' || r.operation === 'read')).toBe(true);
+    expect(f.execute.mock.calls).toHaveLength(6);
   });
 });
 

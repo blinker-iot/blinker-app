@@ -6,6 +6,7 @@ import { TaskRecord } from '../../../core/device-v2/tasks/contract';
 import { DeviceTimerPage } from './device-timer.page';
 import { TimerService } from './timer.service';
 import { TimingEditPage } from './timing-edit/timing-edit';
+import { NoticeService } from '../../../core/services/notice.service';
 
 const record: TaskRecord = { taskId: 7, definitionRevision: 2, consumedUtcMillis: 0, startSequence: 0, progress: 0,
   definition: { enabled: true, key: 'power', valueType: 'boolean', value: true, schedule: { kind: 'countdown', durationMillis: 3000 } } };
@@ -13,7 +14,7 @@ const record: TaskRecord = { taskId: 7, definitionRevision: 2, consumedUtcMillis
 function timerState() {
   return { ready: true, busy: false, capacity: 6 as number | null, revision: 2, generation: 1,
     records: structuredClone([record]), targets: [{ key: 'power', valueType: 'boolean' }],
-    deviceName: '客厅灯', error: '', notice: '', pending: undefined as any, journal: { held: false } as any,
+    deviceName: '客厅灯', error: '', notice: '', statusText: '', timingText: '', pending: undefined as any, journal: { held: false } as any,
     canInitialize: false, canRetry: false, canReviewPending: false,
     get canWrite() { return this.ready && !this.busy && !this.pending; },
     get canCreate() { return this.canWrite && this.capacity !== null && this.targets.length > 0 && this.records.length < this.capacity; },
@@ -33,6 +34,7 @@ async function render(kind: 'list' | 'edit', timer: TimerService | ReturnType<ty
     provideRouter([]), provideIonicAngular({ animated: false }),
     { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => key === 'id' ? 'device_a' : routeId } } } },
     { provide: AlertController, useValue: alerts }, { provide: NavController, useValue: nav },
+    { provide: NoticeService, useValue: { showToast: vi.fn(async () => undefined) } },
   ] }).overrideComponent(component, { set: { providers: [{ provide: TimerService, useValue: timer }] } }).compileComponents();
   const fixture = TestBed.createComponent<DeviceTimerPage | TimingEditPage>(component);
   if (kind === 'edit') await (fixture.componentInstance as TimingEditPage).ionViewWillEnter();
@@ -43,8 +45,22 @@ async function render(kind: 'list' | 'edit', timer: TimerService | ReturnType<ty
 describe('task pages production template rendering', () => {
   afterEach(() => TestBed.resetTestingModule());
 
+  it('shows confirmation separately from ongoing refresh and folds truthful client timing details', async () => {
+    const timer = timerState(); timer.ready = false; timer.busy = true;
+    timer.notice = '设备已确认本次管理操作；不代表到期动作或物理输出已完成。';
+    timer.statusText = '正在更新任务目录与列表；不会重复下发已确认的操作…';
+    timer.timingText = '提交准备 550 ms；HTTP开始至设备确认 200 ms';
+    const f = await render('list', timer);
+    expect(f.element.textContent).toContain('设备已确认本次管理操作');
+    expect(f.element.textContent).toContain('正在更新任务目录与列表');
+    expect(f.element.textContent).not.toContain('正在等待设备确认/读取任务');
+    const details = f.element.querySelector<HTMLDetailsElement>('.task-timing-details')!;
+    expect(details.open).toBe(false); expect(details.textContent).toContain('HTTP开始不是设备收到');
+    expect(details.textContent).toContain('550 ms'); expect(timer.write).not.toHaveBeenCalled();
+  });
+
   it('renders an asynchronous service result through the real template without a user click or extra request', async () => {
-    const client = { submit: vi.fn(), catalog: vi.fn(), table: vi.fn(), inspect: vi.fn() };
+    const client = { submit: vi.fn(), snapshot: vi.fn(), catalog: vi.fn(), table: vi.fn(), inspect: vi.fn() };
     const data = { authDataChanged: new Subject<void>(), device: { dict: { device_a: {
       displayMetadata: { name: '客厅灯', capabilities: [{ key: 'power', kind: 0, type: 0,
         displayName: '电源开关', trueLabel: '亮', falseLabel: '灭' }] },
@@ -61,6 +77,7 @@ describe('task pages production template rendering', () => {
     await vi.waitFor(() => expect(f.element.querySelector('.capacity-text')?.textContent).toBe('已用 1 / 3 条'));
     expect(f.element.querySelector('.task-detail strong')?.textContent).toBe('电源开关：亮');
     expect(client.submit).not.toHaveBeenCalled(); expect(client.catalog).not.toHaveBeenCalled();
+    expect(client.snapshot).not.toHaveBeenCalled();
     expect(client.table).not.toHaveBeenCalled(); expect(client.inspect).not.toHaveBeenCalled();
   });
 

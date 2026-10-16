@@ -33,7 +33,7 @@ export class DeviceTimerPage implements OnDestroy {
       || record.progress === 1 || record.progress === 2)) return;
     const revision = this.timer.revision, taskId = record.taskId, enabled = !record.definition.enabled, generation = this.timer.generation;
     const alert = await this.alerts.create({ header: operation === 'start' ? '开始新的倒计时？' : enabled ? '启用任务？' : '停用任务？',
-      message: operation === 'start' ? '将从现在重新计时。重启后中止，不自动续跑。' : '启用不等于开始或恢复倒计时。停用不撤销已执行的动作。',
+      message: operation === 'start' ? '设备接受并持久化开始请求后才起算，点击到确认之间有通信等待。重启后中止，不自动续跑。' : '启用不等于开始或恢复倒计时。停用不撤销已执行的动作。',
       buttons: [{ text: '取消', role: 'cancel' }, { text: '确认', role: 'confirm' }] });
     await alert.present();
     if ((await alert.onDidDismiss()).role !== 'confirm' || generation !== this.timer.generation || !this.timer.canWrite || this.timer.revision !== revision) return;

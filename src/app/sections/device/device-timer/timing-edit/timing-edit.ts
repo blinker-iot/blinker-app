@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, Inject, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AlertController, IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, NavController } from '@ionic/angular/standalone';
@@ -6,6 +6,7 @@ import { TaskDefinition, TaskRecord, TaskSchedule, taskDefinition } from '../../
 import { TaskTarget, taskErrorText, taskValue } from '../device-timer.models';
 import { TaskStatusComponent } from '../task-status.component';
 import { TimerService } from '../timer.service';
+import { NoticeService } from '../../../../core/services/notice.service';
 
 function countdownMillis(seconds: number): number {
   const millis = Math.round(seconds * 1000);
@@ -31,7 +32,8 @@ export class TimingEditPage implements OnDestroy {
   private record?: TaskRecord;
   private loaded = false;
   constructor(public readonly timer: TimerService, private readonly route: ActivatedRoute,
-    private readonly nav: NavController, private readonly alerts: AlertController) {}
+    private readonly nav: NavController, private readonly alerts: AlertController,
+    @Inject(NoticeService) private readonly notices: NoticeService | null = null) {}
   get defaultBackHref(): string { return `/device-manager/${this.id}/timer`; }
   get target(): TaskTarget | undefined { return this.timer.targets.find(t => t.key === this.key); }
   get taskNotFound(): boolean { return this.invalidRoute || (this.timer.ready && this.taskId !== undefined
@@ -105,7 +107,7 @@ export class TimingEditPage implements OnDestroy {
       const confirmed = await this.timer.write(this.taskId === undefined
         ? { operation: 'create', expectedRevision: this.revision, definition }
         : { operation: 'replace', expectedRevision: this.revision, taskId: this.taskId, definition }, false);
-      if (confirmed) await this.nav.navigateBack(this.defaultBackHref);
+      if (confirmed) await this.returnConfirmed();
     } catch (error) { this.error = taskErrorText(error); }
   }
   async deleteTask(): Promise<void> {
@@ -117,7 +119,16 @@ export class TimingEditPage implements OnDestroy {
     if ((await alert.onDidDismiss()).role !== 'confirm' || generation !== this.generation) return;
     try {
       if (await this.timer.write({ operation: 'remove', expectedRevision: revision, taskId }, false))
-        await this.nav.navigateBack(this.defaultBackHref);
+        await this.returnConfirmed();
     } catch (error) { this.error = taskErrorText(error); }
+  }
+  private async returnConfirmed(): Promise<void> {
+    // The editor leaves immediately after a verified response. Keep its exact
+    // fresh/historical feedback visible while the list performs its own read.
+    if (this.timer.notice) {
+      try { void this.notices?.showToast(this.timer.notice, 3000).catch(() => undefined); }
+      catch { /* Presentation failure cannot turn a confirmed write into unknown. */ }
+    }
+    await this.nav.navigateBack(this.defaultBackHref);
   }
 }
