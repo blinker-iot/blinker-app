@@ -1,15 +1,18 @@
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { DeviceV2BleService } from './device-v2-ble.service';
 import { BleApplicationMode } from '../device-v2/ble-direct';
+import { BleClient } from '@capacitor-community/bluetooth-le';
+import { DeviceUiPort } from '../device-v2/device-ui.port';
 
 const id = 'ble_ASNFZ4mrze8BI0VniavN7w';
 const turn = async () => { for (let i = 0; i < 30; ++i) await Promise.resolve(); };
 function held<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(r => { resolve = r; }); return { promise, resolve }; }
 function fixture() {
+  const active = new BehaviorSubject(true), loaded = new BehaviorSubject(false);
   const changed = new Subject<void>(), data = { sessionEpoch: 1, auth: { uuid: 'a' }, user: { id: 'a' },
-    authDataChanged: changed, getDevice: () => ({ deviceType: 'ble', cloudEnabled: true }) };
-  const service = new DeviceV2BleService({} as any, { save: vi.fn() } as any, data as any);
+    authDataChanged: changed, deviceDataLoader: loaded, getDevice: () => ({ deviceType: 'ble', cloudEnabled: true }) };
+  const service = createService({} as any, { save: vi.fn() } as any, data as any, { active });
   const context = (service as any).accountContext();
   const abort = new AbortController();
   const admission = { signal: abort.signal, assertAcquire: vi.fn(), assertActive: vi.fn(), onClosed: vi.fn() };
@@ -32,11 +35,88 @@ function fixture() {
   const connect = vi.fn(async () => session);
   const client = vi.spyOn(service as any, 'client').mockReturnValue({ connect });
   const open = () => service.ensureReady(id, 5000, context, admission);
-  return { service, data, changed, context, abort, admission, credential, load, target, discover, session, connect, client, open,
+  return { service, data, changed, active, loaded, context, abort, admission, credential, load, target, discover, session, connect, client, open,
     fault: () => fail(Error('native disconnected')) };
 }
 
+function createService(http: any, cache: any, data: any,
+  visibility = { active: new BehaviorSubject(true) }): DeviceV2BleService {
+  data.deviceDataLoader ??= new BehaviorSubject(false);
+  return new DeviceV2BleService(http, cache, data, visibility as any);
+}
+
 describe('production BLE service admission/cancellation boundary', () => {
+  it('ordinary route scopes reuse the same root BLE link while background still retires it', async () => {
+    const f = fixture();
+    vi.spyOn(f.data, 'getDevice').mockReturnValue({ deviceType: 'ble', cloudEnabled: true, gatewayRouted: false } as any);
+    const cloud = { acquireStateInterest: vi.fn(async () => undefined), waitUntilReady: vi.fn(async () => undefined) };
+    const port = new DeviceUiPort(cloud as any, f.service, { run: action => action() } as any,
+      { active: f.active } as any, f.data as any);
+    const first = port.openConnection(id);
+    await first.ready; await turn();
+    expect(f.connect).toHaveBeenCalledOnce();
+    expect(f.service.connectionSnapshot(id)).toBe('ready');
+    first.close(); await first.closed; await turn();
+    expect(f.session.close).not.toHaveBeenCalled();
+    const second = port.openConnection(id);
+    await second.ready; await turn();
+    expect(f.connect).toHaveBeenCalledOnce();
+    expect(f.session.synchronize).toHaveBeenCalledOnce();
+    f.active.next(false); await second.closed; await turn();
+    expect(f.session.close).toHaveBeenCalledOnce();
+    expect((f.service as any).active).toBeUndefined();
+  });
+
+  it('the root owner closes on background and does not reconnect on foreground alone', async () => {
+    const f = fixture(); await f.open();
+    f.active.next(false); await turn();
+    expect(f.session.close).toHaveBeenCalledOnce();
+    expect((f.service as any).active).toBeUndefined();
+    expect(() => f.open()).toThrow('BLE_DIRECT_APP_INACTIVE');
+    f.active.next(true); await turn();
+    expect(f.connect).toHaveBeenCalledOnce();
+  });
+
+  it.each(['removed', 'disabled'])('directory %s retires a retained ordinary BLE connection', async cause => {
+    const f = fixture(); await f.open();
+    vi.spyOn(f.data, 'getDevice').mockReturnValue(cause === 'removed'
+      ? undefined as any : { config: { disabled: true } } as any);
+    f.loaded.next(true); await turn();
+    expect(f.session.close).toHaveBeenCalledOnce();
+    expect(() => f.open()).toThrow('DEVICE_V2_DEVICE_UNAVAILABLE');
+    expect(f.connect).toHaveBeenCalledOnce();
+  });
+
+  it('radio shutdown clears presence and closes the retained session through the root owner', async () => {
+    const initialize = vi.spyOn(BleClient, 'initialize').mockResolvedValue();
+    let enabled!: (value: boolean) => void;
+    const notifications = vi.spyOn(BleClient, 'startEnabledNotifications')
+      .mockImplementation(async callback => { enabled = callback; });
+    const snapshot = vi.spyOn(BleClient, 'isEnabled').mockResolvedValue(true);
+    const f = fixture();
+    try {
+      await f.open(); (f.service as any).markNearby(id);
+      enabled(false); await turn();
+      expect(f.session.close).toHaveBeenCalledOnce();
+      expect(f.service.nearbySnapshot(id)).toBe(false);
+      expect(() => f.open()).toThrow('BLE_ADAPTER_DISABLED');
+      expect(f.connect).toHaveBeenCalledOnce();
+    } finally { initialize.mockRestore(); notifications.mockRestore(); snapshot.mockRestore(); }
+  });
+
+  it('a background generation cannot revive a queued replacement after a late native open', async () => {
+    const f = fixture(), late = held<any>();
+    f.connect.mockReturnValueOnce(late.promise);
+    const first = f.open().catch(error => error); await turn();
+    const closing = f.service.disconnect(id); await turn();
+    const next = f.open().catch(error => error);
+    f.active.next(false); f.active.next(true);
+    late.resolve(f.session); await first; await closing;
+    expect(await next).toMatchObject({ message: 'BLE_DIRECT_CONNECT_CANCELLED' });
+    expect(f.connect).toHaveBeenCalledOnce();
+    expect(f.session.close).toHaveBeenCalled();
+    expect((f.service as any).active).toBeUndefined();
+  });
   it('BLE-origin native WiFi commands use ordinary Direct without gateway takeover', async () => {
     const f = fixture();
     vi.spyOn(f.data, 'getDevice').mockReturnValue({ deviceType: 'ble', cloudEnabled: true, gatewayRouted: false } as any);

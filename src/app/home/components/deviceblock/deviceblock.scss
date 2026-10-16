@@ -22,20 +22,24 @@
 
 .device-primary {
   position: relative;
+
   z-index: 1;
   min-width: 0;
   min-height: 144px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  gap: 10px;
 }
 
 .device-visual {
-  position: absolute;
-  inset: 8px 12px auto;
+  order: -1;
+  flex: 1;
+  min-height: 0;
   height: 92px;
-  z-index: -1;
   display: flex;
+
   align-items: center;
   justify-content: center;
   pointer-events: none;
@@ -48,16 +52,6 @@
 
 .device-copy {
   min-width: 0;
-  padding: 10px 12px;
-
-  background: color-mix(in srgb, var(--blinker-surface) 58%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(1.15);
-  backdrop-filter: blur(16px) saturate(1.15);
-}
-
-.device-copy,
-.device-extension {
-  border-radius: 0 0 calc(var(--device-card-radius) - 1px) calc(var(--device-card-radius) - 1px);
 }
 
 .device-summary-row {
@@ -146,46 +140,6 @@
   }
 }
 
-.device-card.wide {
-  .device-visual {
-    inset: 0 12px 0 auto;
-    width: 124px;
-
-    height: 100%;
-    transform: translateY(-12px);
-  }
-
-  .device-primary {
-    min-height: 0;
-    padding: 14px 14px 8px;
-    justify-content: flex-start;
-  }
-
-  .device-copy {
-    max-width: calc(100% - 104px);
-    padding: 0;
-
-    background: transparent;
-
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
-  .device-name {
-    font-size: 14px;
-  }
-}
-
-.device-extension {
-  position: relative;
-  z-index: 1;
-  padding: 8px 14px 12px;
-
-  background: color-mix(in srgb, var(--blinker-surface) 58%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(1.15);
-  backdrop-filter: blur(16px) saturate(1.15);
-}
-
 .device-card.without-metrics {
   aspect-ratio: 1;
 
@@ -195,20 +149,49 @@
     inset: 0;
 
     min-height: 0;
+    padding: 14px;
   }
 
   .device-visual {
-    inset: 8% 10% auto;
-    height: 70%;
+    height: auto;
+  }
+}
+
+.device-card.wide,
+.device-card.online {
+  .device-primary {
+    position: relative;
+    min-height: 0;
+    padding: 14px;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
   }
 
   .device-copy {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    min-height: 50%;
-    padding: 14px;
+    flex: 1;
   }
+
+  .device-visual {
+    order: 0;
+    flex: 0 0 48px;
+    height: 48px;
+  }
+}
+
+.device-card.online.without-metrics {
+  aspect-ratio: auto;
+}
+
+.device-card.wide .device-name {
+  font-size: 14px;
+}
+
+.device-extension {
+  position: relative;
+
+  z-index: 1;
+  padding: 8px 14px 12px;
 }
 
 .extension-grid {

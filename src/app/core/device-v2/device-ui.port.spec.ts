@@ -103,7 +103,7 @@ describe('DeviceUiPort', () => {
     const direct = new Promise<void>(resolve => { finishBle = resolve; });
     const service = { acquireStateInterest: vi.fn(async () => undefined), waitUntilReady: vi.fn(() => cloud) };
     const ble = { hasActiveCredential: vi.fn(async () => true), canManagePresenceCredential: vi.fn(async () => false),
-      ensureReady: vi.fn(() => direct), disconnect: vi.fn(async () => undefined) };
+      ensureReady: vi.fn(() => direct), connectionSnapshot: () => 'ready', disconnect: vi.fn(async () => undefined) };
     const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
       { active: new BehaviorSubject(true) } as any, inventory() as any);
     const page = port.openConnection(logicalDeviceId);
@@ -130,7 +130,7 @@ describe('DeviceUiPort', () => {
     expect(page.signal.aborted).toBe(true);
   });
 
-  it.each(['background', 'account'])('retires a late Direct candidate after Cloud is ready on %s', async reason => {
+  it.each(['page', 'background', 'account'])('retires its late Direct selection without taking root ownership on %s', async reason => {
     let finishBle!: () => void;
     const direct = new Promise<void>(resolve => { finishBle = resolve; });
     const release = vi.fn(), active = new BehaviorSubject(true), authDataChanged = new Subject<void>();
@@ -138,7 +138,7 @@ describe('DeviceUiPort', () => {
     const service = { acquireStateInterest: vi.fn(async () => ({ accepted: Promise.resolve(),
       closed: new Promise<any>(() => undefined), release })), waitUntilReady: vi.fn(async () => undefined) };
     const ble = { hasActiveCredential: vi.fn(async () => true), canManagePresenceCredential: vi.fn(async () => false),
-      ensureReady: vi.fn(() => direct), disconnect: vi.fn(async () => undefined) };
+      ensureReady: vi.fn(() => direct), connectionSnapshot: () => 'ready', disconnect: vi.fn(async () => undefined) };
     const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
       { active } as any, data as any);
     const page = port.openConnection(logicalDeviceId);
@@ -146,9 +146,12 @@ describe('DeviceUiPort', () => {
       await page.ready;
       await vi.waitFor(() => expect(ble.ensureReady).toHaveBeenCalledOnce());
       if (reason === 'background') active.next(false);
-      else { data.sessionEpoch++; authDataChanged.next(); }
+      else if (reason === 'account') { data.sessionEpoch++; authDataChanged.next(); }
+      else page.close();
       finishBle(); await page.closed;
-      await vi.waitFor(() => expect(ble.disconnect).toHaveBeenCalledOnce());
+      await Promise.resolve(); await Promise.resolve();
+      // Root lifecycle teardown is covered by the BLE service boundary tests.
+      expect(ble.disconnect).not.toHaveBeenCalled();
       expect(page.signal.aborted).toBe(true); expect(release).toHaveBeenCalledOnce();
       expect(port.isBleDirect(logicalDeviceId)).toBe(false);
     } finally { page.close(); finishBle(); }
@@ -161,6 +164,7 @@ describe('DeviceUiPort', () => {
       acquireStateInterest: vi.fn(async () => undefined), waitUntilReady: vi.fn(async () => undefined) };
     const ble = { hasActiveCredential: vi.fn(async () => true),
       canManagePresenceCredential: vi.fn(async () => false), ensureReady: vi.fn(() => pending),
+      connectionSnapshot: () => 'ready',
       disconnect: vi.fn(async () => undefined), command: vi.fn(async () => undefined) };
     const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
       { active: new BehaviorSubject(true) } as any, inventory() as any);

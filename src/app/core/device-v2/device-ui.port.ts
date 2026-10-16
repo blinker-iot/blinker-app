@@ -56,7 +56,6 @@ export type DeviceUiValue = boolean | number | bigint | string | null | Uint8Arr
 
 interface ConnectionGroup {
   scopes: Set<DeviceUiConnectionScope>;
-  disconnectOnIdle: boolean;
   // Explicitly offline callers share one bounded physical Direct opportunity.
   direct?: DeviceUiConnectionScope;
   lan?: { controller: AbortController; ready: Promise<void>; account: DeviceV2AccountContext; generation: number;
@@ -254,8 +253,8 @@ export class DeviceUiPort {
     });
   }
 
-  // One-shot read-only synchronization. A page uses openConnection instead,
-  // retaining the same owner after ready until it leaves or is backgrounded.
+  // Page scopes own Cloud interest, telemetry and bounded gateway access.
+  // Ordinary Direct BLE sessions are retained by the root BLE service.
   async connect(logicalDeviceId: string, signal?: AbortSignal): Promise<void> {
     const scope = this.createConnection(logicalDeviceId, false, signal);
 
@@ -277,14 +276,9 @@ export class DeviceUiPort {
       group = undefined;
     }
 
-    if (!group) this.connections.set(logicalDeviceId, group = { scopes: new Set(), disconnectOnIdle: false });
+    if (!group) this.connections.set(logicalDeviceId, group = { scopes: new Set() });
 
     const scope = new DeviceUiConnectionScope(current => this.connectTarget(logicalDeviceId, current, group, persistent), signal);
-
-    // Latch local cleanup ownership before a directory removal can erase the
-    // target's role. A Cloud caller must not close an unrelated native session.
-    group.disconnectOnIdle ||= persistent && this.supportsDirectBle(logicalDeviceId)
-      && !this.isGatewayChild(logicalDeviceId);
 
     group.scopes.add(scope);
 
@@ -304,7 +298,9 @@ export class DeviceUiPort {
         if (group.direct) {
           group.direct.close(); // Its signal closes only its own native link, never a successor by logical id.
           this.selectTransport(logicalDeviceId, 'cloud');
-        } else if (group.disconnectOnIdle) void this.ble.disconnect(logicalDeviceId).catch(() => undefined);
+        }
+
+        // Ordinary BLE remains owned by the root service across route changes.
       }
     });
 
@@ -432,9 +428,14 @@ export class DeviceUiPort {
         // ensureReady cancels it and proves the selected logical device with
         // Method 2, so an ambiguous/stale transport address cannot force Cloud.
         await this.ble.ensureReady(logicalDeviceId, HYBRID_BLE_CONNECT_TIMEOUT_MS);
+
+        // The root owner may retain the link, but a retired page cannot
+        // select a transport after an account/background/navigation change.
         signal.throwIfAborted();
-        // A credential/scan is only a candidate. Do not replace a usable
-        // Cloud snapshot until this scope has proved Direct readiness.
+        // The global connection may become ready after its original page left.
+        if (this.ble.connectionSnapshot(logicalDeviceId) !== 'ready') return false;
+
+        // Only an authenticated Direct session may replace Cloud state.
         this.selectTransport(logicalDeviceId, 'ble');
 
         return true;
@@ -682,30 +683,7 @@ export class DeviceUiPort {
       const bleSubscription = this.ble.watchConnection(logicalDeviceId).subscribe(value => {
         bleState = value;
 
-        if (this.isCloudCapable(logicalDeviceId)
-          && this.directConnectAllowed(logicalDeviceId)
-          && value === 'ready' && selected !== 'ble' && selected !== 'lan') {
-          // A bounded Direct attempt may transiently report stopped before a
-          // later retry completes. Once Method 2 has proved the same logical
-          // device, BLE is usable and must become the hybrid foreground path
-          // again; otherwise the page remains pinned to a slower/failing Cloud
-          // session even though its Direct Manifest and State are already live.
-          this.selectTransport(logicalDeviceId, 'ble');
-
-          return;
-        }
-
-        if (this.isCloudCapable(logicalDeviceId) && selected === 'ble' && value === 'stopped') {
-          // Direct is preferred only while it is usable. A peripheral may
-          // retire an idle or faulted GATT session; keep the hybrid device
-          // available through its existing cloud session without replaying
-          // the command that preceded the disconnect.
-          this.selectTransport(logicalDeviceId, 'cloud');
-
-          // The visible page acquires its own Cloud scope on the connection
-          // notification. A passive observer must not start a hidden sync.
-          return;
-        }
+        this.updateBleTransport(logicalDeviceId, value);
 
         publish();
       });
@@ -768,6 +746,7 @@ export class DeviceUiPort {
 
       const bleSubscription = this.ble.watchConnection(logicalDeviceId).subscribe(value => {
         bleState = value;
+        this.updateBleTransport(logicalDeviceId, value);
 
         publish();
       });
@@ -1092,6 +1071,19 @@ export class DeviceUiPort {
     }
 
     return transport;
+  }
+
+  private updateBleTransport(logicalDeviceId: string, state: DeviceUiConnectionState): void {
+    const selected = this.transport(logicalDeviceId).value;
+
+    if (!this.isCloudCapable(logicalDeviceId) || selected === 'lan') return;
+
+    // Lists and control pages observe the same globally owned BLE session.
+    if (state === 'ready' && this.directConnectAllowed(logicalDeviceId)) {
+      this.selectTransport(logicalDeviceId, 'ble');
+    } else if (selected === 'ble') {
+      this.selectTransport(logicalDeviceId, 'cloud');
+    }
   }
 
   private selectTransport(logicalDeviceId: string, value: DeviceUiTransport): void {

@@ -1,9 +1,14 @@
 import { BleClient } from '@capacitor-community/bluetooth-le';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bleScanner } from '../bluetooth/scan';
 import { BleApplicationMode, BleDirectCrypto } from '../device-v2/ble-direct';
 import { DeviceV2BleService } from './device-v2-ble.service';
+
+function createService(http: any, cache: any, data: any): DeviceV2BleService {
+  data.deviceDataLoader ??= new BehaviorSubject(false);
+  return new DeviceV2BleService(http, cache, data, { active: new BehaviorSubject(true) } as any);
+}
 
 describe('BLE presence evidence lifetime', () => {
   beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] }));
@@ -11,7 +16,7 @@ describe('BLE presence evidence lifetime', () => {
   const turn = async () => { for (let i = 0; i < 24; ++i) await Promise.resolve(); };
   const harness = () => {
     const data = { auth: { uuid: 'a' }, user: { id: 'a' }, sessionEpoch: 1, authDataChanged: new Subject<void>() };
-    const service = new DeviceV2BleService({} as any, { save: vi.fn() } as any, data as any);
+    const service = createService({} as any, { save: vi.fn() } as any, data as any);
     const internal = service as any;
     vi.spyOn(BleClient, 'initialize').mockResolvedValue();
     vi.spyOn(internal, 'credentialStore').mockReturnValue({ load: async () => ({
@@ -120,7 +125,7 @@ describe('BLE presence evidence lifetime', () => {
     const enabled = vi.spyOn(BleClient, 'isEnabled').mockResolvedValue(true);
     if (phase === 'snapshot') enabled.mockRejectedValueOnce(Error('permission changed'));
     const first = h.service.watchAdapterEnabled().subscribe(); await turn();
-    expect(h.internal.adapterEnabled.value).toBe(false);
+    expect(h.internal.adapterEnabled.value).toBe(null);
     expect(h.internal.adapterMonitoring).toBeUndefined();
     const initCount = initialize.mock.calls.length;
     await vi.advanceTimersByTimeAsync(30_000); expect(initialize).toHaveBeenCalledTimes(initCount);

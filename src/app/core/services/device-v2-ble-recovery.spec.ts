@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { BleApplicationMode, deriveBlePresenceLocator } from '../device-v2/ble-direct';
 import { DeviceV2BleService } from './device-v2-ble.service';
 
 function fixture() {
   const data = { auth: { uuid: 'owner-a' }, sessionEpoch: 1, authDataChanged: new Subject<void>() };
   const cache = { save: vi.fn() };
-  const service = new DeviceV2BleService({} as any, cache as any, data as any);
+  const service = createService({} as any, cache as any, data as any);
   const credential = {
     source: 'enrollment', state: 'pending', logicalDeviceId: 'ble_pending',
     deviceInstanceId: new Uint8Array(16).fill(1), accessEpoch: 7,
@@ -22,6 +22,11 @@ function fixture() {
   vi.spyOn(service as any, 'client').mockReturnValue(client);
   const scan = vi.spyOn(service, 'discoverDirect');
   return { service, data, cache, credential, store, session, client, scan };
+}
+
+function createService(http: any, cache: any, data: any): DeviceV2BleService {
+  data.deviceDataLoader ??= new BehaviorSubject(false);
+  return new DeviceV2BleService(http, cache, data, { active: new BehaviorSubject(true) } as any);
 }
 
 describe('ordinary BLE pending recovery', () => {

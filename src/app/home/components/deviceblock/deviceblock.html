@@ -7,10 +7,6 @@
   [class.status-reachable]="status === 'reachable'"
   [class.status-ready]="status === 'ready'"
 >
-  <div class="device-visual" aria-hidden="true">
-    <b-device-img [filename]="device.config.image"></b-device-img>
-  </div>
-
   <div class="device-primary">
     <div class="device-copy">
       <div class="device-summary-row">
@@ -40,6 +36,10 @@
         <i [class]="'device-state-icon ' + transportIcon" aria-hidden="true"></i>
         <span>{{ statusText }}</span>
       </div>
+    </div>
+
+    <div class="device-visual" aria-hidden="true">
+      <b-device-img [filename]="device.config.image"></b-device-img>
     </div>
   </div>
 

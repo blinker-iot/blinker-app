@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 
 import { BleApplicationMode, deriveBlePresenceLocator } from '../device-v2/ble-direct';
 import { bleScanner } from '../bluetooth/scan';
@@ -12,6 +12,12 @@ import {
   unambiguousBlePresenceCandidate,
 } from './device-v2-ble.service';
 
+function createService(http: any, cache: any, data: any): DeviceV2BleService {
+  data.deviceDataLoader ??= new BehaviorSubject(false);
+  data.getDevice ??= () => undefined;
+  return new DeviceV2BleService(http, cache, data, { active: new BehaviorSubject(true) } as any);
+}
+
 describe('DeviceV2BleService presence identity', () => {
   const data = {
     auth: { uuid: 'account-a' },
@@ -22,7 +28,7 @@ describe('DeviceV2BleService presence identity', () => {
 
   function realtimeHarness() {
     const account = { ...data, auth: { uuid: 'account-a' }, user: { id: 'account-a' } };
-    const service = new DeviceV2BleService({} as any, { save: vi.fn() } as any, account as any);
+    const service = createService({} as any, { save: vi.fn() } as any, account as any);
     const internal = service as any;
     const lease = { close: vi.fn(async () => undefined) };
     const active = { context: internal.accountContext(), logicalDeviceId: 'ble-one',
@@ -73,7 +79,7 @@ describe('DeviceV2BleService presence identity', () => {
   it('loads negotiation candidates only in the account session that created the client', () => {
     const account = { ...data, auth: { uuid: 'account-a' } };
     const cache = { load: vi.fn().mockReturnValue(undefined), save: vi.fn() };
-    const service = new DeviceV2BleService({} as any, cache as any, account as any);
+    const service = createService({} as any, cache as any, account as any);
     const client = (service as any).client({});
     expect(client.loadManifest('device-one')).toBeUndefined();
     expect(cache.load).toHaveBeenCalledExactlyOnceWith('device-one');
@@ -83,7 +89,7 @@ describe('DeviceV2BleService presence identity', () => {
   });
 
   it('owns a Direct attempt while draining presence, so page exit cannot start a late scan', async () => {
-    const service = new DeviceV2BleService({} as any, { save: vi.fn() } as any, data as any);
+    const service = createService({} as any, { save: vi.fn() } as any, data as any);
     const internal = service as any;
     let finishPresence!: () => void;
     const abort = new AbortController();
@@ -105,7 +111,7 @@ describe('DeviceV2BleService presence identity', () => {
   });
 
   it('shares one owned Direct attempt while presence cancellation is still pending', async () => {
-    const service = new DeviceV2BleService({} as any, { save: vi.fn() } as any, data as any);
+    const service = createService({} as any, { save: vi.fn() } as any, data as any);
     const internal = service as any;
     let finishPresence!: () => void;
     internal.presence = { abort: new AbortController(), promise: new Promise<void>(resolve => { finishPresence = resolve; }) };
@@ -123,7 +129,7 @@ describe('DeviceV2BleService presence identity', () => {
 
   it('late native snapshots and events cannot populate a successor account or its Manifest cache', () => {
     const source = { ...data }, cache = { save: vi.fn() };
-    const service = new DeviceV2BleService({} as any, cache as any, source as any), internal = service as any;
+    const service = createService({} as any, cache as any, source as any), internal = service as any;
     let publish!: (id: string, snapshot: any) => void, event!: (value: any) => void;
     const snapshot = { manifestAccepted: true, manifest: { revision: 1 } };
     const session = { store: {
@@ -140,7 +146,7 @@ describe('DeviceV2BleService presence identity', () => {
   });
 
   it('lists only credential-store recovery candidates', async () => {
-    const service = new DeviceV2BleService(
+    const service = createService(
       {} as ConstructorParameters<typeof DeviceV2BleService>[0],
       { save: vi.fn() } as unknown as ConstructorParameters<typeof DeviceV2BleService>[1],
       data as unknown as ConstructorParameters<typeof DeviceV2BleService>[2],
@@ -155,7 +161,7 @@ describe('DeviceV2BleService presence identity', () => {
 
   it('scan throttling preserves only the original nearby lifetime, without manufacturing new evidence', async () => {
     vi.useFakeTimers();
-    const service = new DeviceV2BleService({} as any, { save: vi.fn() } as any, data as any);
+    const service = createService({} as any, { save: vi.fn() } as any, data as any);
     const internal = service as any;
     const scanner = vi.spyOn(bleScanner, 'run').mockRejectedValue(Error('BLE_SCAN_THROTTLED'));
     const initialize = vi.spyOn(BleClient, 'initialize').mockResolvedValue();
@@ -179,7 +185,7 @@ describe('DeviceV2BleService presence identity', () => {
   it('account retirement clears nearby evidence and its timer', async () => {
     vi.useFakeTimers();
     try {
-      const service = new DeviceV2BleService({} as any, { save: vi.fn() } as any, data as any), internal = service as any;
+      const service = createService({} as any, { save: vi.fn() } as any, data as any), internal = service as any;
       internal.markNearby('ble_test'); internal.resetAccountSession();
       expect(internal.connectionStates.get('ble_test').nearbyUntil).toBe(0);
       await vi.advanceTimersByTimeAsync(20_000); expect(service.connectionSnapshot('ble_test')).toBe('idle');
@@ -187,7 +193,7 @@ describe('DeviceV2BleService presence identity', () => {
   });
 
   it('does not open a recovery window without an authorized PresenceKey', async () => {
-    const service = new DeviceV2BleService(
+    const service = createService(
       {} as ConstructorParameters<typeof DeviceV2BleService>[0],
       { save: vi.fn() } as unknown as ConstructorParameters<typeof DeviceV2BleService>[1],
       data as unknown as ConstructorParameters<typeof DeviceV2BleService>[2],
@@ -345,7 +351,7 @@ describe('DeviceV2BleService presence identity', () => {
       sessionEpoch: 1,
       authDataChanged: changed,
     };
-    const service = new DeviceV2BleService(
+    const service = createService(
       {} as ConstructorParameters<typeof DeviceV2BleService>[0],
       { save: vi.fn() } as unknown as ConstructorParameters<typeof DeviceV2BleService>[1],
       account as unknown as ConstructorParameters<typeof DeviceV2BleService>[2],
@@ -383,7 +389,7 @@ describe('DeviceV2BleService presence identity', () => {
       sessionEpoch: 1,
       authDataChanged: changed,
     };
-    const service = new DeviceV2BleService(
+    const service = createService(
       {} as ConstructorParameters<typeof DeviceV2BleService>[0],
       { save: vi.fn() } as unknown as ConstructorParameters<typeof DeviceV2BleService>[1],
       account as unknown as ConstructorParameters<typeof DeviceV2BleService>[2],
@@ -428,7 +434,7 @@ describe('DeviceV2BleService presence identity', () => {
       sessionEpoch: 1,
       authDataChanged: { subscribe: vi.fn() },
     };
-    const service = new DeviceV2BleService(
+    const service = createService(
       {} as ConstructorParameters<typeof DeviceV2BleService>[0],
       { save: vi.fn() } as unknown as ConstructorParameters<typeof DeviceV2BleService>[1],
       account as unknown as ConstructorParameters<typeof DeviceV2BleService>[2],

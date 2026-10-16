@@ -49,6 +49,7 @@ import {
 } from '../protocol/device-v2';
 import { DeviceV2ManifestCache } from './device-v2-manifest-cache.service';
 import { DataService } from './data.service';
+import { AppVisibilityService } from './app-visibility.service';
 import { BleDirectConnectionAdmission } from '../device-v2/ble-direct/transport';
 import { environment } from '../../../environments/environment';
 
@@ -189,11 +190,13 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   private adapterMonitoring?: Promise<void>;
   private adapterNotificationsActive = false;
   private accountSessionEpoch: number;
+  private appActive = true;
 
   constructor(
     http: HttpClient,
     private readonly manifestCache: DeviceV2ManifestCache,
     private readonly data: DataService,
+    appVisibility: AppVisibilityService,
   ) {
     this.api = new HttpBleEnrollmentApi(http);
     this.presenceApi = new HttpBlePresenceKeyApi(http);
@@ -202,6 +205,28 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
       if (this.accountSessionEpoch === data.sessionEpoch) return;
       this.accountSessionEpoch = data.sessionEpoch;
       this.resetAccountSession();
+    });
+
+    appVisibility.active.subscribe(active => {
+      this.appActive = active;
+
+      if (!active) void this.disconnectAll().catch(() => undefined);
+    });
+
+    data.deviceDataLoader.subscribe(loaded => {
+      if (!loaded) return;
+
+      const ids = new Set([this.active?.logicalDeviceId, this.opening?.logicalDeviceId]);
+
+      for (const id of ids) {
+        if (!id) continue;
+
+        const device = data.getDevice(id);
+
+        if (!device || device.config?.disabled) {
+          void this.disconnect(id).catch(() => undefined);
+        }
+      }
     });
   }
 
@@ -697,7 +722,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     const existing = await api.sync(logicalDeviceId);
     try {
       if (!existing.current.deviceConfirmed) {
-        await this.installPresenceBundle(existing, context, api);
+        await this.installPresenceBundle(existing, context, api, true);
         await this.performPresenceSync(logicalDeviceId, context);
         return;
       }
@@ -705,7 +730,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
         logicalDeviceId, existing.current.version, idempotencyKey,
       );
       try {
-        await this.installPresenceBundle(rotated, context, api);
+        await this.installPresenceBundle(rotated, context, api, true);
       } finally {
         clearBlePresenceKeyBundleSecrets(rotated);
       }
@@ -754,6 +779,18 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     context = this.accountContext(),
     admission?: BleDirectConnectionAdmission,
   ): Promise<void> {
+    if (!this.appActive) throw new Error('BLE_DIRECT_APP_INACTIVE');
+
+    void this.ensureAdapterMonitoring();
+
+    if (this.adapterEnabled.value === false) throw new Error('BLE_ADAPTER_DISABLED');
+
+    const device = this.data.getDevice(logicalDeviceId);
+
+    if (this.data.deviceDataLoader.value && (!device || device.config?.disabled)) {
+      throw new Error('DEVICE_V2_DEVICE_UNAVAILABLE');
+    }
+
     if (!Number.isInteger(scanTimeoutMs) || scanTimeoutMs < 1) {
       return Promise.reject(new Error('BLE_DIRECT_SCAN_TIMEOUT_INVALID'));
     }
@@ -769,8 +806,13 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     // Do not free a native acquisition slot merely because its caller stopped
     // waiting. Cancellation must finish before a successor can reuse the radio.
     if (this.opening?.abort.signal.aborted) {
-      return this.opening.promise.catch(() => undefined).then(
-        () => this.ensureReady(logicalDeviceId, scanTimeoutMs, context, admission));
+      const generation = this.generation;
+
+      return this.opening.promise.catch(() => undefined).then(() => {
+        if (generation !== this.generation) throw new Error('BLE_DIRECT_CONNECT_CANCELLED');
+
+        return this.ensureReady(logicalDeviceId, scanTimeoutMs, context, admission);
+      });
     }
     if (this.opening?.logicalDeviceId === logicalDeviceId
       && sameAccountContext(this.opening.context, context)) {
@@ -791,6 +833,16 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     });
     this.opening = { context, logicalDeviceId, promise, abort, admission };
     return promise;
+  }
+
+  private async disconnectAll(): Promise<void> {
+    // Invalidate queued acquisitions before releasing any native resources.
+    this.generation += 1;
+    this.presence?.abort.abort();
+
+    const ids = new Set([this.active?.logicalDeviceId, this.opening?.logicalDeviceId]);
+
+    await Promise.all([...ids].filter((id): id is string => !!id).map(id => this.disconnect(id)));
   }
 
   async disconnect(logicalDeviceId: string, admission?: BleDirectConnectionAdmission): Promise<void> {
@@ -1033,21 +1085,25 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
 
   private ensureAdapterMonitoring(): Promise<void> {
     if (this.adapterMonitoring) return this.adapterMonitoring;
+    const update = (enabled: boolean) => {
+      this.adapterEnabled.next(enabled);
+
+      if (!enabled) {
+        this.clearNearby();
+        void this.disconnectAll().catch(() => undefined);
+      }
+    };
+
     const monitoring = BleClient.initialize({ androidNeverForLocation: true })
       .then(async () => {
         if (!this.adapterNotificationsActive) {
-          await BleClient.startEnabledNotifications(enabled => {
-            this.adapterEnabled.next(enabled);
-            if (!enabled) { this.presence?.abort.abort(); this.clearNearby(); }
-          });
+          await BleClient.startEnabledNotifications(update);
           this.adapterNotificationsActive = true;
         }
-        const enabled = await BleClient.isEnabled();
-        this.adapterEnabled.next(enabled);
-        if (!enabled) { this.presence?.abort.abort(); this.clearNearby(); }
+        update(await BleClient.isEnabled());
       })
       .catch(() => {
-        this.adapterEnabled.next(false); this.presence?.abort.abort(); this.clearNearby();
+        this.adapterEnabled.next(null); this.presence?.abort.abort(); this.clearNearby();
         // A new visible lifetime may retry after permission has been granted.
         // Do not retry periodically or duplicate an already-installed listener
         // when only the subsequent isEnabled snapshot failed.
@@ -1078,6 +1134,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     bundle: Awaited<ReturnType<HttpBlePresenceKeyApi['reveal']>>,
     context: DeviceV2AccountContext,
     api: Pick<HttpBlePresenceKeyApi, 'confirm'>,
+    acquireConnection = false,
   ): Promise<void> {
     this.assertAccount(context);
     await this.savePresenceBundle(bundle, context);
@@ -1087,12 +1144,23 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
       || (expectedVersion !== 0 && !bundle.previous)) {
       throw new Error('BLE_PRESENCE_PENDING_STATE_INVALID');
     }
-    // Automatic key maintenance is not another physical acquisition owner.
-    // A managed child must already have an authorized connection; retain the
-    // pending bundle for a later explicit connection instead of racing the Hub.
-    if (!this.isGatewayChild(bundle.logicalDeviceId)) await this.ensureReady(bundle.logicalDeviceId, 15_000, context);
+    // Explicit rotation retains the save -> connect -> install sequence.
+    if (acquireConnection && !this.isGatewayChild(bundle.logicalDeviceId)) {
+      await this.ensureReady(bundle.logicalDeviceId, 15_000, context);
+    }
+
+    // Automatic maintenance may join an existing opening, but must never
+    // reconnect after its page leaves. Keep pending keys for the next owner.
+    const opening = this.opening;
+
+    if (opening?.logicalDeviceId === bundle.logicalDeviceId
+      && !opening.abort.signal.aborted
+      && sameAccountContext(opening.context, context)) await opening.promise;
+
     const active = this.active;
+
     if (!active || active.logicalDeviceId !== bundle.logicalDeviceId
+      || active.session.state !== 'ready'
       || !sameAccountContext(active.context, context)) {
       throw new Error('BLE_DIRECT_SESSION_NOT_READY');
     }
@@ -1167,22 +1235,25 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     if (generation !== this.generation) throw new Error('BLE_DIRECT_CONNECT_CANCELLED');
     this.setConnection(logicalDeviceId, 'connecting');
     let session: BleDirectSession | undefined;
-    const credential = await this.credentialStore(context).load(logicalDeviceId);
-    if (!credential || credential.state !== 'active') {
-      if (credential) clearBleControllerCredentialSecrets(credential);
-      this.setConnection(logicalDeviceId, 'stopped');
-      throw new Error('BLE_DIRECT_CREDENTIAL_NOT_FOUND');
-    }
-    const authorized = authorizedPresenceCandidates(logicalDeviceId, credential);
-    const matchesTarget: BleDirectTargetMatcher = async target => {
-      // Direct v2 has no privacy-preserving locator and is retained only long
-      // enough to install the first PresenceKey. Current v3 devices must be
-      // selected before GATT connection, never by trying arbitrary MACs.
-      if (target.profile.wireVersion === 2) return !admission;
-      return (await matchAuthorizedBlePresence(target.profile, authorized))
-        === logicalDeviceId;
-    };
+    let credential: BleControllerCredential | undefined;
+
     try {
+      credential = await this.credentialStore(context).load(logicalDeviceId);
+
+      if (!credential || credential.state !== 'active') {
+        throw new Error('BLE_DIRECT_CREDENTIAL_NOT_FOUND');
+      }
+
+      const authorized = authorizedPresenceCandidates(logicalDeviceId, credential);
+      const matchesTarget: BleDirectTargetMatcher = async target => {
+        // Direct v2 has no privacy-preserving locator and is retained only long
+        // enough to install the first PresenceKey. Current v3 devices must be
+        // selected before GATT connection, never by trying arbitrary MACs.
+        if (target.profile.wireVersion === 2) return !admission;
+        return (await matchAuthorizedBlePresence(target.profile, authorized))
+          === logicalDeviceId;
+      };
+
       const deadline = performance.now() + scanTimeoutMs;
       const rejected = new Set<string>();
       while (!session) {
@@ -1230,7 +1301,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
       this.setConnection(logicalDeviceId, 'stopped');
       throw error;
     } finally {
-      clearBleControllerCredentialSecrets(credential);
+      if (credential) clearBleControllerCredentialSecrets(credential);
     }
   }
 
