@@ -36,6 +36,7 @@ import {
 
 import { Subscription } from 'rxjs';
 import { BlinkerDevice } from '../../core/model/device.model';
+import { isNetworkUnavailable } from '../../core/functions/http-error';
 
 import {
   DeviceUiConnectivitySnapshot,
@@ -143,6 +144,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private layoutEpoch = 0;
   private storedLayout?: DeviceV2PageLayoutRecord;
   private layoutError = '';
+  private consoleError = '';
   private storedCapabilitiesLoading = false;
   private consoleRevision?: number;
   private consoleTimer?: ReturnType<typeof setInterval>;
@@ -483,6 +485,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.storedLayout = undefined;
     this.storedCapabilitiesLoading = false;
     this.layoutError = '';
+    this.consoleError = '';
     this.layoutLoadKey = '';
     this.layoutEpoch += 1;
 
@@ -637,7 +640,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       const source = cloudConsole(this.device) ? await this.consoles.get(logicalDeviceId) : undefined;
 
       if (session !== this.host.sessionVersion || !this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
-      if (source) { installConsole(this.device, source); this.consoleRevision = source.revision; }
+      if (source) installConsole(this.device, source);
 
       const record = source ? consoleLayout(source) : await this.pageLayouts.get(logicalDeviceId);
 
@@ -647,11 +650,19 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       validatingRecord = !!record;
 
       this.applyStoredLayout(record ?? undefined, this.snapshot);
+
+      if (source) {
+        this.consoleRevision = source.revision;
+        this.clearConsoleError();
+      }
     } catch (error) {
+      if (isNetworkUnavailable(error)) return;
+
       if (this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) {
         this.error = this.messageOf(error, '页面布局同步失败');
 
         if (validatingRecord) this.layoutError = this.error;
+        else if (cloudConsole(this.device)) this.consoleError = this.error;
       }
     } finally {
       this.requestRender();
@@ -677,19 +688,22 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       installConsole(this.device, source);
 
       if (source.revision !== this.consoleRevision && this.snapshot.manifestAccepted) {
-        this.consoleRevision = source.revision;
-
         this.applyStoredLayout(consoleLayout(source) ?? undefined, this.snapshot);
+        this.consoleRevision = source.revision;
       }
+
+      this.clearConsoleError();
     } catch (error) {
       if (session !== this.host.sessionVersion || id !== this.logicalDeviceId) return;
+      if (isNetworkUnavailable(error)) return;
 
       if (this.device.config.isShared) {
         this.device.data.canCommand = false;
         this.device.config.canEditConsole = false;
       }
 
-      this.error = '控制台权限或配置暂不可用，请重试。';
+      this.consoleError = '控制台权限或配置暂不可用，请重试。';
+      this.error = this.consoleError;
     } finally { this.consoleRefreshing = false; this.requestRender(); }
   }
 
@@ -950,6 +964,12 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.syncing = task;
 
     return task;
+  }
+
+  private clearConsoleError(): void {
+    if (this.error === this.consoleError) this.error = '';
+
+    this.consoleError = '';
   }
 
   private clearLayoutError(): void {

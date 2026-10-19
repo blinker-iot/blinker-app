@@ -184,26 +184,6 @@ export class DeviceblockListComponent implements AfterViewInit, OnDestroy {
     this.sortable = undefined;
   }
 
-  isWideDevice(deviceId: string) {
-    const device = this.deviceDataDict[deviceId];
-
-    if (!device) return false;
-
-    const card = device.config?.card;
-
-    if (card?.layout === 'standard') return false;
-    if (card?.layout === 'wide') return true;
-    // 宽卡快捷按钮暂时停用，不再因按钮配置自动切换为整行布局。
-    // if ((card?.actions?.length || 0) > 0) return true;
-    if ((card?.metrics?.length || 0) > 2) return true;
-
-    const numericDataCount = Object.values(device.data || {}).filter(
-      (value) => typeof value === 'number' && Number.isFinite(value)
-    ).length;
-
-    return numericDataCount > 2;
-  }
-
   gotoDashboard(deviceId: string) {
     if (Date.now() < this.suppressNavigationUntil) return;
     if (!this.deviceDataDict[deviceId]) return;

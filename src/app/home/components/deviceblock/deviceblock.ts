@@ -23,7 +23,10 @@ type DeviceCardStatus = 'offline' | 'unknown' | 'reachable' | 'ready';
 
 @Component({
   selector: 'deviceblock',
-  host: { '[class.has-metrics]': 'metrics.length > 0' },
+  host: {
+    '[class.has-metrics]': 'metrics.length > 0',
+    '[class.wide-device]': 'wide',
+  },
   templateUrl: 'deviceblock.html',
   styleUrls: ['deviceblock.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -94,7 +97,15 @@ export class Deviceblock {
     return this.current as BlinkerDevice;
   }
 
-  @Input() wide = false;
+  get wide(): boolean {
+    const card = this.current?.config?.card;
+
+    if (card?.layout === 'standard') return false;
+    if (card?.layout === 'wide') return true;
+    if ((card?.metrics?.length ?? 0) > 2) return true;
+
+    return this.allMetrics.length > 2;
+  }
 
   get online(): boolean {
     return !!this.current && this.deviceUi.isOnline(this.current.deviceName);
@@ -152,6 +163,10 @@ export class Deviceblock {
   }
 
   get metrics(): CardMetric[] {
+    return this.allMetrics.slice(0, this.wide ? 6 : 1);
+  }
+
+  private get allMetrics(): CardMetric[] {
     return (this.snapshot?.endpoints ?? []).flatMap(field => {
       const value = field.value;
 
@@ -168,7 +183,7 @@ export class Deviceblock {
           : compactNumber(value),
         unit: field.unit ?? '',
       }];
-    }).slice(0, this.wide ? 6 : 1);
+    });
   }
 
   private get directOnly(): boolean {

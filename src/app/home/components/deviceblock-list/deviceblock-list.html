@@ -5,9 +5,7 @@
   @for (deviceId of deviceDataList; track deviceId) {
   <deviceblock
     class="deviceblock"
-    [class.wide-device]="isWideDevice(deviceId)"
     [device]="deviceDataDict[deviceId]"
-    [wide]="isWideDevice(deviceId)"
     [attr.data-id]="deviceId"
     (click)="gotoDashboard(deviceId)"
   ></deviceblock>
