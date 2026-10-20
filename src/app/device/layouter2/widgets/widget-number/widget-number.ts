@@ -111,28 +111,19 @@ export class WidgetNumberComponent implements Layouter2Widget {
   @ViewChild('Gauge', { read: ElementRef, static: false })
   progressBar: ElementRef;
 
-  scale = 1;
-  fontScale = `scale(${this.scale})`;
+  get fontScale(): string {
+    const length = String(this.value).length + String(this.unit ?? '').length;
+    return `scale(${length > 9 ? 0.6 : length > 6 ? 0.8 : 1})`;
+  }
 
   constructor(private cd: ChangeDetectorRef) {}
 
-  timer;
-  scaleInterval;
   ngAfterViewInit() {
     this.initChart();
-    if (this.isDemo) return;
-    this.cd.detectChanges();
-    this.scaleInterval = setInterval(() => {
-      let textLength = this.value.toString().length + this.unit.length;
-      if (textLength > 9) this.scale = 0.6;
-      else if (textLength > 6) this.scale = 0.8;
-      else this.scale = 1;
-      this.fontScale = `scale(${this.scale})`;
-    }, 1111);
+    if (!this.isDemo) this.cd.detectChanges();
   }
 
   ngOnDestroy() {
-    clearInterval(this.scaleInterval);
     this.destroyBar();
   }
 

@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "outDir": "../../out-tsc/custom-panel", "types": [] },
+  "files": ["main.ts"],
+  "include": ["../**/*.d.ts"]
+}

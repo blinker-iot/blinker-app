@@ -28,12 +28,14 @@ export class WidgetTabComponent implements Layouter2Widget {
   }
 
   get value() {
+    const value = this.device.data[this.key];
+    if (typeof value === 'string') return value;
     return this.getValue(['val']);
   }
 
   get val() {
     if (typeof this.value == 'undefined') return false;
-    return this.getValue(['val'])[0] == '1' ? true : false;
+    return this.value[0] == '1' ? true : false;
   }
 
   get t1() {
@@ -46,7 +48,7 @@ export class WidgetTabComponent implements Layouter2Widget {
 
   get val1() {
     if (typeof this.value == 'undefined') return false;
-    return this.getValue(['val'])[1] == '1' ? true : false;
+    return this.value[1] == '1' ? true : false;
   }
 
   get t2() {
@@ -59,7 +61,7 @@ export class WidgetTabComponent implements Layouter2Widget {
 
   get val2() {
     if (typeof this.value == 'undefined') return false;
-    return this.getValue(['val'])[2] == '1' ? true : false;
+    return this.value[2] == '1' ? true : false;
   }
 
   get t3() {
@@ -72,7 +74,7 @@ export class WidgetTabComponent implements Layouter2Widget {
 
   get val3() {
     if (typeof this.value == 'undefined') return false;
-    return this.getValue(['val'])[3] == '1' ? true : false;
+    return this.value[3] == '1' ? true : false;
   }
 
   get t4() {
@@ -85,7 +87,7 @@ export class WidgetTabComponent implements Layouter2Widget {
 
   get val4() {
     if (typeof this.value == 'undefined') return false;
-    return this.getValue(['val'])[4] == '1';
+    return this.value[4] == '1';
   }
 
   get color() {

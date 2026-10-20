@@ -1,8 +1,7 @@
 @use './section-main' as section-main;
 
-// Global shell for routed pages such as sections/room, sections/scene and
-// sections/self-hosted-server. Main tab pages keep their existing header and
-// fixed scroll-mask implementation.
+// Shared header appearance and controls. Routed pages and tabs keep their
+// respective content offsets and toolbar heights.
 :root {
   --transparent-page-header-height: 44px;
   --transparent-page-mask-color: var(--blinker-bg);
@@ -10,49 +9,32 @@
     var(--ion-safe-area-top, 0px) +
     var(--transparent-page-header-height)
   );
-  --transparent-page-mask-height: calc(
-    var(--transparent-page-content-top) + 20px
-  );
 }
 
-ion-header:not(.main-tab-header):not(.opaque-page-header) {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
+ion-header {
   z-index: 10;
   isolation: isolate;
   overflow: visible !important;
   background: transparent !important;
   box-shadow: none !important;
 
-  // The header surface remains transparent. This visual layer sits above
-  // scrolling content and below the toolbar controls.
+  // Blur scrolling content within the header, below the toolbar controls.
   &::before {
     content: '';
+
     position: absolute;
     top: 0;
     right: 0;
     left: 0;
     z-index: 0;
-    height: var(--transparent-page-mask-height);
+
+    height: 100%;
     pointer-events: none;
-    // rgba() is the WebView fallback; color-mix() preserves page-specific
-    // mask colors in engines that support it.
-    background: linear-gradient(
-      to bottom,
-      rgba(var(--ion-background-color-rgb), 0.58) 0%,
-      rgba(var(--ion-background-color-rgb), 0.34) 55%,
-      rgba(var(--ion-background-color-rgb), 0.12) 78%,
-      transparent 100%
-    );
-    background: linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--transparent-page-mask-color) 58%, transparent) 0%,
-      color-mix(in srgb, var(--transparent-page-mask-color) 34%, transparent) 55%,
-      color-mix(in srgb, var(--transparent-page-mask-color) 12%, transparent) 78%,
-      transparent 100%
-    );
+
+    -webkit-backdrop-filter: blur(var(--ui-header-blur, 16px));
+    backdrop-filter: blur(var(--ui-header-blur, 16px));
+
+    background: transparent;
   }
 
   &::after {
@@ -62,14 +44,70 @@ ion-header:not(.main-tab-header):not(.opaque-page-header) {
   ion-toolbar {
     position: relative;
     z-index: 1;
-    --min-height: var(--transparent-page-header-height) !important;
     --background: transparent !important;
     --ion-color-base: transparent !important;
     --border-color: transparent !important;
     --border-width: 0 !important;
-    min-height: var(--transparent-page-header-height) !important;
+
     background: transparent !important;
     box-shadow: none !important;
+  }
+}
+
+ion-header:not(.main-tab-header):not(.opaque-page-header) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+
+  ion-toolbar {
+    --min-height: var(--transparent-page-header-height) !important;
+    --padding-top: 0;
+    --padding-bottom: 0;
+    --padding-start: 6px;
+    --padding-end: 6px;
+    min-height: var(--transparent-page-header-height) !important;
+  }
+
+  ion-buttons { margin-inline: 0; }
+}
+
+ion-header ion-toolbar ion-buttons {
+  ion-back-button, ion-button.header-back {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+
+    margin: 0;
+    padding: 0;
+    --min-width: 44px;
+    --min-height: 44px;
+    --padding-top: 0;
+    --padding-bottom: 0;
+    --padding-start: 0;
+    --padding-end: 0;
+    --icon-margin-start: 0;
+    --icon-margin-end: 0;
+    --icon-font-size: 24px;
+
+    i { font-size: 24px; }
+  }
+
+  ion-button:not(.header-back):is(.header-action, :has(> i), :has(> ion-icon[slot='icon-only'])) {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+
+    margin: 0;
+    padding: 0;
+    --padding-top: 0;
+    --padding-bottom: 0;
+    --padding-start: 0;
+    --padding-end: 0;
+
+    i, ion-icon { font-size: 16px; }
+    ion-spinner { width: 16px; height: 16px; }
   }
 }
 

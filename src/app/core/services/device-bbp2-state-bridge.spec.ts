@@ -87,7 +87,8 @@ function createHarness(devices: BlinkerDevice[] = [makeDevice()]) {
     watchEvents: vi.fn((id: string) => eventStream(id)),
   };
   const http = {
-    get: vi.fn(() => of({ message: 1001 })),
+    get: vi.fn(() => of<unknown>({ data: {} })),
+    patch: vi.fn(() => of({ status: 200 })),
     post: vi.fn(),
   };
   const initCompleted = new BehaviorSubject(false);
@@ -116,6 +117,7 @@ function createHarness(devices: BlinkerDevice[] = [makeDevice()]) {
     {} as never,
     {} as never,
     deviceUi as never,
+    {} as never,
   );
 
   return {
@@ -244,15 +246,31 @@ describe('DeviceService bbp2 state bridge', () => {
     expect(second.data.temperature).toBe(30);
   });
 
-  it('connects for realtime queries without sending an rt endpoint command', () => {
+  it('observes realtime queries without waking devices or sending an rt endpoint command', () => {
     const device = makeDevice();
     const { deviceUi, service } = createHarness([device]);
 
     service.queryRealtimeData(device, { rt: ['temperature'] });
 
-    expect(deviceUi.connect).toHaveBeenCalledOnce();
-    expect(deviceUi.connect).toHaveBeenCalledWith(firstId);
+    expect(deviceUi.connect).not.toHaveBeenCalled();
+    expect(deviceUi.watchState).toHaveBeenCalledWith(firstId);
     expect(deviceUi.sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('persists V2 interface configuration through the authenticated endpoint', async () => {
+    const device = makeDevice();
+    const { http, service } = createHarness([device]);
+    expect(await service.saveDeviceConfig(device, { component: 'Layouter2Component' })).toBe(true);
+    expect(http.patch).toHaveBeenCalledWith(expect.stringContaining('/ui-config'), { component: 'Layouter2Component' });
+    expect(http.post).not.toHaveBeenCalled();
+  });
+
+  it('saves a V2 display name without sending credentials to the legacy config endpoint', async () => {
+    const device = makeDevice();
+    const { http, service } = createHarness([device]);
+    expect(await service.saveDeviceConfig(device, { customName: '蓝牙音响' })).toBe(true);
+    expect(http.patch).toHaveBeenCalledWith(expect.stringContaining('/ui-config'), { customName: '蓝牙音响' });
+    expect(http.post).not.toHaveBeenCalled();
   });
 
   it('restores the saved UI component on startup without replacing V2 transport fields', async () => {
@@ -265,9 +283,10 @@ describe('DeviceService bbp2 state bridge', () => {
       service,
     } = createHarness([device]);
     http.get.mockReturnValue(of({
-      message: 1000,
-      detail: {
+      status: 200,
+      data: {
         component: 'Customizer',
+        customName: '蓝牙音响',
         image: 'saved-image',
         mode: 'mqtt',
         broker: 'legacy-broker',
@@ -282,6 +301,7 @@ describe('DeviceService bbp2 state bridge', () => {
     });
     expect(device.config).toMatchObject({
       component: 'Customizer',
+      customName: '蓝牙音响',
       image: 'saved-image',
       mode: 'bbp2',
       broker: 'blinker',
@@ -290,15 +310,6 @@ describe('DeviceService bbp2 state bridge', () => {
       key: 'component',
       source: 'config',
     });
-    expect(http.get).toHaveBeenCalledWith(
-      expect.any(String),
-      {
-        params: {
-          uuid: 'user-id',
-          token: 'token',
-          deviceName: firstId,
-        },
-      },
-    );
+    expect(http.get).toHaveBeenCalledWith(expect.stringContaining('/ui-config'));
   });
 });

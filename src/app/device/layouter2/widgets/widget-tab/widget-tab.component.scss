@@ -1,29 +1,29 @@
+:host { container-type: size; }
+
 .tabsbox {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: row;
+    --widget-direction: row;
+    gap: 4px;
+    padding: 8px;
 
     .tab {
         min-width: 0;
-        flex: 0 1 18%;
+        height: 100%;
+        flex: 1 1 0;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-direction: column;
-        i{
-            color: var(--blinker-text-tertiary);
-            font-size: 42px;
-        }
-        .content{
-            margin-top: 5px;
-            color: var(--blinker-text-secondary);
-            font-size: 0.8rem;
-        }
-    }
-
-    .tab:active {
+        gap: 4px;
+        padding: 4px 2px;
+        border: 1px solid transparent;
         border-radius: var(--blinker-radius-control);
-        transform: scale(0.95, 0.95);
+        background: transparent;
+        color: var(--blinker-text-secondary);
+        cursor: pointer;
+        i { color: var(--blinker-text-tertiary); font-size: clamp(16px, 28cqh, 26px); line-height: 1; flex-shrink: 0; }
+        .content { flex-shrink: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 1.2; }
+        &[aria-pressed='true'] { background: var(--blinker-surface-active); border-color: var(--blinker-border); color: var(--blinker-text-primary); }
+        &:focus-visible { outline: 2px solid var(--ion-color-primary); outline-offset: -2px; }
+        &:active { transform: scale(0.96); }
     }
 }

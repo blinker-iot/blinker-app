@@ -1,0 +1,130 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+
+$ease: cubic-bezier(0.3, 0.7, 0.4, 1);
+
+// The whole card is the key: an icon chip, the title with its state, and a
+// round press mark. Two rows tall it stacks; one row tall it is a bar.
+
+:host { padding: 0; }
+
+.hw {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template: 'chip .' auto '. .' 1fr 'copy key' auto / minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 14px 14px 14px 16px;
+  text-align: left;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 0.15s;
+
+  &:active { transform: scale(0.98); }
+}
+
+:host(.wide) .hw {
+  grid-template: 'chip copy key' 1fr / auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.hw-chip {
+  grid-area: chip;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--ui-accent) 13%, var(--ui-card));
+  color: var(--ui-accent);
+  transition: background-color 0.25s, color 0.25s;
+
+  @include theme.electronic { border: 1.5px dotted var(--ui-accent); background: none; }
+}
+
+.hw-copy {
+  grid-area: copy;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+
+  span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+}
+
+.hw-t {
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-tracking);
+}
+
+.hw-s { color: var(--ui-muted); font-size: 12px; transition: color 0.25s; }
+
+// Press mark: a dot in a ring; while held the ring ripples outwards.
+.hw-key {
+  grid-area: key;
+  align-self: end;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ui-accent) 40%, transparent);
+  transition: box-shadow 0.25s;
+
+  i {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ui-accent);
+    transition: transform 0.25s $ease;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--ui-accent);
+    opacity: 0;
+  }
+
+  @include theme.electronic { box-shadow: none; border: 1.5px dotted var(--ui-accent); }
+}
+
+:host(.wide) .hw-key { align-self: center; }
+
+// Held (or reported on): the card takes the accent.
+:host(.on) {
+  border-color: color-mix(in srgb, var(--ui-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--ui-accent) 11%, var(--ui-card));
+
+  .hw-chip { background: var(--ui-accent); color: var(--ui-on-accent); }
+  .hw-s { color: var(--ui-accent); }
+  .hw-key { box-shadow: inset 0 0 0 2px var(--ui-accent); }
+  .hw-key i { transform: scale(1.35); }
+  .hw-key::after { animation: hw-ripple 1.2s ease-out infinite; }
+}
+
+@include theme.electronic-host('.on') {
+  border-color: var(--ui-accent);
+  background: var(--ui-card);
+
+  .hw-chip { background: none; color: var(--ui-accent); }
+  .hw-key { box-shadow: none; }
+}
+
+@keyframes hw-ripple {
+  from { opacity: 0.6; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.7); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host(.on) .hw-key::after { animation: none; }
+}

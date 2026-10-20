@@ -1,0 +1,78 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+@include c.fills-rows;
+.memory-body { display: grid; place-items: center; flex: 1; min-height: 0; container-type: size; }
+
+.orb {
+  position: relative;
+
+  width: min(112px, 100cqi, 100cqb);
+
+  aspect-ratio: 1;
+  overflow: hidden;
+
+  border: 1px solid color-mix(in srgb, var(--ui-accent) 25%, transparent);
+
+  border-radius: 50%;
+
+  background: var(--ui-well);
+
+  &.unknown { border-style: dashed; }
+  &.empty .wave { opacity: 0; }
+}
+
+.wave {
+  position: absolute;
+
+  top: calc((1 - var(--level)) * 100% - 8%);
+  left: 0;
+  width: 200%;
+  height: 100%;
+
+  fill: var(--ui-accent);
+
+  transition: top .6s ease;
+  animation: wave 5s linear infinite;
+}
+
+.wave.back { opacity: .18; animation-duration: 7s; animation-direction: reverse; }
+.wave.front { opacity: .42; }
+
+.orb-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  strong { font-size: 30px; line-height: 1; }
+
+  small { margin-left: 2px; font-family: var(--ui-font); font-size: 12px; }
+  span { color: var(--ui-muted); font-size: 10px; }
+}
+
+.memory-stats {
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 10px;
+
+  > div { display: grid; gap: 4px; text-align: center; }
+
+  span { color: var(--ui-muted); font-size: 10px; }
+  strong { font-size: 14px; overflow-wrap: anywhere; }
+}
+
+.caption { margin: 0; color: var(--ui-muted); font-size: 10px; text-align: center; }
+
+.orb.still .wave { animation: none; }
+
+@keyframes wave { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .wave { animation: none; transition: none; } }
+
+@include theme.electronic { .orb { border-style: dotted; } }

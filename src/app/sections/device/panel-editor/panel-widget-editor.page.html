@@ -1,0 +1,42 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button text="" [defaultHref]="editorUrl" [disabled]="saving" />
+    </ion-buttons>
+    <ion-title>部件属性</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="save()" [disabled]="saving || !widget">
+        @if (saving) { <ion-spinner name="crescent" /> } @else { 保存 }
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content [fullscreen]="true" [scrollY]="false">
+  <div class="property-page content-under-header">
+
+    @if (card; as preview) {
+      <section class="preview-region" aria-label="组件实时预览">
+        <div class="panel">
+          <div class="cell" [class.wide]="preview.widget.grid.width >= 4"
+            [style.--span]="preview.widget.grid.width"
+            [style.--rows]="preview.widget.grid.height">
+            <app-page-widget [card]="preview" />
+          </div>
+        </div>
+      </section>
+      <section class="property-scroll" aria-label="部件属性设置">
+        <div class="property-settings" [attr.inert]="saving ? '' : null">
+          @if (error) { <p class="error" role="alert">{{ error }}</p> }
+
+          <app-widget-inspector [widget]="preview.widget" [field]="preview.field"
+            [extraCandidates]="context!.extraCandidates" [twoColumnLayout]="true"
+            (widgetChange)="updateWidget($event)" />
+          <button class="remove-button" type="button" (click)="remove()" [disabled]="saving">
+            <i class="fa-light fa-trash" aria-hidden="true"></i>移除部件
+          </button>
+        </div>
+      </section>
+    }
+
+  </div>
+</ion-content>

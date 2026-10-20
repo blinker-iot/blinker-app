@@ -23,6 +23,8 @@ export interface BleEnrollmentIntent {
   intentId: Uint8Array;
   logicalDeviceId: string;
   grant: Uint8Array;
+  presenceKeyVersion: number;
+  presenceKey: Uint8Array;
   expiresAt: number;
   securityProfile: number;
   serverKeyId: number;
@@ -33,6 +35,7 @@ export interface BleEnrollmentIntent {
 export interface BleEnrollmentCommit {
   logicalDeviceId: string;
   accessEpoch: number;
+  presenceKeyVersion: number;
   controllerId: Uint8Array;
   state: 'active';
   replayed: boolean;
@@ -67,6 +70,8 @@ interface IntentJson {
   intentId: string;
   logicalDeviceId: string;
   grant: string;
+  presenceKeyVersion: number;
+  presenceKey: string;
   expiresAt: number;
   securityProfile: number;
   serverKeyId: number;
@@ -77,6 +82,7 @@ interface IntentJson {
 interface CommitJson {
   logicalDeviceId: string;
   accessEpoch: number;
+  presenceKeyVersion: number;
   controllerId: string;
   state: string;
   replayed: boolean;
@@ -112,11 +118,17 @@ export class HttpBleEnrollmentApi implements BleEnrollmentApi {
         serverKeyId: request.serverKeyId,
         signatureAlgorithm: request.signatureAlgorithm,
       },
+      { observe: 'response' },
     ));
-    const value = response?.data;
-    if ((response?.status !== 200 && response?.status !== 201)
+    requireNoStore(response.headers.get('Cache-Control'));
+    const envelope = response.body;
+    const value = envelope?.data;
+    if ((response.status !== 200 && response.status !== 201)
+      || envelope?.status !== response.status
       || !value || !/^ble_[A-Za-z0-9_-]{22}$/.test(value.logicalDeviceId)
       || !Number.isSafeInteger(value.expiresAt) || value.expiresAt < 1
+      || !Number.isSafeInteger(value.presenceKeyVersion)
+      || value.presenceKeyVersion < 1 || value.presenceKeyVersion > 0xffffffff
       || typeof value.replayed !== 'boolean') {
       throw new Error('BLE_DIRECT_INTENT_RESPONSE_INVALID');
     }
@@ -124,6 +136,8 @@ export class HttpBleEnrollmentApi implements BleEnrollmentApi {
       intentId: base64UrlDecode(value.intentId, 16),
       logicalDeviceId: value.logicalDeviceId,
       grant: base64UrlDecode(value.grant),
+      presenceKeyVersion: value.presenceKeyVersion,
+      presenceKey: base64UrlDecode(value.presenceKey, 16),
       expiresAt: value.expiresAt,
       securityProfile: value.securityProfile,
       serverKeyId: value.serverKeyId,
@@ -149,12 +163,15 @@ export class HttpBleEnrollmentApi implements BleEnrollmentApi {
     if (response?.status !== 200
       || !value || !/^ble_[A-Za-z0-9_-]{22}$/.test(value.logicalDeviceId)
       || !Number.isSafeInteger(value.accessEpoch) || value.accessEpoch < 1
+      || !Number.isSafeInteger(value.presenceKeyVersion)
+      || value.presenceKeyVersion < 1 || value.presenceKeyVersion > 0xffffffff
       || value.state !== 'active' || typeof value.replayed !== 'boolean') {
       throw new Error('BLE_DIRECT_COMMIT_RESPONSE_INVALID');
     }
     return {
       logicalDeviceId: value.logicalDeviceId,
       accessEpoch: value.accessEpoch,
+      presenceKeyVersion: value.presenceKeyVersion,
       controllerId: base64UrlDecode(value.controllerId, 16),
       state: 'active',
       replayed: value.replayed,
@@ -183,5 +200,11 @@ export class HttpBleEnrollmentApi implements BleEnrollmentApi {
       state: value.state,
       replayed: value.replayed,
     };
+  }
+}
+
+function requireNoStore(value: string | null): void {
+  if (!value?.toLowerCase().split(',').some(token => token.trim() === 'no-store')) {
+    throw new Error('BLE_DIRECT_CACHE_POLICY_INVALID');
   }
 }

@@ -21,7 +21,6 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 
-import { HeroCardComponent } from '../../../core/components/hero-card/hero-card.component';
 import {
   DeviceKeyContext,
   DeviceKeyCreateResponse,
@@ -66,7 +65,6 @@ type KeyDevicePhase =
     IonContent,
     IonSpinner,
     TranslatePipe,
-    HeroCardComponent,
   ],
 })
 export class KeyDeviceGuidePage implements OnDestroy {
@@ -257,8 +255,12 @@ void loop() {
   }
 
   async finishKeySetup(): Promise<void> {
+    const logicalDeviceId = this.revealContext?.logicalDeviceId;
+    if (logicalDeviceId) await this.userService.getAllInfo().catch(() => false);
     this.resetProvisioningState();
-    await this.navController.navigateRoot('/guide');
+    await this.navController.navigateRoot(
+      logicalDeviceId ? `/device/${encodeURIComponent(logicalDeviceId)}` : '/home/device'
+    );
   }
 
   ionViewWillLeave(): void {

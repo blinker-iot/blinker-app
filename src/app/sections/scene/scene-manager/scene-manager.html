@@ -1,83 +1,11 @@
-<ion-header class="manager-header">
-  <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button
-        text=""
-        defaultHref="/home/profile"
-      ></ion-back-button>
-    </ion-buttons>
-    <ion-title>{{'MENU.SCENE_MANAGER' | translate}}</ion-title>
-    @if (loaded && sceneDataList.length) {
-    <ion-buttons slot="end">
-      <ion-button class="edit-button" (click)="switchMode()">
-        {{ editMode ? '完成' : '编辑' }}
-      </ion-button>
-    </ion-buttons>
-    }
-  </ion-toolbar>
-</ion-header>
-<ion-content fullscreen="true">
-  <main>
-    <app-hero-card
-      iconClass="fa-light fa-wand-magic-sparkles"
-      eyebrow="SMART AUTOMATION"
-      heading="让设备按你的方式联动"
-      description="组合多个设备动作，一次触发常用生活场景。"
-      [meta]="sceneDataList.length"
-    />
-
-    <div class="section-label">我的场景</div>
-
-    @if (loaded && sceneDataList.length) {
-    <section class="manager-card">
-      <app-menu-list
-        class="manager-list"
-        [editMode]="editMode"
-        (sortChange)="sortChange($event)"
-      >
-        @for (sceneName of sceneDataList; track sceneName) {
-        <app-menu-item
-          [id]="sceneName"
-          (delete)="delSceneAlert($event)"
-          showArrow="true"
-          (enter)="editScene(sceneName)"
-        >
-          <span class="entry-icon scene-entry-icon" aria-hidden="true">
-            <i
-              [class]="sceneDataDict[sceneName]?.ico || 'fa-light fa-bolt'"
-            ></i>
-          </span>
-          <span class="entry-copy">
-            <strong>{{ sceneName }}</strong>
-            <small
-              >{{ sceneDataDict[sceneName]?.acts?.length || 0 }}
-              个执行动作</small
-            >
-          </span>
-        </app-menu-item>
-        }
-      </app-menu-list>
-    </section>
-    } @if (loaded && !sceneDataList.length) {
-    <section class="empty-state">
-      <span class="empty-icon scene-empty-icon" aria-hidden="true">
-        <i class="fa-light fa-sparkles"></i>
-      </span>
-      <strong>还没有自动化场景</strong>
-      <p>创建一个场景，把多个设备动作组合起来。</p>
-    </section>
-    }
-  </main>
-</ion-content>
-@if (loaded && !editMode) {
-<ion-footer class="manager-footer ion-no-border">
-  <ion-toolbar>
-    <div class="footer-shell">
-      <button type="button" class="primary-action" (click)="addScene()">
-        <i class="fa-light fa-plus" aria-hidden="true"></i>
-        <span>新建场景</span>
-      </button>
-    </div>
-  </ion-toolbar>
-</ion-footer>
-}
+<ion-header><ion-toolbar>
+  <ion-buttons slot="start"><ion-back-button text="" defaultHref="/automation-manager" /></ion-buttons>
+  <ion-title>原场景配置存档</ion-title>
+</ion-toolbar></ion-header>
+<ion-content><main>
+  <p>这些是旧版保存的场景配置，仅供查阅，不会执行或自动转换为云端自动化。</p>
+  <ion-button routerLink="/automation-manager">进入自动化</ion-button>
+  @for (name of sceneNames; track name) {
+    <section class="manager-card"><h2>{{ name }}</h2><p>{{ actionCount(name) }} 个原配置动作 · 未接入当前执行器</p></section>
+  } @empty { <p>暂无原场景配置。</p> }
+</main></ion-content>

@@ -1,6 +1,14 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
-import { IonicModule, NavController } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  NavController,
+} from '@ionic/angular/standalone';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ActivatedRoute } from '@angular/router';
 
@@ -15,8 +23,18 @@ import {
   styleUrls: ['./guide.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonicModule, TranslatePipe, MenuListComponent],
+  imports: [
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    TranslatePipe,
+    MenuListComponent,
+  ],
 })
+
 export class GuidePage {
   readonly isReconfiguration: boolean;
   readonly backHref: string;
@@ -28,9 +46,11 @@ export class GuidePage {
   ) {
     this.isReconfiguration =
       route.snapshot.queryParamMap.get('mode') === 'reconfigure';
+
     const deviceId = route.snapshot.queryParamMap.get('deviceId');
+
     this.backHref = this.isReconfiguration && deviceId
-      ? `/device/${deviceId}`
+      ? `/device-manager/${encodeURIComponent(deviceId)}`
       : '/home/device';
   }
 
@@ -38,24 +58,6 @@ export class GuidePage {
     return this.isReconfiguration
       ? 'DEVICE_GUIDE.RECONFIGURE_TITLE'
       : 'DEVICE_GUIDE.TITLE';
-  }
-
-  get eyebrowKey(): string {
-    return this.isReconfiguration
-      ? 'DEVICE_GUIDE.RECONFIGURE_EYEBROW'
-      : 'DEVICE_GUIDE.EYEBROW';
-  }
-
-  get heroTitleKey(): string {
-    return this.isReconfiguration
-      ? 'DEVICE_GUIDE.RECONFIGURE_TITLE'
-      : 'DEVICE_GUIDE.HERO_TITLE';
-  }
-
-  get heroDescriptionKey(): string {
-    return this.isReconfiguration
-      ? 'DEVICE_GUIDE.RECONFIGURE_DESCRIPTION'
-      : 'DEVICE_GUIDE.HERO_DESCRIPTION';
   }
 
   get sectionTitleKey(): string {
@@ -97,6 +99,7 @@ export class GuidePage {
 
   async selectMethod(method: MenuListItem): Promise<void> {
     if (!method.route) return;
+
     await this.navController.navigateForward(method.route);
   }
 

@@ -11,7 +11,8 @@ ion-content {
 
 .editor-content {
   min-height: 100%;
-  padding: 24px 18px calc(28px + env(safe-area-inset-bottom));
+
+  padding: 0 18px calc(28px + env(safe-area-inset-bottom));
   background:
     radial-gradient(circle at 50% 5%, rgba(var(--ion-color-primary-rgb), 0.12), transparent 23%),
     var(--blinker-bg);

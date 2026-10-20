@@ -1,60 +1,115 @@
 <article
+  #cardElement
   class="device-card"
   [class.wide]="wide"
-  [class.online]="online"
-  [class.offline]="!online"
+  [class.status-offline]="status === 'offline'"
   [class.status-reachable]="status === 'reachable'"
   [class.status-ready]="status === 'ready'"
 >
-  <div class="device-primary">
-    <span
-      class="device-state-icon"
-      role="img"
-      [attr.aria-label]="statusText"
-      [attr.title]="statusText"
-    ><i [class]="transportIcon" aria-hidden="true"></i></span>
-    <div class="device-visual">
-      <b-device-img [filename]="device.config.image"></b-device-img>
+  <header class="device-heading">
+    <div class="device-name">
+      <span class="device-name-text" [attr.title]="displayName">{{ displayName }}</span>
+      @if (device.config.isShared) {
+        <span class="shared-device-badge" role="img" aria-label="别人共享的设备" title="别人共享的设备">
+          <i class="fa-light fa-share-nodes" aria-hidden="true"></i>
+        </span>
+      }
     </div>
-    <div class="device-copy">
-      <div class="device-summary-row">
-        <div class="device-name">{{ device.config.customName || '设备' }}</div>
-        @if (showSwitch) {
-          <button
-            type="button"
-            class="device-switch"
-            [class.checked]="switchOn"
-            [class.waiting]="switchWaiting"
-            [disabled]="!canControl || switchWaiting"
-            [attr.aria-pressed]="switchOn"
-            (click)="tapSwitch($event)"
-          >
-            <span></span>
-          </button>
-        } @else if (!wide && metrics.length > 0) {
-          <div class="device-metrics" aria-label="设备数据">
-            @for (metric of metrics; track metric.key) {
-              <span class="device-metric">
-                <strong>{{ metric.value }}{{ metric.unit }}</strong>
-                <small>{{ metric.key }}</small>
-              </span>
-            }
-          </div>
-        }
-      </div>
-    </div>
+    <span class="device-status" role="img" [attr.aria-label]="statusText" [attr.title]="statusText">
+      <i [class]="'device-state-icon ' + transportIcon" aria-hidden="true"></i>
+    </span>
+  </header>
+
+  <div class="device-visual" aria-hidden="true">
+    <b-device-img [filename]="device.config.image"></b-device-img>
   </div>
 
-  @if (wide && metrics.length > 0) {
-    <aside class="device-extension">
-      <div class="extension-grid" aria-label="设备详细数据">
-        @for (metric of metrics; track metric.key) {
-          <div class="extension-cell extension-metric">
-            <small>{{ metric.key }}</small>
-            <strong>{{ metric.value }}<em>{{ metric.unit }}</em></strong>
+  <footer class="device-metrics" [class.stale]="stale"
+    [style.grid-template-columns]="'repeat(' + rowColumns + ', minmax(max(44px, 3rem), 1fr))'"
+    [attr.aria-label]="stale ? '设备数据，缓存状态' : '设备数据'">
+    @if (cachedReadings) {
+      <span class="device-data-hint">缓存</span>
+    }
+    @for (metric of visibleMetrics; track metric.key) {
+      @if (editing || metric.mode === 'read') {
+      <span class="device-metric" [class.unavailable]="!!metric.unavailable"
+        [style.grid-column]="'span ' + metric.span"
+        [attr.role]="editing ? 'button' : null" [attr.tabindex]="editing ? 0 : null"
+        [attr.title]="metric.description" [attr.aria-label]="metric.description"
+        (click)="configureMetric($event, metric.key)"
+        (keydown.enter)="configureMetric($event, metric.key)" (keydown.space)="configureMetric($event, metric.key)">
+        <span class="device-metric-visual">
+          @if (metric.unavailable) {
+            <small class="device-metric-hint">不可用</small>
+          }
+          @if (editing && !metric.unavailable && metric.mode === 'toggle') {
+            <span class="device-switch-track" [class.is-on]="metric.field?.value === true" aria-hidden="true">
+              <span class="device-switch-thumb"></span>
+            </span>
+          } @else if (editing && !metric.unavailable && metric.mode === 'action') {
+            <i class="fa-light fa-play device-action-icon" aria-hidden="true"></i>
+          } @else {
+            <strong>{{ metric.display }}</strong>
+            @if (metric.unit) {
+              <span class="device-metric-unit">{{ metric.unit }}</span>
+            }
+          }
+        </span>
+      </span>
+      } @else if (metric.mode === 'range') {
+      <div class="device-metric device-range" [class.unavailable]="!!metric.unavailable" style="grid-column: span 2"
+        [attr.title]="controlDescription(metric)">
+        @if (rangeReady(metric)) {
+          <div class="device-range-info" aria-hidden="true">
+            <strong>{{ rangeDisplay(metric) }}{{ metric.unit }}</strong>
           </div>
+          <input type="range" [attr.aria-label]="controlDescription(metric)" [attr.aria-valuetext]="rangeDisplay(metric) + metric.unit"
+            [min]="rangeLimits(metric)?.minimum" [max]="rangeLimits(metric)?.maximum" [step]="rangeLimits(metric)?.step"
+            [value]="rangeValue(metric)" [disabled]="!canInteract(metric)"
+            (click)="stopControlEvent($event)" (pointerdown)="rangePointerStart(metric, $event)"
+            (input)="rangeInput(metric, $event)" (pointerup)="rangePointerEnd(metric, $event)"
+            (pointercancel)="cancelRange()" (lostpointercapture)="cancelRange()" (blur)="cancelRange()"
+            (keydown)="rangeKeyStart(metric, $event)" (keyup)="rangeKeyEnd(metric, $event)"
+            (change)="rangeChange(metric, $event)" />
+        } @else {
+          <button type="button" class="device-range-prepare" [disabled]="!canInteract(metric)"
+            [attr.aria-label]="controlDescription(metric)" (click)="activateControl(metric, $event)">
+            <strong>{{ controlFeedback(metric) || '连接调节' }}</strong>
+          </button>
         }
       </div>
-    </aside>
-  }
+      } @else {
+      <button type="button" class="device-metric device-control" [disabled]="!canInteract(metric)"
+        [attr.role]="metric.mode === 'toggle' ? 'switch' : null"
+        [attr.aria-checked]="metric.mode === 'toggle' ? metric.field?.value === true : null"
+        [attr.title]="controlDescription(metric)" [attr.aria-label]="controlDescription(metric)"
+        (click)="activateControl(metric, $event)">
+        <span class="device-control-body device-metric-visual" aria-hidden="true">
+          @if (controlFeedback(metric)) {
+            <strong class="device-control-feedback">{{ controlFeedback(metric) }}</strong>
+          } @else if (metric.mode === 'toggle') {
+            <span class="device-switch-track" [class.is-on]="metric.field?.value === true">
+              <span class="device-switch-thumb"></span>
+            </span>
+          } @else {
+            <i class="fa-light fa-play device-action-icon"></i>
+          }
+        </span>
+      </button>
+      }
+    }
+    @if (hasMore) {
+      <span class="device-metric device-metric-more" [attr.role]="editing ? 'button' : null"
+        [attr.tabindex]="editing ? 0 : null" [attr.aria-label]="editing ? '设置卡片显示内容' : '进入设备页面查看更多数据'"
+        (click)="configureMetric($event)" (keydown.enter)="configureMetric($event)" (keydown.space)="configureMetric($event)">
+        <span class="device-metric-visual" aria-hidden="true"><strong>···</strong></span>
+      </span>
+    }
+    @if (editing && metrics.length === 0 && !hasMore) {
+      <span class="device-metric device-metric-empty" role="button" tabindex="0" aria-label="设置卡片显示内容"
+        (click)="configureMetric($event)" (keydown.enter)="configureMetric($event)" (keydown.space)="configureMetric($event)">
+        <span class="device-metric-visual" aria-hidden="true"><strong>＋</strong></span>
+      </span>
+    }
+  </footer>
 </article>

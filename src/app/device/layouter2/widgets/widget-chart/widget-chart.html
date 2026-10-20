@@ -14,7 +14,7 @@
   }
   <div class="controls">
     <div class="btnbox">
-      @for (key of keys; track key; let i = $index) { @if (key) {
+      @for (key of keys; track $index; let i = $index) { @if (key) {
       <div
         class="item"
         (click)="changeKey(key)"

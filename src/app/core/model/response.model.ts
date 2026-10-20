@@ -51,10 +51,13 @@ export interface CurrentUser {
   phone: string | null;
   avatar: string | null;
   subscription_plan: GatewaySubscriptionPlan | null;
+
   permissions: string[];
   rbac_permissions: string[];
+
   entitlement_revision?: number;
   entitlements: GatewayEntitlements;
+
   [key: string]: unknown;
 }
 
@@ -71,6 +74,8 @@ export interface DeviceKeyContext {
 }
 
 export interface DeviceV2PresenceMetadata {
+  /** Active gateway route hint; never a local authorization or Ready proof. */
+  gatewayRouted?: boolean;
   cloudReachable?: boolean | null;
   cloudLastSeenAt?: number | null;
   manifestRevision?: number | null;
@@ -78,19 +83,38 @@ export interface DeviceV2PresenceMetadata {
   manifestUpdatedAt?: number | null;
 }
 
-export interface DeviceKeyLogicalDevice extends DeviceKeyContext, DeviceV2PresenceMetadata {
+export interface DeviceKeyLogicalDevice extends DeviceV2PresenceMetadata {
+  logicalDeviceId: string;
+  cloudEnabled: boolean;
+  credentialVersion: number | null;
+  locator: string | null;
   tenantId: string;
   name: string;
+  displayMetadata?: import('../device-v2/display-metadata').DeviceDisplayMetadata;
   deviceType: string;
   state: string;
   createdAt: number;
   updatedAt: number;
 }
 
+export interface DeviceRemovalResponse {
+  status: 200 | 202;
+  data: {
+    logicalDeviceId: string;
+    state: 'deleted';
+    deletedAt: number;
+    cloudAuthorization: 'revoked';
+    brokerCleanupPending: boolean;
+    realtimeRefreshPending: boolean;
+    localAccess: 'not_confirmed';
+  };
+}
+
 export interface DeviceKeyCreateResponse {
   status: number;
+
   data: {
-    device: DeviceKeyLogicalDevice;
+    device: DeviceKeyLogicalDevice & DeviceKeyContext;
     replayed: boolean;
   };
 }
@@ -139,8 +163,19 @@ export interface AccountConnectionResponse {
   shard: { shard_id: number; route_version: number };
 }
 
+export interface DeviceInstanceResolveResponse {
+  status: number;
+  data: { device: DeviceKeyLogicalDevice | null };
+}
+
+export interface DeviceCloudEnableResponse {
+  status: number;
+  data: DeviceKeyRevealData & { replayed: boolean };
+}
+
 export interface DeviceKeyListResponse {
   status: number;
+
   data: { devices: DeviceKeyLogicalDevice[] };
 }
 
@@ -149,7 +184,10 @@ export type DeviceV2ShareRole = 'viewer' | 'operator';
 export interface DeviceV2ShareGrant {
   shareId: string;
   role: DeviceV2ShareRole;
+  canEditConsole?: boolean;
+
   commandEndpointKeys: string[] | null;
+
   version: number;
   state: 'active' | 'revoked';
   createdAt: number;
@@ -158,24 +196,59 @@ export interface DeviceV2ShareGrant {
   memberRef?: string;
 }
 
+export interface DeviceV2ShareMutation {
+  logicalDeviceId: string;
+  share: DeviceV2ShareGrant;
+  replayed: boolean;
+  realtimeRefreshPending: boolean;
+  presenceRotationRequired: boolean;
+}
+
 export interface DeviceV2ShareInvitation {
   invitationId: string;
+
   invitationCode?: string;
   role: DeviceV2ShareRole;
+  canEditConsole?: boolean;
+
   commandEndpointKeys: string[] | null;
-  state: 'pending' | 'accepted' | 'revoked' | 'expired';
+  state: 'pending' | 'accepted' | 'revoked' | 'expired' | 'declined';
+  targeted?: boolean;
   expiresAt: number;
   replayed?: boolean;
 }
 
 export interface DeviceV2OwnerShares {
   logicalDeviceId: string;
+
   shares: DeviceV2ShareGrant[];
   invitations: DeviceV2ShareInvitation[];
 }
 
+export interface DeviceV2SharePreview extends DeviceV2ShareInvitation {
+  logicalDeviceId: string;
+  deviceName: string;
+  deviceType: string;
+  currentShare: DeviceV2ShareGrant | null;
+}
+
+export interface DeviceV2PendingInvitation extends DeviceV2ShareInvitation {
+  state: 'pending';
+  targeted: true;
+  logicalDeviceId: string;
+  deviceName: string;
+  deviceType: string;
+}
+
+export interface DeviceV2InvitationInbox {
+  items: DeviceV2PendingInvitation[];
+
+  nextCursor: string | null;
+}
+
 export interface DeviceV2ReceivedDevice extends DeviceV2PresenceMetadata {
   logicalDeviceId: string;
+  cloudEnabled: boolean;
   tenantId: string;
   name: string;
   deviceType: string;
@@ -201,12 +274,14 @@ export interface FeedbackSubmitResponse {
 
 export interface FeedbackUploadResponse {
   status: number;
+
   data: {
     url: string;
     path: string;
     size: number;
     content_type: string;
   };
+
   messages?: string | null;
 }
 
@@ -237,6 +312,7 @@ export class GatewayHttpError extends Error implements NormalizedHttpError {
 
   constructor(error: NormalizedHttpError) {
     super(error.message);
+
     this.name = 'GatewayHttpError';
     this.httpStatus = error.httpStatus;
     this.code = error.code;

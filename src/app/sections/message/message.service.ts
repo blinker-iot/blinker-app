@@ -17,6 +17,7 @@ import {
   MessagePage,
   MessageReadResult,
   UnreadSummary,
+  parseMessageAction,
 } from './message.model';
 
 interface RequestContext {
@@ -56,6 +57,8 @@ export class MessageService {
     this.syncSession();
     return this.currentItems;
   }
+
+  get sessionEpoch(): number { return this.dataService.sessionEpoch; }
 
   get summary(): Readonly<UnreadSummary> {
     this.syncSession();
@@ -200,7 +203,10 @@ export class MessageService {
         API.MESSAGE.DETAIL(messageId),
       ));
       if (!this.isCurrent(context)) return null;
-      const item = this.responseData(response);
+      const value = this.responseData(response);
+      if (value.id !== messageId) throw new Error('Message identity mismatch');
+      const item = { ...value, action: value.type === 'share.invitation' && value.category === 'device_sharing'
+        ? parseMessageAction(value.action) : null };
       this.replaceLocalItem(item);
       return item;
     } catch (error) {

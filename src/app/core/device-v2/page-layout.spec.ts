@@ -5,6 +5,7 @@ import {
   migratePageLayout,
   PAGE_LAYOUT_COLUMNS,
   parsePageLayout,
+  parsePageWidgets,
 } from './page-layout';
 
 function endpoint(overrides: Partial<DeviceUiEndpoint>): DeviceUiEndpoint {
@@ -65,7 +66,7 @@ describe('PageLayout v1', () => {
         expect.objectContaining({ widgetId: 'endpoint-5', endpointKey: 'uptime', type: 'value' }),
       ],
     });
-    expect(layout.widgets.map(widget => widget.grid.y)).toEqual([0, 1, 3, 4, 5]);
+    expect(layout.widgets.map(widget => widget.grid.y)).toEqual([0, 0, 0, 2, 2]);
     expect(parsePageLayout(JSON.parse(JSON.stringify(layout)), snapshot().endpoints)).toEqual(layout);
   });
 
@@ -86,6 +87,43 @@ describe('PageLayout v1', () => {
   it('requires an accepted Manifest before generating a default page', () => {
     expect(() => generateDefaultPageLayout({ ...snapshot(), manifestAccepted: false }))
       .toThrow(/accepted Manifest/);
+  });
+
+  it.each(['switch', 'button', 'slider', 'input', 'value'] as const)(
+    'retains original schema-1 %s grid sizes without admitting them to new panels', type => {
+      const base = generateDefaultPageLayout(snapshot());
+      const widget = { ...base.widgets[0], type, grid: { x: 0, y: 0, width: 3, height: 5 } };
+      const input = { ...base, widgets: [widget] };
+      expect(parsePageLayout(input).widgets[0]).toEqual(widget);
+      expect(() => parsePageWidgets(input.widgets)).toThrow(/size is not allowed/);
+    });
+
+  it('keeps size rules for new presentation fields and types even inside schema 1', () => {
+    const base = generateDefaultPageLayout(snapshot());
+    const widget = { ...base.widgets[0], grid: { x: 0, y: 0, width: 3, height: 5 } };
+    for (const change of [{ variant: 'tile' }, { options: {} }, { type: 'select' }, { type: 'color' },
+      { type: 'value', extraKeys: ['level'] }]) {
+      expect(() => parsePageLayout({ ...base, widgets: [{ ...widget, ...change }] }))
+        .toThrow(/size is not allowed/);
+    }
+  });
+
+  it('retains legacy dimensions without relaxing bounds, overlaps, keys or endpoint binding', () => {
+    const base = generateDefaultPageLayout(snapshot());
+    const widget = { ...base.widgets[0], grid: { x: 0, y: 0, width: 8, height: 5 } };
+    expect(parsePageLayout({ ...base, widgets: [widget] }, snapshot().endpoints).widgets[0]).toEqual(widget);
+    for (const grid of [{ ...widget.grid, width: 9 }, { ...widget.grid, height: 17 },
+      { ...widget.grid, x: 1 }, { ...widget.grid, height: 1.5 }]) {
+      expect(() => parsePageLayout({ ...base, widgets: [{ ...widget, grid }] })).toThrow();
+    }
+    expect(() => parsePageLayout({ ...base, widgets: [widget, { ...widget, widgetId: 'other' }] }))
+      .toThrow(/overlap/);
+    expect(() => parsePageLayout({ ...base, widgets: [{ ...widget, script: 'unsafe' }] }))
+      .toThrow(/unknown fields/);
+    expect(() => parsePageLayout({ ...base, widgets: [{ ...widget, endpointKey: 'missing' }] }, snapshot().endpoints))
+      .toThrow(/incompatible/);
+    expect(() => parsePageLayout({ ...base, widgets: [{ ...widget, type: 'input' }] }, snapshot().endpoints))
+      .toThrow(/incompatible/);
   });
 
   it('diffs and migrates a stale layout while preserving compatible manual choices', () => {

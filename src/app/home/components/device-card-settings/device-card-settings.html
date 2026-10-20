@@ -1,0 +1,108 @@
+@for (draft of panel() ? [panel()!] : []; track draft.generation) {
+<ion-modal [isOpen]="modalOpen()" class="home-card-settings-modal"
+  (didDismiss)="dismissed(draft.id, draft.generation)">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-buttons slot="start"><ion-button (click)="cancel()" [disabled]="editor.saving()">取消</ion-button></ion-buttons>
+        <ion-title>首页卡片</ion-title>
+        <ion-buttons slot="end"><ion-button (click)="done()" [disabled]="!enabled()">{{ editor.single() ? '保存' : '完成' }}</ion-button></ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content>
+      <main>
+        <h2>{{ name() }}</h2>
+        <p class="help">{{ editor.single() ? '仅设置当前账号在本机的首页卡片。' : '完成后返回首页编辑，点击右上角保存才会保留修改。' }}</p>
+        <fieldset [disabled]="!enabled()">
+          <legend>卡片大小</legend>
+          <div class="size-options">
+            <button type="button" [attr.aria-pressed]="draft.layout === 'standard'" (click)="setLayout('standard')">标准卡</button>
+            <button type="button" [attr.aria-pressed]="draft.layout === 'wide'" (click)="setLayout('wide')">长卡</button>
+          </div>
+        </fieldset>
+        <section aria-label="首页卡片单行预览" class="preview">
+          <div class="preview-card" [class.wide]="draft.layout === 'wide'">
+            @if (device(); as current) {
+              <deviceblock [device]="current" [wide]="draft.layout === 'wide'" [bindings]="draft.bindings"
+                [controlsEnabled]="false" (capacityChange)="previewColumns.set($event)"
+                (rangeCapacityChange)="previewRangeFits.set($event)"></deviceblock>
+            }
+          </div>
+        </section>
+        <section aria-labelledby="card-slots-title">
+          <h3 id="card-slots-title">底部内容</h3>
+          <p class="help">仅一行 · {{ unresolvedLegacy() ? '旧配置待核对' : '已配置 ' + (draft.bindings?.length ?? 0) + ' 项，占 ' + usedColumns() + ' 列' }} · 当前可显示 {{ capacity() }} 列</p>
+          @if (usedColumns() > capacity()) {
+            <p class="help">配置已保留；当前宽度仅显示前部数据，其余通过“更多”进入设备页查看。</p>
+          }
+          @if (readFailed()) {
+            <p class="help" role="status">能力暂不可读取，原绑定保留；关闭设置后进入设备页重新获取。</p>
+          } @else if (!snapshot()?.manifestAccepted) {
+            <p class="help" role="status">尚无已授权的设备能力，请关闭设置后进入设备页获取，再回来配置。</p>
+          } @else if (!fields().length) {
+            <p class="help" role="status">当前设备没有可展示的只读标量属性；快捷操作需另行明确选择。</p>
+          }
+          <fieldset [disabled]="!enabled()">
+            <legend class="sr-only">选择、排列或移除底部小块，设置时不执行设备操作</legend>
+            @if (unresolvedLegacy()) {
+              <p class="help">旧数据引用暂无法完整核对，未改写原配置。可先获取设备能力，或明确清空后重新配置。</p>
+            }
+            <ol>
+              @for (binding of draft.bindings ?? []; track binding.key; let index = $index) {
+                <li [class.highlighted]="draft.focusKey === binding.key">
+                  <label class="block-mode">小块类型
+                    <select [attr.aria-label]="'第' + (index + 1) + '个小块类型'" [value]="mode(binding)"
+                      (change)="setMode(index, $any($event.target).value)">
+                      @for (option of modes; track option.value) {
+                        <option [value]="option.value" [selected]="option.value === mode(binding)"
+                          [disabled]="!canSetMode(binding, option.value)">{{ option.label }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label>{{ index + 1 }}. {{ label(binding) }}
+                    <select [attr.aria-label]="'第' + (index + 1) + '个数据块'" [value]="reference(binding)"
+                      (change)="replace(index, $any($event.target).value)">
+                      @if (!available(binding)) { <option [value]="reference(binding)" [selected]="true">{{ label(binding) }}（能力不可用，已保留）</option> }
+                      @for (field of fieldsFor(binding); track reference({ key: field.key, kind: field.manifestKind!, type: field.manifestType! }) + ':' + $index) {
+                        <option [value]="reference({ key: field.key, kind: field.manifestKind!, type: field.manifestType! })"
+                          [selected]="field.key === binding.key && field.manifestKind === binding.kind && field.manifestType === binding.type"
+                          [disabled]="fieldUsed(field.key, index)">{{ label({ key: field.key, kind: field.manifestKind!, type: field.manifestType! }) }}</option>
+                      }
+                    </select>
+                  </label>
+                  @if (!available(binding)) { <p class="help" role="status">原引用已保留；当前能力或控制权限不可用，不会自动改绑或执行。</p> }
+                  <div class="slot-actions">
+                    <button type="button" [disabled]="index === 0" (click)="move(index, -1)" [attr.aria-label]="'上移' + label(binding)">上移</button>
+                    <button type="button" [disabled]="index === (draft.bindings?.length ?? 0) - 1" (click)="move(index, 1)" [attr.aria-label]="'下移' + label(binding)">下移</button>
+                    <button type="button" (click)="remove(index)" [attr.aria-label]="'移除' + label(binding)">移除</button>
+                  </div>
+                </li>
+              }
+            </ol>
+            <label class="add-mode">新增小块类型
+              <select aria-label="新增小块类型" [value]="addMode()" (change)="setAddMode($any($event.target).value)">
+                @for (option of modes; track option.value) {
+                  <option [value]="option.value" [selected]="option.value === addMode()"
+                    [disabled]="!canSelectAddMode(option.value)">{{ option.label }}</option>
+                }
+              </select>
+            </label>
+            @if (!rangeFits()) { <p class="help">滑条至少占两列，且需有不少于 140 px 的实际宽度；当前仅保留已有配置。</p> }
+            <label class="add-slot">添加数据块
+              <select aria-label="添加底部小块" [disabled]="!canAdd()" [value]="''"
+                (change)="add($any($event.target).value); $any($event.target).value = ''">
+                <option value="" [selected]="true">选择能力</option>
+                @for (field of candidates(); track field.key) {
+                  <option [value]="reference({ key: field.key, kind: field.manifestKind!, type: field.manifestType! })">{{ label({ key: field.key, kind: field.manifestKind!, type: field.manifestType! }) }}</option>
+                }
+              </select>
+            </label>
+            <button type="button" class="clear-slots" (click)="clear()" [disabled]="!unresolvedLegacy() && !draft.bindings?.length">清空底部数据</button>
+          </fieldset>
+        </section>
+        @if (editor.error()) { <p class="error" role="alert">{{ editor.error() }}</p> }
+      </main>
+    </ion-content>
+  </ng-template>
+</ion-modal>
+}

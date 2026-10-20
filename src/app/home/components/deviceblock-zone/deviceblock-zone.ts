@@ -58,11 +58,24 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   private animationFrame?: number;
   private transitionTimer?: number;
   private transitionEndHandler?: (event: TransitionEvent) => void;
+  private _editing = false;
 
   _roomid = -1;
 
   @Input()
+  set editing(editing: boolean) {
+    if (this._editing === editing) return;
+    this._editing = editing;
+    this.abortMotion();
+  }
+
+  get editing(): boolean {
+    return this._editing;
+  }
+
+  @Input()
   set roomid(roomid: number) {
+    if (this.editing) return;
     if (!this.viewInitialized || roomid === this._roomid) {
       this._roomid = roomid;
       this.slides = [this.createCurrentSlide(roomid)];
@@ -139,6 +152,7 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
 
   private onPointerDown = (event: PointerEvent) => {
     if (
+      this.editing ||
       !this.swipeEnabled ||
       this.isAnimating ||
       !event.isPrimary ||
@@ -165,7 +179,7 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
 
   private onPointerMove = (event: PointerEvent) => {
     const start = this.pointerStart;
-    if (!start || start.id !== event.pointerId || start.axis === 'vertical') {
+    if (this.editing || !this.swipeEnabled || !start || start.id !== event.pointerId || start.axis === 'vertical') {
       return;
     }
 
@@ -203,8 +217,8 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   private onPointerUp = (event: PointerEvent) => {
     const start = this.pointerStart;
     this.pointerStart = undefined;
-    if (start?.blocksRefresh) this.refresherEnabled = true;
-    if (!this.swipeEnabled || !start || start.id !== event.pointerId) return;
+    if (start?.blocksRefresh) this.refresherEnabled = !this.editing;
+    if (this.editing || !this.swipeEnabled || !start || start.id !== event.pointerId) return;
     if (start.axis !== 'horizontal') return;
 
     const deltaX = event.clientX - start.x;
@@ -236,8 +250,8 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   private onPointerCancel = () => {
     const start = this.pointerStart;
     this.pointerStart = undefined;
-    if (start?.blocksRefresh) this.refresherEnabled = true;
-    if (start?.axis === 'horizontal') {
+    if (start?.blocksRefresh) this.refresherEnabled = !this.editing;
+    if (!this.editing && start?.axis === 'horizontal') {
       const direction = this.incomingDirection;
       this.animateSlides(direction, null);
     }
@@ -255,6 +269,7 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   }
 
   private getAdjacentRoomId(direction: -1 | 1): number | null {
+    if (this.editing) return null;
     const targetRoomId = this.roomid + direction;
     if (targetRoomId < -1 || targetRoomId >= this.roomDataList.length) {
       return null;
@@ -263,6 +278,7 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   }
 
   private prepareIncomingRoom(roomId: number, direction: -1 | 1) {
+    if (this.editing) return;
     const incomingSlide = this.getIncomingSlide();
     if (
       incomingSlide?.roomId === roomId &&
@@ -305,6 +321,7 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   }
 
   private animateSlides(direction: -1 | 1, targetRoomId: number | null) {
+    if (this.editing) return;
     const current = this.currentSlideElement;
     if (!current) return;
 
@@ -342,6 +359,10 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
 
   private finishSlideTransition() {
     if (!this.isAnimating) return;
+    if (this.editing) {
+      this.abortMotion();
+      return;
+    }
     const targetRoomId = this.transitionRoomId;
     this.clearTransitionWait();
     this.isAnimating = false;
@@ -358,6 +379,7 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   }
 
   private startProgrammaticRoomChange(roomId: number) {
+    if (this.editing) return;
     const direction: -1 | 1 = roomId > this._roomid ? 1 : -1;
     this.incomingDirection = direction;
     this.slides = [
@@ -397,7 +419,7 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
     this.isAnimating = false;
     this.transitionRoomId = null;
     this.slides = [this.createCurrentSlide(this._roomid)];
-    this.refresherEnabled = true;
+    this.refresherEnabled = !this.editing;
     this.clearSlideStyles();
   }
 
@@ -471,17 +493,18 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
       },
       shouldPullToRefresh: () => {
         return (
+          !this.editing &&
           this.refresherEnabled &&
           !!this.scrollElement &&
           this.scrollElement.scrollTop <= 0
         );
       },
     });
-    this.refresherEnabled = true;
+    this.refresherEnabled = !this.editing;
   }
 
   async refresh() {
-    if (!this.dataService.auth) return;
+    if (this.editing || !this.dataService.auth) return;
     await this.userService.getAllInfo();
   }
 
@@ -502,6 +525,6 @@ export class DeviceblockZone implements AfterViewInit, OnDestroy {
   }
 
   refresherEnabledChanged(enabled: boolean) {
-    this.refresherEnabled = enabled;
+    this.refresherEnabled = enabled && !this.editing;
   }
 }

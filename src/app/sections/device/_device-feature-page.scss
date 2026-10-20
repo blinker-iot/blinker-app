@@ -10,11 +10,6 @@
     --background: var(--blinker-bg);
   }
 
-  app-hero-card {
-    --tool-hero-accent: var(--feature-accent, var(--ion-color-primary));
-    margin: 2px 2px 22px;
-  }
-
   .section-label {
     margin: 22px 4px 9px;
     color: var(--blinker-text-secondary);

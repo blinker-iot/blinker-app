@@ -1,5 +1,5 @@
 <div #refreshZone></div>
-<div class="device-list-container" #deviceZone>
+<div class="device-list-container" [class.card-editing]="editing" #deviceZone>
   @for (slide of slides; track slide.roomId) {
   <div
     class="room-slide"

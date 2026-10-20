@@ -1,22 +1,24 @@
 <main class="device-detail-page">
-  <app-hero-card class="device-hero" [class.offline]="!isOnline">
+  <section class="device-hero" aria-label="设备状态">
     <div class="device-hero-content">
-      <b-device-img [filename]="device.config.image" [deviceId]="device.id || device.deviceName"
+      <b-device-img class="device-image" [filename]="device.config.image" [deviceId]="device.id || device.deviceName"
         [alt]="device.config.customName" />
       <div class="device-heading">
-        <div class="device-status" [class.online]="isOnline">
-          <span></span>{{ statusText }}
-        </div>
         <h1>{{ device.config.customName }}</h1>
-        <p>设备</p>
+        <div class="device-status" [class.online]="isOnline"><span></span>{{ statusText }}</div>
       </div>
-      <button class="power-button" type="button" [class.on]="switchOn" [class.waiting]="switchWaiting"
-        [disabled]="!isOnline || switchWaiting" [attr.aria-pressed]="switchOn" (click)="toggleSwitch()">
-        <i class="fa-light fa-power-off"></i>
-        <small>{{ switchWaiting ? '等待中' : (switchOn ? '已开启' : '已关闭') }}</small>
-      </button>
+
+      @if (hasSwitch) {
+        <button class="device-switch" type="button" [class.on]="switchOn"
+          [disabled]="!canControl || !switchKnown || switchWaiting"
+          [attr.aria-label]="switchField?.key || '设备开关'" [attr.aria-pressed]="switchKnown ? switchOn : null"
+          (click)="toggleSwitch()"><span></span></button>
+      }
+
     </div>
-  </app-hero-card>
+  </section>
+
+  @if (error) { <p class="debug-error" role="alert">{{ error }}</p> }
 
   <section class="detail-section interface-section">
     <div class="section-title"><span>界面配置</span></div>
@@ -25,24 +27,25 @@
       <button
         class="interface-action"
         type="button"
-        [disabled]="!!switchingComponent"
+
+        [disabled]="device.config.isShared"
         (click)="selectInterface(action)"
       >
-        <span class="interface-action-icon" aria-hidden="true">
-          <i [class]="'fa-light ' + action.icon"></i>
+        <span class="interface-action-top" aria-hidden="true">
+          <span class="interface-action-icon"><i [class]="'fa-light ' + action.icon"></i></span>
+          <i class="fa-light fa-arrow-up-right interface-action-arrow"></i>
         </span>
         <span class="interface-action-copy">
           <strong>
-            {{ switchingComponent === action.componentName ? '切换中…' : action.title }}
+            {{ action.title }}
           </strong>
           <small>{{ action.description }}</small>
         </span>
-        <i class="fa-light fa-chevron-right interface-action-arrow" aria-hidden="true"></i>
       </button>
       }
+
     </div>
   </section>
-
   <section class="detail-section">
     <div class="section-title">
       <div>
@@ -53,16 +56,22 @@
         </button>
       </div>
     </div>
-    <div class="metric-grid">
-      @for (metric of metrics; track metric.key) {
-      <article class="metric-card">
-        <small>{{ metric.label }}</small>
-        <strong>{{ metric.value }}<em>{{ metric.unit }}</em></strong>
-      </article>
-      }
+    <div class="metric-table">
+      <table aria-label="设备实时数据">
+        <tbody>
+          @for (metric of metrics; track metric.key) {
+            <tr>
+              <th scope="row">{{ metric.label }}</th>
+              <td>
+                <span>{{ metric.value }}</span>@if (metric.unit) { <span class="metric-unit">{{ metric.unit }}</span> }
+              </td>
+            </tr>
+          }
+
+        </tbody>
+      </table>
     </div>
   </section>
-
   <section class="detail-section">
     <div class="section-title"><span>设备信息</span></div>
     <div class="info-card">
@@ -86,4 +95,5 @@
     </div>
   </aside>
   }
+
 </main>

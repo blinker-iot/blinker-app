@@ -14,13 +14,6 @@
 
 <ion-content class="tool-page-content" [fullscreen]="true">
   <main class="tool-page-shell">
-    <app-hero-card
-      iconClass="fa-light fa-radar"
-      eyebrow="MDNS · BONJOUR · ZEROCONF"
-      heading="发现同一网络中的服务"
-      description="查找设备主动广播的地址、端口和 TXT 元数据，无需知道设备 IP。"
-    />
-
     @if (!nativeSupported) {
       <div class="notice warning">
         <i class="fa-light fa-mobile-screen-button"></i>

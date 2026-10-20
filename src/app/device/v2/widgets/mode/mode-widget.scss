@@ -1,0 +1,135 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+
+.modes {
+  flex: 1;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+}
+
+.mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ui-muted);
+  font-size: 12px;
+  transition: color 0.2s, background-color 0.2s;
+
+  span { overflow: hidden; max-width: 100%; white-space: nowrap; text-overflow: ellipsis; }
+
+  .mi { flex: none; width: 16px; height: 16px; }
+
+  &.on { color: var(--ui-ink); }
+
+  @include theme.electronic { span { text-transform: uppercase; } }
+}
+
+.mode-ico {
+  width: 44px;
+  height: 44px;
+  padding: 11px;
+  border-radius: 50%;
+  background: var(--ui-well);
+  transition: background-color 0.25s, color 0.25s;
+
+  @include theme.electronic { border: 1.5px dotted var(--ui-faint); background: none; }
+}
+
+.mode.on .mode-ico {
+  background: var(--c, var(--ui-accent));
+  color: var(--ui-on-accent);
+
+  @include theme.electronic { border-color: var(--c, var(--ui-accent)); background: none; color: var(--c, var(--ui-accent)); }
+}
+
+// Segmented
+
+.modes.segmented {
+  display: flex;
+  align-self: stretch;
+  gap: 2px;
+  margin-top: auto;
+  padding: 3px;
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-well);
+
+  // Equal shares in one line, whatever the label lengths.
+  .mode {
+    flex: 1 1 0;
+    flex-direction: row;
+    justify-content: center;
+    gap: 5px;
+    padding: 9px 2px;
+    border-radius: calc(var(--ui-radius-sm) - 3px);
+    font-family: var(--ui-font-mono);
+    font-size: 11.5px;
+  }
+
+  .mode.on { background: var(--ui-card); box-shadow: var(--ui-knob-shadow); color: var(--c, var(--ui-accent)); }
+
+  // A toned choice shows its colour at rest and fills with it when chosen.
+  .mode.toned { color: color-mix(in srgb, var(--c) 82%, var(--ui-ink)); }
+
+  .mode.toned.on {
+    background: var(--c);
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--c) 30%, transparent);
+    color: var(--ui-on-accent);
+  }
+
+  @include theme.electronic {
+    border: 1px dotted var(--ui-faint);
+    background: none;
+
+    .mode.on { background: var(--ui-well); }
+    .mode.toned { color: var(--c); }
+    .mode.toned.on { background: none; box-shadow: inset 0 0 0 1px var(--c); color: var(--c); }
+  }
+}
+
+// Chips: wrapping pills. A toned choice shows its colour at rest (tinted text on
+// a light wash) and fills with it when chosen; an untoned one stays neutral and
+// fills with the card's accent.
+
+.modes.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-end;
+  gap: 8px;
+
+  .mode {
+    --c: var(--ui-accent);
+    flex-direction: row;
+    gap: 6px;
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: var(--ui-well);
+    color: var(--ui-muted);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+  }
+
+  .mode.toned {
+    background: color-mix(in srgb, var(--c) 12%, var(--ui-card));
+    color: color-mix(in srgb, var(--c) 82%, var(--ui-ink));
+  }
+
+  .mode.on {
+    background: var(--c);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--c) 30%, transparent);
+    color: var(--ui-on-accent);
+  }
+
+  @include theme.electronic {
+    .mode { border: 1px dotted var(--ui-faint); background: none; box-shadow: none; }
+    .mode.toned { border-color: var(--c); background: none; color: var(--c); }
+    .mode.on { border-style: solid; border-color: var(--c); background: none; box-shadow: none; color: var(--c); }
+  }
+}

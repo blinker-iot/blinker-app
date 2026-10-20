@@ -1,3 +1,4 @@
+import type { CustomPanelDocument, PanelMode } from '../device-v2/custom-panel';
 import { Subject } from "rxjs";
 
 export interface DeviceCardMetricConfig {
@@ -20,8 +21,12 @@ export interface DeviceCardConfig {
 }
 
 export interface BlinkerDevice {
+    name?: string,
+    displayMetadata?: import('../device-v2/display-metadata').DeviceDisplayMetadata,
     deviceName: string,
     id?: string,
+    cloudEnabled?: boolean,
+    gatewayRouted?: boolean,
     deviceType?: string,
     config: {
         broker: string,
@@ -33,6 +38,7 @@ export interface BlinkerDevice {
         layouter?: string,
         image?: string,
         isShared?: boolean,
+    canEditConsole?: boolean,
         isPreview?: boolean,
         previewNearby?: boolean,
         position?: any,
@@ -41,6 +47,9 @@ export interface BlinkerDevice {
         card?: DeviceCardConfig,
         authKey?: string,
         component?: string,
+        panelMode?: PanelMode,
+        customPanel?: CustomPanelDocument,
+        hiddenEndpointKeys?: string[],
         headerStyle?: 'dark' | 'light'
     },
     data: any,

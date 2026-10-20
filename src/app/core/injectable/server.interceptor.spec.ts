@@ -18,6 +18,7 @@ import { API } from 'src/app/configs/api.config';
 import { GatewayHttpError } from '../model/response.model';
 import { DataService } from '../services/data.service';
 import { ServerInterceptor } from './server.interceptor';
+import { HttpAutomationApi } from '../device-v2/automation/http';
 
 describe('ServerInterceptor', () => {
   let http: HttpClient;
@@ -78,6 +79,16 @@ describe('ServerInterceptor', () => {
     expect(requestId).toBeTruthy();
     expect(requestId!.length).toBeLessThanOrEqual(128);
     request.flush({ status: 200, data: { id: 'user-1' } });
+  });
+
+  it('uses the same account Bearer and request-id chain for a ranged State history GET', () => {
+    const url = API.DEVICE_V2.STATE_HISTORY('device_a') + '?from=1000&to=2000&limit=50&key=power&before=YWJj';
+    http.get(url).subscribe(); const request = httpTesting.expectOne(url);
+    expect(request.request.method).toBe('GET'); expect(request.request.body).toBeNull();
+    expect(request.request.headers.get('Authorization')).toBe('Bearer old-access');
+    expect(request.request.headers.get('X-Request-ID')).toBeTruthy();
+    expect(request.request.params.has('uuid')).toBe(false); expect(request.request.params.has('token')).toBe(false);
+    request.flush({ message: 1000, detail: { items: [] } });
   });
 
   it('preserves exact account-deletion bodies with Bearer and JSON headers', () => {
@@ -223,6 +234,12 @@ describe('ServerInterceptor', () => {
       API.DEVICE_V2.DETAIL(context.logicalDeviceId),
       API.DEVICE_V2.REVEAL(context.logicalDeviceId),
       API.DEVICE_V2.ROTATE(context.logicalDeviceId),
+      API.DEVICE_V2.TASKS(context.logicalDeviceId),
+      API.DEVICE_V2.PRESENCE_KEY(context.logicalDeviceId),
+      API.DEVICE_V2.ALLOCATE_PRESENCE_KEY(context.logicalDeviceId),
+      API.DEVICE_V2.ROTATE_PRESENCE_KEY(context.logicalDeviceId),
+      API.DEVICE_V2.SYNC_PRESENCE_KEY(context.logicalDeviceId),
+      API.DEVICE_V2.CONFIRM_PRESENCE_KEY(context.logicalDeviceId),
       API.DEVICE_V2.SHARES(context.logicalDeviceId),
       API.DEVICE_V2.SHARE_INVITATIONS(context.logicalDeviceId),
       API.DEVICE_V2.SHARE(context.logicalDeviceId, 'share-1'),
@@ -248,6 +265,125 @@ describe('ServerInterceptor', () => {
     for (const url of deviceUrls) {
       http.post(url, new ArrayBuffer(0)).subscribe();
       const request = httpTesting.expectOne(url);
+      expect(request.request.headers.has('Authorization')).toBe(false);
+      expect(request.request.headers.has('X-Request-ID')).toBe(false);
+      request.flush({});
+    }
+  });
+
+  it('does not authenticate task lookalikes or foreign authorities', () => {
+    for (const url of [
+      'https://untrusted.example/api/v2/devices/device-1/tasks:execute',
+      API.DEVICE_V2.TASKS('device-1') + '/extra',
+      API.DEVICE_V2.TASKS('device-1') + '-other',
+    ]) {
+      http.post(url, {}).subscribe();
+      const request = httpTesting.expectOne(url);
+      expect(request.request.headers.has('Authorization')).toBe(false);
+      expect(request.request.headers.has('X-Request-ID')).toBe(false);
+      request.flush({});
+    }
+  });
+
+  it('authenticates the actual automation list client, including pagination query', async () => {
+    const api = new HttpAutomationApi(http);
+    const pending = api.list(false, 'rule_1', new AbortController().signal);
+    const request = httpTesting.expectOne(API.AUTOMATION.LIST + '?retired=false&after=rule_1');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer old-access');
+    expect(request.request.headers.has('X-Request-ID')).toBe(true);
+    request.flush({ status: 200, data: { rules: [], nextAfter: null } },
+      { headers: { 'Cache-Control': 'private, no-store' } });
+    expect(await pending).toEqual({ rules: [], nextAfter: null });
+  });
+
+  it('does not authenticate automation lookalikes, foreign origins or unknown paths', () => {
+    for (const url of [
+      'https://untrusted.example/api/v2/automations?retired=false',
+      API.AUTOMATION.LIST + '-other',
+      API.AUTOMATION.LIST + '/rule_1/execute',
+      API.AUTOMATION.LIST + '/rule_1/retire/extra',
+      API.AUTOMATION.LIST + '/rule_1/../other',
+    ]) {
+      http.get(url).subscribe();
+      const request = httpTesting.expectOne(url);
+      expect(request.request.headers.has('Authorization')).toBe(false);
+      expect(request.request.headers.has('X-Request-ID')).toBe(false);
+      request.flush({});
+    }
+  });
+
+  it('preserves automation rule id, CAS body and trace across one token refresh', async () => {
+    const url = API.AUTOMATION.RULE('rule_1');
+    const endpoint = { deviceId: 'source', key: 'power', fingerprint: 'ab'.repeat(32), valueType: 'boolean' };
+    const body = { expectedRevision: 3, enabled: true, source: endpoint,
+      target: { ...endpoint, deviceId: 'target', value: true } };
+    http.put(url, body).subscribe();
+    const initial = httpTesting.expectOne(url);
+    expect(initial.request.headers.get('Authorization')).toBe('Bearer old-access');
+    expect(initial.request.headers.get('Content-Type')).toBe('application/json');
+    expect(initial.request.body).toEqual(body);
+    const traceId = initial.request.headers.get('X-Request-ID');
+    initial.flush({ errorCode: 'AUTH_TOKEN_EXPIRED' }, { status: 401, statusText: 'Unauthorized' });
+    httpTesting.expectOne(API.AUTH.REFRESH).flush({ status: 200, data: {
+      access_token: 'new-access', refresh_token: 'new-refresh', token_type: 'bearer',
+    } });
+    await vi.waitFor(() => {
+      const replay = httpTesting.expectOne(url);
+      expect(replay.request.headers.get('Authorization')).toBe('Bearer new-access');
+      expect(replay.request.headers.get('X-Request-ID')).toBe(traceId);
+      expect(replay.request.body).toEqual(body);
+      replay.flush({ status: 200, data: {} });
+    });
+    for (const [method, suffix, data] of [['GET', '', undefined], ['POST', '/retire', { expectedRevision: 4 }]] as const) {
+      http.request(method, url + suffix, { body: data }).subscribe();
+      const request = httpTesting.expectOne(url + suffix);
+      expect(request.request.headers.get('Authorization')).toBe('Bearer new-access');
+      expect(request.request.body).toEqual(data ?? null);
+      request.flush({ status: 200, data: {} });
+    }
+  });
+
+  it('preserves the complete task intent and original id across token refresh', async () => {
+    const url = API.DEVICE_V2.TASKS('device-1');
+    const body = { contract: 'device-tasks/1', requestId: 'AQEBAQEBAQEBAQEBAQEBAQ',
+      operation: 'start', expectedRevision: 3, taskId: 1 };
+    let response: unknown;
+    http.post(url, body).subscribe(value => response = value);
+    const initial = httpTesting.expectOne(url);
+    expect(initial.request.headers.get('Authorization')).toBe('Bearer old-access');
+    expect(initial.request.headers.get('Content-Type')).toBe('application/json');
+    expect(initial.request.body).toEqual(body);
+    const traceId = initial.request.headers.get('X-Request-ID');
+    initial.flush({ errorCode: 'AUTH_TOKEN_EXPIRED' }, { status: 401, statusText: 'Unauthorized' });
+    httpTesting.expectOne(API.AUTH.REFRESH).flush({ status: 200, data: {
+      access_token: 'new-access', refresh_token: 'new-refresh', token_type: 'bearer',
+    } });
+    await vi.waitFor(() => {
+      const replay = httpTesting.expectOne(url);
+      expect(replay.request.headers.get('Authorization')).toBe('Bearer new-access');
+      expect(replay.request.headers.get('X-Request-ID')).toBe(traceId);
+      expect(replay.request.body).toEqual(body);
+      replay.flush({ status: 200, data: { verified: true } });
+    });
+    expect(response).toEqual({ status: 200, data: { verified: true } });
+  });
+
+  it('authenticates LAN context and grant only at the configured account authority', () => {
+    const id = 'device/a b';
+    const url = API.DEVICE_V2.LOCAL_ACCESS(id);
+    expect(url).toContain('/devices/device%2Fa%20b/local-access');
+    for (const method of ['GET', 'POST']) {
+      http.request(method, url).subscribe();
+      const request = httpTesting.expectOne(url);
+      expect(request.request.headers.get('Authorization')).toBe('Bearer old-access');
+      expect(request.request.headers.has('X-Request-ID')).toBe(true);
+      request.flush({ status: 200, data: {} });
+    }
+    // Discovery targets and lookalike hosts must never receive the account token.
+    for (const foreign of ['http://192.0.2.10:8920/bbp2',
+      'https://untrusted.example/api/v2/devices/device-1/local-access']) {
+      http.get(foreign).subscribe();
+      const request = httpTesting.expectOne(foreign);
       expect(request.request.headers.has('Authorization')).toBe(false);
       expect(request.request.headers.has('X-Request-ID')).toBe(false);
       request.flush({});
@@ -354,6 +490,44 @@ describe('ServerInterceptor', () => {
       data: { entitlement: 'iot.devices' },
     });
     httpTesting.expectNone(API.AUTH.REFRESH);
+  });
+
+  it.each([
+    [403, 'DEVICE_V2_BLE_ENROLLMENT_OWNER_INACTIVE'],
+    [410, 'DEVICE_V2_BLE_ENROLLMENT_DEVICE_RETIRED'],
+    [409, 'DEVICE_V2_BLE_RESET_REQUIRED'],
+  ] as const)('preserves BLE enrollment denial %s without refreshing or replaying', (status, code) => {
+    const url = API.DEVICE_V2.BLE_ENROLLMENT_COMMIT('retirement-fixture');
+    let received: unknown;
+    http.post(url, { method2Confirmed: true }).subscribe({ error: error => received = error });
+    httpTesting.expectOne(url).flush({ errorCode: code, errorMessage: 'Enrollment unavailable', data: null },
+      { status, statusText: 'Enrollment denied' });
+    expect(received).toBeInstanceOf(GatewayHttpError);
+    expect(received).toMatchObject({ httpStatus: status, code });
+    httpTesting.expectNone(url);
+    httpTesting.expectNone(API.AUTH.REFRESH);
+  });
+
+  it('preserves structured AI errors when the streaming transport requests text', () => {
+    let received: unknown;
+    http.post(API.INTERFACE_GENERATE, {}, { responseType: 'text' }).subscribe({ error: error => received = error });
+    const request = httpTesting.expectOne(API.INTERFACE_GENERATE);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer old-access');
+    request.flush(JSON.stringify({ errorCode: 'INTERFACE_AI_UNAVAILABLE', errorMessage: 'not configured' }), { status: 503, statusText: 'Service Unavailable' });
+    expect(received).toMatchObject({ code: 'INTERFACE_AI_UNAVAILABLE', httpStatus: 503 });
+  });
+
+  it('allows AI generation to exceed 30 seconds but keeps a bounded timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      let received: unknown;
+      http.post(API.INTERFACE_GENERATE, {}).subscribe({ error: error => received = error });
+      const request = httpTesting.expectOne(API.INTERFACE_GENERATE);
+      await vi.advanceTimersByTimeAsync(45_001);
+      expect(request.cancelled).toBe(false); expect(received).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(request.cancelled).toBe(true); expect(received).toMatchObject({ code: 'GATEWAY_TIMEOUT' });
+    } finally { vi.useRealTimers(); }
   });
 
   it('times out a pending Gateway request with a normalized error', async () => {

@@ -4,7 +4,9 @@ const DEVICE_INSTANCE_ID_BYTES = 16;
 const CONTROLLER_ID_BYTES = 16;
 const CONTROLLER_SECRET_BYTES = 32;
 
-export const BLINKER_CONFIG_ENDPOINT = 'blinker-config/2';
+// Espressif provisioning endpoint names are exact protocol identifiers. The
+// payload carries its own version byte, so the endpoint itself stays stable.
+export const BLINKER_CONFIG_ENDPOINT = 'blinker-config';
 
 export enum BlinkerConfigOperation {
   GetInfo = 1,
@@ -138,11 +140,12 @@ export async function configureBlinkerAccess(
   transport: Esp32ProvisioningTransport,
   deviceKey: string,
   bootstrap?: BlinkerAccessBootstrap,
+  verifiedInfo?: BlinkerConfigInfo,
 ): Promise<{
   info: BlinkerConfigInfo;
   operation: BlinkerConfigOperation.Install | BlinkerConfigOperation.Bootstrap;
 }> {
-  const info = decodeBlinkerConfigInfo(await transport.request(
+  const info = verifiedInfo ?? decodeBlinkerConfigInfo(await transport.request(
     BLINKER_CONFIG_ENDPOINT,
     encodeBlinkerConfigInfoRequest(),
   ));

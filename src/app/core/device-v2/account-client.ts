@@ -10,6 +10,8 @@ import {
   isLogicalDeviceId,
 } from '../protocol/device-v2';
 import { DeviceV2TransportConfigError } from './transport-config.error';
+import { DeviceV2ReadyWaits } from './ready-waits';
+import { DeviceV2DemandOwner, DeviceV2DirectOwner } from '../protocol/device-v2/connection-demand';
 
 export type DeviceV2AccountState = 'idle' | 'connecting' | 'ready' | 'retrying' | 'stopped';
 export type DeviceV2CredentialProvider = () => Promise<AccountConnectionResponse>;
@@ -24,6 +26,7 @@ export interface DeviceV2AccountClientOptions {
 
 export class DeviceV2AccountClient {
   readonly store = new DeviceV2Store();
+  private readonly readyWaits = new DeviceV2ReadyWaits(() => this.currentSession(), this.store);
 
   private stateValue: DeviceV2AccountState = 'idle';
   private desired = false;
@@ -70,6 +73,7 @@ export class DeviceV2AccountClient {
   }
 
   async stop(): Promise<void> {
+    this.readyWaits.retire();
     if (!this.desired && this.stateValue === 'stopped') return;
     this.desired = false;
     this.generation += 1;
@@ -77,13 +81,11 @@ export class DeviceV2AccountClient {
     this.refreshTimer = undefined;
     clearTimeout(this.reconnectTimer);
     this.reconnectTimer = undefined;
-    const connecting = this.connecting;
-    if (connecting) await connecting.catch(() => undefined);
-    try {
-      await this.closeSession();
-    } finally {
-      this.setState('stopped');
-    }
+    // An unresponsive credential provider must not hold account teardown.
+    // open() and its finally already fence late results by generation/task.
+    this.connecting = undefined;
+    this.setState('stopped');
+    await this.closeSession();
   }
 
   async reset(): Promise<void> {
@@ -98,13 +100,36 @@ export class DeviceV2AccountClient {
   }
 
   async ensureReady(logicalDeviceId: string): Promise<void> {
-    await this.start();
-    await this.requireSession().ensureReady(logicalDeviceId);
+    await (await this.currentSession()).ensureReady(logicalDeviceId);
+  }
+
+  waitUntilReady(logicalDeviceId: string, signal?: AbortSignal): Promise<void> {
+    return this.readyWaits.wait(logicalDeviceId, signal);
+  }
+
+  async acquireStateInterest(logicalDeviceId: string, signal: AbortSignal): Promise<DeviceV2DemandOwner | undefined> {
+    signal.throwIfAborted();
+    const session = await this.currentSession();
+    signal.throwIfAborted();
+    return session.acquireStateInterest(logicalDeviceId, signal);
+  }
+
+  async acquireConnectionDemand(logicalDeviceId: string, signal: AbortSignal): Promise<DeviceV2DemandOwner> {
+    signal.throwIfAborted();
+    const session = await this.currentSession();
+    signal.throwIfAborted();
+    return session.acquireConnectionDemand(logicalDeviceId, signal);
+  }
+
+  async reserveDirectPriority(logicalDeviceId: string, signal: AbortSignal): Promise<DeviceV2DirectOwner> {
+    signal.throwIfAborted();
+    const session = await this.currentSession();
+    signal.throwIfAborted();
+    return session.reserveDirectPriority(logicalDeviceId, signal);
   }
 
   async command(logicalDeviceId: string, endpointKey: string, value: unknown): Promise<DeviceV2Ack> {
-    await this.start();
-    return this.requireSession().command(logicalDeviceId, endpointKey, value);
+    return (await this.currentSession()).command(logicalDeviceId, endpointKey, value);
   }
 
   async openTelemetry(
@@ -113,8 +138,7 @@ export class DeviceV2AccountClient {
     intervalMs: number,
     options?: DeviceV2TelemetryOptions,
   ): Promise<DeviceV2TelemetryLease> {
-    await this.start();
-    return this.requireSession().openTelemetry(logicalDeviceId, endpointKeys, intervalMs, options);
+    return (await this.currentSession()).openTelemetry(logicalDeviceId, endpointKeys, intervalMs, options);
   }
 
   async watchPresence(logicalDeviceIds: string[]): Promise<void> {
@@ -124,8 +148,7 @@ export class DeviceV2AccountClient {
     }
     this.presenceTargets = new Set(logicalDeviceIds);
     if (!this.presenceTargets.size) return;
-    await this.start();
-    await this.subscribePresence(this.requireSession());
+    await this.subscribePresence(await this.currentSession());
   }
 
   snapshot(logicalDeviceId: string): DeviceV2TargetSnapshot {
@@ -162,6 +185,7 @@ export class DeviceV2AccountClient {
     if (!this.desired || generation !== this.generation) return;
     this.validateCredential(response);
     await this.closeSession();
+    if (!this.desired || generation !== this.generation) return;
     const channel = await this.channels(response);
     if (!this.desired || generation !== this.generation) {
       await channel.close?.();
@@ -169,7 +193,8 @@ export class DeviceV2AccountClient {
     }
     const session = new DeviceV2Session(channel, this.store);
     session.subscribeErrors(() => {
-      if (this.desired && this.session === session) this.scheduleReconnect();
+      // A target's bounded recovery/resync error is not an account transport loss.
+      if (this.desired && this.session === session && session.state === 'closed') this.scheduleReconnect();
     });
     this.session = session;
     try {
@@ -241,7 +266,11 @@ export class DeviceV2AccountClient {
     this.setState('stopped');
   }
 
-  private requireSession(): DeviceV2Session {
+  private async currentSession(): Promise<DeviceV2Session> {
+    const connecting = this.start();
+    const generation = this.generation;
+    await connecting;
+    if (!this.desired || generation !== this.generation) throw new Error('Device V2 account session changed');
     if (this.session?.state !== 'ready') throw new Error('Device V2 account session is not ready');
     return this.session;
   }

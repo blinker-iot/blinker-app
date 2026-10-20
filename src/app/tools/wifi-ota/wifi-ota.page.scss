@@ -1,22 +1,16 @@
 :host {
-  --ota-accent: #168d79;
+  --ota-accent: var(--ion-color-primary);
   display: block;
+
   height: 100%;
 }
 
-app-hero-card {
-  --tool-hero-background-strength: 16%;
-  --tool-hero-border-strength: 24%;
-  --tool-hero-icon-font-size: 23px;
-  --tool-hero-eyebrow-font-size: 9px;
-  --tool-hero-eyebrow-font-weight: 700;
-  --tool-hero-eyebrow-letter-spacing: .11em;
-  --tool-hero-mobile-padding: 16px;
-}
-
 .target-results { margin-top: 11px; }
+
 .host-field { flex: 1.7; }
+
 .port-field { flex: .8; }
+
 .timeout-field { max-width: 180px; }
 
 .target-preview {
@@ -26,11 +20,14 @@ app-hero-card {
   align-items: center;
   gap: 8px;
   border-radius: 9px;
+
   background: var(--blinker-surface-muted);
   color: var(--blinker-text-tertiary);
+
   font-size: 10px;
 
   i { color: var(--ota-accent); }
+
   span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 

@@ -1,0 +1,39 @@
+@use '../card' as c;
+
+@include c.base;
+@include c.fills-rows;
+
+:host { container-type: inline-size; }
+
+.clock {
+  display: grid;
+
+  grid-template-columns: repeat(5, max-content);
+
+  align-content: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+
+  font-size: clamp(14px, calc(100cqi / var(--digits) * 1.45), 44px);
+}
+
+.time-part {
+  display: contents;
+
+  strong { grid-row: 1; grid-column: var(--time-column); font-size: 1em; line-height: 1; }
+
+  small { grid-row: 2; grid-column: var(--time-column); justify-self: center; color: var(--ui-muted); font-size: 10px; }
+}
+
+.separator { grid-row: 1; font-size: 1em; line-height: 1; color: var(--ui-faint); }
+.caption { margin: 0; color: var(--ui-muted); font-size: 12px; }
+
+:host.compact {
+  flex-direction: row;
+
+  align-items: center;
+  .clock { flex: none; margin-left: auto; font-size: 24px; gap: 3px; }
+  .time-part small { display: none; }
+}

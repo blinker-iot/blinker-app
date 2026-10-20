@@ -1,50 +1,48 @@
 <ion-header class="manager-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button
-        text=""
-        [defaultHref]="defaultBackHref"
-      ></ion-back-button>
+      <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{'MENU.REGIONAL_MANAGER' | translate}}</ion-title>
-    @if (loaded && roomDataList.length) {
+
+    <ion-title>区域管理</ion-title>
+
     <ion-buttons slot="end">
-      <ion-button class="edit-button" (click)="switchMode()">
+      @if (loaded && roomDataList.length) {
+      <ion-button [disabled]="saving" (click)="switchMode()">
         {{ editMode ? '完成' : '编辑' }}
       </ion-button>
+      }
+      <ion-button [disabled]="!loaded || saving" (click)="addRoom()" aria-label="新建区域">
+        <i class="fa-light fa-plus" aria-hidden="true"></i>
+      </ion-button>
     </ion-buttons>
-    }
   </ion-toolbar>
 </ion-header>
+
 <ion-content fullscreen="true">
   <main>
-    <app-hero-card
-      iconClass="fa-light fa-house-chimney-window"
-      eyebrow="SPACE MANAGEMENT"
-      heading="管理你的设备空间"
-      description="按房间整理设备，让查找和控制更直观。"
-      [meta]="roomDataList.length"
-    />
-
-    <div class="section-label">我的区域</div>
+    @if (error) {
+    <div class="error-message" role="alert">
+      <span>{{ error }}</span>
+      <button type="button" (click)="load()">重新加载</button>
+    </div>
+    }
 
     @if (loaded && roomDataList.length) {
-    <section class="manager-card">
+    <section class="manager-card" aria-label="区域列表" [attr.aria-busy]="saving">
       <app-menu-list
         class="manager-list"
-        [editMode]="editMode"
+        [editMode]="editMode && !saving"
         (sortChange)="sortChange($event)"
       >
         @for (roomName of roomDataList; track roomName) {
         <app-menu-item
           [id]="roomName"
-          showArrow="true"
-          (delete)="delRoom(roomName)"
+          [disabled]="saving"
+          [showArrow]="true"
+          (delete)="delRoomAlert(roomName)"
           (enter)="editRoom(roomName)"
         >
-          <span class="entry-icon" aria-hidden="true">
-            <i class="fa-light fa-couch"></i>
-          </span>
           <span class="entry-copy">
             <strong>{{ roomName }}</strong>
             <small>{{ roomDataDict[roomName]?.length || 0 }} 台设备</small>
@@ -53,26 +51,13 @@
         }
       </app-menu-list>
     </section>
-    } @if (loaded && !roomDataList.length) {
+    } @else if (loaded) {
     <section class="empty-state">
-      <span class="empty-icon" aria-hidden="true"
-        ><i class="fa-light fa-house-circle-plus"></i
-      ></span>
-      <strong>还没有区域</strong>
-      <p>创建第一个区域，将设备按空间分类管理。</p>
+      <p>还没有区域</p>
+      <button type="button" (click)="addRoom()" [disabled]="saving">新建区域</button>
     </section>
+    } @else if (!error) {
+    <p class="loading-state">正在加载…</p>
     }
   </main>
 </ion-content>
-@if (loaded && !editMode) {
-<ion-footer class="manager-footer ion-no-border">
-  <ion-toolbar>
-    <div class="footer-shell">
-      <button type="button" class="primary-action" (click)="addRoom()">
-        <i class="fa-light fa-plus" aria-hidden="true"></i>
-        <span>新建区域</span>
-      </button>
-    </div>
-  </ion-toolbar>
-</ion-footer>
-}

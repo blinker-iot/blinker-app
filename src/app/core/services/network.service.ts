@@ -1,62 +1,48 @@
-// 需修复 12.27
-
 import { Injectable } from '@angular/core';
-// import { Network } from '@awesome-cordova-plugins/network/ngx';
-import { Platform } from '@ionic/angular/standalone';
+import { Capacitor } from '@capacitor/core';
+import { Network } from '@capacitor/network';
 import { BehaviorSubject } from 'rxjs';
-import { DataService } from './data.service';
-import { NoticeService } from './notice.service';
 
-@Injectable({
-  providedIn: 'root'
-})
+export interface NetworkEvidence { connected: boolean | undefined; wifi: boolean; generation: number; }
+
+@Injectable({ providedIn: 'root' })
 export class NetworkService {
-  // wifi/none/4g
-  stateWatcher = new BehaviorSubject("unknow");
+  // Native link evidence only, never MQTT retrying or navigator.onLine.
+  private readonly connection = new BehaviorSubject<boolean | undefined>(undefined);
+  readonly connected = this.connection.asObservable();
+  private readonly evidence = new BehaviorSubject<NetworkEvidence>({ connected: undefined, wifi: false, generation: 0 });
+  readonly changes = this.evidence.asObservable();
+  get current(): NetworkEvidence { return this.evidence.value; }
+  private started = false;
+  get offline(): boolean { return this.connection.value === false; }
 
-  // disconnectSubscription;
-  connectSubscription;
-  watchNetworkTimer;
-
-  constructor(
-    // private network: Network,
-    private platform: Platform,
-    private dataService: DataService,
-    private noticeService: NoticeService
-  ) { }
-
-  init() {
-    if (!this.platform.is('cordova')) return
-    this.dataService.initCompleted.subscribe(loaded => {
-      if (loaded) {
-        this.watch();
-      }
-    })
-    this.dataService.authDataExpire.subscribe(state => {
-      if (state) {
-        this.unWatch()
-      }
-    })
+  init(): void {
+    if (this.started || !Capacitor.isNativePlatform()) return;
+    this.started = true;
+    void this.observe();
   }
 
-  watch() {
-    // this.connectSubscription = this.network.onConnect().subscribe(() => {
-    //   // console.log('当前网络状态：' + this.network.type);
-    //   window.clearTimeout(this.watchNetworkTimer)
-    //   this.watchNetworkTimer = window.setTimeout(() => {
-    //     if (this.network.type != 'none') {
-    //       // this.noticeService.showToast('connected');
-    //       this.stateWatcher.next(this.network.type);
-    //     }
-    //   }, 2900);
-    // });
+  private async observe(): Promise<void> {
+    let listener: Awaited<ReturnType<typeof Network.addListener>> | undefined;
+    let version = 0;
+    let live = true;
+    const update = (state?: { connected?: unknown; connectionType?: unknown }) => {
+      const connected = typeof state?.connected === 'boolean' ? state.connected : undefined;
+      this.evidence.next({ connected, wifi: connected === true && state?.connectionType === 'wifi',
+        generation: this.evidence.value.generation + 1 });
+      this.connection.next(connected);
+    };
+    try {
+      listener = await Network.addListener('networkStatusChange', state => {
+        if (live) { ++version; update(state); }
+      });
+      const current = version;
+      const state = await Network.getStatus();
+      if (current === version) update(state); // Late query cannot overwrite a newer event.
+    } catch {
+      live = false;
+      update(undefined);
+      await listener?.remove().catch(() => undefined);
+    }
   }
-
-  unWatch() {
-    // this.disconnectSubscription.unsubscribe();
-    if (typeof this.connectSubscription != 'undefined')
-      this.connectSubscription.unsubscribe();
-  }
-
-
 }

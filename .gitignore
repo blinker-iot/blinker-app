@@ -24,14 +24,17 @@ log.txt
 /plugins
 
 # Compiled output
+/build
 /dist
 /device-template/dist
+/public/custom-panel-runtime
 /tmp
 /out-tsc
 /bazel-out
 
 # Node
 /node_modules
+/device-template/node_modules
 npm-debug.log
 yarn-error.log
 

@@ -45,8 +45,8 @@ jobs:
       - name: Checkout capacitor-mdns
         uses: actions/checkout@v7
         with:
-          repository: coloz/capacitor-mdns
-          ref: ef56689c7a974fa6f718374de57045e548cec1ce
+          repository: i3water/capacitor-mdns
+          ref: 00f994f2896327781c64f93851932f1acbddcb8e
           path: capacitor-mdns
           token: ${{ secrets.CI_REPOS_TOKEN || github.token }}
           persist-credentials: false
@@ -54,8 +54,8 @@ jobs:
       - name: Checkout capacitor-ntfy
         uses: actions/checkout@v7
         with:
-          repository: coloz/capacitor-ntfy
-          ref: edcf3fb507c0743c0452f0b14ae9b5e040acec27
+          repository: i3water/capacitor-ntfy
+          ref: 83b57ee2efdd829db025d37fb898d349e6cd6a35
           path: capacitor-ntfy
           token: ${{ secrets.CI_REPOS_TOKEN || github.token }}
           persist-credentials: false
@@ -72,8 +72,8 @@ jobs:
       - name: Checkout capacitor-wifiprov
         uses: actions/checkout@v7
         with:
-          repository: coloz/capacitor-wifiprov
-          ref: fd8589c0cfd1363d6a6388cddd4efe4719ca1534
+          repository: i3water/capacitor-wifiprov
+          ref: a21e87642a853242677f7dccd8847e9785837ab0
           path: capacitor-wifiprov
           token: ${{ secrets.CI_REPOS_TOKEN || github.token }}
           persist-credentials: false
@@ -82,6 +82,10 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable the declared package manager
+        shell: bash
+        run: corepack enable
 
       - name: Build local Capacitor plugins
         shell: bash
@@ -103,8 +107,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm ci
-          npm run build
+          corepack install
+          pnpm install --frozen-lockfile
+          pnpm --config.enable-pre-post-scripts=true run build
           test -f www/index.html
 
       - name: Upload web files

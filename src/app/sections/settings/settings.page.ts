@@ -1,7 +1,15 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import {
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
+import { AuthService } from '../../core/services/auth.service';
 import { ViewService } from '../../core/services/view.service';
 import {
   LanguageOption,
@@ -9,7 +17,11 @@ import {
 } from '../../core/services/translation.service';
 import { LanguageCode } from '../../core/services/translation.loader';
 import { AppTheme } from '../../core/theme/theme';
-import { HeroCardComponent } from '../../core/components/hero-card/hero-card.component';
+import {
+  getServiceRegion,
+  SERVICE_REGIONS,
+  ServiceRegion,
+} from '../../configs/service-region.config';
 
 @Component({
   selector: 'app-settings',
@@ -17,11 +29,22 @@ import { HeroCardComponent } from '../../core/components/hero-card/hero-card.com
   templateUrl: './settings.page.html',
   styleUrls: ['./settings.page.scss'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [IonicModule, TranslatePipe, HeroCardComponent],
+  imports: [
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    TranslatePipe,
+  ],
 })
 export class SettingsPage {
   readonly languageList: readonly LanguageOption[];
   readonly defaultBackHref: string;
+  readonly serviceRegions = SERVICE_REGIONS;
+
+  switchingRegion = false;
 
   get currentTheme(): AppTheme {
     return this.viewService.theme;
@@ -31,9 +54,14 @@ export class SettingsPage {
     return this.translationService.getSelectedLanguage();
   }
 
+  get currentRegion(): ServiceRegion {
+    return getServiceRegion();
+  }
+
   constructor(
     private viewService: ViewService,
     private translationService: TranslationService,
+    private authService: AuthService,
     route: ActivatedRoute
   ) {
     this.languageList = this.translationService.getLanguageList();
@@ -49,6 +77,18 @@ export class SettingsPage {
 
   selectLanguage(language: LanguageCode): void {
     void this.translationService.setLanguage(language);
+  }
+
+  async selectRegion(region: ServiceRegion): Promise<void> {
+    if (this.switchingRegion || region === this.currentRegion) return;
+
+    this.switchingRegion = true;
+
+    try {
+      await this.authService.logout(region);
+    } finally {
+      this.switchingRegion = false;
+    }
   }
 
   getLanguageImage(language: LanguageCode): string {

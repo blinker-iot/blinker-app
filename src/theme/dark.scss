@@ -2,7 +2,6 @@
 html.dark,
 body.dark {
   color-scheme: dark;
-
   --ion-color-primary: #0a84ff;
   --ion-color-primary-rgb: 10, 132, 255;
   --ion-color-primary-contrast: #ffffff;
@@ -57,7 +56,7 @@ body.dark {
   --ion-tab-bar-background: #071b2e;
   --ion-tab-bar-color: #8ea1b8;
   --ion-tab-bar-color-selected: #0a84ff;
-  --ion-border-color: #2c465f;
+  --ion-border-color: var(--blinker-border);
 
   --blinker-bg: #071b2e;
   --blinker-bg-elevated: #0b2238;
@@ -67,8 +66,9 @@ body.dark {
   --blinker-text-primary: #f3f7fc;
   --blinker-text-secondary: #b4c0cf;
   --blinker-text-tertiary: #8193a9;
-  --blinker-border: #2c465f;
+  --blinker-border: rgba(44, 70, 95, 0.6);
   --blinker-divider: rgba(160, 184, 208, 0.16);
-  --blinker-shadow: 0 12px 36px rgba(0, 0, 0, 0.26);
-  --blinker-shadow-soft: 0 5px 20px rgba(0, 0, 0, 0.18);
+  --blinker-shadow: none;
+  --blinker-shadow-soft: none;
+  --blinker-device-card-shadow: 0 5px 20px rgba(0, 0, 0, 0.18);
 }

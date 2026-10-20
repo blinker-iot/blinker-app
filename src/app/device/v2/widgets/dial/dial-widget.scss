@@ -1,0 +1,98 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+@use 'arc';
+
+@include c.base;
+@include c.fills-rows;
+@include arc.strokes;
+
+// The box takes the viewBox's proportions and the largest size that fits.
+.dl-wrap {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  container-type: size;
+}
+
+.dl-box {
+  position: relative;
+  width: min(100cqw, 100cqh * 220 / var(--vh));
+  aspect-ratio: 220 / var(--vh);
+}
+
+.dl-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  cursor: grab;
+  touch-action: none;
+}
+
+.arc-tick {
+  stroke: var(--ui-faint);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+
+  &.on { stroke: var(--ui-accent); }
+
+  // Electronic ticks are single dots.
+  @include theme.electronic { stroke-width: 2.6; stroke-dasharray: 0.01 100; }
+}
+
+.arc-knob {
+  fill: var(--ui-knob);
+  stroke: var(--ui-accent);
+  stroke-width: 3;
+
+  @include theme.electronic { r: calc(var(--thick) * 0.5px + 2px); fill: var(--ui-accent); stroke: var(--ui-card); }
+}
+
+// A square around the arc's centre, so the reading sits in the middle of the arc.
+.dl-center {
+  position: absolute;
+  inset: 0 0 auto;
+  height: calc(100% * 220 / var(--vh));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+// The unit hangs off the number, so the number alone is centred.
+.dl-num {
+  position: relative;
+  font-size: clamp(38px, 4.6vw, 56px);
+  line-height: 1;
+
+  sup {
+    position: absolute;
+    top: 0.3em;
+    left: 100%;
+    margin-left: 3px;
+    color: var(--ui-muted);
+    font-family: var(--ui-font);
+    font-size: 14px;
+    font-weight: 400;
+  }
+}
+
+.dl-sub {
+  margin-top: 8px;
+  color: var(--ui-muted);
+  font-size: 12px;
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-tracking);
+}
+
+// A little more air under the dial than the card's own gap.
+.dl-btns { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+
+.dl-range {
+  color: var(--ui-muted);
+  font-family: var(--ui-font-mono);
+  font-size: 11px;
+}

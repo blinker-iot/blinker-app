@@ -36,4 +36,4 @@ npm run device-template:test
 
 ## 安全边界
 
-仓库内置模板与宿主同源，并被视为受信任代码。若后续要直接运行 AI 生成或其他不受信任的界面代码，应把它部署到独立 HTTPS 源，再通过 `Customizer?<url>` 加载；不要把不受信任代码写入当前同源模板目录。
+仓库内置模板与宿主同源，并被视为受信任代码。用户编写或 AI 生成的 HTML 由独立的自定义模式承载：`src/app/device/custom-panel` 使用不开放同源权限的 sandbox iframe，`src/custom-panel` 将现有组件构建成 HTML 原子运行时。不要把不受信任代码写入当前同源模板目录。

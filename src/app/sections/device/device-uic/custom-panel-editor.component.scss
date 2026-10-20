@@ -1,0 +1,36 @@
+@use './generation-workspace';
+@use '../field-select';
+@use '../../../device/v2/panel/panel-grid' as grid;
+
+:host { display: block; }
+
+.theme-select { margin-bottom: 24px; }
+
+.preview-canvas { padding: 0; }
+
+.preview-content {
+  max-height: none;
+  padding: 0;
+
+  overflow: visible;
+}
+
+.preview-device {
+  height: var(--transparent-page-header-height);
+
+  padding: 0 grid.$page-inset;
+}
+
+.preview-empty { padding-inline: grid.$page-inset; }
+
+.generation-summary {
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.apply-bar { margin-top: 12px; }
+
+app-custom-panel-frame {
+  --custom-panel-min-height: 0px;
+  --custom-panel-height: 400px;
+}

@@ -17,7 +17,6 @@ export class TipService {
     setTimeout(() => {
       arrayRemove(this.list, this.list.indexOf(options))
     }, options.delay + 1000)
-    console.log(this.list);
     
   }
 

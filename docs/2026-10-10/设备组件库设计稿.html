@@ -1,0 +1,2311 @@
+<title>Blinker 控件库</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@500..900&family=Geist+Mono:wght@300..600&family=Outfit:wght@200..600&display=swap">
+<style>
+/* Layout: 左侧为米家控制中心式 8 栏组件画廊，右侧为参数检查器；三套皮肤共用同一组 token 名 */
+:root, html[data-skin="natural"] {
+  color-scheme: light;
+  --bg: #F2F3F5; --bg-pattern: none;
+  --surface: #FFFFFF; --surface-2: #F4F5F7; --track: #ECEEF1;
+  --ink: #17191C; --muted: #868B93; --faint: #BDC1C7; --line: #E8EAEE;
+  --on-tone: #FFFFFF; --knob: #FFFFFF; --knob-shadow: 0 1px 3px rgba(23, 25, 28, .16);
+  --card-border: transparent; --shadow: 0 1px 2px rgba(23, 25, 28, .03), 0 8px 24px rgba(23, 25, 28, .04);
+  --focus: #3482FF;
+  --t-blue: #3482FF; --t-orange: #FF9A1F; --t-green: #22B573; --t-purple: #7F63F4; --t-teal: #10B3BE; --t-red: #FF5146;
+  --ok: #22B573; --warn: #FF5146; --off: #B4B8BF; --info: #3482FF;
+  --radius: 22px; --radius-s: 14px; --row: 84px;
+  --font-ui: -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans SC", "Helvetica Neue", sans-serif;
+  --font-num: "Outfit", "Helvetica Neue", Arial, sans-serif; --num-w: 300;
+  --font-mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  --case: none; --track-l: 0; --h-prefix: "";
+}
+html[data-skin="dark"] {
+  color-scheme: dark;
+  --bg: #0C0D0F; --bg-pattern: none;
+  --surface: #1B1C20; --surface-2: #26272C; --track: #2C2E34;
+  --ink: #EEF0F3; --muted: #8C9099; --faint: #50545B; --line: #2B2D32;
+  --on-tone: #FFFFFF; --knob: #F4F5F7; --knob-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+  --card-border: rgba(255, 255, 255, .035); --shadow: none;
+  --focus: #4D93FF;
+  --t-blue: #4D93FF; --t-orange: #FFA53D; --t-green: #35C987; --t-purple: #937BFF; --t-teal: #26C4CE; --t-red: #FF6459;
+  --ok: #35C987; --warn: #FF6459; --off: #5E626A; --info: #4D93FF;
+}
+html[data-skin="electro"] {
+  color-scheme: dark;
+  --bg: #070809; --bg-pattern: radial-gradient(circle, rgba(255, 255, 255, .045) 1px, transparent 1.3px);
+  --surface: #0F1113; --surface-2: #15181B; --track: #2A2D31;
+  --ink: #E8E8E6; --muted: #8B8E91; --faint: #45484C; --line: #24272B;
+  --on-tone: #070809; --knob: #E8E8E6; --knob-shadow: none;
+  --card-border: #2A2D31; --shadow: none;
+  --focus: #FF3B30;
+  --t-blue: #FF3B30; --t-orange: #FF3B30; --t-green: #FF3B30; --t-purple: #FF3B30; --t-teal: #FF3B30; --t-red: #FF3B30;
+  --ok: #E8E8E6; --warn: #FF3B30; --off: #45484C; --info: #E8E8E6;
+  --radius: 14px; --radius-s: 8px;
+  --font-ui: "Geist Mono", ui-monospace, "PingFang SC", Menlo, monospace;
+  --font-num: "Doto", "Geist Mono", ui-monospace, monospace; --num-w: 800;
+  --case: uppercase; --track-l: .06em; --h-prefix: "## ";
+}
+</style>
+<script>
+  try {
+    const saved = localStorage.getItem('blinker-ui-skin');
+    document.documentElement.dataset.skin = ['natural', 'electro', 'dark'].includes(saved)
+      ? saved : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'natural');
+  } catch (error) {
+    document.documentElement.dataset.skin = 'natural';
+  }
+</script>
+<style>
+* { box-sizing: border-box; }
+
+html, body { background: var(--bg); color: var(--ink); }
+
+body {
+  font-family: var(--font-ui);
+  background-image: var(--bg-pattern);
+  background-size: 16px 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.page {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding-inline: clamp(16px, 3vw, 36px);
+  padding-block: 28px 72px;
+}
+
+/* ---------- 顶部 ---------- */
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px 28px;
+  padding-block: 4px 26px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: clamp(26px, 3.6vw, 36px);
+  font-weight: 600;
+  letter-spacing: -.01em;
+  text-wrap: balance;
+}
+
+html[data-skin="electro"] .brand h1 {
+  font-family: var(--font-num);
+  font-weight: 800;
+  font-size: clamp(32px, 5.4vw, 54px);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.brand p { margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; max-width: 60ch; }
+
+.spec {
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--muted);
+}
+
+.skins {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow);
+}
+
+.skins button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--muted);
+  transition: background-color .2s, color .2s;
+}
+
+.skins button[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); }
+
+.skins i { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(128, 128, 128, .35); }
+
+html[data-skin="electro"] .skins { border-radius: 4px; border-style: dotted; border-color: var(--faint); }
+html[data-skin="electro"] .skins button { border-radius: 2px; text-transform: uppercase; letter-spacing: .06em; }
+html[data-skin="electro"] .skins button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+/* ---------- 工作台 ---------- */
+
+.bench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 28px;
+  align-items: start;
+}
+
+.sec + .sec { margin-top: 36px; }
+
+.sec-h {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: var(--case);
+  letter-spacing: var(--track-l);
+}
+
+.sec-h::before { content: var(--h-prefix); color: var(--muted); font-weight: 400; }
+
+.sec-h small { font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--muted); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-auto-rows: var(--row);
+  grid-auto-flow: row dense;
+  gap: 12px;
+}
+
+.slot {
+  --s: 2; --r: 2;
+  grid-column: span var(--s);
+  grid-row: span var(--r);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cardwrap { flex: 1; min-height: 0; display: flex; }
+
+.cap {
+  display: flex;
+  gap: 6px;
+  height: 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cap b { color: var(--faint); font-weight: 500; }
+
+.slot.sel .card { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+html[data-skin="electro"] .slot.sel .card { outline: 1px dashed var(--focus); }
+
+.slot.dragging * { transition: none !important; }
+
+/* ---------- 卡片基座 ---------- */
+
+.card {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  text-align: left;
+  transition: background-color .25s, border-color .25s, color .25s;
+}
+
+.hd { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; font-weight: 500; }
+
+.hd-ico { flex: none; width: 20px; height: 20px; color: var(--tone); }
+
+.hd-t {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-transform: var(--case);
+  letter-spacing: var(--track-l);
+}
+
+.hd-v { flex: none; font-size: 12px; color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+
+.ico {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+html[data-skin="electro"] .ico { stroke-width: 2.1; stroke-dasharray: .01 3.1; }
+
+.num { font-family: var(--font-num); font-weight: var(--num-w); font-variant-numeric: tabular-nums; }
+
+html[data-skin="electro"] .num { letter-spacing: .03em; }
+
+.rbtn {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  color: var(--ink);
+  touch-action: manipulation;
+  transition: transform .15s, opacity .2s;
+}
+
+.rbtn .ico { width: 18px; height: 18px; }
+.rbtn:active { transform: scale(.92); }
+.rbtn:disabled { opacity: .35; cursor: default; }
+
+html[data-skin="electro"] .rbtn { background: none; border: 1.5px dotted var(--faint); }
+
+/* ---------- 开关：图标开关卡 ---------- */
+
+.tile { justify-content: space-between; cursor: pointer; }
+.tile:active { transform: scale(.975); }
+
+.tile-ico {
+  width: 42px;
+  height: 42px;
+  padding: 9px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+  transition: background-color .25s, color .25s;
+}
+
+.tile-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.tile-copy strong {
+  font-size: 15px;
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-transform: var(--case);
+  letter-spacing: var(--track-l);
+}
+
+.tile-copy small { font-size: 12px; color: var(--muted); transition: color .25s; }
+
+.tile.wide { flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; }
+.tile.wide .tile-ico { flex: none; width: 38px; height: 38px; padding: 8px; }
+
+.tile-dot { position: absolute; top: 16px; right: 16px; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.tile.on .tile-dot { background: var(--tone); }
+.tile.wide .tile-dot { top: 50%; margin-top: -4px; }
+
+.tile-more { position: absolute; top: 14px; right: 12px; width: 18px; height: 18px; color: var(--faint); }
+.tile.wide .tile-more { top: 50%; margin-top: -9px; }
+
+.tile.st-fill.on { background: var(--tone); color: var(--on-tone); border-color: transparent; }
+.tile.st-fill.on .tile-ico { background: rgba(255, 255, 255, .24); color: var(--on-tone); }
+.tile.st-fill.on small, .tile.st-fill.on .tile-more { color: rgba(255, 255, 255, .8); }
+.tile.st-fill.on .tile-dot { background: var(--on-tone); }
+
+.tile.st-tint.on { background: color-mix(in srgb, var(--tone) 13%, var(--surface)); }
+.tile.st-tint.on .tile-ico { background: var(--tone); color: var(--on-tone); }
+
+.tile.st-outline.on { border-color: var(--tone); box-shadow: inset 0 0 0 1px var(--tone); }
+.tile.st-outline.on .tile-ico { background: color-mix(in srgb, var(--tone) 14%, transparent); color: var(--tone); }
+
+html[data-skin="electro"] .tile .tile-ico { background: none; border: 1.5px dotted var(--faint); }
+html[data-skin="electro"] .tile.on { background: var(--surface); color: var(--ink); border-color: var(--tone); box-shadow: none; }
+html[data-skin="electro"] .tile.on .tile-ico { background: none; color: var(--tone); border-color: var(--tone); }
+html[data-skin="electro"] .tile.on small { color: var(--tone); }
+html[data-skin="electro"] .tile.on .tile-dot { background: var(--tone); }
+
+/* ---------- 开关：胶囊开关行 ---------- */
+
+.rowc { flex-direction: row; align-items: center; gap: 12px; padding-block: 10px; }
+
+.rc-ico {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+  color: var(--tone);
+}
+
+.rc-ico.plain { background: none; padding: 6px 2px; width: 28px; }
+
+html[data-skin="electro"] .rc-ico { background: none; border: 1.5px dotted var(--faint); }
+html[data-skin="electro"] .rc-ico.plain { border: 0; }
+
+.rc-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.rc-copy strong, .rc-copy small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.rc-copy strong { font-size: 14px; font-weight: 500; text-transform: var(--case); letter-spacing: var(--track-l); }
+.rc-copy small { font-size: 12px; color: var(--muted); }
+
+.sw {
+  --w: 48px; --h: 28px;
+  flex: none;
+  position: relative;
+  width: var(--w);
+  height: var(--h);
+  border-radius: 999px;
+  background: var(--track);
+  transition: background-color .25s, border-color .25s;
+}
+
+.sw.sm { --w: 38px; --h: 22px; }
+.sw.lg { --w: 58px; --h: 34px; }
+
+.sw i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(var(--h) - 6px);
+  height: calc(var(--h) - 6px);
+  border-radius: 50%;
+  background: var(--knob);
+  box-shadow: var(--knob-shadow);
+  transition: transform .25s cubic-bezier(.3, .7, .4, 1), background-color .25s;
+}
+
+.sw.on { background: var(--tone); }
+.sw.on i { transform: translateX(calc(var(--w) - var(--h))); }
+
+html[data-skin="electro"] .sw { background: none; border: 1.5px dotted var(--muted); }
+html[data-skin="electro"] .sw i { top: 2px; left: 2px; background: var(--faint); }
+html[data-skin="electro"] .sw.on { background: none; border-color: var(--ink); }
+html[data-skin="electro"] .sw.on i { background: var(--ink); }
+
+/* ---------- 开关：场景按钮 ---------- */
+
+.actc { align-items: center; justify-content: center; gap: 10px; text-align: center; }
+
+.act {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 12%, var(--surface));
+  transition: background-color .25s, color .25s, transform .15s;
+  touch-action: manipulation;
+}
+
+.act:active { transform: scale(.95); }
+.act .ico { width: 22px; height: 22px; flex: none; }
+.act span { position: relative; z-index: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+.act.pill { max-width: 100%; height: 44px; padding-inline: 20px; border-radius: 999px; font-size: 14px; font-weight: 500; }
+.act.circle { width: 64px; height: 64px; border-radius: 50%; }
+.act.circle .ico { width: 28px; height: 28px; }
+.act.block { align-self: stretch; flex: 1; flex-direction: column; border-radius: calc(var(--radius) - 8px); font-size: 14px; font-weight: 500; }
+.act.block .ico { width: 30px; height: 30px; }
+.act.run { background: var(--tone); color: var(--on-tone); }
+
+.act::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--tone);
+  opacity: .28;
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.act.holding::after { transform: scaleX(1); transition: transform .8s linear; }
+
+.act-t { font-size: 14px; font-weight: 500; text-transform: var(--case); letter-spacing: var(--track-l); }
+.act-s { min-height: 16px; font-size: 12px; color: var(--muted); }
+
+html[data-skin="electro"] .act { background: none; border: 1.5px dotted var(--ink); color: var(--ink); }
+html[data-skin="electro"] .act.run { background: none; border-color: var(--tone); color: var(--tone); }
+
+/* ---------- 开关：多键面板 ---------- */
+
+.keys { flex: 1; min-height: 0; display: grid; gap: 8px; }
+
+.keys.joined { gap: 1px; padding: 0; border-radius: var(--radius-s); overflow: hidden; background: var(--line); }
+
+.key {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  transition: background-color .25s, color .25s;
+}
+
+.keys.joined .key { border-radius: 0; }
+.key .ico { width: 22px; height: 22px; }
+.key span { text-transform: var(--case); letter-spacing: var(--track-l); }
+.key.on { background: color-mix(in srgb, var(--tone) 14%, var(--surface)); color: var(--tone); }
+
+.key-led { position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
+.key.on .key-led { background: var(--tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 22%, transparent); }
+
+html[data-skin="electro"] .keys.joined { background: var(--card-border); }
+html[data-skin="electro"] .key { background: var(--surface); }
+html[data-skin="electro"] .key.on { background: var(--surface); color: var(--tone); }
+html[data-skin="electro"] .keys:not(.joined) .key { border: 1px dotted var(--faint); }
+html[data-skin="electro"] .keys:not(.joined) .key.on { border-color: var(--tone); }
+
+/* ---------- 开关：模式宫格 ---------- */
+
+.modes { flex: 1; display: grid; gap: 8px; align-content: center; }
+
+.mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+  transition: color .2s, background-color .2s;
+}
+
+.mode-ico {
+  width: 44px;
+  height: 44px;
+  padding: 11px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  transition: background-color .25s, color .25s;
+}
+
+.mode.on { color: var(--ink); }
+.mode.on .mode-ico { background: var(--tone); color: var(--on-tone); }
+.mode .mi { width: 16px; height: 16px; flex: none; }
+
+.modes.segmented { display: flex; gap: 2px; padding: 3px; border-radius: var(--radius-s); background: var(--surface-2); align-self: stretch; margin-top: auto; }
+.modes.segmented .mode { flex: 1; flex-direction: row; justify-content: center; gap: 5px; padding: 9px 4px; border-radius: calc(var(--radius-s) - 3px); }
+.modes.segmented .mode.on { background: var(--surface); color: var(--tone); box-shadow: var(--knob-shadow); }
+
+.modes.chips { display: flex; flex-wrap: wrap; align-content: flex-end; gap: 8px; }
+.modes.chips .mode { flex-direction: row; gap: 5px; padding: 7px 12px; border-radius: 999px; background: var(--surface-2); }
+.modes.chips .mode.on { background: var(--tone); color: var(--on-tone); }
+
+html[data-skin="electro"] .mode-ico { background: none; border: 1.5px dotted var(--faint); }
+html[data-skin="electro"] .mode.on .mode-ico { background: none; border-color: var(--tone); color: var(--tone); }
+html[data-skin="electro"] .modes.segmented { background: none; border: 1px dotted var(--faint); }
+html[data-skin="electro"] .modes.segmented .mode.on { background: var(--surface-2); }
+html[data-skin="electro"] .modes.chips .mode { background: none; border: 1px dotted var(--faint); }
+html[data-skin="electro"] .modes.chips .mode.on { border-color: var(--tone); color: var(--tone); }
+html[data-skin="electro"] .mode span { text-transform: uppercase; }
+
+/* ---------- 调节：大块滑块 ---------- */
+
+.lvl { padding: 0; gap: 0; }
+
+.lvl-track {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--track);
+  cursor: grab;
+  touch-action: none;
+  outline-offset: -3px;
+}
+
+.lvl-fill { position: absolute; left: 0; bottom: 0; background: var(--tone); }
+.lvl.v .lvl-fill { right: 0; height: calc(var(--p) * 1%); }
+.lvl.h .lvl-fill { top: 0; width: calc(var(--p) * 1%); }
+.lvl.grad.v .lvl-fill { background: linear-gradient(to top, color-mix(in srgb, var(--tone) 55%, var(--surface)), var(--tone)); }
+.lvl.grad.h .lvl-fill { background: linear-gradient(to right, color-mix(in srgb, var(--tone) 55%, var(--surface)), var(--tone)); }
+
+.lvl-mk { position: absolute; background: color-mix(in srgb, var(--ink) 10%, transparent); }
+.lvl.v .lvl-mk { left: 30%; right: 30%; height: 2px; bottom: calc(var(--m) * 1%); border-radius: 2px; }
+.lvl.h .lvl-mk { top: 30%; bottom: 30%; width: 2px; left: calc(var(--m) * 1%); border-radius: 2px; }
+
+.lvl-ico, .lvl-t, .lvl-val { position: absolute; color: var(--ink); transition: color .2s; pointer-events: none; }
+.lvl-ico { width: 26px; height: 26px; color: var(--muted); }
+.lvl .inv { color: var(--on-tone); }
+
+.lvl.v .lvl-ico { left: 50%; bottom: 18px; transform: translateX(-50%); }
+.lvl.v .lvl-val { top: 16px; left: 0; right: 0; text-align: center; font-size: 30px; line-height: 1; }
+.lvl.v .lvl-t { top: 52px; left: 0; right: 0; text-align: center; font-size: 12px; }
+
+.lvl.h .lvl-ico { left: 16px; top: 50%; transform: translateY(-50%); }
+.lvl.h .lvl-t { left: 52px; top: 50%; transform: translateY(-50%); font-size: 14px; font-weight: 500; }
+.lvl.h .lvl-val { right: 18px; top: 50%; transform: translateY(-50%); font-size: 24px; }
+
+.lvl-t { text-transform: var(--case); letter-spacing: var(--track-l); }
+.lvl-val small { font-size: .5em; margin-left: 2px; }
+
+html[data-skin="electro"] .lvl-track { background: radial-gradient(circle, var(--faint) 1.5px, transparent 2px) left bottom / 8px 8px; }
+html[data-skin="electro"] .lvl-fill, html[data-skin="electro"] .lvl.grad .lvl-fill { background: radial-gradient(circle, var(--tone) 1.9px, transparent 2.4px) left bottom / 8px 8px; }
+html[data-skin="electro"] .lvl .inv { color: var(--ink); }
+html[data-skin="electro"] .lvl-mk { background: var(--muted); }
+
+/* ---------- 调节：渐变滑块 ---------- */
+
+.gs-wrap { position: relative; margin-top: auto; }
+.gs-wrap.h-thin { height: 6px; margin-block: auto 12px; }
+.gs-wrap.h-mid { height: 14px; margin-block: auto 8px; }
+.gs-wrap.h-thick { height: 32px; }
+
+.gs-track {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.gs-track.cct { background: linear-gradient(90deg, #FFA54F, #FFD9A8 38%, #FFF6EA 58%, #E4EEFF 78%, #A9CBFF); }
+.gs-track.hue { background: linear-gradient(90deg, #F33, #FF0 17%, #3F3 33%, #3FF 50%, #33F 67%, #F3F 83%, #F33); }
+.gs-track.bright { background: linear-gradient(90deg, #3A3A3C, #FFF4D6); }
+
+.gs-knob {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--p) * 1%);
+  width: 26px;
+  height: 26px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.gs-knob.ring { border: 4px solid var(--knob); box-shadow: var(--knob-shadow), inset var(--knob-shadow); }
+.gs-knob.dot { background: var(--knob); box-shadow: var(--knob-shadow); }
+.gs-knob.bar { width: 8px; height: calc(100% + 14px); border-radius: 4px; background: var(--knob); box-shadow: var(--knob-shadow); }
+
+.gs-ticks { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+
+.gs-val { font-size: 22px; line-height: 1; }
+.gs-val small { font-size: 12px; color: var(--muted); margin-left: 2px; }
+
+html[data-skin="electro"] .gs-track {
+  border-radius: 0;
+  -webkit-mask: radial-gradient(circle, #000 1.7px, transparent 2.2px) left center / 6px 6px;
+  mask: radial-gradient(circle, #000 1.7px, transparent 2.2px) left center / 6px 6px;
+}
+
+html[data-skin="electro"] .gs-knob { display: none; }
+
+.gs-mark { position: absolute; top: 50%; left: calc(var(--p) * 1%); width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--tone); box-shadow: 0 0 0 4px var(--surface); display: none; pointer-events: none; }
+html[data-skin="electro"] .gs-mark { display: block; }
+
+/* ---------- 调节：环形旋钮 / 环形进度 ---------- */
+
+.dl-wrap { position: relative; flex: 1; min-height: 0; }
+
+.dl-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; touch-action: none; cursor: grab; }
+
+.arc-track { fill: none; stroke: var(--track); stroke-linecap: round; }
+.arc-prog { fill: none; stroke: var(--tone); stroke-linecap: round; }
+.arc-tick { stroke: var(--faint); stroke-width: 1.6; stroke-linecap: round; }
+.arc-tick.on { stroke: var(--tone); }
+.arc-knob { fill: var(--knob); stroke: var(--tone); stroke-width: 3; }
+.arc-prog.warn { stroke: var(--warn); }
+
+html[data-skin="electro"] .arc-track { stroke: var(--faint); }
+html[data-skin="electro"] .arc-knob { fill: var(--tone); stroke: var(--surface); }
+
+.dl-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.dl-num { display: flex; align-items: flex-start; font-size: clamp(38px, 4.6vw, 56px); line-height: 1; }
+.dl-num sup { font-family: var(--font-ui); font-weight: 400; font-size: 14px; margin: .3em 0 0 3px; color: var(--muted); }
+.dl-sub { margin-top: 8px; font-size: 12px; color: var(--muted); text-transform: var(--case); letter-spacing: var(--track-l); }
+.dl-btns { display: flex; align-items: center; justify-content: space-between; }
+.dl-range { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+.rg-center .dl-num { font-size: clamp(26px, 3vw, 34px); }
+.rg-foot { margin: 0; text-align: center; }
+.rg-center.half { justify-content: flex-end; padding-bottom: 4px; }
+.rg-center.warn .dl-num { color: var(--warn); }
+
+/* ---------- 调节：档位 ---------- */
+
+.lv-row { flex: 1; min-height: 0; display: flex; align-items: center; gap: 10px; }
+.lv-row > :not(.rbtn) { flex: 1; min-width: 0; align-self: stretch; }
+
+.lv-row > .lv-seg { align-self: center; height: 44px; }
+
+.lv-bars { display: flex; align-items: flex-end; gap: 8px; height: 100%; }
+
+.lv-bar {
+  flex: 1;
+  height: calc(var(--h) * 1%);
+  border-radius: 7px;
+  background: var(--track);
+  transition: background-color .2s;
+}
+
+.lv-bar.on { background: var(--tone); }
+
+html[data-skin="electro"] .lv-bar { border-radius: 0; background: radial-gradient(circle, var(--faint) 1.8px, transparent 2.3px) center bottom / 7px 7px; }
+html[data-skin="electro"] .lv-bar.on { background: radial-gradient(circle, var(--tone) 2px, transparent 2.5px) center bottom / 7px 7px; }
+
+.lv-dots { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+
+.lv-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--surface-2);
+  transition: background-color .2s, color .2s;
+}
+
+.lv-dot.on { background: var(--tone); color: var(--on-tone); }
+.lv-gap { flex: 1; height: 2px; border-radius: 2px; background: var(--track); }
+.lv-gap.on { background: var(--tone); }
+
+html[data-skin="electro"] .lv-dot { background: none; border: 1.5px dotted var(--faint); }
+html[data-skin="electro"] .lv-dot.on { border-color: var(--tone); color: var(--tone); background: none; }
+html[data-skin="electro"] .lv-gap { background: none; border-top: 2px dotted var(--faint); height: 0; }
+html[data-skin="electro"] .lv-gap.on { border-color: var(--tone); }
+
+.lv-seg { display: flex; gap: 2px; padding: 3px; border-radius: var(--radius-s); background: var(--surface-2); align-items: stretch; }
+
+.lv-seg button {
+  flex: 1;
+  min-width: 0;
+  padding-inline: 2px;
+  border-radius: calc(var(--radius-s) - 3px);
+  font-size: 13px;
+  color: var(--muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lv-seg button.on { background: var(--surface); color: var(--tone); box-shadow: var(--knob-shadow); font-weight: 500; }
+
+html[data-skin="electro"] .lv-seg { background: none; border: 1px dotted var(--faint); }
+html[data-skin="electro"] .lv-seg button.on { background: var(--surface-2); }
+
+/* ---------- 调节：色盘 ---------- */
+
+.cw-wrap { flex: 1; min-height: 0; display: grid; place-items: center; }
+
+.cw-box {
+  position: relative;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 1;
+  container-type: size;
+  border-radius: 50%;
+  cursor: grab;
+  touch-action: none;
+}
+
+.cw {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(#F33, #FF0, #3F3, #3FF, #33F, #F3F, #F33);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--rw)), #000 calc(100% - var(--rw) + .5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - var(--rw)), #000 calc(100% - var(--rw) + .5px));
+  pointer-events: none;
+}
+
+html[data-skin="electro"] .cw {
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--rw)), #000 calc(100% - var(--rw) + .5px)), radial-gradient(circle, #000 1.6px, transparent 2.1px) center / 6px 6px;
+  -webkit-mask-composite: source-in;
+  mask: radial-gradient(farthest-side, transparent calc(100% - var(--rw)), #000 calc(100% - var(--rw) + .5px)) intersect, radial-gradient(circle, #000 1.6px, transparent 2.1px) center / 6px 6px;
+}
+
+.cw-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--rw) + 8px);
+  height: calc(var(--rw) + 8px);
+  margin: calc((var(--rw) + 8px) / -2) 0 0 calc((var(--rw) + 8px) / -2);
+  border-radius: 50%;
+  border: 3px solid var(--knob);
+  box-shadow: var(--knob-shadow), 0 0 0 1px rgba(0, 0, 0, .06);
+  transform: rotate(var(--a)) translateY(calc(-50cqmin + var(--rw) / 2)) rotate(calc(var(--a) * -1));
+  pointer-events: none;
+}
+
+.cw-mid {
+  position: absolute;
+  inset: calc(var(--rw) + 14px);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--c);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  pointer-events: none;
+  transition: background-color .15s;
+}
+
+.cw-mid.lt { color: rgba(0, 0, 0, .62); }
+.cw-mid.dk { color: rgba(255, 255, 255, .9); }
+
+html[data-skin="electro"] .cw-mid {
+  background: radial-gradient(circle, var(--c) 2.4px, transparent 2.9px) center / 8px 8px;
+  color: var(--ink);
+}
+
+.sws { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+.swc {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08);
+  transition: transform .15s;
+}
+
+.swc.on { outline: 2px solid var(--ink); outline-offset: 2px; }
+.sws.big { flex: 1; align-content: center; gap: 12px; }
+.sws.big .swc { width: 36px; height: 36px; }
+
+html[data-skin="electro"] .swc { border-radius: 2px; }
+
+/* ---------- 显示 ---------- */
+
+.bn { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; min-height: 0; }
+
+.bn-num { display: flex; align-items: flex-start; gap: 3px; line-height: .95; letter-spacing: -.02em; }
+.bn.md .bn-num { font-size: 34px; }
+.bn.lg .bn-num { font-size: 48px; }
+.bn.xl .bn-num { font-size: 66px; }
+.bn.warn .bn-num { color: var(--warn); }
+
+.bn-u { font-family: var(--font-ui); font-weight: 400; font-size: 14px; color: var(--muted); margin-top: .2em; letter-spacing: 0; }
+.bn-u.base { align-self: flex-end; margin: 0 0 .25em; }
+
+.bn-sub { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12px; color: var(--muted); }
+.bn-sub span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+.delta { flex: none; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); font-family: var(--font-mono); font-size: 11px; }
+
+html[data-skin="electro"] .delta { background: none; border: 1px dotted var(--faint); border-radius: 3px; }
+
+.sp-top { display: flex; align-items: center; gap: 8px; }
+.sp-last { font-size: 24px; line-height: 1; }
+.sp-last small { font-family: var(--font-ui); font-size: 12px; color: var(--muted); margin-left: 2px; font-weight: 400; }
+
+.sp-plot { position: relative; flex: 1; min-height: 0; }
+.sp-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+.sp-grid { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.sp-line { fill: none; stroke: var(--tone); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.sp-area { fill: color-mix(in srgb, var(--tone) 15%, transparent); }
+.sp-bar { fill: color-mix(in srgb, var(--tone) 45%, transparent); }
+.sp-bar.last { fill: var(--tone); }
+
+.sp-end {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 0 3px var(--surface);
+}
+
+.sp-cols { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 2px; }
+
+.sp-col {
+  flex: 1;
+  height: calc(var(--h) * 1%);
+  background: radial-gradient(circle, var(--muted) 1.5px, transparent 2px) center bottom / 100% 6px;
+}
+
+.sp-col.peak { background: radial-gradient(circle, var(--ink) 2px, transparent 2.5px) center top / 100% 6px no-repeat, radial-gradient(circle, var(--faint) 1.3px, transparent 1.8px) center bottom / 100% 6px; }
+.sp-col.last { background: radial-gradient(circle, var(--tone) 2px, transparent 2.5px) center bottom / 100% 6px; }
+.sp-col.peak.last { background: radial-gradient(circle, var(--tone) 2.4px, transparent 2.9px) center top / 100% 6px no-repeat, radial-gradient(circle, var(--faint) 1.3px, transparent 1.8px) center bottom / 100% 6px; }
+
+.sp-ax { display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+
+.st { justify-content: center; }
+.st.inline { flex-direction: row; align-items: center; }
+.st.inline .hd { flex: 1; }
+
+.st-line { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 18px; font-weight: 500; }
+.st.inline .st-line { font-size: 14px; }
+.st-line > span { text-transform: var(--case); letter-spacing: var(--track-l); }
+
+.st-dot { position: relative; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--sc); }
+
+.st-dot.pulse::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid var(--sc);
+  opacity: 0;
+  animation: pulse 1.8s ease-out infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(.5); opacity: .7; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+.st-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sc) 15%, transparent);
+  color: var(--sc);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.st-pill .st-dot { width: 7px; height: 7px; }
+.st-meta { font-size: 12px; color: var(--muted); }
+
+.st.banner { background: color-mix(in srgb, var(--sc) 12%, var(--surface)); border-color: color-mix(in srgb, var(--sc) 30%, transparent); }
+.st.banner .hd-ico { color: var(--sc); }
+
+html[data-skin="electro"] .st-dot.hollow { background: none; border: 1.5px solid var(--muted); }
+html[data-skin="electro"] .st-pill { background: none; border: 1px dotted var(--sc); border-radius: 4px; text-transform: uppercase; }
+html[data-skin="electro"] .st.banner { background: var(--surface); border-color: var(--sc); border-style: dotted; }
+
+.sm-grid { flex: 1; display: grid; align-content: center; gap: 14px 0; }
+
+.sm-it { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-inline: 14px; }
+.sm-it.first { padding-left: 0; }
+.sm-grid.div .sm-it:not(.first) { border-left: 1px solid var(--line); }
+
+.sm-v { font-size: 24px; line-height: 1; white-space: nowrap; }
+.sm-v small { font-family: var(--font-ui); font-weight: 400; font-size: 11px; color: var(--muted); margin-left: 2px; }
+.sm-l { font-size: 12px; color: var(--muted); text-transform: var(--case); letter-spacing: var(--track-l); }
+.sm-it.em .sm-v { font-size: 34px; color: var(--tone); }
+
+html[data-skin="electro"] .sm-grid.div .sm-it:not(.first) { border-left-style: dotted; border-left-color: var(--faint); }
+
+/* ---------- 输入 ---------- */
+
+.ns { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 0; }
+.ns-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ns-v { font-size: 40px; line-height: 1; }
+.ns-v small { font-family: var(--font-ui); font-weight: 400; font-size: 14px; color: var(--muted); margin-left: 3px; }
+.ns-v.ns-sm { flex: none; min-width: 3.2ch; text-align: center; font-size: 24px; }
+.ns-range { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+.ns.split { flex-direction: column; align-items: stretch; }
+.ns.split .ns-mid { flex: 1; justify-content: center; }
+.ns-row { display: flex; gap: 10px; }
+.ns-row .rbtn { flex: 1; height: 38px; border-radius: 12px; }
+
+.tx-row { display: flex; align-items: flex-end; gap: 8px; margin-top: auto; }
+
+.tx-in {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--surface-2);
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  resize: none;
+}
+
+.tx-in:focus { outline: none; border-color: var(--focus); }
+.tx-in::placeholder { color: var(--muted); }
+
+.tx-send {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 41px;
+  padding-inline: 14px;
+  border-radius: 12px;
+  background: var(--tone);
+  color: var(--on-tone);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tx-send .ico { width: 16px; height: 16px; }
+.tx-meta { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--muted); }
+.tx-log { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tx-count { font-family: var(--font-mono); flex: none; }
+
+html[data-skin="electro"] .tx-in { background: none; border: 0; border-bottom: 1.5px dotted var(--faint); border-radius: 0; padding-inline: 2px; }
+html[data-skin="electro"] .tx-in:focus { border-bottom-color: var(--tone); }
+html[data-skin="electro"] .tx-send { background: none; border: 1.5px dotted var(--tone); color: var(--tone); text-transform: uppercase; }
+
+.tm-presets { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 8px; margin-top: auto; }
+
+.tm-p {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-block: 10px;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tm-p b { font-family: var(--font-num); font-weight: 500; font-size: 20px; color: var(--ink); }
+
+html[data-skin="electro"] .tm-p { background: none; border: 1px dotted var(--faint); }
+html[data-skin="electro"] .tm-p b { font-weight: 800; }
+
+.tm-run { flex: 1; min-height: 0; display: flex; align-items: center; gap: 14px; }
+.tm-ring { flex: none; width: 64px; height: 64px; }
+.tm-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.tm-time { font-size: 34px; line-height: 1; }
+.tm-act { font-size: 12px; color: var(--muted); }
+.tm-bar { height: 6px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.tm-bar span { display: block; height: 100%; background: var(--tone); border-radius: inherit; transition: width .9s linear; }
+.tm-x { flex: none; font-size: 12px; color: var(--tone); padding: 4px 2px; }
+
+html[data-skin="electro"] .tm-bar { background: radial-gradient(circle, var(--faint) 1.5px, transparent 2px) left center / 6px 6px; border-radius: 0; }
+html[data-skin="electro"] .tm-bar span { background: radial-gradient(circle, var(--tone) 1.8px, transparent 2.3px) left center / 6px 6px; }
+
+/* ---------- 检查器 ---------- */
+
+.insp {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.ih { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ih h2 { margin: 2px 0 0; font-size: 18px; font-weight: 600; text-transform: var(--case); letter-spacing: var(--track-l); }
+.eyebrow { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+.ib { margin: 8px 0 14px; font-size: 12px; line-height: 1.6; color: var(--muted); }
+.ib b { color: var(--ink); font-weight: 500; }
+
+.grab { display: none; }
+
+.group { display: grid; gap: 12px; padding-block: 14px; border-top: 1px solid var(--line); }
+
+.group h3 {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.f { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: center; gap: 10px; font-size: 13px; }
+.f > label, .f > .fl { color: var(--muted); line-height: 1.35; }
+.f.top { align-items: start; }
+.f.top > .fl { padding-top: 6px; }
+
+.in {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.in:focus { outline: none; border-color: var(--focus); }
+
+.sg { display: flex; flex-wrap: wrap; gap: 3px; padding: 3px; border-radius: 10px; background: var(--surface-2); }
+
+.sg button {
+  flex: 1 0 auto;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--knob-shadow); }
+
+html[data-skin="electro"] .sg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.icons { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; }
+.icons button { aspect-ratio: 1; padding: 5px; border-radius: 8px; color: var(--muted); }
+.icons button[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+
+.tones { display: flex; flex-wrap: wrap; gap: 10px; }
+.tones button { width: 22px; height: 22px; border-radius: 50%; background: var(--c); }
+.tones button[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.rg { display: flex; align-items: center; gap: 10px; }
+.rg input { flex: 1; min-width: 0; accent-color: var(--focus); }
+.rg output { width: 28px; text-align: right; font-family: var(--font-mono); font-size: 12px; }
+
+.f .sw { --tone: var(--focus); justify-self: start; }
+
+.json {
+  margin: 0;
+  max-height: 300px;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  white-space: pre;
+  color: var(--ink);
+}
+
+.json .k { color: var(--focus); }
+.json .s { color: var(--muted); }
+
+.note { margin: 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
+
+/* ---------- 响应式 ---------- */
+
+@media (max-width: 1080px) {
+  .bench { grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; }
+}
+
+@media (max-width: 900px) {
+  .bench { grid-template-columns: minmax(0, 1fr); }
+  .page { padding-bottom: 120px; }
+
+  .insp {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 20;
+    max-height: 78vh;
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    transform: translateY(calc(100% - 72px - env(safe-area-inset-bottom, 0px)));
+    transition: transform .3s cubic-bezier(.3, .7, .4, 1);
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, .12);
+  }
+
+  .insp.open { transform: none; }
+  .ih { cursor: pointer; }
+  .grab { display: block; flex: none; width: 36px; height: 5px; margin-top: 6px; border-radius: 3px; background: var(--faint); }
+}
+
+@media (max-width: 640px) {
+  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; --row: 78px; }
+  .slot[data-span="8"] { --s: 4 !important; }
+  .skins button { padding: 7px 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="page">
+  <header class="top">
+    <div class="brand">
+      <h1>Blinker 控件库</h1>
+      <p>18 个设备组件，按 PageLayout 8 栏栅格排布。点选任一组件，在右侧调整参数，下方实时生成布局片段。所有数据均为演示值，操作不连接设备。</p>
+      <div class="spec" id="spec"></div>
+    </div>
+    <nav class="skins" id="skins" aria-label="主题"></nav>
+  </header>
+
+  <div class="bench">
+    <main id="gallery"></main>
+    <aside class="insp" id="insp" aria-label="组件参数"></aside>
+  </div>
+</div>
+
+<script>
+/* ============ 基础工具 ============ */
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const csv = text => String(text ?? '').split(/[,，]/).map(part => part.trim()).filter(Boolean);
+const pad = number => String(number).padStart(2, '0');
+const isElectro = () => document.documentElement.dataset.skin === 'electro';
+
+function decimalsOf(step) {
+  const text = String(step);
+  return text.includes('.') ? text.split('.')[1].length : 0;
+}
+
+function snap(value, min, max, step) {
+  const snapped = Math.round((value - min) / step) * step + min;
+  return Number(clamp(snapped, min, max).toFixed(decimalsOf(step)));
+}
+
+/* ============ 图标 ============ */
+
+const ICONS = {
+  power: '<path d="M12 3v8"/><path d="M6.6 6.6a7.5 7.5 0 1 0 10.8 0"/>',
+  bulb: '<path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2h5c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  fan: '<circle cx="12" cy="12" r="1.8"/><path d="M12 10.2C10.6 6.4 12.4 3 15 4.1c2.6 1.2.4 5-1.5 6.9"/><path d="M13.6 12.9c4 .7 6.1 3.9 3.9 5.6-2.2 1.7-4.6-2-5.1-4.4"/><path d="M10.4 12.9C7.8 16 4.1 15.8 4 13c-.1-2.8 4.3-2.8 6.6-1.6"/>',
+  snow: '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/><path d="M9.5 4.5 12 6l2.5-1.5M9.5 19.5 12 18l2.5 1.5"/>',
+  flame: '<path d="M12 21c3.9 0 6.5-2.6 6.5-6.2 0-3.6-2.7-5.7-3.7-9.3-2 1.3-3 3.2-3 5-1-.6-1.8-1.7-2.1-3-2.3 1.9-4.2 4.2-4.2 7.3C5.5 18.4 8.1 21 12 21z"/>',
+  drop: '<path d="M12 3.5S6 10 6 14.5a6 6 0 0 0 12 0C18 10 12 3.5 12 3.5z"/>',
+  wind: '<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/>',
+  auto: '<path d="M5.5 19 12 4.5 18.5 19"/><path d="M8.3 13.5h7.4"/>',
+  thermo: '<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 9v8"/>',
+  leaf: '<path d="M5 19c0-8 5-14 15-14 0 10-6 15-14 15"/><path d="M5 19c3-4 6-6.5 9-8"/>',
+  plug: '<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v4"/>',
+  curtain: '<path d="M3 4h18"/><path d="M5 4v16c3 0 5-6 5-16M19 4v16c-3 0-5-6-5-16"/>',
+  lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+  door: '<path d="M6 21V4h12v17M3.5 21h17"/><path d="M14.5 12.5h.01"/>',
+  wifi: '<path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M8.6 16a5 5 0 0 1 6.8 0"/><path d="M12 19.5h.01"/>',
+  bolt: '<path d="M13 2.5 5 13.5h6l-1 8 8-11h-6z"/>',
+  tv: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/>',
+  speaker: '<rect x="6" y="3" width="12" height="18" rx="3"/><circle cx="12" cy="14" r="3"/><path d="M12 7.5h.01"/>',
+  home: '<path d="M4 10.5 12 4l8 6.5V20H4z"/><path d="M10 20v-5h4v5"/>',
+  spark: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18.5 16.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',
+  play: '<path d="M8 5.5v13l10-6.5z"/>',
+  timer: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 2M9.5 2.5h5"/>',
+  palette: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1.4-1.3-1.6-1.3-3 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><path d="M7.5 11h.01M10 7h.01M15 7.2h.01"/>',
+  battery: '<rect x="3" y="7" width="16" height="10" rx="2.5"/><path d="M21 10.5v3M6.5 10.5v3M9.5 10.5v3"/>',
+  filter: '<path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/>',
+  gauge: '<path d="M4 16a8 8 0 1 1 16 0"/><path d="M12 16l4-5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+  send: '<path d="M4 12 20 4l-5 16-3.5-6.5z"/><path d="M11.5 13.5 20 4"/>',
+  chevron: '<path d="m9 6 6 6-6 6"/>',
+};
+
+const ICON_PICK = ['power', 'bulb', 'sun', 'moon', 'fan', 'snow', 'flame', 'drop', 'wind', 'thermo', 'leaf', 'plug', 'curtain', 'lock', 'door', 'wifi', 'bolt', 'tv', 'speaker', 'home', 'spark', 'play', 'timer', 'palette', 'battery', 'filter', 'gauge', 'auto'];
+
+const TONES = [['blue', '蓝'], ['orange', '橙'], ['green', '绿'], ['purple', '紫'], ['teal', '青'], ['red', '红']];
+
+const ico = (name, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ICONS.power}</svg>`;
+
+/* ============ 卡片片段 ============ */
+
+function card(props, cls, inner, tag = 'div', attrs = '', style = '') {
+  return `<${tag} class="card ${cls}" style="--tone:var(--t-${props.tone});${style}" ${attrs}>${inner}</${tag}>`;
+}
+
+function head(props, right = '') {
+  if (props.showTitle === false) return right ? `<div class="hd"><span class="hd-t"></span>${right}</div>` : '';
+  const icon = props.icon ? `<span class="hd-ico">${ico(props.icon)}</span>` : '';
+  return `<div class="hd">${icon}<span class="hd-t">${esc(props.title)}</span>${right}</div>`;
+}
+
+/* ============ 弧线 ============ */
+
+function polar(cx, cy, r, angle) {
+  const radians = (angle - 90) * Math.PI / 180;
+  return [cx + r * Math.cos(radians), cy + r * Math.sin(radians)];
+}
+
+function arc(cx, cy, r, start, end) {
+  const finish = Math.min(Math.max(end, start + .01), start + 359.99);
+  const [x0, y0] = polar(cx, cy, r, start);
+  const [x1, y1] = polar(cx, cy, r, finish);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${finish - start > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+
+const dotted = width => isElectro() ? ` stroke-dasharray="0.01 ${(width * 1.75).toFixed(1)}"` : '';
+
+/* ============ 颜色 ============ */
+
+function hexToHsl(hex) {
+  const value = parseInt(hex.slice(1), 16);
+  const r = (value >> 16 & 255) / 255, g = (value >> 8 & 255) / 255, b = (value & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > .5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s * 100, l * 100];
+}
+
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))));
+  return '#' + [f(0), f(8), f(4)].map(c => c.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+function isLight(hex) {
+  const value = parseInt(hex.slice(1), 16);
+  return (0.299 * (value >> 16 & 255) + 0.587 * (value >> 8 & 255) + 0.114 * (value & 255)) > 170;
+}
+
+/* ============ 组件定义 ============ */
+
+const CATEGORIES = [
+  ['switch', '开关与按钮', 'Switch'],
+  ['adjust', '调节', 'Adjust'],
+  ['display', '显示', 'Display'],
+  ['input', '输入', 'Input'],
+];
+
+const SPECS = [
+
+  /* ---------- 开关 ---------- */
+
+  {
+    type: 'tile', name: '图标开关卡', cat: 'switch', key: 'living_light', bind: 'boolean · 属性 · 可写',
+    spans: [2, 4], rowsOpts: [1, 2],
+    props: { title: '客厅主灯', icon: 'bulb', tone: 'orange', span: 2, rows: 2, activeStyle: 'fill', showState: true, onText: '已开启', offText: '已关闭', corner: 'dot' },
+    schema: [
+      { k: 'activeStyle', label: '开启样式', kind: 'seg', opts: [['fill', '填充'], ['tint', '浅色'], ['outline', '描边']] },
+      { k: 'showState', label: '显示状态', kind: 'bool' },
+      { k: 'onText', label: '开启文案', kind: 'text' },
+      { k: 'offText', label: '关闭文案', kind: 'text' },
+      { k: 'corner', label: '角标', kind: 'seg', opts: [['none', '无'], ['dot', '指示点'], ['chevron', '详情']] },
+    ],
+    value: true,
+    render(p, v) {
+      const corner = p.corner === 'dot' ? '<i class="tile-dot"></i>' : p.corner === 'chevron' ? `<span class="tile-more">${ico('chevron')}</span>` : '';
+      const state = p.showState ? `<small>${esc(v ? p.onText : p.offText)}</small>` : '';
+      return card(p, `tile st-${p.activeStyle} ${p.rows === 1 ? 'wide' : ''} ${v ? 'on' : ''}`,
+        `<span class="tile-ico">${ico(p.icon)}</span><span class="tile-copy"><strong>${esc(p.title)}</strong>${state}</span>${corner}`,
+        'button', `type="button" data-act="toggle" aria-pressed="${v}"`);
+    },
+    act: { toggle: it => { it.value = !it.value; } },
+  },
+
+  {
+    type: 'toggle', name: '胶囊开关行', cat: 'switch', key: 'night_mode', bind: 'boolean · 属性 · 可写',
+    spans: [4, 8], rowsOpts: [1],
+    props: { title: '夜灯模式', icon: 'moon', tone: 'purple', span: 4, rows: 1, desc: '22:00 后自动降低亮度', iconStyle: 'circle', size: 'md' },
+    schema: [
+      { k: 'desc', label: '说明文字', kind: 'text' },
+      { k: 'iconStyle', label: '图标底', kind: 'seg', opts: [['circle', '圆底'], ['plain', '无底'], ['none', '隐藏']] },
+      { k: 'size', label: '开关尺寸', kind: 'seg', opts: [['sm', '小'], ['md', '中'], ['lg', '大']] },
+    ],
+    value: false,
+    render(p, v) {
+      const icon = p.iconStyle === 'none' ? '' : `<span class="rc-ico ${p.iconStyle === 'plain' ? 'plain' : ''}">${ico(p.icon)}</span>`;
+      const desc = p.desc ? `<small>${esc(p.desc)}</small>` : '';
+      return card(p, 'rowc', `${icon}<span class="rc-copy"><strong>${esc(p.title)}</strong>${desc}</span>
+        <button type="button" class="sw ${p.size} ${v ? 'on' : ''}" role="switch" aria-checked="${v}" aria-label="${esc(p.title)}" data-act="toggle"><i></i></button>`);
+    },
+    act: { toggle: it => { it.value = !it.value; } },
+  },
+
+  {
+    type: 'action', name: '场景按钮', cat: 'switch', key: 'scene_home', bind: 'null / boolean · 动作 · 可写',
+    spans: [2, 4], rowsOpts: [1, 2],
+    props: { title: '回家模式', icon: 'home', tone: 'blue', span: 2, rows: 2, shape: 'circle', hold: false, doneText: '已执行', showCount: true },
+    schema: [
+      { k: 'shape', label: '形状', kind: 'seg', opts: [['circle', '圆形'], ['pill', '胶囊'], ['block', '整块']] },
+      { k: 'hold', label: '长按确认', kind: 'bool' },
+      { k: 'doneText', label: '完成文案', kind: 'text' },
+      { k: 'showCount', label: '显示次数', kind: 'bool' },
+    ],
+    value: { count: 0, status: 'idle' },
+    render(p, v) {
+      const trigger = p.hold ? 'data-hold="run"' : 'data-act="run"';
+      const label = p.shape === 'circle' ? '' : `<span>${esc(p.title)}</span>`;
+      const status = v.status === 'run' ? '执行中…'
+        : v.status === 'done' ? esc(p.doneText)
+        : p.hold ? '长按执行'
+        : p.showCount && v.count ? `已执行 ${v.count} 次` : '轻点执行';
+      const button = `<button type="button" class="act ${p.shape} ${v.status === 'run' ? 'run' : ''}" ${trigger} aria-label="${esc(p.title)}">${ico(p.icon)}${label}</button>`;
+      const title = p.shape === 'circle' ? `<span class="act-t">${esc(p.title)}</span>` : '';
+      const caption = p.shape === 'block' && p.rows === 1 ? '' : `<span class="act-s">${status}</span>`;
+      return card(p, 'actc', `${button}${title}${caption}`);
+    },
+    act: {
+      run(it) {
+        if (it.value.status === 'run') return;
+        it.value.status = 'run';
+        setTimeout(() => {
+          it.value.status = 'done';
+          it.value.count += 1;
+          rerender(it);
+          setTimeout(() => { if (it.value.status === 'done') { it.value.status = 'idle'; rerender(it); } }, 1600);
+        }, 650);
+      },
+    },
+  },
+
+  {
+    type: 'keys', name: '多键面板', cat: 'switch', key: 'entry_keys', bind: 'boolean × N · 属性 · 可写（多字段，待定）',
+    spans: [4, 8], rowsOpts: [2, 3],
+    props: { title: '玄关墙壁开关', icon: 'plug', tone: 'teal', span: 4, rows: 2, showTitle: true, labels: '灯带,吊灯,筒灯', keyIcon: 'bulb', layout: 'row', joined: true, showLed: true },
+    schema: [
+      { k: 'labels', label: '按键名称', kind: 'text', hint: '逗号分隔，1–4 个' },
+      { k: 'keyIcon', label: '按键图标', kind: 'icon' },
+      { k: 'layout', label: '排布', kind: 'seg', opts: [['row', '一行'], ['grid', '两列']] },
+      { k: 'joined', label: '连体面板', kind: 'bool' },
+      { k: 'showLed', label: '指示灯', kind: 'bool' },
+    ],
+    value: [true, false, true, false],
+    render(p, v) {
+      const labels = csv(p.labels).slice(0, 4);
+      const columns = p.layout === 'grid' && labels.length > 2 ? 2 : labels.length || 1;
+      const keys = labels.map((label, index) => `<button type="button" class="key ${v[index] ? 'on' : ''}" data-act="key" data-i="${index}" aria-pressed="${!!v[index]}">
+          ${p.showLed ? '<i class="key-led"></i>' : ''}${ico(p.keyIcon)}<span>${esc(label)}</span></button>`).join('');
+      return card(p, '', `${head(p)}<div class="keys ${p.joined ? 'joined' : ''}" style="grid-template-columns:repeat(${columns},minmax(0,1fr))">${keys}</div>`);
+    },
+    act: { key: (it, data) => { it.value[data.i] = !it.value[data.i]; } },
+  },
+
+  {
+    type: 'mode', name: '模式宫格', cat: 'switch', key: 'ac_mode', bind: '枚举 choices · 属性 · 可写',
+    spans: [4, 8], rowsOpts: [1, 2],
+    props: { title: '空调模式', icon: 'snow', tone: 'blue', span: 4, rows: 2, showTitle: true, choices: '制冷:snow,制热:flame,除湿:drop,送风:wind,自动:auto', style: 'tiles', showIcons: true },
+    schema: [
+      { k: 'choices', label: '选项', kind: 'text', hint: '名称:图标，逗号分隔' },
+      { k: 'style', label: '样式', kind: 'seg', opts: [['tiles', '宫格'], ['segmented', '分段'], ['chips', '胶囊']] },
+      { k: 'showIcons', label: '显示图标', kind: 'bool' },
+    ],
+    value: 0,
+    render(p, v) {
+      const choices = csv(p.choices).map(part => { const [label, icon] = part.split(':'); return { label, icon: icon || 'auto' }; });
+      const items = choices.map((choice, index) => {
+        const icon = !p.showIcons ? '' : p.style === 'tiles' ? `<span class="mode-ico">${ico(choice.icon)}</span>` : ico(choice.icon, 'mi');
+        return `<button type="button" class="mode ${index === v ? 'on' : ''}" data-act="pick" data-i="${index}" aria-pressed="${index === v}">${icon}<span>${esc(choice.label)}</span></button>`;
+      }).join('');
+      const columns = p.style === 'tiles' ? `style="grid-template-columns:repeat(${choices.length || 1},minmax(0,1fr))"` : '';
+      const current = choices[v] ? `<span class="hd-v">${esc(choices[v].label)}</span>` : '';
+      return card(p, '', `${head(p, current)}<div class="modes ${p.style}" ${columns}>${items}</div>`);
+    },
+    act: { pick: (it, data) => { it.value = Number(data.i); } },
+  },
+
+  /* ---------- 调节 ---------- */
+
+  {
+    type: 'level', name: '大块亮度滑块', cat: 'adjust', key: 'brightness', bind: 'integer / number · 有范围 · 可写',
+    spans: [2, 4, 8], rowsOpts: [1, 2, 3, 4],
+    props: { title: '亮度', icon: 'sun', tone: 'orange', span: 2, rows: 3, showTitle: true, orientation: 'v', fill: 'solid', showValue: true, marks: 0, min: 1, max: 100, step: 1, unit: '%' },
+    schema: [
+      { k: 'orientation', label: '方向', kind: 'seg', opts: [['v', '竖向'], ['h', '横向']] },
+      { k: 'fill', label: '填充', kind: 'seg', opts: [['solid', '纯色'], ['grad', '渐变']] },
+      { k: 'showValue', label: '显示数值', kind: 'bool' },
+      { k: 'marks', label: '分段刻度', kind: 'seg', opts: [[0, '无'], [4, '4 段'], [10, '10 段']] },
+      { k: 'min', label: '最小值', kind: 'num' },
+      { k: 'max', label: '最大值', kind: 'num' },
+      { k: 'step', label: '步长', kind: 'num' },
+      { k: 'unit', label: '单位', kind: 'text' },
+    ],
+    value: 68,
+    render(p, v) {
+      const pct = (v - p.min) / (p.max - p.min) * 100;
+      const vertical = p.orientation === 'v';
+      const inv = threshold => pct > threshold ? 'inv' : '';
+      const marks = Array.from({ length: Math.max(0, p.marks - 1) }, (_, index) => `<i class="lvl-mk" style="--m:${(index + 1) / p.marks * 100}"></i>`).join('');
+      const title = p.showTitle ? `<span class="lvl-t ${inv(vertical ? 74 : 32)}">${esc(p.title)}</span>` : '';
+      const value = p.showValue ? `<span class="lvl-val num ${inv(vertical ? 86 : 88)}">${v.toFixed(decimalsOf(p.step))}<small>${esc(p.unit)}</small></span>` : '';
+      return card(p, `lvl ${vertical ? 'v' : 'h'} ${p.fill === 'grad' ? 'grad' : ''}`,
+        `<div class="lvl-track" data-drag="lvl" tabindex="0" role="slider" aria-label="${esc(p.title)}" aria-valuemin="${p.min}" aria-valuemax="${p.max}" aria-valuenow="${v}">
+          <div class="lvl-fill" style="--p:${pct}"></div>${marks}
+          <span class="lvl-ico ${inv(vertical ? 9 : 10)}">${ico(p.icon)}</span>${title}${value}
+        </div>`);
+    },
+    drag(it, d) {
+      const p = it.props;
+      const ratio = p.orientation === 'v' ? 1 - d.fy : d.fx;
+      it.value = snap(p.min + clamp(ratio, 0, 1) * (p.max - p.min), p.min, p.max, p.step);
+    },
+    nudge(it, direction) { const p = it.props; it.value = snap(it.value + direction * p.step, p.min, p.max, p.step); },
+    onProp(it, key) {
+      if (key === 'orientation') Object.assign(it.props, it.props.orientation === 'v' ? { span: 2, rows: 3 } : { span: 4, rows: 1 });
+      if (['min', 'max', 'step'].includes(key)) it.value = snap(it.value, it.props.min, it.props.max, it.props.step);
+    },
+  },
+
+  {
+    type: 'gradient', name: '色温 / 色彩滑块', cat: 'adjust', key: 'color_temp', bind: 'integer · 有范围 · 可写',
+    spans: [4, 8], rowsOpts: [1, 2],
+    props: { title: '色温', icon: 'sun', tone: 'orange', span: 4, rows: 2, showTitle: true, preset: 'cct', height: 'mid', knob: 'ring', showTicks: true },
+    schema: [
+      { k: 'preset', label: '轨道', kind: 'seg', opts: [['cct', '色温'], ['hue', '色相'], ['bright', '亮度']] },
+      { k: 'height', label: '轨道粗细', kind: 'seg', opts: [['thin', '细'], ['mid', '中'], ['thick', '粗']] },
+      { k: 'knob', label: '滑块', kind: 'seg', opts: [['ring', '圆环'], ['dot', '圆点'], ['bar', '竖条']] },
+      { k: 'showTicks', label: '刻度标注', kind: 'bool' },
+    ],
+    value: 4200,
+    ranges: {
+      cct: { min: 2700, max: 6500, step: 100, unit: 'K', title: '色温', ticks: ['暖光', '2700K', '4600K', '6500K', '冷光'] },
+      hue: { min: 0, max: 360, step: 1, unit: '°', title: '色相', ticks: ['0°', '90°', '180°', '270°', '360°'] },
+      bright: { min: 1, max: 100, step: 1, unit: '%', title: '亮度', ticks: ['1%', '25%', '50%', '75%', '100%'] },
+    },
+    render(p, v, it) {
+      const range = it.spec.ranges[p.preset];
+      const pct = (v - range.min) / (range.max - range.min) * 100;
+      const value = `<span class="gs-val num">${v}<small>${range.unit}</small></span>`;
+      const ticks = p.showTicks && p.rows > 1 ? `<div class="gs-ticks">${range.ticks.map(tick => `<span>${tick}</span>`).join('')}</div>` : '';
+      return card(p, '', `${head(p, value)}
+        <div class="gs-wrap h-${p.height}">
+          <div class="gs-track ${p.preset}" data-drag="gs" tabindex="0" role="slider" aria-label="${esc(p.title)}" aria-valuemin="${range.min}" aria-valuemax="${range.max}" aria-valuenow="${v}">
+            <i class="gs-knob ${p.knob}" style="--p:${pct}"></i>
+          </div>
+          <i class="gs-mark" style="--p:${pct}"></i>
+        </div>${ticks}`);
+    },
+    drag(it, d) {
+      const range = it.spec.ranges[it.props.preset];
+      it.value = snap(range.min + clamp(d.fx, 0, 1) * (range.max - range.min), range.min, range.max, range.step);
+    },
+    nudge(it, direction) {
+      const range = it.spec.ranges[it.props.preset];
+      it.value = snap(it.value + direction * range.step * (range.step < 10 ? 5 : 1), range.min, range.max, range.step);
+    },
+    onProp(it, key, previous) {
+      if (key !== 'preset') return;
+      const range = it.spec.ranges[it.props.preset];
+      if (it.props.title === it.spec.ranges[previous].title) it.props.title = range.title;
+      it.value = snap((range.min + range.max) / 2, range.min, range.max, range.step);
+    },
+  },
+
+  {
+    type: 'dial', name: '环形温度旋钮', cat: 'adjust', key: 'target_temp', bind: 'number · 有范围 · 可写',
+    spans: [4, 8], rowsOpts: [3, 4],
+    props: { title: '目标温度', icon: 'snow', tone: 'blue', span: 4, rows: 4, showTitle: true, sweep: 270, thick: 12, ticks: true, min: 16, max: 30, step: 0.5, unit: '℃', sub: '制冷 · 自动风', showButtons: true },
+    schema: [
+      { k: 'sweep', label: '弧度', kind: 'seg', opts: [[240, '240°'], [270, '270°'], [300, '300°']] },
+      { k: 'thick', label: '线宽', kind: 'range', min: 4, max: 20, step: 1 },
+      { k: 'ticks', label: '外圈刻度', kind: 'bool' },
+      { k: 'min', label: '最小值', kind: 'num' },
+      { k: 'max', label: '最大值', kind: 'num' },
+      { k: 'step', label: '步长', kind: 'seg', opts: [[0.5, '0.5'], [1, '1']] },
+      { k: 'unit', label: '单位', kind: 'text' },
+      { k: 'sub', label: '副标题', kind: 'text' },
+      { k: 'showButtons', label: '加减按钮', kind: 'bool' },
+    ],
+    value: 24.5,
+    render(p, v) {
+      const half = p.sweep / 2, c = 110, r = 84;
+      const angle = -half + (v - p.min) / (p.max - p.min) * p.sweep;
+      const [kx, ky] = polar(c, c, r, angle);
+      const tickCount = Math.min(40, Math.round(p.max - p.min));
+      const ticks = !p.ticks ? '' : Array.from({ length: tickCount + 1 }, (_, index) => {
+        const a = -half + index / tickCount * p.sweep;
+        const [x0, y0] = polar(c, c, r + p.thick / 2 + 6, a);
+        const [x1, y1] = polar(c, c, r + p.thick / 2 + (index % 5 === 0 ? 12 : 9), a);
+        return `<line class="arc-tick ${a <= angle ? 'on' : ''}" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${(isElectro() ? x0 : x1).toFixed(1)}" y2="${(isElectro() ? y0 : y1).toFixed(1)}"${isElectro() ? ' stroke-width="2.6"' : ''}/>`;
+      }).join('');
+      const knob = `<circle class="arc-knob" cx="${kx.toFixed(1)}" cy="${ky.toFixed(1)}" r="${(p.thick / 2 + (isElectro() ? 2 : 4)).toFixed(1)}"/>`;
+      const buttons = p.showButtons ? `<div class="dl-btns">
+          <button type="button" class="rbtn" data-repeat="dec" aria-label="降低" ${v <= p.min ? 'disabled' : ''}>${ico('minus')}</button>
+          <span class="dl-range">${p.min}–${p.max}${esc(p.unit)}</span>
+          <button type="button" class="rbtn" data-repeat="inc" aria-label="升高" ${v >= p.max ? 'disabled' : ''}>${ico('plus')}</button></div>` : '';
+      return card(p, '', `${head(p)}
+        <div class="dl-wrap">
+          <svg class="dl-svg" viewBox="0 0 220 220" data-drag="dial" tabindex="0" role="slider" aria-label="${esc(p.title)}" aria-valuemin="${p.min}" aria-valuemax="${p.max}" aria-valuenow="${v}">
+            ${ticks}
+            <path class="arc-track" d="${arc(c, c, r, -half, half)}" stroke-width="${p.thick}"${dotted(p.thick)}/>
+            <path class="arc-prog" d="${arc(c, c, r, -half, angle)}" stroke-width="${p.thick}"${dotted(p.thick)}/>
+            ${knob}
+          </svg>
+          <div class="dl-center"><div class="dl-num num">${v.toFixed(decimalsOf(p.step))}<sup>${esc(p.unit)}</sup></div><div class="dl-sub">${esc(p.sub)}</div></div>
+        </div>${buttons}`);
+    },
+    drag(it, d) {
+      const p = it.props, half = p.sweep / 2;
+      const angle = clamp(Math.atan2(d.x - d.w / 2, -(d.y - d.h / 2)) * 180 / Math.PI, -half, half);
+      it.value = snap(p.min + (angle + half) / p.sweep * (p.max - p.min), p.min, p.max, p.step);
+    },
+    nudge(it, direction) { const p = it.props; it.value = snap(it.value + direction * p.step, p.min, p.max, p.step); },
+    act: {
+      inc: it => it.spec.nudge(it, 1),
+      dec: it => it.spec.nudge(it, -1),
+    },
+    onProp(it, key) { if (['min', 'max', 'step'].includes(key)) it.value = snap(it.value, it.props.min, it.props.max, it.props.step); },
+  },
+
+  {
+    type: 'levels', name: '档位选择', cat: 'adjust', key: 'fan_speed', bind: 'integer · 档位 · 可写',
+    spans: [2, 4, 8], rowsOpts: [1, 2, 3],
+    props: { title: '风速', icon: 'fan', tone: 'teal', span: 4, rows: 2, showTitle: true, count: 5, style: 'bars', labels: '', allowOff: true, showButtons: false },
+    schema: [
+      { k: 'count', label: '档位数', kind: 'range', min: 2, max: 7, step: 1 },
+      { k: 'style', label: '样式', kind: 'seg', opts: [['bars', '柱形'], ['dots', '圆点'], ['segment', '分段']] },
+      { k: 'labels', label: '档位名称', kind: 'text', hint: '可选，如：静音,低,中,高,强劲' },
+      { k: 'allowOff', label: '轻点当前档关闭', kind: 'bool' },
+      { k: 'showButtons', label: '加减按钮', kind: 'bool' },
+    ],
+    value: 3,
+    render(p, v) {
+      const labels = csv(p.labels);
+      const name = level => labels[level - 1] || `${level} 档`;
+      const current = `<span class="hd-v">${v === 0 ? '已关闭' : esc(name(v))}</span>`;
+      const levels = Array.from({ length: p.count }, (_, index) => index + 1);
+      let body;
+      if (p.style === 'bars') {
+        body = `<div class="lv-bars">${levels.map(level => `<button type="button" class="lv-bar ${level <= v ? 'on' : ''}" style="--h:${28 + 72 * level / p.count}" data-act="set" data-i="${level}" aria-label="${esc(name(level))}"></button>`).join('')}</div>`;
+      } else if (p.style === 'dots') {
+        body = `<div class="lv-dots">${levels.map(level => `${level > 1 ? `<i class="lv-gap ${level <= v ? 'on' : ''}"></i>` : ''}<button type="button" class="lv-dot ${level <= v ? 'on' : ''}" data-act="set" data-i="${level}" aria-label="${esc(name(level))}">${level}</button>`).join('')}</div>`;
+      } else {
+        body = `<div class="lv-seg">${levels.map(level => `<button type="button" class="${level === v ? 'on' : ''}" data-act="set" data-i="${level}">${esc(labels[level - 1] || level)}</button>`).join('')}</div>`;
+      }
+      const row = p.showButtons
+        ? `<button type="button" class="rbtn" data-act="dec" aria-label="降档" ${v <= 0 ? 'disabled' : ''}>${ico('minus')}</button>${body}<button type="button" class="rbtn" data-act="inc" aria-label="升档" ${v >= p.count ? 'disabled' : ''}>${ico('plus')}</button>`
+        : body;
+      return card(p, '', `${head(p, current)}<div class="lv-row">${row}</div>`);
+    },
+    act: {
+      set(it, data) {
+        const level = Number(data.i);
+        it.value = it.props.allowOff && level === it.value ? 0 : level;
+      },
+      inc: it => { it.value = Math.min(it.props.count, it.value + 1); },
+      dec: it => { it.value = Math.max(0, it.value - 1); },
+    },
+    onProp(it) { it.value = Math.min(it.value, it.props.count); },
+  },
+
+  {
+    type: 'color', name: '色盘', cat: 'adjust', key: 'strip_color', bind: '颜色 #RRGGBB · 可写（编码待定）',
+    spans: [4, 8], rowsOpts: [2, 3, 4],
+    props: { title: '灯带颜色', icon: 'palette', tone: 'purple', span: 4, rows: 4, showTitle: true, mode: 'both', ring: 18, swatches: '#FF5A4E,#FF9A1F,#FFD43B,#2DBE7E,#15B8C2,#3482FF,#8467F5', showHex: true },
+    schema: [
+      { k: 'mode', label: '模式', kind: 'seg', opts: [['wheel', '色环'], ['swatches', '色板'], ['both', '两者']] },
+      { k: 'ring', label: '色环宽度', kind: 'range', min: 8, max: 30, step: 1 },
+      { k: 'swatches', label: '预设色板', kind: 'text', hint: '#RRGGBB，逗号分隔' },
+      { k: 'showHex', label: '显示色值', kind: 'bool' },
+    ],
+    value: '#3482FF',
+    render(p, v) {
+      const hue = Math.round(hexToHsl(v)[0]);
+      const swatches = csv(p.swatches).filter(hex => /^#[0-9a-f]{6}$/i.test(hex));
+      const swatchRow = cls => `<div class="sws ${cls}">${swatches.map(hex => `<button type="button" class="swc ${hex.toUpperCase() === v ? 'on' : ''}" style="--c:${hex}" data-act="swatch" data-i="${hex.toUpperCase()}" aria-label="${hex}"></button>`).join('')}</div>`;
+      const hex = p.showHex ? `<span class="hd-v">${v}</span>` : '';
+      if (p.mode === 'swatches') return card(p, '', `${head(p, hex)}${swatchRow('big')}`);
+      const wheel = `<div class="cw-wrap"><div class="cw-box" style="--rw:${p.ring}px;--a:${hue}deg" data-drag="hue" tabindex="0" role="slider" aria-label="${esc(p.title)} 色相" aria-valuemin="0" aria-valuemax="360" aria-valuenow="${hue}">
+          <div class="cw"></div>
+          <i class="cw-knob" style="background:${v}"></i>
+          <div class="cw-mid ${isLight(v) ? 'lt' : 'dk'}" style="--c:${v}"></div>
+        </div></div>`;
+      return card(p, '', `${head(p, hex)}${wheel}${p.mode === 'both' ? swatchRow('') : ''}`);
+    },
+    drag(it, d) {
+      const hue = (Math.atan2(d.x - d.w / 2, -(d.y - d.h / 2)) * 180 / Math.PI + 360) % 360;
+      it.value = hslToHex(hue, 88, 58);
+    },
+    nudge(it, direction) { it.value = hslToHex((hexToHsl(it.value)[0] + direction * 10 + 360) % 360, 88, 58); },
+    act: { swatch: (it, data) => { it.value = data.i; } },
+    onProp(it, key) {
+      if (key === 'mode') it.props.rows = it.props.mode === 'swatches' ? 2 : it.props.mode === 'wheel' ? 3 : 4;
+    },
+  },
+
+  /* ---------- 显示 ---------- */
+
+  {
+    type: 'number', name: '大数字读数', cat: 'display', key: 'temperature', bind: 'number · 只读 / 上报',
+    spans: [2, 4], rowsOpts: [1, 2],
+    props: { title: '室内温度', icon: 'thermo', tone: 'orange', span: 2, rows: 2, showTitle: true, decimals: 1, size: 'lg', unit: '℃', unitPos: 'sup', sub: '客厅 · 实时', showDelta: true, warnAbove: 28 },
+    schema: [
+      { k: 'decimals', label: '小数位', kind: 'seg', opts: [[0, '0'], [1, '1'], [2, '2']] },
+      { k: 'size', label: '字号', kind: 'seg', opts: [['md', '中'], ['lg', '大'], ['xl', '特大']] },
+      { k: 'unit', label: '单位', kind: 'text' },
+      { k: 'unitPos', label: '单位位置', kind: 'seg', opts: [['sup', '右上'], ['base', '基线']] },
+      { k: 'sub', label: '附注', kind: 'text' },
+      { k: 'showDelta', label: '显示变化', kind: 'bool' },
+      { k: 'warnAbove', label: '高于即告警', kind: 'num', allowEmpty: true },
+    ],
+    value: { now: 24.6, prev: 24.3 },
+    render(p, v) {
+      const warn = p.warnAbove !== '' && v.now > p.warnAbove;
+      const delta = v.now - v.prev;
+      const deltaText = p.showDelta ? `<span class="delta">${delta >= 0 ? '↑' : '↓'}${Math.abs(delta).toFixed(p.decimals || 1)}</span>` : '';
+      return card(p, '', `${head(p)}
+        <div class="bn ${p.size} ${warn ? 'warn' : ''}">
+          <div class="bn-num num">${v.now.toFixed(p.decimals)}<span class="bn-u ${p.unitPos}">${esc(p.unit)}</span></div>
+          ${p.rows > 1 || p.size === 'md' ? `<div class="bn-sub">${deltaText}<span>${warn ? '高于设定阈值' : esc(p.sub)}</span></div>` : ''}
+        </div>`);
+    },
+    live(it) {
+      it.value.prev = it.value.now;
+      it.value.now = Number(clamp(it.value.now + (Math.random() - .45) * .6, 18, 32).toFixed(2));
+    },
+  },
+
+  {
+    type: 'trend', name: '趋势曲线', cat: 'display', key: 'humidity', bind: 'number · 遥测上报',
+    spans: [4, 8], rowsOpts: [2, 3],
+    props: { title: '湿度', icon: 'drop', tone: 'teal', span: 4, rows: 2, showTitle: true, chart: 'area', points: 24, smooth: true, showRange: true, showAxis: true, unit: '%', decimals: 0 },
+    schema: [
+      { k: 'chart', label: '图形', kind: 'seg', opts: [['line', '折线'], ['area', '面积'], ['bars', '柱形'], ['steps', '阶梯']] },
+      { k: 'points', label: '点数', kind: 'seg', opts: [[12, '12'], [24, '24'], [48, '48']] },
+      { k: 'smooth', label: '平滑曲线', kind: 'bool' },
+      { k: 'showRange', label: '显示极值', kind: 'bool' },
+      { k: 'showAxis', label: '显示时间轴', kind: 'bool' },
+      { k: 'unit', label: '单位', kind: 'text' },
+      { k: 'decimals', label: '小数位', kind: 'seg', opts: [[0, '0'], [1, '1']] },
+    ],
+    value: Array.from({ length: 48 }, (_, index) => 48 + Math.sin(index / 5) * 7 + Math.sin(index / 1.7) * 2.2),
+    render(p, v) {
+      const series = v.slice(-p.points);
+      const min = Math.min(...series), max = Math.max(...series), span = max - min || 1;
+      const last = series[series.length - 1];
+      const top = `<span class="sp-last num">${last.toFixed(p.decimals)}<small>${esc(p.unit)}</small></span>`;
+      const axis = !p.showAxis && !p.showRange ? '' : `<div class="sp-ax">
+          <span>${p.showAxis ? `-${p.points}h` : ''}</span>
+          <span>${p.showRange ? `最低 ${min.toFixed(p.decimals)} · 最高 ${max.toFixed(p.decimals)}` : ''}</span>
+          <span>${p.showAxis ? '现在' : ''}</span></div>`;
+      return card(p, '', `${head(p, top)}<div class="sp-plot">${isElectro() ? dotPlot(p, series, min, span) : svgPlot(p, series, min, span)}</div>${axis}`);
+    },
+    live(it) {
+      const series = it.value;
+      const next = clamp(series[series.length - 1] + (Math.random() - .5) * 3, 32, 68);
+      series.push(next);
+      series.shift();
+    },
+  },
+
+  {
+    type: 'ring', name: '环形进度', cat: 'display', key: 'filter_life', bind: 'number · 有范围 · 只读',
+    spans: [2, 4], rowsOpts: [2, 3],
+    props: { title: '滤芯寿命', icon: 'filter', tone: 'green', span: 2, rows: 2, showTitle: true, shape: 'ring', thick: 8, min: 0, max: 100, unit: '%', sub: '约 96 天', warnBelow: 20 },
+    schema: [
+      { k: 'shape', label: '形状', kind: 'seg', opts: [['ring', '整环'], ['half', '半环'], ['segments', '分段']] },
+      { k: 'thick', label: '线宽', kind: 'range', min: 3, max: 16, step: 1 },
+      { k: 'min', label: '最小值', kind: 'num' },
+      { k: 'max', label: '最大值', kind: 'num' },
+      { k: 'unit', label: '单位', kind: 'text' },
+      { k: 'sub', label: '附注', kind: 'text' },
+      { k: 'warnBelow', label: '低于即告警', kind: 'num', allowEmpty: true },
+    ],
+    value: 68,
+    render(p, v) {
+      const ratio = clamp((v - p.min) / (p.max - p.min), 0, 1);
+      const warn = p.warnBelow !== '' && v < p.warnBelow;
+      const half = p.shape === 'half';
+      const c = 100, cy = half ? 104 : 100, r = half ? 86 : 80;
+      let arcs;
+      if (p.shape === 'segments') {
+        const count = 24, gap = 360 / count;
+        arcs = Array.from({ length: count }, (_, index) => {
+          const start = index * gap + 2.4, end = (index + 1) * gap - 2.4;
+          return `<path class="${index < Math.round(ratio * count) ? 'arc-prog' : 'arc-track'} ${warn ? 'warn' : ''}" d="${arc(c, cy, r, start, end)}" stroke-width="${p.thick}" stroke-linecap="butt"${dotted(p.thick)}/>`;
+        }).join('');
+      } else {
+        const start = half ? -90 : 0, sweep = half ? 180 : 360;
+        arcs = `<path class="arc-track" d="${arc(c, cy, r, start, start + sweep)}" stroke-width="${p.thick}"${dotted(p.thick)}/>
+          ${ratio > 0 ? `<path class="arc-prog ${warn ? 'warn' : ''}" d="${arc(c, cy, r, start, start + ratio * sweep)}" stroke-width="${p.thick}"${dotted(p.thick)}/>` : ''}`;
+      }
+      return card(p, '', `${head(p)}
+        <div class="dl-wrap">
+          <svg class="dl-svg" viewBox="0 0 200 ${half ? 116 : 200}" aria-hidden="true" style="cursor:default">${arcs}</svg>
+          <div class="dl-center rg-center ${half ? 'half' : ''} ${warn ? 'warn' : ''}">
+            <div class="dl-num num">${Math.round(v)}<sup>${esc(p.unit)}</sup></div>
+            ${p.rows > 2 || half ? `<div class="dl-sub">${warn ? '请及时更换' : esc(p.sub)}</div>` : ''}
+          </div>
+        </div>${p.rows === 2 && !half ? `<div class="dl-sub rg-foot">${warn ? '请及时更换' : esc(p.sub)}</div>` : ''}`);
+    },
+  },
+
+  {
+    type: 'status', name: '状态徽章', cat: 'display', key: 'gateway_link', bind: '枚举 / boolean · 只读',
+    spans: [2, 4, 8], rowsOpts: [1, 2],
+    props: { title: '网关连接', icon: 'wifi', tone: 'green', span: 4, rows: 1, showTitle: true, variant: 'dot', states: '在线:ok,离线:off,告警:warn', pulse: true, meta: '2 分钟前更新' },
+    schema: [
+      { k: 'variant', label: '形态', kind: 'seg', opts: [['dot', '圆点'], ['pill', '胶囊'], ['banner', '横幅']] },
+      { k: 'states', label: '状态映射', kind: 'text', hint: '名称:语义（ok / off / warn / info）' },
+      { k: 'pulse', label: '呼吸动效', kind: 'bool' },
+      { k: 'meta', label: '附注', kind: 'text' },
+    ],
+    value: 0,
+    render(p, v) {
+      const states = csv(p.states).map(part => { const [label, sem] = part.split(':'); return { label, sem: ['ok', 'off', 'warn', 'info'].includes(sem) ? sem : 'info' }; });
+      const state = states[v % (states.length || 1)] || { label: '—', sem: 'off' };
+      const dot = `<i class="st-dot ${p.pulse && state.sem !== 'off' ? 'pulse' : ''} ${state.sem === 'off' ? 'hollow' : ''}"></i>`;
+      const badge = p.variant === 'pill'
+        ? `<span class="st-pill">${dot}${esc(state.label)}</span>`
+        : `<span class="st-line">${dot}<span>${esc(state.label)}</span></span>`;
+      const inline = p.rows === 1;
+      const meta = !inline && p.meta ? `<span class="st-meta">${esc(p.meta)} · 轻点切换预览</span>` : '';
+      return card(p, `st ${inline ? 'inline' : ''} ${p.variant === 'banner' ? 'banner' : ''}`,
+        `${head(p)}${badge}${meta}`, 'div', `data-act="cycle" role="button" tabindex="0" aria-label="${esc(p.title)}：${esc(state.label)}"`, `--sc:var(--${state.sem})`);
+    },
+    act: { cycle: it => { it.value += 1; } },
+  },
+
+  {
+    type: 'summary', name: '多值汇总', cat: 'display', key: 'air_quality', bind: 'number × N · 只读（多字段，待定）',
+    spans: [4, 8], rowsOpts: [1, 2, 3],
+    props: { title: '空气质量', icon: 'leaf', tone: 'green', span: 8, rows: 2, showTitle: true, items: '温度:24.6:℃,湿度:48:%,PM2.5:12:μg/m³,CO₂:620:ppm', columns: 4, dividers: true, emphasizeFirst: false },
+    schema: [
+      { k: 'items', label: '数据项', kind: 'text', hint: '名称:数值:单位，逗号分隔' },
+      { k: 'columns', label: '列数', kind: 'seg', opts: [[2, '2'], [3, '3'], [4, '4']] },
+      { k: 'dividers', label: '分隔线', kind: 'bool' },
+      { k: 'emphasizeFirst', label: '首项强调', kind: 'bool' },
+    ],
+    value: null,
+    render(p, v, it) {
+      const items = parseItems(p.items);
+      if (!it.value || it.value.length !== items.length) it.value = items.map(item => item.value);
+      const columns = Math.min(p.columns, items.length || 1);
+      const cells = items.map((item, index) => `<div class="sm-it ${index % columns === 0 ? 'first' : ''} ${p.emphasizeFirst && index === 0 ? 'em' : ''}">
+          <span class="sm-v num">${it.value[index].toFixed(item.decimals)}<small>${esc(item.unit)}</small></span>
+          <span class="sm-l">${esc(item.label)}</span></div>`).join('');
+      return card(p, '', `${head(p)}<div class="sm-grid ${p.dividers ? 'div' : ''}" style="grid-template-columns:repeat(${columns},minmax(0,1fr))">${cells}</div>`);
+    },
+    live(it) {
+      const items = parseItems(it.props.items);
+      if (!it.value) return;
+      it.value = it.value.map((value, index) => {
+        const base = items[index]?.value ?? value;
+        const drift = Math.max(Math.abs(base) * .02, items[index]?.decimals ? .1 : 1);
+        return Number(clamp(value + (Math.random() - .5) * drift, base * .85, base * 1.15).toFixed(items[index]?.decimals ?? 0));
+      });
+    },
+    onProp(it, key) { if (key === 'items') it.value = null; },
+  },
+
+  /* ---------- 输入 ---------- */
+
+  {
+    type: 'stepper', name: '数值步进器', cat: 'input', key: 'target_humidity', bind: 'integer / number · 有范围 · 可写',
+    spans: [2, 4, 8], rowsOpts: [1, 2],
+    props: { title: '目标湿度', icon: 'drop', tone: 'blue', span: 4, rows: 2, showTitle: true, layout: 'inline', min: 30, max: 80, step: 5, unit: '%', longPress: true, showRange: true },
+    schema: [
+      { k: 'layout', label: '布局', kind: 'seg', opts: [['inline', '两侧按钮'], ['split', '底部按钮']] },
+      { k: 'min', label: '最小值', kind: 'num' },
+      { k: 'max', label: '最大值', kind: 'num' },
+      { k: 'step', label: '步长', kind: 'num' },
+      { k: 'unit', label: '单位', kind: 'text' },
+      { k: 'longPress', label: '长按连续', kind: 'bool' },
+      { k: 'showRange', label: '显示范围', kind: 'bool' },
+    ],
+    value: 55,
+    render(p, v) {
+      const dec = `<button type="button" class="rbtn" data-repeat="dec" aria-label="减少" ${v <= p.min ? 'disabled' : ''}>${ico('minus')}</button>`;
+      const inc = `<button type="button" class="rbtn" data-repeat="inc" aria-label="增加" ${v >= p.max ? 'disabled' : ''}>${ico('plus')}</button>`;
+      const middle = `<div class="ns-mid"><span class="ns-v num">${v.toFixed(decimalsOf(p.step))}<small>${esc(p.unit)}</small></span>
+        ${p.showRange && p.rows > 1 ? `<span class="ns-range">${p.min}–${p.max} · 步长 ${p.step}</span>` : ''}</div>`;
+      if (p.rows === 1) {
+        const range = p.showRange ? `<small>${p.min}–${p.max}${esc(p.unit)}</small>` : '';
+        return card(p, 'rowc', `<span class="rc-ico">${ico(p.icon)}</span><span class="rc-copy"><strong>${esc(p.title)}</strong>${range}</span>
+          ${dec}<span class="ns-v ns-sm num">${v.toFixed(decimalsOf(p.step))}<small>${esc(p.unit)}</small></span>${inc}`);
+      }
+      const body = p.layout === 'split'
+
+        ? `<div class="ns split">${middle}<div class="ns-row">${dec}${inc}</div></div>`
+        : `<div class="ns">${dec}${middle}${inc}</div>`;
+      return card(p, '', `${head(p)}${body}`);
+    },
+    nudge(it, direction) { const p = it.props; it.value = snap(it.value + direction * p.step, p.min, p.max, p.step); },
+    act: {
+      inc: it => it.spec.nudge(it, 1),
+      dec: it => it.spec.nudge(it, -1),
+    },
+    onProp(it, key) { if (['min', 'max', 'step'].includes(key)) it.value = snap(it.value, it.props.min, it.props.max, it.props.step); },
+  },
+
+  {
+    type: 'text', name: '文本输入', cat: 'input', key: 'screen_text', bind: 'text · 可写',
+    spans: [4, 8], rowsOpts: [2, 3],
+    props: { title: '屏幕文字', icon: 'tv', tone: 'blue', span: 4, rows: 2, showTitle: true, placeholder: '输入要显示的文字', maxLength: 24, sendText: '发送', showCounter: true, multiline: false },
+    schema: [
+      { k: 'placeholder', label: '占位文字', kind: 'text' },
+      { k: 'maxLength', label: '最大长度', kind: 'num' },
+      { k: 'sendText', label: '按钮文案', kind: 'text' },
+      { k: 'showCounter', label: '字数计数', kind: 'bool' },
+      { k: 'multiline', label: '多行', kind: 'bool' },
+    ],
+    value: { draft: '欢迎回家', last: '' },
+    render(p, v, it) {
+      const attrs = `id="tx-${it.id}" class="tx-in" maxlength="${p.maxLength}" placeholder="${esc(p.placeholder)}" aria-label="${esc(p.title)}"`;
+      const field = p.multiline ? `<textarea ${attrs} rows="2">${esc(v.draft)}</textarea>` : `<input ${attrs} value="${esc(v.draft)}">`;
+      const counter = p.showCounter ? `<span class="tx-count">${[...v.draft].length}/${p.maxLength}</span>` : '';
+      return card(p, '', `${head(p)}
+        <div class="tx-row">${field}<button type="button" class="tx-send" data-act="send">${ico('send')}<span>${esc(p.sendText)}</span></button></div>
+        <div class="tx-meta"><span class="tx-log">${v.last ? `已发送「${esc(v.last)}」` : '尚未发送'}</span>${counter}</div>`);
+    },
+    act: { send: it => { const text = it.value.draft.trim(); if (text) it.value.last = text; } },
+    onProp(it, key) { if (key === 'multiline') it.props.rows = it.props.multiline ? 3 : 2; },
+  },
+
+  {
+    type: 'timer', name: '定时 / 倒计时', cat: 'input', key: 'off_timer', bind: 'integer 秒 · 可写（语义待定）',
+    spans: [4, 8], rowsOpts: [2, 3],
+    props: { title: '定时关闭', icon: 'timer', tone: 'purple', span: 4, rows: 2, showTitle: true, presets: '15,30,60,120', actionText: '后关闭', display: 'ring' },
+    schema: [
+      { k: 'presets', label: '预设分钟', kind: 'text', hint: '逗号分隔，最多 6 个' },
+      { k: 'actionText', label: '动作文案', kind: 'text' },
+      { k: 'display', label: '运行显示', kind: 'seg', opts: [['ring', '圆环'], ['bar', '进度条'], ['text', '文字']] },
+    ],
+    value: { total: 0, left: 0 },
+    render(p, v) {
+      if (v.left <= 0) {
+        const presets = csv(p.presets).map(Number).filter(minutes => minutes > 0).slice(0, 6);
+        const buttons = presets.map(minutes => {
+          const hours = minutes >= 60 && minutes % 60 === 0;
+          return `<button type="button" class="tm-p" data-act="start" data-i="${minutes}"><b>${hours ? minutes / 60 : minutes}</b>${hours ? '小时' : '分钟'}</button>`;
+        }).join('');
+        return card(p, '', `${head(p, '<span class="hd-v">未设置</span>')}<div class="tm-presets" style="--n:${presets.length || 1}">${buttons}</div>`);
+      }
+      const ratio = v.left / v.total;
+      const time = clock(v.left);
+      const finish = new Date(Date.now() + v.left * 1000);
+      const at = `${pad(finish.getHours())}:${pad(finish.getMinutes())}`;
+      const cancel = '<button type="button" class="tm-x" data-act="cancel">取消</button>';
+      let body;
+      if (p.display === 'ring') {
+        body = `<div class="tm-run"><svg class="tm-ring" viewBox="0 0 64 64" aria-hidden="true">
+            <path class="arc-track" d="${arc(32, 32, 27, 0, 360)}" stroke-width="5"${dotted(4)}/>
+            <path class="arc-prog" d="${arc(32, 32, 27, 0, ratio * 360)}" stroke-width="5"${dotted(4)}/></svg>
+          <div class="tm-copy"><span class="tm-time num">${time}</span><span class="tm-act">${esc(p.actionText)} · ${at}</span></div></div>`;
+      } else if (p.display === 'bar') {
+        body = `<div class="tm-copy" style="justify-content:flex-end;flex:1"><span class="tm-time num">${time}</span><span class="tm-act">${esc(p.actionText)} · ${at}</span>
+          <div class="tm-bar"><span style="width:${ratio * 100}%"></span></div></div>`;
+      } else {
+        body = `<div class="tm-copy" style="justify-content:flex-end;flex:1"><span class="tm-time num">${at}</span><span class="tm-act">将在 ${time} ${esc(p.actionText)}</span></div>`;
+      }
+      return card(p, '', `${head(p, cancel)}${body}`);
+    },
+    act: {
+      start: (it, data) => { it.value = { total: Number(data.i) * 60, left: Number(data.i) * 60 }; },
+      cancel: it => { it.value = { total: 0, left: 0 }; },
+    },
+  },
+];
+
+/* ============ 图表与解析 ============ */
+
+function smoothPath(points) {
+  let d = `M${points[0][0]},${points[0][1]}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const p0 = points[index - 1] || points[index], p1 = points[index], p2 = points[index + 1], p3 = points[index + 2] || p2;
+    d += `C${p1[0] + (p2[0] - p0[0]) / 6},${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6},${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]},${p2[1]}`;
+  }
+  return d;
+}
+
+function svgPlot(p, series, min, span) {
+  const n = series.length;
+  const points = series.map((value, index) => [index / (n - 1) * 300, 90 - (value - min) / span * 78]);
+  const grid = [12, 51, 90].map(y => `<line class="sp-grid" x1="0" x2="300" y1="${y}" y2="${y}"/>`).join('');
+  let marks;
+  if (p.chart === 'bars') {
+    const width = 300 / n;
+    marks = series.map((value, index) => {
+      const height = 10 + (value - min) / span * 80;
+      return `<rect class="sp-bar ${index === n - 1 ? 'last' : ''}" x="${(index * width + width * .2).toFixed(2)}" y="${(100 - height).toFixed(2)}" width="${(width * .6).toFixed(2)}" height="${height.toFixed(2)}" rx="1.5"/>`;
+    }).join('');
+  } else {
+    const line = p.chart === 'steps'
+      ? points.reduce((d, [x, y], index) => index ? `${d}H${x}V${y}` : `M${x},${y}`, '')
+      : p.smooth ? smoothPath(points) : points.map(([x, y], index) => `${index ? 'L' : 'M'}${x},${y}`).join('');
+    const area = p.chart === 'area' ? `<path class="sp-area" d="${line}L300,100L0,100Z"/>` : '';
+    marks = `${area}<path class="sp-line" d="${line}"/>`;
+  }
+  const [ex, ey] = points[n - 1];
+  const end = p.chart === 'bars' ? '' : `<i class="sp-end" style="left:${ex / 3}%;top:${ey}%"></i>`;
+  return `<svg class="sp-svg" viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true">${grid}${marks}</svg>${end}`;
+}
+
+function dotPlot(p, series, min, span) {
+  const columns = series.map((value, index) => {
+    const height = 14 + (value - min) / span * 86;
+    const kind = p.chart === 'line' || p.chart === 'steps' ? 'peak' : '';
+    return `<i class="sp-col ${kind} ${index === series.length - 1 ? 'last' : ''}" style="--h:${height.toFixed(1)}"></i>`;
+  }).join('');
+  return `<div class="sp-cols" style="gap:${p.chart === 'bars' ? 4 : 1}px" aria-hidden="true">${columns}</div>`;
+}
+
+function parseItems(text) {
+  return csv(text).map(part => {
+    const [label = '', raw = '0', unit = ''] = part.split(':');
+    const value = Number(raw);
+    return { label, unit, value: Number.isFinite(value) ? value : 0, decimals: decimalsOf(raw) };
+  });
+}
+
+function clock(seconds) {
+  const hours = Math.floor(seconds / 3600), minutes = Math.floor(seconds % 3600 / 60), rest = seconds % 60;
+  return hours ? `${hours}:${pad(minutes)}:${pad(rest)}` : `${pad(minutes)}:${pad(rest)}`;
+}
+
+/* ============ 状态 ============ */
+
+const items = SPECS.map((spec, index) => ({
+  id: `c${index + 1}`,
+  index: index + 1,
+  spec,
+  props: { ...spec.props },
+  value: structuredClone(spec.value),
+}));
+
+const byId = id => items.find(item => item.id === id);
+let selected = items[0];
+
+const gallery = $('#gallery');
+const inspector = $('#insp');
+
+/* ============ 画廊 ============ */
+
+function slotHTML(it) {
+  return `<div class="slot ${it === selected ? 'sel' : ''}" data-id="${it.id}" data-span="${it.props.span}" style="--s:${it.props.span};--r:${it.props.rows}">
+      <div class="cardwrap">${it.spec.render(it.props, it.value, it)}</div>
+      <div class="cap"><b>C${pad(it.index)}</b>${it.spec.name}<b>·</b>${it.spec.type}</div>
+    </div>`;
+}
+
+function renderGallery() {
+  gallery.innerHTML = CATEGORIES.map(([cat, name, english]) => {
+    const group = items.filter(it => it.spec.cat === cat);
+    const label = isElectro() ? `${english} · ${name}` : name;
+    return `<section class="sec"><h2 class="sec-h">${label}<small>${pad(group.length)}</small></h2><div class="grid">${group.map(slotHTML).join('')}</div></section>`;
+  }).join('');
+}
+
+function rerender(it) {
+  const slot = gallery.querySelector(`.slot[data-id="${it.id}"]`);
+  if (!slot) return;
+  const active = document.activeElement;
+  const focusKey = active && slot.contains(active) ? focusSelector(active) : null;
+
+  slot.dataset.span = it.props.span;
+  slot.style.setProperty('--s', it.props.span);
+  slot.style.setProperty('--r', it.props.rows);
+  slot.querySelector('.cardwrap').innerHTML = it.spec.render(it.props, it.value, it);
+
+  if (focusKey) slot.querySelector(focusKey)?.focus({ preventScroll: true });
+  if (it === selected) renderJson();
+}
+
+function focusSelector(element) {
+  if (element.id) return `#${element.id}`;
+  for (const name of ['drag', 'act', 'repeat', 'hold']) {
+    if (element.dataset[name]) {
+      return `[data-${name}="${element.dataset[name]}"]${element.dataset.i !== undefined ? `[data-i="${element.dataset.i}"]` : ''}`;
+    }
+  }
+  return null;
+}
+
+function select(it) {
+  if (selected === it) return;
+  gallery.querySelector('.slot.sel')?.classList.remove('sel');
+  selected = it;
+  gallery.querySelector(`.slot[data-id="${it.id}"]`)?.classList.add('sel');
+  renderInspector();
+}
+
+/* ---------- 交互：点击、拖动、长按、连按 ---------- */
+
+let drag = null;
+let hold = null;
+
+function applyDrag(event) {
+  const target = drag.slot.querySelector(`[data-drag="${drag.name}"]`);
+  if (!target) return;
+  const rect = target.getBoundingClientRect();
+  const x = event.clientX - rect.left, y = event.clientY - rect.top;
+  drag.it.spec.drag(drag.it, { x, y, w: rect.width, h: rect.height, fx: x / rect.width, fy: y / rect.height });
+  rerender(drag.it);
+}
+
+function stopHold() {
+  if (!hold) return;
+  clearTimeout(hold.timer);
+  clearInterval(hold.interval);
+  hold.element?.classList.remove('holding');
+  hold = null;
+}
+
+function runAct(it, name, data) {
+  const handler = it.spec.act?.[name];
+  if (!handler) return;
+  handler(it, data);
+  rerender(it);
+}
+
+gallery.addEventListener('pointerdown', event => {
+  const slot = event.target.closest('.slot');
+  if (!slot) return;
+  const it = byId(slot.dataset.id);
+  select(it);
+
+  const dragTarget = event.target.closest('[data-drag]');
+  if (dragTarget) {
+    drag = { it, slot, name: dragTarget.dataset.drag };
+    slot.setPointerCapture(event.pointerId);
+    slot.classList.add('dragging');
+    applyDrag(event);
+    event.preventDefault();
+    return;
+  }
+
+  const holdTarget = event.target.closest('[data-hold]');
+  if (holdTarget) {
+    holdTarget.classList.add('holding');
+    hold = { element: holdTarget, timer: setTimeout(() => { stopHold(); runAct(it, holdTarget.dataset.hold, {}); }, 800) };
+    return;
+  }
+
+  const repeatTarget = event.target.closest('[data-repeat]');
+  if (repeatTarget && !repeatTarget.disabled) {
+    const name = repeatTarget.dataset.repeat;
+    runAct(it, name, {});
+    if (it.props.longPress !== false) {
+      hold = { timer: setTimeout(() => { hold.interval = setInterval(() => runAct(it, name, {}), 70); }, 380) };
+    }
+  }
+});
+
+gallery.addEventListener('pointermove', event => { if (drag) applyDrag(event); });
+
+for (const type of ['pointerup', 'pointercancel']) {
+  window.addEventListener(type, () => {
+    stopHold();
+    if (drag) { drag.slot.classList.remove('dragging'); drag = null; }
+  });
+}
+
+gallery.addEventListener('click', event => {
+  const slot = event.target.closest('.slot');
+  if (!slot) return;
+  const it = byId(slot.dataset.id);
+  const repeatTarget = event.target.closest('[data-repeat]');
+  if (repeatTarget && event.detail === 0) return runAct(it, repeatTarget.dataset.repeat, {});
+  const holdTarget = event.target.closest('[data-hold]');
+  if (holdTarget && event.detail === 0) return runAct(it, holdTarget.dataset.hold, {});
+  const actTarget = event.target.closest('[data-act]');
+  if (actTarget) runAct(it, actTarget.dataset.act, { ...actTarget.dataset });
+});
+
+gallery.addEventListener('keydown', event => {
+  const slot = event.target.closest('.slot');
+  if (!slot) return;
+  const it = byId(slot.dataset.id);
+  if (event.target.matches('[data-drag]') && it.spec.nudge) {
+    const direction = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[event.key];
+    if (direction) { event.preventDefault(); it.spec.nudge(it, direction); rerender(it); }
+  }
+  if (event.target.matches('input.tx-in') && event.key === 'Enter') runAct(it, 'send', {});
+  if (event.target.matches('[role="button"][data-act]') && (event.key === 'Enter' || event.key === ' ')) {
+    event.preventDefault();
+    runAct(it, event.target.dataset.act, {});
+  }
+});
+
+gallery.addEventListener('focusin', event => {
+  const slot = event.target.closest('.slot');
+  if (slot) select(byId(slot.dataset.id));
+});
+
+gallery.addEventListener('input', event => {
+  if (!event.target.matches('.tx-in')) return;
+  const it = byId(event.target.closest('.slot').dataset.id);
+  it.value.draft = event.target.value;
+  const counter = event.target.closest('.card').querySelector('.tx-count');
+  if (counter) counter.textContent = `${[...it.value.draft].length}/${it.props.maxLength}`;
+});
+
+/* ============ 检查器 ============ */
+
+function commonSchema(it) {
+  const spec = it.spec;
+  return [
+    { k: 'title', label: '标题', kind: 'text' },
+    ...('showTitle' in spec.props ? [{ k: 'showTitle', label: '显示标题', kind: 'bool' }] : []),
+    { k: 'icon', label: '图标', kind: 'icon' },
+    { k: 'tone', label: '色调', kind: 'tone' },
+    { k: 'span', label: '宽度', kind: 'seg', opts: spec.spans.map(value => [value, `${value} 栏`]) },
+    { k: 'rows', label: '高度', kind: 'seg', opts: spec.rowsOpts.map(value => [value, `${value} 行`]) },
+  ];
+}
+
+function fieldHTML(it, def) {
+  const value = it.props[def.k];
+  const id = `p-${def.k}`;
+  const hint = def.hint ? ` title="${esc(def.hint)}"` : '';
+  if (def.kind === 'text' || def.kind === 'num') {
+    const type = def.kind === 'num' ? 'number' : 'text';
+    return `<div class="f"><label for="${id}">${def.label}</label><input class="in" id="${id}" type="${type}" step="any" data-prop="${def.k}" value="${esc(value)}" placeholder="${esc(def.hint || '')}"${hint}></div>`;
+  }
+  if (def.kind === 'bool') {
+    return `<div class="f"><span class="fl" id="${id}">${def.label}</span><button type="button" class="sw sm ${value ? 'on' : ''}" role="switch" aria-checked="${!!value}" aria-labelledby="${id}" data-prop="${def.k}" data-bool><i></i></button></div>`;
+  }
+  if (def.kind === 'range') {
+    return `<div class="f"><label for="${id}">${def.label}</label><div class="rg"><input id="${id}" type="range" min="${def.min}" max="${def.max}" step="${def.step}" value="${value}" data-prop="${def.k}"><output>${value}</output></div></div>`;
+  }
+  if (def.kind === 'seg') {
+    const buttons = def.opts.map(([option, label]) => `<button type="button" data-prop="${def.k}" data-val="${option}" aria-pressed="${String(option) === String(value)}">${label}</button>`).join('');
+    return `<div class="f"><span class="fl">${def.label}</span><div class="sg" role="group" aria-label="${def.label}">${buttons}</div></div>`;
+  }
+  if (def.kind === 'icon') {
+    const buttons = ICON_PICK.map(name => `<button type="button" data-prop="${def.k}" data-val="${name}" aria-pressed="${name === value}" aria-label="${name}">${ico(name)}</button>`).join('');
+    return `<div class="f top"><span class="fl">${def.label}</span><div class="icons">${buttons}</div></div>`;
+  }
+  if (def.kind === 'tone') {
+    const buttons = TONES.map(([name, label]) => `<button type="button" data-prop="${def.k}" data-val="${name}" aria-pressed="${name === value}" aria-label="${label}" title="${label}" style="--c:var(--t-${name})"></button>`).join('');
+    return `<div class="f"><span class="fl">${def.label}</span><div class="tones">${buttons}</div></div>`;
+  }
+  return '';
+}
+
+function renderInspector() {
+  const it = selected;
+  const open = inspector.classList.contains('open');
+  inspector.innerHTML = `
+    <div class="ih" data-sheet>
+      <div><div class="eyebrow">C${pad(it.index)} · type: ${it.spec.type}</div><h2>${it.spec.name}</h2></div>
+      <span class="grab" aria-hidden="true"></span>
+    </div>
+    <p class="ib">绑定字段 <b>${it.spec.bind}</b>${isElectro() ? '<br>电子主题下全部色调统一为信号红。' : ''}</p>
+    <div class="group"><h3>通用</h3>${commonSchema(it).map(def => fieldHTML(it, def)).join('')}</div>
+    <div class="group"><h3>专属参数</h3>${it.spec.schema.map(def => fieldHTML(it, def)).join('')}</div>
+    <div class="group"><h3>PageLayout widget</h3><pre class="json" id="json"></pre>
+      <p class="note">props 为协议扩展草案；grid.x / y 由布局决定，此处固定为 0。</p></div>`;
+  inspector.classList.toggle('open', open);
+  renderJson();
+}
+
+function renderJson() {
+  const it = selected;
+  const { title, span, rows, ...rest } = it.props;
+  const widget = {
+    widgetId: `w-${it.spec.key}`,
+    type: it.spec.type,
+    endpointKey: it.spec.key,
+    title,
+    grid: { x: 0, y: 0, width: span, height: rows },
+    props: rest,
+  };
+  const json = esc(JSON.stringify(widget, null, 2))
+    .replace(/&quot;([^&]+?)&quot;:/g, '<span class="k">"$1"</span>:')
+    .replace(/: &quot;(.*?)&quot;/g, ': <span class="s">"$1"</span>');
+  const target = $('#json', inspector);
+  if (target) target.innerHTML = json;
+}
+
+function allSchema(it) {
+  return [...commonSchema(it), ...it.spec.schema];
+}
+
+function setProp(key, raw, rebuild) {
+  const it = selected;
+  const def = allSchema(it).find(entry => entry.k === key);
+  if (!def) return;
+  const previous = it.props[key];
+  let value = raw;
+
+  if (def.kind === 'seg') value = def.opts.find(([option]) => String(option) === String(raw))?.[0] ?? previous;
+  if (def.kind === 'num' || def.kind === 'range') {
+    if (raw === '' && def.allowEmpty) value = '';
+    else if (raw === '' || !Number.isFinite(Number(raw))) return;
+    else value = Number(raw);
+  }
+  if (def.kind === 'num' && ['step', 'maxLength'].includes(key) && value <= 0) return;
+  if (key === 'max' && value <= it.props.min) return;
+  if (key === 'min' && value >= it.props.max) return;
+
+  it.props[key] = value;
+  it.spec.onProp?.(it, key, previous);
+  rerender(it);
+  if (rebuild) renderInspector();
+}
+
+inspector.addEventListener('click', event => {
+  if (event.target.closest('[data-sheet]')) {
+    inspector.classList.toggle('open');
+    return;
+  }
+  const target = event.target.closest('[data-prop]');
+  if (!target || target.matches('input')) return;
+  if (target.hasAttribute('data-bool')) setProp(target.dataset.prop, !selected.props[target.dataset.prop], true);
+  else setProp(target.dataset.prop, target.dataset.val, true);
+});
+
+inspector.addEventListener('input', event => {
+  const target = event.target.closest('input[data-prop]');
+  if (!target) return;
+  if (target.type === 'range') target.nextElementSibling.textContent = target.value;
+  setProp(target.dataset.prop, target.value, false);
+});
+
+/* ============ 主题 ============ */
+
+const SKINS = [
+  { id: 'natural', name: '自然', dot: '#3482FF', bg: '#FFFFFF', spec: '背景 #F2F3F5 · 卡片 #FFFFFF · 主色按色调 · 圆角 22 · 8 栏栅格' },
+  { id: 'electro', name: '电子', dot: '#FF3B30', bg: '#070809', spec: 'BG #070809 · SURFACE #0F1113 · RED #FF3B30 · DOT GRID 8PX · RADIUS 14' },
+  { id: 'dark', name: '暗夜', dot: '#4D93FF', bg: '#1B1C20', spec: '背景 #0C0D0F · 卡片 #1B1C20 · 主色按色调提亮 · 圆角 22' },
+];
+
+function renderSkins() {
+  const current = document.documentElement.dataset.skin;
+  $('#skins').innerHTML = SKINS.map(skin => `<button type="button" data-skin="${skin.id}" aria-pressed="${skin.id === current}">
+      <i style="background:radial-gradient(circle at 50% 50%, ${skin.dot} 34%, ${skin.bg} 38%)"></i>${skin.name}</button>`).join('');
+  $('#spec').textContent = SKINS.find(skin => skin.id === current).spec;
+}
+
+$('#skins').addEventListener('click', event => {
+  const button = event.target.closest('[data-skin]');
+  if (!button) return;
+  document.documentElement.dataset.skin = button.dataset.skin;
+  try { localStorage.setItem('blinker-ui-skin', button.dataset.skin); } catch (error) { /* 仅为偏好记忆 */ }
+  renderSkins();
+  renderGallery();
+  renderInspector();
+});
+
+/* ============ 演示数据心跳 ============ */
+
+let tick = 0;
+
+setInterval(() => {
+  tick += 1;
+  for (const it of items) {
+    const busy = drag?.it === it || it.spec.type === 'text';
+    if (it.spec.type === 'timer' && it.value.left > 0) {
+      it.value.left -= 1;
+      rerender(it);
+    } else if (it.spec.live && tick % 3 === 0 && !busy) {
+      it.spec.live(it);
+      rerender(it);
+    }
+  }
+}, 1000);
+
+/* ============ 启动 ============ */
+
+renderSkins();
+renderGallery();
+renderInspector();
+</script>

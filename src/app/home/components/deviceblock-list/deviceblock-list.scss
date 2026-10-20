@@ -7,31 +7,44 @@
   position: relative;
   width: 100%;
   touch-action: pan-y;
-  container-type: inline-size;
   padding: 0 7px 12px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-content: start;
-  gap: 10px;
+  gap: 12px;
+  align-items: start;
 
   > .deviceblock.wide-device {
     grid-column: 1 / -1;
-    height: calc((100cqi - 10px) / 2);
-    min-height: 0;
-    max-height: calc((100cqi - 10px) / 2);
   }
 
   > .deviceblock {
+    position: relative;
     touch-action: pan-y;
-    cursor: grab;
+    border-radius: 18px;
+    cursor: pointer;
+
+    &.selected {
+      outline: 2px solid var(--ion-color-primary);
+      outline-offset: 2px;
+    }
+
+    &.sortable-card {
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--ion-color-primary);
+      outline-offset: 2px;
+    }
   }
 }
 
 .device-count {
   grid-column: 1 / -1;
-}
-
-.device-count {
   padding: 9px 0 4px;
   color: var(--blinker-text-tertiary);
   font-size: 11px;

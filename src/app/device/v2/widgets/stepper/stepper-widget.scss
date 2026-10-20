@@ -1,0 +1,112 @@
+@use '../../../../../theme/ui-theme' as theme;
+@use '../card' as c;
+
+@include c.base;
+
+.ns {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ns-mid {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ns-v {
+  font-size: 40px;
+  line-height: 1;
+
+  small {
+    margin-left: 3px;
+    color: var(--ui-muted);
+    font-family: var(--ui-font);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  &.ns-sm { flex: none; min-width: 3.2ch; font-size: 24px; text-align: center; }
+}
+
+.ns-range {
+  color: var(--ui-muted);
+  font-family: var(--ui-font-mono);
+  font-size: 11px;
+}
+
+.ns.split {
+  flex-direction: column;
+  align-items: stretch;
+
+  .ns-mid { flex: 1; justify-content: center; }
+}
+
+.ns-row {
+  display: flex;
+  gap: 10px;
+
+  .rbtn { flex: 1; height: 38px; border-radius: 12px; }
+}
+
+// One row high: icon, title and range, then − value +.
+
+:host(.rowc) {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding-block: 10px;
+}
+
+.rc-ico {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ui-accent) 14%, transparent);
+  color: var(--ui-accent);
+
+  @include theme.electronic { border: 1.5px dotted var(--ui-faint); background: none; }
+}
+
+.rc-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  strong, small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  strong { font-size: 14px; font-weight: 500; text-transform: var(--ui-case); letter-spacing: var(--ui-tracking); }
+  small { color: var(--ui-muted); font-size: 12px; }
+}
+
+// Send key of an action stepper: a round accent key, a check once sent.
+.ns-go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-left: auto;
+  padding: 9px;
+  border-radius: 50%;
+  background: var(--ui-accent);
+  color: var(--ui-on-accent);
+  transition: transform 0.15s, background-color 0.25s;
+
+  &:active { transform: scale(0.92); }
+  &:disabled { opacity: 0.5; cursor: default; }
+
+  @include theme.electronic { border: 1.5px dotted var(--ui-accent); background: none; color: var(--ui-accent); }
+}
+
+.hd .ns-go { width: 30px; height: 30px; margin-block: -4px; padding: 8px; }

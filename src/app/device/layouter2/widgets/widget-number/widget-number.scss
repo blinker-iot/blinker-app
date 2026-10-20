@@ -1,46 +1,45 @@
+:host { container-type: size; }
+
 .numbox {
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    overflow: hidden;
-    padding: 0.5rem;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px 12px;
     width: 100%;
     height: 100%;
+    overflow: hidden;
+    > * { flex-shrink: 0; }
 
-    i {
-        font-size: 1.5rem;
-    }
-
+    > i { font-size: 22px; line-height: 1; }
     .valuebox {
         display: flex;
-        justify-content: flex-start;
-        align-items: flex-end;
-        flex-direction: row;
-        transition: transform 0.2s;
-        font-size: 1.3rem;
-        line-height: 1.3rem;
-        transform-origin: left;
-        margin-top: 0.25rem;
-
-        .value {
-            color: var(--blinker-text-primary);
-            font-weight: bold;
-        }
-
-        .unit {
-            color: var(--blinker-text-secondary);
-            font-size: 0.7rem;
-            line-height: 0.9rem;
-            white-space: nowrap;
-        }
+        align-items: baseline;
+        gap: 3px;
+        max-width: 100%;
+        line-height: 1.15;
+        transform-origin: left center;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        .value { color: var(--blinker-text-primary); font-size: 22px; font-weight: 650; }
+        .unit { color: var(--blinker-text-secondary); font-size: 11px; }
     }
+    .content { font-size: 11px; line-height: 1.2; }
+}
 
-    .content {
-        font-size: 0.7rem;
-        position: absolute;
-        bottom: 0.25rem;
-        left: 0.5rem;
-    }
+@container (max-height: 96px) {
+    .numbox { padding: 6px 8px; gap: 3px; }
+    .numbox > i { font-size: 16px; }
+    .numbox .valuebox .value { font-size: 18px; }
+    .numbox .content { font-size: 10px; }
+}
+
+@container (max-height: 70px) {
+    .numbox { padding: 4px 8px; gap: 2px; }
+    .numbox > i { font-size: 14px; }
+    .numbox .valuebox .value { font-size: 17px; }
 }
 .numbox10 {
     width: 100%;
@@ -226,6 +225,10 @@
     }
 
     .right-box {
+        min-width: 0;
+        flex: 1;
+        padding-right: 10px;
+        gap: 5px;
         display: flex;
         flex-direction: column;
         font-size: 0.7rem;
@@ -233,7 +236,10 @@
 
     .valuebox {
         display: flex;
-        align-items: flex-end;
+        align-items: baseline;
+        transform-origin: left center;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
 
         .value {
             font-size: 25px;

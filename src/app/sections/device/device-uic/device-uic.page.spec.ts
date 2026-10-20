@@ -1,191 +1,269 @@
-import { ActivatedRoute } from '@angular/router';
-import { AlertController, NavController } from '@ionic/angular';
-import { BehaviorSubject } from 'rxjs';
-
-import { BlinkerDevice } from '../../../core/model/device.model';
-import { DataService } from '../../../core/services/data.service';
-import { DeviceService } from '../../../core/services/device.service';
-import { NoticeService } from '../../../core/services/notice.service';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { DeviceUicPage } from './device-uic.page';
+import { BlinkerDevice } from '../../../core/model/device.model';
+import { DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
+import { capabilityTiles } from './interface-draft';
 
-vi.mock('@ionic/angular', () => ({
-  AlertController: class {},
-  IonicModule: class {},
-  NavController: class {},
-}));
+const snapshot: DeviceUiSnapshot = {
+  manifestAccepted: true, manifestFingerprint: 'a'.repeat(64), manifestRevision: 1, stateRevision: 1, stateFresh: true,
+  endpoints: [
+    { id: 1, key: 'power', role: 'property', valueType: 'boolean', readable: true, writable: true, notifies: true, value: true },
+    { id: 2, key: 'temperature', role: 'property', valueType: 'number', readable: true, writable: false, notifies: true, value: 24.6, unit: '°C' },
+  ],
+};
 
-vi.mock('@ionic/angular/standalone', () => ({
-  AlertController: class {},
-  LoadingController: class {},
-  Platform: class {},
-  ToastController: class {},
-}));
-
-describe('DeviceUicPage', () => {
-  const navigateRoot = vi.fn().mockResolvedValue(true);
-  const present = vi.fn().mockResolvedValue(undefined);
-  const dismiss = vi.fn().mockResolvedValue(undefined);
-  const createAlert = vi.fn().mockResolvedValue({ present, dismiss });
-  const saveDeviceConfig = vi.fn().mockResolvedValue(true);
-  const showToast = vi.fn().mockResolvedValue(undefined);
-
-  let device: BlinkerDevice;
+describe('interface studio workflow', () => {
   let page: DeviceUicPage;
-
-  function createPage(id = 'device-1'): DeviceUicPage {
-    const route = {
-      snapshot: {
-        paramMap: {
-          get: (key: string) => (key === 'id' ? id : null),
-        },
-      },
-    } as unknown as ActivatedRoute;
-
-    device = {
-      id,
-      deviceName: id,
-      config: {
-        broker: 'blinker',
-        customName: '测试设备',
-        mode: 'mqtt',
-      },
-      data: {},
-      storage: {},
-      subject: { next: vi.fn() },
-    } as unknown as BlinkerDevice;
-    const dataService = {
-      device: { dict: { [id]: device }, list: [id] },
-      userDataLoader: new BehaviorSubject(false),
-    } as unknown as DataService;
-
-    const result = new DeviceUicPage(
-      route,
-      { navigateRoot } as unknown as NavController,
-      { create: createAlert } as unknown as AlertController,
-      dataService,
-      { saveDeviceConfig } as unknown as DeviceService,
-      { showToast } as unknown as NoticeService,
-    );
-    result.ngOnInit();
-    return result;
-  }
+  let device: BlinkerDevice;
+  let state: BehaviorSubject<DeviceUiSnapshot>;
+  let navigateRoot: ReturnType<typeof vi.fn>;
+  let navigateForward: ReturnType<typeof vi.fn>;
+  let saveConfig: ReturnType<typeof vi.fn>;
+  let saveLayout: ReturnType<typeof vi.fn>;
+  let generate: ReturnType<typeof vi.fn>;
+  let close: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    page = createPage();
-  });
+    device = { id: 'device-1', deviceName: 'device-1', config: { mode: 'bbp2', broker: '', customName: '试验设备', layouter: '{"dashboard":[]}' }, data: {}, storage: {}, subject: new Subject() };
+    state = new BehaviorSubject(snapshot);
+    navigateRoot = vi.fn().mockResolvedValue(true);
+    navigateForward = vi.fn().mockResolvedValue(true);
+    saveConfig = vi.fn().mockResolvedValue(true);
+    saveLayout = vi.fn().mockResolvedValue({ revision: 3 });
+    generate = vi.fn().mockResolvedValue({ summary: '开关优先', tiles: capabilityTiles(device, snapshot).slice(0, 1) });
+    close = vi.fn();
 
-  afterEach(() => {
-    page.ngOnDestroy();
-  });
-
-  it('maps the three methods to their registered device components', () => {
-    expect(page.methodItems.map((item) => item.title)).toEqual([
-      'AI生成界面',
-      '拖拽编辑器（经典版）',
-      '调试工具界面',
-    ]);
-    expect(page.methodItems.map((item) => item.componentName)).toEqual([
-      'Customizer',
-      'Layouter2Component',
-      'TestDashboard',
-    ]);
-    expect(page.backHref).toBe('/device-manager/device-1');
-  });
-
-  it('offers and saves the automatic DeviceV2 interface for bbp2 devices', async () => {
-    device.config.mode = 'bbp2';
-
-    expect(page.availableMethodItems).toHaveLength(4);
-    const automaticMethod = page.availableMethodItems[0];
-    expect(automaticMethod).toMatchObject({
-      title: '自动适配界面',
-      componentName: 'DeviceV2',
-    });
-
-    await page.selectMethod(automaticMethod);
-
-    expect(createAlert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        header: '确定使用自动适配界面？',
-        message: '确认后将修改当前设备使用的界面组件。',
-      }),
+    page = new DeviceUicPage(
+      { snapshot: { paramMap: { get: () => 'device-1' }, data: {} } } as never,
+      { navigateRoot, navigateForward } as never,
+      { device: { dict: { 'device-1': device } }, userDataLoader: new BehaviorSubject(false) } as never,
+      { saveDeviceConfig: saveConfig } as never, { showToast: vi.fn().mockResolvedValue(undefined) } as never,
+      {
+        watchState: () => state, watchConnection: () => new BehaviorSubject('ready'),
+        watchEvents: () => new Subject(), appActive: new BehaviorSubject(true),
+        isBleDirect: () => false, openConnection: () => ({ ready: Promise.resolve(), close }),
+      } as never,
+      { get: vi.fn().mockResolvedValue({ revision: 2 }), saveCandidate: saveLayout } as never,
+      { generate } as never, { markForCheck: vi.fn() } as never,
+      { get: vi.fn().mockResolvedValue(null) } as never,
+      {} as never,
     );
-    const alertOptions = createAlert.mock.calls[0][0];
-    await alertOptions.buttons[1].handler();
 
-    expect(saveDeviceConfig).toHaveBeenCalledWith(device, {
-      component: 'DeviceV2',
-    });
-    expect(device.config.component).toBe('DeviceV2');
-    expect(device.subject.next).toHaveBeenCalledWith({
-      key: 'component',
-      value: 'DeviceV2',
-      source: 'device-uic',
-    });
-    expect(navigateRoot).toHaveBeenCalledWith('/device/device-1');
+    page.ngOnInit();
   });
 
-  it.each([
-    [0, 'Customizer'],
-    [1, 'Layouter2Component'],
-    [2, 'TestDashboard'],
-  ] as const)(
-    'confirms and saves method %i as component %s',
-    async (methodIndex, componentName) => {
-      await page.selectMethod(page.methodItems[methodIndex]);
+  afterEach(() => page.ngOnDestroy());
 
-      expect(saveDeviceConfig).not.toHaveBeenCalled();
-      expect(createAlert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          header: `确定使用${page.methodItems[methodIndex].title}？`,
-          message: '确认后将修改当前设备使用的界面组件。',
-        }),
-      );
-      expect(present).toHaveBeenCalled();
+  async function select(method: 'automatic' | 'ai' | 'classic') {
+    if (method === 'classic') {
+      page.selectMethod(method);
 
-      const alertOptions = createAlert.mock.calls[0][0];
-      const confirmButton = alertOptions.buttons[1];
-      await confirmButton.handler();
+      return;
+    }
 
-      expect(saveDeviceConfig).toHaveBeenCalledWith(device, {
-        component: componentName,
-      });
-      expect(device.config.component).toBe(componentName);
-      expect(device.subject.next).toHaveBeenCalledWith({
-        key: 'component',
-        value: componentName,
-        source: 'device-uic',
-      });
-      expect(showToast).toHaveBeenCalledWith('界面配置已更新');
-      expect(navigateRoot).toHaveBeenCalledWith('/device/device-1');
-    },
-  );
+    page.selected = method;
 
-  it('does not change local configuration when saving fails', async () => {
-    saveDeviceConfig.mockResolvedValueOnce(false);
+    await page.refreshCapabilities();
+    await vi.waitFor(() => expect(page.loading).toBe(false));
+  }
 
-    await page.selectMethod(page.methodItems[2]);
-    const alertOptions = createAlert.mock.calls[0][0];
-    await alertOptions.buttons[1].handler();
-
-    expect(device.config.component).toBeUndefined();
-    expect(device.subject.next).not.toHaveBeenCalled();
-    expect(showToast).toHaveBeenCalledWith(
-      '界面配置保存失败，请稍后重试',
-    );
-    expect(navigateRoot).not.toHaveBeenCalled();
+  it('previews capabilities without saving or switching the device', async () => {
+    await select('automatic');
+    expect(page.tiles).toHaveLength(2);
+    expect(page.canApply).toBe(true);
+    expect(saveConfig).not.toHaveBeenCalled();
+    expect(saveLayout).not.toHaveBeenCalled();
+    expect(page.tiles.map(tile => tile.width)).toEqual([2, 2]);
   });
 
-  it('updates preview devices locally without calling the API', async () => {
-    device.config.isPreview = true;
-
-    await page.selectMethod(page.methodItems[1]);
-    const alertOptions = createAlert.mock.calls[0][0];
-    await alertOptions.buttons[1].handler();
-
-    expect(saveDeviceConfig).not.toHaveBeenCalled();
-    expect(device.config.component).toBe('Layouter2Component');
+  it('saves a validated V2 layout with the current revision before switching', async () => {
+    await select('automatic'); await page.apply();
+    expect(saveLayout).toHaveBeenCalledWith('device-1', expect.objectContaining({ revision: 2 }), snapshot.endpoints, 2);
+    expect(saveConfig).toHaveBeenCalledWith(device, { component: 'DeviceV2', panelMode: 'normal' });
     expect(navigateRoot).toHaveBeenCalledWith('/device/device-1');
+    expect(device.config.layouter).toBe('{"dashboard":[]}');
+  });
+
+  it('keeps configuration and navigation unchanged if layout saving fails', async () => {
+    await select('automatic'); saveLayout.mockRejectedValueOnce(new Error()); await page.apply();
+    expect(saveConfig).not.toHaveBeenCalled(); expect(navigateRoot).not.toHaveBeenCalled(); expect(page.error).toContain('保存失败');
+  });
+
+  it('blocks stale revision writes until refresh', async () => {
+    await select('automatic'); saveLayout.mockRejectedValueOnce({ code: 'DEVICE_V2_PAGE_LAYOUT_CONFLICT' }); await page.apply();
+    expect(page.canApply).toBe(false); expect(page.error).toContain('其他位置');
+    await page.refreshCapabilities(); expect(page.canApply).toBe(true);
+  });
+
+  it('reports a partial save and retains the new revision for retry', async () => {
+    await select('automatic'); saveConfig.mockResolvedValueOnce(false); await page.apply();
+    expect(device.config.component).toBeUndefined(); expect(navigateRoot).not.toHaveBeenCalled(); expect(page.error).toContain('布局已保存');
+    await page.apply(); expect(saveLayout.mock.calls[1][3]).toBe(3);
+  });
+
+  it('requires AI generation before applying and preserves a good draft after failure', async () => {
+    await select('ai'); expect(page.canApply).toBe(false);
+
+    page.prompt = '开关在上面'; await page.generate(); expect(page.canApply).toBe(true); expect(page.tiles).toHaveLength(1);
+
+    generate.mockRejectedValueOnce(new Error()); await page.generate(); expect(page.tiles).toHaveLength(1); expect(page.generated).toBe(true);
+  });
+
+  it('can generate from an accepted manifest while the device connection is still pending', async () => {
+    (page as any).deviceUi.openConnection = () => ({ ready: new Promise(() => {}), close });
+
+    await select('ai');
+    expect(page.sourceTiles).toHaveLength(2);
+    await page.generate();
+    expect(generate).toHaveBeenCalledOnce();
+    expect(page.generated).toBe(true);
+    expect(page.canApply).toBe(true);
+  });
+
+  it('finishes a pending layout read after AI generation starts', async () => {
+    let finishRead!: (value: unknown) => void;
+
+    (page as any).pageLayouts.get = () => new Promise(resolve => { finishRead = resolve; });
+    page.selected = 'ai';
+
+    void page.refreshCapabilities();
+    expect(page.loading).toBe(true);
+    await page.generate();
+    expect(generate).toHaveBeenCalledOnce();
+    expect(page.generated).toBe(true);
+    expect(page.canApply).toBe(false);
+    finishRead({ revision: 2 });
+    await vi.waitFor(() => expect(page.loading).toBe(false));
+    expect(page.canApply).toBe(true);
+  });
+
+  it('explains a missing accepted manifest when generation is requested', async () => {
+    await select('ai');
+    state.next({ ...snapshot, manifestAccepted: false });
+    await page.generate();
+    expect(generate).not.toHaveBeenCalled();
+    expect(page.error).toContain('尚未识别');
+  });
+
+  it('enables generation when capabilities arrive after the empty state', async () => {
+    state.next({ ...snapshot, manifestAccepted: false });
+    await select('ai');
+    expect(page.sourceTiles).toHaveLength(0);
+    state.next(snapshot);
+    expect(page.sourceTiles).toHaveLength(2);
+    await page.generate();
+    expect(generate).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(page.canApply).toBe(true));
+  });
+
+  it('discards late generation results after leaving', async () => {
+    await select('ai'); let finish!: (value: unknown) => void;
+    generate.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+
+    page.prompt = '做一个控制面板'; const task = page.generate(); page.ionViewDidLeave();
+
+    finish({ tiles: [], summary: 'late' }); await task;
+    expect(page.generated).toBe(false); expect(page.summary).toBe(''); expect(close).toHaveBeenCalled();
+  });
+
+  it('invalidates an AI draft when capabilities change', async () => {
+    await select('ai'); page.prompt = '开关在上面'; await page.generate();
+    state.next({ ...snapshot, manifestFingerprint: 'b'.repeat(64) }); expect(page.generated).toBe(false); expect(page.canApply).toBe(false);
+  });
+
+  it('opens the panel editor without changing the saved interface', async () => {
+    await select('classic'); await page.apply(); expect(saveLayout).not.toHaveBeenCalled();
+    expect(saveConfig).not.toHaveBeenCalled();
+    expect(navigateForward).toHaveBeenCalledWith('/device/device-1/edit'); expect(device.config.layouter).toBe('{"dashboard":[]}');
+  });
+
+  it('does not call cloud services when opening the editor for preview devices', async () => {
+    device.config.isPreview = true; await select('classic'); await page.apply(); expect(saveConfig).not.toHaveBeenCalled();
+  });
+
+  it('does not allow shared devices to change configuration', async () => {
+    device.config.isShared = true; await select('classic'); await page.apply(); expect(page.selected).toBeNull(); expect(saveConfig).not.toHaveBeenCalled();
+  });
+
+  it('generates from a selected style without requiring a custom prompt, then saves that style', async () => {
+    await select('ai'); page.chooseStyle('electronic');
+    expect(page.tiles[0].type).toBe('value');
+    await page.generate();
+    expect(generate).toHaveBeenCalledWith(expect.stringContaining('OLED 点阵'), page.sourceTiles, 'electronic', expect.objectContaining({ onPreview: expect.any(Function), signal: expect.any(AbortSignal) }));
+    await page.apply();
+    expect(saveLayout.mock.calls[0][1].style).toBe('electronic');
+  });
+
+  it('invalidates the previous AI result on style change and protects a running generation', async () => {
+    await select('ai'); await page.generate();
+    page.chooseStyle('dark');
+    expect(page.generated).toBe(false); expect(page.canApply).toBe(false); expect(page.summary).toBe('');
+    expect(page.tiles.map(tile => tile.width)).toEqual([2, 2]);
+
+    page.generating = true; page.chooseStyle('natural'); expect(page.style).toBe('dark');
+  });
+
+  it('updates the canvas during generation, preserves layout on live state updates, and blocks partial apply', async () => {
+    await select('ai');
+
+    let finish!: (value: unknown) => void;
+
+    generate.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+
+    const pending = page.generate();
+    const options = generate.mock.lastCall![3];
+    const partial = { summary: '', tiles: [{ ...page.sourceTiles[1], title: 'AI 温度' }] };
+
+    options.onPreview(partial);
+    expect(page.generating).toBe(true); expect(page.previewCount).toBe(1);
+    expect(page.tiles[0].title).toBe('AI 温度'); expect(page.canApply).toBe(false);
+
+    state.next({ ...snapshot, endpoints: snapshot.endpoints.map(field => ({ ...field, value: field.id === 2 ? 28 : field.value })) });
+    expect(page.tiles[0].title).toBe('AI 温度'); expect(page.tiles[0].value).toBe('28');
+    finish(partial); await pending;
+    expect(page.canApply).toBe(true); expect(page.tiles[0].value).toBe('28');
+  });
+
+  it('restores a successful draft on cancellation and ignores late stream callbacks', async () => {
+    await select('ai'); await page.generate();
+
+    const original = page.tiles;
+    let finish!: (value: unknown) => void;
+
+    generate.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+
+    const pending = page.generate(); const options = generate.mock.lastCall![3];
+
+    options.onPreview({ summary: '', tiles: [page.sourceTiles[1]] });
+    page.cancelGeneration();
+    expect(options.signal.aborted).toBe(true); expect(page.generated).toBe(true); expect(page.tiles).toEqual(original);
+    options.onPreview({ summary: '', tiles: [] }); finish({ summary: 'late', tiles: [] }); await pending;
+    expect(page.tiles).toEqual(original); expect(page.canApply).toBe(true);
+  });
+
+  it('restores the last complete draft after a partial stream fails and allows retry', async () => {
+    await select('ai'); await page.generate(); const original = page.tiles;
+    generate.mockImplementationOnce(async (...args) => { args[3].onPreview({ summary: '', tiles: [page.sourceTiles[1]] }); throw new Error('truncated'); });
+    await page.generate();
+    expect(page.tiles).toEqual(original); expect(page.generated).toBe(true); expect(page.error).toContain('未完成');
+    await page.generate(); expect(page.error).toBe(''); expect(page.canApply).toBe(true);
+  });
+
+  it('aborts generation when the device manifest changes', async () => {
+    await select('ai'); let finish!: (value: unknown) => void;
+    generate.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+
+    const pending = page.generate(); const options = generate.mock.lastCall![3];
+
+    state.next({ ...snapshot, manifestFingerprint: 'c'.repeat(64) });
+    expect(options.signal.aborted).toBe(true); expect(page.generating).toBe(false); expect(page.canApply).toBe(false);
+    finish({ summary: 'late', tiles: [] }); await pending;
+    expect(page.tiles).toHaveLength(2); expect(page.generated).toBe(false);
+  });
+
+  it('invalidates generation when manifest acceptance is revoked without changing its fingerprint', async () => {
+    await select('ai'); await page.generate();
+    state.next({ ...snapshot, manifestAccepted: false });
+    expect(page.generated).toBe(false); expect(page.canApply).toBe(false); expect(page.tiles).toEqual([]);
   });
 });

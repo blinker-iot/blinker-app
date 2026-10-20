@@ -1,0 +1,54 @@
+$page-inset: 16px;
+$page-bottom-inset: 32px;
+$page-max-width: 720px;
+
+// Shared geometry: half-width cards align to rows; full-width cards use their
+// content height. Drawing widgets claim --fill-h through the fills-rows mixin.
+@mixin layout {
+  .panel {
+    --row-h: 84px;
+    --gap: 12px;
+
+    display: grid;
+
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-auto-rows: auto;
+
+    gap: var(--gap);
+  }
+
+  .cell {
+    --fill-h: calc(var(--rows) * var(--row-h) + (var(--rows) - 1) * var(--gap));
+
+    grid-column: var(--col) / span var(--span);
+    grid-row: var(--row) / span var(--rows);
+
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+
+    min-height: var(--fill-h);
+
+    contain: size;
+  }
+
+  .cell.full { min-height: 0; contain: none; }
+}
+
+@mixin compact {
+  .panel {
+    --row-h: 78px;
+    --gap: 10px;
+
+    // Preserve insertion order instead of backfilling earlier gaps.
+    grid-auto-flow: row;
+  }
+
+  .cell {
+    grid-column: span min(8, calc(var(--span) * 2));
+    grid-row: span var(--rows);
+  }
+
+  .cell.wide { min-height: 0; contain: none; }
+}

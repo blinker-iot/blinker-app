@@ -1,0 +1,83 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start"><ion-back-button text="" defaultHref="/share-manager" /></ion-buttons>
+    <ion-title>设备邀请</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <main class="invitation-page">
+    @let view = invitation.state();
+
+    @if (view.phase === 'login') {
+      <section class="status-panel">
+        <h1>登录后接受邀请</h1>
+        <ion-button expand="block" (click)="login()">登录并继续</ion-button>
+      </section>
+    } @else if (view.phase === 'loading') {
+      <div class="status-panel loading" role="status">
+        <ion-spinner name="crescent" />
+        <p>正在读取邀请…</p>
+      </div>
+    } @else if (view.phase === 'preview' || view.phase === 'accepting' || view.phase === 'declining') {
+      @if (view.preview; as preview) {
+        @let access = preview.currentShare?.state === 'active' ? preview.currentShare! : preview;
+
+        <section class="invitation-card" aria-labelledby="device-title">
+          <div class="device-heading">
+            <span class="device-mark" aria-hidden="true"><i class="fa-light fa-microchip"></i></span>
+            <h1 id="device-title">{{ preview.deviceName }}</h1>
+          </div>
+
+          <dl class="invitation-details">
+            <div>
+              <dt>有效期</dt>
+              <dd>{{ preview.expiresAt | date:'yyyy/MM/dd HH:mm' }}</dd>
+            </div>
+            <div>
+              <dt>权限</dt>
+              <dd>
+                <span>{{ access.role === 'viewer' ? '仅查看' : '查看和控制' }}</span>
+                @if (access.canEditConsole) { <span>编辑控制台</span> }
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <div class="invitation-actions">
+          @if (preview.state === 'accepted' && preview.currentShare?.state !== 'active') {
+            <p class="status-message">分享已解除，请让所有者重新邀请</p>
+          } @else {
+            <ion-button expand="block" [disabled]="view.phase !== 'preview'" (click)="accept()">
+              {{ view.phase === 'accepting' ? '正在接受…' : preview.currentShare?.state === 'active' ? '进入共享设备' : '接受分享' }}
+            </ion-button>
+
+            @if (preview.targeted && preview.state === 'pending') {
+              <ion-button expand="block" fill="clear" color="medium" [disabled]="view.phase !== 'preview'" (click)="invitation.decline()">
+                {{ view.phase === 'declining' ? '正在处理…' : '拒绝邀请' }}
+              </ion-button>
+            }
+          }
+        </div>
+      }
+    } @else if (view.phase === 'accepted') {
+      <section class="status-panel">
+        @if (view.result?.share.state === 'active') {
+          <h1>已接受分享</h1>
+          @if (view.result?.realtimeRefreshPending) { <p>设备权限同步中</p> }
+          @if (openError) { <p role="alert">{{ openError }}</p> }
+          <ion-button expand="block" [disabled]="opening" (click)="openDevice()">{{ opening ? '正在进入…' : '进入设备' }}</ion-button>
+        } @else { <p>分享已解除，请让所有者重新邀请</p> }
+      </section>
+    } @else if (view.phase === 'declined') {
+      <p class="status-message">{{ view.message }}</p>
+    } @else if (view.phase === 'error') {
+      <section class="status-panel">
+        <p role="alert">{{ view.message }}</p>
+        <ion-button expand="block" (click)="invitation.refresh()">重试</ion-button>
+      </section>
+    } @else {
+      <p class="status-message">请从邀请链接打开</p>
+    }
+  </main>
+</ion-content>

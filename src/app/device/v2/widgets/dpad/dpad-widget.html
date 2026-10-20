@@ -1,0 +1,26 @@
+@if (showTitle) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ title }}</span>
+    @if (status) { <span class="hd-v">{{ status }}</span> }
+  </div>
+}
+
+<div class="dp-wrap">
+  <div class="dp" role="group" [attr.aria-label]="title">
+    @for (direction of directions; track direction) {
+      @if (choice(direction); as label) {
+        <button type="button" class="dp-key" [class]="direction" [class.on]="active() === direction"
+          [attr.aria-label]="label" data-press [disabled]="card.disabled && active() !== direction"
+          (pointerdown)="press($event, direction)" (pointerup)="release()" (pointercancel)="release()"
+          (lostpointercapture)="release()" (click)="tap(direction)" (contextmenu)="$event.preventDefault()">
+          @if (direction === 'center') {
+            <span class="dp-label">{{ label }}</span>
+          } @else {
+            <app-ui-icon name="chevron" />
+          }
+        </button>
+      }
+    }
+  </div>
+</div>

@@ -1,15 +1,4 @@
-@use '../../room/room-manager/room-manager';
-
-.scene-empty-icon {
-  background: linear-gradient(145deg, #8e9dff, #5967df);
-  box-shadow: 0 9px 20px rgba(89, 103, 223, 0.25);
-}
-
-app-hero-card {
-  --tool-hero-accent: #5967df;
-}
-
-.scene-entry-icon {
-  color: #6875e8;
-  background: rgba(104, 117, 232, 0.11);
-}
+main { max-width: 48rem; margin: auto; padding: 1rem; }
+.manager-card { border: 1px solid var(--ion-color-light-shade); border-radius: .75rem; padding: 1rem; margin-block: 1rem; }
+h2 { font-size: 1.1rem; }
+p { line-height: 1.5; }

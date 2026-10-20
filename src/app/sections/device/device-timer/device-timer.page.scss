@@ -10,14 +10,20 @@ ion-content {
   --section-main-padding-bottom: 34px;
 }
 
-app-hero-card {
-  margin-bottom: 14px;
-}
-
 .add-task-button {
   width: 100%;
   margin: 0;
 }
+
+.creation-hint {
+  margin: 8px 0;
+  color: var(--blinker-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.device-context { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+.task-execution-note { margin: 0 0 12px; color: var(--blinker-text-secondary); font-size: 12px; line-height: 1.6; }
 
 .task-list,
 .empty-state {
@@ -42,7 +48,7 @@ app-hero-card {
   appearance: none;
   width: 100%;
   min-height: 86px;
-  padding: 10px 76px 10px 13px;
+  padding: 10px 13px;
   border: 0;
   color: var(--blinker-text-primary);
   background: transparent;
@@ -66,16 +72,6 @@ app-hero-card {
   display: grid;
   place-items: center;
   font-size: 16px;
-}
-
-.task-row.loop .task-type-icon {
-  color: #6366f1;
-  background: rgba(99, 102, 241, 0.11);
-}
-
-.task-row.countdown .task-type-icon {
-  color: #06b6d4;
-  background: rgba(6, 182, 212, 0.11);
 }
 
 .task-copy,
@@ -112,14 +108,6 @@ app-hero-card {
   }
 }
 
-.loop .task-heading small {
-  color: #6366f1;
-}
-
-.countdown .task-heading small {
-  color: #0891b2;
-}
-
 .task-detail {
   flex-direction: column;
   gap: 2px;
@@ -147,14 +135,8 @@ app-hero-card {
   font-size: 11px;
 }
 
-.task-toggle {
-  position: absolute;
-  top: 50%;
-  right: 11px;
-  z-index: 2;
-  transform: translateY(-50%) scale(0.72);
-  transform-origin: right center;
-}
+.task-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; }
+button:disabled { opacity: .6; }
 
 .empty-state {
   min-height: 240px;
@@ -164,18 +146,6 @@ app-hero-card {
   align-items: center;
   justify-content: center;
   text-align: center;
-
-  > span {
-    width: 58px;
-    height: 58px;
-    margin-bottom: 16px;
-    border-radius: 18px;
-    color: #fff;
-    background: linear-gradient(145deg, #fbbf24, #f59e0b);
-    display: grid;
-    place-items: center;
-    font-size: 24px;
-  }
 
   strong {
     font-size: 14px;
@@ -188,16 +158,4 @@ app-hero-card {
     font-size: 11px;
     line-height: 1.55;
   }
-}
-
-.empty-add {
-  min-height: 38px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: 11px;
-  color: #fff;
-  background: #f59e0b;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 650;
 }

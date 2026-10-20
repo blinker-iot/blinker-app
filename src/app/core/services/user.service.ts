@@ -1,9 +1,9 @@
+import { isRegionSnapshot, RegionSnapshot } from '../model/region.model';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API } from 'src/app/configs/api.config';
 import { sha256 } from '../functions/func';
-import { BlinkerDevice } from '../model/device.model';
 import {
   AccountDeletionCodeData,
   AilyResponse,
@@ -25,6 +25,7 @@ interface SessionFence {
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
+  private inventoryRequest = 0;
   get avatarUploadConfigured(): boolean {
     return API.USER.UPLOAD_AVATAR.trim().length > 0;
   }
@@ -44,20 +45,22 @@ export class UserService {
   ) {}
 
   async getAllInfo(): Promise<boolean> {
+    const request = ++this.inventoryRequest;
     const session = this.captureSession();
     if (!session) return false;
     this.dataService.userLoadError.next(null);
     this.dataService.deviceLoadError.next(null);
     this.dataService.configLoadError.next(null);
 
-    const [userResult, deviceResult, receivedResult] = await Promise.allSettled([
+    const [userResult, deviceResult, receivedResult, regionResult] = await Promise.allSettled([
       firstValueFrom(this.http.get<AilyResponse<CurrentUser>>(API.AUTH.ME)),
       firstValueFrom(this.http.get<DeviceKeyListResponse>(API.DEVICE_V2.LIST)),
       firstValueFrom(this.http.get<DeviceV2ReceivedSharesResponse>(
         API.DEVICE_V2.RECEIVED_SHARES,
       )),
+      firstValueFrom(this.http.get<AilyResponse<RegionSnapshot>>(API.ACCOUNT.REGIONS)),
     ]);
-    if (!this.sessionMatches(session)) return false;
+    if (!this.sessionMatches(session) || request !== this.inventoryRequest) return false;
 
     const deletedAccountError =
       userResult.status === 'rejected' &&
@@ -86,6 +89,15 @@ export class UserService {
       return false;
     }
 
+    const applyRegions = () => {
+      if (regionResult.status === 'fulfilled' && isRegionSnapshot(regionResult.value?.data)) {
+        this.dataService.loadRegions(regionResult.value.data);
+      } else {
+        this.dataService.configLoadError.next(regionResult.status === 'rejected'
+          ? regionResult.reason : new Error('The region response is invalid.'));
+      }
+    };
+
     let devices: DeviceKeyLogicalDevice[];
     if (
       deviceResult.status === 'fulfilled'
@@ -99,6 +111,7 @@ export class UserService {
           : new Error('The device-list response is invalid.'),
       );
       this.dataService.loadGatewayUser(userResult.value.data);
+      applyRegions();
       this.dataService.initCompleted.next(true);
       await this.noticeService.hideLoading();
       return true;
@@ -116,8 +129,10 @@ export class UserService {
       );
     }
 
-    if (!this.sessionMatches(session)) return false;
-    this.dataService.loadGatewayData(userResult.value.data, devices, received);
+    if (!this.sessionMatches(session) || request !== this.inventoryRequest) return false;
+    this.dataService.loadGatewayData(userResult.value.data, devices, received,
+      receivedResult.status === 'fulfilled' && Array.isArray(receivedResult.value?.data?.devices));
+    applyRegions();
     await this.noticeService.hideLoading();
     return true;
   }
@@ -136,20 +151,6 @@ export class UserService {
         uuid: this.uuid,
         token: this.token,
         userConf: JSON.stringify(userConfig),
-      }),
-    )
-      .then((response) => response.message === 1000)
-      .catch(this.handleError);
-  }
-
-  delDevice(device: BlinkerDevice): Promise<boolean> {
-    return firstValueFrom(
-      this.http.get<BlinkerResponse>(API.USER.DEL_DEVICE, {
-        params: {
-          uuid: this.uuid,
-          token: this.token,
-          deviceName: device.deviceName,
-        },
       }),
     )
       .then((response) => response.message === 1000)

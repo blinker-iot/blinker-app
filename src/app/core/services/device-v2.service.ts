@@ -8,6 +8,7 @@ import { openMqttDeviceV2Channel } from '../device-v2/mqtt-channel';
 import { AccountConnectionResponse } from '../model/response.model';
 import {
   DeviceV2Ack,
+  DeviceV2Manifest,
   DeviceV2Store,
   DeviceV2TargetSnapshot,
   DeviceV2TelemetryLease,
@@ -15,6 +16,7 @@ import {
 } from '../protocol/device-v2';
 import { DataService } from './data.service';
 import { DeviceV2ManifestCache } from './device-v2-manifest-cache.service';
+import { DeviceV2DemandOwner, DeviceV2DirectOwner } from '../protocol/device-v2/connection-demand';
 
 export type { DeviceV2AccountState } from '../device-v2/account-client';
 
@@ -26,10 +28,10 @@ export class DeviceV2Service {
   private accountId?: string;
 
   constructor(
-    http: HttpClient,
-    data: DataService,
+    private readonly http: HttpClient,
+    private readonly data: DataService,
     zone: NgZone,
-    manifestCache: DeviceV2ManifestCache,
+    private readonly manifestCache: DeviceV2ManifestCache,
   ) {
     this.client = new DeviceV2AccountClient(
       () => firstValueFrom(http.get<AccountConnectionResponse>(API.ACCOUNT.CONNECTION, {
@@ -74,6 +76,22 @@ export class DeviceV2Service {
     return this.client.ensureReady(logicalDeviceId);
   }
 
+  waitUntilReady(logicalDeviceId: string, signal?: AbortSignal): Promise<void> {
+    return this.client.waitUntilReady(logicalDeviceId, signal);
+  }
+
+  acquireStateInterest(logicalDeviceId: string, signal: AbortSignal): Promise<DeviceV2DemandOwner | undefined> {
+    return this.client.acquireStateInterest(logicalDeviceId, signal);
+  }
+
+  acquireConnectionDemand(logicalDeviceId: string, signal: AbortSignal): Promise<DeviceV2DemandOwner> {
+    return this.client.acquireConnectionDemand(logicalDeviceId, signal);
+  }
+
+  reserveDirectPriority(logicalDeviceId: string, signal: AbortSignal): Promise<DeviceV2DirectOwner> {
+    return this.client.reserveDirectPriority(logicalDeviceId, signal);
+  }
+
   command(logicalDeviceId: string, endpointKey: string, value: unknown): Promise<DeviceV2Ack> {
     return this.client.command(logicalDeviceId, endpointKey, value);
   }
@@ -91,12 +109,33 @@ export class DeviceV2Service {
     return this.client.snapshot(logicalDeviceId);
   }
 
+  async readStoredManifest(logicalDeviceId: string): Promise<DeviceV2Manifest> {
+    const epoch = this.data.sessionEpoch;
+    const response = await firstValueFrom(this.http.get<{
+      status: number;
+      data: DeviceV2Manifest & { logicalDeviceId: string };
+    }>(API.DEVICE_V2.MANIFEST(logicalDeviceId)));
+
+    if (epoch !== this.data.sessionEpoch) throw new Error('登录状态已变化');
+    if (response.status !== 200 || response.data?.logicalDeviceId !== logicalDeviceId
+      || !this.manifestCache.valid(response.data)) {
+      throw new Error('设备能力快照无效');
+    }
+
+    const live = this.store.snapshot(logicalDeviceId);
+    const manifest = live.manifestAccepted && live.manifest ? live.manifest : response.data;
+
+    this.manifestCache.save(logicalDeviceId, manifest);
+
+    return manifest;
+  }
+
   private watchInventoryPresence(data: DataService): void {
     const logicalDeviceIds = data.device.list.filter(logicalDeviceId => {
       const device = data.device.dict[logicalDeviceId];
       return device?.config?.mode === 'bbp2'
         && device.config.disabled !== true
-        && !/^ble_[A-Za-z0-9_-]{22}$/.test(logicalDeviceId);
+        && device.cloudEnabled === true;
     });
     for (const logicalDeviceId of logicalDeviceIds) {
       const presence = data.device.dict[logicalDeviceId]?.data;

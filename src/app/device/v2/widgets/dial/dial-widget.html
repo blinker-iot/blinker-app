@@ -1,0 +1,38 @@
+@if (showTitle) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ title }}</span>
+  </div>
+}
+
+<div class="dl-wrap">
+  <div class="dl-box" [style.--vh]="viewHeight">
+    <svg class="dl-svg" [attr.viewBox]="'0 0 220 ' + viewHeight" role="slider" tabindex="0" [attr.aria-label]="title"
+      [attr.aria-valuemin]="min" [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" [style.--thick]="thickness"
+      (pointerdown)="turnStart($event)" (pointermove)="turnMove($event)" (pointerup)="turnEnd($event)"
+      (pointercancel)="turnEnd($event)" (keydown)="key($event)">
+      @for (tick of ticks; track $index) {
+        <line class="arc-tick" [class.on]="tick.on" [attr.x1]="tick.x1" [attr.y1]="tick.y1" [attr.x2]="tick.x2" [attr.y2]="tick.y2" />
+      }
+      <path class="arc-track" [attr.d]="track" [attr.stroke-width]="thickness" />
+      @if (level > 0.002) {
+        <path class="arc-prog" [attr.d]="progress" [attr.stroke-width]="thickness" />
+      }
+      <circle class="arc-knob" [attr.cx]="knob.x" [attr.cy]="knob.y" [attr.r]="thickness / 2 + 4" />
+    </svg>
+    <div class="dl-center">
+      <div class="dl-num num"><span [valueTransition]="reading.text">{{ reading.text }}</span><sup>{{ reading.unit }}</sup></div>
+      @if (options.caption) { <div class="dl-sub">{{ options.caption }}</div> }
+    </div>
+  </div>
+</div>
+
+@if (options.showButtons !== false) {
+  <div class="dl-btns">
+    <button type="button" class="rbtn" aria-label="降低" [disabled]="card.disabled || value <= min"
+      (pointerdown)="repeatStart($event, -1)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()"><app-ui-icon name="minus" /></button>
+    <span class="dl-range">{{ min }}–{{ max }}{{ unit }}</span>
+    <button type="button" class="rbtn" aria-label="升高" [disabled]="card.disabled || value >= max"
+      (pointerdown)="repeatStart($event, 1)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()"><app-ui-icon name="plus" /></button>
+  </div>
+}

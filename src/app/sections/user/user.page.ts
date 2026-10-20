@@ -1,9 +1,15 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
+
 import {
   AlertController,
-  IonicModule,
-} from '@ionic/angular';
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import {
   MenuListComponent,
@@ -52,7 +58,16 @@ const ACCOUNT_DELETION_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   templateUrl: './user.page.html',
   styleUrls: ['./user.page.scss'],
   standalone: true,
-  imports: [IonicModule, MenuListComponent, RouterModule],
+  imports: [
+    IonBackButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    MenuListComponent,
+    RouterModule,
+  ],
 })
 export class UserPage implements OnInit, OnDestroy {
   private subscription?: Subscription;

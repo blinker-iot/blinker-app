@@ -1,3 +1,4 @@
+import { DeviceConsoleService, cloudConsole, installConsole } from './device-console.service';
 // 需修复 12.27
 
 import { Injectable } from '@angular/core';
@@ -108,6 +109,7 @@ export class DeviceService {
     private noticeService: NoticeService,
     private toastService: ToastService,
     private deviceUi: DeviceUiPort,
+    private consoles: DeviceConsoleService,
   ) { }
 
   init() {
@@ -480,7 +482,8 @@ export class DeviceService {
     if (device.config.mode === 'bbp2') {
       const id = this.logicalDeviceId(device);
       if (id) this.bindV2Device(device, id);
-      if (id) void this.deviceUi.connect(id).catch((error) => this.handleError(error));
+      // Inventory queries observe subscribed Presence; they never wake every
+      // gateway child. Explicit page/read synchronization owns connection demand.
       return;
     }
     // MQTT设备,且APP已经在该broker中注册
@@ -755,6 +758,13 @@ export class DeviceService {
 
   //saveDeviceConfig后需要调用loadConifg更新本地的config
   saveDeviceConfig(device, deviceConfig) {
+    if (device.config.mode === 'bbp2'
+      && Object.keys(deviceConfig).length > 0
+      && Object.keys(deviceConfig).every(key => ['component', 'panelMode', 'customPanel', 'layouter', 'customName', 'hiddenEndpointKeys', 'image'].includes(key))) {
+      return this.http.patch<{ status: number }>(API.DEVICE_V2.UI_CONFIG(device.deviceName), deviceConfig)
+        .toPromise().then(response => response?.status === 200).catch(() => false);
+    }
+    if (device.config.mode === 'bbp2') return Promise.resolve(false);
     return this.http
       .post(API.DEVICE.SAVE_CONFIG,
         {
@@ -777,6 +787,18 @@ export class DeviceService {
   }
 
   loadDeviceConfig(device) {
+    if (cloudConsole(device) && device.config.isShared) {
+      const epoch = this.dataService.sessionEpoch;
+      return this.consoles.get(device.deviceName).then(record => {
+        if (epoch !== this.dataService.sessionEpoch) return undefined;
+        installConsole(device, record);
+        return { ...record.uiConfig, component: 'DeviceV2' };
+      }).catch(() => undefined);
+    }
+    if (device.config.mode === 'bbp2') {
+      return this.http.get<{ data: Record<string, unknown> }>(API.DEVICE_V2.UI_CONFIG(device.deviceName))
+        .toPromise().then(response => response?.data).catch(() => undefined);
+    }
     return this.http.get(API.DEVICE.LOAD_CONFIG, {
       params: {
         uuid: this.uuid,
@@ -1053,14 +1075,14 @@ export class DeviceService {
       : data;
     if (!this.isRecord(message)) throw new Error('bbp2 指令必须是 JSON 对象');
 
-    if ('get' in message) {
-      await this.deviceUi.connect(logicalDeviceId);
-    }
     const payload = this.isRecord(message['set'])
       ? message['set']
       : message;
-    for (const [key, value] of Object.entries(payload)) {
-      if (key === 'get' || key === 'set' || key === 'rt') continue;
+    const commands = Object.entries(payload).filter(([key]) => !['get', 'set', 'rt'].includes(key));
+    // Only an explicit read may wait for connection preparation. A mixed
+    // get+set must never retain a control operation behind the ready wait.
+    if (!commands.length && 'get' in message) await this.deviceUi.connect(logicalDeviceId);
+    for (const [key, value] of commands) {
       await this.deviceUi.sendCommand(logicalDeviceId, key, value);
     }
   }

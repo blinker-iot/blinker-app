@@ -1,4 +1,4 @@
-@if (loaded) {
+@if (loaded && device) {
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
@@ -7,20 +7,15 @@
     <ion-title>{{ device.config.customName }} {{ 'DEVICE.SETTING' | translate }}</ion-title>
   </ion-toolbar>
 </ion-header>
-} @if (loaded) {
+} @if (loaded && device) {
 <ion-content [fullscreen]="true">
   <main>
     <section class="device-card">
-      <button type="button" class="device-image-button" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice"
+      <button type="button" class="device-image-button" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice || imageSaving"
         (click)="selectIcon()">
         <span class="device-image-shell">
           <b-device-img [filename]="device.config.image"></b-device-img>
         </span>
-        @if (!isSharedDevice) {
-        <span class="image-edit-badge" aria-hidden="true">
-          <i class="fa-light fa-camera"></i>
-        </span>
-        }
       </button>
       <div class="device-summary">
         <!-- <span class="device-kicker">
@@ -33,21 +28,92 @@
         </span> -->
         <div class="device-name-row">
           <h1>{{ device.config.customName }}</h1>
-          @if (!isSharedDevice) {
-          <button type="button" class="rename-button" (click)="changeName()" aria-label="修改设备名称">
+
+          @if (isSharedDevice) {
+          <span class="shared-device-badge" role="img" aria-label="别人共享的设备" title="别人共享的设备">
+            <i class="fa-light fa-share-nodes" aria-hidden="true"></i>
+          </span>
+          } @else {
+          <button type="button" class="rename-button" [disabled]="!canEditDisplay || displayBusy" (click)="changeName()" aria-label="修改设备名称">
             <i class="fa-light fa-pen"></i>
           </button>
           }
+
         </div>
-        <span class="info-copy">
-          <strong>ID: {{ device.id }}</strong>
-        </span>
+        <button type="button" class="device-id" (click)="copyDeviceId()"
+          [title]="device.id || device.deviceName" aria-label="复制设备 ID">
+
+          ID: {{ device.id || device.deviceName }}
+        </button>
       </div>
     </section>
-    @if (canRevealAuthKey && !isSharedDevice) {
+    @if (canEditDisplay) {
+    <section class="display-card">
+      <div class="section-heading"><div><h2>功能名称</h2><p class="help">设置控制页面、自动化和定时共用的名称，不改变设备代码中的 key。</p></div>
+        <button type="button" [disabled]="displayBusy" (click)="loadDisplayMetadata()">{{ displayOpen ? '重新加载' : '设置' }}</button>
+      </div>
+      @if (displayOpen) {
+        <fieldset [disabled]="displayBusy">
+        @for (row of displayRows; track row.key) {
+          <div class="display-field"><label>{{ row.key }}<input maxlength="80" [(ngModel)]="row.displayName" placeholder="功能名称（留空使用原 key）" /></label>
+            @if (row.type === 0) {
+              <div class="boolean-labels"><label>开启 / true<input maxlength="80" [(ngModel)]="row.trueLabel" placeholder="开" /></label>
+                <label>关闭 / false<input maxlength="80" [(ngModel)]="row.falseLabel" placeholder="关" /></label></div>
+            }
+          </div>
+        } @empty { <p class="help">还没有设备能力缓存，请先打开控制页获取能力，再重新加载。</p> }
+        </fieldset>
+        <button class="display-save" type="button" [disabled]="!canSaveDisplay" (click)="saveDisplayMetadata()">保存功能名称</button>
+      }
+    </section>
+    }
+    @if (displayError) { <p class="error" role="alert">{{ displayError }}</p> }
+    @if (hasDeviceKeyContext && isOwner) {
+    <section class="access-card">
+      <div class="section-heading">
+        <h2>设备 Key</h2>
+        <span>版本 {{ device.credentialVersion }}</span>
+      </div>
+      <div class="key-row">
+        <code [class.revealed]="keyVisible">
+          {{ keyVisible && secretKey ? secretKey : '••••••••••••' }}
+        </code>
+        <div class="key-actions">
+          <button type="button" [disabled]="keyBusy" (click)="toggleKey()"
+            [attr.aria-label]="keyVisible ? '隐藏设备 Key' : '查看设备 Key'">
+            <i class="fa-light" [class.fa-eye]="!keyVisible" [class.fa-eye-slash]="keyVisible"></i>
+          </button>
+          <button type="button" [disabled]="keyBusy" (click)="copyKey()" aria-label="复制设备 Key">
+            <i class="fa-light fa-copy"></i>
+          </button>
+          <button type="button" class="refresh-key" [disabled]="keyBusy" (click)="refreshKey()"
+            aria-label="刷新设备 Key">
+            <i class="fa-light fa-rotate" [class.fa-spin]="keyOperation === 'rotate'"></i>
+          </button>
+        </div>
+      </div>
+
+      @if (keyError) {
+      <p class="error" role="alert">{{ keyError }}</p>
+      }
+
+      <p class="help">刷新后旧 Key 立即失效，需同步更新设备代码。</p>
+    </section>
+
+    @if (supportsGatewayEnrollment) {
+    <section class="reconfigure-card">
+      <div>
+        <h2>添加蓝牙子设备</h2>
+        <p>由当前 Edge Hub 扫描并安全认领附近的 Blinker 蓝牙设备。</p>
+      </div>
+      <button type="button" [disabled]="keyBusy" (click)="startGatewayEnrollment()">
+        开始<i class="fa-light fa-chevron-right"></i>
+      </button>
+    </section>
+    }
+    } @else if (canRevealAuthKey && !isSharedDevice) {
     <section class="info-card">
       <div class="info-row">
-        <span class="info-icon secret"><i class="fa-light fa-key"></i></span>
         <span class="info-copy">
           <small>{{ 'DEVICE.SECRET' | translate }}</small>
           <strong class="secret-value" [class.revealed]="showKey">
@@ -60,10 +126,65 @@
       </div>
     </section>
     }
-    <div class="section-label menu-section-label">设备功能</div>
-    <app-menu-list [detailed]="true" [items]="deviceMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
-    <div class="section-label danger-section-label">设备管理</div>
-    <app-menu-list [detailed]="true" [items]="managementMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
+
+    <button type="button" class="panel-mode-picker" [id]="'panel-mode-' + id" aria-haspopup="dialog"
+      [disabled]="panelModeSaving || panelModeLoading || debugModeSaving" [attr.aria-busy]="panelModeSaving || panelModeLoading">
+      <span class="mode-label">显示模式</span>
+      <span class="mode-current">{{ panelMode === 'custom' ? '自定义模式' : '组件模式' }}</span>
+
+      @if (panelModeSaving || panelModeLoading) {
+        <ion-spinner name="crescent" aria-hidden="true" />
+      } @else {
+        <i class="fa-light fa-chevron-down" aria-hidden="true"></i>
+      }
+
+    </button>
+
+    <ion-popover #modePopover class="panel-mode-popover" [trigger]="'panel-mode-' + id"
+      size="cover" side="bottom" alignment="start" [arrow]="false">
+
+      <ng-template>
+        <ion-list lines="none">
+          <ion-radio-group aria-label="显示模式" [value]="panelMode"
+            (ionChange)="setPanelMode($event.detail.value); modePopover.dismiss()">
+            <ion-item><ion-radio value="normal" labelPlacement="start" justify="space-between">组件模式</ion-radio></ion-item>
+            <ion-item><ion-radio value="custom" labelPlacement="start" justify="space-between"
+              [disabled]="isSharedDevice && !device.config.customPanel">自定义模式</ion-radio></ion-item>
+          </ion-radio-group>
+        </ion-list>
+      </ng-template>
+    </ion-popover>
+    @if (cardEditor?.error()) { <p class="error" role="alert">{{ cardEditor?.error() }}</p> }
+    <section class="menu-group">
+      <h2 class="section-label">设备功能</h2>
+      <app-menu-list [detailed]="true" [items]="deviceMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
+    </section>
+    <section class="menu-group">
+      <h2 class="section-label">设备管理</h2>
+      <app-menu-list [detailed]="true" [items]="managementMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
+    </section>
+    <section class="debug-entry">
+      <span><strong id="debug-mode-label">调试模式</strong><small>查看原始数据与指令</small></span>
+
+      <button class="debug-switch" type="button" role="switch" aria-labelledby="debug-mode-label"
+        [attr.aria-checked]="debugEnabled" [class.on]="debugEnabled" [attr.aria-busy]="debugModeSaving"
+        [disabled]="debugModeSaving || panelModeSaving || panelModeLoading || isSharedDevice"
+        (click)="setDebugMode(!debugEnabled)"><span></span></button>
+    </section>
+
+    @if (hasDeviceKeyContext && isOwner && supportsWifiProvisioning) {
+    <section class="reconfigure-card">
+      <div>
+        <h2>重新配网</h2>
+        <p>只重新写入 Wi-Fi；保留当前设备、控制页面、DeviceKey 和 Direct BLE 控制权。</p>
+      </div>
+      <button type="button" [disabled]="keyBusy" (click)="startReconfigure()">
+        开始<i class="fa-light fa-chevron-right"></i>
+      </button>
+    </section>
+    }
+
   </main>
 </ion-content>
 }
+<home-card-settings />

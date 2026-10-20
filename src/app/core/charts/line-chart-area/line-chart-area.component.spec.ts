@@ -8,6 +8,7 @@ const chartMock = vi.hoisted(() => {
   const remove = vi.fn();
   const areaSeries = { applyOptions, setData };
   const chart = {
+    applyOptions: vi.fn(),
     addSeries: vi.fn(() => areaSeries),
     remove,
     timeScale: vi.fn(() => ({ fitContent })),
@@ -26,6 +27,7 @@ const chartMock = vi.hoisted(() => {
 });
 
 vi.mock('lightweight-charts', () => ({
+  ColorType: { Solid: 'solid' },
   AreaSeries: {},
   createChart: chartMock.createChart,
 }));
@@ -84,5 +86,21 @@ describe('LineChartAreaComponent', () => {
       { time: 1787187600, value: 58 },
     ]);
     component.ngOnDestroy();
+  });
+
+  it('updates canvas colors when the containing device theme changes', async () => {
+    const component = createComponent();
+    const parent = document.createElement('section');
+    parent.append(component.chartContainer.nativeElement);
+    document.body.append(parent);
+    const style = component.chartContainer.nativeElement.style;
+    style.setProperty('--blinker-text-secondary', '#b4c0cd');
+    component.ngAfterViewInit();
+    expect(chartMock.chart.applyOptions).toHaveBeenLastCalledWith(expect.objectContaining({ layout: { textColor: '#b4c0cd' } }));
+    style.setProperty('--blinker-text-secondary', '#526780');
+    parent.setAttribute('data-ui-theme', 'natural');
+    await vi.waitFor(() => expect(chartMock.chart.applyOptions).toHaveBeenLastCalledWith(expect.objectContaining({ layout: { textColor: '#526780' } })));
+    component.ngOnDestroy();
+    parent.remove();
   });
 });

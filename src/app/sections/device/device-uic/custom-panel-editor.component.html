@@ -1,0 +1,86 @@
+<div class="workspace">
+  <section class="workspace-controls generation-form">
+    <div class="theme-select">
+      <span class="panel-label" id="custom-theme-label">界面风格</span>
+      <button class="field-trigger" type="button" [id]="themeTriggerId" aria-haspopup="dialog"
+        aria-labelledby="custom-theme-label" [disabled]="!ready || generating || saving">
+        <span>{{ selectedTheme.name }}</span>
+        <i class="fa-light fa-chevron-down" aria-hidden="true"></i>
+      </button>
+      <ion-popover #themePopover class="field-popover" [trigger]="themeTriggerId"
+        size="cover" side="bottom" alignment="start" [arrow]="false" [showBackdrop]="false" [attr.data-ui-theme]="theme">
+        <ng-template>
+          <ion-radio-group class="field-options" aria-label="界面风格" [value]="theme"
+            (ionChange)="chooseTheme($event.detail.value); themePopover.dismiss()">
+            @for (option of themes; track option.id) {
+              <ion-radio [value]="option.id" labelPlacement="start" justify="space-between">{{ option.name }}</ion-radio>
+            }
+          </ion-radio-group>
+        </ng-template>
+      </ion-popover>
+    </div>
+
+    <label class="panel-label" for="custom-prompt">界面需求 <small>可选</small></label>
+    <div class="prompt-box">
+      <textarea id="custom-prompt" [(ngModel)]="prompt" maxlength="1200" rows="4" [disabled]="!ready || generating || saving"
+        [placeholder]="preview ? '描述想调整的部分，例如：放大常用开关，让数据排列更紧凑' : '例如：顶部展示设备概况，常用开关放大，温度和湿度并排显示'"></textarea>
+      <span>{{ prompt.length }} / 1200</span>
+    </div>
+    <div class="suggestions">
+      @for (suggestion of suggestions; track suggestion) {
+        <button type="button" [disabled]="!ready || generating || saving" (click)="prompt = suggestion">{{ suggestion }}</button>
+      }
+    </div>
+
+    <button class="generate-button" type="button" [disabled]="!ready || generating || saving || device.config.isShared" (click)="generate()">
+      <i [class]="generating ? 'fa-light fa-spinner-third spinning' : 'fa-light fa-wand-magic-sparkles'" aria-hidden="true"></i>
+      {{ generating ? '正在生成…' : preview ? '调整界面' : '生成界面' }}
+    </button>
+
+    @if (error) { <p class="generate-feedback" role="alert">{{ error }}</p> }
+  </section>
+
+  <section class="preview-section" aria-label="界面预览" [attr.aria-busy]="generating">
+    <div class="preview-heading">
+      <span><span class="status-dot"></span>{{ generating ? '正在生成' : '效果预览' }}</span>
+      <app-generation-duration [running]="generating">预览不会发送设备指令</app-generation-duration>
+    </div>
+    <div class="preview-canvas" [attr.data-ui-theme]="theme">
+      <div class="preview-content">
+        <div class="preview-device">
+          <i class="fa-light fa-microchip" aria-hidden="true"></i>
+          <strong>{{ device.config.customName || device.deviceName }}</strong>
+          <span>{{ selectedTheme.name }}</span>
+        </div>
+
+        @if (preview) {
+          <app-custom-panel-frame [document]="preview" [cards]="cards" [theme]="theme" [readOnlyScroll]="true" />
+        } @else {
+          <div class="preview-empty">
+            <i class="fa-light fa-wave-pulse" aria-hidden="true"></i>
+            <strong>{{ ready ? '你的界面将在这里出现' : '正在读取设备信息…' }}</strong>
+            <p>描述你的想法，生成适合这台设备的控制面板。</p>
+          </div>
+        }
+      </div>
+
+      @if (generating) {
+        <div class="preview-loading">
+          <div class="preview-loading-status" role="status" aria-live="polite">
+            <ion-spinner name="crescent" aria-hidden="true" />
+            <span>正在生成界面…</span>
+          </div>
+          <button type="button" (click)="cancel()">取消生成</button>
+        </div>
+      }
+    </div>
+
+    @if (message && !generating) { <p class="generation-summary" role="status">{{ message }}</p> }
+  </section>
+</div>
+
+<footer class="apply-bar">
+  <button type="button" class="apply-button" [disabled]="!canApply" (click)="apply()">
+    {{ saving ? '正在保存…' : '应用这个界面' }} <i class="fa-light fa-arrow-right" aria-hidden="true"></i>
+  </button>
+</footer>

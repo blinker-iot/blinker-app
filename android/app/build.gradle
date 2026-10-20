@@ -28,6 +28,18 @@ android {
     }
 }
 
+// Optional local hardware CA, supplied outside the repository. Only debug
+// consumes this manifest/resource overlay; release never trusts a test CA.
+def localNetworkConfig = providers.environmentVariable('BLINKER_DEBUG_NETWORK_CONFIG_DIR').orNull
+if (localNetworkConfig) {
+    def networkRoot = file(localNetworkConfig)
+    if (!new File(networkRoot, 'AndroidManifest.xml').isFile() || !new File(networkRoot, 'res').isDirectory()) {
+        throw new GradleException('Invalid BLINKER_DEBUG_NETWORK_CONFIG_DIR')
+    }
+    android.sourceSets.debug.manifest.srcFile new File(networkRoot, 'AndroidManifest.xml')
+    android.sourceSets.debug.res.srcDir new File(networkRoot, 'res')
+}
+
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
@@ -40,6 +52,7 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    implementation 'org.java-websocket:Java-WebSocket:1.6.0'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

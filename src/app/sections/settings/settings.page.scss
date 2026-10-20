@@ -6,26 +6,27 @@ ion-content {
   --background: var(--blinker-bg);
 }
 
-app-hero-card {
-  margin-bottom: 20px;
-}
-
 .section-label {
   margin: 4px 4px 10px;
+
   color: var(--blinker-text-secondary);
+
   font-size: 13px;
+
   letter-spacing: 0.02em;
 }
 
 .settings-card {
   padding: 18px;
+
   border: 1px solid var(--blinker-border);
   border-radius: var(--blinker-radius-card);
   background: var(--blinker-surface);
   box-shadow: var(--blinker-shadow-soft);
 }
 
-.appearance-section-label {
+.appearance-section-label,
+.service-region-section-label {
   margin-top: 22px;
 }
 
@@ -38,66 +39,87 @@ app-hero-card {
 
   h2 {
     margin: 0 0 5px;
+
     color: var(--blinker-text-primary);
+
     font-size: 17px;
     font-weight: 600;
   }
 
   p {
     margin: 0;
+
     color: var(--blinker-text-secondary);
+
     font-size: 13px;
+
     line-height: 1.5;
   }
 
   > i {
     padding-top: 2px;
+
     color: var(--ion-color-primary);
+
     font-size: 22px;
   }
 }
 
 .theme-options {
   display: grid;
+
   grid-template-columns: repeat(2, minmax(0, 1fr));
+
   gap: 8px;
 }
 
 .language-options {
   display: grid;
+
   grid-template-columns: repeat(2, minmax(0, 1fr));
+
   gap: 8px;
 }
 
 .language-option {
   appearance: none;
+
   width: 100%;
+
   display: grid;
+
   grid-template-columns: 20px minmax(0, 1fr) 14px;
+
   align-items: center;
   gap: 7px;
   min-height: 42px;
   padding: 7px 8px;
+
   border: 1px solid var(--blinker-border);
   border-radius: var(--blinker-radius-control);
   background: var(--blinker-bg-elevated);
   color: var(--blinker-text-primary);
+
   font-size: 10px;
+
   line-height: 1.25;
+
   font-weight: 600;
   text-align: start;
   cursor: pointer;
+
   transition:
     transform 120ms cubic-bezier(.2, 0, 0, 1),
     border-color 180ms cubic-bezier(.2, 0, 0, 1),
     background-color 180ms cubic-bezier(.2, 0, 0, 1),
     box-shadow 180ms cubic-bezier(.2, 0, 0, 1);
-
   img {
     width: 20px;
     height: 20px;
     object-fit: cover;
+
     border: 1px solid var(--blinker-border);
+
     border-radius: 50%;
   }
 
@@ -136,24 +158,30 @@ app-hero-card {
 
 .theme-option {
   appearance: none;
+
   width: 100%;
+
   display: grid;
+
   grid-template-columns: minmax(0, 1fr) 18px;
+
   align-items: center;
   gap: 8px;
   padding: 10px;
+
   border: 1px solid var(--blinker-border);
   border-radius: var(--blinker-radius-control);
   background: var(--blinker-bg-elevated);
   color: var(--blinker-text-primary);
+
   text-align: left;
   cursor: pointer;
+
   transition:
     transform 120ms cubic-bezier(.2, 0, 0, 1),
     border-color 180ms cubic-bezier(.2, 0, 0, 1),
     background-color 180ms cubic-bezier(.2, 0, 0, 1),
     box-shadow 180ms cubic-bezier(.2, 0, 0, 1);
-
   &:active {
     transform: scale(0.99);
   }
@@ -174,11 +202,12 @@ app-hero-card {
   position: relative;
   grid-column: 1 / -1;
   width: 100%;
+
   height: 64px;
   overflow: hidden;
   border: 1px solid;
   border-radius: 10px;
-  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: none;
 
   span {
     position: absolute;
@@ -213,6 +242,7 @@ app-hero-card {
     right: 0;
     bottom: 0;
     left: 0;
+
     height: 11px;
     display: flex;
     align-items: center;
@@ -234,8 +264,8 @@ app-hero-card {
 .preview-light {
   border-color: #d9e0ea;
   background: #f2f5fb;
-  color: #9aa4b2;
 
+  color: #9aa4b2;
   .preview-header { background: #111827; }
   .preview-card { background: #ffffff; }
   .preview-nav { background: #ffffff; }
@@ -244,6 +274,7 @@ app-hero-card {
 .preview-dark {
   border-color: #3a475e;
   background: #0b1a35;
+
   color: #8192ac;
 
   .preview-header { background: #e9eef7; }
@@ -261,24 +292,30 @@ app-hero-card {
 .option-title {
   display: flex;
   align-items: center;
+
   color: var(--blinker-text-primary);
+
   font-size: 14px;
   font-weight: 600;
 
   i {
     width: 20px;
+
     color: var(--ion-color-primary);
   }
 }
 
 .option-description {
   color: var(--blinker-text-secondary);
+
   font-size: 10px;
+
   line-height: 1.4;
 }
 
 .selection-icon {
   color: var(--blinker-border);
+
   font-size: 18px;
 }
 
@@ -286,14 +323,43 @@ app-hero-card {
   color: var(--ion-color-primary);
 }
 
-.saved-hint {
-  display: flex;
-  align-items: flex-start;
+.service-region-options {
+  display: grid;
   gap: 8px;
-  margin: 14px 5px 0;
-  color: var(--blinker-text-tertiary);
-  font-size: 12px;
-  line-height: 1.5;
+}
+
+.service-region-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+
+  border: 1px solid var(--blinker-border);
+  border-radius: var(--blinker-radius-control);
+  background: var(--blinker-bg-elevated);
+
+  font-size: 14px;
+  cursor: pointer;
+
+  input {
+    width: 16px;
+    height: 16px;
+
+    margin: 0;
+
+    accent-color: var(--ion-color-primary);
+  }
+
+  &:has(input:focus-visible) {
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: 2px;
+  }
+
+  &.selected {
+    border-color: var(--ion-color-primary);
+    background: var(--blinker-surface-active);
+  }
 }
 
 @media (max-width: 360px) {

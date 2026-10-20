@@ -1,4 +1,7 @@
 .rangebox {
+    box-sizing: border-box;
+    min-width: 0;
+    flex: 1 1 0;
     width: 100%;
     height: 100%;
     display: flex;
@@ -30,11 +33,16 @@
         top: 0.5rem;
         font-size: 0.7rem;
         color: var(--blinker-text-secondary);
-        width: 90%;
+        left: 12px;
+        right: 12px;
+        gap: 8px;
         display: flex;
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
+
+        span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        span:last-child { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
     }
 }
 
@@ -44,6 +52,8 @@
     .textbox {
         position: absolute;
         top: 0;
+        left: 0;
+        right: auto;
         color: var(--blinker-text-primary);
         display: flex;
         height: 100%;
@@ -106,18 +116,26 @@
 }
 
 .flex-row-box {
+    --widget-direction: row;
     display: flex;
     align-items: center;
 }
 
 .jj-box {
     color: var(--blinker-text-secondary);
-    width: 50px;
+    flex: 0 0 44px;
+    width: 44px;
     height: 100%;
     display: flex;
     flex-direction: column;
 
     .jj-btn {
+        width: 100%;
+        padding: 0;
+        background: var(--blinker-surface-muted);
+        color: var(--blinker-text-primary);
+        border: 0;
+        cursor: pointer;
         height: 50%;
         display: flex;
         justify-content: center;
@@ -125,6 +143,8 @@
         i {
             font-size: 16px;
         }
+        &:disabled { color: var(--blinker-text-tertiary); opacity: 0.45; cursor: default; }
+        &:focus-visible { outline: 2px solid var(--ion-color-primary); outline-offset: -3px; }
     }
 }
 
@@ -132,4 +152,5 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    .jj-btn { height: 100%; }
 }

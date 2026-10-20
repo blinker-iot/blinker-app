@@ -9,13 +9,6 @@
 
 <ion-content fullscreen="true">
   <main>
-    <app-hero-card
-      iconClass="fa-light fa-server"
-      eyebrow="SELF-HOSTED SERVICE"
-      heading="连接你的服务器"
-      description="保存独立的服务器地址和访问密钥，供自建服务功能使用。"
-    />
-
     <div class="section-label">连接配置</div>
     <form class="server-form" (ngSubmit)="save()" novalidate>
       <div class="field" [class.field-invalid]="addressError">

@@ -1,0 +1,24 @@
+@if (showTitle) {
+  <div class="hd">
+    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    <span class="hd-t">{{ title }}</span>
+  </div>
+}
+
+<div class="modes" [class]="style" role="radiogroup" [attr.aria-label]="title"
+  [style.grid-template-columns]="style === 'tiles' ? 'repeat(' + (choices.length || 1) + ', minmax(0, 1fr))' : null">
+  @for (choice of choices; track choice.label) {
+    <button type="button" class="mode" role="radio" [class.on]="choice.label === current" [class.toned]="choice.tone"
+      [style.--c]="choice.tone ? 'var(--ui-' + choice.tone + ')' : null"
+      [attr.aria-checked]="choice.label === current" [disabled]="card.disabled" (click)="pick(choice.label)">
+      @if (showIcons && choice.icon) {
+        @if (style === 'tiles') {
+          <span class="mode-ico"><app-ui-icon [name]="choice.icon" /></span>
+        } @else {
+          <app-ui-icon class="mi" [name]="choice.icon" />
+        }
+      }
+      <span>{{ choice.label }}</span>
+    </button>
+  }
+</div>

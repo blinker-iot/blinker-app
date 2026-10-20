@@ -1,197 +1,187 @@
-import { Component, ViewChildren, QueryList, ElementRef } from '@angular/core';
-
-import { AlertController, IonicModule } from '@ionic/angular';
-import { TranslatePipe } from '@ngx-translate/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Router } from '@angular/router';
+
+import {
+  AlertController,
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
+
 import { MenuListComponent } from 'src/app/core/components/menu-list/menu-list';
 import { MenuItemComponent } from 'src/app/core/components/menu-list/menu-item/menu-item';
+import { OrderData } from 'src/app/core/model/data.model';
 import { DataService } from 'src/app/core/services/data.service';
-import { RoomService } from '../room.service';
-import { NoticeService } from 'src/app/core/services/notice.service';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
+import { RoomService, roomErrorMessage } from '../room.service';
 
 @Component({
   selector: 'room-manager',
   templateUrl: 'room-manager.html',
   styleUrls: ['room-manager.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
-    IonicModule,
-    TranslatePipe,
-    MenuListComponent,
-    MenuItemComponent,
-    HeroCardComponent,
+    IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar,
+    MenuListComponent, MenuItemComponent,
   ],
 })
-export class RoomManagerPage {
-  @ViewChildren('sortbox') sortbox: QueryList<ElementRef>;
 
+export class RoomManagerPage {
   loaded = false;
-  alert;
+  saving = false;
   editMode = false;
-  oldRoomData;
+  error = '';
   defaultBackHref = '/home/device';
 
-  get roomData() {
-    return this.dataService.room;
-  }
+  private revision = 0;
+  private sessionEpoch = -1;
 
-  get roomDataDict() {
-    return this.dataService.room.dict;
-  }
-
-  get roomDataList() {
+  get roomDataList(): string[] {
     return this.dataService.room.list;
   }
 
-  set roomDataList(list) {
-    this.dataService.room.list = list;
+  get roomDataDict(): Record<string, string[]> {
+    return this.dataService.room.dict;
   }
 
   constructor(
-    private router: Router,
-    private roomService: RoomService,
-    private alertCtrl: AlertController,
-    private noticeService: NoticeService,
-    private dataService: DataService
+    private readonly router: Router,
+    private readonly roomService: RoomService,
+    private readonly alertCtrl: AlertController,
+    private readonly dataService: DataService,
   ) {
-    const navigation = this.router.getCurrentNavigation();
-    const stateBackHref = navigation?.extras.state?.['backHref'];
-    const previousHref = navigation?.previousNavigation?.finalUrl?.toString();
+    const state = this.router.getCurrentNavigation()?.extras.state;
 
-    if (typeof stateBackHref === 'string') {
-      this.defaultBackHref = stateBackHref;
-    } else if (previousHref) {
-      this.defaultBackHref = previousHref;
+    if (typeof state?.['backHref'] === 'string') this.defaultBackHref = state['backHref'];
+  }
+
+  async ionViewDidEnter(): Promise<void> {
+    await this.load();
+  }
+
+  async load(): Promise<void> {
+    this.loaded = false;
+    this.error = '';
+
+    try {
+      const snapshot = await this.roomService.load();
+
+      this.revision = snapshot.revision;
+      this.sessionEpoch = this.dataService.sessionEpoch;
+      this.loaded = true;
+    } catch (error) {
+      this.error = roomErrorMessage(error);
     }
   }
 
-  subscription;
-  ngOnInit() {
-    this.ensureRoomData();
-    this.loaded = true;
-    this.oldRoomData = JSON.stringify(this.roomData);
-    this.subscription = this.dataService.userDataLoader.subscribe((loaded) => {
-      if (loaded) {
-        this.ensureRoomData();
-        this.fixRoomData();
-        this.oldRoomData = JSON.stringify(this.roomData);
-        this.loaded = loaded;
-      }
-    });
+  switchMode(): void {
+    if (!this.saving) this.editMode = !this.editMode;
   }
 
-  // 退出页面时保存数据
-  ngOnDestroy() {
-    this.subscription?.unsubscribe();
-    if (this.oldRoomData == JSON.stringify(this.roomData)) return;
-    this.saveConfig();
-  }
+  async addRoom(): Promise<void> {
+    if (!this.loaded || this.saving) return;
 
-  // 修复早起版本造成的数据错误
-  fixRoomData() {
-    Object.keys(this.roomDataDict).forEach((key) => {
-      if (key == 'undefined') delete this.roomDataDict['undefined'];
-    });
-  }
-
-  switchMode() {
-    this.editMode = !this.editMode;
-  }
-
-  async addRoom() {
-    if (this.roomDataList.length > 98) {
-      this.noticeService.showToast('tooManyRooms');
-      return;
-    }
-    this.alert = await this.alertCtrl.create({
-      header: '新建房间',
-      subHeader: '请设置新房间名称',
-      inputs: [
-        { name: 'newRoomName', value: '新的房间', placeholder: '新的房间' },
-      ],
+    const alert = await this.alertCtrl.create({
+      header: '新建区域',
+      inputs: [{ name: 'name', placeholder: '区域名称', attributes: { maxlength: 10 } }],
       buttons: [
+        { text: '取消', role: 'cancel' },
         {
-          text: '取消',
-          handler: (data) => {
-            console.log('Cancel clicked');
-          },
-        },
-        {
-          text: '确认',
-          handler: (data) => {
-            if (data.newRoomName.length == 0) return;
-            if (data.newRoomName.length > 10) {
-              this.noticeService.showToast('tooLongRoomName');
-              return;
+          text: '创建',
+          handler: async (data) => {
+            const name = String(data.name ?? '').trim();
+
+            const invalid = !name ? '请输入区域名称。'
+              : name.length > 10 ? '区域名称最多 10 个字。'
+              : this.roomDataList.includes(name) ? '该区域已存在。'
+              : ['__proto__', 'constructor', 'prototype'].includes(name) ? '请使用其他区域名称。'
+              : this.roomDataList.length >= 99 ? '最多创建 99 个区域。' : '';
+
+            if (invalid) {
+              alert.message = invalid;
+
+              return false;
             }
-            if (this.roomIsExist(data.newRoomName)) {
-              this.noticeService.showToast('sameRoomName');
-              return;
+
+            const draft = structuredClone(this.dataService.room);
+
+            draft.list.push(name);
+
+            draft.dict[name] = [];
+
+            if (!await this.save(draft)) {
+              alert.message = this.error;
+
+              return false;
             }
-            this.newRoom(data.newRoomName);
-            this.editRoom(data.newRoomName);
+
+            this.editRoom(name);
+
+            return true;
           },
         },
       ],
     });
-    this.alert.present();
+
+    await alert.present();
   }
 
-  editRoom(roomName) {
-    this.router.navigate(['room-manager', roomName]);
+  editRoom(name: string): void {
+    if (!this.saving) void this.router.navigate(['room-manager', name]);
   }
 
-  roomIsExist(roomName) {
-    if (this.roomDataList.indexOf(roomName) > -1) return true;
-    return false;
-  }
-
-  newRoom(roomName) {
-    this.roomDataList.push(roomName);
-    this.roomDataDict[roomName] = [];
-  }
-
-  async delRoomAlert(roomName) {
-    this.alert = await this.alertCtrl.create({
-      header: '确定要删除该房间？',
-      subHeader: '房间内的设备不会被删除',
+  async delRoomAlert(name: string): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: '删除区域？',
+      message: '区域内的设备不会被删除。',
       buttons: [
+        { text: '取消', role: 'cancel' },
         {
-          text: '取消',
-          handler: (data) => {
-            console.log('Cancel clicked');
-          },
-        },
-        {
-          text: '确认',
-          handler: (data) => {
-            this.delRoom(roomName);
+          text: '删除',
+          role: 'destructive',
+          handler: async () => {
+            const draft = structuredClone(this.dataService.room);
+
+            draft.list = draft.list.filter(room => room !== name);
+
+            delete draft.dict[name];
+
+            return this.save(draft);
           },
         },
       ],
     });
-    this.alert.present();
+
+    await alert.present();
   }
 
-  delRoom(roomName) {
-    let index = this.roomDataList.indexOf(roomName);
-    if (index > -1) {
-      this.roomDataList.splice(index, 1);
-    }
-    delete this.roomDataDict[roomName];
+  async sortChange(order: string[]): Promise<void> {
+    if (JSON.stringify(order) === JSON.stringify(this.roomDataList)) return;
+
+    await this.save({ list: order, dict: structuredClone(this.roomDataDict) });
   }
 
-  saveConfig() {
-    this.roomService.saveData(this.roomData);
-  }
+  private async save(draft: OrderData): Promise<boolean> {
+    if (this.saving) return false;
 
-  sortChange(event) {
-    this.roomDataList = event;
-  }
+    this.saving = true;
+    this.error = '';
 
-  private ensureRoomData(): void {
-    if (!this.dataService.room) {
-      this.dataService.room = { list: [], dict: {} };
+    try {
+      const snapshot = await this.roomService.saveData(draft, this.revision, this.sessionEpoch);
+
+      this.revision = snapshot.revision;
+
+      return true;
+    } catch (error) {
+      this.error = roomErrorMessage(error);
+
+      return false;
+    } finally {
+      this.saving = false;
     }
   }
 }

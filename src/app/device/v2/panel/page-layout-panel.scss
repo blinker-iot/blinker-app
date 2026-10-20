@@ -1,0 +1,53 @@
+@use '../../../../theme/ui-theme' as theme;
+@use './panel-grid' as grid;
+
+@include grid.layout;
+
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+.panel {
+  @include theme.ui-theme;
+
+  color: var(--ui-ink);
+  font-family: var(--ui-font);
+
+  &[data-ui-theme] {
+    padding: 12px;
+
+    border-radius: calc(var(--ui-radius) + 6px);
+    background: var(--ui-bg);
+  }
+}
+
+
+.cell.selected > :first-child {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 3px;
+}
+
+:host-context([data-ui-theme='electronic']) .cell.selected > :first-child { outline: 1px dashed var(--ui-focus); }
+
+.cell-error {
+  margin: 0 6px;
+
+  color: var(--ui-alert);
+
+  font-size: 11px;
+}
+
+.empty {
+  grid-column: 1 / -1;
+
+  color: var(--ui-muted);
+
+  font-size: 13px;
+
+  text-align: center;
+}
+
+@container (max-width: 560px) {
+  @include grid.compact;
+}

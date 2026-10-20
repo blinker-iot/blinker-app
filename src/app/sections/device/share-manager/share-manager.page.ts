@@ -1,18 +1,30 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { parseConsoleLink } from '../../../core/services/device-console.service';
+import { ServiceRegion } from '../../../configs/service-region.config';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { AlertController, IonicModule } from '@ionic/angular';
+
+import {
+  AlertController,
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonRouterLinkWithHref,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
+  NavController,
+} from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
-
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
-import { HeroCardComponent } from 'src/app/core/components/hero-card/hero-card.component';
-import {
-  TabSelectorComponent,
-  TabSelectorOption,
-} from 'src/app/core/components/tab-selector/tab-selector.component';
 import { ShareDate } from 'src/app/core/model/data.model';
+import { DeviceV2PendingInvitation } from 'src/app/core/model/response.model';
 import { DataService } from 'src/app/core/services/data.service';
 import { DeviceV2SharingService } from 'src/app/core/services/device-v2-sharing.service';
+import { DeviceV2ShareInvitationService } from 'src/app/core/services/device-v2-share-invitation.service';
+import { PublicConsoleBookmarksService } from 'src/app/core/services/public-console-bookmarks.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
 import { UserService } from 'src/app/core/services/user.service';
 
@@ -22,20 +34,39 @@ import { UserService } from 'src/app/core/services/user.service';
   templateUrl: './share-manager.page.html',
   styleUrls: ['./share-manager.page.scss'],
   imports: [
-    IonicModule,
+    IonBackButton,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonRouterLinkWithHref,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
     RouterModule,
     TranslatePipe,
     BDeviceImgComponent,
-    HeroCardComponent,
-    TabSelectorComponent,
   ],
 })
+
 export class ShareManagerPage implements OnInit, OnDestroy {
   loaded = false;
+
   tab: 'sharing' | 'received' = 'sharing';
   busyDeviceId = '';
+  loadError = '';
+  private loadGeneration = 0;
+  pendingInvitations: DeviceV2PendingInvitation[] = [];
 
+  invitationCursor: string | null = null;
+  invitationsLoading = false;
+  invitationError = '';
+  private inboxGeneration = 0;
+  private inboxEpoch = -1;
   private deviceSubscription?: Subscription;
+  private authSubscription?: Subscription;
+
+  get authenticated(): boolean { return !!this.dataService.auth?.accessToken; }
 
   get deviceDataDict() {
     return this.dataService.device?.dict ?? {};
@@ -55,47 +86,110 @@ export class ShareManagerPage implements OnInit, OnDestroy {
     return this.shareData.received;
   }
 
-  get sharedByMeCount(): number {
-    return Object.values(this.shareData.byDevice).reduce(
-      (total, access) => total + access.shares.filter(
-        (share) => share.state === 'active',
-      ).length,
-      0,
-    );
-  }
-
-  get shareTabs(): readonly TabSelectorOption[] {
-    return [
-      { value: 'sharing', label: '我的共享', icon: 'fa-light fa-share-nodes' },
-      {
-        value: 'received',
-        label: '接收的设备',
-        icon: 'fa-light fa-inbox-in',
-        badge: this.receivedDevices.length || null,
-      },
-    ];
-  }
-
   constructor(
     private readonly sharing: DeviceV2SharingService,
     private readonly dataService: DataService,
     private readonly userService: UserService,
     private readonly alerts: AlertController,
     private readonly notices: NoticeService,
+    private readonly invitation: DeviceV2ShareInvitationService,
+    private readonly nav: NavController,
+    readonly bookmarks: PublicConsoleBookmarksService,
+    private readonly cd: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
+    if (!this.authenticated) this.tab = 'received';
+
+    this.authSubscription = this.dataService.authDataChanged.subscribe(() => {
+      this.clearInbox();
+      this.loadGeneration++;
+
+      if (!this.authenticated) this.tab = 'received';
+
+      void this.loadShares();
+      this.cd.markForCheck();
+    });
+
     this.deviceSubscription = this.dataService.deviceDataLoader.subscribe((loaded) => {
       if (loaded) void this.loadShares();
     });
   }
 
   ngOnDestroy(): void {
+    this.loadGeneration++;
+    this.clearInbox();
     this.deviceSubscription?.unsubscribe();
+    this.authSubscription?.unsubscribe();
   }
 
   changeTab(tab: string): void {
     if (tab === 'sharing' || tab === 'received') this.tab = tab;
+  }
+
+  ionViewWillEnter(): void {
+    if (!this.authenticated) this.tab = 'received';
+
+    void this.bookmarks.load();
+    void this.loadShares();
+  }
+
+  login(): void {
+    void this.nav.navigateForward('/login', { queryParams: { returnSharing: '1' } });
+  }
+
+  async removePublicDevice(deviceId: string, region: ServiceRegion): Promise<void> {
+    try {
+      await this.bookmarks.remove(deviceId, region);
+    } catch {
+      await this.notices.showToast('未能移除本机设备，请重试');
+    }
+  }
+
+  openPendingInvitation(invitationId: string): void {
+    if (this.invitation.stageDirected(invitationId)) void this.nav.navigateForward('/share-invitation');
+  }
+
+  private clearInbox(): void {
+    this.inboxGeneration++;
+
+    this.inboxEpoch = this.dataService.sessionEpoch;
+    this.pendingInvitations = [];
+    this.invitationCursor = null;
+    this.invitationError = '';
+    this.invitationsLoading = false;
+  }
+
+  async loadPendingInvitations(more = false): Promise<void> {
+    if (this.inboxEpoch !== this.dataService.sessionEpoch) this.clearInbox();
+    if (!this.dataService.auth?.uuid || (more && (!this.invitationCursor || this.invitationsLoading))) return;
+
+    const epoch = this.dataService.sessionEpoch, generation = ++this.inboxGeneration;
+    const cursor = more ? this.invitationCursor! : undefined;
+
+    this.invitationsLoading = true; this.invitationError = '';
+
+    try {
+      const page = await this.sharing.listPendingInvitations(cursor);
+
+      if (epoch !== this.dataService.sessionEpoch || generation !== this.inboxGeneration) return;
+
+      this.pendingInvitations = more
+        ? [...new Map([...this.pendingInvitations, ...page.items].map(item => [item.invitationId, item])).values()]
+        : page.items;
+
+      this.invitationCursor = page.nextCursor;
+    } catch {
+      if (epoch === this.dataService.sessionEpoch && generation === this.inboxGeneration) {
+        this.invitationError = '待处理邀请暂未刷新，请重试';
+      }
+    } finally {
+      if (epoch === this.dataService.sessionEpoch && generation === this.inboxGeneration) {
+        this.invitationsLoading = false;
+
+        this.cd.markForCheck();
+      }
+    }
   }
 
   activeShareCount(deviceId: string): number {
@@ -110,64 +204,96 @@ export class ShareManagerPage implements OnInit, OnDestroy {
 
   async showAcceptInvitation(): Promise<void> {
     const alert = await this.alerts.create({
-      header: '领取共享设备',
-      message: '输入设备所有者发给你的 43 位单次邀请码。',
-      inputs: [{ name: 'code', type: 'text', placeholder: '共享邀请码' }],
+      header: '粘贴分享链接',
+      message: '控制台链接可直接查看；成员邀请需核对权限后接受。',
+      inputs: [{ name: 'code', type: 'text', placeholder: '分享链接或邀请码' }],
       buttons: [
         { text: '取消', role: 'cancel' },
         {
-          text: '领取',
+          text: '打开',
           handler: (data: { code?: string }) => {
-            void this.acceptInvitation(data.code ?? '');
+            const consoleToken = parseConsoleLink(data.code);
+
+            if (consoleToken) { void this.nav.navigateForward('/s/' + consoleToken); return true; }
+
+            if (!this.invitation.stage(data.code ?? '')) {
+              void this.notices.showToast('分享链接或邀请码格式无效');
+
+              return false;
+            }
+
+            void this.nav.navigateForward(['/share-invitation', this.invitation.code]);
+
+            return true;
           },
         },
       ],
     });
+
     await alert.present();
   }
 
   async leaveShare(logicalDeviceId: string): Promise<void> {
     if (this.busyDeviceId) return;
+
     this.busyDeviceId = logicalDeviceId;
+
     try {
-      await this.sharing.leaveShare(logicalDeviceId);
+      const result = await this.sharing.leaveShare(logicalDeviceId);
+
       await this.userService.getAllInfo();
+
+      await this.notices.showToast(result.realtimeRefreshPending
+        ? '已退出分享，通信权限同步中' : '已退出分享');
     } catch (error) {
       console.error('Failed to leave Device V2 share', error);
       await this.notices.showToast('退出设备共享失败，请稍后重试');
     } finally {
       this.busyDeviceId = '';
+
+      this.cd.markForCheck();
     }
   }
 
-  private async acceptInvitation(code: string): Promise<void> {
-    try {
-      await this.sharing.acceptInvitation(code.trim());
-      await this.userService.getAllInfo();
-      this.tab = 'received';
-      await this.notices.showToast('共享设备已添加');
-    } catch (error) {
-      console.error('Failed to accept Device V2 invitation', error);
-      await this.notices.showToast('邀请码无效、已过期或已被领取');
-    }
-  }
+  async loadShares(): Promise<void> {
+    const generation = ++this.loadGeneration, epoch = this.dataService.sessionEpoch;
 
-  private async loadShares(): Promise<void> {
+    if (!this.authenticated) {
+      this.loaded = true;
+      this.loadError = '';
+
+      this.cd.markForCheck();
+
+      return;
+    }
+
+    void this.loadPendingInvitations();
+
+    this.loadError = '';
+
     try {
-      const [received, ...ownerShares] = await Promise.all([
+      const [received, ...ownerShares] = await Promise.allSettled([
         this.sharing.listReceived(),
         ...this.shareableDeviceList.map((deviceId) => this.sharing.listDevice(deviceId)),
       ]);
+
+      if (generation !== this.loadGeneration || epoch !== this.dataService.sessionEpoch) return;
+
       this.dataService.share = {
-        received,
-        byDevice: Object.fromEntries(
-          ownerShares.map((access) => [access.logicalDeviceId, access]),
-        ),
+        received: received.status === 'fulfilled' ? received.value : this.shareData.received,
+        byDevice: { ...this.shareData.byDevice, ...Object.fromEntries(ownerShares.flatMap(result =>
+          result.status === 'fulfilled' ? [[result.value.logicalDeviceId, result.value]] : [])) },
       };
-    } catch (error) {
-      console.error('Failed to load Device V2 share inventory', error);
+
+      if ([received, ...ownerShares].some(result => result.status === 'rejected')) {
+        this.loadError = '部分分享信息暂未刷新，请重试';
+      }
     } finally {
-      this.loaded = true;
+      if (generation === this.loadGeneration && epoch === this.dataService.sessionEpoch) {
+        this.loaded = true;
+
+        this.cd.markForCheck();
+      }
     }
   }
 }

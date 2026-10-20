@@ -3,9 +3,12 @@ import {
   BleClient,
   BleDevice,
   BleService,
-  ScanMode,
+  BluetoothLe,
   ScanResult,
 } from '@capacitor-community/bluetooth-le';
+import { Capacitor } from '@capacitor/core';
+import { bleScanner } from '../../bluetooth/scan';
+import { BleBootstrapPriorityWindow, startBleBootstrapPriority } from './bootstrap-priority';
 
 import {
   BleApplicationMode,
@@ -20,12 +23,32 @@ const FRAGMENT_MAGIC = 0xb2;
 const FRAGMENT_VERSION = 1;
 const FRAGMENT_HEADER_SIZE = 4;
 const GATT_PACKET_SIZE = 20;
+const GATT_MAX_PACKET_SIZE = 244;
 const MAX_RECORD_SIZE = 1048;
+const GATT_INTER_FRAGMENT_DELAY_MS = 30;
+const GATT_LARGE_PACKET_DELAY_MS = 10;
+const GATT_MTU_PROBE_BUDGET_MS = 250;
+
+// One subsequent acquisition uses ATT20 after an unknown larger-write result.
+// This is bounded, process-local carrier advice, never a logical-device identity
+// or a retry of the failed command. Reconnection still requires Method 2.
+const baselinePacketHints = new Map<string, number>();
+function rememberBaselinePacket(deviceId: string): void {
+  const now = performance.now();
+  for (const [id, expires] of baselinePacketHints) if (expires <= now) baselinePacketHints.delete(id);
+  if (baselinePacketHints.size >= 16) baselinePacketHints.delete(baselinePacketHints.keys().next().value!);
+  baselinePacketHints.set(deviceId, now + 300_000);
+}
 
 export interface BleDirectTarget {
   device: BleDevice;
   profile: BleModeProfile;
+  rssi?: number;
 }
+
+export type BleDirectTargetMatcher = (
+  target: BleDirectTarget,
+) => boolean | Promise<boolean>;
 
 // Family discovery is intentionally narrower than device identity. A scan
 // result is Blinker only when both the frozen service UUID and the versioned
@@ -45,10 +68,35 @@ export function parseBlinkerAdvertisement(
 
 export interface BleDirectRecordLink {
   connect(target: BleDirectTarget): Promise<void>;
-  waitForMode(mode: BleApplicationMode, timeoutMs?: number): Promise<BleDirectTarget>;
+  waitForMode(
+    mode: BleApplicationMode,
+    timeoutMs?: number,
+    matcher?: BleDirectTargetMatcher,
+  ): Promise<BleDirectTarget>;
   sendRecord(record: Uint8Array, writeTimeoutMs?: number): Promise<void>;
   receiveRecord(timeoutMs?: number): Promise<Uint8Array>;
+  // Carrier facts only. The client applies them after an authenticated Hello,
+  // before creating the shared DirectSession receive loop.
+  maxPacketSize?(): Promise<number>;
+  preparePacketNegotiation?(size: number): void;
+  applyPacketSize?(size: number): void;
+  rememberPacketFallback?(): void;
+  // Optional transport-local hint only; must never throw or delay readiness.
+  finishBootstrap?(): void;
   disconnect(): Promise<void>;
+}
+
+// Caller-owned lifetime and policy, independent of MQTT, UI and owner codecs.
+// Acquisition is checked at the native boundary; existing traffic can use the
+// original bounded promise while a new revision is still being negotiated.
+export interface BleDirectConnectionAdmission {
+  readonly signal: AbortSignal;
+  assertAcquire(): void;
+  assertActive(): void;
+  // Notification at actual native acquisition, not scan start.
+  onAcquire?(): void;
+  // Retire logical work immediately; this is NOT a native-release receipt.
+  onClosed?(): void;
 }
 
 export async function discoverBlinkerDevice(
@@ -56,27 +104,45 @@ export async function discoverBlinkerDevice(
   timeoutMs = 15_000,
   excludedDeviceIds: ReadonlySet<string> = new Set(),
   signal?: AbortSignal,
+  matcher?: BleDirectTargetMatcher,
 ): Promise<BleDirectTarget> {
+  const deadline = performance.now() + timeoutMs;
   await initializeBle();
-  return scanFor(mode, timeoutMs, undefined, excludedDeviceIds, signal);
+  if (performance.now() >= deadline) throw Error('BLE_DIRECT_SCAN_TIMEOUT');
+  return scanFor(mode, Math.max(1, Math.ceil(deadline - performance.now())), undefined, excludedDeviceIds, signal, matcher);
 }
 
 export async function discoverBlinkerDevices(
   mode: BleApplicationMode,
   timeoutMs = 2_500,
   signal?: AbortSignal,
+  observed?: (target: BleDirectTarget) => void,
 ): Promise<BleDirectTarget[]> {
+  const deadline = performance.now() + timeoutMs;
   await initializeBle();
-  return scanForAll(mode, timeoutMs, signal);
+  if (performance.now() >= deadline) throw Error('BLE_SCAN_DEADLINE');
+  return scanForAll(mode, Math.max(1, Math.ceil(deadline - performance.now())), signal, observed);
 }
+
+// A rejected native close is unknown physical capacity, across all record
+// link instances in this process. Do not clear it on account/page replacement.
+let nativeReleaseFailure: Error | undefined;
 
 export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
   private target?: BleDirectTarget;
-  private readonly packetSize = GATT_PACKET_SIZE;
+  private packetSize = GATT_PACKET_SIZE;
+  private receivePacketSize = GATT_PACKET_SIZE;
+  private availablePacketSize = GATT_PACKET_SIZE;
+  private baselineOnly = false;
+  private sending = false;
   private writeWithoutResponse = false;
   private frameId = 0;
   private connected = false;
   private disconnected = false;
+  private generation = 0;
+  private detachAbort?: () => void;
+  private disconnecting?: Promise<void>;
+  private bootstrapPriority?: BleBootstrapPriorityWindow;
   private reassembler = new FragmentReassembler();
   private readonly records: Uint8Array[] = [];
   private readonly waiters: Array<{
@@ -85,25 +151,56 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
     timer?: ReturnType<typeof setTimeout>;
   }> = [];
 
+  constructor(
+    private readonly admission?: BleDirectConnectionAdmission,
+    private readonly bootstrapPriorityEnabled = false,
+  ) {}
+
   async connect(target: BleDirectTarget): Promise<void> {
     if (this.connected) throw new Error('BLE_DIRECT_ALREADY_CONNECTED');
     validateTarget(target);
+    const generation = ++this.generation;
+    const check = () => {
+      if (nativeReleaseFailure) throw nativeReleaseFailure;
+      this.admission?.signal.throwIfAborted();
+      if (generation !== this.generation) throw new Error('BLE_DIRECT_CONNECT_CANCELLED');
+    };
+    check();
+    await this.disconnecting;
     await initializeBle();
+    check();
+    this.admission?.assertAcquire(); // After all async preparation, immediately before native acquisition.
+    this.disconnecting = undefined;
     this.disconnected = false;
+    this.packetSize = GATT_PACKET_SIZE;
+    this.receivePacketSize = GATT_PACKET_SIZE;
+    this.availablePacketSize = GATT_PACKET_SIZE;
+    this.sending = false;
+    const fallbackUntil = baselinePacketHints.get(target.device.deviceId);
+    this.baselineOnly = fallbackUntil !== undefined && fallbackUntil > performance.now();
+    baselinePacketHints.delete(target.device.deviceId);
     this.target = {
       device: { ...target.device },
-      profile: { ...target.profile, setupSessionLocator: target.profile.setupSessionLocator.slice() },
+      profile: { ...target.profile, modeLocator: target.profile.modeLocator.slice() },
     };
+    const abort = () => { void this.disconnect().catch(() => undefined); };
+    this.admission?.signal.addEventListener('abort', abort, { once: true });
+    this.detachAbort = () => this.admission?.signal.removeEventListener('abort', abort);
     try {
+      this.admission?.onAcquire?.();
       await BleClient.connect(
         target.device.deviceId,
-        () => this.onDisconnected(),
+        () => { if (generation === this.generation) this.onDisconnected(); },
         { timeout: 15_000 },
       );
+      check();
       let contract = findGattContract(await BleClient.getServices(target.device.deviceId));
+      check();
       if (!contract) {
         await BleClient.discoverServices(target.device.deviceId);
+        check();
         contract = findGattContract(await BleClient.getServices(target.device.deviceId));
+        check();
       }
       if (!contract) throw new Error('BLE_DIRECT_GATT_CONTRACT_INVALID');
       this.writeWithoutResponse = !contract.receive.properties.write
@@ -112,12 +209,34 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
         target.device.deviceId,
         BLINKER_BLE_SERVICE_UUID,
         BLINKER_BLE_TRANSMIT_UUID,
-        value => this.onFragment(new Uint8Array(
-          value.buffer, value.byteOffset, value.byteLength,
-        ).slice()),
+        value => {
+          if (generation === this.generation) this.onFragment(new Uint8Array(
+            value.buffer, value.byteOffset, value.byteLength,
+          ).slice());
+        },
       );
+      check();
       this.connected = true;
+      if (this.bootstrapPriorityEnabled && Capacitor.getPlatform() === 'android') {
+        this.bootstrapPriority = startBleBootstrapPriority(
+          // BleClient puts priority requests in the same JS queue as GATT I/O.
+          // Use the exported native plugin for this independent, nonblocking
+          // Android hint; never disable or replace the normal GATT queue.
+          priority => BluetoothLe.requestConnectionPriority({
+            deviceId: target.device.deviceId, connectionPriority: priority,
+          }),
+          () => generation === this.generation && this.connected
+            && !this.disconnected && !this.admission?.signal.aborted,
+        );
+      }
     } catch (error) {
+      if (generation !== this.generation || this.admission?.signal.aborted) {
+        // An SDK connect may succeed AFTER cancellation's first disconnect.
+        // Drain that cleanup, then close the late native result before allowing
+        // the service's original opening slot to settle.
+        await this.disconnecting;
+        this.disconnecting = undefined;
+      }
       await this.disconnect().catch(() => undefined);
       throw error;
     }
@@ -126,13 +245,16 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
   async waitForMode(
     mode: BleApplicationMode,
     timeoutMs = 15_000,
+    matcher?: BleDirectTargetMatcher,
   ): Promise<BleDirectTarget> {
     const deviceId = this.target?.device.deviceId;
     if (!deviceId || this.connected) throw new Error('BLE_DIRECT_DISCONNECT_REQUIRED');
-    return scanFor(mode, timeoutMs, deviceId);
+    return scanFor(mode, timeoutMs, deviceId, new Set(), undefined, matcher);
   }
 
   async sendRecord(record: Uint8Array, writeTimeoutMs?: number): Promise<void> {
+    this.admission?.signal.throwIfAborted();
+    this.admission?.assertActive();
     if (!this.connected || !this.target || this.disconnected) {
       throw new Error('BLE_DIRECT_NOT_CONNECTED');
     }
@@ -143,38 +265,110 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
       && (!Number.isInteger(writeTimeoutMs) || writeTimeoutMs < 1)) {
       throw new Error('BLE_DIRECT_WRITE_TIMEOUT_INVALID');
     }
-    this.frameId = this.frameId === 0xff ? 1 : this.frameId + 1;
-    const capacity = this.packetSize - FRAGMENT_HEADER_SIZE;
-    let offset = 0;
-    let index = 0;
-    while (offset < record.length) {
-      const size = Math.min(capacity, record.length - offset);
-      const flags = (offset === 0 ? 1 : 0) | (offset + size === record.length ? 2 : 0);
-      const fragment = new Uint8Array(FRAGMENT_HEADER_SIZE + size);
-      fragment.set([
-        FRAGMENT_MAGIC,
-        (FRAGMENT_VERSION << 4) | flags,
-        this.frameId,
-        index,
+    if (this.sending) throw new Error('BLE_DIRECT_TX_BUSY');
+    this.sending = true;
+    const generation = this.generation;
+    const packetSize = this.packetSize;
+    try {
+      this.frameId = this.frameId === 0xff ? 1 : this.frameId + 1;
+      const fragments = fragmentBleRecord(record, packetSize, this.frameId);
+      for (let index = 0; index < fragments.length; index += 1) {
+        this.admission?.signal.throwIfAborted();
+        this.admission?.assertActive();
+        if (generation !== this.generation || !this.connected || this.disconnected)
+          throw new Error('BLE_DIRECT_NOT_CONNECTED');
+        const fragment = fragments[index]!;
+        const write = this.writeWithoutResponse
+          ? BleClient.writeWithoutResponse.bind(BleClient)
+          : BleClient.write.bind(BleClient);
+        try {
+          await write(
+            this.target.device.deviceId,
+            BLINKER_BLE_SERVICE_UUID,
+            BLINKER_BLE_RECEIVE_UUID,
+            new DataView(fragment.buffer),
+            writeTimeoutMs === undefined ? undefined : { timeout: writeTimeoutMs },
+          );
+        } catch (error) {
+          if (packetSize > GATT_PACKET_SIZE) rememberBaselinePacket(this.target.device.deviceId);
+          // Delivery may have occurred. Never resend a business record at a new
+          // size; retire the link and let a new authenticated session use ATT20.
+          await this.disconnect().catch(() => undefined);
+          throw error;
+        }
+        this.admission?.signal.throwIfAborted();
+        if (generation !== this.generation || !this.connected || this.disconnected)
+          throw new Error('BLE_DIRECT_NOT_CONNECTED');
+        // WRITE_TYPE_DEFAULT confirms controller delivery, not necessarily
+        // consumption by a split-radio RPC host. Preserve that scheduling
+        // slice at20; reduce spacing only after peer packet acceptance.
+        if (index + 1 < fragments.length) {
+          await new Promise(resolve => setTimeout(resolve, packetSize > GATT_PACKET_SIZE
+            ? GATT_LARGE_PACKET_DELAY_MS : GATT_INTER_FRAGMENT_DELAY_MS));
+        }
+      }
+    } finally { if (generation === this.generation) this.sending = false; }
+  }
+
+  async maxPacketSize(): Promise<number> {
+    this.admission?.signal.throwIfAborted();
+    this.admission?.assertActive();
+    if (!this.connected || !this.target || this.disconnected) throw Error('BLE_DIRECT_NOT_CONNECTED');
+    if (this.baselineOnly) return GATT_PACKET_SIZE;
+    const generation = this.generation;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let mtu: number | undefined;
+    try {
+      // Reading the current native fact must not strand BleClient's shared
+      // GATT queue if the optional call outlives this bounded probe.
+      mtu = await Promise.race([
+        BluetoothLe.getMtu({ deviceId: this.target.device.deviceId }).then(result => result.value),
+        new Promise<undefined>(resolve => { timer = setTimeout(() => resolve(undefined), GATT_MTU_PROBE_BUDGET_MS); }),
       ]);
-      fragment.set(record.subarray(offset, offset + size), FRAGMENT_HEADER_SIZE);
-      const write = this.writeWithoutResponse
-        ? BleClient.writeWithoutResponse.bind(BleClient)
-        : BleClient.write.bind(BleClient);
-      await write(
-        this.target.device.deviceId,
-        BLINKER_BLE_SERVICE_UUID,
-        BLINKER_BLE_RECEIVE_UUID,
-        new DataView(fragment.buffer),
-        writeTimeoutMs === undefined ? undefined : { timeout: writeTimeoutMs },
-      );
-      offset += size;
-      index += 1;
-      if (index > 0x100) throw new Error('BLE_DIRECT_FRAGMENT_COUNT');
-    }
+    } catch { /* Unsupported platform/probe failure preserves ATT20. */ }
+    finally { clearTimeout(timer); }
+    this.admission?.signal.throwIfAborted();
+    this.admission?.assertActive();
+    if (generation !== this.generation || !this.connected || this.disconnected)
+      throw Error('BLE_DIRECT_NOT_CONNECTED');
+    this.availablePacketSize = Number.isInteger(mtu) && mtu! >= 23 && mtu! <= 517
+      ? Math.min(mtu! - 3, GATT_MAX_PACKET_SIZE) : GATT_PACKET_SIZE;
+    return this.availablePacketSize;
+  }
+
+  applyPacketSize(size: number): void {
+    this.admission?.signal.throwIfAborted();
+    this.admission?.assertActive();
+    if (!this.connected || this.disconnected) throw Error('BLE_DIRECT_NOT_CONNECTED');
+    if (!Number.isInteger(size) || size < GATT_PACKET_SIZE || size > this.availablePacketSize)
+      throw Error('BLE_DIRECT_PACKET_SIZE_INVALID');
+    if (this.sending || (this.reassembler.active && size > this.receivePacketSize))
+      throw Error('BLE_DIRECT_PACKET_BOUNDARY_REQUIRED');
+    this.receivePacketSize = Math.max(this.receivePacketSize, size);
+    this.packetSize = size;
+  }
+
+  preparePacketNegotiation(size: number): void {
+    this.admission?.signal.throwIfAborted();
+    this.admission?.assertActive();
+    if (!this.connected || this.disconnected) throw Error('BLE_DIRECT_NOT_CONNECTED');
+    if (!Number.isInteger(size) || size < GATT_PACKET_SIZE || size > this.availablePacketSize)
+      throw Error('BLE_DIRECT_PACKET_SIZE_INVALID');
+    if (this.sending || this.reassembler.active) throw Error('BLE_DIRECT_PACKET_BOUNDARY_REQUIRED');
+    // After Method 2, widen RX admission before requesting the change. A
+    // peer can enqueue its next record immediately after the ATT20 Hello,
+    // while this caller is still asynchronously decrypting that response.
+    // TX remains20 until the authenticated answer is accepted.
+    this.receivePacketSize = size;
+  }
+
+  rememberPacketFallback(): void {
+    if (this.target) rememberBaselinePacket(this.target.device.deviceId);
   }
 
   receiveRecord(timeoutMs = 10_000): Promise<Uint8Array> {
+    this.admission?.signal.throwIfAborted();
+    this.admission?.assertActive();
     if (!Number.isInteger(timeoutMs) || timeoutMs < 0) {
       return Promise.reject(new Error('BLE_DIRECT_RECEIVE_TIMEOUT_INVALID'));
     }
@@ -201,23 +395,50 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
   }
 
   async disconnect(): Promise<void> {
+    if (this.disconnecting) return this.disconnecting;
+    ++this.generation;
+    this.cancelBootstrapPriority();
+    this.detachAbort?.();
+    this.detachAbort = undefined;
     const deviceId = this.target?.device.deviceId;
     this.connected = false;
     this.disconnected = true;
+    this.packetSize = GATT_PACKET_SIZE;
+    this.receivePacketSize = GATT_PACKET_SIZE;
+    this.availablePacketSize = GATT_PACKET_SIZE;
+    this.sending = false;
     this.reassembler.reset();
     this.records.length = 0;
     this.rejectWaiters('BLE_DIRECT_DISCONNECTED');
     if (!deviceId) return;
-    await BleClient.stopNotifications(
-      deviceId, BLINKER_BLE_SERVICE_UUID, BLINKER_BLE_TRANSMIT_UUID,
-    ).catch(() => undefined);
-    await BleClient.disconnect(deviceId).catch(() => undefined);
+    this.disconnecting = Promise.resolve().then(async () => {
+      await BleClient.stopNotifications(
+        deviceId, BLINKER_BLE_SERVICE_UUID, BLINKER_BLE_TRANSMIT_UUID,
+      ).catch(() => undefined);
+      await BleClient.disconnect(deviceId);
+    }).catch(() => {
+      nativeReleaseFailure ??= new Error('BLE_DIRECT_NATIVE_RELEASE_FAILED');
+      throw nativeReleaseFailure;
+    });
+    return this.disconnecting;
+  }
+
+  finishBootstrap(): void {
+    this.bootstrapPriority?.finish();
+    this.bootstrapPriority = undefined;
+  }
+
+  private cancelBootstrapPriority(): void {
+    this.bootstrapPriority?.cancel();
+    this.bootstrapPriority = undefined;
   }
 
   private onFragment(fragment: Uint8Array): void {
     if (!this.connected || this.disconnected) return;
     try {
-      const record = this.reassembler.push(fragment, this.packetSize);
+      this.admission?.signal.throwIfAborted();
+      this.admission?.assertActive();
+      const record = this.reassembler.push(fragment, this.receivePacketSize);
       if (!record) return;
       const waiter = this.waiters.shift();
       if (waiter) {
@@ -230,14 +451,21 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
       }
     } catch (error) {
       this.onDisconnected(error instanceof Error ? error.message : 'BLE_DIRECT_FRAGMENT_INVALID');
-      void this.disconnect();
+      void this.disconnect().catch(() => undefined);
     }
   }
 
   private onDisconnected(reason = 'BLE_DIRECT_DISCONNECTED'): void {
+    ++this.generation;
+    this.cancelBootstrapPriority();
     this.connected = false;
     this.disconnected = true;
+    this.packetSize = GATT_PACKET_SIZE;
+    this.receivePacketSize = GATT_PACKET_SIZE;
+    this.availablePacketSize = GATT_PACKET_SIZE;
+    this.sending = false;
     this.reassembler.reset();
+    this.records.length = 0;
     this.rejectWaiters(reason);
   }
 
@@ -248,6 +476,38 @@ export class CapacitorBleDirectRecordLink implements BleDirectRecordLink {
       waiter.reject(new Error(reason));
     }
   }
+}
+
+export function fragmentBleRecord(
+  record: Uint8Array,
+  packetSize: number,
+  frameId: number,
+): Uint8Array[] {
+  if (!(record instanceof Uint8Array) || !record.length || record.length > MAX_RECORD_SIZE
+    || !Number.isInteger(packetSize) || packetSize < GATT_PACKET_SIZE
+    || packetSize > GATT_MAX_PACKET_SIZE
+    || !Number.isInteger(frameId) || frameId < 1 || frameId > 0xff) {
+    throw new Error('BLE_DIRECT_FRAGMENT_INPUT_INVALID');
+  }
+  const capacity = packetSize - FRAGMENT_HEADER_SIZE;
+  const count = Math.ceil(record.length / capacity);
+  if (count > 0x100) throw new Error('BLE_DIRECT_FRAGMENT_COUNT');
+  const fragments: Uint8Array[] = [];
+  for (let index = 0, offset = 0; offset < record.length; index += 1) {
+    const size = Math.min(capacity, record.length - offset);
+    const flags = (offset === 0 ? 1 : 0) | (offset + size === record.length ? 2 : 0);
+    const fragment = new Uint8Array(FRAGMENT_HEADER_SIZE + size);
+    fragment.set([
+      FRAGMENT_MAGIC,
+      (FRAGMENT_VERSION << 4) | flags,
+      frameId,
+      index,
+    ]);
+    fragment.set(record.subarray(offset, offset + size), FRAGMENT_HEADER_SIZE);
+    fragments.push(fragment);
+    offset += size;
+  }
+  return fragments;
 }
 
 function initializeBle(): Promise<void> {
@@ -261,8 +521,11 @@ export class FragmentReassembler {
   private chunks: Uint8Array[] = [];
   private size = 0;
 
+  get active(): boolean { return this.frameId !== 0; }
+
   push(fragment: Uint8Array, packetSize: number): Uint8Array | undefined {
-    if (packetSize <= FRAGMENT_HEADER_SIZE || fragment.length <= FRAGMENT_HEADER_SIZE
+    if (!Number.isInteger(packetSize) || packetSize < GATT_PACKET_SIZE || packetSize > GATT_MAX_PACKET_SIZE
+      || fragment.length <= FRAGMENT_HEADER_SIZE
       || fragment.length > packetSize || fragment[0] !== FRAGMENT_MAGIC
       || (fragment[1]! >> 4) !== FRAGMENT_VERSION
       || (fragment[1]! & 0x0c) !== 0 || fragment[2] === 0) {
@@ -275,9 +538,12 @@ export class FragmentReassembler {
     const index = fragment[3]!;
     const payload = fragment.slice(FRAGMENT_HEADER_SIZE);
     if (start) {
-      if (this.frameId !== 0 || index !== 0) return this.fail();
+      if (index !== 0 || this.frameId === frameId) return this.fail();
+      // A different START retires an incomplete frame (e.g. known
+      // nonconsumption/MTU fallback); payload stride is frozen for this frame.
+      this.reset();
       this.frameId = frameId;
-      this.payloadCapacity = packetSize - FRAGMENT_HEADER_SIZE;
+      this.payloadCapacity = payload.length;
     } else if (this.frameId === 0 || frameId !== this.frameId || index !== this.nextIndex) {
       return this.fail();
     }
@@ -320,78 +586,78 @@ async function scanFor(
   deviceId?: string,
   excludedDeviceIds: ReadonlySet<string> = new Set(),
   signal?: AbortSignal,
+  matcher?: BleDirectTargetMatcher,
 ): Promise<BleDirectTarget> {
-  if (!Number.isInteger(timeoutMs) || timeoutMs < 1) {
-    throw new Error('BLE_DIRECT_SCAN_TIMEOUT_INVALID');
-  }
-  if (signal?.aborted) throw new Error('BLE_DIRECT_SCAN_CANCELLED');
-  return new Promise<BleDirectTarget>((resolve, reject) => {
-    let settled = false;
-    let timer: ReturnType<typeof setTimeout>;
-    let abort = () => undefined;
-    const finish = (target?: BleDirectTarget, error?: Error) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      signal?.removeEventListener('abort', abort);
-      void BleClient.stopLEScan().catch(() => undefined);
-      if (target) resolve(target);
-      else reject(error ?? new Error('BLE_DIRECT_SCAN_FAILED'));
-    };
-    abort = () => finish(undefined, new Error('BLE_DIRECT_SCAN_CANCELLED'));
-    timer = setTimeout(() => finish(undefined, new Error('BLE_DIRECT_SCAN_TIMEOUT')), timeoutMs);
-    signal?.addEventListener('abort', abort, { once: true });
-    void BleClient.requestLEScan({
-      services: [BLINKER_BLE_SERVICE_UUID],
-      allowDuplicates: true,
-      scanMode: ScanMode.SCAN_MODE_LOW_LATENCY,
-    }, result => {
-      if (deviceId && result.device.deviceId !== deviceId) return;
-      if (excludedDeviceIds.has(result.device.deviceId)) return;
+  let selected: BleDirectTarget | undefined, matchError: unknown, matching = false, finished = false;
+  const pending: BleDirectTarget[] = [], evaluated = new Set<string>();
+  const deadline = performance.now() + timeoutMs;
+  const abort = new AbortController();
+  const cancel = () => abort.abort();
+  signal?.addEventListener('abort', cancel, { once: true });
+  if (signal?.aborted) cancel();
+  try {
+    await bleScanner.run([BLINKER_BLE_SERVICE_UUID], timeoutMs, abort.signal, (result, finish) => {
+      if (deviceId && result.device.deviceId !== deviceId || excludedDeviceIds.has(result.device.deviceId)) return;
       const profile = parseBlinkerAdvertisement(result);
-      if (profile?.mode === mode) finish({ device: result.device, profile });
-    }).catch(error => finish(undefined, error instanceof Error ? error : new Error(String(error))));
-  });
+      if (profile?.mode !== mode) return;
+      const target = { device: result.device, profile, rssi: result.rssi };
+      if (!matcher) { selected = target; finish(); return; }
+      const key = scanIdentity(target);
+      // Bound crypto work/candidates even in a crowded or hostile RF environment.
+      if (evaluated.has(key) || evaluated.size >= 64 || pending.length >= 16) return;
+      evaluated.add(key); pending.push(target);
+      if (matching) return;
+      matching = true;
+      void (async () => {
+        try {
+          while (!finished && !abort.signal.aborted && pending.length) {
+            const candidate = pending.shift()!;
+            if (await matcher(candidate)) {
+              if (!finished && !abort.signal.aborted && performance.now() < deadline) { selected = candidate; finish(); }
+              return;
+            }
+          }
+        } catch (error) { if (!finished) { matchError = error; abort.abort(); } }
+        finally { matching = false; }
+      })();
+    });
+    if (!selected) throw Error('BLE_DIRECT_SCAN_TIMEOUT');
+    return selected;
+  } catch (error) {
+    if (matchError) throw matchError;
+    if (error instanceof Error && error.message === 'BLE_SCAN_CANCELLED') throw Error('BLE_DIRECT_SCAN_CANCELLED');
+    throw error;
+  } finally {
+    finished = true; abort.abort(); pending.length = 0;
+    signal?.removeEventListener('abort', cancel);
+  }
 }
 
-async function scanForAll(
-  mode: BleApplicationMode,
-  timeoutMs: number,
-  signal?: AbortSignal,
-): Promise<BleDirectTarget[]> {
-  if (!Number.isInteger(timeoutMs) || timeoutMs < 1) {
-    throw new Error('BLE_DIRECT_SCAN_TIMEOUT_INVALID');
-  }
-  if (signal?.aborted) throw new Error('BLE_DIRECT_SCAN_CANCELLED');
-  return new Promise<BleDirectTarget[]>((resolve, reject) => {
-    const found = new Map<string, BleDirectTarget>();
-    let settled = false;
-    let timer: ReturnType<typeof setTimeout>;
-    let abort = () => undefined;
-    const finish = (error?: Error) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      signal?.removeEventListener('abort', abort);
-      void BleClient.stopLEScan().catch(() => undefined).then(() => {
-        if (error) reject(error);
-        else resolve([...found.values()]);
-      });
-    };
-    abort = () => finish(new Error('BLE_DIRECT_SCAN_CANCELLED'));
-    timer = setTimeout(() => finish(), timeoutMs);
-    signal?.addEventListener('abort', abort, { once: true });
-    void BleClient.requestLEScan({
-      services: [BLINKER_BLE_SERVICE_UUID],
-      allowDuplicates: true,
-      scanMode: ScanMode.SCAN_MODE_LOW_LATENCY,
-    }, result => {
-      const profile = parseBlinkerAdvertisement(result);
-      if (profile?.mode === mode) {
-        found.set(result.device.deviceId, { device: result.device, profile });
-      }
-    }).catch(error => finish(error instanceof Error ? error : new Error(String(error))));
+async function scanForAll(mode: BleApplicationMode, timeoutMs: number, signal?: AbortSignal,
+  observed?: (target: BleDirectTarget) => void): Promise<BleDirectTarget[]> {
+  const found = new Map<string, BleDirectTarget>();
+  await bleScanner.run([BLINKER_BLE_SERVICE_UUID], timeoutMs, signal, result => {
+    const profile = parseBlinkerAdvertisement(result);
+    if (profile?.mode !== mode) return;
+    const target = { device: result.device, profile, rssi: result.rssi }, key = scanIdentity(target);
+    if (found.has(key)) found.set(key, target);
+    else if (found.size < 64) {
+      found.set(key, target);
+      observed?.(target);
+    }
   });
+  return [...found.values()];
+}
+
+function scanIdentity(target: BleDirectTarget): string {
+  if (target.profile.modeLocator.some(byte => byte !== 0)) {
+    return `${target.profile.mode}:${target.profile.wireVersion}:${
+      [...target.profile.modeLocator]
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('')
+    }`;
+  }
+  return `transport:${target.device.deviceId.toLowerCase()}`;
 }
 
 function serviceData(result: Pick<ScanResult, 'serviceData'>): DataView | undefined {

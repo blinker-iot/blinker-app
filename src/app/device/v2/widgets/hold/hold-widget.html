@@ -1,0 +1,11 @@
+<button type="button" class="hw" data-press [attr.aria-pressed]="on" [attr.aria-label]="title + '，' + state"
+  (pointerdown)="press($event)" (pointerup)="release()" (pointercancel)="release()" (lostpointercapture)="release()"
+  (keydown.space)="$event.preventDefault(); start()" (keyup.space)="release()" (blur)="release()"
+  (contextmenu)="$event.preventDefault()">
+  <span class="hw-chip"><app-ui-icon [name]="options.icon || 'power'" /></span>
+  <span class="hw-copy">
+    @if (showTitle) { <span class="hw-t">{{ title }}</span> }
+    <span class="hw-s" [valueTransition]="state">{{ state }}</span>
+  </span>
+  <span class="hw-key" aria-hidden="true"><i></i></span>
+</button>

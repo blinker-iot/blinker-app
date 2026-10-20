@@ -16,6 +16,12 @@ type StateListener = (logicalDeviceId: string, snapshot: DeviceV2TargetSnapshot)
 type EventListener = (event: DeviceV2Event) => void;
 export type DeviceV2PatchResult = 'applied' | 'ignored' | 'resync';
 
+// A complete cache is not permission to control a target known to be unreachable.
+// null means Presence is unknown/unsupported; the server still gates delivery.
+export function isDeviceV2TargetReady(snapshot: DeviceV2TargetSnapshot): boolean {
+  return snapshot.manifestAccepted && snapshot.stateFresh && snapshot.cloudReachable !== false && !snapshot.cloudPresenceLost;
+}
+
 interface ManifestTransfer {
   revision: number;
   fingerprint: string;
@@ -33,6 +39,7 @@ interface StateTransfer {
 }
 
 interface TargetState {
+  cloudPresenceLost?: boolean;
   manifest: DeviceV2Manifest | null;
   manifestAccepted: boolean;
   stateRevision: number | null;
@@ -263,7 +270,7 @@ export class DeviceV2Store {
     return true;
   }
 
-  applyPresence(logicalDeviceId: string, presence: DeviceV2Presence): boolean {
+  applyPresence(logicalDeviceId: string, presence: DeviceV2Presence, subscriptionConfirmed = false): boolean {
     if (typeof presence.cloudReachable !== 'boolean'
       || (presence.cloudLastSeenAt !== null
         && (!Number.isSafeInteger(presence.cloudLastSeenAt) || presence.cloudLastSeenAt < 0))
@@ -271,6 +278,8 @@ export class DeviceV2Store {
       throw new Error('Device presence is invalid');
     }
     const target = this.target(logicalDeviceId);
+    // Inventory snapshots are not proof that a failed live subscription recovered.
+    if (target.cloudPresenceLost && !subscriptionConfirmed) return false;
     const current = target.cloudLastSeenAt;
     if (current !== null && presence.cloudLastSeenAt === null) return false;
     if (current !== null && presence.cloudLastSeenAt !== null) {
@@ -283,8 +292,16 @@ export class DeviceV2Store {
     }
     if (presence.cloudReachable === target.cloudReachable
       && presence.cloudLastSeenAt === target.cloudLastSeenAt) return false;
+    if (presence.cloudReachable && target.cloudReachable === false) {
+      // Keep the page and last values, but a new bearer/projection may have
+      // restarted with a lower revision. Presence is not a fresh State proof.
+      target.stateFresh = false;
+      target.stateTransfer = undefined;
+      target.eventInterrupted = true;
+    }
     target.cloudReachable = presence.cloudReachable;
     target.cloudLastSeenAt = presence.cloudLastSeenAt;
+    target.cloudPresenceLost = undefined;
     this.notify(logicalDeviceId, target);
     return true;
   }
@@ -295,6 +312,7 @@ export class DeviceV2Store {
       target.stateFresh = false;
       target.eventInterrupted = true;
       target.cloudReachable = null;
+      target.cloudPresenceLost = undefined;
       target.manifestTransfer = undefined;
       target.stateTransfer = undefined;
       this.notify(logicalDeviceId, target);
@@ -319,6 +337,12 @@ export class DeviceV2Store {
     }
   }
 
+  losePresence(logicalDeviceId: string): void {
+    const target = this.target(logicalDeviceId);
+    target.cloudReachable = null; target.cloudPresenceLost = true;
+    this.invalidate(logicalDeviceId);
+  }
+
   invalidate(logicalDeviceId: string): void {
     const target = this.target(logicalDeviceId);
     target.manifestAccepted = false;
@@ -327,6 +351,16 @@ export class DeviceV2Store {
     target.manifestTransfer = undefined;
     target.stateTransfer = undefined;
     this.notify(logicalDeviceId, target);
+  }
+
+  invalidateState(logicalDeviceId: string): void {
+    this.markStateStale(logicalDeviceId, this.target(logicalDeviceId));
+  }
+
+  interruptNotifications(logicalDeviceId: string): void {
+    const target = this.target(logicalDeviceId);
+    target.eventInterrupted = true;
+    this.markStateStale(logicalDeviceId, target);
   }
 
   private markStateStale(logicalDeviceId: string, target: TargetState): void {
@@ -365,6 +399,7 @@ export class DeviceV2Store {
 
   private snapshotOf(target: TargetState): DeviceV2TargetSnapshot {
     return {
+      ...(target.cloudPresenceLost ? { cloudPresenceLost: true } : {}),
       manifest: target.manifest ? this.cloneManifest(target.manifest) : null,
       manifestAccepted: target.manifestAccepted,
       stateRevision: target.stateRevision,

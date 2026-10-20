@@ -1,0 +1,22 @@
+<section class="panel" [attr.data-ui-theme]="theme || null" [attr.inert]="interactive ? null : ''">
+
+  @for (card of ordered; track card.widget.widgetId) {
+    <div
+      class="cell" [class.selected]="card.widget.widgetId === selectedId" [attr.data-widget-id]="card.widget.widgetId"
+      [class.full]="card.widget.grid.width === 8" [class.wide]="card.widget.grid.width >= 4"
+      [style.--col]="card.widget.grid.x + 1" [style.--span]="card.widget.grid.width"
+      [style.--row]="card.widget.grid.y + 1" [style.--rows]="card.widget.grid.height"
+
+    >
+      <app-page-widget [card]="card" [interactive]="interactive" (action)="emit(card, $event)" />
+
+      @if (card.error) {
+        <p class="cell-error" role="alert">{{ card.error }}</p>
+      }
+
+    </div>
+  } @empty {
+    <div class="empty"><p>设备未声明可用能力。</p></div>
+  }
+
+</section>

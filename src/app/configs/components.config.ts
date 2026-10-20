@@ -1,13 +1,12 @@
 import { Type } from '@angular/core';
-
 import { Customizer } from '../device/customizer/customizer.component';
-import { Layouter2Component } from '../device/layouter2/layouter2';
+import { LegacyPanelComponent } from '../device/legacy-panel/legacy-panel.component';
 import { TestDeviceDashboardComponent } from '../device/test-dashboard/test-device-dashboard.component';
 import { DeviceV2Page } from '../device/v2/device-v2.page';
 
 export const deviceComponentDict: Record<string, Type<unknown>> = {
-  Layouter2: Layouter2Component,
-  Layouter2Component,
+  Layouter2: LegacyPanelComponent,
+  Layouter2Component: LegacyPanelComponent,
   Customizer,
   DeviceV2: DeviceV2Page,
   TestDashboard: TestDeviceDashboardComponent,

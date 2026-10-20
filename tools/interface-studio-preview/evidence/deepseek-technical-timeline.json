@@ -1,0 +1,92 @@
+[
+  {
+    "ms": 300,
+    "applyDisabled": true,
+    "error": "",
+    "generating": true,
+    "progress": "正在构思布局，收到组件后会立即显示…取消生成",
+    "tiles": [
+      "温度24.6°C",
+      "湿度61%",
+      "电源开关开启",
+      "亮度65%",
+      "refresh 执行",
+      "label客厅"
+    ]
+  },
+  {
+    "ms": 5615,
+    "applyDisabled": true,
+    "error": "",
+    "generating": true,
+    "progress": "已编排 1 个组件，画布持续更新中…取消生成",
+    "tiles": [
+      "温度24.6°C"
+    ]
+  },
+  {
+    "ms": 5792,
+    "applyDisabled": true,
+    "error": "",
+    "generating": true,
+    "progress": "已编排 2 个组件，画布持续更新中…取消生成",
+    "tiles": [
+      "温度24.6°C",
+      "湿度61%"
+    ]
+  },
+  {
+    "ms": 5951,
+    "applyDisabled": true,
+    "error": "",
+    "generating": true,
+    "progress": "已编排 3 个组件，画布持续更新中…取消生成",
+    "tiles": [
+      "温度24.6°C",
+      "湿度61%",
+      "电源开关开启"
+    ]
+  },
+  {
+    "ms": 6152,
+    "applyDisabled": true,
+    "error": "",
+    "generating": true,
+    "progress": "已编排 4 个组件，画布持续更新中…取消生成",
+    "tiles": [
+      "温度24.6°C",
+      "湿度61%",
+      "电源开关开启",
+      "刷新 执行"
+    ]
+  },
+  {
+    "ms": 6218,
+    "applyDisabled": true,
+    "error": "",
+    "generating": true,
+    "progress": "已编排 5 个组件，画布持续更新中…取消生成",
+    "tiles": [
+      "温度24.6°C",
+      "湿度61%",
+      "电源开关开启",
+      "刷新 执行",
+      "亮度65%"
+    ]
+  },
+  {
+    "ms": 6250,
+    "applyDisabled": false,
+    "error": "",
+    "generating": false,
+    "progress": "采用深色科技风格与紧凑密度，按温度置顶要求将温度值列于首位并作为唯一强调项，随后放置湿度与开关、刷新等短操作，最后让亮度滑块和标签输入各独占整行，保持监测在前、控制集中、滑块输入通栏的紧凑布局。",
+    "tiles": [
+      "温度24.6°C",
+      "湿度61%",
+      "电源开关开启",
+      "刷新 执行",
+      "亮度65%",
+      "标签客厅"
+    ]
+  }
+]

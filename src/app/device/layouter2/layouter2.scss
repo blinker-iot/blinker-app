@@ -1,8 +1,10 @@
 :host {
   position: relative;
   display: block;
+
   width: 100%;
   height: 100%;
+
   color: var(--blinker-text-primary);
 }
 
@@ -16,7 +18,9 @@
 
 [device-box] {
   position: relative;
+
   width: 100%;
+
   min-height: 100%;
   transition: padding 180ms ease, background-color 180ms ease;
   transform-origin: center top 0;
@@ -24,6 +28,16 @@
   &.is-editing {
     padding-bottom: calc(104px + var(--ion-safe-area-bottom, 0px));
   }
+}
+
+.empty-layout {
+  position: absolute;
+  inset: 0;
+
+  display: grid;
+
+  place-items: center;
+  padding: 24px;
 }
 
 gridster {
@@ -37,30 +51,35 @@ gridster {
 
   gridster-item {
     overflow: hidden;
+
     border: 1px solid var(--blinker-border);
     border-radius: var(--blinker-radius-card);
     background: var(--blinker-surface);
     box-shadow: var(--blinker-shadow-soft);
-    transition: border-color 160ms ease, box-shadow 160ms ease;
+
+    transition: border-color 160ms ease;
   }
 
   gridster-item.gridster-item-moving {
     cursor: grabbing;
     transition: none;
   }
-
 }
 
 .is-editing gridster gridster-item {
   border-color: color-mix(in srgb, var(--ion-color-primary) 28%, var(--blinker-border));
-  box-shadow: 0 8px 22px rgba(var(--ion-color-primary-rgb), 0.09);
+
+  box-shadow: none;
 }
 
 .layouter-bar {
   position: fixed;
+
   right: 0;
+
   bottom: calc(10px + var(--ion-safe-area-bottom, 0px));
   left: 0;
+
   z-index: 999;
   display: flex;
   flex-direction: column;

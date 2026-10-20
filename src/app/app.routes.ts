@@ -1,4 +1,4 @@
-import { Routes } from '@angular/router';
+import { Routes, RouterStateSnapshot } from '@angular/router';
 import { LayouterGuard } from './device/layouter2/layouter.guard';
 import { asHomeTabId } from './home/home-tab-state';
 
@@ -19,6 +19,7 @@ export const routes: Routes = [
       },
       {
         path: 'device',
+        canDeactivate: [(component: { canDeactivate(): Promise<boolean> }) => component.canDeactivate()],
         loadComponent: () =>
           import('./home/components/tab-device/tab-device').then(
             (m) => m.TabDeviceComponent
@@ -91,12 +92,26 @@ export const routes: Routes = [
     loadComponent: () => import('./sections/room/room-edit/room-edit').then(m => m.RoomEditPage),
   },
   {
+    path: 'device/:id/settings',
+    loadComponent: () => import('./sections/device/device-settings/device-settings').then(m => m.DeviceSettingsPage),
+  },
+  {
+    path: 'device/:id/gateway-enrollment',
+    loadComponent: () => import('./sections/device/edge-gateway-enrollment/edge-gateway-enrollment.page')
+      .then(m => m.EdgeGatewayEnrollmentPage),
+  },
+  {
     path: 'scene-manager',
-    loadComponent: () => import('./sections/scene/scene-manager/scene-manager').then(m => m.SceneManager),
+    pathMatch: 'full',
+    redirectTo: 'automation-manager',
   },
   {
     path: 'scene-manager/:scene',
-    loadComponent: () => import('./sections/scene/scene-editor/scene-edit').then(m => m.SceneEditor),
+    redirectTo: 'scene-archive',
+  },
+  {
+    path: 'scene-archive',
+    loadComponent: () => import('./sections/scene/scene-manager/scene-manager').then(m => m.SceneManager),
   },
   {
     path: 'share-manager',
@@ -105,6 +120,40 @@ export const routes: Routes = [
   {
     path: 'share-manager/:id',
     loadComponent: () => import('./sections/device/device-share/device-share').then(m => m.DeviceSharePage),
+  },
+  {
+    path: 'automation-manager',
+    loadComponent: () => import('./sections/scene/automation/automation.page').then(m => m.AutomationPage),
+  },
+  {
+    path: 's/:token',
+    loadComponent: () => import('./sections/device/shared-console/shared-console.page').then(m => m.SharedConsolePage),
+  },
+  {
+    path: 'share-invitation',
+    loadComponent: () => import('./sections/device/share-invitation/share-invitation.page').then(m => m.ShareInvitationPage),
+  },
+  {
+    path: 'share-invitation/:code',
+    loadComponent: () => import('./sections/device/share-invitation/share-invitation.page').then(m => m.ShareInvitationPage),
+  },
+  {
+    path: 'device/:id/edit/custom',
+    data: { method: 'custom', returnToDevice: true },
+    loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+    canDeactivate: [(component: { canDeactivate(): Promise<boolean> | boolean }) => component.canDeactivate()],
+  },
+  {
+    path: 'device/:id/edit/widget/:widgetId',
+    loadComponent: () => import('./sections/device/panel-editor/panel-widget-editor.page').then(m => m.PanelWidgetEditorPage),
+    canDeactivate: [(component: { canDeactivate(nextUrl?: string): Promise<boolean> },
+      _route: unknown, _state: unknown, next: RouterStateSnapshot) => component.canDeactivate(next.url)],
+  },
+  {
+    path: 'device/:id/edit',
+    loadComponent: () => import('./sections/device/panel-editor/panel-editor.page').then(m => m.PanelEditorPage),
+    canDeactivate: [(component: { canDeactivate(nextUrl?: string): Promise<boolean> },
+      _route: unknown, _state: unknown, next: RouterStateSnapshot) => component.canDeactivate(next.url)],
   },
   {
     path: 'device/:id',
@@ -137,7 +186,32 @@ export const routes: Routes = [
   },
   {
     path: 'device-manager/:id/uic',
+    pathMatch: 'full',
     loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+  },
+  {
+    path: 'device-manager/:id/uic/custom',
+    data: { method: 'custom' },
+    loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+    canDeactivate: [(component: { canDeactivate(): Promise<boolean> | boolean }) => component.canDeactivate()],
+  },
+  {
+    path: 'device-manager/:id/uic/automatic',
+    data: { method: 'automatic' },
+    loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+  },
+  {
+    path: 'device-manager/:id/uic/ai',
+    data: { method: 'ai' },
+    loadComponent: () => import('./sections/device/device-uic/device-uic.page').then(m => m.DeviceUicPage),
+  },
+  {
+    path: 'device-manager/:id/component-preview',
+    loadComponent: () => import('./sections/device/component-preview/component-preview.page').then(m => m.ComponentPreviewPage),
+  },
+  {
+    path: 'device-manager/:id/components',
+    loadComponent: () => import('./sections/device/device-components/device-components.page').then(m => m.DeviceComponentsPage),
   },
   {
     path: 'device-manager/:id',

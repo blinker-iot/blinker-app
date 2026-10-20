@@ -1,9 +1,25 @@
 <ion-header class="main-tab-header">
   <ion-toolbar>
+    @if (cardEditor.editing()) {
+    <ion-buttons slot="start" class="card-editor-actions">
+      <ion-button class="header-action card-editor-action" aria-label="取消编辑" title="取消编辑"
+        (click)="cardEditor.cancel()" [disabled]="cardEditor.saving()">
+        <i class="fa-light fa-xmark" aria-hidden="true"></i>
+      </ion-button>
+    </ion-buttons>
+    <ion-buttons slot="end" class="card-editor-actions">
+      <ion-button class="header-action card-editor-action" aria-label="保存卡片" title="保存卡片"
+        [attr.aria-busy]="cardEditor.saving() ? 'true' : null"
+        (click)="cardEditor.save()" [disabled]="cardEditor.saving() || cardEditor.dragging()">
+        <i class="fa-light fa-check" aria-hidden="true"></i>
+      </ion-button>
+    </ion-buttons>
+    } @else {
     <ion-title>{{ 'NAVIGATION.DEVICE' | translate }}</ion-title>
     <ion-buttons slot="end">
       <ion-button
         class="header-action notice-button"
+        aria-label="消息通知"
         [routerLink]="['/message']"
       >
         <i class="fa-light fa-bell"></i>
@@ -12,26 +28,37 @@
         #deviceAddMenuTrigger
         id="device-add-menu-trigger"
         class="header-action add-button"
+        [attr.aria-label]="'HOME.ADD_DEVICE' | translate"
         aria-haspopup="menu"
       >
         <i class="fa-light fa-plus"></i>
       </ion-button>
     </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
 
 <ion-content #deviceContent fullscreen="true">
   <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
 
+  @if (!cardEditor.editing() || cardEditor.error()) {
   <div slot="fixed" class="room-list-fixed">
-    <room-list [(roomid)]="roomid" (roomidChange)="onRoomidChange($event)"></room-list>
+    @if (!cardEditor.editing()) {
+    <room-list [roomid]="roomid" (roomidChange)="onRoomidChange($event)"></room-list>
+    }
+    @if (cardEditor.error()) {
+    <p class="card-editor-error" role="alert">{{ cardEditor.error() }}</p>
+    }
   </div>
+  }
 
   <div class="device-page">
     @if (deviceNum > 0) {
     <div class="device-zone">
       <deviceblock-zone
-        [(roomid)]="roomid"
+        [roomid]="roomid"
+        (roomidChange)="onRoomidChange($event)"
+        [editing]="cardEditor.editing() && cardEditor.active()"
       ></deviceblock-zone>
     </div>
     } @else {
@@ -48,6 +75,9 @@
   </div>
 </ion-content>
 
+<home-card-settings />
+
+@if (!cardEditor.editing()) {
 <ion-popover
   #deviceAddMenu
   class="device-add-popover"
@@ -58,7 +88,8 @@
   alignment="end"
   [dismissOnSelect]="false"
   [showBackdrop]="true"
-  (willPresent)="prepareAddMenuPosition()"
+  [arrow]="false"
+  (willPresent)="scheduleAddMenuPosition()"
   (didPresent)="scheduleAddMenuPosition()"
 >
   <ng-template>
@@ -72,7 +103,6 @@
           <strong>{{ 'TAB_DEVICE.ADD_DEVICE' | translate }}</strong>
           <small>{{ 'TAB_DEVICE.ADD_DEVICE_DESCRIPTION' | translate }}</small>
         </span>
-        <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
       </button>
 
       <button type="button" role="menuitem" (click)="openAddPage('/room-manager')">
@@ -81,17 +111,9 @@
           <strong>{{ 'TAB_DEVICE.ADD_ROOM' | translate }}</strong>
           <small>{{ 'TAB_DEVICE.ADD_ROOM_DESCRIPTION' | translate }}</small>
         </span>
-        <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
       </button>
 
-      <button type="button" role="menuitem" (click)="showComponentPending()">
-        <span class="menu-icon"><i class="fa-light fa-puzzle-piece"></i></span>
-        <span class="menu-copy">
-          <strong>{{ 'TAB_DEVICE.ADD_COMPONENT' | translate }}</strong>
-          <small>{{ 'TAB_DEVICE.ADD_COMPONENT_DESCRIPTION' | translate }}</small>
-        </span>
-        <i class="fa-light fa-chevron-right menu-arrow" aria-hidden="true"></i>
-      </button>
     </nav>
   </ng-template>
 </ion-popover>
+}

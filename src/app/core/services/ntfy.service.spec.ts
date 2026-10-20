@@ -30,11 +30,13 @@ vi.mock('@aparajita/capacitor-secure-storage', () => ({
 vi.mock('capacitor-ntfy', () => ({
   Ntfy: {
     addListener: vi.fn(),
+    getNotificationPermission: vi.fn(),
     requestNotificationPermission: vi.fn(),
     start: vi.fn(),
     stop: vi.fn(),
     getMessages: vi.fn(),
     clearMessages: vi.fn(),
+    consumeNotificationAction: vi.fn(),
   },
 }));
 
@@ -66,11 +68,13 @@ describe('NtfyService backend installation', () => {
   let httpTesting: HttpTestingController;
   let dataService: DataServiceDouble;
   let messageListener: ((message: NtfyMessage) => void) | null;
+  let actionListener: (() => void) | null;
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('android');
     messageListener = null;
+    actionListener = null;
     dataService = {
       auth: { accessToken: 'access-token', uuid: 'account-a' },
       user: { id: 'account-a' },
@@ -83,10 +87,12 @@ describe('NtfyService backend installation', () => {
     vi.mocked(SecureStorage.get).mockResolvedValue(null);
     vi.mocked(SecureStorage.set).mockResolvedValue(undefined);
     vi.mocked(SecureStorage.remove).mockResolvedValue(true);
-    vi.mocked(Ntfy.addListener).mockImplementation(async (_event, listener) => {
-      messageListener = listener as unknown as (message: NtfyMessage) => void;
+    vi.mocked(Ntfy.addListener).mockImplementation(async (event, listener) => {
+      if (String(event) === 'messageReceived') messageListener = listener as unknown as (message: NtfyMessage) => void;
+      if (event === 'notificationAction') actionListener = listener as () => void;
       return { remove: vi.fn().mockResolvedValue(undefined) } as PluginListenerHandle;
     });
+    vi.mocked(Ntfy.getNotificationPermission).mockResolvedValue({ state: 'granted' });
     vi.mocked(Ntfy.requestNotificationPermission).mockResolvedValue({ state: 'granted' });
     vi.mocked(Ntfy.start).mockResolvedValue(connectedStatus);
     vi.mocked(Ntfy.stop).mockResolvedValue({
@@ -97,6 +103,7 @@ describe('NtfyService backend installation', () => {
     });
     vi.mocked(Ntfy.getMessages).mockResolvedValue({ messages: [] });
     vi.mocked(Ntfy.clearMessages).mockResolvedValue(undefined);
+    vi.mocked(Ntfy.consumeNotificationAction).mockResolvedValue({});
 
     TestBed.configureTestingModule({
       providers: [
@@ -129,6 +136,94 @@ describe('NtfyService backend installation', () => {
     expect(SecureStorage.get).not.toHaveBeenCalled();
     expect(Ntfy.addListener).not.toHaveBeenCalled();
     expect(Ntfy.start).not.toHaveBeenCalled();
+  });
+
+  it.each(['granted', 'denied', 'unsupported'] as const)(
+    'starts a subscription without requesting permission again when %s', async state => {
+      vi.mocked(Ntfy.getNotificationPermission).mockResolvedValue({ state });
+      // An unnecessary Activity request could wait indefinitely on a locked phone.
+      vi.mocked(Ntfy.requestNotificationPermission).mockImplementation(() => new Promise(() => {}));
+      const result = service.ensureInstallation(); await settle();
+      const request = httpTesting.expectOne(API.NOTIFICATION_INSTALLATIONS.COLLECTION);
+      request.flush(installationEnvelope(200, request.request.body.installationId,
+        'server-installation', 'active', credentials), noStoreResponse(200, 'OK'));
+      await expect(result).resolves.toBe(true);
+      expect(Ntfy.requestNotificationPermission).not.toHaveBeenCalled();
+      expect(Ntfy.start).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('requests notification permission only for the initial prompt state', async () => {
+    vi.mocked(Ntfy.getNotificationPermission).mockResolvedValue({ state: 'prompt' });
+    vi.mocked(Ntfy.requestNotificationPermission).mockResolvedValue({ state: 'denied' });
+    const result = service.ensureInstallation(); await settle();
+    const request = httpTesting.expectOne(API.NOTIFICATION_INSTALLATIONS.COLLECTION);
+    request.flush(installationEnvelope(200, request.request.body.installationId,
+      'server-installation', 'active', credentials), noStoreResponse(200, 'OK'));
+    await expect(result).resolves.toBe(true);
+    expect(Ntfy.requestNotificationPermission).toHaveBeenCalledTimes(1);
+    expect(Ntfy.start).toHaveBeenCalledTimes(1);
+  });
+
+  async function startWithStoredInstallation(): Promise<void> {
+    vi.mocked(SecureStorage.get).mockImplementation(key => Promise.resolve(
+      key === NTFY_CONFIG.secureStorageKey ? storedState(storedActiveInstallation(), []) : null,
+    ));
+    const started = service.init(); await settle();
+    httpTesting.expectOne(API.NOTIFICATION_INSTALLATIONS.COLLECTION).flush(
+      installationEnvelope(200, 'client-installation', 'server-installation', 'active', credentials),
+      noStoreResponse(200, 'OK'),
+    );
+    await started;
+  }
+
+  it('consumes a cold-start tap then routes warm taps independently of received-message deduplication', async () => {
+    const tapped = message('transport-1', { sequence_id: 'message-1', click: 'https://untrusted.invalid' });
+    vi.mocked(Ntfy.consumeNotificationAction).mockResolvedValueOnce({ message: tapped });
+    const actions: string[] = [], received: string[] = [];
+    service.notificationActions$.subscribe(id => actions.push(id));
+    service.messageIds$.subscribe(id => received.push(id));
+    await startWithStoredInstallation();
+    expect(actions).toEqual(['message-1']);
+    messageListener?.(tapped);
+    vi.mocked(Ntfy.consumeNotificationAction).mockResolvedValueOnce({ message: tapped });
+    actionListener?.(); await settle();
+    expect(actions).toEqual(['message-1', 'message-1']);
+    expect(received).toEqual(['message-1']);
+  });
+
+  it('ignores consumed taps for another topic, invalid business IDs, or a changed account session', async () => {
+    const actions: string[] = [];
+    service.notificationActions$.subscribe(id => actions.push(id));
+    await startWithStoredInstallation();
+    for (const invalid of [
+      { ...message('t', { sequence_id: 'm' }), topic: 'another-installation' },
+      message('t', { sequence_id: 'bad\nmessage' }),
+      message('t', { click: 'diandeng://share/' + 'A'.repeat(43) }),
+    ]) {
+      vi.mocked(Ntfy.consumeNotificationAction).mockResolvedValueOnce({ message: invalid });
+      actionListener?.(); await settle();
+    }
+    let release!: (value: { message: NtfyMessage }) => void;
+    vi.mocked(Ntfy.consumeNotificationAction).mockReturnValueOnce(new Promise(resolve => { release = resolve; }));
+    actionListener?.();
+    dataService.sessionEpoch += 1;
+    dataService.auth = { accessToken: 'another-token', uuid: 'account-b' };
+    release({ message: message('t', { sequence_id: 'old-account' }) }); await settle();
+    expect(actions).toEqual([]);
+  });
+
+  it('does not route a tap from a retired installation or while logged out', async () => {
+    const actions: string[] = [];
+    service.notificationActions$.subscribe(id => actions.push(id));
+    await startWithStoredInstallation();
+    (service as any).storedInstallation.state = 'revoke_pending';
+    vi.mocked(Ntfy.consumeNotificationAction).mockResolvedValue({ message: message('t', { sequence_id: 'm' }) });
+    actionListener?.(); await settle();
+    (service as any).storedInstallation.state = 'active';
+    dataService.auth = null;
+    actionListener?.(); await settle();
+    expect(actions).toEqual([]);
   });
 
   it('replays a provisioning POST with the same body and key, then starts server credentials', async () => {
@@ -549,20 +644,43 @@ describe('NtfyService backend installation', () => {
     });
   });
 
-  it('emits each business sequence_id once and ignores the ntfy transport id', async () => {
-    dataService.auth = null;
-    dataService.userDataLoader.next(false);
+  it('emits only current-account exact-topic business IDs, ignoring stale sessions and transport IDs', async () => {
+    vi.mocked(SecureStorage.get).mockImplementation(key => Promise.resolve(
+      key === NTFY_CONFIG.secureStorageKey ? storedState(storedActiveInstallation(), []) : null,
+    ));
     const ids: string[] = [];
     service.messageIds$.subscribe((id) => ids.push(id));
-
-    await service.init();
+    const started = service.init(); await settle();
+    httpTesting.expectOne(API.NOTIFICATION_INSTALLATIONS.COLLECTION).flush(
+      installationEnvelope(200, 'client-installation', 'server-installation', 'active', credentials),
+      noStoreResponse(200, 'OK'),
+    );
+    await started;
     expect(messageListener).not.toBeNull();
     messageListener?.(message('transport-1', { sequence_id: 'message-1' }));
     messageListener?.(message('transport-2', { sequence_id: 'message-1' }));
     messageListener?.(message('transport-3', { sequence_id: 'message-2' }));
     messageListener?.(message('message-3', {}));
+    messageListener?.({ ...message('transport-4', { sequence_id: 'wrong-topic' }), topic: 'another-installation' });
+    messageListener?.(message('transport-5', { sequence_id: 'bad\nmessage' }));
+    dataService.auth = { accessToken: 'another-token', uuid: 'account-b' };
+    messageListener?.(message('transport-6', { sequence_id: 'old-account' }));
+    dataService.auth = null;
+    messageListener?.(message('transport-7', { sequence_id: 'logged-out' }));
 
     expect(ids).toEqual(['message-1', 'message-2']);
+  });
+
+  it('rejects multi-topic and path-bearing credentials rather than widening subscription scope', async () => {
+    for (const invalid of [{ ...credentials, topic: 'private-topic,another-topic' },
+      { ...credentials, topic: '*' }, { ...credentials, baseUrl: 'https://ntfy.example.test/other' },
+      { ...credentials, token: 'token\nheader' }]) {
+      const result = service.ensureInstallation(); await settle();
+      const req = httpTesting.expectOne(API.NOTIFICATION_INSTALLATIONS.COLLECTION);
+      req.flush(installationEnvelope(200, req.request.body.installationId, 'server-installation', 'active', invalid), noStoreResponse(200, 'OK'));
+      await expect(result).resolves.toBe(false);
+    }
+    expect(Ntfy.start).not.toHaveBeenCalled();
   });
 
   it('replays DELETE for revoke_pending and removes the secure record after revoked', async () => {
