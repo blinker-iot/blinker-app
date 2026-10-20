@@ -36,6 +36,7 @@ import { captureDeviceV2AccountContext, assertDeviceV2AccountContext, DeviceV2Ac
 import { DirectDeviceSession } from '../protocol/device-v2/direct-session';
 import { BleOfflineOpportunity } from './ble-direct/offline-opportunity';
 import { DeviceUiConnection, DeviceUiConnectionScope } from './connection-scope';
+import { EndpointCommandGate } from './endpoint-control';
 
 export type { DeviceUiConnection } from './connection-scope';
 export type DeviceUiConnectionState = DeviceV2BleConnectionState;
@@ -195,6 +196,7 @@ export class DeviceUiPort {
   private readonly directHandoffs = new Map<string, Promise<void>>();
   private readonly connections = new Map<string, ConnectionGroup>();
   private readonly offlineOpportunity = new BleOfflineOpportunity();
+  private readonly commandGate = new EndpointCommandGate();
   private readonly lanChanges = new Subject<string>();
   private active = true;
 
@@ -959,6 +961,12 @@ export class DeviceUiPort {
   }
 
   async sendCommand(logicalDeviceId: string, endpointKey: string, value: unknown): Promise<void> {
+    const key = JSON.stringify([API.BASE_URL, this.data.auth?.uuid, this.data.sessionEpoch,
+      logicalDeviceId, endpointKey]);
+    return this.commandGate.run(key, () => this.dispatchCommand(logicalDeviceId, endpointKey, value));
+  }
+
+  private async dispatchCommand(logicalDeviceId: string, endpointKey: string, value: unknown): Promise<void> {
     if (this.transport(logicalDeviceId).value === 'lan') {
       const session = this.lanSession(logicalDeviceId);
 

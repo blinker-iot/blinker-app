@@ -95,4 +95,17 @@ describe('DeviceV2PageLayoutService', () => {
     )).rejects.toThrow(/incompatible/);
   });
 
+  it('reads and preserves an existing schema-1 full-row control without resizing it', async () => {
+    const stored = { ...layout, widgets: [{ ...layout.widgets[0], grid: { x: 0, y: 0, width: 8, height: 1 } }] };
+    const record = { logicalDeviceId, revision: 1, manifestFingerprint: fingerprint,
+      layout: stored, createdAt: 1000, updatedAt: 1000 };
+    const put = vi.fn(() => of({ status: 200, body: { status: 200, data: record } }));
+    const service = new DeviceV2PageLayoutService({ get: () => of({ status: 200,
+      body: { status: 200, data: record } }), put } as any);
+    await expect(service.get(logicalDeviceId)).resolves.toEqual(record);
+    await expect(service.saveCandidate(logicalDeviceId, stored, endpoints, 1)).resolves.toEqual(record);
+    expect(put).toHaveBeenCalledWith(API.DEVICE_V2.PAGE_LAYOUT(logicalDeviceId),
+      { expectedRevision: 1, layout: stored }, { observe: 'response' });
+  });
+
 });

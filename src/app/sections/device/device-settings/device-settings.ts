@@ -53,6 +53,8 @@ import { CapacitorWiFiProvAllocationStore } from 'src/app/core/device-v2/provisi
 import { CapacitorBleControllerCredentialStore } from 'src/app/core/device-v2/ble-direct/credential-store';
 import { WiFiProvRetirement } from 'src/app/core/device-v2/provisioning/wifiprov-retirement';
 import { RoomService, roomErrorMessage } from '../../room/room.service';
+import { DeviceCardEditor } from '../../../home/device-card-editor.service';
+import { DeviceCardSettingsPanel } from '../../../home/components/device-card-settings/device-card-settings';
 
 import {
   MenuListComponent,
@@ -70,6 +72,7 @@ type ManagedDevice = BlinkerDevice
   standalone: true,
   templateUrl: 'device-settings.html',
   styleUrls: ['device-settings.scss'],
+  providers: [DeviceCardEditor],
   imports: [
     IonBackButton,
     IonButtons,
@@ -87,6 +90,7 @@ type ManagedDevice = BlinkerDevice
     BDeviceImgComponent,
     MenuListComponent,
     TranslatePipe,
+    DeviceCardSettingsPanel,
   ],
 })
 
@@ -132,6 +136,13 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
   get canEditDisplay(): boolean { return this.isOwner && this.device.config.mode === 'bbp2'
     && !this.device.config.disabled && !this.device.config.isPreview; }
+
+  get canEditHomeCard(): boolean {
+    const id = this.logicalDeviceId || this.device?.deviceName;
+    return !this.destroyed && !!this.cardEditor && !!this.dataService.auth?.uuid && !!id
+      && this.dataService.getDevice(id) === this.device && this.device?.config.mode === 'bbp2'
+      && !this.device.config.disabled && !this.device.config.isPreview;
+  }
 
   get panelMode(): PanelMode {
     return readDevicePanelMode(this.device);
@@ -198,6 +209,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         route: `/device-manager/${this.id}/storage`,
       },
     ];
+
+    if (this.canEditHomeCard) {
+      items.push({ id: 'home-card', title: '首页卡片', icon: 'fa-table-cells',
+        description: '设置当前账号在本机的卡片大小和显示数据' });
+    }
 
     if (this.deviceShortcutService.isAvailable) {
       items.push({
@@ -310,11 +326,14 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     private readonly manifests?: DeviceV2ManifestCache,
     private readonly panels?: DevicePanelService,
     private readonly roomService?: RoomService,
+    readonly cardEditor?: DeviceCardEditor,
   ) {}
 
   ngOnInit(): void {
     this.subscriptions.add(this.activatedRoute.paramMap.subscribe(params => {
-      this.id = params.get('id') ?? '';
+      const nextId = params.get('id') ?? '';
+      if (this.id && nextId !== this.id) this.cardEditor?.cancel();
+      this.id = nextId;
       this.logicalDeviceId = this.id;
       ++this.displayGeneration; this.displayBusy = false;
       this.displayOpen = false; this.displayMetadata = undefined; this.displayRows = []; this.displayError = '';
@@ -456,8 +475,14 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     }
   }
 
+  ionViewWillLeave(): void {
+    // Ionic may cache this page rather than destroy it on navigation.
+    this.cardEditor?.cancel();
+  }
+
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.cardEditor?.cancel();
     ++this.displayGeneration;
     this.subscriptions.unsubscribe();
     this.clearSecret();
@@ -1085,6 +1110,10 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   selectMenuItem(item: MenuListItem): void {
     if (item.disabled || (item.id === 'timer' && !taskEntryState(this.device).available)) return;
+    if (item.id === 'home-card') {
+      this.openHomeCardSettings();
+      return;
+    }
     if (item.id === 'rooms') {
       void this.selectRooms();
 
@@ -1111,5 +1140,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     if (item.id === 'unbind') {
       this.unbind();
     }
+  }
+
+  openHomeCardSettings(): void {
+    if (!this.canEditHomeCard) return;
+    const id = this.logicalDeviceId || this.device.deviceName;
+    if (this.cardEditor!.beginSingle(id)) this.cardEditor!.openSettings(id);
   }
 }

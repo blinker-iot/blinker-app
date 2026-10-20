@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  Bbp2ErrorCode,
   DeviceV2EndpointKind,
+  DeviceV2RouteError,
   DeviceV2TelemetryManager,
   DeviceV2TelemetryOperation,
   DeviceV2TelemetrySnapshot,
@@ -472,25 +474,56 @@ describe('Device V2 telemetry lifecycle', () => {
     expect(controls).toHaveLength(2);
   });
 
-  it('a failed renewal clears sample metadata and publishes an inactive snapshot', async () => {
+  it('an Internal renewal retires samples until explicit visibility recovery, and closed streams cannot revive', async () => {
     vi.useFakeTimers();
-    const { manager, error } = createFixture(async (_deviceId, control) => {
-      if (control.operation !== DeviceV2TelemetryOperation.Open) throw new Error('renew failed');
+    const failure = new DeviceV2RouteError(Bbp2ErrorCode.Internal, 98);
+    let epoch = 0;
+    const { manager, controls, error } = createFixture(async (_deviceId, control) => {
+      if (control.operation === DeviceV2TelemetryOperation.Renew) throw failure;
       return {
-        streamId: control.streamId, epoch: 1,
-        status: DeviceV2TelemetryStatusCode.Opened, effectiveIntervalMs: 1000,
-        leaseMs: control.leaseMs,
+        streamId: control.streamId,
+        epoch: control.operation === DeviceV2TelemetryOperation.Open ? ++epoch : control.epoch,
+        status: control.operation === DeviceV2TelemetryOperation.Open
+          ? DeviceV2TelemetryStatusCode.Opened : DeviceV2TelemetryStatusCode.Closed,
+        effectiveIntervalMs: 1000,
+        leaseMs: control.operation === DeviceV2TelemetryOperation.Close ? 0 : control.leaseMs,
       };
     });
     const lease = await manager.open('device_test', ['temperature'], 1000);
-    manager.receiveData('device_test', sample(lease.snapshot, 1));
+    const previous = lease.snapshot;
+    manager.receiveData('device_test', sample(previous, 1));
     await vi.advanceTimersByTimeAsync(10000);
     expect(error).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith(failure);
     expect(lease.snapshot).toMatchObject({
       active: false, sampleSequence: undefined, receivedAtMs: undefined, values: {},
     });
-    manager.receiveData('device_test', sample(lease.snapshot, 2));
+    manager.receiveData('device_test', sample(previous, 2));
     expect(lease.snapshot.sampleSequence).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(controls.map(control => control.operation)).toEqual([
+      DeviceV2TelemetryOperation.Open, DeviceV2TelemetryOperation.Renew,
+    ]);
+
+    await lease.setVisible(false);
+    await lease.setVisible(true);
+    expect(lease.snapshot).toMatchObject({ active: true, visible: true, epoch: 2, values: {} });
+    manager.receiveData('device_test', sample(previous, 3));
+    expect(lease.snapshot.sampleSequence).toBeUndefined();
+    const current = lease.snapshot;
+    manager.receiveData('device_test', sample(current, 1));
+    expect(lease.snapshot.values['temperature']?.value).toBe(21.5);
+
+    await lease.close();
+    manager.receiveData('device_test', sample(current, 2));
+    manager.receiveStatus('device_test', { ...current, status: DeviceV2TelemetryStatusCode.Expired, leaseMs: 0 });
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(lease.snapshot).toMatchObject({ active: false, visible: false, values: {} });
+    expect(controls.map(control => control.operation)).toEqual([
+      DeviceV2TelemetryOperation.Open, DeviceV2TelemetryOperation.Renew,
+      DeviceV2TelemetryOperation.Open, DeviceV2TelemetryOperation.Close,
+    ]);
+    expect(error).toHaveBeenCalledTimes(1);
     manager.reset();
   });
 });

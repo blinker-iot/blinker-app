@@ -1,5 +1,20 @@
 <ion-header class="main-tab-header">
   <ion-toolbar>
+    @if (cardEditor.editing()) {
+    <ion-buttons slot="start" class="card-editor-actions">
+      <ion-button class="header-action card-editor-action" aria-label="取消编辑" title="取消编辑"
+        (click)="cardEditor.cancel()" [disabled]="cardEditor.saving()">
+        <i class="fa-light fa-xmark" aria-hidden="true"></i>
+      </ion-button>
+    </ion-buttons>
+    <ion-buttons slot="end" class="card-editor-actions">
+      <ion-button class="header-action card-editor-action" aria-label="保存卡片" title="保存卡片"
+        [attr.aria-busy]="cardEditor.saving() ? 'true' : null"
+        (click)="cardEditor.save()" [disabled]="cardEditor.saving() || cardEditor.dragging()">
+        <i class="fa-light fa-check" aria-hidden="true"></i>
+      </ion-button>
+    </ion-buttons>
+    } @else {
     <ion-title>{{ 'NAVIGATION.DEVICE' | translate }}</ion-title>
     <ion-buttons slot="end">
       <ion-button
@@ -19,21 +34,31 @@
         <i class="fa-light fa-plus"></i>
       </ion-button>
     </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
 
 <ion-content #deviceContent fullscreen="true">
   <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
 
+  @if (!cardEditor.editing() || cardEditor.error()) {
   <div slot="fixed" class="room-list-fixed">
-    <room-list [(roomid)]="roomid" (roomidChange)="onRoomidChange($event)"></room-list>
+    @if (!cardEditor.editing()) {
+    <room-list [roomid]="roomid" (roomidChange)="onRoomidChange($event)"></room-list>
+    }
+    @if (cardEditor.error()) {
+    <p class="card-editor-error" role="alert">{{ cardEditor.error() }}</p>
+    }
   </div>
+  }
 
   <div class="device-page">
     @if (deviceNum > 0) {
     <div class="device-zone">
       <deviceblock-zone
-        [(roomid)]="roomid"
+        [roomid]="roomid"
+        (roomidChange)="onRoomidChange($event)"
+        [editing]="cardEditor.editing() && cardEditor.active()"
       ></deviceblock-zone>
     </div>
     } @else {
@@ -50,6 +75,9 @@
   </div>
 </ion-content>
 
+<home-card-settings />
+
+@if (!cardEditor.editing()) {
 <ion-popover
   #deviceAddMenu
   class="device-add-popover"
@@ -88,3 +116,4 @@
     </nav>
   </ng-template>
 </ion-popover>
+}

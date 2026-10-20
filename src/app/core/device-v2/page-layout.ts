@@ -49,6 +49,7 @@ export interface PageLayoutDiff {
 }
 
 const appearances: readonly PageWidgetAppearance[] = ['default', 'compact', 'emphasized'];
+const legacyWidgetTypes: readonly PageWidgetType[] = ['switch', 'button', 'slider', 'input', 'value'];
 
 // Default size of each type's default variant, as width x height.
 const DEFAULT_SIZES: Readonly<Record<PageWidgetType, [number, number]>> = {
@@ -139,7 +140,7 @@ export function parsePageLayout(input: unknown, endpoints?: readonly DeviceUiEnd
   if (!/^[0-9a-f]{64}$/.test(manifestFingerprint)) {
     throw new Error('PageLayout manifestFingerprint is invalid');
   }
-  const widgets = parsePageWidgets(root['widgets'], endpoints);
+  const widgets = parsePageWidgetsDocument(root['widgets'], endpoints, true);
 
   return {
     schemaVersion: PAGE_LAYOUT_SCHEMA_VERSION,
@@ -153,6 +154,15 @@ export function parsePageLayout(input: unknown, endpoints?: readonly DeviceUiEnd
 
 // Shared presentation validation for V2 layouts and legacy device panels.
 export function parsePageWidgets(input: unknown, endpoints?: readonly DeviceUiEndpoint[]): PageLayoutWidget[] {
+  // New panels have no original schema-1 grid sizes to retain.
+  return parsePageWidgetsDocument(input, endpoints, false);
+}
+
+function parsePageWidgetsDocument(
+  input: unknown,
+  endpoints: readonly DeviceUiEndpoint[] | undefined,
+  allowLegacySizes: boolean,
+): PageLayoutWidget[] {
   if (!Array.isArray(input) || input.length > PAGE_LAYOUT_MAX_WIDGETS) {
     throw new Error('PageLayout widgets are invalid');
   }
@@ -162,7 +172,7 @@ export function parsePageWidgets(input: unknown, endpoints?: readonly DeviceUiEn
     : undefined;
   const ids = new Set<string>();
   const widgets = input.map((value, index) => {
-    const widget = parseWidget(value, index);
+    const widget = parseWidget(value, index, allowLegacySizes);
     if (ids.has(widget.widgetId)) throw new Error('PageLayout widgetId is duplicated');
     ids.add(widget.widgetId);
     const endpoint = endpointByKey?.get(widget.endpointKey);
@@ -242,7 +252,7 @@ export function migratePageLayout(input: unknown, snapshot: DeviceUiSnapshot, ad
   }, snapshot.endpoints);
 }
 
-function parseWidget(input: unknown, index: number): PageLayoutWidget {
+function parseWidget(input: unknown, index: number, allowLegacySizes: boolean): PageLayoutWidget {
   const label = `PageLayout widget ${index}`;
   const value = object(input, label);
   exactKeys(value, ['widgetId', 'type', 'endpointKey', 'extraKeys', 'title', 'appearance', 'variant', 'options', 'grid'], label);
@@ -270,7 +280,13 @@ function parseWidget(input: unknown, index: number): PageLayoutWidget {
     height: integer(gridValue['height'], 1, 16, `${label} grid.height`),
   };
   if (grid.x + grid.width > PAGE_LAYOUT_COLUMNS) throw new Error(`${label} exceeds the grid`);
-  if (!sizeAllowed(widgetVariant(type, variant), grid.width, grid.height)) throw new Error(`${label} size is not allowed for its variant`);
+  // Mirror Gateway: original schema-1 widgets accepted every bounded grid size.
+  // An explicit variant, options or extra readings belongs to the newer contract.
+  const legacySize = allowLegacySizes && legacyWidgetTypes.includes(type)
+    && value['variant'] === undefined && value['options'] === undefined && value['extraKeys'] === undefined;
+  if (!legacySize && !sizeAllowed(widgetVariant(type, variant), grid.width, grid.height)) {
+    throw new Error(`${label} size is not allowed for its variant`);
+  }
   return {
     widgetId, type, endpointKey, title, appearance,
     ...(extraKeys ? { extraKeys } : {}),

@@ -6,6 +6,42 @@
   height: 100%;
 }
 
+:host.card-editing {
+  --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 64px);
+}
+
+:host.card-editor-error {
+  --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 156px);
+}
+
+:host.card-editing.card-editor-error {
+  --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 112px);
+}
+
+ion-buttons.card-editor-actions {
+  margin: 0;
+}
+
+// The shared section header also styles icon-only actions at 32px. Scope this
+// full hit target to the home editor so its stronger rule cannot shrink it.
+ion-header.main-tab-header ion-buttons.card-editor-actions ion-button.card-editor-action {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+:host.card-editing .room-list-fixed {
+  padding-bottom: 8px;
+}
+
+.card-editor-error {
+  margin: 6px 0 0;
+  color: var(--ion-color-danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 ion-content {
   --background: var(--blinker-bg);
   --overflow: auto;

@@ -3,12 +3,13 @@ import { BehaviorSubject } from 'rxjs';
 import { DeviceSettingsPage } from './device-settings';
 import { GatewayHttpError } from '../../../core/model/response.model';
 import { CapacitorWiFiProvAllocationStore } from '../../../core/device-v2/provisioning/wifiprov-allocation-store';
+import { DeviceCardEditor } from '../../../home/device-card-editor.service';
 
 describe('DeviceSettingsPage V2 access flow', () => {
   const logicalDeviceId = 'device_11111111-1111-4111-8111-111111111111';
   const deviceKey = 'A'.repeat(43);
 
-  function harness(confirmRole = 'confirm') {
+  function harness(confirmRole = 'confirm', cardEditor?: Partial<DeviceCardEditor>) {
     const device: any = {
       logicalDeviceId,
       credentialVersion: 1,
@@ -71,6 +72,9 @@ describe('DeviceSettingsPage V2 access flow', () => {
       notice as any,
       cd as any,
       { load: () => ({ fields: [{ key: 'power', kind: 0, type: 0, id: 1, access: 7 }] }) } as any,
+      undefined,
+      undefined,
+      cardEditor as DeviceCardEditor | undefined,
     );
     page.ngOnInit();
     return { page, device, data, management, users, alerts, nav, notice, route };
@@ -94,6 +98,67 @@ describe('DeviceSettingsPage V2 access flow', () => {
     expect(f.nav.navigateForward).toHaveBeenCalledExactlyOnceWith(`/device-manager/${logicalDeviceId}/storage`);
     f.page.ngOnDestroy();
   });
+
+  it('opens the shared personal home-card editor without owner config writes or navigation', () => {
+    const editor = { beginSingle: vi.fn().mockReturnValue(true), openSettings: vi.fn(), cancel: vi.fn() };
+    const f = harness('confirm', editor);
+    f.device.config.isShared = true;
+    const original = structuredClone(f.device.config);
+    const entry = f.page.deviceMenuItems.find(item => item.id === 'home-card')!;
+    expect(entry.title).toBe('首页卡片');
+    expect(entry.description).toContain('当前账号在本机');
+    f.page.selectMenuItem(entry);
+    expect(editor.beginSingle).toHaveBeenCalledExactlyOnceWith(logicalDeviceId);
+    expect(editor.openSettings).toHaveBeenCalledExactlyOnceWith(logicalDeviceId);
+    expect(f.management.saveDisplayMetadataV2).not.toHaveBeenCalled();
+    expect(f.nav.navigateForward).not.toHaveBeenCalled();
+    expect(f.device.config).toEqual(original);
+    f.page.ngOnDestroy();
+    expect(editor.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not open settings after the personal editor rejects its account or storage context', () => {
+    const editor = { beginSingle: vi.fn().mockReturnValue(false), openSettings: vi.fn(), cancel: vi.fn() };
+    const f = harness('confirm', editor);
+    f.page.openHomeCardSettings();
+    expect(editor.beginSingle).toHaveBeenCalledExactlyOnceWith(logicalDeviceId);
+    expect(editor.openSettings).not.toHaveBeenCalled();
+    f.page.ngOnDestroy();
+  });
+
+  it('cancels the personal card draft when Ionic caches a settings page on leave', () => {
+    const editor = { beginSingle: vi.fn().mockReturnValue(true), openSettings: vi.fn(), cancel: vi.fn() };
+    const f = harness('confirm', editor);
+    f.page.openHomeCardSettings(); f.page.ionViewWillLeave();
+    expect(editor.cancel).toHaveBeenCalledOnce();
+    expect(f.management.saveDisplayMetadataV2).not.toHaveBeenCalled();
+    f.page.ngOnDestroy();
+  });
+
+  it('cancels the old personal draft when a cached settings component changes device ID', () => {
+    const editor = { beginSingle: vi.fn().mockReturnValue(true), openSettings: vi.fn(), cancel: vi.fn() };
+    const f = harness('confirm', editor);
+    f.page.openHomeCardSettings();
+    f.route.paramMap.next({ get: name => name === 'id' ? 'another-device' : null });
+    expect(editor.cancel).toHaveBeenCalledOnce();
+    expect(f.page.id).toBe('another-device');
+    f.page.ngOnDestroy();
+  });
+
+  it.each(['preview', 'disabled', 'legacy', 'invisible'] as const)(
+    'rechecks %s devices before opening personal home-card settings', kind => {
+      const editor = { beginSingle: vi.fn().mockReturnValue(true), openSettings: vi.fn(), cancel: vi.fn() };
+      const f = harness('confirm', editor);
+      if (kind === 'preview') f.device.config.isPreview = true;
+      if (kind === 'disabled') f.device.config.disabled = true;
+      if (kind === 'legacy') f.device.config.mode = 'legacy';
+      if (kind === 'invisible') f.data.getDevice.mockReturnValue(undefined);
+      expect(f.page.deviceMenuItems.some(item => item.id === 'home-card')).toBe(false);
+      f.page.selectMenuItem({ id: 'home-card', title: '首页卡片' });
+      expect(editor.beginSingle).not.toHaveBeenCalled();
+      expect(editor.openSettings).not.toHaveBeenCalled();
+      f.page.ngOnDestroy();
+    });
 
   it.each([
     ['预览', { config: { isPreview: true } }], ['分享', { config: { isShared: true } }],

@@ -19,6 +19,7 @@ export const routes: Routes = [
       },
       {
         path: 'device',
+        canDeactivate: [(component: { canDeactivate(): Promise<boolean> }) => component.canDeactivate()],
         loadComponent: () =>
           import('./home/components/tab-device/tab-device').then(
             (m) => m.TabDeviceComponent

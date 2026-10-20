@@ -220,6 +220,70 @@ describe('automation rendered form management flow (local API/cache/storage doub
     expect(api.write).not.toHaveBeenCalled();
   });
 
+  it('renders confirmed configuration and detail before the subsequent list refresh completes', async () => {
+    await click('新建自动化'); await input('ion-input', '名称', '先确认再刷新');
+    await input('ion-select', '源属性', 'source:1'); await input('ion-select', '目标属性', 'target:1');
+    let finishList!: (page: ReturnType<typeof automationPage>) => void;
+    api.list.mockImplementationOnce(async () => new Promise<ReturnType<typeof automationPage>>(resolve => { finishList = resolve; }));
+    button('保存自动化').click();
+    try {
+      // Do not use settled(): the deliberately pending list is not the write confirmation.
+      await vi.waitFor(() => {
+        fixture.detectChanges();
+        expect(service.state().refreshing).toBe(true);
+        expect(fixture.componentInstance.view).toBe('detail');
+        expect(fixture.nativeElement.querySelector('ion-input[label="名称"]')).toBeNull();
+        expect(fixture.nativeElement.textContent).toContain('先确认再刷新');
+        expect(fixture.nativeElement.textContent).toContain('配置已保存。');
+      });
+      expect(service.state().busy).toBe(true); expect(service.state().ready).toBe(false);
+      expect(service.state().error).toBe(''); expect(service.state().pending).toEqual([]);
+      for (const label of ['启用', '编辑', '删除']) expect(button(label).disabled).toBe(true);
+      expect(api.write).toHaveBeenCalledTimes(1); expect(api.list).toHaveBeenCalledTimes(2);
+    } finally {
+      finishList?.(automationPage({ rules: [...replies.values()].map(detail => detail.rule), nextAfter: null }));
+    }
+    await settled();
+    expect(service.state().refreshing).toBe(false); expect(service.state().ready).toBe(true);
+    expect(service.state().notice).toBe('配置已保存。'); expect(service.state().refreshError).toBe('');
+    expect(fixture.componentInstance.view).toBe('detail'); expect(button('启用').disabled).toBe(false);
+    expect(api.write).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps confirmed detail after list failure, disables stale writes and rereads without resubmitting', async () => {
+    await click('新建自动化'); await input('ion-input', '名称', '刷新失败仍已保存');
+    await input('ion-select', '源属性', 'source:1'); await input('ion-select', '目标属性', 'target:1');
+    let failList!: (error: Error) => void;
+    api.list.mockImplementationOnce(async () => new Promise<ReturnType<typeof automationPage>>((_resolve, reject) => { failList = reject; }));
+    button('保存自动化').click();
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(fixture.componentInstance.view).toBe('detail');
+      expect(service.state().refreshing).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('配置已保存。');
+    });
+    failList(new Error('AUTOMATION_UNAVAILABLE')); await settled();
+    const confirmed = service.state().detail;
+    expect(confirmed?.rule).toMatchObject({ name: '刷新失败仍已保存', definitionRevision: 1, enabled: false });
+    expect(service.state().notice).toBe('配置已保存。'); expect(service.state().error).toBe('');
+    expect(service.state().refreshError).not.toBe('');
+    expect(fixture.nativeElement.textContent).toContain(service.state().refreshError);
+    expect(fixture.nativeElement.textContent).toContain('配置已保存。');
+    expect(fixture.componentInstance.view).toBe('detail');
+    expect(service.state().busy).toBe(false); expect(service.state().ready).toBe(false);
+    expect(service.state().pending).toEqual([]);
+    for (const label of ['启用', '编辑', '删除']) expect(button(label).disabled).toBe(true);
+    expect(api.write).toHaveBeenCalledTimes(1);
+
+    await click('重新读取列表');
+    expect(api.list).toHaveBeenCalledTimes(3); expect(api.write).toHaveBeenCalledTimes(1);
+    expect(api.get).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.view).toBe('detail'); expect(service.state().detail).toEqual(confirmed);
+    expect(service.state().ready).toBe(true); expect(service.state().refreshError).toBe('');
+    expect(service.state().notice).toBe('配置已保存。'); expect(service.state().pending).toEqual([]);
+    for (const label of ['启用', '编辑', '删除']) expect(button(label).disabled).toBe(false);
+  });
+
   it.each([
     { source: 'source:1', direction: 'rising', condition: { kind: 'boolean-edge', direction: 'rising' } },
     { source: 'source:1', direction: 'falling', condition: { kind: 'boolean-edge', direction: 'falling' } },

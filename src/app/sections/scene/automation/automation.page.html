@@ -1,7 +1,7 @@
 <ion-header><ion-toolbar>
   <ion-buttons slot="start">
     @if (view === 'list') { <ion-back-button defaultHref="/home/profile" text="" /> }
-    @else { <ion-button [disabled]="automation.state().busy" (click)="leaveView()">返回</ion-button> }
+    @else { <ion-button [disabled]="automation.state().busy && !automation.state().refreshing" (click)="leaveView()">返回</ion-button> }
   </ion-buttons>
   <ion-title>{{ view === 'editor' ? (editing ? '编辑自动化' : '新建自动化') : view === 'detail' ? '自动化详情' : '自动化' }}</ion-title>
   <ion-buttons slot="end"><ion-button [disabled]="automation.state().busy || view === 'editor'" (click)="refresh()">刷新</ion-button></ion-buttons>
@@ -10,6 +10,11 @@
   @if (automation.state().busy) { <ion-progress-bar type="indeterminate" /> }
   @if (automation.state().error) { <p role="alert">{{ automation.state().error }}</p> }
   @if (automation.state().notice) { <p role="status">{{ automation.state().notice }}</p> }
+  @if (automation.state().refreshing) { <p role="status">正在更新列表与本地请求记录，不会重复提交已确认的配置…</p> }
+  @if (automation.state().refreshError) {
+    <p role="alert">{{ automation.state().refreshError }}</p>
+    <ion-button fill="outline" [disabled]="automation.state().busy" (click)="automation.retryRefresh()">重新读取列表</ion-button>
+  }
   @if (automation.state().pending.length) {
     <section class="pending"><h2>有保存结果待确认</h2><p class="hint">先核对原操作，避免重复创建或覆盖配置。</p>
       @for (pending of automation.state().pending; track pending.ruleId) {
@@ -132,9 +137,9 @@
         <p class="hint">{{ conditionText(detail.rule.condition, detail.rule.source) }}。每次动作间隔至少 30 秒。</p>
         @if (detail.rule.targetOutcomeUnknown) { <p role="status">上次执行结果待确认，不会自动重发；删除规则也不会撤回已发出的动作。</p> }
         @if (detail.rule.retiredAtMs === null) {
-          <ion-button [disabled]="automation.state().busy || hasPending(detail.rule.ruleId)" (click)="automation.toggle(detail.rule)">{{ detail.rule.enabled ? '停用' : '启用' }}</ion-button>
-          <ion-button fill="outline" [disabled]="automation.state().busy || hasPending(detail.rule.ruleId)" (click)="startEdit(detail.rule)">编辑</ion-button>
-          <ion-button color="danger" fill="clear" [disabled]="automation.state().busy || hasPending(detail.rule.ruleId)" (click)="retire(detail.rule)">删除</ion-button>
+          <ion-button [disabled]="!automation.state().ready || automation.state().busy || hasPending(detail.rule.ruleId)" (click)="automation.toggle(detail.rule)">{{ detail.rule.enabled ? '停用' : '启用' }}</ion-button>
+          <ion-button fill="outline" [disabled]="!automation.state().ready || automation.state().busy || hasPending(detail.rule.ruleId)" (click)="startEdit(detail.rule)">编辑</ion-button>
+          <ion-button color="danger" fill="clear" [disabled]="!automation.state().ready || automation.state().busy || hasPending(detail.rule.ruleId)" (click)="retire(detail.rule)">删除</ion-button>
         }
         @if (automation.state().reviewed; as reviewed) { <ion-button [disabled]="automation.state().busy" (click)="acceptChanged(reviewed)">已核对，停止本机跟踪</ion-button> }
         <details><summary>技术详情</summary><code>{{ detail.rule.ruleId }}</code>

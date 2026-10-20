@@ -22,7 +22,7 @@ export const AUTOMATION_CLIENT = new InjectionToken<AutomationClient>('automatio
 } });
 @Injectable()
 export class AutomationService implements OnDestroy {
-  readonly state = signal({ ready: false, busy: false, error: '', notice: '', retired: false,
+  readonly state = signal({ ready: false, busy: false, refreshing: false, refreshError: '', error: '', notice: '', retired: false,
     rules: [] as AutomationRule[], pending: [] as AutomationIntent[], choices: [] as AutomationChoice[],
     nextAfter: null as string | null, detail: undefined as AutomationDetail | undefined,
     reviewed: undefined as AutomationIntent | undefined });
@@ -45,20 +45,35 @@ export class AutomationService implements OnDestroy {
   }
   close(): void {
     this.controller?.abort(); this.controller = undefined; this.account = undefined;
-    this.patch({ ready: false, busy: false, rules: [], pending: [], choices: [], detail: undefined,
+    this.patch({ ready: false, busy: false, refreshing: false, refreshError: '', rules: [], pending: [], choices: [], detail: undefined,
       reviewed: undefined, nextAfter: null, error: '', notice: '' });
   }
   ngOnDestroy(): void { this.close(); this.subscription.unsubscribe(); }
-  private async run(work: (signal: AbortSignal) => Promise<void>): Promise<void> {
+  private async run(work: (signal: AbortSignal) => Promise<void>, refreshConfirmed = false): Promise<void> {
     const c = this.controller; if (!c || this.state().busy) return;
     this.patch({ busy: true, error: '', notice: '' });
-    try { await work(c.signal); }
+    let completed = false;
+    try { await work(c.signal); completed = true; }
     catch (error) { if (this.current(c.signal)) this.patch({ error: automationErrorText(error) }); }
     finally {
       if (this.current(c.signal)) {
-        try { const pending = await this.client.pending(); if (this.current(c.signal)) this.patch({ pending }); }
-        catch (error) { if (this.current(c.signal)) this.patch({ error: automationErrorText(error), ready: false }); }
-        if (this.current(c.signal)) this.patch({ busy: false });
+        if (completed && refreshConfirmed) {
+          // The client has already verified the write and settled its durable
+          // intent. Neither list I/O nor a redundant journal read holds up its
+          // confirmation; this read retains the same page/account owner.
+          void this.refreshConfirmedList(c.signal);
+        } else {
+          try {
+            const pending = await this.client.pending();
+            // A successful recovery may also read the list. Only that fresh
+            // list plus this settled journal clears an earlier refresh error;
+            // a detail GET alone must not restore list readiness.
+            if (this.current(c.signal)) this.patch({ pending,
+              refreshError: this.state().ready ? '' : this.state().refreshError });
+          }
+          catch (error) { if (this.current(c.signal)) this.patch({ error: automationErrorText(error), ready: false }); }
+          if (this.current(c.signal)) this.patch({ busy: false });
+        }
       }
     }
   }
@@ -72,7 +87,29 @@ export class AutomationService implements OnDestroy {
       choices: automationChoices(this.data.device?.dict, id => this.manifests.load(id)) });
   }
   async refresh(retired = this.state().retired): Promise<void> {
-    await this.run(async signal => { this.patch({ ready: false, detail: undefined, reviewed: undefined }); await this.list(signal, retired); });
+    await this.run(async signal => { this.patch({ ready: false, refreshError: '', detail: undefined, reviewed: undefined }); await this.list(signal, retired); });
+  }
+  private async refreshConfirmedList(signal: AbortSignal): Promise<void> {
+    if (!this.current(signal)) return;
+    this.patch({ busy: true, refreshing: true, ready: false, refreshError: '', rules: [], nextAfter: null });
+    try { await this.list(signal, this.state().retired); }
+    catch {
+      if (this.current(signal)) this.patch({ ready: false,
+        refreshError: '列表尚未更新；已确认的配置保持，不会重复提交。请重新读取列表。' });
+    }
+    // Preserve all other unresolved intents, even if the list read failed.
+    if (!this.current(signal)) return;
+    try { const pending = await this.client.pending(); if (this.current(signal)) this.patch({ pending }); }
+    catch {
+      if (this.current(signal)) this.patch({ ready: false,
+        refreshError: '本地请求记录尚未读取；已确认的配置保持，未确认请求不会被清除。请重新读取列表。' });
+    } finally {
+      if (this.current(signal)) this.patch({ busy: false, refreshing: false });
+    }
+  }
+  async retryRefresh(): Promise<void> {
+    const c = this.controller;
+    if (c && !this.state().busy && this.state().refreshError) await this.refreshConfirmedList(c.signal);
   }
   async more(): Promise<void> {
     if (this.state().nextAfter) await this.run(signal => this.list(signal, this.state().retired, true));
@@ -138,15 +175,16 @@ export class AutomationService implements OnDestroy {
     await this.submit({ ruleId: rule.ruleId, operation: 'retire', body: { expectedRevision: rule.definitionRevision } });
   }
   private async submit(intent: AutomationIntent): Promise<boolean> {
+    const c = this.controller;
     let confirmed = false;
     await this.run(async signal => {
       const detail = await this.client.submit(intent, signal);
       if (!this.current(signal)) return;
       confirmed = true;
-      this.patch({ detail, reviewed: undefined, notice: '配置已保存。' });
-      await this.list(signal, this.state().retired);
-    });
-    return confirmed;
+      this.patch({ detail, reviewed: undefined, notice: '配置已保存。',
+        pending: this.state().pending.filter(pending => pending.ruleId !== intent.ruleId) });
+    }, true);
+    return confirmed && !!c && this.current(c.signal);
   }
   async recover(intent: AutomationIntent, retry = false): Promise<void> {
     await this.run(async signal => {

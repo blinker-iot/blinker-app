@@ -37,6 +37,7 @@ import {
 import { Subscription } from 'rxjs';
 import { BlinkerDevice } from '../../core/model/device.model';
 import { capabilityBooleanLabel, capabilityDisplayName } from '../../core/device-v2/display-metadata';
+import { canWriteDeviceEndpoint } from '../../core/device-v2/endpoint-control';
 import {
   DeviceUiConnectivitySnapshot,
   DeviceUiConnectionState,
@@ -250,10 +251,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   get readOnly(): boolean { return this.device.config.isShared === true && this.device.data.canCommand !== true; }
 
   private allowedEndpoint(field: DeviceUiEndpoint): boolean {
-    if (!this.device.config.isShared) return true;
-
-    return this.device.data.canCommand === true && (this.device.data.commandEndpointKeys === null
-      || this.device.data.commandEndpointKeys?.includes(field.key) === true);
+    return canWriteDeviceEndpoint(this.device, field);
   }
 
   get widgets(): PageLayoutWidget[] {

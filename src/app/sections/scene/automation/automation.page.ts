@@ -131,6 +131,7 @@ export class AutomationPage {
   }
   startCreate(): void { if (this.canStartCreate) { ++this.generation; this.resetForm(); this.setView('editor'); } }
   async refresh(): Promise<void> {
+    if (this.automation.state().refreshError) { await this.automation.retryRefresh(); return; }
     const detail = this.automation.state().detail;
     if (this.view === 'detail' && detail) { await this.inspect(detail.rule); return; }
     this.backToList(); await this.automation.refresh();
@@ -142,7 +143,8 @@ export class AutomationPage {
     if (generation === this.generation && !this.automation.state().error && this.automation.state().detail?.rule.ruleId === rule.ruleId) this.setView('detail');
   }
   async startEdit(rule: AutomationRule): Promise<void> {
-    if (rule.retiredAtMs !== null || this.hasPending(rule.ruleId)) return;
+    if (!this.automation.state().ready || this.automation.state().busy
+      || rule.retiredAtMs !== null || this.hasPending(rule.ruleId)) return;
     const generation = this.generation;
     await this.automation.inspect(rule.ruleId);
     if (generation !== this.generation || this.automation.state().error) return;

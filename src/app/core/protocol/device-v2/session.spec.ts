@@ -8,9 +8,12 @@ import {
   DeviceV2Channel,
   DeviceV2RouteError,
   DeviceV2Session,
+  DeviceV2TelemetryOperation,
+  DeviceV2TelemetryStatusCode,
   bytesToHex,
   decodeDeliveryBody,
   decodeFrame,
+  encodeTelemetryControlBody,
   encodeDeliveryBody,
   encodeFrame,
   hexToBytes,
@@ -205,6 +208,67 @@ function installServer(
 }
 
 describe('DeviceV2Session', () => {
+  it('a typed Internal telemetry renewal stays on the ready session without retrying or sending a Command', async () => {
+    vi.useFakeTimers();
+    const channel = new FakeChannel();
+    installServer(channel);
+    const session = new DeviceV2Session(channel, undefined, { requestId: requestIds() });
+    try {
+      await session.start();
+      await session.ensureReady(logicalDeviceId);
+      // Pin a read-only telemetry capability in the local fixture; renewal still
+      // uses the public lease API and real Session Route/Error codecs below.
+      const snapshot = session.store.snapshot(logicalDeviceId);
+      vi.spyOn(session.store, 'snapshot').mockReturnValue({ ...snapshot, manifest: {
+        ...snapshot.manifest!, fields: [{ ...snapshot.manifest!.fields[0], access: 5, telemetryMinimumIntervalMs: 1000 }],
+      } });
+      const respond = channel.responder!, errors = vi.fn(), closes = vi.spyOn(channel, 'close');
+      session.subscribeErrors(errors);
+      let failedSequence: number | undefined;
+      channel.responder = payload => {
+        const frame = decodeFrame(payload);
+        if (frame.kind !== Bbp2MessageKind.Route) return respond(payload);
+        const request = decodeDeliveryBody(frame.body);
+        if (request.messageKind !== Bbp2MessageKind.TelemetryControl) return respond(payload);
+        const renew = encodeTelemetryControlBody({ operation: DeviceV2TelemetryOperation.Renew,
+          streamId: 1, epoch: 1, leaseMs: 30000 });
+        if (bytesToHex(request.messageBody) === bytesToHex(renew)) {
+          failedSequence = frame.sequence;
+          channel.emit(encodeFrame({ kind: Bbp2MessageKind.Error, flags: Bbp2FrameFlag.IsResponse,
+            sequence: 201, body: errorBody(Bbp2ErrorCode.Internal, frame.sequence) }));
+          return;
+        }
+        expect(request.messageBody).toEqual(encodeTelemetryControlBody({ operation: DeviceV2TelemetryOperation.Open,
+          streamId: 1, leaseMs: 30000, intervalMs: 1000, fieldIds: [1] }));
+        channel.emit(encodeFrame({ kind: Bbp2MessageKind.Delivery, flags: Bbp2FrameFlag.IsResponse, sequence: 200,
+          body: encodeDeliveryBody({ ...request, messageKind: Bbp2MessageKind.TelemetryStatus,
+            messageFlags: Bbp2FrameFlag.IsResponse | Bbp2FrameFlag.IdMode,
+            messageBody: concat(Uint8Array.of(0xa5, 0, 1),
+              Uint8Array.of(1, 1, 2, DeviceV2TelemetryStatusCode.Opened, 3), unsigned(1000),
+              Uint8Array.of(4), unsigned(30000)) }) }));
+      };
+      const count = channel.published.length;
+      const lease = await session.openTelemetry(logicalDeviceId, ['power'], 1000);
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(errors).toHaveBeenCalledOnce();
+      expect(errors.mock.calls[0][0]).toBeInstanceOf(DeviceV2RouteError);
+      expect(errors.mock.calls[0][0]).toMatchObject({ code: Bbp2ErrorCode.Internal, relatedSequence: failedSequence });
+      expect(session.state).toBe('ready');
+      expect(lease.snapshot).toMatchObject({ active: false, values: {} });
+      await vi.advanceTimersByTimeAsync(60000);
+      const frames = channel.published.slice(count).map(decodeFrame);
+      expect(frames.map(frame => decodeDeliveryBody(frame.body).messageKind)).toEqual([
+        Bbp2MessageKind.TelemetryControl, Bbp2MessageKind.TelemetryControl,
+      ]);
+      expect(channel.published.map(decodeFrame).filter(frame => frame.kind === Bbp2MessageKind.Hello)).toHaveLength(1);
+      expect(closes).not.toHaveBeenCalled();
+      expect(errors).toHaveBeenCalledOnce();
+    } finally {
+      await session.close();
+      vi.useRealTimers();
+    }
+  });
+
   it('refreshes State without repeating a verified Manifest exchange', async () => {
     const channel = new FakeChannel();
     const server = installServer(channel);

@@ -154,6 +154,7 @@
         </ion-list>
       </ng-template>
     </ion-popover>
+    @if (cardEditor?.error()) { <p class="error" role="alert">{{ cardEditor?.error() }}</p> }
     <section class="menu-group">
       <h2 class="section-label">设备功能</h2>
       <app-menu-list [detailed]="true" [items]="deviceMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
@@ -186,3 +187,4 @@
   </main>
 </ion-content>
 }
+<home-card-settings />
