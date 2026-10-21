@@ -1,4 +1,7 @@
 import { BleClient } from '@capacitor-community/bluetooth-le';
+
+import { environment } from 'src/environments/environment';
+import { localCapabilities } from 'src/environments/deployment';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bleScanner } from '../bluetooth/scan';
@@ -9,6 +12,10 @@ function createService(http: any, cache: any, data: any): DeviceV2BleService {
   data.deviceDataLoader ??= new BehaviorSubject(false);
   return new DeviceV2BleService(http, cache, data, { active: new BehaviorSubject(true) } as any);
 }
+
+const originalDeployment = environment.deployment;
+beforeEach(() => { environment.deployment = localCapabilities; });
+afterEach(() => { environment.deployment = originalDeployment; });
 
 describe('BLE presence evidence lifetime', () => {
   beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] }));

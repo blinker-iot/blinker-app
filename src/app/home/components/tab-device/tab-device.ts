@@ -26,6 +26,7 @@ import { API } from '../../../configs/api.config';
 import { DeviceCardEditor } from '../../device-card-editor.service';
 import { DeviceCardSettingsPanel } from '../device-card-settings/device-card-settings';
 import { DeviceCardControl } from '../../device-card-control.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'tab-device',
@@ -49,6 +50,7 @@ import { DeviceCardControl } from '../../device-card-control.service';
 })
 
 export class TabDeviceComponent implements OnInit {
+  readonly messagesAvailable = environment.deployment.messages;
   private _roomid = -1;
   private addMenuLayoutFrame?: number;
   private readonly presenceRefresh: BlePresenceRefresh;

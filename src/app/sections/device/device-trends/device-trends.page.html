@@ -1,0 +1,74 @@
+<ion-header><ion-toolbar>
+  <ion-buttons slot="start"><ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button></ion-buttons>
+  <ion-title>在线趋势</ion-title>
+</ion-toolbar></ion-header>
+<ion-content [fullscreen]="true"><main>
+  <h1 class="device-context">{{ deviceName }}</h1>
+  <p class="source-note">启用记录且设备云在线时，服务器每约 60 秒选样归档；不是设备所有消息都固定每 60 秒上传。关闭此页面不停止已启用的归档。时间为服务器接收时间（UTC），不是设备采集时间。不补离线数据，不保证每个样本送达；相同读数也会保留。</p>
+  @if (state().detail; as detail) {
+    <section class="surface-card policy-card" aria-label="在线记录设置">
+      <p class="runtime-phase">{{ phaseLabel }}</p>
+      <p class="policy-note">设置：{{ detail.policy?.enabled ? '已启用' : '未启用' }} · 每 60 秒 · 最多 4 项。最多保留 30 天、每设备 200,000 条；容量上限可能提前移除旧记录。</p>
+      @if (canConfigure) {
+        <label class="enabled-control"><input type="checkbox" [ngModel]="state().draftEnabled" (ngModelChange)="setEnabled($event)" [disabled]="state().busy || state().writeBlocked" />启用在线记录</label>
+        @if (!detail.fields.length) { <p class="empty-state">当前没有可记录的只读数值实时能力；请先让设备获取并上报匹配的能力目录。</p> }
+        <fieldset [disabled]="state().busy || state().writeBlocked"><legend>选择数值功能（最多 4 项）</legend>
+          @for (field of detail.fields; track field.key) {
+            <label><input type="checkbox" [checked]="state().draftKeys.includes(field.key)" [disabled]="!state().draftKeys.includes(field.key) && state().draftKeys.length >= 4" (change)="selectField(field.key, $any($event.target).checked)" />{{ fieldLabel(field) }}</label>
+          }
+        </fieldset>
+        <button class="secondary-action" type="button" [disabled]="!canSave" (click)="save()">保存记录设置</button>
+      } @else { <p class="readonly-note">仅设备所有者可以更改记录设置；分享用户可按当前权限查看。</p> }
+    </section>
+  }
+  @if (state().notice) { <p class="notice-note" role="status">{{ state().notice }}</p> }
+  @if (state().error) { <p class="error-note" role="alert">{{ state().error }}</p> }
+  <section class="surface-card query-form" aria-label="在线趋势查询">
+    <label>窗口宽度<select class="window-width" [ngModel]="state().rangeMs" (ngModelChange)="changeRange($event)" [disabled]="!canQuery || state().busy">
+      @for (range of ranges; track range.value) { <option [ngValue]="range.value">{{ range.label }}</option> }
+    </select></label>
+    <label>结束时间（UTC，不含）<input class="window-end" type="datetime-local" step="1"
+      [ngModel]="state().endInput" (ngModelChange)="editEnd($event)" [attr.aria-invalid]="!!windowError"
+      [disabled]="!canQuery || state().busy" /></label>
+    <button class="secondary-action apply-window" type="button" [disabled]="!canApplyWindow" (click)="applyWindow()">查询窗口</button>
+    <label>功能<select [ngModel]="state().key" (ngModelChange)="changeKey($event)" [disabled]="!canQuery || state().busy">
+      <option value="">全部功能</option>@for (field of keyOptions; track field.key) { <option [value]="field.key">{{ fieldLabel(field) }}</option> }
+    </select></label>
+    <button class="secondary-action" type="button" [disabled]="!canQuery || state().busy" (click)="refresh()">只读刷新</button>
+    <nav class="window-navigation" aria-label="历史时间窗口">
+      <button class="secondary-action previous-window" type="button" [disabled]="!canShiftWindow(-1)" (click)="shiftWindow(-1)">前一窗</button>
+      <button class="secondary-action next-window" type="button" [disabled]="!canShiftWindow(1)" (click)="shiftWindow(1)">后一窗</button>
+      <button class="secondary-action latest-window" type="button" [disabled]="!canQuery || state().busy" (click)="latestWindow()">回到最近窗口</button>
+    </nav>
+  </section>
+  @if (windowError) { <p class="window-error" role="alert">{{ windowError }}</p> }
+  @if (windowPending) { <p class="window-pending" role="status">时间输入尚未应用，结果仍对应已查询范围；点击“查询窗口”后更新。</p> }
+  @if (state().busy) { <div class="query-loading" role="status"><ion-spinner name="crescent"></ion-spinner><span>正在与服务器确认…</span></div> }
+  @if (state().ready) {
+    <p class="range-note">已查询：{{ utcText(state().from) }} 至 {{ utcText(state().to) }}（不含结束时刻）。刷新和筛选保持此窗口；保留期及容量限制可能使旧记录不完整。</p>
+    @if (!state().rows.length) { <p class="empty-state">该范围暂无归档样本。未启用、离线或采样间断时不会补点。</p> }
+    @for (curve of curves; track curve.key + ':' + curve.type) {
+      <section class="surface-card chart-card" aria-label="有界接收时间曲线">
+        <h2>{{ fieldLabel(curve) }}</h2><small>{{ curve.min }} ～ {{ curve.max }} · 已读取 {{ curve.dots.length }} 个点</small>
+        <svg viewBox="0 0 300 100" role="img" [attr.aria-label]="fieldLabel(curve) + '服务器接收时间趋势'">
+          @for (path of curve.paths; track $index) { <path [attr.d]="path" /> }
+          @for (dot of curve.dots; track $index) { <circle [attr.cx]="dot.x" [attr.cy]="dot.y" r="1.8" /> }
+        </svg>
+        <small>{{ utcText(curve.from) }} → {{ utcText(curve.to) }}；间断处分段显示，不补点。</small>
+      </section>
+    }
+    @if (state().rows.length) {
+      <p class="section-label">已读取 {{ state().rows.length }} 条（最多 {{ viewLimit }} 条），最新记录在前；精确大整数仅显示数值，不绘制近似曲线。</p>
+      <section class="surface-card history-list" aria-label="真实归档样本">
+        @for (row of state().rows; track row.id) {
+          <article class="history-row"><div class="history-main"><strong>{{ fieldLabel(row) }}</strong><span>{{ row.state.value }}</span></div>
+            <time [attr.datetime]="utcDate(row.receivedAt)">{{ utcText(row.receivedAt) }}</time>
+            <small>服务器接收时间 · 来源：云端实时采样</small>
+          </article>
+        }
+      </section>
+    }
+    @if (canLoadMore) { <button class="secondary-action load-more-action" type="button" (click)="loadMore()">查看更早样本</button> }
+    @if (bounded) { <p class="bounded-note">已达到本窗口 {{ viewLimit }} 条字段记录上限，曲线未必覆盖整个窗口；可按功能筛选或缩小窗口后查询。</p> }
+  }
+</main></ion-content>

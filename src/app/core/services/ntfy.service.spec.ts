@@ -1,4 +1,7 @@
 import '@angular/compiler';
+
+import { environment } from 'src/environments/environment';
+import { localCapabilities } from 'src/environments/deployment';
 import {
   HttpClient,
   provideHttpClient,
@@ -62,6 +65,10 @@ const credentials = {
   topic: 'private-topic',
   token: 'private-token',
 };
+
+const originalDeployment = environment.deployment;
+beforeEach(() => { environment.deployment = localCapabilities; });
+afterEach(() => { environment.deployment = originalDeployment; });
 
 describe('NtfyService backend installation', () => {
   let service: NtfyService;
@@ -136,6 +143,19 @@ describe('NtfyService backend installation', () => {
     expect(SecureStorage.get).not.toHaveBeenCalled();
     expect(Ntfy.addListener).not.toHaveBeenCalled();
     expect(Ntfy.start).not.toHaveBeenCalled();
+  });
+
+  it('stops inherited native activity once when deployment is closed without touching stored intent or HTTP', async () => {
+    vi.spyOn(NTFY_CONFIG, 'enabled', 'get').mockReturnValue(false);
+    await service.init();
+    await service.init();
+    await expect(service.ensureInstallation()).resolves.toBe(false);
+    await expect(service.revoke()).resolves.toBe(true);
+    expect(Ntfy.stop).toHaveBeenCalledTimes(1);
+    for (const fn of [SecureStorage.get, SecureStorage.set, SecureStorage.remove,
+      Ntfy.addListener, Ntfy.getNotificationPermission, Ntfy.requestNotificationPermission,
+      Ntfy.start, Ntfy.clearMessages]) expect(fn).not.toHaveBeenCalled();
+    httpTesting.expectNone(() => true);
   });
 
   it.each(['granted', 'denied', 'unsupported'] as const)(

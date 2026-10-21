@@ -5,6 +5,7 @@ import { AlertController } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
 
 import {
+  ChangeDetectorRef,
   ChangeDetectionStrategy,
   Component,
   OnDestroy,
@@ -54,6 +55,8 @@ export class LoginPage implements OnDestroy {
   code: string = '';
   countdown: number = 0;
   private countdownTimer: any;
+  private sendingCode = false;
+  private destroyed = false;
 
   showPoweredBy = true;
   USER_AGREEMENT = CONFIG.USER_AGREEMENT;
@@ -68,11 +71,14 @@ export class LoginPage implements OnDestroy {
     private dataService: DataService,
     private shareInvitation: DeviceV2ShareInvitationService,
     private route: ActivatedRoute,
+    private readonly cd: ChangeDetectorRef,
   ) { }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     if (this.countdownTimer) {
       clearInterval(this.countdownTimer);
+      this.countdownTimer = undefined;
     }
   }
 
@@ -110,6 +116,7 @@ export class LoginPage implements OnDestroy {
   // 发送验证码
   async sendCode(event: Event) {
     event.preventDefault();
+    if (this.destroyed || this.sendingCode || this.countdown > 0) return;
 
     if (!this.email || !this.isValidEmail(this.email)) {
       this.noticeService.showToast('needValidEmail');
@@ -117,30 +124,45 @@ export class LoginPage implements OnDestroy {
       return;
     }
 
-    await this.noticeService.showLoading('sendingCode');
+    this.sendingCode = true;
+    try {
+      await this.noticeService.showLoading('sendingCode');
+      if (this.destroyed) {
+        await this.noticeService.hideLoading();
+        return;
+      }
 
-    const success = await this.authService.sendEmailCode(this.email);
+      const success = await this.authService.sendEmailCode(this.email);
 
-    await this.noticeService.hideLoading();
+      await this.noticeService.hideLoading();
+      if (this.destroyed) return;
 
-    if (success) {
-      this.noticeService.showToast('codeSent');
-      this.startCountdown();
-    } else {
-      this.noticeService.showToast('sendCodeFailed');
+      if (success) {
+        this.noticeService.showToast('codeSent');
+        this.startCountdown();
+      } else {
+        this.noticeService.showToast('sendCodeFailed');
+      }
+    } finally {
+      this.sendingCode = false;
     }
   }
 
   // 开始倒计时
   startCountdown() {
+    if (this.destroyed) return;
+    if (this.countdownTimer) clearInterval(this.countdownTimer);
     this.countdown = 60;
+    this.cd.markForCheck();
 
     this.countdownTimer = setInterval(() => {
       this.countdown--;
 
       if (this.countdown <= 0) {
         clearInterval(this.countdownTimer);
+        this.countdownTimer = undefined;
       }
+      this.cd.markForCheck();
     }, 1000);
   }
 

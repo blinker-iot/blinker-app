@@ -16,7 +16,6 @@ ion-content {
   background: var(--blinker-bg);
 }
 
-.summary-dot,
 .version-dot {
   width: 6px;
   height: 6px;
@@ -102,53 +101,82 @@ ion-content {
   font-size: 13px;
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 9px;
-  margin-bottom: 14px;
+.account-card {
+  padding: 16px;
+  border: 1px solid var(--blinker-border);
+  border-radius: 14px;
+  background: var(--blinker-surface);
+  box-shadow: var(--blinker-shadow-soft);
+}
 
-  button {
-    position: relative;
-    min-height: 96px;
-    padding: 13px 8px 11px;
-    border: 1px solid var(--blinker-border);
-    border-radius: 14px;
-    background: var(--blinker-surface);
-    box-shadow: var(--blinker-shadow-soft);
-    color: var(--blinker-text-primary);
-    display: grid;
-    justify-items: center;
-    gap: 4px;
+.account-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 
-    > i {
-      color: var(--blinker-text-secondary);
-      font-size: 18px;
-    }
-
-    strong {
-      font-size: 17px;
-      font-weight: 600;
-      line-height: 1;
-
-      small {
-        color: var(--blinker-text-secondary);
-        font-size: 9px;
-        font-weight: 400;
-      }
-    }
-
-    > span:not(.summary-dot) {
-      color: var(--blinker-text-secondary);
-      font-size: 10px;
-    }
+  h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
   }
 }
 
-.summary-dot {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+.account-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 6px 0 6px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ion-color-primary);
+  font-size: 12px;
+
+  &:disabled { opacity: 0.55; }
+}
+
+.account-entitlements {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+  margin: 18px 0 14px;
+
+  dt {
+    color: var(--blinker-text-secondary);
+    font-size: 12px;
+  }
+
+  dd {
+    margin: 8px 0 0;
+    overflow-wrap: anywhere;
+    font-size: 16px;
+    font-weight: 600;
+  }
+}
+
+.plan-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: rgba(var(--ion-color-primary-rgb), 0.08);
+  color: var(--blinker-text-secondary);
+  font-size: 13px;
+
+  &.pro { color: var(--ion-color-primary); }
+}
+
+.account-hint,
+.account-status {
+  margin: 0;
+  color: var(--blinker-text-tertiary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.account-status {
+  margin-bottom: 6px;
+  color: var(--ion-color-warning-shade);
 }
 
 app-menu-list {

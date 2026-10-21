@@ -1,4 +1,5 @@
 import { Routes, RouterStateSnapshot } from '@angular/router';
+import { deploymentGuard } from './core/injectable/deployment.guard';
 import { LayouterGuard } from './device/layouter2/layouter.guard';
 import { asHomeTabId } from './home/home-tab-state';
 
@@ -65,7 +66,7 @@ export const routes: Routes = [
   { path: 'feedback', loadComponent: () => import('./sections/feedback/feedback.component').then(m => m.FeedbackPage) },
   { path: 'about', loadComponent: () => import('./sections/about/about.page').then(m => m.AboutPage) },
   { path: 'user', loadComponent: () => import('./sections/user/user.page').then(m => m.UserPage) },
-  { path: 'message', loadComponent: () => import('./sections/message/message.page').then(m => m.MessagePage) },
+  { path: 'message', canMatch: [deploymentGuard('messages')], loadComponent: () => import('./sections/message/message.page').then(m => m.MessagePage) },
   {
     path: 'guide',
     pathMatch: 'full',
@@ -73,10 +74,12 @@ export const routes: Routes = [
   },
   {
     path: 'guide/wifi',
+    canMatch: [deploymentGuard('directAccess')],
     loadComponent: () => import('./sections/guide/wifi-device/wifi-device.page').then(m => m.WifiDeviceGuidePage),
   },
   {
     path: 'guide/ble',
+    canMatch: [deploymentGuard('directAccess')],
     loadComponent: () => import('./sections/guide/ble-device/ble-device.page').then(m => m.BleDeviceGuidePage),
   },
   {
@@ -97,6 +100,7 @@ export const routes: Routes = [
   },
   {
     path: 'device/:id/gateway-enrollment',
+    canMatch: [deploymentGuard('directAccess')],
     loadComponent: () => import('./sections/device/edge-gateway-enrollment/edge-gateway-enrollment.page')
       .then(m => m.EdgeGatewayEnrollmentPage),
   },
@@ -123,10 +127,12 @@ export const routes: Routes = [
   },
   {
     path: 'automation-manager',
+    canMatch: [deploymentGuard('automation')],
     loadComponent: () => import('./sections/scene/automation/automation.page').then(m => m.AutomationPage),
   },
   {
     path: 's/:token',
+    canMatch: [deploymentGuard('consoleLinks')],
     loadComponent: () => import('./sections/device/shared-console/shared-console.page').then(m => m.SharedConsolePage),
   },
   {
@@ -162,10 +168,12 @@ export const routes: Routes = [
   },
   {
     path: 'device-manager/:id/timer',
+    canMatch: [deploymentGuard('tasks')],
     loadComponent: () => import('./sections/device/device-timer/device-timer.page').then(m => m.DeviceTimerPage),
   },
   {
     path: 'device-manager/:id/timer/:taskid',
+    canMatch: [deploymentGuard('tasks')],
     loadComponent: () => import('./sections/device/device-timer/timing-edit/timing-edit').then(m => m.TimingEditPage),
   },
   {
@@ -179,6 +187,10 @@ export const routes: Routes = [
   {
     path: 'device-manager/:id/storage',
     loadComponent: () => import('./sections/device/device-storage/device-storage.page').then(m => m.DeviceStoragePage),
+  },
+  {
+    path: 'device-manager/:id/trends',
+    loadComponent: () => import('./sections/device/device-trends/device-trends.page').then(m => m.DeviceTrendsPage),
   },
   {
     path: 'device-manager/:id/update',

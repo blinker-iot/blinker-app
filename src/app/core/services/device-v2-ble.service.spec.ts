@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
+
 import { BehaviorSubject, Subject } from 'rxjs';
 
 import { BleApplicationMode, deriveBlePresenceLocator } from '../device-v2/ble-direct';
 import { bleScanner } from '../bluetooth/scan';
 import { BleClient } from '@capacitor-community/bluetooth-le';
 import { GatewayHttpError } from '../model/response.model';
+import { environment } from 'src/environments/environment';
+import { cloudBetaCapabilities, localCapabilities } from 'src/environments/deployment';
 import {
   DeviceV2BleService,
   matchAuthorizedBlePresence,
@@ -12,11 +15,34 @@ import {
   unambiguousBlePresenceCandidate,
 } from './device-v2-ble.service';
 
+const originalDeployment = environment.deployment;
+beforeEach(() => { environment.deployment = localCapabilities; });
+afterEach(() => { environment.deployment = originalDeployment; });
+
 function createService(http: any, cache: any, data: any): DeviceV2BleService {
   data.deviceDataLoader ??= new BehaviorSubject(false);
   data.getDevice ??= () => undefined;
   return new DeviceV2BleService(http, cache, data, { active: new BehaviorSubject(true) } as any);
 }
+
+it('keeps closed deployment presence and adapter monitoring inert without reading credentials', async () => {
+  environment.deployment = cloudBetaCapabilities;
+  const initialize = vi.spyOn(BleClient, 'initialize');
+  const scan = vi.spyOn(bleScanner, 'run');
+  try {
+    const http = { get: vi.fn(), post: vi.fn() };
+    const service = createService(http, {}, { authDataChanged: new Subject(), sessionEpoch: 1 });
+    const watch = service.watchAdapterEnabled().subscribe();
+    expect(await service.hasActiveCredential('device-one')).toBe(false);
+    expect(await service.canManagePresenceCredential('device-one')).toBe(false);
+    await service.refreshPresence(['device-one']);
+    await expect(service.discoverDirect()).rejects.toThrow('BLE_DIRECT_DEPLOYMENT_UNAVAILABLE');
+    await expect(service.discoverProvisioningDevices()).rejects.toThrow('BLE_DIRECT_DEPLOYMENT_UNAVAILABLE');
+    expect(initialize).not.toHaveBeenCalled(); expect(scan).not.toHaveBeenCalled();
+    expect(http.get).not.toHaveBeenCalled(); expect(http.post).not.toHaveBeenCalled();
+    watch.unsubscribe();
+  } finally { environment.deployment = localCapabilities; initialize.mockRestore(); scan.mockRestore(); }
+});
 
 describe('DeviceV2BleService presence identity', () => {
   const data = {

@@ -94,7 +94,7 @@ function encoded(value: unknown): Uint8Array {
 function toBase64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
-function stateValue(value: unknown, fieldKey: string, type: number): StateHistoryValue {
+export function parseHistoryStateValue(value: unknown, fieldKey: string, type: number): StateHistoryValue {
   const record = object(value, ['type', 'cbor'], ['value', 'encoding']);
   assert(record['type'] === type);
   const bytes = encoded(record['cbor']);
@@ -133,7 +133,7 @@ function item(value: unknown, query: StateHistoryQuery): StateHistoryItem {
   assert(record['observedAt'] >= query.from && record['observedAt'] < query.to
     && (query.key === undefined || record['key'] === query.key));
   return { id: record['id'], segmentId: record['segmentId'], key: record['key'], kind: 0,
-    type: Number(record['type']), state: stateValue(record['state'], record['key'], Number(record['type'])),
+    type: Number(record['type']), state: parseHistoryStateValue(record['state'], record['key'], Number(record['type'])),
     revision: Number(record['revision']), manifestFingerprint: record['manifestFingerprint'],
     observedAt: record['observedAt'], event: record['event'] };
 }

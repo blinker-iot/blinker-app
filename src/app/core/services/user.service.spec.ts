@@ -92,6 +92,20 @@ describe('UserService API contracts', () => {
     expect(dataService.auth?.uuid).toBe('legacy-uuid');
   });
 
+  it('retains the last owned quota count on refresh failure and does not count received shares', async () => {
+    const first = service.getAllInfo(), firstRequests = inventoryRequests();
+    flushInventory(firstRequests, true); await first;
+    expect(dataService.ownedDeviceCount).toBe(1);
+    const loading = service.getAllInfo(), requests = inventoryRequests();
+    requests.user.flush({ data: { id: 'legacy-uuid', nickname: 'User' } });
+    requests.owned.flush({ message: 'Unavailable' }, { status: 503, statusText: 'Unavailable' });
+    requests.shared.flush({ data: { devices: [] } });
+    requests.regions.flush({ data: { revision: 0, order: [], rooms: {} } });
+    await expect(loading).resolves.toBe(true);
+    expect(dataService.deviceLoadError.value).toMatchObject({ status: 503 });
+    expect(dataService.ownedDeviceCount).toBe(1);
+  });
+
   it('loads the V2 device inventory without Legacy JSON subresource requests', async () => {
     const deviceId = 'device_1234567890abcdef';
     const loading = service.getAllInfo();
@@ -162,6 +176,7 @@ describe('UserService API contracts', () => {
     await expect(loading).resolves.toBe(true);
     expect(dataService.user.id).toBe('user-1');
     expect(dataService.device.list).toEqual([deviceId, 'device_shared']);
+    expect(dataService.ownedDeviceCount).toBe(1);
     expect(dataService.device.dict['device_shared'].config.isShared).toBe(true);
     expect(dataService.device.dict['device_shared'].data.cloudReachable).toBe(true);
     expect(dataService.device.dict['device_shared'].data.canCommand).toBe(false);

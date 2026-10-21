@@ -10,12 +10,15 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { DataService } from '../../../core/services/data.service';
 import { UpdateService } from '../../../core/services/update.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { UserService } from '../../../core/services/user.service';
 import { MessageService } from '../../../sections/message/message.service';
 import {
   MenuListComponent,
   MenuListItem,
 } from '../../../core/components/menu-list/menu-list';
 import { createProfileMenuGroups } from './profile-menu.config';
+import { environment } from 'src/environments/environment';
+import { profileEntitlements } from './profile-entitlements';
 
 @Component({
   selector: 'app-tab-profile',
@@ -31,6 +34,9 @@ import { createProfileMenuGroups } from './profile-menu.config';
   ],
 })
 export class TabProfileComponent implements OnInit {
+  readonly messagesAvailable = environment.deployment.messages;
+  refreshingAccount = false;
+  private failedAccountEpoch: number | null = null;
   get menuGroups() {
     return createProfileMenuGroups(
       {
@@ -56,16 +62,24 @@ export class TabProfileComponent implements OnInit {
     return this.user?.avatar || '';
   }
 
-  get planSummary(): string {
-    const plan = this.user?.subscriptionPlan;
-    const planName = plan?.display_name?.trim() || plan?.name?.trim() || '';
-    if (!planName) return '';
+  get accountEntitlements() {
+    return profileEntitlements(this.user, this.dataService.ownedDeviceCount);
+  }
 
-    const endDate = plan?.end_date?.trim();
-    if (!endDate) return planName;
+  get deviceQuotaLabel(): string {
+    const { limit, used } = this.accountEntitlements;
+    const key = limit === -1
+      ? used === null ? 'DEVICE_QUOTA_UNLIMITED' : 'DEVICE_QUOTA_UNLIMITED_COUNT'
+      : limit === null
+        ? used === null ? 'DEVICE_QUOTA_UNKNOWN' : 'DEVICE_QUOTA_USAGE'
+        : used === null ? 'DEVICE_QUOTA_LIMIT' : 'DEVICE_QUOTA_COUNT';
+    return this.translate.instant(`PROFILE.${key}`, { used, limit });
+  }
 
-    const dateOnly = endDate.match(/^\d{4}-\d{2}-\d{2}/)?.[0] || endDate;
-    return `${planName} · ${dateOnly}`;
+  get showAccountRefreshFailure(): boolean {
+    return this.failedAccountEpoch === this.dataService.sessionEpoch
+      || (!!this.user?.id && (!!this.dataService.userLoadError.value
+        || !!this.dataService.deviceLoadError.value));
   }
 
   get roomNum() {
@@ -110,11 +124,27 @@ export class TabProfileComponent implements OnInit {
     private authService: AuthService,
     private translate: TranslateService,
     private navController: NavController,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private userService: UserService,
   ) {}
 
   ngOnInit(): void {
     void this.messageService.init().catch(() => undefined);
+  }
+
+  async refreshAccount(): Promise<void> {
+    if (this.refreshingAccount || !this.dataService.auth) return;
+    this.refreshingAccount = true;
+    this.failedAccountEpoch = null;
+    const epoch = this.dataService.sessionEpoch;
+    try {
+      const loaded = await this.userService.getAllInfo();
+      if (epoch === this.dataService.sessionEpoch && !loaded) this.failedAccountEpoch = epoch;
+    } catch {
+      if (epoch === this.dataService.sessionEpoch) this.failedAccountEpoch = epoch;
+    } finally {
+      this.refreshingAccount = false;
+    }
   }
 
   goto(page?: string) {

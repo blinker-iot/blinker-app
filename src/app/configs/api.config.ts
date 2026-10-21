@@ -55,6 +55,8 @@ export const API = {
     DETAIL: deviceKeyV2Url,
     DISPLAY_METADATA: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/display-metadata',
     STATE_HISTORY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/state-history',
+    PERIODIC_HISTORY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/periodic-history',
+    PERIODIC_HISTORY_POLICY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/periodic-history-policy',
     TASKS: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/tasks:execute',
     MANIFEST: (id: string) => deviceKeyV2Url(id) + '/manifest',
     CONSOLE: (id: string) => deviceKeyV2Url(id) + "/console",
@@ -220,6 +222,8 @@ function isDeviceKeyManagementUrl(url: string): boolean {
       || parts[1] === 'page-layout'
       || parts[1] === 'display-metadata'
       || parts[1] === 'state-history'
+      || parts[1] === 'periodic-history'
+      || parts[1] === 'periodic-history-policy'
       || parts[1] === 'ui-config'
       || parts[1] === 'console'
       || parts[1] === 'console-link'

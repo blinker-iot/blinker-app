@@ -4,10 +4,18 @@ import { CapacitorConfig } from '@capacitor/cli';
 // rejected by the browser. Local hardware tests may opt in explicitly because
 // the development Gateway advertises an isolated ws:// LAN endpoint.
 const localCleartext = process.env['BLINKER_LOCAL_CLEARTEXT'] === '1';
+const profile = process.env['BLINKER_APP_PROFILE'];
+if (profile && profile !== 'cloud-beta') {
+  throw new Error('Unknown BLINKER_APP_PROFILE');
+}
+const cloudBeta = profile === 'cloud-beta';
+if (cloudBeta && (localCleartext || process.env['BLINKER_DEBUG_NETWORK_CONFIG_DIR'])) {
+  throw new Error('Cloud beta must not use local cleartext or debug network trust');
+}
 
 const config: CapacitorConfig = {
-  appId: 'iot.diandeng.tech',
-  appName: '点灯·blinker',
+  appId: cloudBeta ? 'iot.diandeng.tech.beta' : 'iot.diandeng.tech',
+  appName: cloudBeta ? 'Blinker 内测' : '点灯·blinker',
   webDir: 'www',
   // Capacitor's debug bridge logs complete plugin arguments and return values.
   // SecureStorage carries DeviceKey/controller credentials, so bridge logging

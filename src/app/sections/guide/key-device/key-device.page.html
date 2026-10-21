@@ -69,6 +69,17 @@
       </button>
       <small>{{ 'DEVICE_GUIDE.KEY_RETRY_REVEAL_HELP' | translate }}</small>
     </section>
+    } @else if (phase === 'recent-auth-required') {
+    <section class="flow-status blocked-state" role="alert">
+      <span class="status-icon blocked-icon" aria-hidden="true">
+        <i class="fa-light fa-shield-exclamation"></i>
+      </span>
+      <h1>{{ 'DEVICE_GUIDE.KEY_RECENT_AUTH_TITLE' | translate }}</h1>
+      <p>{{ keyError }}</p>
+      <button type="button" class="primary-action" (click)="finishKeySetup()">
+        {{ 'DEVICE_GUIDE.KEY_OPEN_DEVICE' | translate }}
+      </button>
+    </section>
     } @else if (phase === 'step-up-blocked') {
     <section class="flow-status blocked-state" role="alert">
       <span class="status-icon blocked-icon" aria-hidden="true">
@@ -90,7 +101,7 @@
       <span class="status-icon blocked-icon" aria-hidden="true">
         <i class="fa-light fa-circle-xmark"></i>
       </span>
-      <h1>{{ 'DEVICE_GUIDE.KEY_CREATE_BLOCKED_TITLE' | translate }}</h1>
+      <h1>{{ createBlockedTitleKey | translate }}</h1>
       <p>{{ keyError }}</p>
     </section>
     } @else if (phase === 'revealed') {

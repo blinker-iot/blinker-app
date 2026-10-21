@@ -95,7 +95,9 @@
 
       @if (device && !device.config.isShared) {
       <div class="invite-actions">
+        @if (directedSharingAvailable) {
         <button type="button" [disabled]="!!busyId" (click)="inviteAccount()">邮箱邀请</button>
+        }
         <button type="button" [disabled]="!!busyId" (click)="addShare()">邀请链接</button>
       </div>
       }

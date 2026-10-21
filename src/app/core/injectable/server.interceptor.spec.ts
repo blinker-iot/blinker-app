@@ -453,6 +453,25 @@ describe('ServerInterceptor', () => {
     httpTesting.expectNone(API.AUTH.REFRESH);
   });
 
+  it.each([
+    API.DEVICE_V2.REVEAL('device-1'),
+    API.DEVICE_V2.ROTATE('device-1'),
+    API.DEVICE_V2.ENABLE_CLOUD,
+  ])('preserves a recent-auth rejection on %s without token refresh, logout or replay', url => {
+    let received: unknown;
+    const original = { ...dataService.auth };
+    http.post(url, {}).subscribe({ error: error => received = error });
+    httpTesting.expectOne(url).flush({
+      errorCode: 'DEVICE_KEY_RECENT_AUTH_REQUIRED', errorMessage: 'Recent authentication required',
+    }, { status: 403, statusText: 'Forbidden', headers: { 'X-Request-ID': 'fixture-recent-auth' } });
+    expect(received).toBeInstanceOf(GatewayHttpError);
+    expect(received).toMatchObject({ httpStatus: 403, code: 'DEVICE_KEY_RECENT_AUTH_REQUIRED', requestId: 'fixture-recent-auth' });
+    expect(dataService.auth).toEqual(original);
+    expect(navigateRoot).not.toHaveBeenCalled();
+    httpTesting.expectNone(API.AUTH.REFRESH);
+    httpTesting.expectNone(url);
+  });
+
   it('preserves multipart feedback uploads and lets the browser set the boundary', () => {
     const formData = new FormData();
     formData.append('file', new Blob(['image'], { type: 'image/png' }));

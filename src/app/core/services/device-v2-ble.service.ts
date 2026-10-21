@@ -231,6 +231,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   }
 
   discoverProvisioningDevices(timeoutMs?: number): Promise<BleDirectTarget[]> {
+    if (!environment.deployment.directAccess) return Promise.reject(new Error('BLE_DIRECT_DEPLOYMENT_UNAVAILABLE'));
     return discoverBlinkerDevices(BleApplicationMode.Provisioning, timeoutMs);
   }
 
@@ -240,6 +241,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     signal?: AbortSignal,
     matcher?: BleDirectTargetMatcher,
   ): Promise<BleDirectTarget> {
+    if (!environment.deployment.directAccess) return Promise.reject(new Error('BLE_DIRECT_DEPLOYMENT_UNAVAILABLE'));
     return discoverBlinkerDevice(
       BleApplicationMode.Direct, timeoutMs, excludedDeviceIds, signal, matcher,
     );
@@ -647,6 +649,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   }
 
   async hasActiveCredential(logicalDeviceId: string): Promise<boolean> {
+    if (!environment.deployment.directAccess) return false;
     const context = this.accountContext();
     const credential = await this.credentialStore(context).load(logicalDeviceId);
     if (!credential) {
@@ -663,6 +666,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   }
 
   async canManagePresenceCredential(logicalDeviceId: string): Promise<boolean> {
+    if (!environment.deployment.directAccess) return false;
     const context = this.accountContext();
     const credential = await this.credentialStore(context).load(logicalDeviceId);
     if (!credential) {
@@ -741,6 +745,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   }
 
   refreshPresence(logicalDeviceIds: readonly string[], signal?: AbortSignal): Promise<void> {
+    if (!environment.deployment.directAccess) return Promise.resolve();
     const context = this.accountContext();
     if (signal?.aborted) return Promise.resolve();
     if (this.active || this.opening) return Promise.resolve();
@@ -779,6 +784,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
     context = this.accountContext(),
     admission?: BleDirectConnectionAdmission,
   ): Promise<void> {
+    if (!environment.deployment.directAccess) throw new Error('BLE_DIRECT_DEPLOYMENT_UNAVAILABLE');
     if (!this.appActive) throw new Error('BLE_DIRECT_APP_INACTIVE');
 
     void this.ensureAdapterMonitoring();
@@ -947,6 +953,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   }
 
   private accountContext(): DeviceV2AccountContext {
+    if (!environment.deployment.directAccess) throw new Error('BLE_DIRECT_DEPLOYMENT_UNAVAILABLE');
     return captureDeviceV2AccountContext(this.data, API.BASE_URL);
   }
 
@@ -1084,6 +1091,7 @@ export class DeviceV2BleService implements EdgeGatewayChildControl {
   }
 
   private ensureAdapterMonitoring(): Promise<void> {
+    if (!environment.deployment.directAccess) return Promise.resolve();
     if (this.adapterMonitoring) return this.adapterMonitoring;
     const update = (enabled: boolean) => {
       this.adapterEnabled.next(enabled);

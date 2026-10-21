@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+
+import { environment } from 'src/environments/environment';
+import { localCapabilities } from 'src/environments/deployment';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { BleApplicationMode, deriveBlePresenceLocator } from '../device-v2/ble-direct';
 import { DeviceV2BleService } from './device-v2-ble.service';
@@ -28,6 +31,10 @@ function createService(http: any, cache: any, data: any): DeviceV2BleService {
   data.deviceDataLoader ??= new BehaviorSubject(false);
   return new DeviceV2BleService(http, cache, data, { active: new BehaviorSubject(true) } as any);
 }
+
+const originalDeployment = environment.deployment;
+beforeEach(() => { environment.deployment = localCapabilities; });
+afterEach(() => { environment.deployment = originalDeployment; });
 
 describe('ordinary BLE pending recovery', () => {
   it('discovers a fresh link by authorized Presence, then reuses the original resume and Manifest cache', async () => {

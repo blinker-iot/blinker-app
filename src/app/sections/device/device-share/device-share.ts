@@ -23,6 +23,7 @@ import { DataService } from 'src/app/core/services/data.service';
 import { DeviceV2SharingService } from 'src/app/core/services/device-v2-sharing.service';
 import { DeviceV2BleService } from 'src/app/core/services/device-v2-ble.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'device-share',
@@ -42,6 +43,7 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 })
 
 export class DeviceSharePage implements OnInit, OnDestroy {
+  readonly directedSharingAvailable = environment.deployment.directedSharing;
   id = '';
   device;
   busyId = '';
@@ -61,7 +63,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   private permissionMember?: DeviceV2ShareGrant;
   private linkRequest?: { key: string; body: string };
 
-  get supportsConsoleLink(): boolean { return cloudConsole(this.device); }
+  get supportsConsoleLink(): boolean { return environment.deployment.consoleLinks && cloudConsole(this.device); }
   get linkActive(): boolean { return this.viewLink?.state === 'active' && (this.viewLink.expiresAt === null || this.viewLink.expiresAt > Date.now()); }
 
   get publicLink(): string {
@@ -177,7 +179,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   }
 
   async inviteAccount(): Promise<void> {
-    if (this.busyId || this.destroyed) return;
+    if (!this.directedSharingAvailable || this.busyId || this.destroyed) return;
     const epoch = this.dataService.sessionEpoch, deviceId = this.id, pageEpoch = this.pageEpoch;
     const alert = await this.alerts.create({
       header: '通过邮箱邀请',
@@ -195,7 +197,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   }
 
   async addShare(recipientAccount?: string): Promise<void> {
-    if (this.busyId || this.destroyed) return;
+    if ((recipientAccount !== undefined && !this.directedSharingAvailable) || this.busyId || this.destroyed) return;
 
     this.permissionMember = undefined;
     this.permissionRecipient = recipientAccount;
@@ -264,7 +266,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   }
 
   async setPublicAccess(enabled: boolean): Promise<void> {
-    if (this.busyId || this.linkLoading || this.destroyed) return;
+    if (!this.supportsConsoleLink || this.busyId || this.linkLoading || this.destroyed) return;
 
     const epoch = this.dataService.sessionEpoch;
     const previous = this.publicAccessEnabled;
@@ -296,7 +298,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   }
 
   openLinkSettings(): void {
-    if (!this.publicAccessEnabled || this.busyId || this.linkLoading) return;
+    if (!this.supportsConsoleLink || !this.publicAccessEnabled || this.busyId || this.linkLoading) return;
 
     this.publicFields = [...this.viewLink?.publicFields || []];
     this.linkDays = this.viewLink?.expiresAt === null ? null : 7;
@@ -304,7 +306,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   }
 
   async saveViewLink(rotate = false): Promise<void> {
-    if (this.busyId || this.destroyed || !this.publicAccessEnabled || this.linkLoading) return;
+    if (!this.supportsConsoleLink || this.busyId || this.destroyed || !this.publicAccessEnabled || this.linkLoading) return;
 
     const epoch = this.dataService.sessionEpoch;
     const body = { ...(this.viewLink ? { expectedVersion: this.viewLink.version } : {}),
@@ -343,6 +345,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   }
 
   async revokeViewLink(): Promise<void> {
+    if (!this.supportsConsoleLink) return;
     const alert = await this.alerts.create({ header: '停用控制台链接？',
       message: '通过此链接的查看将停止，已授权成员不受影响。',
       buttons: [{ text: '保留', role: 'cancel' }, { text: '停用', role: 'destructive', handler: () => {

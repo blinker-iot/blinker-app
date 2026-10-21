@@ -21,11 +21,39 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
         }
+        beta {
+            initWith debug
+            applicationIdSuffix ".beta"
+            versionNameSuffix "-beta"
+            matchingFallbacks = ['debug']
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+// Beta shares the existing internal debug signer, but not its package/data or
+// local CA overlay. Sync the explicit cloud profile before assembling it.
+tasks.register('verifyCloudBetaConfig') {
+    doLast {
+        if (providers.environmentVariable('BLINKER_DEBUG_NETWORK_CONFIG_DIR').isPresent() ||
+            providers.environmentVariable('BLINKER_LOCAL_CLEARTEXT').getOrElse('0') == '1') {
+            throw new GradleException('Cloud beta forbids local network trust overrides')
+        }
+        def assets = file('src/main/assets')
+        def config = new groovy.json.JsonSlurper().parse(new File(assets, 'capacitor.config.json'))
+        def registry = new groovy.json.JsonSlurper().parse(new File(assets, 'capacitor.plugins.json'))
+        if (config.appId != 'iot.diandeng.tech.beta' || config.server?.androidScheme != 'https' ||
+            config.server?.cleartext != false || config.server?.url || config.loggingBehavior != 'none' ||
+            !registry.any { it.pkg == '@aparajita/capacitor-secure-storage' && it.classpath }) {
+            throw new GradleException('Run pnpm run sync:cloud-beta before assembling beta')
+        }
+    }
+}
+tasks.configureEach {
+    if (name == 'preBetaBuild') dependsOn 'verifyCloudBetaConfig'
 }
 
 // Optional local hardware CA, supplied outside the repository. Only debug

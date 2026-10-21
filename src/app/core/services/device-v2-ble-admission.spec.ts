@@ -1,4 +1,7 @@
 import { BehaviorSubject, Subject } from 'rxjs';
+
+import { environment } from 'src/environments/environment';
+import { localCapabilities } from 'src/environments/deployment';
 import { describe, expect, it, vi } from 'vitest';
 import { DeviceV2BleService } from './device-v2-ble.service';
 import { BleApplicationMode } from '../device-v2/ble-direct';
@@ -44,6 +47,10 @@ function createService(http: any, cache: any, data: any,
   data.deviceDataLoader ??= new BehaviorSubject(false);
   return new DeviceV2BleService(http, cache, data, visibility as any);
 }
+
+const originalDeployment = environment.deployment;
+beforeEach(() => { environment.deployment = localCapabilities; });
+afterEach(() => { environment.deployment = originalDeployment; });
 
 describe('production BLE service admission/cancellation boundary', () => {
   it('ordinary route scopes reuse the same root BLE link while background still retires it', async () => {

@@ -52,6 +52,7 @@ describe('DataService', () => {
     expect(service.deviceDataLoader.value).toBe(true);
     expect(service.initCompleted.value).toBe(true);
     expect(service.userDataLoader.value).toBe(false);
+    expect(service.ownedDeviceCount).toBeNull();
     expect(service.user.id).toBeUndefined();
     expect(service.getDevice('ble_one')?.data.power).toBeUndefined();
     expect(SecureStorage.get).toHaveBeenCalledExactlyOnceWith('session');
@@ -98,6 +99,19 @@ describe('DataService', () => {
     saveDeviceCatalog(scope(), [item]);
     service.loadGatewayData({ id: 'user-a' } as any, [], [], false);
     expect(loadDeviceCatalog(scope())).toBeUndefined();
+  });
+
+  it('counts only the complete owned response, independent of shared catalog and optional sharing errors', async () => {
+    await service.setAuthData(auth);
+    const owned = (id: string, state: string) => ({ ...item.device, logicalDeviceId: id, state });
+    service.loadGatewayData({ id: 'user-a' } as any, [
+      owned('own-a', 'active'), owned('own-a', 'active'), owned('own-b', 'disabled'), owned('deleted', 'deleted'),
+    ] as any, [{ ...item.device, share: { state: 'active', shareId: 'share-1', role: 'viewer' } } as any], false);
+    expect(service.ownedDeviceCount).toBe(2);
+    await service.setAuthData({ ...auth, uuid: 'user-b' });
+    expect(service.ownedDeviceCount).toBeNull();
+    service.loadGatewayData({ id: 'user-b' } as any, []);
+    expect(service.ownedDeviceCount).toBe(0);
   });
 
   it('uses server display names, retains newer CAS receipts across stale inventory and offline restart', async () => {
