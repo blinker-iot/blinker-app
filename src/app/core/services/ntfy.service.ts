@@ -78,6 +78,7 @@ interface ErrorInfo {
 @Injectable({ providedIn: 'root' })
 export class NtfyService {
   private initialized = false;
+  private disabledStop?: Promise<void>;
   private storageReady: Promise<void> | null = null;
   private storageLoaded = false;
   private storedInstallation: StoredInstallation | null = null;
@@ -112,7 +113,13 @@ export class NtfyService {
   }
 
   async init(): Promise<void> {
-    if (this.initialized || !this.isAndroid()) return;
+    if (this.initialized || Capacitor.getPlatform() !== 'android') return;
+    if (!NTFY_CONFIG.enabled) {
+      // An update may inherit a native subscription. Stop locally without
+      // touching credentials, cleanup intent, permissions, or closed HTTP APIs.
+      await (this.disabledStop ??= Ntfy.stop().then(() => undefined, () => undefined));
+      return;
+    }
 
     this.initialized = true;
     try {

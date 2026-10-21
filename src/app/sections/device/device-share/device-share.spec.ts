@@ -1,6 +1,27 @@
 import { DeviceSharePage } from './device-share';
 
+import { environment } from 'src/environments/environment';
+import { cloudBetaCapabilities, localCapabilities } from 'src/environments/deployment';
+
+const originalDeployment = environment.deployment;
+beforeEach(() => { environment.deployment = localCapabilities; });
+afterEach(() => { environment.deployment = originalDeployment; });
+
 describe('DeviceSharePage sharing contract', () => {
+  it('blocks closed email and Console access without blocking open invitations', async () => {
+    environment.deployment = cloudBetaCapabilities;
+    try {
+      const f = fixture();
+      f.page.device = { cloudEnabled: true, config: { mode: 'bbp2', isShared: false } };
+      expect(f.page.supportsConsoleLink).toBe(false);
+      await f.page.refreshLink(); await f.page.inviteAccount();
+      await f.page.addShare('reader@example.com');
+      expect(f.page.permissionsOpen).toBe(false);
+      expect(f.alerts.create).not.toHaveBeenCalled();
+      expect(f.sharing.createInvitation).not.toHaveBeenCalled();
+      await f.page.addShare(); expect(f.page.permissionsOpen).toBe(true);
+    } finally { environment.deployment = localCapabilities; }
+  });
   function fixture() {
     const data = { share: { byDevice: {} }, sessionEpoch: 1 };
     const sharing = { createInvitation: vi.fn(), revokeInvitation: vi.fn(), updateShare: vi.fn(), revokeShare: vi.fn(),

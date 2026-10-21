@@ -60,13 +60,20 @@ test('six-source closure includes untracked inputs but no caches, signing materi
   f.put('blinker-app', 'src/new-feature.ts', 'new source');
   for (const file of ['blinker.jks', 'blinker.jks.txt', '.env', 'node_modules/fake.js', 'www/app.js',
     'android/local.properties', 'android/capacitor.settings.gradle',
-    'android/app/src/main/assets/capacitor.config.json', 'android/app/src/main/assets/public/app.js']) f.put('blinker-app', file, 'private/generated');
+    'android/app/src/main/assets/capacitor.config.json', 'android/app/src/main/assets/public/app.js',
+    'public/custom-panel-runtime/runtime.json', 'public/custom-panel-runtime/atoms.json',
+    'public/custom-panel-runtime/template.html']) f.put('blinker-app', file, 'private/generated');
   f.put('capacitor-ntfy', 'dist/plugin.js', 'old dist');
   const m = f.create();
   assert.equal(Object.keys(m.provenance).length, 6);
   assert.ok(m.files['blinker-app/src/new-feature.ts']);
   assert.ok(m.files['blinker-app/tests/fixtures/time_sync_golden_vectors.properties']);
+  for (const file of ['tools/sync-cloud-beta.mjs', 'tools/cloud-beta.test.mjs',
+    'tools/custom-panel/pack.mjs']) {
+    assert.ok(m.files[`blinker-app/${file}`]);
+  }
   assert.ok(!Object.keys(m.files).some(name => /private|node_modules|\.jks|\.env|\/dist\/|capacitor\.settings/.test(name)));
+  assert.ok(!Object.keys(m.files).some(name => name.startsWith('blinker-app/public/custom-panel-runtime/')));
   assert.deepEqual(verifySource(f.bundle), m);
   assert.throws(() => f.create(), /must not exist/);
 });

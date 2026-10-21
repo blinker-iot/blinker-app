@@ -55,6 +55,7 @@ import { WiFiProvRetirement } from 'src/app/core/device-v2/provisioning/wifiprov
 import { RoomService, roomErrorMessage } from '../../room/room.service';
 import { DeviceCardEditor } from '../../../home/device-card-editor.service';
 import { DeviceCardSettingsPanel } from '../../../home/components/device-card-settings/device-card-settings';
+import { environment } from 'src/environments/environment';
 
 import {
   MenuListComponent,
@@ -178,7 +179,8 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   get deviceMenuItems(): readonly MenuListItem[] {
-    const timer = taskEntryState(this.device);
+    const timer = environment.deployment.tasks ? taskEntryState(this.device)
+      : { available: false, description: '当前服务环境暂未开放定时任务；已有设备任务不受此入口影响。' };
     const items: MenuListItem[] = [
       {
         id: 'timer',
@@ -213,6 +215,11 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     if (this.canEditHomeCard) {
       items.push({ id: 'home-card', title: '首页卡片', icon: 'fa-table-cells',
         description: '设置当前账号在本机的卡片大小和显示数据' });
+    }
+
+    if (this.device?.config.mode === 'bbp2' && !this.device.config.isPreview && !this.device.config.disabled) {
+      items.push({ id: 'trends', title: '在线趋势', description: '查看云在线时周期归档的数值样本',
+        icon: 'fa-chart-line', route: `/device-manager/${this.id}/trends` });
     }
 
     if (this.deviceShortcutService.isAvailable) {
@@ -359,12 +366,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
     this.device = this.dataService.getDevice(this.logicalDeviceId) as ManagedDevice;
 
-    this.supportsWifiProvisioning = this.isOwner
+    this.supportsWifiProvisioning = environment.deployment.directAccess && this.isOwner
       && this.hasDeviceKeyContext
       && this.device.state === 'active'
       && this.device.cloudEnabled === true;
 
-    this.supportsGatewayEnrollment = this.isOwner
+    this.supportsGatewayEnrollment = environment.deployment.directAccess && this.isOwner
       && this.hasDeviceKeyContext
       && this.device.deviceType === 'edge-hub'
       && Number.isSafeInteger(this.device.cloudLastSeenAt)
@@ -759,8 +766,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       this.revealedAuthKey = response.data.deviceKey;
       this.showKey = true;
     } catch (error) {
-      console.error('Failed to reveal Device V2 key', error);
-      await this.noticeService.showToast('设备密钥读取失败，请稍后重试');
+      await this.noticeService.showToast(this.keyErrorMessage(error, '设备密钥读取失败，请稍后重试'));
     } finally {
       this.revealingKey = false;
     }
@@ -1067,11 +1073,15 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
   private keyErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof GatewayHttpError) {
-      if (error.httpStatus === 403) return '只有设备所有者可以管理设备 Key';
+      if (error.code === 'DEVICE_KEY_RECENT_AUTH_REQUIRED') {
+        return '为保护设备 Key，请先退出并重新登录，再重试本次操作；无需删除或重新创建设备';
+      }
 
       if (error.code === 'DEVICE_KEY_STEP_UP_UNAVAILABLE') {
-        return '当前登录状态不能查看或刷新设备 Key';
+        return '设备 Key 安全校验暂时不可用，请稍后重试；无需重新创建设备';
       }
+
+      if (error.httpStatus === 403) return '只有设备所有者可以管理设备 Key';
     }
 
     return fallback;
@@ -1109,7 +1119,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   }
 
   selectMenuItem(item: MenuListItem): void {
-    if (item.disabled || (item.id === 'timer' && !taskEntryState(this.device).available)) return;
+    if (item.disabled || (item.id === 'timer' && (!environment.deployment.tasks || !taskEntryState(this.device).available))) return;
     if (item.id === 'home-card') {
       this.openHomeCardSettings();
       return;

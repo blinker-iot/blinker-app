@@ -11,6 +11,7 @@ import {
 } from '@ionic/angular/standalone';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ActivatedRoute } from '@angular/router';
+import { environment } from 'src/environments/environment';
 
 import {
   MenuListComponent,
@@ -67,7 +68,7 @@ export class GuidePage {
   }
 
   get methodItems(): readonly MenuListItem[] {
-    return [
+    const items: MenuListItem[] = [
       {
         id: 'key',
         icon: 'fa-key',
@@ -95,10 +96,11 @@ export class GuidePage {
         route: '/guide/ble',
       },
     ];
+    return environment.deployment.directAccess ? items : items.filter(item => item.id === 'key');
   }
 
   async selectMethod(method: MenuListItem): Promise<void> {
-    if (!method.route) return;
+    if (!method.route || !this.methodItems.some(item => item.id === method.id && item.route === method.route)) return;
 
     await this.navController.navigateForward(method.route);
   }

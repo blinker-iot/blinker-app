@@ -1,4 +1,5 @@
 import type { MenuListItem } from '../../../core/components/menu-list/menu-list';
+import { environment } from 'src/environments/environment';
 
 export interface ProfileMenuStats {
   roomNum: number;
@@ -30,12 +31,12 @@ export function createProfileMenuGroups(
           value: translate('PROFILE.REGION_COUNT', { count: stats.roomNum }),
           route: '/room-manager',
         },
-        {
+        ...(environment.deployment.automation ? [{
           id: 'automation',
           title: translate('PROFILE.AUTOMATION'),
           icon: 'fa-bullseye-pointer',
           route: '/automation-manager',
-        },
+        }] : []),
         {
           id: 'sharing',
           title: translate('PROFILE.DEVICE_SHARING'),

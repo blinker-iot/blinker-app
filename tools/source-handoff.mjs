@@ -25,12 +25,14 @@ export const APP_FILES = [
   'device-template/vite.config.ts', 'device-template/index.html',
   'tests/fixtures/time_sync_golden_vectors.properties',
   'tools/source-handoff.mjs', 'tools/source-handoff.test.mjs',
+  'tools/sync-cloud-beta.mjs', 'tools/cloud-beta.test.mjs',
+  'tools/custom-panel/pack.mjs',
 ];
 export const APP_TREES = ['src', 'public', 'android/app/src', 'android/gradle',
   'device-template/src', 'device-template/tests'];
 export const PLUGIN_FILES = ['package.json', 'package-lock.json', 'tsconfig.json',
   'rollup.config.mjs', 'LICENSE', 'README.md', 'android/build.gradle'];
-const GENERATED = /^android\/app\/src\/main\/(?:assets\/(?:public\/|capacitor\.(?:config|plugins)\.json$)|res\/xml\/config\.xml$)/;
+const GENERATED = /^(?:public\/custom-panel-runtime\/|android\/app\/src\/main\/(?:assets\/(?:public\/|capacitor\.(?:config|plugins)\.json$)|res\/xml\/config\.xml$))/;
 const PRIVATE = /(?:^|\/)(?:\.env(?:\.|$)|local\.properties$|google-services\.json$)|\.(?:jks|keystore|pem|key|p12|pfx|db|bin|apk|aar)$|\.private\./i;
 const HASH = /^[a-f0-9]{64}$/;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

@@ -1,4 +1,7 @@
 import '@angular/compiler';
+
+import { environment } from 'src/environments/environment';
+import { localCapabilities } from 'src/environments/deployment';
 import { HttpClient, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -12,6 +15,10 @@ import { DataService } from 'src/app/core/services/data.service';
 import { NtfyService } from 'src/app/core/services/ntfy.service';
 import { MessageItem, MessagePage, UnreadSummary } from './message.model';
 import { MessageService } from './message.service';
+
+const originalDeployment = environment.deployment;
+beforeEach(() => { environment.deployment = localCapabilities; });
+afterEach(() => { environment.deployment = originalDeployment; });
 
 describe('MessageService', () => {
   let service: MessageService;
@@ -57,6 +64,23 @@ describe('MessageService', () => {
 
   afterEach(() => {
     httpTesting.verify();
+    vi.restoreAllMocks();
+  });
+
+  it('makes closed deployment startup, foreground events and explicit inbox operations inert', async () => {
+    vi.spyOn(service, 'available', 'get').mockReturnValue(false);
+    await service.init();
+    dataService.userDataLoader.next(true);
+    appVisibility.active.next(false); appVisibility.active.next(true);
+    ntfyMessageIds.next('message-1');
+    await Promise.resolve();
+    await service.loadFirst(); await service.loadMore(); await service.refresh();
+    expect(await service.getMessage('message-1')).toBeNull();
+    expect(await service.markRead('message-1')).toBeNull();
+    expect(await service.markAllRead()).toBeNull();
+    expect(await service.deleteMessage('message-1')).toBeNull();
+    expect(service.unreadTotal).toBe(0);
+    httpTesting.expectNone(() => true);
   });
 
   it('only accepts typed canonical actions from matching authenticated message details', async () => {

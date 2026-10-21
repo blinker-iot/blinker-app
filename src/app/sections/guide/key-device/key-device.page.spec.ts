@@ -255,9 +255,8 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
     expect(deviceService.revealDeviceKeyV2).toHaveBeenCalledTimes(1);
   });
 
-  it('retries pending Broker allocation with the same create identity', async () => {
+  it('does not automatically retry pending Broker allocation and preserves the identity for a manual retry', async () => {
     const { page, deviceService } = createHarness();
-    const wait = vi.spyOn(page as any, 'wait').mockResolvedValue(undefined);
     const pending = new GatewayHttpError({
       httpStatus: 503,
       code: 'BROKER_ALLOCATION_PENDING',
@@ -265,44 +264,22 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
     });
     deviceService.createDeviceKeyV2
       .mockRejectedValueOnce(pending)
-      .mockRejectedValueOnce(pending)
       .mockResolvedValueOnce(createResponse());
     deviceService.revealDeviceKeyV2.mockResolvedValue(revealResponse());
 
     await page.createKeyDevice();
 
-    const createCalls = deviceService.createDeviceKeyV2.mock.calls;
-    expect(createCalls).toHaveLength(3);
-    expect(createCalls[1][1]).toBe(createCalls[0][1]);
-    expect(createCalls[2][1]).toBe(createCalls[0][1]);
-    expect(wait).toHaveBeenNthCalledWith(1, 1000);
-    expect(wait).toHaveBeenNthCalledWith(2, 2000);
-    expect(page.phase).toBe('revealed');
-  });
-
-  it('cancels a pending Broker allocation retry after leaving the page', async () => {
-    const { page, deviceService } = createHarness();
-    const retryDelay = deferred<void>();
-    const wait = vi
-      .spyOn(page as any, 'wait')
-      .mockReturnValue(retryDelay.promise);
-    deviceService.createDeviceKeyV2.mockRejectedValue(
-      new GatewayHttpError({
-        httpStatus: 503,
-        code: 'BROKER_ALLOCATION_PENDING',
-        message: 'pending',
-      })
-    );
-
-    const operation = page.createKeyDevice();
-    await vi.waitFor(() => expect(wait).toHaveBeenCalledTimes(1));
-    page.ionViewWillLeave();
-    retryDelay.resolve();
-    await operation;
-
     expect(deviceService.createDeviceKeyV2).toHaveBeenCalledTimes(1);
     expect(deviceService.revealDeviceKeyV2).not.toHaveBeenCalled();
-    expect(page.phase).toBe('idle');
+    expect(page.phase).toBe('create-failed');
+    expect(page.keyError).toBe('DEVICE_GUIDE.KEY_CREATE_PREPARING_DESCRIPTION');
+    const firstIdentity = deviceService.createDeviceKeyV2.mock.calls[0][1];
+
+    await page.createKeyDevice();
+
+    expect(deviceService.createDeviceKeyV2).toHaveBeenCalledTimes(2);
+    expect(deviceService.createDeviceKeyV2.mock.calls[1][1]).toBe(firstIdentity);
+    expect(page.phase).toBe('revealed');
   });
 
   it('stops a terminal create conflict without submitting create again', async () => {
@@ -322,6 +299,141 @@ describe('KeyDeviceGuidePage DeviceKey V2 flow', () => {
     expect(deviceService.createDeviceKeyV2).toHaveBeenCalledTimes(1);
     expect(deviceService.revealDeviceKeyV2).not.toHaveBeenCalled();
     expect(deviceService.createDevice).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['DEVICE_LIMIT_REACHED', 'KEY_DEVICE_LIMIT'],
+    ['DEVICE_ENTITLEMENT_INVALID', 'KEY_DEVICE_ENTITLEMENT'],
+  ])('explains %s without replaying create or revealing a key', async (code, key) => {
+    const { page, deviceService, userService, dataService, navController } = createHarness();
+    const originalAuth = dataService.auth;
+    deviceService.createDeviceKeyV2.mockRejectedValue(new GatewayHttpError({
+      httpStatus: 403, code, message: 'private upstream diagnostic',
+      data: { limit: 1, plan: 'unverified-snapshot' },
+    }));
+
+    await page.createKeyDevice();
+    const idempotencyKey = deviceService.createDeviceKeyV2.mock.calls[0][1];
+    await page.createKeyDevice();
+    await page.retryReveal();
+
+    expect(page.phase).toBe('create-blocked');
+    expect(page.createBlockedTitleKey).toBe(`DEVICE_GUIDE.${key}_TITLE`);
+    expect(page.keyError).toBe(`DEVICE_GUIDE.${key}_DESCRIPTION`);
+    expect(page.keyError).not.toContain('private upstream diagnostic');
+    expect(page.showsCreateForm).toBe(false);
+    expect(deviceService.createDeviceKeyV2).toHaveBeenCalledTimes(1);
+    expect((page as any).idempotencyKey).toBe(idempotencyKey);
+    expect(deviceService.revealDeviceKeyV2).not.toHaveBeenCalled();
+    expect(deviceService.createDevice).not.toHaveBeenCalled();
+    expect(userService.getAllInfo).not.toHaveBeenCalled();
+    expect(navController.navigateRoot).not.toHaveBeenCalled();
+    expect(dataService.auth).toBe(originalAuth);
+
+    page.ionViewWillLeave();
+    expect(page.createBlockedTitleKey).toBe('DEVICE_GUIDE.KEY_CREATE_BLOCKED_TITLE');
+    expect(page.phase).toBe('idle');
+    page.ngOnDestroy();
+  });
+
+  it.each([
+    [403, 'DEVICE_OWNER_REQUIRED', 'KEY_CREATE_DENIED'],
+    [400, 'DEVICE_LIMIT_REACHED', 'KEY_CREATE_INVALID'],
+    [409, 'DEVICE_ENTITLEMENT_INVALID', 'KEY_CREATE_CONFLICT'],
+  ])('does not mislabel HTTP %s / %s as an allowance rejection', async (httpStatus, code, key) => {
+    const { page, deviceService } = createHarness();
+    deviceService.createDeviceKeyV2.mockRejectedValue(new GatewayHttpError({
+      httpStatus, code, message: 'private upstream diagnostic',
+    }));
+
+    await page.createKeyDevice();
+
+    expect(page.phase).toBe('create-blocked');
+    expect(page.createBlockedTitleKey).toBe(`DEVICE_GUIDE.${key}_TITLE`);
+    expect(page.keyError).toBe(`DEVICE_GUIDE.${key}_DESCRIPTION`);
+    expect(deviceService.createDeviceKeyV2).toHaveBeenCalledTimes(1);
+    expect(deviceService.revealDeviceKeyV2).not.toHaveBeenCalled();
+    page.ngOnDestroy();
+  });
+
+  it.each([
+    [400, 'INVALID_REQUEST', 'KEY_CREATE_INVALID', 'create-blocked'],
+    [401, 'AUTH_TOKEN_MISSING', 'KEY_CREATE_AUTH', 'create-blocked'],
+    [403, 'AILY_REQUEST_REJECTED', 'KEY_CREATE_DENIED', 'create-blocked'],
+    [404, 'HTTP_404', 'KEY_CREATE_ENDPOINT', 'create-blocked'],
+    [405, 'METHOD_NOT_ALLOWED', 'KEY_CREATE_ENDPOINT', 'create-blocked'],
+    [409, 'IDEMPOTENCY_CONFLICT', 'KEY_CREATE_CONFLICT', 'create-blocked'],
+    [409, 'DEVICE_NOT_ACTIVE', 'KEY_CREATE_CONFLICT', 'create-blocked'],
+    [410, 'SERVICE_ACCOUNT_DELETED', 'KEY_CREATE_ACCOUNT_UNAVAILABLE', 'create-blocked'],
+    [429, 'COMMON_RATE_LIMITED', 'KEY_CREATE_RATE_LIMITED', 'create-failed'],
+    [0, 'NETWORK_ERROR', 'KEY_CREATE_NETWORK', 'create-failed'],
+    [0, 'GATEWAY_TIMEOUT', 'KEY_CREATE_TIMEOUT', 'create-failed'],
+    [500, 'DEVICE_V2_INTERNAL_ERROR', 'KEY_CREATE_SERVICE', 'create-failed'],
+    [502, 'AILY_UNAVAILABLE', 'KEY_CREATE_SERVICE', 'create-failed'],
+    [503, 'BROKER_UNAVAILABLE', 'KEY_CREATE_SERVICE', 'create-failed'],
+    [503, 'DEVICE_V2_UNAVAILABLE', 'KEY_CREATE_SERVICE', 'create-failed'],
+    [503, 'BROKER_ALLOCATION_PENDING', 'KEY_CREATE_PREPARING', 'create-failed'],
+    [418, 'UNKNOWN_CREATE_CODE', 'KEY_CREATE_BLOCKED', 'create-failed'],
+  ])('classifies HTTP %s / %s without automatically repeating create', async (httpStatus, code, key, phase) => {
+    const { page, deviceService, dataService, navController } = createHarness();
+    const auth = dataService.auth;
+    deviceService.createDeviceKeyV2.mockRejectedValue(new GatewayHttpError({
+      httpStatus: Number(httpStatus), code: String(code), message: 'private upstream diagnostic',
+    }));
+
+    await page.createKeyDevice();
+    await page.retryReveal();
+
+    expect(page.phase).toBe(phase);
+    expect(page.createBlockedTitleKey).toBe(`DEVICE_GUIDE.${key}_TITLE`);
+    expect(page.keyError).toBe(`DEVICE_GUIDE.${key}_DESCRIPTION`);
+    expect(page.keyError).not.toContain('private upstream diagnostic');
+    expect(deviceService.createDeviceKeyV2).toHaveBeenCalledTimes(1);
+    expect(deviceService.revealDeviceKeyV2).not.toHaveBeenCalled();
+    expect(deviceService.createDevice).not.toHaveBeenCalled();
+    expect(dataService.auth).toBe(auth);
+    expect(navController.navigateRoot).not.toHaveBeenCalled();
+    page.ngOnDestroy();
+  });
+
+  it('uses a safe unknown-result description for an unexpected failure', async () => {
+    const { page, deviceService } = createHarness();
+    deviceService.createDeviceKeyV2.mockRejectedValue(new Error('private failure'));
+
+    await page.createKeyDevice();
+
+    expect(page.keyError).toBe('DEVICE_GUIDE.KEY_CREATE_BLOCKED_DESCRIPTION');
+    expect(deviceService.createDeviceKeyV2).toHaveBeenCalledTimes(1);
+    expect(deviceService.revealDeviceKeyV2).not.toHaveBeenCalled();
+    page.ngOnDestroy();
+  });
+
+  it('retains the created device when recent authentication is required without replaying create or reveal', async () => {
+    const { page, deviceService, navController, userService, dataService } = createHarness();
+    deviceService.createDeviceKeyV2.mockResolvedValue(createResponse());
+    deviceService.revealDeviceKeyV2.mockRejectedValue(new GatewayHttpError({
+      httpStatus: 403, code: 'DEVICE_KEY_RECENT_AUTH_REQUIRED', message: 'Recent authentication required',
+    }));
+    const originalAuth = dataService.auth;
+
+    await page.createKeyDevice();
+    await page.createKeyDevice();
+    await page.retryReveal();
+
+    expect(page.phase).toBe('recent-auth-required');
+    expect(page.keyError).toBe('DEVICE_GUIDE.KEY_RECENT_AUTH_DESCRIPTION');
+    expect(page.secretKey).toBe('');
+    expect(page.showsCreateForm).toBe(false);
+    expect(deviceService.createDeviceKeyV2).toHaveBeenCalledTimes(1);
+    expect(deviceService.revealDeviceKeyV2).toHaveBeenCalledTimes(1);
+    expect(dataService.auth).toBe(originalAuth);
+    expect(navController.navigateRoot).not.toHaveBeenCalled();
+
+    await page.finishKeySetup();
+    expect(userService.getAllInfo).toHaveBeenCalledTimes(1);
+    expect(navController.navigateRoot).toHaveBeenCalledWith('/device/logical%2Fdevice%20%231');
+    expect(deviceService.createDevice).not.toHaveBeenCalled();
+    page.ngOnDestroy();
   });
 
   it('blocks step-up unavailable without retrying or falling back', async () => {

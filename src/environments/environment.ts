@@ -2,12 +2,15 @@
 // `ng build` replaces `environment.ts` with `environment.prod.ts`.
 // The list of file replacements can be found in `angular.json`.
 
+import { cloudBetaCapabilities } from './deployment';
+
 export const environment = {
   production: false,
   deviceV2LanEnabled: false,
   deviceV2BleBootstrapPriorityEnabled: false,
   consoleWebBaseUrl: '',
   gatewayBaseUrl: 'https://iot.yiyu.pro',
+  deployment: cloudBetaCapabilities,
 };
 
 /*

@@ -2,6 +2,7 @@
   <ion-toolbar>
     <ion-title>{{ 'PROFILE.TITLE' | translate }}</ion-title>
     <ion-buttons slot="end">
+      @if (messagesAvailable) {
       <ion-button
         class="header-action"
         [attr.aria-label]="messageButtonLabel"
@@ -12,6 +13,7 @@
         <span class="notice-badge" aria-hidden="true">{{ unreadMessageBadge }}</span>
         }
       </ion-button>
+      }
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
@@ -33,6 +35,30 @@
       </div>
       <i class="fa-light fa-chevron-right profile-arrow"></i>
     </button>
+
+    <section class="account-card" aria-labelledby="account-entitlements-title" [attr.aria-busy]="refreshingAccount">
+      <div class="account-card-heading">
+        <h2 id="account-entitlements-title">{{ 'PROFILE.ACCOUNT_ENTITLEMENTS_TITLE' | translate }}</h2>
+        <button type="button" class="account-refresh" [disabled]="refreshingAccount" (click)="refreshAccount()">
+          <i class="fa-light fa-arrow-rotate-right" aria-hidden="true"></i>
+          {{ (refreshingAccount ? 'PROFILE.ACCOUNT_REFRESHING' : 'PROFILE.ACCOUNT_REFRESH') | translate }}
+        </button>
+      </div>
+      <dl class="account-entitlements">
+        <div>
+          <dt>{{ 'PROFILE.PLAN_LABEL' | translate }}</dt>
+          <dd><span class="plan-badge" [class.pro]="accountEntitlements.pro">{{ accountEntitlements.planName || ('PROFILE.PLAN_UNKNOWN' | translate) }}</span></dd>
+        </div>
+        <div>
+          <dt>{{ 'PROFILE.DEVICE_QUOTA_LABEL' | translate }}</dt>
+          <dd class="device-quota">{{ deviceQuotaLabel }}</dd>
+        </div>
+      </dl>
+      @if (showAccountRefreshFailure && !refreshingAccount) {
+      <p class="account-status" role="status">{{ 'PROFILE.ACCOUNT_REFRESH_FAILED' | translate }}</p>
+      }
+      <p class="account-hint">{{ 'PROFILE.ACCOUNT_QUOTA_HINT' | translate }}</p>
+    </section>
 
     @for (menuGroup of menuGroups; track menuGroup.id) {
     <app-menu-list [items]="menuGroup.items"

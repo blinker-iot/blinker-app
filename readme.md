@@ -43,9 +43,22 @@ npm run build
 
 环境端点位于 `src/environments/`，在构建时选择，不在运行中切换或修改打包后的 JS：
 
-- 浏览器本地：`ng build --configuration local`，使用 `environment.local.ts` 的 HTTP `127.0.0.1:7000`。
+- 云端受限内测：`pnpm run build:cloud-beta`，使用 `https://iot.yiyu.pro`，复用当前 Aily 测试 Auth。该显式 beta 开放既有最小自动化及任务页面，须匹配服务器的 automation／单设备 Task 部署；普通 production／development 配置保持关闭。任务页面只允许所有者查询普通 WiFi 设备，实际准入名单、签发及容量仍由服务器和设备的新鲜结果确认，不代表所有设备均支持四槽。Direct、定向分享及通知／消息不因此开放；H1／H2和原控制沿用现有链路，权限与 CAS 不变。
+- 浏览器本地：`ng build --configuration local`，使用 `environment.local.ts` 的 HTTP `127.0.0.1:17000`。
 - Android USB 联调：`npm run build:local-device`，叠加 `environment.local-device.ts`，使用 HTTPS `127.0.0.1:17000`；随后执行原 Capacitor copy 和 Android debug 构建。需要匹配的本机 HTTPS proxy、ADB reverse 和仓外 `BLINKER_DEBUG_NETWORK_CONFIG_DIR` CA 配置，不关闭证书校验。默认仍 `deviceV2LanEnabled=false`。
 - 生产：原 production 配置和 release 签名/信任链，不使用本地 authority 或 debug CA。
+
+云端 beta Android 的正常源码入口（先按上方手册构建相邻插件并安装锁定依赖）：
+
+```powershell
+pnpm run sync:cloud-beta
+cd android
+.\gradlew.bat assembleBeta
+```
+
+该入口先构建 production Web＋cloud-beta 配置，再运行官方 `cap sync android` 生成原生注册表；不能以 `cap copy` 或手抄旧注册表替代。`beta` 使用独立包名 `iot.diandeng.tech.beta`／“Blinker 内测”、HTTPS WebView、禁止明文和本地 debug CA，仍为内部 debug 签名，不是商店 release。原普通 debug／release 包名不变；不得卸载旧包、清数据或复用另一 authority 的凭据来处理安装签名冲突。安装前另备份已有 beta 的账号和日志，并核对签名；本次源码入口的软件验证不等于新 APK 已编译／安装或真机验收。
+
+`BLINKER_LOCAL_CLEARTEXT` 和 `BLINKER_DEBUG_NETWORK_CONFIG_DIR` 不得用于 beta。切回本机或普通包时，重新构建对应 Web 配置并执行正常 Capacitor sync，不混用共享的 `www`／原生 assets；本入口不自动安装、操作 ADB 或部署服务。
 
 2026-09-15：上述 Android 构建入口已在保留数据安装的 debug APK 上验证实际 HTTPS authority、
 原账号目录/账户 MQTT，以及 ESP32S3 BLE 属性/按钮/状态、App 冷启动和退出回收；打包后未修改 JS。

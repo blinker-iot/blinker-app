@@ -44,6 +44,8 @@ export class DataService {
   private _sessionEpoch = 0;
   private secureStorageReady: Promise<void> | null = null;
   user: UserData = this.emptyUser();
+  /** Only a complete owned-device response, never the merged/shared or cached catalog. */
+  ownedDeviceCount: number | null = null;
   device: OrderData = this.emptyOrder();
   scene: OrderData = this.emptyOrder();
   room: OrderData = this.emptyOrder();
@@ -287,6 +289,7 @@ export class DataService {
 
   private resetBlinkerMemory(): void {
     this.user = this.emptyUser();
+    this.ownedDeviceCount = null;
     this.device = this.emptyOrder();
     this.scene = this.emptyOrder();
     this.room = this.emptyOrder();
@@ -323,6 +326,10 @@ export class DataService {
     complete = true,
   ): void {
     this.loadGatewayUser(currentUser);
+
+    this.ownedDeviceCount = new Set(devices
+      .filter(device => device.state !== 'deleted')
+      .map(device => device.logicalDeviceId)).size;
 
     const ownedIds = new Set(devices.map((device) => device.logicalDeviceId));
 

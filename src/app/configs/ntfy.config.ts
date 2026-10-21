@@ -1,5 +1,7 @@
+import { environment } from '../../environments/environment';
+
 export const NTFY_CONFIG = {
-  enabled: true,
+  get enabled(): boolean { return environment.deployment.notifications; },
   secureStorageKey: 'ntfy-installation-v2',
   legacySecureStorageKey: 'ntfy-installation-v1',
   secureStoragePrefix: 'blinker_',

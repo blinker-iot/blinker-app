@@ -303,6 +303,7 @@ describe('TabProfileComponent message badge', () => {
       { instant: (key: string) => key } as never,
       {} as never,
       messageService as never,
+      {} as never,
     );
 
     profile.ngOnInit();

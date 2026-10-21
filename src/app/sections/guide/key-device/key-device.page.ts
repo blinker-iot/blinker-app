@@ -23,20 +23,11 @@ import { Subscription } from 'rxjs';
 
 import {
   DeviceKeyContext,
-  DeviceKeyCreateResponse,
   GatewayHttpError,
 } from '../../../core/model/response.model';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceV2ManagementService } from '../../../core/services/device-v2-management.service';
 import { UserService } from '../../../core/services/user.service';
-
-const BROKER_ALLOCATION_RETRY_DELAYS_MS = [
-  1000,
-  2000,
-  4000,
-  8000,
-  16000,
-] as const;
 
 type KeyDevicePhase =
   | 'idle'
@@ -46,6 +37,7 @@ type KeyDevicePhase =
   | 'revealing'
   | 'reveal-failed'
   | 'reveal-blocked'
+  | 'recent-auth-required'
   | 'step-up-blocked'
   | 'revealed';
 
@@ -88,6 +80,7 @@ void loop() {
   secretKey = '';
   keyVisible = false;
   keyError = '';
+  createBlockedTitleKey = 'DEVICE_GUIDE.KEY_CREATE_BLOCKED_TITLE';
   phase: KeyDevicePhase = 'idle';
 
   private idempotencyKey = '';
@@ -169,13 +162,11 @@ void loop() {
     this.cd.markForCheck();
 
     try {
-      const response = await this.createDeviceWithAllocationRetry(
+      const response = await this.deviceService.createDeviceKeyV2(
         customName,
         this.idempotencyKey,
-        operationGeneration,
-        sessionEpoch
+        'diy'
       );
-      if (!response) return;
       if (!this.isOperationActive(operationGeneration, sessionEpoch)) return;
       const device = response.data.device;
       this.revealContext = {
@@ -186,48 +177,17 @@ void loop() {
     } catch (error) {
       if (!this.isOperationActive(operationGeneration, sessionEpoch)) return;
       this.phase = this.isTerminalV2Error(error)
+        || (error instanceof GatewayHttpError && [405, 410].includes(error.httpStatus))
         ? 'create-blocked'
         : 'create-failed';
-      this.keyError = this.translate.instant(
-        this.isErrorCode(error, 'IDEMPOTENCY_CONFLICT')
-          ? 'DEVICE_GUIDE.KEY_CREATE_CONFLICT'
-          : this.phase === 'create-blocked'
-            ? 'DEVICE_GUIDE.KEY_CREATE_BLOCKED_DESCRIPTION'
-          : 'DEVICE_GUIDE.CREATE_FAILED'
-      );
+      const failure = this.createFailureKeys(error);
+      this.createBlockedTitleKey = failure.title;
+      this.keyError = this.translate.instant(failure.description);
       this.cd.markForCheck();
       return;
     }
 
     await this.revealDeviceKey(operationGeneration, sessionEpoch);
-  }
-
-  private async createDeviceWithAllocationRetry(
-    name: string,
-    idempotencyKey: string,
-    operationGeneration: number,
-    sessionEpoch: number
-  ): Promise<DeviceKeyCreateResponse | null> {
-    for (let attempt = 0; ; attempt += 1) {
-      try {
-        return await this.deviceService.createDeviceKeyV2(
-          name,
-          idempotencyKey,
-          'diy'
-        );
-      } catch (error) {
-        if (
-          !this.isErrorCode(error, 'BROKER_ALLOCATION_PENDING') ||
-          attempt >= BROKER_ALLOCATION_RETRY_DELAYS_MS.length
-        ) {
-          throw error;
-        }
-        await this.wait(BROKER_ALLOCATION_RETRY_DELAYS_MS[attempt]);
-        if (!this.isOperationActive(operationGeneration, sessionEpoch)) {
-          return null;
-        }
-      }
-    }
   }
 
   async retryReveal(): Promise<void> {
@@ -299,7 +259,12 @@ void loop() {
     } catch (error) {
       if (!this.isOperationActive(operationGeneration, sessionEpoch)) return;
       this.clearSecretKey();
-      if (this.isErrorCode(error, 'DEVICE_KEY_STEP_UP_UNAVAILABLE')) {
+      if (this.isErrorCode(error, 'DEVICE_KEY_RECENT_AUTH_REQUIRED')) {
+        this.phase = 'recent-auth-required';
+        this.keyError = this.translate.instant(
+          'DEVICE_GUIDE.KEY_RECENT_AUTH_DESCRIPTION'
+        );
+      } else if (this.isErrorCode(error, 'DEVICE_KEY_STEP_UP_UNAVAILABLE')) {
         this.phase = 'step-up-blocked';
         this.keyError = this.translate.instant(
           'DEVICE_GUIDE.KEY_STEP_UP_BLOCKED_DESCRIPTION'
@@ -326,7 +291,55 @@ void loop() {
     this.idempotencyKey = '';
     this.idempotencyName = '';
     this.keyError = '';
+    this.createBlockedTitleKey = 'DEVICE_GUIDE.KEY_CREATE_BLOCKED_TITLE';
     this.phase = 'idle';
+  }
+
+  private createFailureKeys(error: unknown): { title: string; description: string } {
+    let key = 'KEY_CREATE_BLOCKED';
+    if (error instanceof GatewayHttpError) {
+      switch (error.httpStatus) {
+        case 0:
+          key = error.code === 'GATEWAY_TIMEOUT' ? 'KEY_CREATE_TIMEOUT' : 'KEY_CREATE_NETWORK';
+          break;
+        case 400:
+          key = 'KEY_CREATE_INVALID';
+          break;
+        case 401:
+          key = 'KEY_CREATE_AUTH';
+          break;
+        case 403:
+          key = error.code === 'DEVICE_LIMIT_REACHED'
+            ? 'KEY_DEVICE_LIMIT'
+            : error.code === 'DEVICE_ENTITLEMENT_INVALID'
+              ? 'KEY_DEVICE_ENTITLEMENT'
+              : 'KEY_CREATE_DENIED';
+          break;
+        case 404:
+        case 405:
+          key = 'KEY_CREATE_ENDPOINT';
+          break;
+        case 409:
+          key = 'KEY_CREATE_CONFLICT';
+          break;
+        case 410:
+          if (error.code === 'SERVICE_ACCOUNT_DELETED') key = 'KEY_CREATE_ACCOUNT_UNAVAILABLE';
+          break;
+        case 429:
+          key = 'KEY_CREATE_RATE_LIMITED';
+          break;
+        default:
+          if (error.httpStatus >= 500) {
+            key = error.httpStatus === 503 && error.code === 'BROKER_ALLOCATION_PENDING'
+              ? 'KEY_CREATE_PREPARING'
+              : 'KEY_CREATE_SERVICE';
+          }
+      }
+    }
+    return {
+      title: `DEVICE_GUIDE.${key}_TITLE`,
+      description: `DEVICE_GUIDE.${key}_DESCRIPTION`,
+    };
   }
 
   private clearSecretKey(): void {
@@ -363,10 +376,6 @@ void loop() {
       position: 'bottom',
     });
     await toast.present();
-  }
-
-  private wait(delayMs: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 
   private async writeClipboard(value: string): Promise<void> {

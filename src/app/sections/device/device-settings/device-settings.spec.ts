@@ -1,11 +1,31 @@
 import { BehaviorSubject } from 'rxjs';
 
+
 import { DeviceSettingsPage } from './device-settings';
 import { GatewayHttpError } from '../../../core/model/response.model';
 import { CapacitorWiFiProvAllocationStore } from '../../../core/device-v2/provisioning/wifiprov-allocation-store';
 import { DeviceCardEditor } from '../../../home/device-card-editor.service';
+import { environment } from 'src/environments/environment';
+import { cloudBetaCapabilities, localCapabilities } from 'src/environments/deployment';
+
+const originalDeployment = environment.deployment;
+beforeEach(() => { environment.deployment = localCapabilities; });
+afterEach(() => { environment.deployment = originalDeployment; });
 
 describe('DeviceSettingsPage V2 access flow', () => {
+  it('distinguishes closed service tasks from device capability without hiding H1/H2', () => {
+    environment.deployment = cloudBetaCapabilities;
+    let f: ReturnType<typeof harness> | undefined;
+    try {
+      f = harness(); f.device.deviceType = 'wifi';
+      const timer = f.page.deviceMenuItems.find(item => item.id === 'timer')!;
+      expect(timer.disabled).toBe(true); expect(timer.description).toContain('当前服务环境');
+      f.page.selectMenuItem(timer); expect(f.nav.navigateForward).not.toHaveBeenCalled();
+      expect(f.page.supportsWifiProvisioning).toBe(false); expect(f.page.supportsGatewayEnrollment).toBe(false);
+      expect(f.page.deviceMenuItems.some(item => item.id === 'storage')).toBe(true);
+      expect(f.page.deviceMenuItems.some(item => item.id === 'trends')).toBe(true);
+    } finally { f?.page.ngOnDestroy(); environment.deployment = localCapabilities; }
+  });
   const logicalDeviceId = 'device_11111111-1111-4111-8111-111111111111';
   const deviceKey = 'A'.repeat(43);
 
@@ -96,6 +116,16 @@ describe('DeviceSettingsPage V2 access flow', () => {
     expect(entry.title).toBe('状态历史'); expect(entry.description).toContain('服务器实际收到');
     expect(entry.description).not.toContain('用量'); f.page.selectMenuItem(entry);
     expect(f.nav.navigateForward).toHaveBeenCalledExactlyOnceWith(`/device-manager/${logicalDeviceId}/storage`);
+    f.page.ngOnDestroy();
+  });
+
+  it('keeps online trends separate from H1 and makes its read entry available to shared V2 users', () => {
+    const f = harness(); f.device.config.isShared = true;
+    const entry = f.page.deviceMenuItems.find(item => item.id === 'trends')!;
+    expect(entry.title).toBe('在线趋势'); expect(entry.description).toContain('周期归档');
+    f.page.selectMenuItem(entry);
+    expect(f.nav.navigateForward).toHaveBeenCalledExactlyOnceWith(`/device-manager/${logicalDeviceId}/trends`);
+    f.device.config.isPreview = true; expect(f.page.deviceMenuItems.some(item => item.id === 'trends')).toBe(false);
     f.page.ngOnDestroy();
   });
 
@@ -283,6 +313,68 @@ describe('DeviceSettingsPage V2 access flow', () => {
     });
     expect(copy).toHaveBeenCalledWith(deviceKey);
     expect(device.deviceKey).toBeUndefined();
+  });
+
+  it.each([
+    [403, 'DEVICE_KEY_RECENT_AUTH_REQUIRED', '请先退出并重新登录'],
+    [503, 'DEVICE_KEY_STEP_UP_UNAVAILABLE', '安全校验暂时不可用'],
+    [403, 'DEVICE_FORBIDDEN', '只有设备所有者'],
+  ])('distinguishes Key reveal errors %s/%s without changing identity or authorization', async (httpStatus, code, hint) => {
+    const f = harness(), original = structuredClone(f.device), originalAuth = f.data.auth;
+    f.management.revealDeviceKeyV2.mockRejectedValue(new GatewayHttpError({ httpStatus, code, message: 'Rejected' }));
+    await f.page.revealKey();
+    expect(f.page.keyError).toContain(hint);
+    expect(f.page.secretKey).toBe('');
+    expect(f.page.keyVisible).toBe(false);
+    expect(f.page.keyBusy).toBe(false);
+    expect(f.management.revealDeviceKeyV2).toHaveBeenCalledTimes(1);
+    expect(f.management.rotateDeviceKeyV2).not.toHaveBeenCalled();
+    expect(f.management.deleteDeviceV2).not.toHaveBeenCalled();
+    expect(f.data.auth).toBe(originalAuth);
+    expect(f.device).toEqual(original);
+    f.page.ngOnDestroy();
+  });
+
+  it.each([
+    [403, 'DEVICE_KEY_RECENT_AUTH_REQUIRED', '请先退出并重新登录'],
+    [503, 'DEVICE_KEY_STEP_UP_UNAVAILABLE', '安全校验暂时不可用'],
+    [403, 'DEVICE_FORBIDDEN', '只有设备所有者'],
+  ])('distinguishes Key rotate errors %s/%s and retains the original transaction id', async (httpStatus, code, hint) => {
+    const f = harness(), original = structuredClone(f.device);
+    f.management.rotateDeviceKeyV2.mockRejectedValue(new GatewayHttpError({ httpStatus, code, message: 'Rejected' }));
+    await f.page.refreshKey();
+    expect(f.page.keyError).toContain(hint);
+    expect(f.page.secretKey).toBe('');
+    expect(f.page.keyBusy).toBe(false);
+    expect(f.management.rotateDeviceKeyV2).toHaveBeenCalledTimes(1);
+    expect(f.management.revealDeviceKeyV2).not.toHaveBeenCalled();
+    expect(f.device).toEqual(original);
+    expect((f.page as any).rotateIdempotencyKey).toBe(f.management.rotateDeviceKeyV2.mock.calls[0][1]);
+    f.page.ngOnDestroy();
+  });
+
+  it('does not copy a Key after a recent-auth rejection', async () => {
+    const f = harness(), copy = vi.spyOn(f.page as any, 'writeClipboard');
+    f.management.revealDeviceKeyV2.mockRejectedValue(new GatewayHttpError({
+      httpStatus: 403, code: 'DEVICE_KEY_RECENT_AUTH_REQUIRED', message: 'Rejected',
+    }));
+    await f.page.copyKey();
+    expect(copy).not.toHaveBeenCalled();
+    expect(f.page.keyError).toContain('请先退出并重新登录');
+    f.page.ngOnDestroy();
+  });
+
+  it('uses the same Key error guidance without logging raw responses on the secondary reveal path', async () => {
+    const f = harness(), log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    f.management.revealDeviceKeyV2.mockRejectedValue(new GatewayHttpError({
+      httpStatus: 403, code: 'DEVICE_KEY_RECENT_AUTH_REQUIRED', message: 'Rejected',
+    }));
+    try {
+      await f.page.showAuthKey();
+      expect(f.notice.showToast).toHaveBeenCalledWith(expect.stringContaining('请先退出并重新登录'));
+      expect(log).not.toHaveBeenCalled();
+      expect(f.page.showKey).toBe(false);
+    } finally { log.mockRestore(); f.page.ngOnDestroy(); }
   });
 
   it('owner removal clears displayed Key but does not claim local credentials were erased', async () => {
