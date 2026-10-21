@@ -4,7 +4,9 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { ModalController, NavController, provideIonicAngular } from '@ionic/angular/standalone';
 import { provideTranslateService } from '@ngx-translate/core';
+import { BehaviorSubject } from 'rxjs';
 import { API } from '../../configs/api.config';
+import { AppVisibilityService } from '../../core/services/app-visibility.service';
 import { AuthService } from '../../core/services/auth.service';
 import { DataService } from '../../core/services/data.service';
 import { DeviceV2ShareInvitationService } from '../../core/services/device-v2-share-invitation.service';
@@ -24,6 +26,7 @@ vi.mock('altcha-lib/v1', () => ({
 // Angular testing backend. Manual detectChanges verifies the template contract,
 // not Android/NgZone/Ionic cached-route behavior or actual email delivery.
 async function render() {
+  const active = new BehaviorSubject(true);
   const notice = {
     showLoading: vi.fn().mockResolvedValue(undefined),
     hideLoading: vi.fn().mockResolvedValue(undefined),
@@ -42,6 +45,7 @@ async function render() {
       { provide: NavController, useValue: { navigateRoot: vi.fn(), navigateForward: vi.fn() } },
       { provide: ModalController, useValue: { create: vi.fn() } },
       { provide: DeviceV2ShareInvitationService, useValue: { hasPending: false } },
+      { provide: AppVisibilityService, useValue: { active } },
     ],
   }).compileComponents();
   const fixture = TestBed.createComponent(LoginPage), page = fixture.componentInstance;
@@ -53,6 +57,9 @@ async function render() {
   const button = element.querySelector<HTMLButtonElement>('.send-code-btn')!;
   const http = TestBed.inject(HttpTestingController);
   vi.useFakeTimers();
+  // Ionic can cache this component instead of destroying it on navigation.
+  // The optional call permits the same behavioral regression on the old page.
+  (page as any).ionViewWillEnter?.();
   async function settle() {
     // Bounded promise turns: loading, ALTCHA, HttpClient and toast continuations.
     for (let turn = 0; turn < 12; turn++) await Promise.resolve();
@@ -70,7 +77,7 @@ async function render() {
     expect(request.request.body.email).toBe('offline@example.invalid');
     return request;
   }
-  return { fixture, page, element, button, http, notice, settle, issuedEmailRequest };
+  return { fixture, page, element, button, http, notice, active, settle, issuedEmailRequest };
 }
 
 describe('Login email-code production template and lifecycle', () => {
@@ -188,5 +195,164 @@ describe('Login email-code production template and lifecycle', () => {
     expect(f.notice.showLoading).not.toHaveBeenCalled();
     expect(f.notice.showToast).toHaveBeenCalledWith('needValidEmail');
     expect(interval).not.toHaveBeenCalled(); expect(f.page.countdown).toBe(0);
+  });
+
+  it('D6 expires after a 65 second clock jump even when only one interval callback runs', async () => {
+    const f = await render();
+    f.button.click();
+    const request = await f.issuedEmailRequest();
+    request.flush({ status: 200, data: null }); await f.settle();
+    expect(f.page.countdown).toBe(60);
+    // setSystemTime changes elapsed time without dispatching 65 queued ticks.
+    vi.setSystemTime(Date.now() + 65000);
+    await vi.advanceTimersByTimeAsync(1000); f.fixture.detectChanges();
+    expect(f.page.countdown).toBe(0);
+    expect(f.button.disabled).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+    f.http.expectNone(API.AUTH.ALTCHA_CHALLENGE); f.http.expectNone(API.AUTH.EMAIL_CODE);
+  });
+
+  it('D6 releases the cached page timer and resumes the original remaining cooldown once', async () => {
+    const f = await render();
+    f.button.click();
+    const request = await f.issuedEmailRequest();
+    request.flush({ status: 200, data: null }); await f.settle();
+    const sentAt = Date.now();
+    (f.page as any).ionViewWillLeave?.();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.setSystemTime(sentAt + 30000);
+    (f.page as any).ionViewWillEnter?.(); await f.settle();
+    expect(f.page.countdown).toBe(30);
+    expect(f.button.textContent!.trim()).toBe('30s');
+    expect(f.button.disabled).toBe(true);
+    expect(vi.getTimerCount()).toBe(1);
+    (f.page as any).ionViewWillEnter?.(); await f.settle();
+    expect(vi.getTimerCount()).toBe(1);
+    f.http.expectNone(API.AUTH.ALTCHA_CHALLENGE); f.http.expectNone(API.AUTH.EMAIL_CODE);
+  });
+
+  it('D6 returns to an expired cached page with no timer and no automatic send', async () => {
+    const f = await render();
+    f.button.click();
+    const request = await f.issuedEmailRequest();
+    request.flush({ status: 200, data: null }); await f.settle();
+    (f.page as any).ionViewWillLeave?.();
+    vi.setSystemTime(Date.now() + 65000);
+    (f.page as any).ionViewWillEnter?.(); await f.settle();
+    expect(f.page.countdown).toBe(0);
+    expect(f.button.disabled).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+    f.http.expectNone(API.AUTH.ALTCHA_CHALLENGE); f.http.expectNone(API.AUTH.EMAIL_CODE);
+  });
+
+  it('D6 stops background ticking and recalculates the cooldown on foreground recovery', async () => {
+    const f = await render();
+    f.button.click();
+    const request = await f.issuedEmailRequest();
+    request.flush({ status: 200, data: null }); await f.settle();
+    const sentAt = Date.now();
+    f.active.next(false);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.setSystemTime(sentAt + 25000);
+    f.active.next(true); await f.settle();
+    expect(f.page.countdown).toBe(35);
+    expect(vi.getTimerCount()).toBe(1);
+    f.active.next(false);
+    vi.setSystemTime(sentAt + 65000);
+    f.active.next(true); await f.settle();
+    expect(f.page.countdown).toBe(0);
+    expect(f.button.disabled).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+    f.http.expectNone(API.AUTH.ALTCHA_CHALLENGE); f.http.expectNone(API.AUTH.EMAIL_CODE);
+  });
+
+  it.each(['cached-page', 'background'])('D6 retains a late accepted send while %s without restarting a hidden timer', async hidden => {
+    const f = await render();
+    f.button.click();
+    const request = await f.issuedEmailRequest();
+    if (hidden === 'cached-page') (f.page as any).ionViewWillLeave?.();
+    else f.active.next(false);
+    request.flush({ status: 200, data: null }); await f.settle();
+    const acceptedAt = Date.now();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.setSystemTime(acceptedAt + 20000);
+    if (hidden === 'cached-page') (f.page as any).ionViewWillEnter?.();
+    else f.active.next(true);
+    await f.settle();
+    expect(f.page.countdown).toBe(40);
+    expect(f.button.disabled).toBe(true);
+    expect(vi.getTimerCount()).toBe(1);
+    f.http.expectNone(API.AUTH.ALTCHA_CHALLENGE); f.http.expectNone(API.AUTH.EMAIL_CODE);
+  });
+
+  it('D6 foreground events cannot revive a cached page and duplicate entry owns only one timer', async () => {
+    const f = await render();
+    f.button.click();
+    const request = await f.issuedEmailRequest();
+    request.flush({ status: 200, data: null }); await f.settle();
+    const acceptedAt = Date.now();
+    (f.page as any).ionViewWillLeave?.();
+    vi.setSystemTime(acceptedAt + 20000);
+    f.active.next(false); f.active.next(true); f.active.next(true);
+    await f.settle();
+    expect(vi.getTimerCount()).toBe(0);
+    (f.page as any).ionViewWillEnter?.();
+    f.active.next(true); (f.page as any).ionViewWillEnter?.(); await f.settle();
+    expect(f.page.countdown).toBe(40);
+    expect(vi.getTimerCount()).toBe(1);
+    f.http.expectNone(API.AUTH.ALTCHA_CHALLENGE); f.http.expectNone(API.AUTH.EMAIL_CODE);
+  });
+
+  it.each(['cached-page', 'background'])('D6 does not start Auth HTTP when %s while loading is pending', async hidden => {
+    const f = await render();
+    let presented!: () => void;
+    f.notice.showLoading.mockImplementationOnce(() => new Promise<void>(resolve => { presented = resolve; }));
+    f.button.click(); await f.settle();
+    if (hidden === 'cached-page') (f.page as any).ionViewWillLeave?.();
+    else f.active.next(false);
+    presented(); await f.settle();
+    expect(f.notice.hideLoading).toHaveBeenCalledTimes(1);
+    expect(f.notice.showToast).not.toHaveBeenCalled();
+    expect(f.page.countdown).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+    f.http.expectNone(API.AUTH.ALTCHA_CHALLENGE); f.http.expectNone(API.AUTH.EMAIL_CODE);
+    if (hidden === 'cached-page') (f.page as any).ionViewWillEnter?.();
+    else f.active.next(true);
+    await f.settle();
+    expect(f.button.disabled).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+    f.http.expectNone(API.AUTH.ALTCHA_CHALLENGE); f.http.expectNone(API.AUTH.EMAIL_CODE);
+  });
+
+  it('D6 starts the cooldown at accepted HTTP response rather than delayed loading dismissal', async () => {
+    const f = await render();
+    let dismissed!: () => void;
+    f.notice.hideLoading.mockImplementationOnce(() => new Promise<void>(resolve => { dismissed = resolve; }));
+    f.button.click();
+    const request = await f.issuedEmailRequest();
+    request.flush({ status: 200, data: null }); await f.settle();
+    expect(f.page.countdown).toBe(60);
+    vi.setSystemTime(Date.now() + 20000);
+    dismissed(); await f.settle();
+    await vi.advanceTimersByTimeAsync(1000); f.fixture.detectChanges();
+    expect(f.page.countdown).toBe(39);
+    expect(f.button.textContent!.trim()).toBe('39s');
+    expect(vi.getTimerCount()).toBe(1);
+    f.http.expectNone(API.AUTH.ALTCHA_CHALLENGE); f.http.expectNone(API.AUTH.EMAIL_CODE);
+  });
+
+  it('D6 unsubscribes from visibility on destruction and never revives its timer', async () => {
+    const f = await render();
+    f.button.click();
+    const request = await f.issuedEmailRequest();
+    request.flush({ status: 200, data: null }); await f.settle();
+    expect(f.active.observers.length).toBe(1);
+    f.fixture.destroy();
+    expect(f.active.observers.length).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.setSystemTime(Date.now() + 65000);
+    f.active.next(false); f.active.next(true);
+    expect(vi.getTimerCount()).toBe(0);
+    f.http.expectNone(API.AUTH.ALTCHA_CHALLENGE); f.http.expectNone(API.AUTH.EMAIL_CODE);
   });
 });

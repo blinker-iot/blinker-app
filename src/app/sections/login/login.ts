@@ -1,8 +1,8 @@
 import { parseConsoleLink } from '../../core/services/device-console.service';
 import { isServiceRegion } from '../../configs/service-region.config';
 import { parseShareInvitation } from '../../core/device-v2/sharing/invitation-link';
-import { AlertController } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 import {
   ChangeDetectorRef,
@@ -30,6 +30,9 @@ import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DataService } from 'src/app/core/services/data.service';
 import { DeviceV2ShareInvitationService } from 'src/app/core/services/device-v2-share-invitation.service';
+import { AppVisibilityService } from 'src/app/core/services/app-visibility.service';
+
+const CODE_COOLDOWN_MS = 60_000;
 
 @Component({
   selector: 'app-login',
@@ -54,7 +57,10 @@ export class LoginPage implements OnDestroy {
   email: string = '';
   code: string = '';
   countdown: number = 0;
-  private countdownTimer: any;
+  private countdownTimer?: ReturnType<typeof setInterval>;
+  private countdownUntil = 0;
+  private pageVisible = false;
+  private readonly visibilitySubscription: Subscription;
   private sendingCode = false;
   private destroyed = false;
 
@@ -72,14 +78,26 @@ export class LoginPage implements OnDestroy {
     private shareInvitation: DeviceV2ShareInvitationService,
     private route: ActivatedRoute,
     private readonly cd: ChangeDetectorRef,
-  ) { }
+    private readonly visibility: AppVisibilityService,
+  ) {
+    this.visibilitySubscription = visibility.active.subscribe(() => this.syncCountdown());
+  }
+
+  ionViewWillEnter(): void {
+    if (this.destroyed) return;
+    this.pageVisible = true;
+    this.syncCountdown();
+  }
+
+  ionViewWillLeave(): void {
+    this.pageVisible = false;
+    this.stopCountdownTimer();
+  }
 
   ngOnDestroy(): void {
     this.destroyed = true;
-    if (this.countdownTimer) {
-      clearInterval(this.countdownTimer);
-      this.countdownTimer = undefined;
-    }
+    this.visibilitySubscription.unsubscribe();
+    this.stopCountdownTimer();
   }
 
   openSettings(): void {
@@ -116,7 +134,9 @@ export class LoginPage implements OnDestroy {
   // 发送验证码
   async sendCode(event: Event) {
     event.preventDefault();
-    if (this.destroyed || this.sendingCode || this.countdown > 0) return;
+    if (!this.canPresent || this.sendingCode) return;
+    this.syncCountdown();
+    if (this.countdown > 0) return;
 
     if (!this.email || !this.isValidEmail(this.email)) {
       this.noticeService.showToast('needValidEmail');
@@ -127,19 +147,21 @@ export class LoginPage implements OnDestroy {
     this.sendingCode = true;
     try {
       await this.noticeService.showLoading('sendingCode');
-      if (this.destroyed) {
+      if (!this.canPresent) {
         await this.noticeService.hideLoading();
         return;
       }
 
       const success = await this.authService.sendEmailCode(this.email);
+      // Accepted response starts the UI cooldown, not a delayed overlay close.
+      // A hidden page retains the deadline without owning a ticking resource.
+      if (success) this.startCountdown();
 
       await this.noticeService.hideLoading();
-      if (this.destroyed) return;
+      if (!this.canPresent) return;
 
       if (success) {
         this.noticeService.showToast('codeSent');
-        this.startCountdown();
       } else {
         this.noticeService.showToast('sendCodeFailed');
       }
@@ -148,22 +170,35 @@ export class LoginPage implements OnDestroy {
     }
   }
 
-  // 开始倒计时
+  private get canPresent(): boolean {
+    return !this.destroyed && this.pageVisible && this.visibility.active.value;
+  }
+
+  // UI only: authoritative send limits remain on the existing Auth service.
   startCountdown() {
     if (this.destroyed) return;
-    if (this.countdownTimer) clearInterval(this.countdownTimer);
-    this.countdown = 60;
+    this.countdownUntil = Date.now() + CODE_COOLDOWN_MS;
+    this.syncCountdown();
+  }
+
+  private syncCountdown(): void {
+    if (!this.canPresent) {
+      this.stopCountdownTimer();
+      return;
+    }
+    this.countdown = Math.max(0, Math.ceil((this.countdownUntil - Date.now()) / 1000));
+    if (this.countdown === 0) this.countdownUntil = 0;
+    if (this.countdown === 0) this.stopCountdownTimer();
+    else if (this.countdownTimer === undefined) {
+      this.countdownTimer = setInterval(() => this.syncCountdown(), 1000);
+    }
     this.cd.markForCheck();
+  }
 
-    this.countdownTimer = setInterval(() => {
-      this.countdown--;
-
-      if (this.countdown <= 0) {
-        clearInterval(this.countdownTimer);
-        this.countdownTimer = undefined;
-      }
-      this.cd.markForCheck();
-    }, 1000);
+  private stopCountdownTimer(): void {
+    if (this.countdownTimer === undefined) return;
+    clearInterval(this.countdownTimer);
+    this.countdownTimer = undefined;
   }
 
   async login() {
