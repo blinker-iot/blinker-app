@@ -43,7 +43,9 @@
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>用于发现并配置附近的蓝牙设备。</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>用于获取设备位置并辅助配置附近的网络设备。</string>
+	<string>在你设置设备位置时，使用手机当前位置作为选点。</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>在你设置设备位置时，使用手机当前位置作为选点。</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>用于发现、连接和配置本地网络中的智能设备。</string>
 	<key>NSBonjourServices</key>

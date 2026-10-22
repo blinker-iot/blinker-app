@@ -1,84 +1,80 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
-    </ion-buttons>
-    <ion-title>设备位置设置</ion-title>
-  </ion-toolbar>
-</ion-header>
-
+<ion-header><ion-toolbar><ion-buttons slot="start">
+  <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
+</ion-buttons><ion-title>{{ editing ? '设置位置' : '设备位置' }}</ion-title>
+  @if (editing) {
+  <ion-buttons slot="end"><button class="toolbar-action cancel" type="button" [disabled]="!!busy" (click)="cancelEditing()">取消</button></ion-buttons>
+  }
+</ion-toolbar></ion-header>
 <ion-content [fullscreen]="true">
-  @if (loaded) {
-  <main>
-    <section class="map-preview surface-card" aria-label="当前选择的设备位置">
-      <div class="map-grid" aria-hidden="true"></div>
-      <span class="map-pin" aria-hidden="true">
-        <i class="fa-solid fa-location-dot"></i>
-      </span>
-      <div class="coordinate-badge">
-        <small>WGS84</small>
-        <strong>{{ longitude | number: '1.4-6' }}, {{ latitude | number: '1.4-6' }}</strong>
+  @if (state !== 'owner') {
+  <section class="empty-state" aria-live="polite"><h1>{{ state === 'shared' ? '暂无位置访问权限' : '位置暂不可用' }}</h1><p>{{ message }}</p></section>
+  } @else if (!present) {
+  <section class="empty-state"><p>位置查看已暂停</p></section>
+  } @else if (record || editing) {
+    @if (record?.location || editing) {
+    <div class="map-area">
+      <app-location-map [point]="point" [name]="deviceName" [editable]="editing && !busy && !viewingSaved" [active]="present"
+        (pointChange)="selectPoint($event)" />
+    </div>
+    <section class="location-panel" [class.editor]="editing">
+      <div class="device-heading"><span class="device-glyph" aria-hidden="true"><i class="fal fa-map-marker-alt"></i></span>
+        <div><h1>{{ deviceName }}</h1><p>{{ viewingSaved ? '已保存的位置' : editing ? '拖动标记或点选地图' : '设备安装位置' }}</p></div>
+        @if (!editing) { <button class="text-action edit" type="button" [disabled]="!canMutate" (click)="startEditing()">修改</button> }
       </div>
+      @if (!editing && summary.length) {
+      <dl class="device-summary">@for (item of summary; track $index) { <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div> }</dl>
+      @if (summaryStale) { <p class="last-state">上次状态</p> }
+      }
+      @if (editing) {
+      <form (ngSubmit)="save()">
+        <button class="secondary-action locate" type="button" [disabled]="!!busy || locating" (click)="locate()">
+          <i class="fal fa-location-arrow" aria-hidden="true"></i>{{ locating ? '正在定位…' : '使用手机当前位置' }}</button>
+        @if (locationError) { <p class="error" role="alert">{{ locationError }}</p> }
+        <details class="coordinate-entry"><summary>输入经纬度</summary>
+          <div class="coordinate-inputs"><label>经度<input name="longitude" inputmode="decimal" autocomplete="off" placeholder="-180 ～ 180"
+            [ngModel]="longitude" (ngModelChange)="edit('longitude', $event)" [disabled]="!!busy" /></label>
+          <label>纬度<input name="latitude" inputmode="decimal" autocomplete="off" placeholder="-90 ～ 90"
+            [ngModel]="latitude" (ngModelChange)="edit('latitude', $event)" [disabled]="!!busy" /></label></div>
+          <p class="coordinate-note">GPS / WGS84 坐标</p>
+        </details>
+        <button class="primary-action save" type="submit" [disabled]="!canSave">{{ busy === 'write' ? '保存中…' : '保存位置' }}</button>
+      </form>
+      }
+      @if (error || reviewRequired) {
+      <div class="recovery" aria-live="polite">
+        @if (error) { <p class="error" role="alert">{{ error }}</p> }
+        @if (!fresh) { <button class="text-action reload" type="button" [disabled]="!!busy" (click)="reload()">{{ busy === 'read' ? '加载中…' : '查看最新位置' }}</button> }
+        @if (reviewRequired && fresh) {
+          <p>选点已保留，请核对后继续。</p>
+          <button class="text-action compare" type="button" [disabled]="!!busy" (click)="viewingSaved = !viewingSaved">{{ viewingSaved ? '返回我的选点' : record?.location ? '查看已保存标记' : '最新记录未设置位置' }}</button>
+          <button class="text-action review" type="button" [disabled]="!!busy" (click)="review()">确认当前选点</button>
+        }
+      </div>
+      }
+      @if (notice) { <p class="notice" role="status">{{ notice }}</p> }
+      @if (editing && record?.location && !clearPrompt) {
+      <button class="text-action remove" type="button" [disabled]="!canClear" (click)="clearPrompt = true">移除位置</button>
+      }
+      @if (clearPrompt) {
+      <div class="remove-confirm"><p>移除设备位置？</p><button class="text-action" type="button" [disabled]="!!busy" (click)="clearPrompt = false">取消</button>
+        <button class="text-action clear" type="button" [disabled]="!canClear" (click)="clearLocation()">确认移除</button></div>
+      }
     </section>
-
-    @if (usingTestData) {
-    <p class="test-data-note">
-      <i class="fa-light fa-flask" aria-hidden="true"></i>
-      当前设备没有位置数据，已载入杭州测试坐标，可直接修改或保存用于调试。
-    </p>
+    } @else {
+    <section class="empty-state"><div class="empty-pin" aria-hidden="true"><i class="fal fa-map-marker-alt"></i></div>
+      <h1>要设置设备位置吗？</h1><p>{{ deviceName }}</p>
+      @if (error) { <p class="error" role="alert">{{ error }}</p> }
+      @if (!fresh) { <button class="text-action reload" type="button" [disabled]="!!busy" (click)="reload()">{{ busy === 'read' ? '加载中…' : '查看最新位置' }}</button> }
+      @if (reviewRequired && fresh) { <button class="text-action review" type="button" [disabled]="!!busy" (click)="review()">确认最新记录</button> }
+      @if (notice) { <p role="status">{{ notice }}</p> }
+      <button class="primary-action setup" type="button" [disabled]="!canMutate" (click)="startEditing()">设置位置</button>
+      <a class="text-action" [routerLink]="defaultBackHref">暂不设置</a>
+    </section>
     }
-
-    <div class="section-label">坐标设置</div>
-    <form class="surface-card coordinate-form" (ngSubmit)="saveGeolocation()">
-      <label>
-        <span>经度</span>
-        <small>-180 至 180</small>
-        <input name="longitude" type="number" inputmode="decimal" step="0.000001" min="-180" max="180"
-          [(ngModel)]="longitude" />
-      </label>
-      <label>
-        <span>纬度</span>
-        <small>-90 至 90</small>
-        <input name="latitude" type="number" inputmode="decimal" step="0.000001" min="-90" max="90"
-          [(ngModel)]="latitude" />
-      </label>
-      @if (!coordinatesValid) {
-      <p class="validation-message">
-        <i class="fa-light fa-circle-exclamation"></i>
-        请输入有效的经纬度。
-      </p>
-      }
-      <div class="action-row">
-        <button type="button" class="secondary-action" [disabled]="locating" (click)="useCurrentLocation()">
-          <i class="fa-light" [class.fa-location-crosshairs]="!locating" [class.fa-spinner-third]="locating"
-            [class.fa-spin]="locating"></i>
-          {{ locating ? '定位中' : '使用当前位置' }}
-        </button>
-        <button type="submit" class="primary-action" [disabled]="!hasChanges || saving">
-          <i class="fa-light" [class.fa-check]="!saving" [class.fa-spinner-third]="saving" [class.fa-spin]="saving"></i>
-          {{ saving ? '保存中' : '保存位置' }}
-        </button>
-      </div>
-    </form>
-
-    <div class="section-label">测试位置</div>
-    <section class="surface-card preset-list">
-      @for (preset of presets; track preset.name) {
-      <button type="button" (click)="selectPreset(preset)">
-        <span class="preset-icon"><i class="fa-light fa-map-pin"></i></span>
-        <span class="preset-copy">
-          <strong>{{ preset.name }}</strong>
-          <small>{{ preset.description }} · {{ preset.longitude }}, {{ preset.latitude }}</small>
-        </span>
-        <i class="fa-light fa-chevron-right"></i>
-      </button>
-      }
-    </section>
-  </main>
   } @else {
-  <div class="loading-state">
-    <ion-spinner name="crescent"></ion-spinner>
-    <span>正在加载设备位置…</span>
-  </div>
+  <section class="empty-state" aria-live="polite">
+    <p>{{ busy === 'read' ? '正在加载位置…' : error || '位置暂不可用' }}</p>
+    @if (!busy) { <button class="secondary-action reload" type="button" (click)="reload()">重试</button> }
+  </section>
   }
 </ion-content>

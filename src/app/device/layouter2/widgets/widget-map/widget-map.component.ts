@@ -12,6 +12,7 @@ import {
 import { ActionSheetController } from '@ionic/angular';
 import { NavController } from '@ionic/angular/standalone';
 import * as L from 'leaflet';
+import { MAP_PROVIDER_NAMES, mapTileConfiguration } from 'src/app/core/maps/map-tiles';
 import {
   ActiveThirdPartyService,
   GeolocationServiceProvider,
@@ -20,12 +21,6 @@ import {
 import { Layouter2Widget } from '../config';
 
 type MapState = 'loading' | 'ready' | 'missing-key' | 'error';
-
-const MAP_PROVIDER_NAMES: Record<GeolocationServiceProvider, string> = {
-  tianditu: '天地图',
-  geoapify: 'Geoapify',
-  locationIq: 'LocationIQ',
-};
 
 @Component({
   selector: 'widget-map',
@@ -224,54 +219,12 @@ export class WidgetMapComponent
   ): L.TileLayer {
     if (!this.mymap) throw new Error('地图尚未初始化');
 
-    const key = encodeURIComponent(service.key);
-    switch (service.provider) {
-      case 'tianditu': {
-        const commonOptions: L.TileLayerOptions = {
-          subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
-          minZoom: 1,
-          maxZoom: 18,
-          attribution: '&copy; 天地图',
-        };
-        const baseLayer = L.tileLayer(
-          `https://t{s}.tianditu.gov.cn/vec_w/wmts?service=wmts&request=GetTile&version=1.0.0&layer=vec&style=default&tilematrixset=w&format=tiles&tilematrix={z}&tilerow={y}&tilecol={x}&tk=${key}`,
-          commonOptions
-        );
-        this.watchTileLoading(baseLayer);
-        baseLayer.addTo(this.mymap);
-        L.tileLayer(
-          `https://t{s}.tianditu.gov.cn/cva_w/wmts?service=wmts&request=GetTile&version=1.0.0&layer=cva&style=default&tilematrixset=w&format=tiles&tilematrix={z}&tilerow={y}&tilecol={x}&tk=${key}`,
-          { ...commonOptions, attribution: '' }
-        ).addTo(this.mymap);
-        return baseLayer;
-      }
-      case 'geoapify': {
-        const tileSuffix = L.Browser.retina ? '@2x.png' : '.png';
-        const baseLayer = L.tileLayer(
-          `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}${tileSuffix}?apiKey=${key}`,
-          {
-            maxZoom: 20,
-            attribution:
-              'Powered by <a href="https://www.geoapify.com/" target="_blank">Geoapify</a> | &copy; OpenMapTiles &copy; OpenStreetMap contributors',
-          }
-        );
-        this.watchTileLoading(baseLayer);
-        return baseLayer.addTo(this.mymap);
-      }
-      case 'locationIq': {
-        const baseLayer = L.tileLayer(
-          `https://{s}-tiles.locationiq.com/v3/streets/r/{z}/{x}/{y}.png?key=${key}`,
-          {
-            subdomains: ['a', 'b', 'c'],
-            maxZoom: 18,
-            attribution:
-              '&copy; <a href="https://locationiq.com/" target="_blank">LocationIQ</a> &copy; OpenStreetMap contributors',
-          }
-        );
-        this.watchTileLoading(baseLayer);
-        return baseLayer.addTo(this.mymap);
-      }
-    }
+    const config = mapTileConfiguration(service, L.Browser.retina);
+    if (!config) throw new Error('地图服务尚未配置');
+    const layers = config.layers.map(layer => L.tileLayer(layer.url, layer.options));
+    this.watchTileLoading(layers[0]);
+    layers.forEach(layer => layer.addTo(this.mymap!));
+    return layers[0];
   }
 
   private clearLoadingDeadline(): void {

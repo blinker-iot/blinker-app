@@ -1,0 +1,23 @@
+:host { display: block; min-height: 320px; height: 100%; isolation: isolate; }
+.location-map { position: relative; height: 100%; min-height: 320px; overflow: hidden; border-radius: 20px;
+  background: var(--blinker-surface, #f2f4f6); }
+.map-canvas { position: absolute; inset: 0; }
+.loading-badge, .hint-badge { position: absolute; z-index: 500; left: 15px; border-radius: 20px; padding: 8px 12px;
+  background: var(--blinker-surface, white); font-size: 12px; color: var(--blinker-text-secondary, #657382); }
+.loading-badge { top: 15px; }
+.hint-badge { bottom: 30px; pointer-events: none; }
+.map-message { position: absolute; inset: 0; z-index: 600; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 12px; padding: 26px; text-align: center; background: var(--blinker-surface, #f5f7f9);
+  color: var(--blinker-text-secondary, #657382); }
+.map-message i { color: var(--ion-color-primary, #3b82f6); font-size: 32px; }
+.map-message strong { color: var(--blinker-text-primary, #1a2530); font-size: 16px; }
+.message-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+button { padding: 9px 14px; border: 0; border-radius: 20px; background: var(--ion-color-primary, #3b82f6); color: white;
+  font-size: 12px; cursor: pointer; }
+button.secondary { color: var(--ion-color-primary, #3b82f6); background: transparent; border: 1px solid currentColor; }
+button:focus-visible { outline: 2px solid var(--ion-color-primary, #3b82f6); outline-offset: 3px; }
+:host ::ng-deep .blinker-location-pin { background: none; border: 0; }
+:host ::ng-deep .blinker-location-pin > span { display: block; width: 28px; height: 28px; background: var(--ion-color-primary, #3b82f6);
+  border: 3px solid white; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: -2px 3px 12px #18395755; }
+:host ::ng-deep .leaflet-control-zoom { overflow: hidden; border: 0; border-radius: 13px; box-shadow: 0 3px 16px #102c4520; }
+:host ::ng-deep .leaflet-control-zoom a { background: var(--blinker-surface, white); color: var(--blinker-text-primary, #1a2530); }

@@ -54,6 +54,7 @@ export const API = {
     ENABLE_CLOUD: API_V2_URL + '/devices:enable-cloud',
     DETAIL: deviceKeyV2Url,
     DISPLAY_METADATA: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/display-metadata',
+    LOCATION: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/location',
     STATE_HISTORY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/state-history',
     PERIODIC_HISTORY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/periodic-history',
     PERIODIC_HISTORY_POLICY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/periodic-history-policy',
@@ -221,6 +222,7 @@ function isDeviceKeyManagementUrl(url: string): boolean {
       || parts[1] === 'presence-key:confirm'
       || parts[1] === 'page-layout'
       || parts[1] === 'display-metadata'
+      || parts[1] === 'location'
       || parts[1] === 'state-history'
       || parts[1] === 'periodic-history'
       || parts[1] === 'periodic-history-policy'

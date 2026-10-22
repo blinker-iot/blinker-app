@@ -1,227 +1,137 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
   IonBackButton,
-  IonButton,
   IonButtons,
   IonContent,
   IonHeader,
-  IonSpinner,
   IonTitle,
   IonToolbar,
+  NavController,
 } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
-import { BlinkerDevice } from 'src/app/core/model/device.model';
-import { DataService } from 'src/app/core/services/data.service';
+import { API } from '../../../configs/api.config';
+import {
+  assertDeviceV2AccountContext,
+  captureDeviceV2AccountContext,
+  DeviceV2AccountContext,
+} from '../../../core/device-v2/account-scope';
+import { deviceDisplayName } from '../../../core/device-v2/display-metadata';
+import { DataService } from '../../../core/services/data.service';
 
-type LogType = 'system' | 'device' | 'user' | 'warning';
+type PageStatus = 'inactive' | 'ready' | 'signed-out' | 'account-changed'
+  | 'unavailable' | 'preview' | 'unsupported';
 
-interface RuntimeLog {
-  id: string;
-  date: Date;
-  type: LogType;
-  title: string;
-  detail: string;
-}
-
-interface LogFilter {
-  id: 'all' | LogType;
-  label: string;
-}
-
-function createTestLogs(): RuntimeLog[] {
-  const now = Date.now();
-  const minutesAgo = (minutes: number) => new Date(now - minutes * 60_000);
-
-  return [
-    {
-      id: 'test-online',
-      date: minutesAgo(2),
-      type: 'system',
-      title: '设备上线',
-      detail: 'MQTT 连接已建立，信号质量良好',
-    },
-    {
-      id: 'test-temperature',
-      date: minutesAgo(8),
-      type: 'device',
-      title: '温度数据上报',
-      detail: 'temperature = 24.6 °C',
-    },
-    {
-      id: 'test-switch',
-      date: minutesAgo(18),
-      type: 'user',
-      title: '执行开关操作',
-      detail: '用户将设备开关设置为 ON',
-    },
-    {
-      id: 'test-network',
-      date: minutesAgo(43),
-      type: 'warning',
-      title: '网络短暂波动',
-      detail: '连接中断 3 秒后自动恢复',
-    },
-    {
-      id: 'test-timer',
-      date: minutesAgo(75),
-      type: 'user',
-      title: '定时任务已执行',
-      detail: '工作日节能模式执行成功',
-    },
-    {
-      id: 'test-restart',
-      date: minutesAgo(132),
-      type: 'system',
-      title: '设备重新启动',
-      detail: '启动原因：软件复位',
-    },
-  ];
-}
+const UNAVAILABLE = {
+  inactive: ['请从设备设置重新进入', '此页面没有后台日志采集或缓存记录。'],
+  'signed-out': ['请先登录当前账号', '登录后请从设备列表重新进入设备设置。'],
+  'account-changed': ['登录账号已变化', '请返回设备列表，重新进入当前账号的设备。'],
+  unavailable: ['设备不存在或当前不可用', '设备可能已移除、停用或权限已变化，请返回设备列表确认。'],
+  preview: ['预览设备没有运行日志', '预览内容不代表真实设备事件，不会生成演示日志。'],
+  unsupported: ['当前设备暂不支持此入口', '此入口仅适用于当前账号下的 V2 设备，不会加载旧格式日志。'],
+} as const;
 
 @Component({
   selector: 'app-device-log',
   templateUrl: './device-log.component.html',
   styleUrls: ['./device-log.component.scss'],
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonBackButton,
-    IonButton,
-    IonButtons,
-    IonContent,
-    IonHeader,
-    IonSpinner,
-    IonTitle,
-    IonToolbar,
-  ],
+  imports: [IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar],
 })
-export class DeviceLogComponent implements OnInit, OnDestroy {
-  readonly filters: readonly LogFilter[] = [
-    { id: 'all', label: '全部' },
-    { id: 'system', label: '系统' },
-    { id: 'device', label: '设备' },
-    { id: 'user', label: '操作' },
-    { id: 'warning', label: '异常' },
-  ];
-
-  id = '';
-  device?: BlinkerDevice;
-  loaded = false;
-  usingTestData = false;
-  selectedType: LogFilter['id'] = 'all';
-  searchText = '';
-  logs: RuntimeLog[] = [];
-  lastRefreshed = new Date();
-
-  private subscription?: Subscription;
-
-  get defaultBackHref(): string {
-    return `/device-manager/${this.id}`;
-  }
-
-  get visibleLogs(): RuntimeLog[] {
-    const keyword = this.searchText.trim().toLocaleLowerCase();
-    return this.logs.filter((log) => {
-      const typeMatches = this.selectedType === 'all' || log.type === this.selectedType;
-      const textMatches =
-        !keyword ||
-        `${log.title} ${log.detail}`.toLocaleLowerCase().includes(keyword);
-      return typeMatches && textMatches;
-    });
-  }
-
-  get warningCount(): number {
-    return this.logs.filter((log) => log.type === 'warning').length;
-  }
+export class DeviceLogComponent implements OnDestroy {
+  readonly status = signal<PageStatus>('inactive');
+  readonly deviceName = signal('');
+  private id = '';
+  private visible = false;
+  private destroyed = false;
+  private account?: DeviceV2AccountContext;
+  private readonly subscriptions = new Subscription();
 
   constructor(
-    private readonly dataService: DataService,
-    private readonly activatedRoute: ActivatedRoute,
-  ) {}
-
-  ngOnInit(): void {
-    this.id = this.activatedRoute.snapshot.paramMap.get('id') || '';
-    this.bindDevice();
-    this.subscription = this.dataService.userDataLoader.subscribe((loaded) => {
-      if (loaded) this.bindDevice();
-    });
+    private readonly data: DataService,
+    private readonly route: ActivatedRoute,
+    private readonly navigation: NavController,
+  ) {
+    this.subscriptions.add(data.authDataChanged.subscribe(() => this.reconcile()));
+    this.subscriptions.add(data.deviceDataLoader.subscribe(() => this.reconcile()));
   }
+
+  get defaultBackHref(): string {
+    return this.canNavigate ? `/device-manager/${encodeURIComponent(this.id)}` : '/home/device';
+  }
+
+  get unavailableTitle(): string {
+    const status = this.status();
+    return status === 'ready' ? '' : UNAVAILABLE[status][0];
+  }
+
+  get unavailableDescription(): string {
+    const status = this.status();
+    return status === 'ready' ? '' : UNAVAILABLE[status][1];
+  }
+
+  ionViewWillEnter(): void {
+    if (this.destroyed) return;
+    this.close();
+    this.visible = true;
+    this.id = this.route.snapshot.paramMap.get('id') || '';
+    if (!this.data.auth?.uuid) { this.show('signed-out'); return; }
+    try {
+      this.account = captureDeviceV2AccountContext(this.data, API.BASE_URL);
+      this.reconcile();
+    } catch { this.show('signed-out'); }
+  }
+
+  ionViewWillLeave(): void { this.close(); }
 
   ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
+    this.destroyed = true;
+    this.close();
+    this.subscriptions.unsubscribe();
   }
 
-  selectType(type: LogFilter['id']): void {
-    this.selectedType = type;
+  openHistory(target: 'storage' | 'trends'): void {
+    this.reconcile();
+    if (!this.canNavigate) return;
+    void this.navigation.navigateForward(`/device-manager/${encodeURIComponent(this.id)}/${target}`);
   }
 
-  typeLabel(type: LogType): string {
-    return {
-      system: '系统',
-      device: '设备',
-      user: '操作',
-      warning: '异常',
-    }[type];
+  private get canNavigate(): boolean {
+    return this.visible && !this.destroyed && this.status() === 'ready' && this.accountCurrent();
   }
 
-  refreshLogs(): void {
-    this.lastRefreshed = new Date();
-    if (!this.usingTestData) {
-      this.bindDevice();
+  private accountCurrent(): boolean {
+    if (!this.account || this.account.authority !== API.BASE_URL || !this.data.auth?.uuid) return false;
+    try { assertDeviceV2AccountContext(this.data, this.account); return true; }
+    catch { return false; }
+  }
+
+  private reconcile(): void {
+    if (!this.visible || this.destroyed) return;
+    if (!this.accountCurrent()) {
+      this.account = undefined;
+      this.show(this.data.auth?.uuid ? 'account-changed' : 'signed-out');
       return;
     }
-
-    this.logs = [
-      {
-        id: `test-refresh-${Date.now()}`,
-        date: this.lastRefreshed,
-        type: 'system',
-        title: '日志刷新完成',
-        detail: '这是一条用于验证实时列表样式的测试记录',
-      },
-      ...this.logs,
-    ];
-  }
-
-  private bindDevice(): void {
-    this.device = this.dataService.device?.dict?.[this.id];
-    this.loaded = Boolean(this.device);
-    if (!this.device) return;
-
-    const rawLogs = this.findRawLogs();
-    if (rawLogs.length) {
-      this.logs = rawLogs.map((log, index) => this.normalizeLog(log, index));
-      this.usingTestData = false;
-    } else if (!this.logs.length || !this.usingTestData) {
-      this.logs = createTestLogs();
-      this.usingTestData = true;
+    const device = this.data.getDevice(this.id);
+    const state = (device as { state?: unknown } | undefined)?.state;
+    if (!device || device.config.disabled || (state !== undefined && state !== 'active')) {
+      this.show('unavailable'); return;
     }
+    if (device.config.isPreview) { this.show('preview'); return; }
+    if (device.config.mode !== 'bbp2') { this.show('unsupported'); return; }
+    this.deviceName.set(deviceDisplayName(device));
+    this.status.set('ready');
   }
 
-  private findRawLogs(): unknown[] {
-    const data = this.device?.data;
-    const candidates = [data?.runtimeLogs, data?.logs, data?.log];
-    return candidates.find((candidate) => Array.isArray(candidate)) || [];
+  private show(status: Exclude<PageStatus, 'ready'>): void {
+    this.deviceName.set('');
+    this.status.set(status);
   }
 
-  private normalizeLog(raw: unknown, index: number): RuntimeLog {
-    const entry = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-    const rawType = String(entry['type'] || 'device');
-    const type: LogType = ['system', 'device', 'user', 'warning'].includes(rawType)
-      ? (rawType as LogType)
-      : 'device';
-    const rawDate = entry['date'] || entry['timestamp'] || entry['time'];
-    const date = rawDate ? new Date(rawDate as string | number) : new Date();
-
-    return {
-      id: String(entry['id'] || `${date.getTime()}-${index}`),
-      date: Number.isNaN(date.getTime()) ? new Date() : date,
-      type,
-      title: String(entry['title'] || entry['event'] || '设备记录'),
-      detail: String(entry['detail'] || entry['data'] || entry['message'] || '—'),
-    };
+  private close(): void {
+    this.visible = false;
+    this.account = undefined;
+    this.id = '';
+    this.show('inactive');
   }
 }

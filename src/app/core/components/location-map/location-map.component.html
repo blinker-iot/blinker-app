@@ -1,0 +1,16 @@
+<div class="location-map" [class.is-editable]="editable" role="region" aria-label="WGS84 位置地图">
+  <div #mapContainer class="map-canvas"></div>
+  @if (mapState === 'ready' || mapState === 'loading') {
+    @if (!hasPoint) { <span class="hint-badge">{{ editable ? '点选地图设置位置' : '尚未设置位置' }}</span> }
+    @if (mapState === 'loading') { <span class="loading-badge" role="status">正在加载地图…</span> }
+  } @else if (mapState !== 'inactive') {
+    <div class="map-message" role="status">
+      <i class="fa-light fa-map-location-dot" aria-hidden="true"></i>
+      <strong>{{ mapState === 'missing-key' ? '请检查地图服务配置' : '地图暂时无法加载' }}</strong>
+      <div class="message-actions">
+        <button type="button" (click)="refresh()">重试</button>
+        <button type="button" class="secondary" (click)="openMapSettings()">地图设置</button>
+      </div>
+    </div>
+  }
+</div>

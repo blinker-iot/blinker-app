@@ -193,14 +193,15 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       },
       {
         id: 'location',
-        title: '设备位置',
-        description: '查看并更新设备所在位置',
+        title: '地理位置',
+        description: this.isSharedDevice ? '地理位置暂不向分享用户开放'
+          : '在地图上查看或调整设备位置',
         route: `/device-manager/${this.id}/location`,
       },
       {
         id: 'logs',
         title: '运行日志',
-        description: '查看设备事件、操作和系统记录',
+        description: '当前尚未接入真实设备运行日志',
         route: `/device-manager/${this.id}/logs`,
       },
       {
