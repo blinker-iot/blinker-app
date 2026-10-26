@@ -19,7 +19,7 @@
           @if (index > 0) { <i class="lv-gap" [class.on]="index + 1 <= current"></i> }
           <button type="button" class="lv-dot" role="radio" [class.on]="index + 1 <= current"
             [attr.aria-checked]="index + 1 === current" [attr.aria-label]="name(index + 1)" [disabled]="card.disabled"
-            (click)="set(index + 1)">{{ index + 1 }}</button>
+            (click)="set(index + 1)"><span class="lv-dot-face" aria-hidden="true">{{ index + 1 }}</span></button>
         }
       </div>
     }
@@ -27,7 +27,7 @@
       <div class="lv-seg" role="radiogroup" [attr.aria-label]="title">
         @for (level of levels; track $index; let index = $index) {
           <button type="button" role="radio" [class.on]="index + 1 === current" [attr.aria-checked]="index + 1 === current"
-            [disabled]="card.disabled" (click)="set(index + 1)">{{ name(index + 1) }}</button>
+            [title]="name(index + 1)" [disabled]="card.disabled" (click)="set(index + 1)">{{ name(index + 1) }}</button>
         }
       </div>
     }
@@ -36,7 +36,7 @@
         @for (level of levels; track $index; let index = $index) {
           <button type="button" class="lv-bar" role="radio" [class.on]="index + 1 <= current"
             [attr.aria-checked]="index + 1 === current" [attr.aria-label]="name(index + 1)" [disabled]="card.disabled"
-            [style.--h]="height(index + 1)" (click)="set(index + 1)"></button>
+            [style.--h]="height(index + 1)" (click)="set(index + 1)"><span class="lv-bar-fill" aria-hidden="true"></span></button>
         }
       </div>
     }

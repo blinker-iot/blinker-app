@@ -1,4 +1,7 @@
 import { DeviceUiEndpoint, DeviceUiSnapshot } from './device-ui.port';
+import { generateAutomaticPageLayout } from './automatic-page-layout';
+import { widgetVariant } from './page-widget';
+import { presetForVariant } from './widget-presets';
 import {
   diffPageLayout,
   generateDefaultPageLayout,
@@ -6,6 +9,7 @@ import {
   PAGE_LAYOUT_COLUMNS,
   parsePageLayout,
   parsePageWidgets,
+  type PageLayoutWidget,
 } from './page-layout';
 
 function endpoint(overrides: Partial<DeviceUiEndpoint>): DeviceUiEndpoint {
@@ -50,6 +54,11 @@ function snapshot(): DeviceUiSnapshot {
   };
 }
 
+function legacyWidget(overrides: Partial<PageLayoutWidget> = {}): PageLayoutWidget {
+  return { widgetId: 'original', type: 'switch', endpointKey: 'power',
+    grid: { x: 0, y: 0, width: 3, height: 5 }, ...overrides };
+}
+
 describe('PageLayout v1', () => {
   it('generates one deterministic schema for default, manual, and Agent editors', () => {
     const layout = generateDefaultPageLayout(snapshot());
@@ -66,9 +75,45 @@ describe('PageLayout v1', () => {
         expect.objectContaining({ widgetId: 'endpoint-5', endpointKey: 'uptime', type: 'value' }),
       ],
     });
-    expect(layout.widgets.map(widget => widget.grid.y)).toEqual([0, 0, 0, 2, 2]);
+    expect(layout.widgets.map(widget => widget.grid.y)).toEqual([0, 0, 0, 3, 5]);
     expect(parsePageLayout(JSON.parse(JSON.stringify(layout)), snapshot().endpoints)).toEqual(layout);
   });
+
+  it('uses catalogue defaults for every newly generated binding, including alternate variants', () => {
+    const source: DeviceUiSnapshot = { ...snapshot(), endpoints: [
+      ...snapshot().endpoints,
+      endpoint({ id: 6, key: 'setLevel', role: 'action', valueType: 'integer', minimum: 0, maximum: 100 }),
+      endpoint({ id: 7, key: 'keys', role: 'action', valueType: 'text', choices: ['up', 'down'] }),
+      endpoint({ id: 8, key: 'event', role: 'event', valueType: 'boolean', writable: false }),
+      endpoint({ id: 9, key: 'mode', valueType: 'text', choices: ['auto', 'manual'] }),
+      endpoint({ id: 10, key: 'color', valueType: 'integer', minimum: 0, maximum: 0xffffff }),
+    ] };
+    const before = structuredClone(source);
+    const layout = generateDefaultPageLayout(source);
+
+    for (const widget of layout.widgets) {
+      const preset = presetForVariant(widgetVariant(widget.type, widget.variant));
+      expect(widget.grid).toMatchObject({ width: preset.width, height: preset.height });
+      expect(widget.options).toEqual(preset.options);
+      expect(widget.options).not.toBe(preset.options);
+    }
+    expect(source).toEqual(before);
+  });
+
+  it.each([undefined, 'natural', 'dark', 'electronic'] as const)(
+    'keeps automatic theme %s on the same default sizes and options', style => {
+      const source = snapshot();
+      const base = generateDefaultPageLayout(source);
+      const automatic = generateAutomaticPageLayout(source, style, ['power']);
+
+      expect(automatic.widgets.some(widget => widget.endpointKey === 'power')).toBe(false);
+      for (const widget of automatic.widgets) {
+        const original = base.widgets.find(candidate => candidate.widgetId === widget.widgetId)!;
+        expect(widget.grid).toMatchObject({ width: original.grid.width, height: original.grid.height });
+        expect(widget.options).toEqual(original.options);
+        expect(widget.endpointKey).toBe(original.endpointKey);
+      }
+    });
 
   it('rejects executable/unknown fields, invalid bindings, and overlapping widgets', () => {
     const layout = generateDefaultPageLayout(snapshot());
@@ -92,7 +137,7 @@ describe('PageLayout v1', () => {
   it.each(['switch', 'button', 'slider', 'input', 'value'] as const)(
     'retains original schema-1 %s grid sizes without admitting them to new panels', type => {
       const base = generateDefaultPageLayout(snapshot());
-      const widget = { ...base.widgets[0], type, grid: { x: 0, y: 0, width: 3, height: 5 } };
+      const widget = legacyWidget({ type });
       const input = { ...base, widgets: [widget] };
       expect(parsePageLayout(input).widgets[0]).toEqual(widget);
       expect(() => parsePageWidgets(input.widgets)).toThrow(/size is not allowed/);
@@ -100,7 +145,7 @@ describe('PageLayout v1', () => {
 
   it('keeps size rules for new presentation fields and types even inside schema 1', () => {
     const base = generateDefaultPageLayout(snapshot());
-    const widget = { ...base.widgets[0], grid: { x: 0, y: 0, width: 3, height: 5 } };
+    const widget = legacyWidget();
     for (const change of [{ variant: 'tile' }, { options: {} }, { type: 'select' }, { type: 'color' },
       { type: 'value', extraKeys: ['level'] }]) {
       expect(() => parsePageLayout({ ...base, widgets: [{ ...widget, ...change }] }))
@@ -110,7 +155,7 @@ describe('PageLayout v1', () => {
 
   it('retains legacy dimensions without relaxing bounds, overlaps, keys or endpoint binding', () => {
     const base = generateDefaultPageLayout(snapshot());
-    const widget = { ...base.widgets[0], grid: { x: 0, y: 0, width: 8, height: 5 } };
+    const widget = legacyWidget({ grid: { x: 0, y: 0, width: 8, height: 5 } });
     expect(parsePageLayout({ ...base, widgets: [widget] }, snapshot().endpoints).widgets[0]).toEqual(widget);
     for (const grid of [{ ...widget.grid, width: 9 }, { ...widget.grid, height: 17 },
       { ...widget.grid, x: 1 }, { ...widget.grid, height: 1.5 }]) {
@@ -124,6 +169,54 @@ describe('PageLayout v1', () => {
       .toThrow(/incompatible/);
     expect(() => parsePageLayout({ ...base, widgets: [{ ...widget, type: 'input' }] }, snapshot().endpoints))
       .toThrow(/incompatible/);
+  });
+
+  it('retains an untouched legacy size while editing another widget or renaming/moving it', () => {
+    const base = generateDefaultPageLayout(snapshot());
+    const old = legacyWidget();
+    const modern = { ...base.widgets[1], grid: { ...base.widgets[1].grid, x: 4, y: 0 } };
+    const saved = parsePageLayout({ ...base, widgets: [old, modern] }, snapshot().endpoints).widgets;
+    const edited = [
+      { ...saved[0], title: '原开关', grid: { ...saved[0].grid, x: 1, y: 6 } },
+      { ...saved[1], title: '新标题' },
+    ];
+
+    expect(parsePageWidgets(edited, snapshot().endpoints, saved)).toEqual(edited);
+    expect(saved[0]).toEqual(old);
+  });
+
+  it('does not inherit a legacy size for new identities, bindings or presentation changes', () => {
+    const old = legacyWidget();
+    const changes: Partial<PageLayoutWidget>[] = [
+      { widgetId: 'new' }, { endpointKey: 'other' }, { type: 'button' }, { variant: 'tile' },
+      { options: { icon: 'plug' } }, { extraKeys: ['temperature'] },
+      { grid: { ...old.grid, width: 4 } }, { grid: { ...old.grid, height: 6 } },
+    ];
+    for (const change of changes) {
+      expect(() => parsePageWidgets([{ ...old, ...change }], undefined, [old])).toThrow();
+    }
+    expect(() => parsePageWidgets([old])).toThrow(/size is not allowed/);
+  });
+
+  it('still checks bounds, overlap and endpoint compatibility for retained legacy sizes', () => {
+    const old = legacyWidget();
+    expect(() => parsePageWidgets([{ ...old, grid: { ...old.grid, x: 7 } }], undefined, [old])).toThrow(/exceeds/);
+    expect(() => parsePageWidgets([old, { ...old, widgetId: 'new' }], undefined,
+      [old, { ...old, widgetId: 'new' }])).toThrow(/overlap/);
+    expect(() => parsePageWidgets([old], [], [old])).toThrow(/incompatible/);
+  });
+
+  it('leaves saved geometry, ordering and bindings unchanged when migrating without additions', () => {
+    const base = generateDefaultPageLayout(snapshot());
+    const saved = parsePageLayout({ ...base, widgets: [
+      legacyWidget({ grid: { x: 5, y: 8, width: 3, height: 5 } }),
+      { ...base.widgets[1], grid: { x: 1, y: 2, width: 2, height: 3 } },
+    ] }, snapshot().endpoints);
+    const before = structuredClone(saved);
+    const next = migratePageLayout(saved, { ...snapshot(), manifestFingerprint: 'cd'.repeat(32) }, false);
+
+    expect(next.widgets).toEqual(before.widgets);
+    expect(saved).toEqual(before);
   });
 
   it('diffs and migrates a stale layout while preserving compatible manual choices', () => {

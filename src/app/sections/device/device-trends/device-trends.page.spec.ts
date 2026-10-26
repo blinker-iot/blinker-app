@@ -218,3 +218,105 @@ describe('Online trends page lifecycle and save confirmation', () => {
     expect(f.instance.canConfigure).toBe(false); expect(f.instance.state().error).toContain('权限'); f.instance.ngOnDestroy();
   });
 });
+
+describe('Online trends manual read recovery', () => {
+  afterEach(() => vi.restoreAllMocks());
+  it.each(['network', 401, 429, 503])('manual read recovery waits for an explicit read after %s, not visibility changes', async failure => {
+    const f = setup();
+    f.history.read.mockRejectedValueOnce(typeof failure === 'number'
+      ? new GatewayHttpError({ httpStatus: failure, code: 'UNAVAILABLE', message: 'private upstream detail' })
+      : Error('private upstream detail'));
+    try {
+      f.instance.ionViewWillEnter(); await settled(f.instance);
+      const error = f.instance.state().error;
+      expect(error).toContain('手动刷新'); expect(error).not.toContain('private');
+      for (let n = 0; n < 2; ++n) {
+        f.visibility.active.next(false);
+        expect(f.instance.state().rows).toEqual([]); expect(f.instance.state().detail).toBeNull();
+        expect(f.instance.state().draftKeys).toEqual([]);
+        f.visibility.active.next(true); await settled(f.instance);
+        expect(f.history.read).toHaveBeenCalledTimes(1); expect(f.history.detail).toHaveBeenCalledTimes(1);
+        expect(f.instance.state().error).toBe(error); expect(f.instance.canSave).toBe(false);
+      }
+      await f.instance.refresh();
+      expect(f.history.read).toHaveBeenCalledTimes(2); expect(f.history.detail).toHaveBeenCalledTimes(2);
+      expect(f.instance.state().ready).toBe(true); expect(f.instance.state().error).toBe('');
+      f.visibility.active.next(false); f.visibility.active.next(true); await settled(f.instance);
+      expect(f.history.read).toHaveBeenCalledTimes(3); expect(f.history.save).not.toHaveBeenCalled();
+    } finally { f.instance.ngOnDestroy(); }
+  });
+  it.each(['permission', 'overlap'])('manual read recovery discards a failed %s page and refreshes from the first page', async failure => {
+    const f = setup();
+    f.history.read.mockImplementationOnce(async (_id, query) => page(query, [row(query)], 'YWJj'));
+    try {
+      f.instance.ionViewWillEnter(); await settled(f.instance);
+      if (failure === 'permission') f.history.read.mockRejectedValueOnce(new GatewayHttpError({ httpStatus: 403, code: 'DENIED', message: 'private' }));
+      await f.instance.loadMore();
+      expect(f.instance.state().ready).toBe(false); expect(f.instance.state().rows).toEqual([]);
+      expect(f.instance.state().nextCursor).toBeNull();
+      const error = f.instance.state().error;
+      f.visibility.active.next(false); f.visibility.active.next(true); await settled(f.instance);
+      expect(f.history.read).toHaveBeenCalledTimes(2); expect(f.history.detail).toHaveBeenCalledTimes(1);
+      expect(f.instance.state().error).toBe(error); expect(f.instance.canSave).toBe(false);
+      await f.instance.refresh();
+      expect(f.history.read.mock.calls[2][1].before).toBeUndefined();
+      expect(f.instance.state().ready).toBe(true); expect(f.history.save).not.toHaveBeenCalled();
+    } finally { f.instance.ngOnDestroy(); }
+  });
+  it('manual read recovery preserves unknown-save fencing through a failed reconciliation and only unlocks a fresh revision', async () => {
+    const f = await opened(); draft(f);
+    try {
+      f.history.save.mockRejectedValueOnce(Error('unknown'));
+      await f.instance.save();
+      f.history.detail.mockRejectedValueOnce(Error('read failed'));
+      await f.instance.refresh();
+      f.visibility.active.next(false); f.visibility.active.next(true); await settled(f.instance);
+      expect(f.history.detail).toHaveBeenCalledTimes(2); expect(f.history.read).toHaveBeenCalledTimes(2);
+      expect(f.instance.canSave).toBe(false); await f.instance.save();
+      expect(f.history.save).toHaveBeenCalledTimes(1);
+      f.history.detail.mockResolvedValueOnce({ ...detail(), policy: { revision: 2, enabled: false,
+        manifestFingerprint: hash, keys: ['reading'], intervalMs: 60000, updatedAt: now } });
+      await f.instance.refresh();
+      expect(f.instance.state().notice).toContain('不会自动重发'); expect(f.instance.canSave).toBe(true);
+      await f.instance.save(); expect(f.history.save.mock.calls[1][1].expectedRevision).toBe(2);
+    } finally { f.instance.ngOnDestroy(); }
+  });
+  it('manual read recovery does not suppress the separate read-only recovery of a later interrupted save', async () => {
+    const f = setup(), pending = deferred<any>();
+    let saved: Promise<void> | undefined;
+    try {
+      f.history.read.mockRejectedValueOnce(Error('network'));
+      f.instance.ionViewWillEnter(); await settled(f.instance);
+      f.visibility.active.next(false); f.visibility.active.next(true); await settled(f.instance);
+      expect(f.history.read).toHaveBeenCalledTimes(1);
+      await f.instance.refresh(); draft(f); f.history.save.mockReturnValueOnce(pending.promise);
+      saved = f.instance.save(); const signal = f.history.save.mock.calls[0][2];
+      f.visibility.active.next(false); expect(signal.aborted).toBe(true);
+      f.visibility.active.next(true); await settled(f.instance);
+      expect(f.history.read).toHaveBeenCalledTimes(3); expect(f.history.detail).toHaveBeenCalledTimes(3);
+      expect(f.instance.state().notice).toContain('只读刷新'); expect(f.history.save).toHaveBeenCalledTimes(1);
+      pending.resolve(detail()); await saved;
+      expect(f.instance.state().detail!.policy).toBeNull();
+    } finally { pending.resolve(detail()); await saved; f.instance.ngOnDestroy(); }
+  });
+  it('manual read recovery clears its failed-read context on leave or account change, with no request until re-entry', async () => {
+    const f = setup();
+    try {
+      f.history.read.mockRejectedValueOnce(Error('network'));
+      f.instance.ionViewWillEnter(); await settled(f.instance);
+      f.instance.ionViewWillLeave();
+      expect(f.instance.state().error).toBe('');
+      f.visibility.active.next(false); f.visibility.active.next(true);
+      expect(f.history.read).toHaveBeenCalledTimes(1);
+      f.instance.ionViewWillEnter(); await settled(f.instance);
+      expect(f.history.read).toHaveBeenCalledTimes(2); expect(f.instance.state().ready).toBe(true);
+      f.history.read.mockRejectedValueOnce(Error('network')); await f.instance.refresh();
+      f.data.auth.uuid = 'other'; ++f.data.sessionEpoch; f.data.authDataChanged.next();
+      f.visibility.active.next(false); f.visibility.active.next(true);
+      expect(f.history.read).toHaveBeenCalledTimes(3); expect(f.instance.state().error).toBe('');
+      expect(f.instance.state().detail).toBeNull(); expect(f.instance.canSave).toBe(false);
+      f.instance.ionViewWillEnter(); await settled(f.instance);
+      expect(f.history.read).toHaveBeenCalledTimes(4); expect(f.history.save).not.toHaveBeenCalled();
+    } finally { f.instance.ngOnDestroy(); }
+  });
+});

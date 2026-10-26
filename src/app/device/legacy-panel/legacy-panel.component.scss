@@ -1,0 +1,30 @@
+@use '../v2/panel/panel-grid' as grid;
+
+:host {
+  display: block;
+  box-sizing: border-box;
+  max-width: grid.$page-max-width;
+  margin-inline: auto;
+  padding: grid.$page-inset;
+}
+
+// The custom document owns its single inset and bounded content viewport.
+:host.custom-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-width: none;
+  padding: 0;
+}
+
+.error { flex-shrink: 0; color: var(--ui-alert); padding: 16px; }
+
+.empty {
+  min-height: 42vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--blinker-text-secondary);
+  text-align: center;
+}

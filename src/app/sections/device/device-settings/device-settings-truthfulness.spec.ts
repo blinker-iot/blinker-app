@@ -29,10 +29,12 @@ describe('Device settings truthfulness', () => {
     expect(entry.route).toBe('/device-manager/device_a/location');
   });
 
-  it('keeps the log status route while explicitly stating that no real source is connected', () => {
+  it('keeps the existing route and describes only retained cloud command delivery', () => {
     const entry = page().deviceMenuItems.find(item => item.id === 'logs')!;
-    expect(entry.description).toBe('当前尚未接入真实设备运行日志');
+    expect(entry.title).toBe('活动记录');
+    expect(entry.description).toBe('查看最近 7 天保留的云端控制投递');
     expect(entry.route).toBe('/device-manager/device_a/logs');
+    expect(page(true).deviceMenuItems.find(item => item.id === 'logs')!.description).toBe('活动记录暂不向分享用户开放');
   });
 
   it('preserves the separate personal region entry for owned and shared devices', () => {

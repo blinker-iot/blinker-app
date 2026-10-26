@@ -46,19 +46,29 @@
   --h: 28px;
   flex: none;
   position: relative;
-  width: var(--w);
-  height: var(--h);
-  border-radius: 999px;
-  background: var(--ui-track);
-  transition: background-color 0.25s, border-color 0.25s;
+  width: max(48px, var(--w));
+  height: 48px;
+
+  &::before {
+    content: '';
+    box-sizing: border-box;
+    position: absolute;
+    top: calc((100% - var(--h)) / 2);
+    left: calc((100% - var(--w)) / 2);
+    width: var(--w);
+    height: var(--h);
+    border-radius: 999px;
+    background: var(--ui-track);
+    transition: background-color 0.25s, border-color 0.25s;
+  }
 
   &.sm { --w: 38px; --h: 22px; }
   &.lg { --w: 58px; --h: 34px; }
 
   i {
     position: absolute;
-    top: 3px;
-    left: 3px;
+    top: calc((100% - var(--h)) / 2 + 3px);
+    left: calc((100% - var(--w)) / 2 + 3px);
     width: calc(var(--h) - 6px);
     height: calc(var(--h) - 6px);
     border-radius: 50%;
@@ -67,16 +77,15 @@
     transition: transform 0.25s cubic-bezier(0.3, 0.7, 0.4, 1), background-color 0.25s;
   }
 
-  &.on { background: var(--ui-accent); }
+  &.on::before { background: var(--ui-accent); }
   &.on i { transform: translateX(calc(var(--w) - var(--h))); }
 
   @include theme.electronic {
-    border: 1.5px dotted var(--ui-muted);
-    background: none;
+    &::before { border: 1.5px dotted var(--ui-muted); background: none; }
 
-    i { top: 2px; left: 2px; background: var(--ui-faint); }
+    i { background: var(--ui-faint); }
 
-    &.on { border-color: var(--ui-ink); background: none; }
+    &.on::before { border-color: var(--ui-ink); background: none; }
     &.on i { background: var(--ui-ink); }
   }
 }

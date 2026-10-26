@@ -1,3 +1,5 @@
+@use '../../../../theme/settings-surface' as settings;
+
 .menu-list {
   overflow: hidden;
 
@@ -170,4 +172,80 @@
       opacity: 0.68;
     }
   }
+}
+
+// Explicitly selected by settings pages. Other menu consumers keep their
+// original compact/detailed appearance and projected-item editing behavior.
+.menu-list--settings {
+  @include settings.tokens;
+  @include settings.card;
+
+  padding: 0;
+
+  .menu-row {
+    @include settings.row;
+    @include settings.interaction;
+
+    border-bottom-color: var(--blinker-divider);
+  }
+
+  .menu-icon {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    color: var(--blinker-text-secondary);
+
+    i { font-size: 20px; }
+  }
+
+  .menu-copy {
+    min-width: 0;
+    flex: 1;
+    gap: 4px;
+  }
+
+  .menu-title {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .menu-description,
+  .menu-value {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .menu-value {
+    flex: 0 1 30%;
+  }
+
+  .menu-arrow {
+    margin-left: 0;
+    font-size: 11px;
+  }
+
+  .menu-badge {
+    max-width: 30%;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    color: var(--blinker-text-secondary);
+  }
+
+  .menu-row--danger {
+    color: var(--ion-color-danger);
+
+    .menu-icon { color: inherit; }
+  }
+
+  // Keep the ring within the clipped grouped surface, including edge rows.
+  .menu-row:focus-visible { outline-offset: -3px; }
 }

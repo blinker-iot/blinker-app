@@ -1,571 +1,179 @@
-:host {
-  display: block;
+@use '../../../../theme/settings-surface' as surface;
+@use '../../../../theme/workflow-surface' as workflow;
 
-  height: 100%;
+@include workflow.page;
 
-  color: var(--blinker-text-primary);
-  background: var(--blinker-bg);
+.sharing-heading p { margin-bottom: 0; }
+.settings-card { @include surface.card; }
+.setting-copy, .member-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  strong { font-size: 0.9375rem; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+  small { color: var(--blinker-text-secondary); font-size: 0.8125rem; line-height: 1.6; }
 }
-
-ion-content {
-  --background: var(--blinker-bg);
-  --section-main-padding-bottom: 28px;
-}
-
-.device-name {
-  margin: 0 4px 20px;
-  font-size: 19px;
-  font-weight: 600;
-
-  line-height: 1.4;
-
-  overflow-wrap: anywhere;
-}
-
-.settings-card {
-  overflow: hidden;
-
-  border: 1px solid var(--blinker-border);
-
-  border-radius: 16px;
-
-  background: var(--blinker-surface);
-}
-
-.public-access-row,
-.permission-option {
+.public-access-row, .permission-option {
   display: flex;
-
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  min-height: 82px;
-  padding: 17px 18px;
+  gap: 16px;
+  min-height: 64px;
+  cursor: pointer;
 }
-
-.setting-copy,
-.member-copy {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-
-  strong {
-    font-size: 14px;
-    font-weight: 550;
-
-    line-height: 1.4;
-  }
-
-  small {
-    color: var(--blinker-text-secondary);
-
-    font-size: 11px;
-
-    line-height: 1.5;
-  }
-}
-
+// The labelled row owns the full hit area; the switch keeps a compact visual.
 .toggle {
   appearance: none;
   position: relative;
-  flex: 0 0 44px;
-  width: 44px;
-  height: 26px;
-
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
   margin: 0;
-
-  border-radius: 20px;
-
-  background: var(--blinker-border);
-
+  border: 0;
+  background: transparent;
   cursor: pointer;
-  transition: background-color 160ms ease;
-
-  &::after {
-    content: '';
-
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #fff;
-
-    box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
-
-    transition: transform 160ms ease;
-  }
-
-  &:checked {
-    background: var(--ion-color-primary);
-
-    &::after {
-      transform: translateX(18px);
-    }
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--ion-color-primary);
-    outline-offset: 4px;
-  }
+  &::before, &::after { content: ''; position: absolute; transition: background-color 120ms ease, transform 120ms ease; }
+  &::before { inset: 11px 2px; border-radius: 20px; background: var(--blinker-text-secondary); }
+  &::after { top: 14px; left: 5px; width: 20px; height: 20px; border-radius: 50%; background: var(--blinker-surface); }
+  &:checked::before { background: var(--ion-color-primary); }
+  &:checked::after { transform: translateX(18px); background: var(--ion-color-primary-contrast); }
+  @include surface.focus-ring;
+  &:disabled { cursor: default; opacity: 0.5; }
 }
-
-.public-card {
-  padding: 0 16px;
-}
-
-.public-access-row {
-  min-height: 78px;
-  padding: 17px 2px;
-}
-
-.public-link-row {
-  margin-bottom: 10px;
-  padding: 4px 14px 12px;
-  border-radius: 12px;
-
-  background: var(--blinker-surface-muted);
-}
-
+.public-note, .options-note { color: var(--blinker-text-secondary); font-size: 0.875rem; line-height: 1.6; }
+.public-link-row { padding-block: 12px; border-top: 1px solid var(--blinker-divider); }
 .public-link-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 0;
-
-  > span {
-    display: flex;
-
-    align-items: center;
-    gap: 8px;
-
-    color: var(--blinker-text-secondary);
-
-    font-size: 12px;
-  }
+  gap: 8px;
+  > span { display: flex; align-items: center; gap: 8px; color: var(--blinker-text-secondary); font-size: 0.875rem; }
 }
-
-.copy-action {
-  display: inline-flex;
-
-  align-items: center;
-  gap: 5px;
-  min-height: 32px;
-  margin-right: -6px;
-  padding: 0 6px;
-  border-radius: 7px;
-
-  color: var(--ion-color-primary);
-
-  background: transparent;
-  font-size: 11px;
-}
-
 .public-link {
   margin: 0;
-
-  color: var(--blinker-text-primary);
-
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 12px;
-
+  font-size: 0.8125rem;
   line-height: 1.6;
-
   overflow-wrap: anywhere;
-
-  -webkit-user-select: text;
-
   user-select: text;
 }
-
-.link-row {
+.link-row, .link-expiry, .link-settings-action, .link-management {
   display: flex;
-
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  min-height: 48px;
-
-  margin: 0;
-
-  padding: 2px 2px 10px;
-  font-size: 11px;
-
-  > span {
-    flex: 1;
-  }
-
-  ion-spinner {
-    width: 16px;
-    height: 16px;
-  }
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
-
-.link-expiry {
-  display: flex;
-
-  align-items: center;
-  gap: 7px;
-
-  color: var(--blinker-text-tertiary);
-}
-
-.link-settings-action {
-  display: flex;
-
-  align-items: center;
-  gap: 6px;
-}
-
-button {
-  border: 0;
-
-  cursor: pointer;
-  font-family: inherit;
-}
-
-button:disabled,
-.toggle:disabled {
-  opacity: 0.4;
-
-  cursor: default;
-}
-
-.compact-primary {
-  min-height: 34px;
-  padding: 0 13px;
-  border-radius: 9px;
-
-  color: var(--ion-color-primary-contrast);
-  background: var(--ion-color-primary);
-
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.icon-action {
-  display: grid;
-  place-items: center;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 34px;
-
-  padding: 0;
-
-  color: var(--blinker-text-secondary);
-
-  background: transparent;
-  font-size: 15px;
-}
-
-.text-action,
-.invite-actions button {
-  min-height: 34px;
-  padding: 0 3px;
-
-  color: var(--ion-color-primary);
-
-  background: transparent;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
+.link-row { justify-content: space-between; min-height: 48px; > span { flex: 1 1 120px; } }
+.link-expiry { color: var(--blinker-text-secondary); }
+ion-spinner { width: 20px; height: 20px; flex-shrink: 0; }
+.text-action, .copy-action, .invite-actions button, .link-management button { @include surface.button; background: transparent; font-size: 0.875rem; }
+.copy-action { display: inline-flex; align-items: center; gap: 8px; }
+.compact-primary, .options-save { @include surface.button; color: var(--ion-color-primary-contrast); background: var(--ion-color-primary); font-size: 0.875rem; }
+.icon-action { @include surface.icon-button; }
+.members-section { display: grid; gap: 8px; min-width: 0; }
 .section-heading {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
-  margin: 26px 4px 8px;
-
-  h2 {
-    margin: 0;
-
-    font-size: 13px;
-    font-weight: 550;
-
-    span {
-      margin-left: 6px;
-
-      color: var(--blinker-text-tertiary);
-
-      font-size: 11px;
-      font-weight: 400;
-    }
-  }
+  gap: 8px;
+  padding-inline: 4px;
+  h2 { margin: 0; }
+  h2 span { margin-left: 8px; color: var(--blinker-text-secondary); font-size: 0.875rem; font-weight: 400; }
 }
-
-.invite-actions {
-  display: flex;
-  gap: 16px;
-}
-
+.invite-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.member-list { padding: 0; }
 .member-row {
   display: flex;
-
   align-items: center;
-  gap: 10px;
-  min-height: 74px;
-  padding: 12px 15px;
-
-  + .member-row {
-    border-top: 1px solid var(--blinker-divider);
-  }
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 16px;
+  + .member-row { border-top: 1px solid var(--blinker-divider); }
 }
-
 .member-avatar {
   display: grid;
   place-items: center;
-  flex: 0 0 34px;
-  height: 34px;
+  flex: 0 0 36px;
+  height: 36px;
   border-radius: 50%;
-
   color: var(--blinker-text-secondary);
   background: var(--blinker-surface-muted);
-
-  font-size: 14px;
+  font-size: 1rem;
 }
-
-.member-copy {
-  flex: 1;
-
-  strong {
-    font-size: 12px;
-    overflow-wrap: anywhere;
-  }
-
-  small {
-    font-size: 10px;
-  }
+.member-copy { flex: 1 1 80px; }
+.pending-label { display: inline-block; color: var(--blinker-text-secondary); font-size: 0.8125rem; font-weight: 400; }
+.empty-members { margin: 0; padding: 24px 16px; color: var(--blinker-text-secondary); text-align: center; }
+.muted { color: var(--blinker-text-secondary); }
+.error, .danger, .link-management .danger { color: var(--ion-color-danger); }
+.invitation-entry {
+  @include surface.interaction;
+  display: flex;
+  align-items: center;
+  flex: 1 1 150px;
+  gap: 8px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  color: inherit;
+  background: transparent;
+  text-align: left;
 }
+.invitation-chevron { color: var(--blinker-text-secondary); font-size: 0.8125rem; }
 
-.pending-label {
-  margin-left: 5px;
-
-  color: var(--blinker-text-tertiary);
-
-  font-size: 10px;
-  font-weight: 400;
-}
-
-.empty-members {
-  margin: 0;
-
-  padding: 24px 18px;
-
-  color: var(--blinker-text-tertiary);
-
-  font-size: 12px;
-  text-align: center;
-}
-
-.muted {
-  color: var(--blinker-text-tertiary);
-}
-
-.error,
-.danger {
-  color: var(--ion-color-danger);
-}
-
+// Ionic renders these sheets through an overlay portal: bind the same local
+// tokens here, not through a global override or the underlying device panel.
 .share-options-modal {
-  --width: min(100%, 440px);
+  @include surface.tokens;
+  --width: min(100%, 480px);
   --height: auto;
-  --max-height: 90%;
+  --max-height: calc(100% - var(--ion-safe-area-top, 0px) - 16px);
   --border-radius: 22px 22px 0 0;
   --background: var(--blinker-surface);
   align-items: flex-end;
 }
-
 .share-options {
-  padding: 20px 22px calc(22px + env(safe-area-inset-bottom));
-
+  @include workflow.content;
+  box-sizing: border-box;
+  padding: 20px max(16px, var(--ion-safe-area-right, 0px)) calc(24px + var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px))) max(16px, var(--ion-safe-area-left, 0px));
   overflow-y: auto;
-
+  max-height: calc(100vh - var(--ion-safe-area-top, 0px) - 16px);
   color: var(--blinker-text-primary);
 }
-
-.options-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-
-  h2 {
-    margin: 0;
-
-    font-size: 18px;
-    font-weight: 600;
-  }
-}
-
-.permission-options {
-  margin-bottom: 22px;
-}
-
-.permission-option {
-  padding: 14px 0;
-  min-height: 65px;
-}
-
-.permission-option + .permission-option {
-  border-top: 1px solid var(--blinker-divider);
-}
-
-.options-label {
-  display: block;
-  margin-bottom: 10px;
-
-  color: var(--blinker-text-secondary);
-
-  font-size: 12px;
-}
-
+.options-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; h2 { margin: 0; } }
+.permission-options { margin-bottom: 16px; }
+.permission-option { padding-block: 12px; + .permission-option { border-top: 1px solid var(--blinker-divider); } }
+.options-label { display: block; margin-bottom: 8px; color: var(--blinker-text-secondary); font-size: 0.875rem; }
 .expiry-options {
   display: grid;
-
-  grid-template-columns: repeat(4, 1fr);
-
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-
-  button {
-    min-height: 40px;
-
-    border: 1px solid var(--blinker-border);
-    border-radius: 9px;
-    background: transparent;
-
-    color: var(--blinker-text-secondary);
-
-    font-size: 12px;
-  }
-
-  button.selected {
-    border-color: var(--ion-color-primary);
-    color: var(--ion-color-primary);
-    background: rgba(var(--ion-color-primary-rgb), 0.06);
-  }
+  button { @include surface.button; color: var(--blinker-text-secondary); font-size: 0.875rem; }
+  button.selected { color: var(--ion-color-primary); box-shadow: inset 0 0 0 2px currentColor; }
 }
-
-.options-note {
-  margin: 15px 0 20px;
-
-  color: var(--blinker-text-tertiary);
-
-  font-size: 11px;
-
-  line-height: 1.7;
-}
-
-.options-save {
-  width: 100%;
-
-  min-height: 44px;
-  border-radius: 11px;
-
-  background: var(--ion-color-primary);
-  color: var(--ion-color-primary-contrast);
-
-  font-size: 14px;
-}
-
-.link-management {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.link-management button {
-  min-height: 34px;
-  padding: 0;
-
-  background: transparent;
-
-  color: var(--blinker-text-secondary);
-
-  font-size: 11px;
-}
-
-.link-management .danger {
-  color: var(--ion-color-danger);
-}
-
-.invitation-entry {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  gap: 10px;
-  min-width: 0;
-  min-height: 50px;
-  padding: 0;
-  color: inherit;
-  background: transparent;
-  text-align: left;
-
-  ion-spinner { width: 16px; height: 16px; }
-}
-
-.invitation-chevron {
-  color: var(--blinker-text-tertiary);
-
-  font-size: 10px;
-}
-
-.invitation-device {
-  margin: 0 0 14px;
-  font-size: 15px;
-  font-weight: 500;
-  overflow-wrap: anywhere;
-}
-
-.invitation-settings {
-  margin-bottom: 16px;
-  padding: 0 14px;
-  border-radius: 12px;
-
-  background: var(--blinker-surface-muted);
-}
-
+.options-note { margin-block: 16px; }
+.options-save { width: 100%; i { margin-right: 8px; } }
+.link-management { justify-content: space-between; margin-top: 8px; }
+.invitation-device { margin-bottom: 12px; }
+.invitation-settings { margin-bottom: 16px; }
 .invitation-setting {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 52px;
-  padding: 12px 0;
-  font-size: 13px;
-  font-weight: 400;
-
-  line-height: 1.5;
-
-  + .invitation-setting {
-    border-top: 1px solid var(--blinker-divider);
-  }
+  min-height: 64px;
+  padding-block: 8px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  + .invitation-setting { border-top: 1px solid var(--blinker-divider); }
 }
-
-.invitation-expiry {
-  color: var(--blinker-text-secondary);
-
-  font-size: 12px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.invitation-link {
-  margin-bottom: 22px;
-  padding: 14px;
-  border-radius: 12px;
-
-  background: var(--blinker-surface-muted);
-}
-
-.options-save i { margin-right: 8px; }
-
-@media (min-width: 600px) {
-  .share-options-modal {
-    align-items: center;
-
-    --border-radius: 22px;
-  }
-}
+.invitation-expiry { color: var(--blinker-text-secondary); text-align: right; }
+.invitation-link { margin-block: 16px; padding: 12px; border-radius: 12px; background: var(--blinker-surface-muted); }
+@media (min-width: 600px) { .share-options-modal { align-items: center; --border-radius: 22px; } }
+@media (prefers-reduced-motion: reduce) { .toggle::before, .toggle::after { transition: none; } }

@@ -1,5 +1,5 @@
 @if (!embedded) {
-<ion-header>
+<ion-header class="control-page-header">
   <ion-toolbar color="transparent">
     <ion-buttons slot="start">
       <ion-back-button text="" defaultHref="/home/device"></ion-back-button>
@@ -14,7 +14,7 @@
         <ion-button
           aria-label="设备接入设置"
           [routerLink]="['/device', device.deviceName, 'settings']"
-        ><i class="fa-light fa-gear"></i></ion-button>
+        ><i class="fa-light fa-gear" aria-hidden="true"></i></ion-button>
       </ion-buttons>
     }
 
@@ -22,18 +22,23 @@
 </ion-header>
 }
 
-<ion-content [fullscreen]="true" [scrollY]="!customPanel">
-  <main class="v2-content content-under-header" [class.custom-panel-view]="!!customPanel">
+<ion-content [fullscreen]="true" [scrollY]="!customPanel || !!panelEditSession">
+  <main class="v2-content content-under-header" [class.custom-panel-view]="!!customPanel && !panelEditSession">
+
+    @if (panelEditSession; as session) {
+      <app-panel-editor [embeddedSession]="session" [liveSnapshot]="snapshot" [hostRevision]="panelRevision"
+        [editingActive]="viewActive" (changed)="panelEditChanged.emit()" (saved)="acceptPanelEdit($event)" />
+    } @else {
 
     @if (error) {
-      <section class="notice error">
+      <section class="notice error" role="alert">
         <span>{{ error }}</span>
         <ion-button size="small" fill="clear" (click)="retry()">重试</ion-button>
       </section>
     }
 
     @if (telemetryError) {
-      <section class="notice">
+      <section class="notice" role="status">
         <span>实时数据已降级：{{ telemetryError }}</span>
       </section>
     }
@@ -75,17 +80,17 @@
 
       </section>
     } @else {
-      @if (telemetryActive) {
-        <section class="summary telemetry-summary" aria-label="实时数据来源与实际间隔">
-          <span>{{ telemetrySummary }}</span>
-          <span>仅本页可见时更新</span>
-        </section>
-      }
-
       <app-page-layout-panel [cards]="panelCards" [interactive]="!readOnly"
         (action)="onPanelAction($event)"></app-page-layout-panel>
 
-      <section class="live-fields" aria-label="本页实时数据">
+      @if (telemetryActive) {
+      <details class="live-data">
+        <summary>
+          <span class="live-data-title">实时数据</span>
+          <span class="telemetry-summary" aria-label="实时数据来源与实际间隔">{{ telemetrySummary }}</span>
+        </summary>
+        <p class="live-data-hint">仅本页可见时更新</p>
+        <section class="live-fields" aria-label="本页实时数据">
         @for (widget of widgets; track widget.widgetId) {
           @if (endpoint(widget); as field) {
             @if (telemetryField(field); as live) {
@@ -103,7 +108,9 @@
             }
           }
         }
-      </section>
+        </section>
+      </details>
+      }
 
       @if (lastEvent) {
         <section class="event">
@@ -113,5 +120,6 @@
       }
     }
 
+    }
   </main>
 </ion-content>

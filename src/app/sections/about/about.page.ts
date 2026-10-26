@@ -43,6 +43,7 @@ export class AboutPage {
     // let browser = this.iab.create(url, '_system', 'location=no,hidden=no');
     const modal = await this.modalCtrl.create({
       component: DocPage,
+      cssClass: 'about-document-modal',
       backdropDismiss: false,
       componentProps: {
         'docTitle': title,

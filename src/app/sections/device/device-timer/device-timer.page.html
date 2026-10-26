@@ -2,28 +2,30 @@
   <ion-buttons slot="start"><ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button></ion-buttons>
   <ion-title>定时功能</ion-title>
   <ion-buttons slot="end"><ion-button aria-label="刷新任务" [disabled]="timer.busy" (click)="timer.refresh()">
-    <i class="fa-light fa-rotate-right" [class.fa-spin]="timer.busy"></i>
+    <i class="fa-light fa-rotate-right" aria-hidden="true" [class.fa-spin]="timer.busy"></i>
   </ion-button></ion-buttons>
 </ion-toolbar></ion-header>
 <ion-content [fullscreen]="true"><main>
-  <h1 class="device-context">{{ timer.deviceName }}</h1>
-  <p class="task-execution-note">定时/延时由设备执行，退出 App 不会取消已安装任务。</p>
+  <header class="page-intro">
+    <h1 class="device-context">{{ timer.deviceName }}</h1>
+    <p class="task-execution-note">定时/延时由设备执行，退出 App 不会取消已安装任务。</p>
+  </header>
   <app-task-status [timer]="timer" />
   @if (timer.ready) {
     <button class="add-task-button primary-action" type="button"
       [disabled]="!timer.canCreate" (click)="addTask()">新建任务</button>
     @if (timer.creationHint) { <p class="creation-hint">{{ timer.creationHint }}</p> }
     @if (timer.records.length) {
-      <section class="task-list surface-card">
+      <section class="task-list" aria-label="已安装任务">
         @for (record of timer.records; track record.taskId) {
-          <article class="task-row" [class.disabled]="!record.definition.enabled">
+          <article class="task-row surface-card" [class.disabled]="!record.definition.enabled">
             <button class="task-main" type="button" (click)="editTask(record)" [disabled]="timer.busy">
-              <span class="task-type-icon"><i class="fa-light fa-calendar-clock"></i></span>
+              <span class="task-type-icon"><i class="fa-light fa-calendar-clock" aria-hidden="true"></i></span>
               <span class="task-copy">
-                <span class="task-heading"><small>#{{ record.taskId }}</small><strong>{{ scheduleText(record) }}</strong></span>
+                <span class="task-heading"><strong>{{ scheduleText(record) }}</strong><small>#{{ record.taskId }}</small></span>
                 <span class="task-detail"><strong>{{ timer.targetLabel(record.definition.key, record.definition.valueType) }}：{{ timer.valueLabel(record.definition.key, record.definition.value, record.definition.valueType) }}</strong>
-                  <small>{{ progressText(record) }}</small></span>
-              </span><i class="fa-light fa-chevron-right row-arrow"></i>
+                  <small>{{ record.definition.enabled ? '定义已启用' : '定义已停用' }} · {{ progressText(record) }}</small></span>
+              </span><i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i>
             </button>
             <div class="task-actions">
               <ion-button fill="clear" size="small" [disabled]="!timer.canWrite" (click)="change(record, 'enable')">

@@ -1,13 +1,13 @@
 @if (showTitle) {
   <div class="hd">
-    @if (options.icon) { <span class="hd-ico"><app-ui-icon [name]="options.icon" /></span> }
+    @if (options.icon) { <span class="hd-ico" aria-hidden="true"><app-ui-icon [name]="options.icon" /></span> }
     <span class="hd-t">{{ title }}</span>
   </div>
 }
 
 <div class="dl-wrap">
   <div class="dl-box" [style.--vh]="viewHeight">
-    <svg class="dl-svg" [attr.viewBox]="'0 0 220 ' + viewHeight" role="slider" tabindex="0" [attr.aria-label]="title"
+    <svg class="dl-svg" [attr.viewBox]="'0 0 220 ' + viewHeight" role="slider" [attr.tabindex]="card.disabled ? -1 : 0" [attr.aria-disabled]="card.disabled" [attr.aria-label]="title"
       [attr.aria-valuemin]="min" [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" [style.--thick]="thickness"
       (pointerdown)="turnStart($event)" (pointermove)="turnMove($event)" (pointerup)="turnEnd($event)"
       (pointercancel)="turnEnd($event)" (keydown)="key($event)">
@@ -30,9 +30,9 @@
 @if (options.showButtons !== false) {
   <div class="dl-btns">
     <button type="button" class="rbtn" aria-label="降低" [disabled]="card.disabled || value <= min"
-      (pointerdown)="repeatStart($event, -1)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()"><app-ui-icon name="minus" /></button>
+      (pointerdown)="repeatStart($event, -1)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()"><app-ui-icon name="minus" aria-hidden="true" /></button>
     <span class="dl-range">{{ min }}–{{ max }}{{ unit }}</span>
     <button type="button" class="rbtn" aria-label="升高" [disabled]="card.disabled || value >= max"
-      (pointerdown)="repeatStart($event, 1)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()"><app-ui-icon name="plus" /></button>
+      (pointerdown)="repeatStart($event, 1)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()"><app-ui-icon name="plus" aria-hidden="true" /></button>
   </div>
 }

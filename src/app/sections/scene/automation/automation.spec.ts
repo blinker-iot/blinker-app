@@ -2,6 +2,7 @@ import '@angular/compiler';
 import { Subject } from 'rxjs';
 import { AutomationService } from './automation.service';
 import { AutomationPage } from './automation.page';
+import { routes } from '../../../app.routes';
 import { automationCapabilityGuidance, automationChoices, automationChoiceValue, automationConditionText, automationDeviceName, automationErrorText, automationExecutionText, automationRuleStatus } from './automation.models';
 import { AutomationDetail, AutomationIntent, AutomationRule, automationIntent } from '../../../core/device-v2/automation/contract';
 const manifest = { revision: 1, fingerprint: 'ab'.repeat(32), fields: [
@@ -24,6 +25,71 @@ function setup() {
   return { data, client, service, alerts, page };
 }
 describe('minimal automation view lifecycle', () => {
+  function routeCanLeave(page: AutomationPage): Promise<boolean> | boolean {
+    const route = routes.find(item => item.path === 'automation-manager');
+    expect(route?.canMatch).toHaveLength(1);
+    expect(route?.canDeactivate).toHaveLength(1);
+    return (route!.canDeactivate![0] as (component: AutomationPage) => Promise<boolean> | boolean)(page);
+  }
+  it('lets the real route leave an unchanged editor without showing a discard dialog or writing', async () => {
+    const f = setup(); await f.service.open(); f.page.startCreate();
+    expect(await routeCanLeave(f.page)).toBe(true);
+    expect(f.alerts.create).not.toHaveBeenCalled(); expect(f.client.submit).not.toHaveBeenCalled();
+    f.service.ngOnDestroy();
+  });
+  it('keeps the exact unsaved draft when a route-exit discard dialog is cancelled', async () => {
+    const f = setup(); await f.service.open(); f.page.startCreate();
+    f.page.name = '尚未保存'; f.page.source = 'source:4'; f.page.sourceChanged();
+    f.page.threshold = 23; f.page.hysteresis = 2;
+    f.alerts.create.mockResolvedValueOnce({ present: async () => undefined, onDidDismiss: async () => ({ role: 'cancel' }) });
+    expect(await routeCanLeave(f.page)).toBe(false);
+    expect(f.page.view).toBe('editor'); expect(f.page.name).toBe('尚未保存');
+    expect(f.page.source).toBe('source:4'); expect(f.page.threshold).toBe(23); expect(f.page.hysteresis).toBe(2);
+    expect(f.client.submit).not.toHaveBeenCalled(); f.service.ngOnDestroy();
+  });
+  it('shares one discard confirmation between the page return and a concurrent route exit', async () => {
+    const f = setup(); await f.service.open(); f.page.startCreate(); f.page.name = '保留草稿';
+    let dismiss!: (value: { role: string }) => void;
+    f.alerts.create.mockResolvedValueOnce({ present: async () => undefined,
+      onDidDismiss: () => new Promise(resolve => { dismiss = resolve; }) });
+    const headerBack = f.page.leaveView(), routeBack = routeCanLeave(f.page);
+    await vi.waitFor(() => expect(dismiss).toBeDefined());
+    expect(f.alerts.create).toHaveBeenCalledTimes(1);
+    dismiss({ role: 'cancel' }); await headerBack; expect(await routeBack).toBe(false);
+    expect(f.page.view).toBe('editor'); expect(f.page.name).toBe('保留草稿');
+    expect(f.client.submit).not.toHaveBeenCalled(); f.service.ngOnDestroy();
+  });
+  it('authorizes a confirmed route exit once and discards only on the existing leave lifecycle', async () => {
+    const f = setup(); await f.service.open(); f.page.startCreate(); f.page.name = '明确放弃';
+    expect(await routeCanLeave(f.page)).toBe(true);
+    expect(f.alerts.create).toHaveBeenCalledTimes(1); expect(f.page.name).toBe('明确放弃');
+    f.page.ionViewWillLeave(); expect(f.page.view).toBe('list'); expect(f.page.name).toBe('');
+    expect(f.client.submit).not.toHaveBeenCalled(); f.service.ngOnDestroy();
+  });
+  it('preserves the authorized capability-visit draft without adding a second discard confirmation', async () => {
+    const f = setup(); await f.service.open(); f.page.startCreate(); f.page.name = '能力往返草稿';
+    f.page.source = 'source:1'; f.page.prepareCapabilityVisit();
+    expect(await routeCanLeave(f.page)).toBe(true); expect(f.alerts.create).not.toHaveBeenCalled();
+    f.page.ionViewWillLeave(); f.page.ionViewWillEnter();
+    expect(f.page.view).toBe('editor'); expect(f.page.name).toBe('能力往返草稿'); expect(f.page.source).toBe('source:1');
+    expect(f.client.submit).not.toHaveBeenCalled(); f.service.ngOnDestroy();
+  });
+  it('does not use an old account capability-visit exemption for a later route exit', async () => {
+    const f = setup(); await f.service.open(); f.page.startCreate(); f.page.name = '旧账号草稿';
+    f.page.prepareCapabilityVisit(); f.data.auth.uuid = 'other'; f.data.sessionEpoch++;
+    f.alerts.create.mockResolvedValueOnce({ present: async () => undefined, onDidDismiss: async () => ({ role: 'cancel' }) });
+    expect(await routeCanLeave(f.page)).toBe(false); expect(f.alerts.create).toHaveBeenCalledTimes(1);
+    expect(f.client.submit).not.toHaveBeenCalled(); f.service.ngOnDestroy();
+  });
+  it('ignores a late route-discard confirmation after the page lifecycle changed', async () => {
+    const f = setup(); await f.service.open(); f.page.startCreate(); f.page.name = '旧页面草稿';
+    let dismiss!: (value: { role: string }) => void;
+    f.alerts.create.mockResolvedValueOnce({ present: async () => undefined,
+      onDidDismiss: () => new Promise(resolve => { dismiss = resolve; }) });
+    const leaving = routeCanLeave(f.page); await vi.waitFor(() => expect(dismiss).toBeDefined());
+    f.page.ionViewWillLeave(); dismiss({ role: 'confirm' }); expect(await leaving).toBe(false);
+    expect(f.page.view).toBe('list'); expect(f.client.submit).not.toHaveBeenCalled(); f.service.ngOnDestroy();
+  });
   it('distinguishes missing cached capability, absent conditions/actions and unsupported profiles without reading unsupported caches', () => {
     const device = { deviceType: 'diy', config: { mode: 'bbp2' } };
     const devices = { missing: device, sourceOnly: device, targetOnly: device, neither: device,

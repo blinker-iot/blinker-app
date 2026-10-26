@@ -1,36 +1,3 @@
-:host {
-  --ota-accent: var(--ion-color-primary);
-  display: block;
+@use '../ota/ota-surface' as ota;
 
-  height: 100%;
-}
-
-.target-results { margin-top: 11px; }
-
-.host-field { flex: 1.7; }
-
-.port-field { flex: .8; }
-
-.timeout-field { max-width: 180px; }
-
-.target-preview {
-  min-width: 0;
-  padding: 10px 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: 9px;
-
-  background: var(--blinker-surface-muted);
-  color: var(--blinker-text-tertiary);
-
-  font-size: 10px;
-
-  i { color: var(--ota-accent); }
-
-  span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-}
-
-@media (max-width: 430px) {
-  .auth-row { flex-direction: column; gap: 0; }
-}
+@include ota.page;

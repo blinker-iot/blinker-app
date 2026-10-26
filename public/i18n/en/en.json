@@ -39,6 +39,8 @@
     "ABOUT_US": "About Us"
   },
   "SETTINGS": {
+    "LANGUAGE_SAVE_FAILED": "Could not apply the selected language. Please try again.",
+    "REGION_CHANGE_FAILED": "The region change did not complete. Check the current region before trying again.",
     "SERVICE_REGION": "Service region",
     "SERVICE_REGION_HINT": "Changing the service region requires signing in again",
     "TITLE": "Settings",
@@ -222,6 +224,16 @@
     "OLD_DEVICE_API_PENDING": "The migration service is not connected yet. Please try again later."
   },
   "COMMUNITY": {
+    "PRODUCT_PREVIEW": "Product preview",
+    "PREVIOUS_PAGE": "Previous page",
+    "NEXT_PAGE": "Next page",
+    "PAGE_STATUS": "Page {{page}} of {{total}}",
+    "PAGINATION": "Content pages",
+    "SEARCH": "Search content",
+    "CLOSE_SEARCH": "Close search",
+    "CATEGORY_FILTER": "Filter content by category",
+    "LOCAL_PREVIEW_NOTE": "Local examples only, not an actual product launch announcement.",
+    "PRODUCT_PREVIEW_STATUS": "Product example · Not a launch announcement",
     "SEARCH_PLACEHOLDER": "Search ideas, products, and tips",
     "CATEGORY_RECOMMENDED": "Recommended",
     "CATEGORY_INSPIRATION": "Smart ideas",
@@ -240,13 +252,15 @@
     "KITCHEN_AIR_TITLE": "Kitchen air management guide",
     "KITCHEN_AIR_DESCRIPTION": "Link cooking-fume detection with air purification",
     "KITCHEN_AIR_META": "6 min read · 8,643 views",
-    "NO_RESULTS": "No matching content. Try another keyword.",
+    "NO_RESULTS": "No matching content. Change the category or adjust your search keyword.",
     "COMING_SOON": "Coming soon",
     "OMNI_STATION_NAME": "Omni Base Station",
     "OMNI_STATION_DESCRIPTION": "Cleaning, dust collection, and drying in one",
     "OMNI_STATION_LAUNCH": "Coming in Q3 2026"
   },
   "PROFILE": {
+    "DEVICE_MANAGEMENT": "Device management",
+    "CONNECTION_AND_SERVICES": "Connections and services",
     "TITLE": "Profile",
     "USER_AVATAR": "User avatar",
     "VERSION": "Version {{version}}",

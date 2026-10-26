@@ -1,37 +1,55 @@
 <ion-header>
   <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
-    </ion-buttons>
-    <ion-title>运行日志</ion-title>
+    <ion-buttons slot="start"><ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button></ion-buttons>
+    <ion-title>活动记录</ion-title>
   </ion-toolbar>
 </ion-header>
-
 <ion-content [fullscreen]="true">
   <main>
-    @if (status() === 'ready') {
-    <section class="availability-card surface-card" role="status">
-      <i class="fa-light fa-file-lines" aria-hidden="true"></i>
-      <p class="device-name">{{ deviceName() }}</p>
-      <h1>运行日志尚未接入</h1>
-      <p>当前版本未接入可信的设备运行日志接口，不显示演示记录，也不将状态或采样数据当作操作记录。</p>
+    @if (present && status() === 'ready') {
+    <section class="activity-heading surface-card">
+      <div><h1>{{ deviceName() }}</h1><p>最近 7 天 · 云端控制投递</p></div>
+      <button type="button" class="secondary-action" data-action="refresh" [disabled]="!canQuery || state().busy" (click)="refresh()">刷新</button>
     </section>
-
-    <section class="related-data surface-card" aria-label="其他设备数据">
-      <h2>查看其他数据</h2>
-      <p>以下页面分别展示属性状态变化和周期数值样本，不是用户操作或设备执行日志。仅在你选择后进入。</p>
-      <button type="button" class="secondary-action" data-history="storage" (click)="openHistory('storage')">
-        <i class="fa-light fa-database" aria-hidden="true"></i> 状态历史
-      </button>
-      <button type="button" class="secondary-action" data-history="trends" (click)="openHistory('trends')">
-        <i class="fa-light fa-chart-line" aria-hidden="true"></i> 在线趋势
-      </button>
+    <details class="scope-note source-disclosure surface-card">
+      <summary>记录范围与状态说明</summary>
+      <div class="disclosure-body">
+        <p>仅显示服务器保留的云端控制投递，不包含 BLE／LAN 控制、定时任务或全部 State 事件；操作者未记录。</p>
+        <p>“设备已确认”表示收到 ACK，不等于新鲜 State 或物理执行完成。“结果未知”不会自动重发。</p>
+        <p>记录时间是服务器创建记录的时刻；最近更新是服务器记录的最后变化，不是设备执行时间。功能别名采用当前名称。</p>
+      </div>
+    </details>
+    <section class="activity-list" aria-label="云端控制活动" [attr.aria-busy]="state().busy">
+      @if (state().busy) { <p class="read-status" role="status">正在读取活动记录…</p> }
+      @if (state().error) { <p class="read-error surface-card" role="alert">{{ state().error }}</p> }
+      @if (state().ready && !state().rows.length) { <p class="empty-state surface-card" role="status">所选范围内暂无可显示的活动记录</p> }
+      @for (row of state().rows; track row.id) {
+      <article class="activity-row surface-card">
+        <div class="row-heading"><h2>{{ fieldLabel(row) }}</h2><span class="activity-status workflow-status" [attr.data-status]="row.status">{{ statusLabel(row) }}</span></div>
+        @if (fieldLabel(row) !== row.endpointKey) { <p class="endpoint-key">{{ row.endpointKey }}</p> }
+        <dl>
+          <div><dt>记录时间</dt><dd><time [attr.datetime]="utcDate(row.createdAt)">{{ row.createdAt | date:'yyyy-MM-dd HH:mm:ss' }}</time></dd></div>
+          <div><dt>最近更新</dt><dd><time [attr.datetime]="utcDate(row.updatedAt)">{{ row.updatedAt | date:'yyyy-MM-dd HH:mm:ss' }}</time></dd></div>
+          <div><dt>投递尝试</dt><dd>{{ row.attemptCount }} 次</dd></div>
+        </dl>
+      </article>
+      }
+      @if (state().ready && state().nextCursor) {
+      <button type="button" class="secondary-action load-more" data-action="more" [disabled]="!canLoadMore" (click)="loadMore()">{{ bounded ? '已显示 200 条' : '加载更多' }}</button>
+      }
+      @if (bounded) { <p class="bounded-note">本页最多显示 200 条；刷新可查看最新记录。</p> }
     </section>
-    } @else {
+    } @else if (present) {
     <section class="availability-card surface-card" role="status">
       <i class="fa-light fa-file-circle-question" aria-hidden="true"></i>
-      <h1>{{ unavailableTitle }}</h1>
-      <p>{{ unavailableDescription }}</p>
+      <h1>{{ unavailableTitle }}</h1><p>{{ unavailableDescription }}</p>
+    </section>
+    }
+    @if (canNavigate) {
+    <section class="related-data surface-card" aria-label="其他设备数据">
+      <h2>其他数据</h2>
+      <button type="button" class="secondary-action" data-history="storage" (click)="openHistory('storage')"><i class="fa-light fa-database" aria-hidden="true"></i> 状态历史</button>
+      <button type="button" class="secondary-action" data-history="trends" (click)="openHistory('trends')"><i class="fa-light fa-chart-line" aria-hidden="true"></i> 在线趋势</button>
     </section>
     }
   </main>

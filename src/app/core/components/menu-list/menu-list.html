@@ -2,6 +2,7 @@
   #sortbox
   [class.menu-list]="items !== undefined"
   [class.menu-list--detailed]="items !== undefined && detailed"
+  [class.menu-list--settings]="items !== undefined && appearance === 'settings'"
   [class.item-list-box]="items === undefined"
   [class.edit]="items === undefined && editMode"
   [class.sort]="items === undefined && enableSort"

@@ -16,15 +16,19 @@
 </ng-template>
 
 @if (rows === 1) {
-  <span class="rc-ico"><app-ui-icon [name]="options.icon || 'gauge'" /></span>
-  <span class="rc-copy">
-    <strong>{{ title }}</strong>
-    @if (showRange) { <small>{{ min }}–{{ max }}{{ unit }}</small> }
-  </span>
-  <ng-container *ngTemplateOutlet="dec" />
-  <span class="ns-v ns-sm num"><span [valueTransition]="reading.text">{{ reading.text }}</span><small>{{ reading.unit }}</small></span>
-  <ng-container *ngTemplateOutlet="inc" />
-  @if (command) { <ng-container *ngTemplateOutlet="go" /> }
+  <div class="rc-body">
+    <span class="rc-ico"><app-ui-icon [name]="options.icon || 'gauge'" /></span>
+    <span class="rc-copy">
+      <strong>{{ title }}</strong>
+      @if (showRange) { <small>{{ min }}–{{ max }}{{ unit }}</small> }
+    </span>
+    <div class="rc-controls" role="group" [attr.aria-label]="title">
+      <ng-container *ngTemplateOutlet="dec" />
+      <span class="ns-v ns-sm num"><span [valueTransition]="reading.text">{{ reading.text }}</span><small>{{ reading.unit }}</small></span>
+      <ng-container *ngTemplateOutlet="inc" />
+      @if (command) { <ng-container *ngTemplateOutlet="go" /> }
+    </div>
+  </div>
 } @else {
   @if (showTitle) {
     <div class="hd">

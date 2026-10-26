@@ -4,28 +4,20 @@
     <ion-buttons slot="start">
       <ion-back-button text="" [defaultHref]="'/device/' + id"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{ device.config.customName }} {{ 'DEVICE.SETTING' | translate }}</ion-title>
+    <ion-title>{{ 'DEVICE.SETTING' | translate }}</ion-title>
   </ion-toolbar>
 </ion-header>
 } @if (loaded && device) {
 <ion-content [fullscreen]="true">
   <main>
     <section class="device-card">
-      <button type="button" class="device-image-button" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice || imageSaving"
+      <button type="button" class="device-image-button" aria-label="修改设备图片" [class.editable]="!isSharedDevice" [disabled]="isSharedDevice || imageSaving"
         (click)="selectIcon()">
         <span class="device-image-shell">
           <b-device-img [filename]="device.config.image"></b-device-img>
         </span>
       </button>
       <div class="device-summary">
-        <!-- <span class="device-kicker">
-          <i
-            class="fa-solid fa-circle"
-            [class.online]="device.data?.enable"
-            aria-hidden="true"
-          ></i>
-          {{ isSharedDevice ? '共享设备' : '我的设备' }}
-        </span> -->
         <div class="device-name-row">
           <h1>{{ device.config.customName }}</h1>
 
@@ -35,7 +27,7 @@
           </span>
           } @else {
           <button type="button" class="rename-button" [disabled]="!canEditDisplay || displayBusy" (click)="changeName()" aria-label="修改设备名称">
-            <i class="fa-light fa-pen"></i>
+            <i class="fa-light fa-pen" aria-hidden="true"></i>
           </button>
           }
 
@@ -47,12 +39,31 @@
         </button>
       </div>
     </section>
-    @if (canEditDisplay) {
-    <section class="display-card">
-      <div class="section-heading"><div><h2>功能名称</h2><p class="help">设置控制页面、自动化和定时共用的名称，不改变设备代码中的 key。</p></div>
-        <button type="button" [disabled]="displayBusy" (click)="loadDisplayMetadata()">{{ displayOpen ? '重新加载' : '设置' }}</button>
-      </div>
+    <section class="menu-group" aria-labelledby="display-section-title">
+      <h2 class="section-label" id="display-section-title">名称与显示</h2>
+      <div class="display-card">
+        <button type="button" class="panel-mode-picker" aria-haspopup="dialog" [attr.aria-expanded]="panelModeSelectionOpen"
+          [disabled]="panelModeSaving || panelModeLoading || debugModeSaving" [attr.aria-busy]="panelModeSaving || panelModeLoading"
+          (click)="openPanelModeSelector()">
+          <i class="fa-light fa-display row-icon" aria-hidden="true"></i>
+          <span class="mode-label">显示模式</span>
+          <span class="mode-current">{{ panelMode === 'custom' ? '自定义面板' : '组件面板' }}</span>
+          @if (panelModeSaving || panelModeLoading) {
+            <ion-spinner name="crescent" aria-hidden="true" />
+          } @else { <i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i> }
+        </button>
+        @if (canEditDisplay) {
+        <button type="button" class="display-entry" [disabled]="displayBusy" [attr.aria-expanded]="displayOpen"
+          (click)="displayOpen ? displayOpen = false : loadDisplayMetadata()">
+          <i class="fa-light fa-font row-icon" aria-hidden="true"></i>
+          <span>功能名称</span>
+          <i class="fa-light row-arrow" [class.fa-chevron-down]="displayOpen" [class.fa-chevron-right]="!displayOpen" aria-hidden="true"></i>
+        </button>
       @if (displayOpen) {
+      <div class="display-details">
+        <div class="section-heading"><p class="help">控制页面、自动化和定时共用的名称，不改变设备代码中的 key。</p>
+          <button type="button" [disabled]="displayBusy" (click)="loadDisplayMetadata()">重新加载</button>
+        </div>
         <fieldset [disabled]="displayBusy">
         @for (row of displayRows; track row.key) {
           <div class="display-field"><label>{{ row.key }}<input maxlength="80" [(ngModel)]="row.displayName" placeholder="功能名称（留空使用原 key）" /></label>
@@ -64,10 +75,12 @@
         } @empty { <p class="help">还没有设备能力缓存，请先打开控制页获取能力，再重新加载。</p> }
         </fieldset>
         <button class="display-save" type="button" [disabled]="!canSaveDisplay" (click)="saveDisplayMetadata()">保存功能名称</button>
+      </div>
       }
+        }
+        @if (displayError) { <p class="error display-error" role="alert">{{ displayError }}</p> }
+      </div>
     </section>
-    }
-    @if (displayError) { <p class="error" role="alert">{{ displayError }}</p> }
     @if (hasDeviceKeyContext && isOwner) {
     <section class="access-card">
       <div class="section-heading">
@@ -120,48 +133,21 @@
             {{ showKey ? displayedAuthKey : '••••••••••••' }}
           </strong>
         </span>
-        <button type="button" class="reveal-button" (click)="showAuthKey()" [disabled]="showKey || revealingKey">
+        <button type="button" class="reveal-button" aria-label="查看设备密钥" (click)="showAuthKey()" [disabled]="showKey || revealingKey">
           <i class="fa-light" [class.fa-eye]="!showKey" [class.fa-eye-slash]="showKey"></i>
         </button>
       </div>
     </section>
     }
 
-    <button type="button" class="panel-mode-picker" [id]="'panel-mode-' + id" aria-haspopup="dialog"
-      [disabled]="panelModeSaving || panelModeLoading || debugModeSaving" [attr.aria-busy]="panelModeSaving || panelModeLoading">
-      <span class="mode-label">显示模式</span>
-      <span class="mode-current">{{ panelMode === 'custom' ? '自定义模式' : '组件模式' }}</span>
-
-      @if (panelModeSaving || panelModeLoading) {
-        <ion-spinner name="crescent" aria-hidden="true" />
-      } @else {
-        <i class="fa-light fa-chevron-down" aria-hidden="true"></i>
-      }
-
-    </button>
-
-    <ion-popover #modePopover class="panel-mode-popover" [trigger]="'panel-mode-' + id"
-      size="cover" side="bottom" alignment="start" [arrow]="false">
-
-      <ng-template>
-        <ion-list lines="none">
-          <ion-radio-group aria-label="显示模式" [value]="panelMode"
-            (ionChange)="setPanelMode($event.detail.value); modePopover.dismiss()">
-            <ion-item><ion-radio value="normal" labelPlacement="start" justify="space-between">组件模式</ion-radio></ion-item>
-            <ion-item><ion-radio value="custom" labelPlacement="start" justify="space-between"
-              [disabled]="isSharedDevice && !device.config.customPanel">自定义模式</ion-radio></ion-item>
-          </ion-radio-group>
-        </ion-list>
-      </ng-template>
-    </ion-popover>
     @if (cardEditor?.error()) { <p class="error" role="alert">{{ cardEditor?.error() }}</p> }
     <section class="menu-group">
       <h2 class="section-label">设备功能</h2>
-      <app-menu-list [detailed]="true" [items]="deviceMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
+      <app-menu-list appearance="settings" [detailed]="true" [items]="deviceMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
     </section>
     <section class="menu-group">
       <h2 class="section-label">设备管理</h2>
-      <app-menu-list [detailed]="true" [items]="managementMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
+      <app-menu-list appearance="settings" [detailed]="true" [items]="managementMenuItems" (itemSelected)="selectMenuItem($event)"></app-menu-list>
     </section>
     <section class="debug-entry">
       <span><strong id="debug-mode-label">调试模式</strong><small>查看原始数据与指令</small></span>
@@ -169,7 +155,7 @@
       <button class="debug-switch" type="button" role="switch" aria-labelledby="debug-mode-label"
         [attr.aria-checked]="debugEnabled" [class.on]="debugEnabled" [attr.aria-busy]="debugModeSaving"
         [disabled]="debugModeSaving || panelModeSaving || panelModeLoading || isSharedDevice"
-        (click)="setDebugMode(!debugEnabled)"><span></span></button>
+        (click)="setDebugMode(!debugEnabled)"><span class="switch-track"><span></span></span></button>
     </section>
 
     @if (hasDeviceKeyContext && isOwner && supportsWifiProvisioning) {
@@ -187,4 +173,19 @@
   </main>
 </ion-content>
 }
+<ion-modal #panelModeDialog class="panel-mode-dialog" [isOpen]="panelModeSelectionOpen"
+  [canDismiss]="canDismissPanelMode" (didDismiss)="panelModeDismissed()">
+  <ng-template>
+    <ion-header><ion-toolbar>
+      <ion-buttons slot="start"><button type="button" class="modal-close" aria-label="取消显示模式选择"
+        [disabled]="panelModeSaving" (click)="closePanelModeSelector()"><i class="fa-light fa-xmark" aria-hidden="true"></i></button></ion-buttons>
+      <ion-title>显示模式</ion-title>
+    </ion-toolbar></ion-header>
+    <ion-content>
+      <app-panel-mode-selector [currentMode]="panelMode" [hasCustomPanel]="!!device?.config?.customPanel"
+        [shared]="isSharedDevice" [busy]="panelModeSaving || panelModeLoading" [error]="panelModeError"
+        (confirmed)="confirmPanelMode($event)" (cancelled)="closePanelModeSelector()" />
+    </ion-content>
+  </ng-template>
+</ion-modal>
 <home-card-settings />

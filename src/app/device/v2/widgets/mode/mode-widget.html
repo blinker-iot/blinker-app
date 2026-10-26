@@ -6,11 +6,11 @@
 }
 
 <div class="modes" [class]="style" role="radiogroup" [attr.aria-label]="title"
-  [style.grid-template-columns]="style === 'tiles' ? 'repeat(' + (choices.length || 1) + ', minmax(0, 1fr))' : null">
+  [style.grid-template-columns]="style === 'tiles' ? 'repeat(' + (choices.length || 1) + ', minmax(48px, 1fr))' : null">
   @for (choice of choices; track choice.label) {
     <button type="button" class="mode" role="radio" [class.on]="choice.label === current" [class.toned]="choice.tone"
       [style.--c]="choice.tone ? 'var(--ui-' + choice.tone + ')' : null"
-      [attr.aria-checked]="choice.label === current" [disabled]="card.disabled" (click)="pick(choice.label)">
+      [attr.aria-checked]="choice.label === current" [title]="choice.label" [disabled]="card.disabled" (click)="pick(choice.label)">
       @if (showIcons && choice.icon) {
         @if (style === 'tiles') {
           <span class="mode-ico"><app-ui-icon [name]="choice.icon" /></span>

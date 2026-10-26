@@ -39,6 +39,8 @@
     "ABOUT_US": "Sobre nós"
   },
   "SETTINGS": {
+    "LANGUAGE_SAVE_FAILED": "Não foi possível aplicar o idioma selecionado. Tente novamente.",
+    "REGION_CHANGE_FAILED": "A alteração de região não foi concluída. Verifique a região atual antes de tentar novamente.",
     "SERVICE_REGION": "Região do serviço",
     "SERVICE_REGION_HINT": "Alterar a região do serviço requer iniciar sessão novamente",
     "TITLE": "Definições",
@@ -75,6 +77,16 @@
     "FEATURE_PENDING": "Esta funcionalidade estará disponível em breve"
   },
   "COMMUNITY": {
+    "PRODUCT_PREVIEW": "Prévia de produtos",
+    "PREVIOUS_PAGE": "Página anterior",
+    "NEXT_PAGE": "Próxima página",
+    "PAGE_STATUS": "Página {{page}} de {{total}}",
+    "PAGINATION": "Páginas de conteúdo",
+    "SEARCH": "Pesquisar conteúdo",
+    "CLOSE_SEARCH": "Fechar pesquisa",
+    "CATEGORY_FILTER": "Filtrar conteúdo por categoria",
+    "LOCAL_PREVIEW_NOTE": "Apenas exemplos locais, não um anúncio real de lançamento de produtos.",
+    "PRODUCT_PREVIEW_STATUS": "Exemplo de produto · Não é um anúncio de lançamento",
     "SEARCH_PLACEHOLDER": "Pesquisar ideias, produtos e sugestões",
     "CATEGORY_RECOMMENDED": "Recomendado",
     "CATEGORY_INSPIRATION": "Ideias inteligentes",
@@ -93,13 +105,15 @@
     "KITCHEN_AIR_TITLE": "Guia de gestão do ar da cozinha",
     "KITCHEN_AIR_DESCRIPTION": "Associe a deteção de fumos à purificação do ar",
     "KITCHEN_AIR_META": "6 min de leitura · 8 643 visualizações",
-    "NO_RESULTS": "Não há conteúdo correspondente. Experimente outra palavra-chave.",
+    "NO_RESULTS": "Não há conteúdo correspondente. Mude de categoria ou ajuste a palavra-chave.",
     "COMING_SOON": "Brevemente",
     "OMNI_STATION_NAME": "Estação base multifunções",
     "OMNI_STATION_DESCRIPTION": "Limpeza, recolha de pó e secagem num só equipamento",
     "OMNI_STATION_LAUNCH": "Disponível no 3.º trimestre de 2026"
   },
   "PROFILE": {
+    "DEVICE_MANAGEMENT": "Gestão de dispositivos",
+    "CONNECTION_AND_SERVICES": "Ligações e serviços",
     "TITLE": "Perfil",
     "USER_AVATAR": "Avatar do utilizador",
     "VERSION": "Versão {{version}}",

@@ -1,4 +1,4 @@
-<ion-header class="about-header">
+<ion-header class="about-header control-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button text="" defaultHref="/home/profile"></ion-back-button>
@@ -9,7 +9,7 @@
 
 <ion-content fullscreen="true">
   <main>
-    <div class="section-label">关于我们</div>
+    <h2 class="section-label">关于我们</h2>
     <section class="about-card">
       <div class="card-heading">
         <span class="heading-icon" aria-hidden="true"><i class="fa-light fa-building"></i></span>
@@ -23,26 +23,26 @@
 
     <section class="capability-grid" aria-label="点灯能力">
       <article>
-        <span><i class="fa-light fa-code"></i></span>
+        <span aria-hidden="true"><i class="fa-light fa-code"></i></span>
         <strong>开放开发</strong>
         <small>丰富的硬件和平台接入能力</small>
       </article>
       <article>
-        <span><i class="fa-light fa-layer-group"></i></span>
+        <span aria-hidden="true"><i class="fa-light fa-layer-group"></i></span>
         <strong>多端协同</strong>
         <small>APP、设备与云服务统一协作</small>
       </article>
       <article>
-        <span><i class="fa-light fa-bolt"></i></span>
+        <span aria-hidden="true"><i class="fa-light fa-bolt"></i></span>
         <strong>快速落地</strong>
         <small>缩短原型验证与产品化路径</small>
       </article>
     </section>
 
-    <div class="section-label legal-section-label">协议与隐私</div>
-    <section class="legal-card">
+    <h2 class="section-label" id="legal-heading">协议与隐私</h2>
+    <section class="legal-card" aria-labelledby="legal-heading">
       <button type="button" (click)="openUrl(USER_AGREEMENT, '用户协议')">
-        <span class="legal-icon"><i class="fa-light fa-file-contract"></i></span>
+        <span class="legal-icon" aria-hidden="true"><i class="fa-light fa-file-contract"></i></span>
         <span class="legal-copy">
           <strong>{{ 'ACCOUNT.USER_AGREEMENT' | translate }}</strong>
           <small>查看服务条款与用户权利</small>
@@ -50,7 +50,7 @@
         <i class="fa-light fa-chevron-right legal-arrow" aria-hidden="true"></i>
       </button>
       <button type="button" (click)="openUrl(PRIVACY_POLICY, '隐私政策')">
-        <span class="legal-icon privacy"><i class="fa-light fa-shield-check"></i></span>
+        <span class="legal-icon" aria-hidden="true"><i class="fa-light fa-shield-check"></i></span>
         <span class="legal-copy">
           <strong>{{ 'ACCOUNT.PRIVACY_POLICY' | translate }}</strong>
           <small>了解个人信息的收集与保护</small>

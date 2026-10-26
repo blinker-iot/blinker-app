@@ -144,3 +144,86 @@ describe('State history page existing account/read lifecycle', () => {
     expect(f.page.state().rows).toEqual([]); expect(f.page.state().error).toBeTruthy(); f.page.ngOnDestroy();
   });
 });
+
+describe('State history manual read recovery', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each([0, 401, 429, 503])('manual read recovery retains a safe initial failure for status %i until explicit refresh', async status => {
+    const f = setup(), privateDetail = 'private-service-detail-do-not-display';
+    f.history.read.mockRejectedValueOnce(status
+      ? new GatewayHttpError({ httpStatus: status, code: 'PRIVATE_UPSTREAM_CODE', message: privateDetail })
+      : Error(privateDetail));
+    try {
+      f.page.ionViewWillEnter(); await settled(f.page);
+      const prompt = f.page.state().error;
+      expect(prompt).toContain('手动刷新'); expect(prompt).not.toContain(privateDetail);
+      expect(prompt).not.toContain('PRIVATE_UPSTREAM_CODE');
+      expect(f.page.state().ready).toBe(false); expect(f.page.state().rows).toEqual([]);
+      for (let n = 0; n < 2; ++n) {
+        f.visibility.active.next(false); f.visibility.active.next(true);
+        await Promise.resolve(); await Promise.resolve();
+        expect(f.history.read).toHaveBeenCalledTimes(1);
+        expect(f.page.state().error).toBe(prompt); expect(f.page.state().busy).toBe(false);
+        expect(f.page.state().rows).toEqual([]); expect(f.page.state().nextCursor).toBeNull();
+      }
+      await f.page.refresh();
+      expect(f.history.read).toHaveBeenCalledTimes(2); expect(f.page.state().error).toBe('');
+      expect(f.page.state().ready).toBe(true); expect(f.page.state().rows).toHaveLength(1);
+      f.visibility.active.next(false); f.visibility.active.next(true); await settled(f.page);
+      expect(f.history.read).toHaveBeenCalledTimes(3); expect(f.page.state().ready).toBe(true);
+    } finally { f.page.ngOnDestroy(); }
+  });
+
+  it.each(['permission', 'response'])('manual read recovery clears a failed %s page and starts manual refresh from a new first page', async reason => {
+    const f = setup();
+    f.history.read.mockImplementationOnce(async (_id, query) => result(query, [item(query)], 'YWJj'));
+    try {
+      f.page.ionViewWillEnter(); await settled(f.page);
+      f.history.read.mockRejectedValueOnce(reason === 'permission'
+        ? new GatewayHttpError({ httpStatus: 404, code: 'PRIVATE_DENIAL', message: 'private-service-detail' })
+        : Error('STATE_HISTORY_RESPONSE_INVALID private-service-detail'));
+      await f.page.loadMore();
+      const prompt = f.page.state().error;
+      expect(prompt).toBeTruthy(); expect(prompt).not.toContain('private-service-detail');
+      expect(prompt).not.toContain('PRIVATE_DENIAL'); expect(f.page.state().rows).toEqual([]);
+      expect(f.page.state().nextCursor).toBeNull(); expect(f.page.state().ready).toBe(false);
+      expect(f.page.canLoadMore).toBe(false); expect(f.history.read).toHaveBeenCalledTimes(2);
+      f.visibility.active.next(false); f.visibility.active.next(true);
+      await Promise.resolve(); await Promise.resolve();
+      expect(f.history.read).toHaveBeenCalledTimes(2); expect(f.page.state().error).toBe(prompt);
+      await f.page.refresh();
+      expect(f.history.read).toHaveBeenCalledTimes(3);
+      expect(f.history.read.mock.calls[2][1].before).toBeUndefined();
+      expect(f.page.state().error).toBe(''); expect(f.page.state().ready).toBe(true);
+      expect(f.page.state().rows).toHaveLength(1);
+    } finally { f.page.ngOnDestroy(); }
+  });
+
+  it('manual read recovery permits a fresh explicit route entry after a failed read without hidden queries', async () => {
+    const f = setup(); f.history.read.mockRejectedValueOnce(Error('network'));
+    try {
+      f.page.ionViewWillEnter(); await settled(f.page); expect(f.page.state().error).toBeTruthy();
+      f.page.ionViewWillLeave(); f.visibility.active.next(false); f.visibility.active.next(true);
+      await Promise.resolve(); expect(f.history.read).toHaveBeenCalledTimes(1);
+      expect(f.page.state().rows).toEqual([]); expect(f.page.canQuery).toBe(false);
+      f.page.ionViewWillEnter(); await settled(f.page);
+      expect(f.history.read).toHaveBeenCalledTimes(2); expect(f.page.state().ready).toBe(true);
+      expect(f.page.state().error).toBe('');
+    } finally { f.page.ngOnDestroy(); }
+  });
+
+  it('manual read recovery fences a changed account and reads only after explicit entry into the new context', async () => {
+    const f = setup(); f.history.read.mockRejectedValueOnce(Error('network'));
+    try {
+      f.page.ionViewWillEnter(); await settled(f.page);
+      f.data.auth.uuid = 'other'; ++f.data.sessionEpoch; f.data.authDataChanged.next();
+      f.visibility.active.next(false); f.visibility.active.next(true);
+      await Promise.resolve(); await f.page.refresh();
+      expect(f.history.read).toHaveBeenCalledTimes(1); expect(f.page.canQuery).toBe(false);
+      expect(f.page.state().rows).toEqual([]); expect(f.page.state().policyConfirmed).toBe(false);
+      f.page.ionViewWillEnter(); await settled(f.page);
+      expect(f.history.read).toHaveBeenCalledTimes(2); expect(f.page.state().ready).toBe(true);
+      expect(f.page.state().error).toBe('');
+    } finally { f.page.ngOnDestroy(); }
+  });
+});

@@ -1,4 +1,4 @@
-<ion-header>
+<ion-header class="control-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button
@@ -18,7 +18,7 @@
       <section class="hub-card">
         <span class="feature-icon"><i class="fa-light fa-router"></i></span>
         <div>
-          <small>EDGE HUB</small>
+          <small>当前网关</small>
           <h1>{{ hub?.config?.customName }}</h1>
           <p>扫描、连接和协议转发由该网关完成；App 不接触网关凭据。</p>
         </div>
@@ -28,7 +28,7 @@
         <section class="recovery-card">
           <div class="section-heading">
             <div>
-              <small>RECOVERY</small>
+              <small>接入恢复</small>
               <h2>继续未完成的接入</h2>
             </div>
             <span>{{ recoveries.length }}</span>
@@ -46,10 +46,10 @@
       }
 
       @if (phase !== 'ready') {
-        <section class="enrollment-card">
+        <section class="enrollment-card" [attr.aria-busy]="busy">
           <div class="section-heading">
             <div>
-              <small>NEW CHILD</small>
+              <small>添加设备</small>
               <h2>认领新设备</h2>
             </div>
           </div>
@@ -99,14 +99,14 @@
       }
 
       @if (phase === 'waiting') {
-        <section class="result waiting">
+        <section class="result waiting" role="status">
           <i class="fa-light fa-clock"></i>
           <h2>{{ retirementPending ? '设备已认领，等待旧绑定退役' : '设备已认领，等待网关确认' }}</h2>
           <p>可以稍后从本页继续，不需要重新认领设备。</p>
           <button type="button" [disabled]="busy" (click)="continueWaiting()">继续确认</button>
         </section>
       } @else if (phase === 'ready') {
-        <section class="result ready">
+        <section class="result ready" role="status">
           <i class="fa-light fa-circle-check"></i>
           <h2>子设备已接入</h2>
           <p>{{ logicalDeviceId }}</p>

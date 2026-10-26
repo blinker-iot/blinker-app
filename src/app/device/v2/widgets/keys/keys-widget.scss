@@ -9,10 +9,14 @@
 
 .keys {
   flex: 1;
+  min-width: 0;
+  min-height: 48px;
   display: grid;
-  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
-  grid-auto-rows: minmax(36px, 1fr);
+  grid-template-columns: repeat(var(--cols), minmax(48px, 1fr));
+  grid-auto-rows: minmax(48px, 1fr);
   gap: 8px;
+  // Saved dense keypads scroll inside their own card, never shrink targets.
+  overflow: auto;
 }
 
 // A key at rest is neutral, or tinted with its tone; the key just sent fills.
@@ -22,7 +26,8 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-width: 0;
+  min-width: 48px;
+  min-height: 48px;
   padding: 0 8px;
   border-radius: var(--ui-radius-sm);
   background: var(--ui-well);
@@ -31,13 +36,14 @@
   font-weight: 500;
   touch-action: manipulation;
   user-select: none;
-  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.12s;
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
 
   span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-transform: var(--ui-case); }
 
   app-ui-icon { flex: none; width: 16px; height: 16px; }
 
-  &:active { transform: scale(0.95); }
+  &:active:not(:disabled) { box-shadow: inset 0 0 0 2px var(--c); }
+  &:focus-visible { outline-offset: -2px; }
   &:disabled { opacity: 0.5; cursor: default; }
 
   &.toned {
@@ -59,4 +65,8 @@
     &.toned { border-color: var(--c); background: none; color: var(--c); }
     &.sent { border-style: solid; border-color: var(--c); background: none; box-shadow: none; color: var(--c); }
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .key { transition: none; }
 }

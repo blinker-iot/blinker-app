@@ -22,7 +22,7 @@
   border: 1px solid var(--blinker-border);
   border-radius: var(--device-card-radius);
   background: var(--blinker-surface);
-  box-shadow: var(--blinker-device-card-shadow);
+  box-shadow: none;
   color: var(--blinker-text-primary);
 }
 

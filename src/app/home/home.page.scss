@@ -1,49 +1,41 @@
+@use '../../theme/settings-surface' as settings;
+
+:host {
+    @include settings.tokens;
+    display: block;
+    height: 100%;
+    background: var(--blinker-bg);
+}
+
 ion-toolbar {
     --background: transparent !important;
     --ion-color-base: transparent !important;
 }
 
-ion-tabs::after {
-    content: '';
-
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-
-    z-index: 9;
-
-    height: calc(74px + var(--ion-safe-area-bottom, 0px));
-
-    pointer-events: none;
-
-    background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        color-mix(in srgb, var(--blinker-bg) 52%, transparent) 52%,
-        color-mix(in srgb, var(--blinker-bg) 95%, transparent) 100%
-    );
-}
-
 ion-tab-bar {
-    height: 60px;
+    // Ionic locks this host to content-box in its shadow stylesheet. Reserve
+    // the 7px padding inside the intended 64px physical navigation surface.
+    --home-navigation-height: 64px;
+    height: calc(var(--home-navigation-height) - 14px);
+    min-height: calc(var(--home-navigation-height) - 14px);
 
-    --background: color-mix(in srgb, var(--blinker-surface) 60%, transparent);
+    --background: var(--blinker-surface);
     --border: 0;
-    --color: var(--ion-tab-bar-color);
-    --color-selected: var(--ion-tab-bar-color-selected);
-    margin:
-        0 max(16px, var(--ion-safe-area-right, 0px))
-        calc(10px + var(--ion-safe-area-bottom, 0px))
-        max(16px, var(--ion-safe-area-left, 0px));
+    --color: var(--blinker-text-secondary);
+    --color-selected: var(--blinker-text-primary);
+    // Float over the page: the rounded exterior must show actual content,
+    // not a rectangular flex spacer or a full-width fade behind the bar.
+    position: absolute;
+    right: max(12px, var(--ion-safe-area-right, 0px));
+    bottom: calc(10px + var(--ion-safe-area-bottom, 0px));
+    left: max(12px, var(--ion-safe-area-left, 0px));
+    margin: 0;
 
-    padding: 2px 10px;
+    padding: 7px 4px;
     overflow: hidden;
-    border-radius: 999px;
+    border-radius: 25px;
 
-    box-shadow: 0 2px 0 color-mix(in srgb, var(--blinker-text-primary) 8%, transparent);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--blinker-text-primary) 3%, transparent);
 
     ion-tab-button {
         --background: transparent;
@@ -52,20 +44,28 @@ ion-tab-bar {
         --padding-end: 0;
         --ripple-color: var(--ion-color-primary);
         position: relative;
+        min-width: 48px;
+        min-height: 48px;
+        border-radius: 18px;
+        overflow: hidden;
 
-        i {
-            font-size: 21px;
-            transition: transform 180ms ease, color 180ms ease;
+        &.tab-selected {
+            --background: var(--blinker-surface-muted);
         }
 
-        &.tab-selected i {
-            transform: translateY(-1px);
+        &::part(native):focus-visible {
+            outline: 2px solid var(--ion-color-primary);
+            outline-offset: -3px;
+        }
+
+        i {
+            font-size: 20px;
         }
     }
 
     ion-label {
-        margin: 5px 0 0;
-        font-size: 10px;
+        margin: 3px 0 0;
+        font-size: 0.625rem;
         font-weight: 500;
     }
 }

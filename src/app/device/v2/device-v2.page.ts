@@ -14,10 +14,13 @@ import {
   ChangeDetectorRef,
   Component,
   Input,
+  EventEmitter,
+  Output,
   OnChanges,
   OnDestroy,
   OnInit,
   SimpleChanges,
+  ViewChild,
 } from '@angular/core';
 
 import { RouterModule } from '@angular/router';
@@ -67,6 +70,8 @@ import {
   DeviceV2PageLayoutService,
 } from '../../core/services/device-v2-page-layout.service';
 import { TelemetryChartComponent } from './telemetry-chart.component';
+import { PanelEditorPage } from '../../sections/device/panel-editor/panel-editor.page';
+import { EmbeddedPanelSession, SavedPanelEdit } from '../../sections/device/panel-editor/embedded-panel-session';
 import {
   TelemetryPresentation,
   TelemetryFieldPresentation,
@@ -105,12 +110,40 @@ function emptySnapshot(): DeviceUiSnapshot {
     TelemetryChartComponent,
     PageLayoutPanelComponent,
     CustomPanelFrameComponent,
+    PanelEditorPage,
   ],
   templateUrl: './device-v2.page.html',
   styleUrls: ['./device-v2.page.scss'],
 })
 
 export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
+  @ViewChild(PanelEditorPage) panelEditor?: PanelEditorPage;
+  @Output() panelEditChanged = new EventEmitter<void>();
+  panelEditSession?: EmbeddedPanelSession;
+  get panelRevision(): number { return this.storedLayout?.revision ?? 0; }
+
+  beginPanelEdit(): boolean {
+    if (this.customMode || !this.canEdit || this.device.config.canEditConsole === false
+      || !this.panelLayoutReady || !this.layout || !this.snapshot.manifestAccepted || this.pending.size || this.layoutStale || this.layoutError) return false;
+    this.panelEditSession = { device: this.device, document: this.layout,
+      snapshot: this.snapshot, record: this.storedLayout ?? null };
+    this.releaseTelemetry();
+    this.requestRender();
+    return true;
+  }
+
+  endPanelEdit(): void {
+    this.panelEditSession = undefined;
+    this.refreshTelemetry();
+    this.requestRender();
+  }
+
+  acceptPanelEdit(saved: SavedPanelEdit): void {
+    if (!this.panelEditSession) return;
+    this.applyStoredLayout(saved.record ?? undefined, this.snapshot);
+    if (saved.consoleRevision !== undefined) this.consoleRevision = saved.consoleRevision;
+    this.endPanelEdit();
+  }
   @Input({ required: true }) device!: BlinkerDevice;
 
   // Navigation cancellation is a lifetime boundary, not a rendering effect.
@@ -155,6 +188,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private layoutLoadKey = '';
   private layoutEpoch = 0;
   private storedLayout?: DeviceV2PageLayoutRecord;
+  private panelLayoutReady = false;
   private layoutError = '';
   private storedCapabilitiesLoading = false;
   private consoleRevision?: number;
@@ -306,6 +340,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   onPanelAction(action: PanelAction): void {
+    if (this.panelEditSession) return;
     const { field, value } = action;
 
     if (!this.allowedEndpoint(field)) return;
@@ -535,6 +570,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.layoutStale = undefined;
     this.layoutUpdating = false;
     this.storedLayout = undefined;
+    this.panelLayoutReady = false;
+    this.panelEditSession = undefined;
     this.storedCapabilitiesLoading = false;
     this.layoutError = '';
     this.layoutLoadKey = '';
@@ -768,6 +805,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private applyStoredLayout(record: DeviceV2PageLayoutRecord | undefined, snapshot: DeviceUiSnapshot): void {
+    this.panelLayoutReady = true;
     this.storedLayout = record;
 
     if (!record || !record.layout.widgets.length) {
@@ -791,6 +829,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private refreshTelemetry(): void {
+    if (this.panelEditSession) { this.releaseTelemetry(); return; }
     if (this.accountState !== 'ready') {
       if (this.telemetry || this.telemetryOpening) this.releaseTelemetry();
 
@@ -1176,6 +1215,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   async send(field: DeviceUiEndpoint, value: unknown): Promise<void> {
+    if (this.panelEditSession) return;
     if (!this.allowedEndpoint(field)) return;
     if (!this.logicalDeviceId || !this.canControl) return;
     const current = this.endpointsByKey.get(field.key);

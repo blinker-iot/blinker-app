@@ -8,8 +8,11 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <main>
-    <h1 class="device-name">{{ device?.config?.customName || '设备' }}</h1>
+  <main class="device-sharing-page">
+    <section class="surface-card sharing-heading" aria-label="当前设备">
+      <h1 class="device-name">{{ device?.config?.customName || '设备' }}</h1>
+      <p class="hint">管理当前设备的分享与访问权限。</p>
+    </section>
 
     @if (supportsConsoleLink && !device?.config?.isShared) {
     <section class="settings-card public-card" aria-label="公开访问设置">
@@ -30,6 +33,7 @@
           (change)="setPublicAccess($any($event.target).checked)"
         />
       </label>
+      <p class="public-note">公开链接可转发，持有链接的人可查看；不授予账号成员控制权限。</p>
 
       @if (linkLoading) {
       <div class="link-row muted" role="status"><ion-spinner name="crescent" />正在读取</div>
@@ -90,8 +94,9 @@
     </section>
     }
 
+    <section class="members-section" aria-labelledby="sharing-members-title">
     <div class="section-heading">
-      <h2>成员@if (sharedUserCount) { <span>{{ sharedUserCount }}</span> }</h2>
+      <h2 id="sharing-members-title">成员@if (sharedUserCount) { <span>{{ sharedUserCount }}</span> }</h2>
 
       @if (device && !device.config.isShared) {
       <div class="invite-actions">
@@ -154,6 +159,7 @@
       <p class="empty-members">暂无成员</p>
       }
 
+    </section>
     </section>
   </main>
 </ion-content>
@@ -271,7 +277,7 @@
           长期
         </button>
       </div>
-      <p class="options-note">链接可转发，请确认自定义内容适合公开。</p>
+      <p class="options-note">链接可转发，请确认自定义内容适合公开。此入口仅供查看，不改变已授权成员的权限。</p>
 
       @if (linkError) {
       <p class="error" role="alert">{{ linkError }}</p>

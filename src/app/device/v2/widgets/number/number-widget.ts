@@ -11,6 +11,7 @@ import { compactNumber, formatNumber, numeric } from '../widget-kit';
   imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './number-widget.html',
   styleUrls: ['./number-widget.scss'],
+  host: { '[class.rowc]': 'rows === 1' },
 })
 
 export class NumberWidgetComponent extends ReadingWidgetBase implements OnChanges {

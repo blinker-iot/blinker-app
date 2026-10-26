@@ -39,6 +39,8 @@
     "ABOUT_US": "关于我们"
   },
   "SETTINGS": {
+    "LANGUAGE_SAVE_FAILED": "未能应用所选语言，请重试。",
+    "REGION_CHANGE_FAILED": "服务区域切换未完成，请核对当前区域后重试。",
     "SERVICE_REGION": "服务区域",
     "SERVICE_REGION_HINT": "切换服务区域后需要重新登录",
     "TITLE": "设置",
@@ -222,6 +224,16 @@
     "OLD_DEVICE_API_PENDING": "迁移服务尚未接入，请稍后再试。"
   },
   "COMMUNITY": {
+    "PRODUCT_PREVIEW": "产品预览",
+    "PREVIOUS_PAGE": "上一页",
+    "NEXT_PAGE": "下一页",
+    "PAGE_STATUS": "第 {{page}} / {{total}} 页",
+    "PAGINATION": "内容分页",
+    "SEARCH": "搜索内容",
+    "CLOSE_SEARCH": "关闭搜索",
+    "CATEGORY_FILTER": "按分类筛选内容",
+    "LOCAL_PREVIEW_NOTE": "本页仅展示本地示例，不代表真实产品上市预告。",
+    "PRODUCT_PREVIEW_STATUS": "产品示例 · 非真实上市预告",
     "SEARCH_PLACEHOLDER": "搜索灵感、产品与技巧",
     "CATEGORY_RECOMMENDED": "推荐",
     "CATEGORY_INSPIRATION": "智能灵感",
@@ -240,13 +252,15 @@
     "KITCHEN_AIR_TITLE": "厨房空气管理指南",
     "KITCHEN_AIR_DESCRIPTION": "油烟检测与空气净化联动",
     "KITCHEN_AIR_META": "6 分钟阅读 · 8,643 次浏览",
-    "NO_RESULTS": "暂时没有匹配内容，换个关键词试试",
+    "NO_RESULTS": "暂无匹配内容，请切换分类或调整搜索关键词。",
     "COMING_SOON": "即将上线",
     "OMNI_STATION_NAME": "全能基站",
     "OMNI_STATION_DESCRIPTION": "集清洁、集尘与烘干于一体",
     "OMNI_STATION_LAUNCH": "敬请期待 · 2026 Q3 上线"
   },
   "PROFILE": {
+    "DEVICE_MANAGEMENT": "设备管理",
+    "CONNECTION_AND_SERVICES": "连接与服务",
     "TITLE": "用户中心",
     "USER_AVATAR": "用户头像",
     "VERSION": "版本 {{version}}",

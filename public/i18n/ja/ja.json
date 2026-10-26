@@ -39,6 +39,8 @@
     "ABOUT_US": "このアプリについて"
   },
   "SETTINGS": {
+    "LANGUAGE_SAVE_FAILED": "選択した言語を適用できませんでした。もう一度お試しください。",
+    "REGION_CHANGE_FAILED": "サービス地域の変更が完了しませんでした。現在の地域を確認してから、もう一度お試しください。",
     "SERVICE_REGION": "サービス地域",
     "SERVICE_REGION_HINT": "サービス地域を変更すると、再ログインが必要です",
     "TITLE": "設定",
@@ -75,6 +77,16 @@
     "FEATURE_PENDING": "この機能は近日公開予定です"
   },
   "COMMUNITY": {
+    "PRODUCT_PREVIEW": "製品プレビュー",
+    "PREVIOUS_PAGE": "前のページ",
+    "NEXT_PAGE": "次のページ",
+    "PAGE_STATUS": "{{page}} / {{total}} ページ",
+    "PAGINATION": "コンテンツのページ",
+    "SEARCH": "コンテンツを検索",
+    "CLOSE_SEARCH": "検索を閉じる",
+    "CATEGORY_FILTER": "カテゴリでコンテンツを絞り込む",
+    "LOCAL_PREVIEW_NOTE": "このページはローカルのサンプルです。実際の製品発売予告ではありません。",
+    "PRODUCT_PREVIEW_STATUS": "製品サンプル · 実際の発売予告ではありません",
     "SEARCH_PLACEHOLDER": "アイデア、製品、ヒントを検索",
     "CATEGORY_RECOMMENDED": "おすすめ",
     "CATEGORY_INSPIRATION": "スマートアイデア",
@@ -93,13 +105,15 @@
     "KITCHEN_AIR_TITLE": "キッチンの空気管理ガイド",
     "KITCHEN_AIR_DESCRIPTION": "油煙検知と空気清浄を連動",
     "KITCHEN_AIR_META": "読了 6 分 · 8,643 回閲覧",
-    "NO_RESULTS": "一致するコンテンツがありません。別のキーワードをお試しください。",
+    "NO_RESULTS": "一致するコンテンツがありません。カテゴリを切り替えるか、検索キーワードを変更してください。",
     "COMING_SOON": "近日公開",
     "OMNI_STATION_NAME": "オールインワンベースステーション",
     "OMNI_STATION_DESCRIPTION": "清掃、集じん、乾燥を一台に集約",
     "OMNI_STATION_LAUNCH": "2026 年第 3 四半期に登場予定"
   },
   "PROFILE": {
+    "DEVICE_MANAGEMENT": "デバイス管理",
+    "CONNECTION_AND_SERVICES": "接続とサービス",
     "TITLE": "プロフィール",
     "USER_AVATAR": "ユーザーのアバター",
     "VERSION": "バージョン {{version}}",

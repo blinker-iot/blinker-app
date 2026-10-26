@@ -1,5 +1,8 @@
+@use '../../../../theme/settings-surface' as settings;
+
 :host {
-  --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 118px);
+  @include settings.tokens;
+  --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 128px);
   position: relative;
   display: block;
 
@@ -11,11 +14,17 @@
 }
 
 :host.card-editor-error {
-  --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 156px);
+  --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 166px);
 }
 
 :host.card-editing.card-editor-error {
   --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 112px);
+}
+
+// Keep normal actions inside Ionic's clipped toolbar. The editor owns its
+// separate start/end spacing and 44px targets below.
+ion-header.main-tab-header ion-toolbar ion-buttons:not(.card-editor-actions) {
+  margin-inline-end: 0;
 }
 
 ion-buttons.card-editor-actions {
@@ -47,8 +56,13 @@ ion-content {
   --overflow: auto;
 }
 
+.top-scroll-mask {
+  background: var(--blinker-bg);
+}
+
 ion-popover.device-add-popover {
-  --width: 218px;
+  @include settings.tokens;
+  --width: 260px;
   --max-width: calc(100vw - 28px);
   --offset-y: 2px;
   --background: var(--blinker-surface);
@@ -98,10 +112,10 @@ ion-popover.device-add-popover {
     }
     &:active,
     &:focus-visible {
-      outline: none;
-
       background: var(--blinker-surface-active);
     }
+
+    @include settings.focus-ring;
   }
 
   .menu-icon {
@@ -109,7 +123,7 @@ ion-popover.device-add-popover {
     height: 38px;
     border-radius: 12px;
 
-    background: rgba(var(--ion-color-primary-rgb), 0.09);
+    background: var(--blinker-surface-muted);
     color: var(--ion-color-primary);
 
     display: grid;
@@ -127,23 +141,17 @@ ion-popover.device-add-popover {
     gap: 3px;
 
     strong {
-      font-size: 13px;
+      font-size: 0.875rem;
       font-weight: 600;
 
-      line-height: 1.2;
+      line-height: 1.5;
     }
 
     small {
-      overflow: hidden;
-
-      color: var(--blinker-text-tertiary);
-
-      font-size: 10px;
-
-      line-height: 1.2;
-
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      color: var(--blinker-text-secondary);
+      font-size: 0.75rem;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
     }
   }
 }
@@ -157,7 +165,7 @@ ion-popover.device-add-popover {
 
   z-index: 4;
   box-sizing: border-box;
-  padding: 0 18px 13px;
+  padding: 0 max(18px, var(--ion-safe-area-right, 0px)) 20px max(18px, var(--ion-safe-area-left, 0px));
 
   background: var(--blinker-bg);
 }
@@ -169,7 +177,10 @@ ion-popover.device-add-popover {
 
   min-height: 100%;
 
-  padding: var(--top-scroll-mask-height) 18px 18px;
+  padding: var(--top-scroll-mask-height)
+    max(18px, var(--ion-safe-area-right, 0px))
+    calc(94px + var(--ion-safe-area-bottom, 0px))
+    max(18px, var(--ion-safe-area-left, 0px));
 
   display: flex;
   flex-direction: column;
@@ -227,24 +238,32 @@ ion-popover.device-add-popover {
 
   p {
     margin: 9px 0 21px;
-    font-size: 11px;
+    font-size: 0.875rem;
+    line-height: 1.5;
   }
 
   > button {
     min-width: 126px;
-    height: 42px;
+    min-height: 48px;
+    padding: 12px 20px;
     border: 0;
-    border-radius: 21px;
+    border-radius: 16px;
 
     background: var(--ion-color-primary);
-    box-shadow: 0 9px 20px rgba(var(--ion-color-primary-rgb), 0.25);
+    box-shadow: none;
 
-    color: white;
-    font-size: 13px;
+    color: var(--ion-color-primary-contrast);
+    font-size: 0.875rem;
     font-weight: 600;
 
     i {
       margin-right: 6px;
     }
+
+    @include settings.interaction;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .device-add-menu button { transition: none; }
 }

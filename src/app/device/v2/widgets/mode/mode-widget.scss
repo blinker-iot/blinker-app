@@ -5,9 +5,13 @@
 
 .modes {
   flex: 1;
+  min-width: 0;
+  min-height: 48px;
   display: grid;
-  align-content: center;
+  align-content: safe center;
+  grid-auto-rows: minmax(48px, auto);
   gap: 8px;
+  overflow: auto;
 }
 
 .mode {
@@ -15,12 +19,14 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  min-width: 0;
+  min-width: 48px;
+  min-height: 48px;
   color: var(--ui-muted);
   font-size: 12px;
   transition: color 0.2s, background-color 0.2s;
 
-  span { overflow: hidden; max-width: 100%; white-space: nowrap; text-overflow: ellipsis; }
+  span { min-width: 0; overflow: hidden; max-width: 100%; white-space: nowrap; text-overflow: ellipsis; }
+  &:focus-visible { outline-offset: -2px; }
 
   .mi { flex: none; width: 16px; height: 16px; }
 
@@ -51,6 +57,9 @@
 
 .modes.segmented {
   display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 1;
+  min-height: 54px;
   align-self: stretch;
   gap: 2px;
   margin-top: auto;
@@ -58,9 +67,9 @@
   border-radius: var(--ui-radius-sm);
   background: var(--ui-well);
 
-  // Equal shares in one line, whatever the label lengths.
+  // Equal shares until the full-size targets need another line.
   .mode {
-    flex: 1 1 0;
+    flex: 1 0 64px;
     flex-direction: row;
     justify-content: center;
     gap: 5px;
@@ -98,14 +107,15 @@
 .modes.chips {
   display: flex;
   flex-wrap: wrap;
-  align-content: flex-end;
+  align-content: safe flex-end;
   gap: 8px;
 
   .mode {
     --c: var(--ui-accent);
     flex-direction: row;
     gap: 6px;
-    min-height: 34px;
+    max-width: 100%;
+    min-height: 48px;
     padding: 0 14px;
     border-radius: 999px;
     background: var(--ui-well);
@@ -132,4 +142,24 @@
     .mode.toned { border-color: var(--c); background: none; color: var(--c); }
     .mode.on { border-style: solid; border-color: var(--c); background: none; box-shadow: none; color: var(--c); }
   }
+}
+
+// Keep saved single-row geometry. Tile icons become an inline visual inside
+// the same full-size target; a dense legacy choice set scrolls locally rather
+// than shrinking or overlapping its buttons.
+:host(.rowc) {
+  flex-direction: row;
+  align-items: center;
+  padding-block: 4px;
+  gap: 12px;
+
+  .hd { flex: 0 1 30%; min-height: 18px; font-size: 12px; line-height: 18px; }
+  .hd-ico { width: 18px; height: 18px; }
+  .modes { align-self: stretch; margin-top: 0; }
+  .modes:not(.chips):not(.segmented) .mode { flex-direction: row; gap: 6px; }
+  .mode-ico { width: 32px; height: 32px; padding: 7px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode, .mode-ico { transition: none; }
 }

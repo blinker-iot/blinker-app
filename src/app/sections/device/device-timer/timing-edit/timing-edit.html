@@ -3,58 +3,65 @@
   <ion-title>{{ taskId === undefined ? '新建任务' : '编辑任务 #' + taskId }}</ion-title>
 </ion-toolbar></ion-header>
 <ion-content [fullscreen]="true"><main>
-  <h1 class="device-context">{{ timer.deviceName }}</h1>
-  <p class="task-clock-note">保存倒计时不会自动开始；日期/星期任务需要设备有效时间，本页无法确认校时状态及来源。</p>
+  <header class="page-intro">
+    <h1 class="device-context">{{ timer.deviceName }}</h1>
+    <p class="task-clock-note">保存倒计时不会自动开始；日期/星期任务需要设备有效时间，本页无法确认校时状态及来源。</p>
+  </header>
   <app-task-status [timer]="timer" />
-  @if (error) { <p role="alert">{{ error }}</p> }
+  @if (error) { <p class="form-error" role="alert">{{ error }}</p> }
   @if (timer.ready && !taskNotFound) {
     @if (taskId === undefined && timer.creationHint) { <p class="creation-hint">{{ timer.creationHint }}</p> }
-    <button type="button" class="primary-action load-form-button" [disabled]="timer.busy" (click)="loadForm()">{{ formLoaded ? '从当前查询重新载入（覆盖未保存编辑）' : '载入当前任务信息' }}</button>
+    <button type="button" class="secondary-action load-form-button" [disabled]="timer.busy" (click)="loadForm()">{{ formLoaded ? '从当前查询重新载入（覆盖未保存编辑）' : '载入当前任务信息' }}</button>
     @if (!formLoaded) { <p class="form-load-hint">查询已恢复，请明确载入当前任务信息后编辑。</p> }
     @else {
-    <fieldset [disabled]="!timer.canWrite">
-      <section class="surface-card setting-card">
-        <label>任务类型<select [(ngModel)]="kind">
+    <fieldset class="task-form" [disabled]="!timer.canWrite">
+      <legend class="sr-only">任务定义</legend>
+      <section class="surface-card setting-card" aria-label="何时执行">
+        <h2>何时执行</h2>
+        <label class="form-field">任务类型<select [(ngModel)]="kind">
           <option value="countdown">倒计时</option><option value="once">一次日期</option><option value="weekly">每周/每天</option>
         </select></label>
         @if (kind === 'countdown') {
-          <label>倒计时秒数<input type="number" min="0.001" max="2147483.647" step="0.001" [(ngModel)]="seconds" /></label>
+          <label class="form-field">倒计时秒数<input type="number" min="0.001" max="2147483.647" step="0.001" [(ngModel)]="seconds" /></label>
           <p>保存定义不会开始计时。请返回列表点击“开始新倒计时”，设备接受并持久化开始请求后起算，不以手机点击时刻为准。重启后中止，不自动续跑。</p>
         }
-        @if (kind === 'once') { <label>执行日期（手机当前时区）<input type="datetime-local" step="0.001" [(ngModel)]="dateTime" /></label> }
+        @if (kind === 'once') { <label class="form-field">执行日期（手机当前时区）<input type="datetime-local" step="0.001" [(ngModel)]="dateTime" /></label> }
         @if (kind === 'weekly') {
-          <label>执行时刻<input type="time" [(ngModel)]="time" /></label>
-          <div class="weekdays">@for (day of days; track $index) {
+          <label class="form-field">执行时刻<input type="time" [(ngModel)]="time" /></label>
+          <div class="weekdays" role="group" aria-label="执行星期">@for (day of days; track $index) {
             <label><input type="checkbox" [checked]="daySelected($index)" (change)="toggleDay($index, $any($event.target).checked)" />周{{ day }}</label>
           }</div>
-          <label>固定 UTC 偏移（分钟）<input type="number" min="-720" max="840" step="1" [(ngModel)]="utcOffsetMinutes" /></label>
+          <label class="form-field">固定 UTC 偏移（分钟）<input type="number" min="-720" max="840" step="1" [(ngModel)]="utcOffsetMinutes" /></label>
           <p>星期一对应第一个选项；固定偏移不会自动随旅行或夏令时调整。</p>
         }
-        <label><input type="checkbox" [(ngModel)]="enabled" />启用定义（不是开始/恢复倒计时）</label>
       </section>
-      <div class="section-label">属性赋值</div>
-      <section class="surface-card setting-card">
-        <label>固件允许的目标<select [ngModel]="key" (ngModelChange)="selectTarget($event)">
+      <section class="surface-card setting-card" aria-label="执行动作">
+        <h2>执行动作</h2>
+        <label class="form-field">固件允许的目标<select [ngModel]="key" (ngModelChange)="selectTarget($event)">
           <option value="" disabled>请选择属性</option>
           @for (item of timer.targets; track item.key) { <option [value]="item.key">{{ timer.targetLabel(item.key, item.valueType) }}</option> }
         </select></label>
         @if (target?.valueType === 'boolean') {
-          <label>属性值<select [(ngModel)]="value"><option [ngValue]="false">{{ timer.valueLabel(key, false, target?.valueType) }}</option><option [ngValue]="true">{{ timer.valueLabel(key, true, target?.valueType) }}</option></select></label>
+          <label class="form-field">属性值<select [(ngModel)]="value"><option [ngValue]="false">{{ timer.valueLabel(key, false, target?.valueType) }}</option><option [ngValue]="true">{{ timer.valueLabel(key, true, target?.valueType) }}</option></select></label>
         } @else if (target) {
-          <label>数值<input type="text" inputmode="decimal" [(ngModel)]="value" /></label>
+          <label class="form-field">数值<input type="text" inputmode="decimal" [(ngModel)]="value" /></label>
         }
         @if (target?.constraints; as hint) { <p>上次能力缓存提示：最小 {{ hint.minimum ?? '未限定' }}，最大 {{ hint.maximum ?? '未限定' }}，步进 {{ hint.step ?? '未限定' }} {{ hint.unit }}；以设备实际校验为准。</p> }
         @if (!target) { <p class="target-unavailable">{{ key ? timer.targetLabel(key) + '不在当前固件调度目录中，不能保存。' : '当前没有可选的定时属性，请检查设备代码。' }}{{ taskId !== undefined ? '仍可删除原任务。' : '' }}</p> }
       </section>
+      <section class="surface-card setting-card" aria-label="定义状态">
+        <h2>定义状态</h2>
+        <label class="check-field"><input type="checkbox" [(ngModel)]="enabled" />启用定义（不是开始/恢复倒计时）</label>
+      </section>
     </fieldset>
     }
   } @else if (taskNotFound) { <section class="not-found surface-card"><strong>找不到任务或旧任务地址已失效</strong><p>请返回列表，按设备任务 ID 重新选择。</p></section> }
-</main></ion-content>
 @if (timer.ready && !taskNotFound && formLoaded) {
   <div class="editor-bottom-actions">
     <button class="save-action" type="button" [disabled]="!canSave" (click)="save()">保存定义（不自动开始倒计时）</button>
     @if (taskId !== undefined) {
-      <button class="delete-action" type="button" [disabled]="!timer.canWrite" aria-label="删除任务" (click)="deleteTask()"><i class="fa-light fa-trash-can"></i></button>
+      <button class="delete-action" type="button" [disabled]="!timer.canWrite" aria-label="删除任务" (click)="deleteTask()"><i class="fa-light fa-trash-can" aria-hidden="true"></i></button>
     }
   </div>
 }
+</main></ion-content>

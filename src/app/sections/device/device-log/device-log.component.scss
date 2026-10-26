@@ -1,50 +1,33 @@
-@use '../device-feature-page' as feature;
+@use '../../../../theme/workflow-surface' as workflow;
+@include workflow.page;
 
-@include feature.base;
-
-.availability-card {
-  padding: 30px 20px;
-  text-align: center;
-
-  > i {
-    color: var(--blinker-text-tertiary);
-    font-size: 34px;
-  }
-
-  h1 {
-    margin: 18px 0 10px;
-    color: var(--blinker-text-primary);
-    font-size: 18px;
-    font-weight: 650;
-  }
-
-  .device-name {
-    margin-bottom: -8px;
-    overflow-wrap: anywhere;
-  }
+.activity-heading { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; }
+.activity-heading > div { min-width: 0; }
+.activity-heading p, .scope-note p, .read-status, .bounded-note, .availability-card p {
+  color: var(--blinker-text-secondary); font-size: 14px; line-height: 1.6;
 }
-
-.availability-card p,
-.related-data p {
-  color: var(--blinker-text-secondary);
-  font-size: 13px;
-  line-height: 1.65;
+.activity-heading p { margin-top: 8px; }
+.activity-list { display: grid; gap: 16px; min-width: 0; }
+.read-status { min-height: 48px; display: flex; align-items: center; }
+.row-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: center; }
+.row-heading h2 { min-width: 0; }
+.activity-status { font-size: 14px; font-weight: 650; }
+.activity-status[data-status='outcome_unknown'] {
+  color: var(--blinker-text-primary);
+  padding-inline-start: 8px;
+  border-inline-start: 3px solid var(--ion-color-warning-shade);
 }
-
-.related-data {
-  margin-top: 14px;
-  padding: 18px;
-
-  h2 {
-    margin: 0 0 8px;
-    color: var(--blinker-text-primary);
-    font-size: 15px;
-  }
-
-  p { margin: 0 0 14px; }
-
-  button {
-    width: 100%;
-    margin-top: 8px;
-  }
-}
+.endpoint-key { margin-top: 4px; color: var(--blinker-text-secondary); font-size: 13px; }
+dl { margin: 16px 0 0; font-size: 14px; line-height: 1.6; }
+dl > div { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: space-between; margin-top: 8px; }
+dt { color: var(--blinker-text-secondary); }
+dd { min-width: 0; margin: 0; color: var(--blinker-text-primary); overflow-wrap: anywhere; }
+.read-error { color: var(--ion-color-danger); }
+.read-error, .empty-state { font-size: 14px; line-height: 1.6; }
+.load-more { width: 100%; }
+.availability-card { padding: 24px 20px; text-align: center; }
+.availability-card > i { color: var(--blinker-text-secondary); font-size: 32px; }
+.availability-card h1 { margin-block: 16px 8px; }
+.related-data { display: grid; gap: 8px; }
+.related-data h2 { margin-bottom: 4px; }
+.related-data button { width: 100%; }

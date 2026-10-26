@@ -21,7 +21,16 @@ html[data-readonly-scroll] {
   &::-webkit-scrollbar { display: none; }
 }
 
-body { margin: 0; }
+// This viewport has the same content width and single inset as component mode.
+// Querying the iframe viewport instead would switch 32px too early.
+body {
+  @include grid.viewport;
+
+  width: 100%;
+  max-width: grid.$page-max-width;
+  margin: 0 auto;
+  padding: grid.$page-inset grid.$page-inset grid.$page-bottom-inset;
+}
 * { box-sizing: border-box; }
 
 @include grid.layout;
@@ -30,13 +39,11 @@ body { margin: 0; }
 .panel > :where(:not(.cell)) { grid-column: 1 / -1; }
 .panel > .custom-card { align-self: start; }
 
-// The root panel owns the single page inset, shared with component mode.
+// Insets belong to the viewport, not each nested group or root panel.
 body > .panel {
   width: 100%;
-
-  max-width: grid.$page-max-width;
-  margin: 0 auto;
-  padding: grid.$page-inset grid.$page-inset grid.$page-bottom-inset;
+  margin: 0;
+  padding: 0;
 }
 
 // Plain HTML data cards share the built-in surface and reading hierarchy.
@@ -117,11 +124,9 @@ body > .panel {
 
 [data-ui-theme='electronic'] .custom-card .num { letter-spacing: 0.03em; }
 
-@media (max-width: 560px) {
-  @include grid.compact;
-}
+@include grid.responsive;
 
-.atom-error { color: var(--ui-alert); font-size: 13px; padding: 12px; }
+.atom-error { flex: none; margin: 0; color: var(--ui-alert); font-size: 13px; line-height: 1.5; padding: 12px; overflow-wrap: anywhere; }
 .atom-unavailable {
   justify-content: center;
   padding: 16px;

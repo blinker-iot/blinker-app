@@ -13,7 +13,7 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <main>
+  <main class="sharing-page">
     @if (authenticated) {
       <div class="share-categories" role="group" aria-label="设备共享分类">
         <button type="button" [class.selected]="tab === 'sharing'"
@@ -58,8 +58,8 @@
       } @else {
         @if (authenticated) {
           @if (pendingInvitations.length || invitationsLoading || invitationError) {
-            <section class="share-section">
-              <div class="section-heading"><h2>待处理邀请</h2></div>
+            <section class="share-section pending-invitations" aria-labelledby="pending-invitations-title">
+              <div class="section-heading"><h2 id="pending-invitations-title">待处理邀请</h2></div>
 
               @if (invitationError) {
                 <p class="error-notice" role="alert">
@@ -91,8 +91,8 @@
             </section>
           }
 
-          <section class="share-section">
-            <div class="section-heading"><h2>已接收设备</h2></div>
+          <section class="share-section received-devices" aria-labelledby="received-devices-title">
+            <div class="section-heading"><h2 id="received-devices-title">已接收设备</h2></div>
             @if (receivedDevices.length) {
               <div class="device-list">
                 @for (item of receivedDevices; track item.logicalDeviceId) {
@@ -115,11 +115,12 @@
           </section>
         }
 
-        <section class="share-section">
+        <section class="share-section local-bookmarks" aria-labelledby="local-bookmarks-title">
           <div class="section-heading">
-            <h2>本机收藏 <span>仅保存在本机</span></h2>
+            <h2 id="local-bookmarks-title">本机收藏 <span>仅保存在本机</span></h2>
             @if (!authenticated) { <button type="button" class="text-action" (click)="login()">登录</button> }
           </div>
+          <p class="section-note">公开设备的只读入口，不代表已加入账号共享。</p>
 
           @if (bookmarks.error()) {
             <p class="error-notice" role="alert">

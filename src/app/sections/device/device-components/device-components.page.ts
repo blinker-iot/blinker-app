@@ -15,16 +15,18 @@ import {
 import { Subscription } from 'rxjs';
 
 import { API } from '../../../configs/api.config';
-import { assertDeviceV2AccountContext, captureDeviceV2AccountContext } from '../../../core/device-v2/account-scope';
+import { assertDeviceV2AccountContext, captureDeviceV2AccountContext, DeviceV2AccountContext } from '../../../core/device-v2/account-scope';
 import { DeviceUiConnection, DeviceUiPort, DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
 import {
-  generateDefaultPageLayout, isExtraReading, migratePageLayout, PageLayout, PageLayoutWidget, reflowPageWidgets,
+  generateDefaultPageLayout, isExtraReading, migratePageLayout, PageLayout, PageLayoutWidget, parsePageLayout,
 } from '../../../core/device-v2/page-layout';
+import { placeWidget } from '../../../core/device-v2/panel-document';
 import type { UiTheme } from '../../../core/device-v2/ui-theme';
 import { BlinkerDevice } from '../../../core/model/device.model';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceService } from '../../../core/services/device.service';
-import { DeviceV2PageLayoutService } from '../../../core/services/device-v2-page-layout.service';
+import { cloudConsole, consoleLayout, DeviceConsole, DeviceConsoleService, installConsole } from '../../../core/services/device-console.service';
+import { DeviceV2PageLayoutRecord, DeviceV2PageLayoutService } from '../../../core/services/device-v2-page-layout.service';
 import { readDeviceTheme } from '../../../device/device-theme';
 import { PageLayoutPanelComponent, PanelCard } from '../../../device/v2/panel/page-layout-panel';
 import { WidgetInspectorComponent } from '../widget-inspector/widget-inspector';
@@ -59,7 +61,7 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
   error = '';
   configReady = false;
   // Widget being restyled in the editor, with the layout it belongs to.
-  editing?: { widget: PageLayoutWidget; layout: PageLayout; revision: number };
+  editing?: { widget: PageLayoutWidget; layout: PageLayout; revision: number; invalid?: boolean };
 
   private connection?: DeviceUiConnection;
   private stateSubscription?: Subscription;
@@ -73,6 +75,7 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
     private readonly layouts: DeviceV2PageLayoutService,
     private readonly deviceUi: DeviceUiPort,
     private readonly cd: ChangeDetectorRef,
+    private readonly consoles: DeviceConsoleService,
   ) {
     this.id = route.snapshot.paramMap.get('id') ?? '';
   }
@@ -122,10 +125,18 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
         });
       }
 
-      const [config, record] = await Promise.all([
-        this.devices.loadDeviceConfig(device),
-        this.layouts.get(this.id),
-      ]);
+      let config: { hiddenEndpointKeys?: string[] } | undefined;
+      let record: DeviceV2PageLayoutRecord | null;
+      if (cloudConsole(device)) {
+        const source = await this.readCloudConsole(context);
+        config = source.uiConfig;
+        record = consoleLayout(source);
+      } else {
+        [config, record] = await Promise.all([
+          this.devices.loadDeviceConfig(device),
+          this.layouts.get(this.id),
+        ]);
+      }
       assertDeviceV2AccountContext(this.data, context);
       if (this.destroyed) return;
       if (!config) throw new Error('config-unavailable');
@@ -153,10 +164,12 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
     this.error = '';
     try {
       const context = captureDeviceV2AccountContext(this.data, API.BASE_URL);
+      let restoredLayout: PageLayout | undefined;
+      let restoredRevision: number | undefined;
       // A newly generated layout may omit hidden fields. Restore their default
       // widget before making them visible again, without changing other widgets.
       if (visible) {
-        const record = await this.layouts.get(this.id);
+        const record = await this.readLayout();
         assertDeviceV2AccountContext(this.data, context);
         if (this.destroyed) return;
         const layout = record
@@ -171,8 +184,13 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
             while (layout.widgets.some(item => item.widgetId === widgetId)) widgetId += '-restored';
             const y = Math.max(0, ...layout.widgets.map(item => item.grid.y + item.grid.height));
             layout.widgets.push({ ...widget, widgetId, grid: { ...widget.grid, y } });
-            const saved = await this.layouts.saveCandidate(this.id, layout, this.snapshot.endpoints, record.revision);
-            this.layout = saved.layout;
+            if (cloudConsole(device)) {
+              restoredLayout = layout;
+              restoredRevision = record.revision;
+            } else {
+              const saved = await this.layouts.saveCandidate(this.id, layout, this.snapshot.endpoints, record.revision);
+              this.layout = saved.layout;
+            }
           }
         }
         hidden.delete(key);
@@ -183,7 +201,15 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
       assertDeviceV2AccountContext(this.data, context);
       if (this.destroyed) return;
       const hiddenEndpointKeys = [...hidden];
-      if (!await this.devices.saveDeviceConfig(device, { hiddenEndpointKeys })) throw new Error('save-failed');
+      if (cloudConsole(device)) {
+        // Console owns both fields: restore a missing widget and its visibility
+        // together, instead of partially saving through the two legacy APIs.
+        const source = await this.saveCloudConsole({
+          ...(restoredLayout ? { layout: restoredLayout } : {}),
+          uiConfig: { hiddenEndpointKeys },
+        }, context, restoredRevision);
+        this.layout = consoleLayout(source)?.layout;
+      } else if (!await this.devices.saveDeviceConfig(device, { hiddenEndpointKeys })) throw new Error('save-failed');
       assertDeviceV2AccountContext(this.data, context);
       if (this.destroyed) return;
 
@@ -242,14 +268,18 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
 
   async saveStyle(): Promise<void> {
     const editing = this.editing;
-    if (!editing || this.saving || !this.snapshot?.manifestAccepted) return;
+    if (!editing || editing.invalid || this.saving || !this.snapshot?.manifestAccepted) return;
     this.saving = true;
+    this.error = '';
     try {
       const context = captureDeviceV2AccountContext(this.data, API.BASE_URL);
-      const widgets = reflowPageWidgets(editing.layout.widgets.map(widget =>
-        widget.widgetId === editing.widget.widgetId ? editing.widget : widget));
+      const placed = placeWidget(editing.widget, editing.layout.widgets.filter(widget => widget.widgetId !== editing.widget.widgetId));
+      const widgets = editing.layout.widgets.map(widget => widget.widgetId === placed.widgetId ? placed : widget);
       const candidate = { ...editing.layout, revision: Math.max(1, editing.revision), widgets };
-      const saved = await this.layouts.saveCandidate(this.id, candidate, this.snapshot.endpoints, editing.revision);
+      const saved = cloudConsole(this.device)
+        ? consoleLayout(await this.saveCloudConsole({ layout: candidate }, context, editing.revision))
+        : await this.layouts.saveCandidate(this.id, candidate, this.snapshot.endpoints, editing.revision);
+      if (!saved) throw new Error('layout-unavailable');
       assertDeviceV2AccountContext(this.data, context);
       if (this.destroyed) return;
       this.layout = saved.layout;
@@ -264,15 +294,68 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
     }
   }
 
+  updateStyleWidget(widget: PageLayoutWidget): void {
+    if (this.editing && !this.saving) this.editing.widget = widget;
+  }
+
+  setStyleInvalid(invalid: boolean): void {
+    if (this.editing && !this.saving) this.editing.invalid = invalid;
+  }
+
   // The stored layout for the current Manifest, or a fresh default one.
   private async editableLayout(): Promise<{ layout: PageLayout; revision: number }> {
     const snapshot = this.snapshot!;
-    const record = await this.layouts.get(this.id);
+    const record = await this.readLayout();
     if (!record) return { layout: generateDefaultPageLayout(snapshot), revision: 0 };
     const layout = record.manifestFingerprint === snapshot.manifestFingerprint
       ? record.layout
       : migratePageLayout(record.layout, snapshot);
     return { layout: { ...layout, widgets: [...layout.widgets] }, revision: record.revision };
+  }
+
+  private async readLayout(): Promise<DeviceV2PageLayoutRecord | null> {
+    if (!cloudConsole(this.device)) return this.layouts.get(this.id);
+    const context = captureDeviceV2AccountContext(this.data, API.BASE_URL);
+    return consoleLayout(await this.readCloudConsole(context));
+  }
+
+  private async readCloudConsole(context: DeviceV2AccountContext): Promise<DeviceConsole> {
+    const device = this.device!;
+    const source = await this.consoles.get(this.id);
+    this.acceptCloudConsole(device, source, context);
+    return source;
+  }
+
+  private async saveCloudConsole(
+    change: { layout?: PageLayout; uiConfig?: DeviceConsole['uiConfig'] },
+    context: DeviceV2AccountContext,
+    expectedRevision?: number,
+  ): Promise<DeviceConsole> {
+    const device = this.device!;
+    if (device.config.isShared || device.config.canEditConsole === false) throw new Error('console-not-editable');
+    if (change.layout) {
+      // Preserve the legacy saveCandidate validation and layout CAS token. The
+      // Console's own top-level revision is not the layout's base revision.
+      if (expectedRevision === undefined || !Number.isSafeInteger(expectedRevision)
+        || expectedRevision < 0 || expectedRevision > 0x7ffffffe) {
+        throw new Error('PageLayout revision is invalid');
+      }
+      const layout = parsePageLayout(change.layout, this.snapshot!.endpoints);
+      if (layout.revision !== Math.max(1, expectedRevision)) throw new Error('PageLayout base revision does not match expectedRevision');
+      change = { ...change, layout };
+    }
+    assertDeviceV2AccountContext(this.data, context);
+    if (this.destroyed) throw new Error('component-settings-inactive');
+    const source = await this.consoles.save(this.id, change);
+    this.acceptCloudConsole(device, source, context);
+    return source;
+  }
+
+  private acceptCloudConsole(device: BlinkerDevice, source: DeviceConsole, context: DeviceV2AccountContext): void {
+    assertDeviceV2AccountContext(this.data, context);
+    if (this.destroyed || this.device !== device || device.config.isShared
+      || !source.capabilities.canEditConsole) throw new Error('component-settings-inactive');
+    installConsole(device, source);
   }
 
   ionViewWillEnter(): void {

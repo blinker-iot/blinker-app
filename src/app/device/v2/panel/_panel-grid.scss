@@ -1,13 +1,22 @@
 $page-inset: 16px;
 $page-bottom-inset: 32px;
 $page-max-width: 720px;
+// Eight columns need a 156px minimum two-column card: (660 - 3 * 12) / 4.
+$compact-max-width: 660px;
 
-// Shared geometry: half-width cards align to rows; full-width cards use their
-// content height. Drawing widgets claim --fill-h through the fills-rows mixin.
+// Measure the available panel content, never the surrounding page or iframe.
+@mixin viewport {
+  container: page-panel / inline-size;
+}
+
+// Saved columns/rows are unchanged. Both axes use the same measured unit, so
+// a 2 x 2 card is square, including the gaps, rather than just on a 375px phone.
 @mixin layout {
   .panel {
-    --row-h: 84px;
     --gap: 12px;
+    // Each grid measures itself, including nested groups inside an Agent
+    // document. An outer page/iframe width must not size an inner card.
+    container: panel-grid / inline-size;
 
     display: grid;
 
@@ -18,6 +27,7 @@ $page-max-width: 720px;
   }
 
   .cell {
+    --row-h: calc((100cqw - 7 * var(--gap)) / 8);
     --fill-h: calc(var(--rows) * var(--row-h) + (var(--rows) - 1) * var(--gap));
 
     grid-column: var(--col) / span var(--span);
@@ -31,24 +41,32 @@ $page-max-width: 720px;
     min-height: var(--fill-h);
 
     contain: size;
+    justify-content: flex-start;
+
+    // Fix the visible card, not the whole grid row. A neighbour's normal-flow
+    // error can grow its row without stretching this card or hiding feedback.
+    > app-page-widget,
+    > .preset-preview {
+      flex: none;
+      height: var(--fill-h);
+      min-height: 0;
+    }
   }
 
-  .cell.full { min-height: 0; contain: none; }
+  .cell.feedback { contain: none; }
 }
 
 @mixin compact {
-  .panel {
-    --row-h: 78px;
-    --gap: 10px;
-
-    // Preserve insertion order instead of backfilling earlier gaps.
-    grid-auto-flow: row;
-  }
-
   .cell {
+    --row-h: calc((100cqw - 3 * var(--gap)) / 4);
+    // Auto-placement retains insertion order; do not backfill earlier gaps.
     grid-column: span min(8, calc(var(--span) * 2));
     grid-row: span var(--rows);
   }
+}
 
-  .cell.wide { min-height: 0; contain: none; }
+@mixin responsive {
+  @container panel-grid (max-width: #{$compact-max-width}) {
+    @include compact;
+  }
 }

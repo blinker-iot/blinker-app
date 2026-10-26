@@ -3,6 +3,12 @@
 
 @include c.base;
 
+:host { container-type: inline-size; }
+
+// Keep the visible keys separate: these are real, non-overlapping targets,
+// not pseudo-elements extending into the reading or adjacent controls.
+.rbtn { width: 48px; height: 48px; }
+
 .ns {
   flex: 1;
   min-height: 0;
@@ -50,19 +56,39 @@
 }
 
 .ns-row {
+  flex: none;
+  min-height: 48px;
   display: flex;
   gap: 10px;
+  overflow-x: auto;
 
-  .rbtn { flex: 1; height: 38px; border-radius: 12px; }
+  .rbtn { flex: 1; min-width: 48px; height: 48px; border-radius: 12px; }
 }
 
 // One row high: icon, title and range, then − value +.
 
 :host(.rowc) {
-  flex-direction: row;
+  padding: 6px 10px;
+}
+
+.rc-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   align-items: center;
   gap: 12px;
-  padding-block: 10px;
+}
+
+.rc-controls {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+
+  .ns-v { white-space: nowrap; }
 }
 
 .rc-ico {
@@ -94,10 +120,10 @@
   flex: none;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 48px;
+  height: 48px;
   margin-left: auto;
-  padding: 9px;
+  padding: 15px;
   border-radius: 50%;
   background: var(--ui-accent);
   color: var(--ui-on-accent);
@@ -109,4 +135,35 @@
   @include theme.electronic { border: 1.5px dotted var(--ui-accent); background: none; color: var(--ui-accent); }
 }
 
-.hd .ns-go { width: 30px; height: 30px; margin-block: -4px; padding: 8px; }
+.hd .ns-go { margin-block: -14px; }
+
+// A legacy half-card may be only 166px wide. Preserve its saved grid and
+// make the title and controls fit the single 78px row instead of clipping +.
+@container (max-width: 380px) {
+  .rc-body { flex-direction: column; align-items: stretch; gap: 2px; }
+  .rc-ico, .rc-copy small { display: none; }
+  .rc-copy { flex: none; }
+  .rc-copy strong { font-size: 12px; line-height: 14px; }
+  .rc-controls { justify-content: space-between; gap: 4px; }
+  .ns-v.ns-sm { min-width: 0; font-size: 20px; }
+  .ns-v.ns-sm small { font-size: 11px; }
+  .ns.split .ns-v { font-size: 32px; }
+  .ns.split .ns-range { font-size: 10px; line-height: 12px; }
+}
+
+// The same 48px keys must not squeeze a multi-row quarter-card's reading.
+// Reuse the existing split arrangement visually without changing its options.
+@container (max-width: 230px) {
+  .ns:not(.split) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(48px, 1fr));
+    grid-template-rows: minmax(0, 1fr) 48px;
+    margin-inline: -4px;
+    gap: 8px;
+
+    .ns-mid { grid-column: 1 / -1; grid-row: 1; align-self: center; }
+    .rbtn { width: 100%; border-radius: 12px; }
+    .ns-v { font-size: 32px; }
+    .ns-range { font-size: 10px; line-height: 12px; }
+  }
+}

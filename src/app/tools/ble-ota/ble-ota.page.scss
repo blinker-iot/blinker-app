@@ -1,7 +1,3 @@
-:host {
-  --ota-accent: #7165e8;
-  display: block;
-  height: 100%;
-}
+@use '../ota/ota-surface' as ota;
 
-.device-results { margin-top: 11px; }
+@include ota.page;

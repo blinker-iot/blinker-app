@@ -7,26 +7,35 @@
 
 .tm-presets {
   display: grid;
-
-  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
-
+  flex: none;
+  min-width: 0;
+  // Keep both the target minimum and long, valid preset values readable.
+  grid-template-columns: repeat(var(--n), minmax(max-content, 1fr));
   gap: 8px;
-
   margin-top: auto;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
 }
 
 .tm-p {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
   gap: 2px;
-  padding-block: 10px;
+  padding: 6px 4px;
 
   border-radius: var(--ui-radius-sm);
   background: var(--ui-well);
   color: var(--ui-muted);
 
   font-size: 11px;
+  touch-action: manipulation;
+
+  &:focus-visible { outline-offset: -2px; }
+  &:disabled { opacity: 0.4; cursor: default; }
 
   b {
     color: var(--ui-ink);
@@ -103,11 +112,15 @@
   flex: 1;
 
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow-y: auto;
+  overscroll-behavior-block: contain;
 
-  &.tm-end { justify-content: flex-end; }
+  > * { flex: none; }
+  &.tm-end { justify-content: safe flex-end; }
 }
 
 .tm-time { font-size: 34px; line-height: 1; }
@@ -141,9 +154,15 @@
 
 .tm-x {
   flex: none;
-  padding: 4px 2px;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  min-height: 48px;
+  padding: 0;
 
   color: var(--ui-accent);
 
   font-size: 12px;
+  touch-action: manipulation;
+  &:disabled { opacity: 0.4; cursor: default; }
 }

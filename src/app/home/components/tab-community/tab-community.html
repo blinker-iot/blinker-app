@@ -1,5 +1,5 @@
 <ion-header
-  class="main-tab-header discover-header"
+  class="main-tab-header home-tab-header discover-header"
   [class.search-visible]="searchVisible"
 >
   <ion-toolbar>
@@ -8,102 +8,142 @@
       <ion-button
         class="header-action"
         [class.active]="searchVisible"
-        [attr.aria-label]="searchVisible ? '关闭搜索' : '搜索'"
+        [attr.aria-label]="(searchVisible ? 'COMMUNITY.CLOSE_SEARCH' : 'COMMUNITY.SEARCH') | translate"
         [attr.aria-expanded]="searchVisible"
+        aria-controls="community-search-field"
         (click)="toggleSearch()"
       >
-        <i [class]="searchVisible ? 'fa-light fa-xmark' : 'fa-light fa-magnifying-glass'"></i>
+        <i [class]="searchVisible ? 'fa-light fa-xmark' : 'fa-light fa-magnifying-glass'" aria-hidden="true"></i>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
-  @if (searchVisible) {
-    <div class="search-field">
-      <i class="fa-light fa-magnifying-glass"></i>
-      <input
-        type="search"
-        [(ngModel)]="searchKeyword"
-        [placeholder]="'COMMUNITY.SEARCH_PLACEHOLDER' | translate"
-        autofocus
-      />
-    </div>
-  }
+  <div id="community-search-field">
+    @if (searchVisible) {
+      <div class="search-field">
+        <i class="fa-light fa-magnifying-glass" aria-hidden="true"></i>
+        <input
+          type="search"
+          [(ngModel)]="searchKeyword"
+          [attr.aria-label]="'COMMUNITY.SEARCH' | translate"
+          aria-controls="community-results"
+          [placeholder]="'COMMUNITY.SEARCH_PLACEHOLDER' | translate"
+          autofocus
+        />
+      </div>
+    }
+  </div>
   <div
+    #categoryTabs
     class="category-tabs"
-    role="tablist"
+    role="group"
+    [attr.aria-label]="'COMMUNITY.CATEGORY_FILTER' | translate"
   >
     @for (category of categories; track category.id) {
-    <button
-      type="button"
-      role="tab"
-      [attr.aria-selected]="activeCategory === category.id"
-      [class.active]="activeCategory === category.id"
-      (click)="selectCategory(category.id)"
-    >
-      {{ category.labelKey | translate }}
-    </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="activeCategory === category.id"
+        aria-controls="community-results"
+        [class.active]="activeCategory === category.id"
+        [attr.data-category]="category.id"
+        (click)="selectCategory(category.id)"
+      >
+        {{ category.labelKey | translate }}
+      </button>
     }
   </div>
 </ion-header>
 
-<ion-content fullscreen="true">
+<ion-content fullscreen="true" [scrollEvents]="true" (ionScroll)="rememberScroll($event)">
   <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
 
   <div class="discover-content">
-    <section class="content-section">
-      <div class="section-heading">
-        <div>
-          <h2>{{ 'COMMUNITY.SMART_INSPIRATION' | translate }}</h2>
-        </div>
-        <button type="button" (click)="selectCategory('recommended')">
-          {{ 'COMMUNITY.VIEW_ALL' | translate }}
-          <i class="fa-light fa-chevron-right"></i>
-        </button>
-      </div>
+    <p class="local-preview-note">{{ 'COMMUNITY.LOCAL_PREVIEW_NOTE' | translate }}</p>
 
-      @if (filteredCards.length > 0) {
-      <div class="inspiration-grid">
-        @for (card of filteredCards; track card.titleKey) {
-        <article class="story-card">
-          <div class="story-image">
-            <span>{{ card.categoryKey | translate }}</span>
-          </div>
-          <div class="story-copy">
-            <h3>{{ card.titleKey | translate }}</h3>
-            <p>{{ card.descriptionKey | translate }}</p>
-            <small>{{ card.metaKey | translate }}</small>
-          </div>
-        </article>
+    <div id="community-results">
+      @let cards = storyPage.items;
+      @let visibleProducts = filteredProducts;
+      @if (activeCategory === 'recommended') {
+        @for (section of recommendedSections; track section.id) {
+          <section class="content-section" [attr.aria-label]="section.labelKey | translate">
+            <div class="section-heading">
+              <h2>{{ section.labelKey | translate }}</h2>
+              <button type="button" class="view-all" [attr.data-category]="section.id"
+                [attr.aria-label]="(section.labelKey | translate) + ' · ' + ('COMMUNITY.VIEW_ALL' | translate)"
+                (click)="viewAll(section.id)">{{ 'COMMUNITY.VIEW_ALL' | translate }}</button>
+            </div>
+            <div class="inspiration-grid">
+              @for (card of section.cards; track card.titleKey) {
+                <article class="story-card">
+                  <div class="story-image">
+                    <span class="category-label">{{ section.labelKey | translate }}</span>
+                    <img [src]="card.imageSrc" alt="" width="112" height="112" loading="lazy" decoding="async" />
+                  </div>
+                  <div class="story-copy">
+                    <h3>{{ card.titleKey | translate }}</h3>
+                    <p>{{ card.descriptionKey | translate }}</p>
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
         }
-      </div>
-      } @else {
-      <div class="no-result">
-        <i class="fa-light fa-sparkles"></i>
-        <span>{{ 'COMMUNITY.NO_RESULTS' | translate }}</span>
-      </div>
+      } @else if (cards.length > 0) {
+        <section class="content-section collection-directory">
+          @for (card of cards; track card.titleKey) {
+            <article class="collection-project">
+              <h2 class="collection-title">{{ card.titleKey | translate }}</h2>
+              <div class="collection-cover">
+                <img [src]="card.imageSrc" alt="" width="80" height="80" loading="lazy" decoding="async" />
+              </div>
+              <p class="collection-summary">{{ card.descriptionKey | translate }}</p>
+            </article>
+          }
+        </section>
       }
-    </section>
 
-    <section class="content-section product-section">
-      <div class="section-heading">
-        <div>
-          <h2>{{ 'COMMUNITY.COMING_SOON' | translate }}</h2>
-        </div>
-      </div>
-      <div class="product-list">
-        @for (product of products; track product.nameKey) {
-        <article class="product-card">
-          <div class="product-image" aria-hidden="true"></div>
-          <div class="product-copy">
-            <h3>{{ product.nameKey | translate }}</h3>
-            <p>{{ product.descriptionKey | translate }}</p>
-            <small>{{ product.launchKey | translate }}</small>
+      @if (visibleProducts.length > 0) {
+        <section class="content-section product-section">
+          @if (activeCategory === 'recommended') {
+            <div class="section-heading">
+              <h2>{{ 'COMMUNITY.PRODUCT_PREVIEW' | translate }}</h2>
+              <button type="button" class="view-all" data-category="products"
+                [attr.aria-label]="('COMMUNITY.CATEGORY_PRODUCTS' | translate) + ' · ' + ('COMMUNITY.VIEW_ALL' | translate)"
+                (click)="viewAll('products')">{{ 'COMMUNITY.VIEW_ALL' | translate }}</button>
+            </div>
+          }
+          <div class="product-list">
+            @for (product of (activeCategory === 'recommended' ? visibleProducts.slice(0, 1) : productPage.items); track product.nameKey) {
+              <article class="product-card">
+                <div class="product-image" aria-hidden="true">
+                  <img [src]="product.imageSrc" alt="" width="64" height="64" loading="lazy" decoding="async" />
+                </div>
+                <div class="product-copy">
+                  <h3>{{ product.nameKey | translate }}</h3>
+                  <p>{{ product.descriptionKey | translate }}</p>
+                  <small>{{ 'COMMUNITY.PRODUCT_PREVIEW_STATUS' | translate }}</small>
+                </div>
+              </article>
+            }
           </div>
-          <button type="button">
-            <i class="fa-light fa-arrow-right"></i>
+        </section>
+      }
+      @if (activeCategory !== 'recommended' && pagination.pageCount > 1) {
+        <nav class="content-pagination" [attr.aria-label]="'COMMUNITY.PAGINATION' | translate">
+          <button type="button" [disabled]="pagination.page === 1" (click)="selectPage(pagination.page - 1)">
+            {{ 'COMMUNITY.PREVIOUS_PAGE' | translate }}
           </button>
-        </article>
-        }
-      </div>
-    </section>
+          <span role="status">{{ 'COMMUNITY.PAGE_STATUS' | translate:{ page: pagination.page, total: pagination.pageCount } }}</span>
+          <button type="button" [disabled]="pagination.page === pagination.pageCount" (click)="selectPage(pagination.page + 1)">
+            {{ 'COMMUNITY.NEXT_PAGE' | translate }}
+          </button>
+        </nav>
+      }
+      @if (cards.length === 0 && visibleProducts.length === 0) {
+        <div class="no-result" role="status">
+          <i class="fa-light fa-sparkles" aria-hidden="true"></i>
+          <span>{{ 'COMMUNITY.NO_RESULTS' | translate }}</span>
+        </div>
+      }
+    </div>
   </div>
 </ion-content>

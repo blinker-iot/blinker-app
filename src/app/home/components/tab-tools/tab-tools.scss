@@ -1,4 +1,8 @@
+@use '../../../../theme/settings-surface' as settings;
+
 :host {
+  @include settings.tokens;
+
   --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 64px);
   display: block;
   height: 100%;
@@ -11,24 +15,25 @@ ion-content {
 }
 
 .tools-page {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 680px;
+  @include settings.page;
+
   min-height: 100%;
-  margin: 0 auto;
   // ion-tab-bar 在部分原生 WebView 中会覆盖滚动层，预留完整点击区。
-  padding: calc(var(--ion-safe-area-top, 0px) + 64px) 16px calc(88px + env(safe-area-inset-bottom));
+  padding-top: calc(var(--ion-safe-area-top, 0px) + 80px);
+  padding-inline: max(16px, var(--ion-safe-area-left, 0px)) max(16px, var(--ion-safe-area-right, 0px));
+  padding-bottom: calc(88px + max(env(safe-area-inset-bottom), var(--ion-safe-area-bottom, 0px)));
 }
 
 .tool-section {
-  margin: 0 0 14px;
+  min-width: 0;
 
   h2 {
-    margin: 0 2px 7px;
+    margin: 0 4px 8px;
     color: var(--blinker-text-primary);
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 600;
-    line-height: 1.4;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
   }
 }
 

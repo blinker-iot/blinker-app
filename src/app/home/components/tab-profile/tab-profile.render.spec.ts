@@ -8,11 +8,15 @@ import { AuthService } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { MessageService } from '../../../sections/message/message.service';
 import { TabProfileComponent } from './tab-profile';
+import { environment } from 'src/environments/environment';
+import { localCapabilities } from 'src/environments/deployment';
 
 describe('profile entitlement production template', () => {
-  afterEach(() => TestBed.resetTestingModule());
+  const originalDeployment = environment.deployment;
+  beforeEach(() => { environment.deployment = localCapabilities; });
+  afterEach(() => { TestBed.resetTestingModule(); environment.deployment = originalDeployment; });
 
-  async function render(name: string | null, limit: number | null, used: number | null) {
+  async function render(name: string | null, limit: number | null, used: number | null, currentVersion = '3.0.0') {
     const data = { auth: { uuid: 'user-a' }, sessionEpoch: 1,
       user: { username: 'User', avatar: '', phone: '',
         subscriptionPlan: name ? { name: name.toLowerCase(), display_name: name } : null,
@@ -21,14 +25,17 @@ describe('profile entitlement production template', () => {
       deviceLoadError: new BehaviorSubject<unknown>(null),
     };
     const users = { getAllInfo: vi.fn(async () => true) };
+    const navigation = { navigateForward: vi.fn() };
+    const auth = { logout: vi.fn() };
+    const update = { currentVersion, hasNewVersion: false };
     await TestBed.configureTestingModule({ imports: [TabProfileComponent], providers: [
       provideIonicAngular({ animated: false }), provideTranslateService(),
       { provide: DataService, useValue: data },
-      { provide: UpdateService, useValue: { currentVersion: '2.4.1', hasNewVersion: false } },
-      { provide: AuthService, useValue: { logout: vi.fn() } },
+      { provide: UpdateService, useValue: update },
+      { provide: AuthService, useValue: auth },
       { provide: UserService, useValue: users },
       { provide: MessageService, useValue: { unreadTotal: 0, init: vi.fn(async () => undefined) } },
-      { provide: NavController, useValue: { navigateForward: vi.fn() } },
+      { provide: NavController, useValue: navigation },
     ] }).compileComponents();
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('zh-profile-test', { PROFILE: {
@@ -36,11 +43,13 @@ describe('profile entitlement production template', () => {
       ACCOUNT_REFRESH_FAILED: '更新未完成，当前显示上次获取的数据。', PLAN_LABEL: '当前套餐', PLAN_UNKNOWN: '套餐待查询',
       DEVICE_QUOTA_LABEL: '设备额度', DEVICE_QUOTA_COUNT: '{{used}} / {{limit}} 台',
       DEVICE_QUOTA_UNKNOWN: '待查询', DEVICE_QUOTA_UNLIMITED_COUNT: '已用 {{used}} 台 · 不限量',
+      DEVICE_MANAGEMENT: '设备管理', CONNECTION_AND_SERVICES: '连接与服务',
+      FEEDBACK: '反馈', ABOUT_US: '关于我们', LOGOUT: '退出登录', SETTINGS: '设置', VERSION: '版本 {{version}}',
     } });
     translate.use('zh-profile-test');
     const fixture = TestBed.createComponent(TabProfileComponent);
     fixture.autoDetectChanges(); await fixture.whenStable();
-    return { fixture, data, users, element: fixture.nativeElement as HTMLElement };
+    return { fixture, data, users, navigation, auth, update, element: fixture.nativeElement as HTMLElement };
   }
 
   it.each([['Free', 7], ['Pro', 1]] as const)('renders %s and its returned quota without a hard-coded plan allowance', async (name, limit) => {
@@ -74,5 +83,51 @@ describe('profile entitlement production template', () => {
     h.element.querySelector<HTMLButtonElement>('.account-refresh')!.click();
     await h.fixture.whenStable();
     expect(h.element.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('keeps identity and entitlements in one card with independent refresh, not nested buttons', async () => {
+    const h = await render('Pro', 3, 1);
+    const card = h.element.querySelector('.account-card')!;
+    expect(card.querySelector('.user-info .name')?.textContent?.trim()).toBe('User');
+    expect(card.querySelector('.device-quota')).not.toBeNull();
+    expect(card.querySelectorAll('button')).toHaveLength(2);
+    expect(card.querySelector('button button')).toBeNull();
+    expect(card.querySelector('.account-refresh')?.getAttribute('aria-label')).toBe('刷新');
+    card.querySelector<HTMLButtonElement>('.user-info')!.click();
+    expect(h.navigation.navigateForward).toHaveBeenCalledExactlyOnceWith('/user');
+    card.querySelector<HTMLButtonElement>('.account-refresh')!.click();
+    await h.fixture.whenStable();
+    expect(h.users.getAllInfo).toHaveBeenCalledOnce();
+    expect(h.navigation.navigateForward).toHaveBeenCalledOnce();
+  });
+
+  it('keeps settings directly reachable when messages and automation are unavailable', async () => {
+    environment.deployment = { ...localCapabilities, messages: false, automation: false };
+    const h = await render(null, null, null);
+    const headerActions = h.element.querySelectorAll<HTMLElement>('ion-button.header-action');
+    expect(headerActions).toHaveLength(1);
+    expect(headerActions[0].getAttribute('aria-label')).toBe('设置');
+    headerActions[0].click();
+    expect(h.navigation.navigateForward).toHaveBeenCalledExactlyOnceWith('/settings');
+    expect(h.element.querySelector('[aria-labelledby="profile-group-devices"]')?.textContent).toContain('设备管理');
+    expect(h.element.querySelector('[aria-labelledby="profile-group-connections"]')?.textContent).toContain('连接与服务');
+    expect(h.element.querySelectorAll('.menu-list--settings')).toHaveLength(2);
+    expect(h.element.querySelectorAll('.menu-row')).toHaveLength(4);
+  });
+
+  it('retains feedback, about and a separately placed logout without making another service route', async () => {
+    const h = await render('Free', 2, 1);
+    const links = h.element.querySelectorAll<HTMLButtonElement>('.support-links button');
+    expect(Array.from(links, button => button.textContent?.trim())).toEqual(['反馈', '关于我们']);
+    links[0].click(); links[1].click();
+    h.element.querySelector<HTMLButtonElement>('.support-logout')!.click();
+    expect(h.navigation.navigateForward.mock.calls).toEqual([['/feedback'], ['/about']]);
+    expect(h.auth.logout).toHaveBeenCalledOnce();
+    expect(h.users.getAllInfo).not.toHaveBeenCalled();
+  });
+
+  it('shows an unknown version instead of a fabricated release number', async () => {
+    const h = await render('Free', 2, 1, '');
+    expect(h.element.querySelector('.profile-version')?.textContent?.trim()).toBe('版本 —');
   });
 });

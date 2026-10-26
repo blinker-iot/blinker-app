@@ -1,4 +1,4 @@
-<ion-header class="main-tab-header">
+<ion-header class="main-tab-header home-tab-header">
   <ion-toolbar>
     <ion-title>{{ 'PROFILE.TITLE' | translate }}</ion-title>
     <ion-buttons slot="end">
@@ -8,12 +8,15 @@
         [attr.aria-label]="messageButtonLabel"
         (click)="goto('/message')"
       >
-        <i class="fa-light fa-message-dots"></i>
+        <i class="fa-light fa-message-dots" aria-hidden="true"></i>
         @if (showUnreadMessageBadge) {
         <span class="notice-badge" aria-hidden="true">{{ unreadMessageBadge }}</span>
         }
       </ion-button>
       }
+      <ion-button class="header-action" [attr.aria-label]="'PROFILE.SETTINGS' | translate" (click)="goto('/settings')">
+        <i class="fa-light fa-gear" aria-hidden="true"></i>
+      </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
@@ -22,38 +25,36 @@
   <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
 
   <div class="profile-content">
-    <button type="button" class="user-info" (click)="goto('/user')">
-      <div class="avatar">
-        @if (avatar) {
-        <img [src]="avatar" [alt]="'PROFILE.USER_AVATAR' | translate" />
-        } @else {
-        <span>{{ userName.slice(0, 1) }}</span>
-        }
-      </div>
-      <div class="info">
-        <div class="name">{{ userName }}</div>
-      </div>
-      <i class="fa-light fa-chevron-right profile-arrow"></i>
-    </button>
-
     <section class="account-card" aria-labelledby="account-entitlements-title" [attr.aria-busy]="refreshingAccount">
-      <div class="account-card-heading">
-        <h2 id="account-entitlements-title">{{ 'PROFILE.ACCOUNT_ENTITLEMENTS_TITLE' | translate }}</h2>
-        <button type="button" class="account-refresh" [disabled]="refreshingAccount" (click)="refreshAccount()">
+      <h2 id="account-entitlements-title" class="visually-hidden">{{ 'PROFILE.ACCOUNT_ENTITLEMENTS_TITLE' | translate }}</h2>
+      <button type="button" class="user-info" (click)="goto('/user')">
+        <div class="avatar">
+          @if (avatar) {
+          <img [src]="avatar" alt="" width="56" height="56" />
+          } @else {
+          <span>{{ userName.slice(0, 1) }}</span>
+          }
+        </div>
+        <div class="info">
+          <div class="name">{{ userName }}</div>
+        </div>
+        <i class="fa-light fa-chevron-right profile-arrow" aria-hidden="true"></i>
+      </button>
+      <div class="account-card-details">
+        <dl class="account-entitlements">
+          <div class="account-plan">
+            <dt class="visually-hidden">{{ 'PROFILE.PLAN_LABEL' | translate }}</dt>
+            <dd><span class="plan-badge" [class.pro]="accountEntitlements.pro">{{ accountEntitlements.planName || ('PROFILE.PLAN_UNKNOWN' | translate) }}</span></dd>
+          </div>
+          <div class="account-quota">
+            <dt>{{ 'PROFILE.DEVICE_QUOTA_LABEL' | translate }}</dt>
+            <dd class="device-quota">{{ deviceQuotaLabel }}</dd>
+          </div>
+        </dl>
+        <button type="button" class="account-refresh" [disabled]="refreshingAccount" [attr.aria-label]="(refreshingAccount ? 'PROFILE.ACCOUNT_REFRESHING' : 'PROFILE.ACCOUNT_REFRESH') | translate" (click)="refreshAccount()">
           <i class="fa-light fa-arrow-rotate-right" aria-hidden="true"></i>
-          {{ (refreshingAccount ? 'PROFILE.ACCOUNT_REFRESHING' : 'PROFILE.ACCOUNT_REFRESH') | translate }}
         </button>
       </div>
-      <dl class="account-entitlements">
-        <div>
-          <dt>{{ 'PROFILE.PLAN_LABEL' | translate }}</dt>
-          <dd><span class="plan-badge" [class.pro]="accountEntitlements.pro">{{ accountEntitlements.planName || ('PROFILE.PLAN_UNKNOWN' | translate) }}</span></dd>
-        </div>
-        <div>
-          <dt>{{ 'PROFILE.DEVICE_QUOTA_LABEL' | translate }}</dt>
-          <dd class="device-quota">{{ deviceQuotaLabel }}</dd>
-        </div>
-      </dl>
       @if (showAccountRefreshFailure && !refreshingAccount) {
       <p class="account-status" role="status">{{ 'PROFILE.ACCOUNT_REFRESH_FAILED' | translate }}</p>
       }
@@ -61,19 +62,39 @@
     </section>
 
     @for (menuGroup of menuGroups; track menuGroup.id) {
-    <app-menu-list [items]="menuGroup.items"
-      (itemSelected)="selectMenuItem($event)"></app-menu-list>
+      @if (menuGroup.id === 'support') {
+        <div class="profile-support">
+          <div class="support-links">
+          @for (item of menuGroup.items; track item.id) {
+            @if (!item.danger) {
+              <button type="button" (click)="selectMenuItem(item)">{{ item.title }}</button>
+            }
+          }
+          </div>
+          @for (item of menuGroup.items; track item.id) {
+            @if (item.danger) {
+              <button type="button" class="support-logout" (click)="selectMenuItem(item)">{{ item.title }}</button>
+            }
+          }
+        </div>
+      } @else {
+        <section class="profile-menu-group" [attr.aria-labelledby]="'profile-group-' + menuGroup.id">
+          <h2 class="visually-hidden" [id]="'profile-group-' + menuGroup.id">{{ menuGroup.title }}</h2>
+          <app-menu-list appearance="settings" [items]="menuGroup.items"
+            (itemSelected)="selectMenuItem($event)"></app-menu-list>
+        </section>
+      }
     }
 
     <div class="profile-version">
       <span>
         {{
           'PROFILE.VERSION'
-            | translate: { version: currentVersion || '2.4.1' }
+            | translate: { version: currentVersion }
         }}
       </span>
       @if (showNewVersion) {
-      <span class="version-dot"></span>
+      <span class="version-dot" aria-hidden="true"></span>
       }
     </div>
 

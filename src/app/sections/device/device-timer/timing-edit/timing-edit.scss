@@ -1,17 +1,21 @@
-@use '../../device-feature-page' as feature;
-@include feature.base;
-:host { --feature-accent: #f59e0b; }
-.device-context { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
-ion-content { --section-main-padding-bottom: 92px; }
-fieldset { min-width: 0; border: 0; padding: 0; }
-.setting-card { padding: 16px; margin-top: 12px; }
-.setting-card label { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
-input:not([type=checkbox]), select { min-width: 0; max-width: 100%; flex: 1; padding: 10px; border: 1px solid var(--blinker-border); border-radius: 8px; color: var(--blinker-text-primary); background: var(--blinker-surface); }
-.weekdays { display: flex; flex-wrap: wrap; gap: 10px; }
-p { font-size: 12px; line-height: 1.6; color: var(--blinker-text-secondary); }
-.editor-bottom-actions { position: fixed; right: 16px; left: 16px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 20; display: flex; gap: 8px; }
-.editor-bottom-actions button { min-height: 48px; border-radius: 16px; font: inherit; padding: 12px; }
-.save-action { flex: 1; border: 1px solid var(--ion-color-primary); color: var(--ion-color-primary-contrast); background: var(--ion-color-primary); }
-.delete-action { color: var(--ion-color-danger); background: var(--blinker-surface); border: 1px solid var(--ion-color-danger); }
-button:disabled, fieldset:disabled { opacity: .6; }
-.not-found { padding: 24px; }
+@use '../../../../../theme/workflow-surface' as workflow;
+
+@include workflow.page;
+
+.task-clock-note { color: var(--blinker-text-secondary); }
+.task-form { display: grid; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.setting-card { display: grid; gap: 16px; }
+.setting-card h2, .setting-card p { margin: 0; }
+.form-field { display: grid; gap: 8px; min-width: 0; font-size: .9375rem; line-height: 1.5; }
+.check-field, .weekdays label { display: flex; align-items: center; gap: 12px; min-height: 48px; font-size: .9375rem; line-height: 1.5; }
+.weekdays { display: flex; flex-wrap: wrap; gap: 8px; }
+.weekdays label { min-width: 64px; padding: 4px 8px; border-radius: 12px; background: var(--blinker-surface-muted); }
+input[type='checkbox'] { flex: 0 0 20px; width: 20px; height: 20px; margin: 0; accent-color: var(--ion-color-primary); }
+.editor-bottom-actions { display: flex; align-items: stretch; gap: 8px; }
+.editor-bottom-actions button { min-height: 48px; border-radius: 16px; font: inherit; line-height: 1.5; padding: 12px 16px; }
+.save-action { flex: 1; min-width: 0; border: 0; color: var(--ion-color-primary-contrast); background: var(--ion-color-primary); overflow-wrap: anywhere; }
+.delete-action { flex: 0 0 48px; min-width: 48px; color: var(--ion-color-danger); background: var(--blinker-surface); border: 1px solid var(--ion-color-danger); }
+.editor-bottom-actions button:active:not(:disabled) { opacity: .8; }
+.form-error, .target-unavailable { color: var(--ion-color-danger); }
+.form-error { margin: 0; padding: 12px 16px; border: 1px solid var(--ion-color-danger); border-radius: 12px; background: var(--blinker-surface); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

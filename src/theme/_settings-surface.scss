@@ -1,0 +1,149 @@
+// Opt-in page chrome only. Read the existing semantic theme; never override
+// --ui-* widget tokens or selectors inside an Agent document.
+@mixin tokens {
+  // Inherit the existing user-selected color-scheme rather than guessing from
+  // system preference. Engines without light-dark keep the existing palette.
+  @supports (color: light-dark(black, white)) {
+    --blinker-bg: light-dark(#f2f3f5, #111215);
+    --blinker-bg-elevated: light-dark(#f2f3f5, #111215);
+    --blinker-surface: light-dark(#ffffff, #202226);
+    --blinker-surface-muted: light-dark(#f2f4f7, #25272c);
+    --blinker-surface-active: light-dark(#f2f4f7, #25272c);
+    --blinker-text-primary: light-dark(#202124, #f2f2f4);
+    --blinker-text-secondary: light-dark(#64666c, #b0b2b9);
+    --blinker-text-tertiary: light-dark(#64666c, #b0b2b9);
+    --blinker-divider: light-dark(#ebebed, #32353b);
+    --blinker-border: light-dark(#ebebed, #32353b);
+    --ion-color-primary: light-dark(#096bd8, #69aaff);
+    --ion-color-primary-contrast: light-dark(#ffffff, #111215);
+    --ion-color-danger: light-dark(#ba343c, #ff9c9c);
+    --ion-color-danger-contrast: light-dark(#ffffff, #111215);
+  }
+
+  // Ionic chrome inherits its own surface variables from the legacy shell.
+  // Bind them locally as well so the migrated page and its toolbar agree.
+  --ion-background-color: var(--blinker-bg);
+  --ion-text-color: var(--blinker-text-primary);
+  --ion-toolbar-background: var(--blinker-bg);
+  --ion-toolbar-color: var(--blinker-text-primary);
+  --ion-card-background: var(--blinker-surface);
+  --ion-card-color: var(--blinker-text-primary);
+  --ion-item-background: var(--blinker-surface);
+
+  color: var(--blinker-text-primary, var(--ion-text-color));
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
+    'HarmonyOS Sans SC', 'MiSans', 'Noto Sans SC', 'Helvetica Neue', sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+// The page shell owns scrolling and safe-area insets, not this content column.
+@mixin page {
+  box-sizing: border-box;
+  width: min(720px, 100%);
+  margin-inline: auto;
+  padding: 20px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@mixin card {
+  min-width: 0;
+  padding: 16px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--blinker-surface, var(--ion-card-background));
+  box-shadow: none;
+}
+
+@mixin focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: 3px;
+  }
+}
+
+@mixin row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 16px;
+  color: var(--blinker-text-primary, var(--ion-text-color));
+  font: inherit;
+  text-align: start;
+}
+
+@mixin interaction {
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 120ms ease, color 120ms ease;
+
+  &:active:not(:disabled) {
+    background: var(--blinker-surface-active);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  @include focus-ring;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+@mixin icon-button {
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 48px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--blinker-text-secondary, var(--ion-color-medium));
+  font: inherit;
+
+  @include interaction;
+}
+
+@mixin button {
+  box-sizing: border-box;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--blinker-surface-muted);
+  color: var(--ion-color-primary);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  @include interaction;
+}
+
+@mixin field {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px;
+  border: 1px solid var(--blinker-border, var(--ion-border-color));
+  border-radius: 12px;
+  background: var(--blinker-surface-muted);
+  color: var(--blinker-text-primary, var(--ion-text-color));
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+
+  @include focus-ring;
+}

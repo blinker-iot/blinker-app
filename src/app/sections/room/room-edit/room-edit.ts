@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
 import {
@@ -9,6 +9,7 @@ import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-devi
 import { OrderData } from 'src/app/core/model/data.model';
 import { DataService } from 'src/app/core/services/data.service';
 import { RoomService, roomErrorMessage } from '../room.service';
+import { RoomReadRecovery } from '../room-read-recovery';
 
 @Component({
   selector: 'page-room-edit',
@@ -19,7 +20,7 @@ import { RoomService, roomErrorMessage } from '../room.service';
   imports: [IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, BDeviceImgComponent],
 })
 
-export class RoomEditPage implements OnInit {
+export class RoomEditPage implements OnDestroy {
   roomName = '';
   loaded = false;
   saving = false;
@@ -27,6 +28,7 @@ export class RoomEditPage implements OnInit {
   private draft: OrderData = { list: [], dict: {} };
   private revision = 0;
   private sessionEpoch = -1;
+  private readonly readRecovery: RoomReadRecovery;
 
   get deviceDataDict() {
     return this.dataService.device.dict;
@@ -46,18 +48,27 @@ export class RoomEditPage implements OnInit {
     private readonly alertCtrl: AlertController,
     private readonly activatedRoute: ActivatedRoute,
     private readonly nav: NavController,
-  ) {}
+  ) { this.readRecovery = new RoomReadRecovery(this.dataService); }
 
-  ngOnInit(): void {
-    void this.load();
+  async ionViewDidEnter(): Promise<void> {
+    this.readRecovery.enter();
+    if (!this.loaded) await this.load();
   }
 
+  ionViewWillLeave(): void { this.readRecovery.leave(); }
+
+  ngOnDestroy(): void { this.readRecovery.leave(); }
+
   async load(): Promise<void> {
+    if (this.saving) return;
+    const attempt = this.readRecovery.begin();
+    if (!attempt) return;
     this.loaded = false;
     this.error = '';
 
     try {
       const snapshot = await this.roomService.load();
+      if (!this.readRecovery.accepts(attempt)) return;
       const name = this.activatedRoute.snapshot.params['room'];
 
       if (!Object.hasOwn(snapshot.rooms, name)) {
@@ -72,7 +83,9 @@ export class RoomEditPage implements OnInit {
       this.roomName = name;
       this.loaded = true;
     } catch (error) {
+      if (!this.readRecovery.current(attempt)) return;
       this.error = roomErrorMessage(error);
+      this.readRecovery.afterFailure(error, attempt, () => void this.load());
     }
   }
 

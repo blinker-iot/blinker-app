@@ -39,6 +39,8 @@
     "ABOUT_US": "À propos"
   },
   "SETTINGS": {
+    "LANGUAGE_SAVE_FAILED": "Impossible d’appliquer la langue choisie. Réessayez.",
+    "REGION_CHANGE_FAILED": "Le changement de région n’a pas abouti. Vérifiez la région actuelle avant de réessayer.",
     "SERVICE_REGION": "Région du service",
     "SERVICE_REGION_HINT": "Changer de région de service nécessite de se reconnecter",
     "TITLE": "Paramètres",
@@ -75,6 +77,16 @@
     "FEATURE_PENDING": "Cette fonctionnalité sera bientôt disponible"
   },
   "COMMUNITY": {
+    "PRODUCT_PREVIEW": "Aperçu des produits",
+    "PREVIOUS_PAGE": "Page précédente",
+    "NEXT_PAGE": "Page suivante",
+    "PAGE_STATUS": "Page {{page}} sur {{total}}",
+    "PAGINATION": "Pagination du contenu",
+    "SEARCH": "Rechercher du contenu",
+    "CLOSE_SEARCH": "Fermer la recherche",
+    "CATEGORY_FILTER": "Filtrer le contenu par catégorie",
+    "LOCAL_PREVIEW_NOTE": "Exemples locaux uniquement, sans annonce réelle de lancement de produits.",
+    "PRODUCT_PREVIEW_STATUS": "Exemple de produit · Pas une annonce de lancement",
     "SEARCH_PLACEHOLDER": "Rechercher des idées, produits et conseils",
     "CATEGORY_RECOMMENDED": "Recommandé",
     "CATEGORY_INSPIRATION": "Idées intelligentes",
@@ -93,13 +105,15 @@
     "KITCHEN_AIR_TITLE": "Guide de gestion de l’air dans la cuisine",
     "KITCHEN_AIR_DESCRIPTION": "Associez la détection des fumées à la purification de l’air",
     "KITCHEN_AIR_META": "6 min de lecture · 8 643 vues",
-    "NO_RESULTS": "Aucun contenu correspondant. Essayez un autre mot-clé.",
+    "NO_RESULTS": "Aucun contenu correspondant. Changez de catégorie ou modifiez votre mot-clé.",
     "COMING_SOON": "Bientôt disponible",
     "OMNI_STATION_NAME": "Station de base tout-en-un",
     "OMNI_STATION_DESCRIPTION": "Nettoyage, collecte de poussière et séchage réunis",
     "OMNI_STATION_LAUNCH": "Disponible au 3e trimestre 2026"
   },
   "PROFILE": {
+    "DEVICE_MANAGEMENT": "Gestion des appareils",
+    "CONNECTION_AND_SERVICES": "Connexions et services",
     "TITLE": "Profil",
     "USER_AVATAR": "Avatar utilisateur",
     "VERSION": "Version {{version}}",

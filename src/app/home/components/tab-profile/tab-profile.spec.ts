@@ -8,14 +8,18 @@ describe('profile account refresh', () => {
         name: 'pro', display_name: 'Pro',
       }, entitlements: { 'iot.devices': 3 } },
       ownedDeviceCount: 1 as number | null,
+      room: { list: [] as unknown[] },
       userLoadError: new BehaviorSubject<unknown>(null), deviceLoadError: new BehaviorSubject<unknown>(null),
     };
     const users = { getAllInfo: vi.fn(async () => true) };
     const messages = { init: vi.fn(async () => undefined) };
-    const component = new TabProfileComponent(data as any, {} as any, {} as any,
+    const update = { currentVersion: undefined as string | undefined };
+    const auth = { logout: vi.fn() };
+    const navigation = { navigateForward: vi.fn() };
+    const component = new TabProfileComponent(data as any, update as any, auth as any,
       { instant: (key: string, params?: unknown) => `${key}:${JSON.stringify(params)}` } as any,
-      {} as any, messages as any, users as any);
-    return { data, users, component, messages };
+      navigation as any, messages as any, users as any);
+    return { data, users, component, messages, update, auth, navigation };
   }
 
   it('does not add a new auto-refresh or polling chain on initialization', () => {
@@ -78,5 +82,26 @@ describe('profile account refresh', () => {
     h.data.ownedDeviceCount = null; h.data.sessionEpoch++;
     expect(h.component.showAccountRefreshFailure).toBe(false);
     expect(h.component.accountEntitlements).toMatchObject({ planName: '', limit: null, used: null });
+  });
+
+  it('retains a real empty region list and never invents an installed version', () => {
+    const h = harness();
+    expect(h.component.roomNum).toBe(0);
+    expect(h.component.menuGroups[0].items.find(item => item.id === 'room')?.value).toContain('"count":0');
+    expect(h.component.currentVersion).toBe('—');
+    h.data.room.list = [{ id: 'room-1' }];
+    h.update.currentVersion = '3.0.0';
+    expect(h.component.roomNum).toBe(1);
+    expect(h.component.currentVersion).toBe('3.0.0');
+  });
+
+  it('keeps support navigation and logout on their original handlers', () => {
+    const h = harness();
+    h.component.selectMenuItem({ id: 'feedback', title: 'Feedback', route: '/feedback' });
+    h.component.selectMenuItem({ id: 'about', title: 'About', route: '/about' });
+    h.component.selectMenuItem({ id: 'logout', title: 'Logout', danger: true });
+    expect(h.navigation.navigateForward.mock.calls).toEqual([['/feedback'], ['/about']]);
+    expect(h.auth.logout).toHaveBeenCalledOnce();
+    expect(h.users.getAllInfo).not.toHaveBeenCalled();
   });
 });

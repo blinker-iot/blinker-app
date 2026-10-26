@@ -4,7 +4,6 @@ import {
   OnInit,
 } from '@angular/core';
 
-import { FormsModule } from '@angular/forms';
 import { IonicModule, NavController } from '@ionic/angular';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { DataService } from '../../../core/services/data.service';
@@ -27,7 +26,6 @@ import { profileEntitlements } from './profile-entitlements';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
-    FormsModule,
     IonicModule,
     TranslatePipe,
     MenuListComponent,
@@ -83,7 +81,7 @@ export class TabProfileComponent implements OnInit {
   }
 
   get roomNum() {
-    return this.dataService.room?.list?.length || 2;
+    return this.dataService.room?.list?.length ?? 0;
   }
 
   get sharedDeviceNum() {
@@ -95,7 +93,7 @@ export class TabProfileComponent implements OnInit {
   }
 
   get currentVersion() {
-    return this.updateService.currentVersion;
+    return this.updateService.currentVersion || '—';
   }
 
   get unreadMessageCount(): number {
@@ -165,7 +163,4 @@ export class TabProfileComponent implements OnInit {
     this.goto(item.route);
   }
 
-  checkCodePush() {
-    // 检查更新
-  }
 }

@@ -9,8 +9,8 @@
 
 <ion-content fullscreen="true">
   <main>
-    <div class="section-label">连接配置</div>
-    <form class="server-form" (ngSubmit)="save()" novalidate>
+    <form class="server-form" (ngSubmit)="save()" novalidate aria-labelledby="server-form-heading">
+      <h1 id="server-form-heading" class="section-heading">独立配置</h1>
       <div class="field" [class.field-invalid]="addressError">
         <label class="field-label" for="self-hosted-server-address">
           <span>服务器地址</span>
@@ -29,14 +29,14 @@
             [(ngModel)]="serverAddress"
             (ngModelChange)="clearValidation('address')"
             [attr.aria-invalid]="addressError ? 'true' : 'false'"
-            aria-describedby="address-help address-error"
+            [attr.aria-describedby]="addressError ? 'address-help address-error' : 'address-help'"
           />
         </span>
         <small id="address-help" class="field-help">
           支持 HTTP、HTTPS、WS 和 WSS，请填写完整协议。
         </small>
         @if (addressError) {
-        <small id="address-error" class="field-error">
+        <small id="address-error" class="field-error" role="alert">
           <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
           {{ addressError }}
         </small>
@@ -62,12 +62,14 @@
             [(ngModel)]="serverKey"
             (ngModelChange)="clearValidation('key')"
             [attr.aria-invalid]="keyError ? 'true' : 'false'"
-            aria-describedby="key-help key-error"
+            [attr.aria-describedby]="keyError ? 'key-help key-error' : 'key-help'"
           />
           <button
             type="button"
             class="key-toggle"
             (click)="toggleKeyVisibility()"
+            [attr.aria-label]="showKey ? '隐藏服务器密钥' : '显示服务器密钥'"
+            [attr.aria-pressed]="showKey"
           >
             <i
               class="fa-light"
@@ -81,17 +83,21 @@
           密钥仅保存在当前设备，请勿分享给他人。
         </small>
         @if (keyError) {
-        <small id="key-error" class="field-error">
+        <small id="key-error" class="field-error" role="alert">
           <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
           {{ keyError }}
         </small>
         }
       </div>
 
+      @if (operationError) {
+      <p class="field-error operation-error" role="alert">{{ operationError }}</p>
+      }
+
       @if (saved) {
       <div class="save-success" role="status">
         <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-        配置已保存
+        配置已保存在本机
       </div>
       }
 
@@ -110,7 +116,7 @@
     <aside class="privacy-tip">
       <i class="fa-light fa-shield-check" aria-hidden="true"></i>
       <div>
-        <strong>独立配置</strong>
+        <strong>仅保存本机配置</strong>
         <p>这里的设置不会修改应用内置的 API 地址或现有账户连接。</p>
       </div>
     </aside>

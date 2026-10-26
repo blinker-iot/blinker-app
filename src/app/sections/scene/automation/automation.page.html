@@ -6,24 +6,28 @@
   <ion-title>{{ view === 'editor' ? (editing ? '编辑自动化' : '新建自动化') : view === 'detail' ? '自动化详情' : '自动化' }}</ion-title>
   <ion-buttons slot="end"><ion-button [disabled]="automation.state().busy || view === 'editor'" (click)="refresh()">刷新</ion-button></ion-buttons>
 </ion-toolbar></ion-header>
-<ion-content><main>
+<ion-content><main class="workflow-page">
   @if (automation.state().busy) { <ion-progress-bar type="indeterminate" /> }
-  @if (automation.state().error) { <p role="alert">{{ automation.state().error }}</p> }
-  @if (automation.state().notice) { <p role="status">{{ automation.state().notice }}</p> }
-  @if (automation.state().refreshing) { <p role="status">正在更新列表与本地请求记录，不会重复提交已确认的配置…</p> }
+  @if (automation.state().error) { <div class="workflow-feedback error" role="alert">{{ automation.state().error }}</div> }
+  @if (automation.state().notice) { <div class="workflow-feedback confirmation" role="status">{{ automation.state().notice }}</div> }
+  @if (automation.state().refreshing) { <div class="workflow-feedback refreshing" role="status">正在更新列表与本地请求记录，不会重复提交已确认的配置…</div> }
   @if (automation.state().refreshError) {
-    <p role="alert">{{ automation.state().refreshError }}</p>
-    <ion-button fill="outline" [disabled]="automation.state().busy" (click)="automation.retryRefresh()">重新读取列表</ion-button>
+    <div class="workflow-feedback warning refresh-error" role="alert">
+      <p>{{ automation.state().refreshError }}</p>
+      <ion-button fill="outline" [disabled]="automation.state().busy" (click)="automation.retryRefresh()">重新读取列表</ion-button>
+    </div>
   }
   @if (automation.state().pending.length) {
-    <section class="pending"><h2>有保存结果待确认</h2><p class="hint">先核对原操作，避免重复创建或覆盖配置。</p>
+    <section class="pending workflow-stack" aria-label="待确认的自动化操作"><header class="workflow-section-heading"><h2>有保存结果待确认</h2><p class="hint">先核对原操作，避免重复创建或覆盖配置。</p></header>
       @for (pending of automation.state().pending; track pending.ruleId) {
-        <article>
-          <strong>{{ pending.operation === 'put' && pending.body.name ? pending.body.name : '待确认的自动化操作' }}</strong>
-          <p>{{ pending.operation === 'retire' ? '删除待确认' : pending.body.expectedRevision === 0 ? '新建待确认' : '修改待确认' }}</p>
+        <article class="surface-card pending-card">
+          <h3>{{ pending.operation === 'put' && pending.body.name ? pending.body.name : '待确认的自动化操作' }}</h3>
+          <p class="workflow-status">{{ pending.operation === 'retire' ? '删除待确认' : pending.body.expectedRevision === 0 ? '新建待确认' : '修改待确认' }}</p>
+          <div class="workflow-actions">
           <ion-button size="small" [disabled]="automation.state().busy" (click)="query(pending)">查询原请求</ion-button>
           <ion-button size="small" fill="outline" [disabled]="automation.state().busy" (click)="retry(pending)">恢复同一请求</ion-button>
-          <details><summary>技术详情</summary><code>{{ pending.ruleId }}</code><p>原版本 {{ pending.body.expectedRevision }}</p>
+          </div>
+          <details class="workflow-details"><summary>技术详情</summary><code>{{ pending.ruleId }}</code><p>原版本 {{ pending.body.expectedRevision }}</p>
             @if (pending.operation === 'put') { <p>{{ pendingCondition(pending) }}</p> }
           </details>
         </article>
@@ -32,44 +36,47 @@
   }
   @if (view === 'list') {
     <p class="hint">当设备满足条件时，自动执行另一设备的动作。启用后无需保持 App 打开。</p>
-    <div class="actions">
+    <div class="workflow-actions list-actions">
       @if (!automation.state().retired) { <ion-button [disabled]="!canStartCreate" (click)="startCreate()">新建自动化</ion-button> }
       <ion-button fill="clear" [disabled]="automation.state().busy" (click)="showHistory()">{{ automation.state().retired ? '当前自动化' : '已删除记录' }}</ion-button>
     </div>
     @if (automation.state().ready) {
-      <section class="rule-list"><h2>{{ automation.state().retired ? '已删除记录' : '我的自动化' }}</h2>
+      <section class="rule-list workflow-stack"><h2>{{ automation.state().retired ? '已删除记录' : '我的自动化' }}</h2>
         @for (rule of automation.state().rules; track rule.ruleId) {
-          <article>
-            <h3>{{ ruleTitle(rule) }}</h3>
-            <p>当：{{ automation.endpointLabel(rule.source) }}{{ triggerText(rule.condition, rule.source) }}</p>
-            <p>执行：{{ actionText(rule) }}</p>
-            <p class="rule-status">{{ ruleStatus(rule) }}</p>
-            @if (rule.targetOutcomeUnknown) { <p role="status">请先核对上次执行结果，不能重复创建来绕过。</p> }
+          <article class="surface-card rule-card">
+            <header class="rule-heading"><h3>{{ ruleTitle(rule) }}</h3><p class="workflow-status rule-status">{{ ruleStatus(rule) }}</p></header>
+            <dl class="rule-summary"><div><dt>当</dt><dd>{{ automation.endpointLabel(rule.source) }}{{ triggerText(rule.condition, rule.source) }}</dd></div>
+              <div><dt>执行</dt><dd>{{ actionText(rule) }}</dd></div></dl>
+            @if (rule.targetOutcomeUnknown) { <p class="workflow-feedback warning" role="status">请先核对上次执行结果，不能重复创建来绕过。</p> }
+            <div class="workflow-actions">
             <ion-button size="small" fill="clear" [disabled]="automation.state().busy" (click)="inspect(rule)">详情与结果</ion-button>
             @if (rule.retiredAtMs === null) {
               <ion-button size="small" fill="outline" [disabled]="automation.state().busy || hasPending(rule.ruleId)" (click)="automation.toggle(rule)">{{ rule.enabled ? '停用' : '启用' }}</ion-button>
               <ion-button size="small" fill="clear" [disabled]="automation.state().busy || hasPending(rule.ruleId)" (click)="startEdit(rule)">编辑</ion-button>
             }
+            </div>
           </article>
-        } @empty { <div class="empty"><p>{{ automation.state().retired ? '暂无已删除记录。' : '还没有自动化。选择一个条件和一个动作开始。' }}</p></div> }
+        } @empty { <div class="surface-card workflow-empty"><p>{{ automation.state().retired ? '暂无已删除记录。' : '还没有自动化。选择一个条件和一个动作开始。' }}</p></div> }
         @if (automation.state().nextAfter) { <ion-button [disabled]="automation.state().busy" (click)="automation.more()">加载更多</ion-button> }
       </section>
       @if (!automation.state().retired && automation.state().rules.length >= 4) { <p class="hint">目前最多保留 4 条自动化；删除不再使用的规则可腾出名额。</p> }
     }
-    <details class="help"><summary>使用说明与支持范围</summary>
+    <details class="help surface-card workflow-details"><summary>使用说明与支持范围</summary>
       <p>目前支持所属账号的普通 WiFi 设备，一条自动化包含一个条件和一个开关或非负整数属性动作。按钮、多步骤、延时暂不支持。</p>
       <p>首次数据和重连只建立起点，不执行动作。持续保持条件不会重复执行。每次动作间隔至少 30 秒，间隔内的新触发不会稍后补发。</p>
       <ion-button fill="clear" routerLink="/scene-archive">查看原场景配置（仅存档）</ion-button>
     </details>
   }
   @if (view === 'editor') {
-    <section class="editor"><h2>{{ editing ? '修改条件与动作' : '设置条件与动作' }}</h2>
+    <div class="editor workflow-stack">
+      <section class="surface-card form-section" aria-label="自动化名称"><h2>名称</h2>
       <ion-input label="名称" labelPlacement="stacked" maxlength="80" placeholder="例如：关灯后打开风扇" [(ngModel)]="name" [disabled]="automation.state().busy" />
       @if (!validName) { <p class="hint">请输入 1～80 个字符的名称，不包含控制字符。</p> }
       @if (!editing && !automation.state().ready && !automation.state().busy) {
         <ion-button fill="outline" (click)="automation.refresh()">重新查询自动化</ion-button>
       }
-      <h3>当</h3>
+      </section>
+      <section class="surface-card form-section" aria-label="自动化条件"><h2>当</h2>
       @if (editing) { <p>{{ automation.endpointLabel(editing.source) }}</p> }
       @else {
         <ion-select label="源属性" labelPlacement="stacked" [(ngModel)]="source" (ionChange)="sourceChanged()" [disabled]="automation.state().busy">
@@ -87,11 +94,12 @@
       @if (numericSource) {
         <ion-input label="触发阈值" labelPlacement="stacked" type="number" inputmode="decimal" [(ngModel)]="threshold" [disabled]="automation.state().busy" />
         <ion-input label="恢复幅度（回差）" labelPlacement="stacked" type="number" inputmode="decimal" [(ngModel)]="hysteresis" [disabled]="automation.state().busy" />
-        <details><summary>为什么需要回差？</summary><p>避免数值在阈值附近波动时反复触发。回到回差边界后才可再次触发；请按该属性的实际单位填写，不会自动猜测。</p></details>
+        <details class="workflow-details"><summary>为什么需要回差？</summary><p>避免数值在阈值附近波动时反复触发。回到回差边界后才可再次触发；请按该属性的实际单位填写，不会自动猜测。</p></details>
         @if (conditionValue; as selected) { <p class="hint">{{ conditionText(selected) }}</p> }
         @else { <p class="hint">请填写有效阈值和正回差，两个边界须能区分。</p> }
       }
-      <h3>就执行</h3>
+      </section>
+      <section class="surface-card form-section" aria-label="自动化动作"><h2>就执行</h2>
       @if (editing) { <p>{{ automation.endpointLabel(editing.target) }}</p><p class="hint">保留原设备与属性，仅修改条件、目标值和名称。</p> }
       @else {
         <ion-select label="目标属性" labelPlacement="stacked" [(ngModel)]="target" (ionChange)="targetChanged()" [disabled]="automation.state().busy">
@@ -100,7 +108,7 @@
         @if (automation.state().ready && !targets.length) { <p class="hint">暂无可选动作，请使用另一台所属普通 WiFi 设备的可写开关或非负整数属性（0～4294967295，仍须符合设备范围）。</p> }
       }
       @if (automation.state().ready && !editing && (!sources.length || !targets.length)) {
-        <div class="capability-guide" aria-label="自动化设备能力引导">
+        <aside class="capability-guide" aria-label="自动化设备能力引导">
           <h3>准备设备能力</h3>
           <p class="hint">这里只读取已保存的能力，不会自动连接其他设备。打开所需设备控制页后返回，此处会更新可选属性。本次填写仅临时保留，不跨 App 重启。</p>
           @for (device of capabilityGuidance; track device.deviceId) {
@@ -111,7 +119,7 @@
               }
             </article>
           } @empty { <p class="hint">一条自动化需要两台不同的所属普通 WiFi 设备，请先添加或准备另一台设备。</p> }
-        </div>
+        </aside>
       }
       @if (numericTarget) {
         <ion-input label="目标值" labelPlacement="stacked" type="number" inputmode="numeric" [(ngModel)]="value" [disabled]="automation.state().busy" />
@@ -122,36 +130,43 @@
           缓存范围仅作提示，服务器会核对设备当前能力。</p>
         @if (targetValue === undefined) { <p class="hint">请填写符合设备范围的非负整数。</p> }
       } @else {
-        <ion-select label="目标值" [(ngModel)]="value" [disabled]="automation.state().busy || !selectedTarget"><ion-select-option [value]="true">{{ targetValueText(true) }}</ion-select-option><ion-select-option [value]="false">{{ targetValueText(false) }}</ion-select-option></ion-select>
+        <ion-select label="目标值" labelPlacement="stacked" [(ngModel)]="value" [disabled]="automation.state().busy || !selectedTarget"><ion-select-option [value]="true">{{ targetValueText(true) }}</ion-select-option><ion-select-option [value]="false">{{ targetValueText(false) }}</ion-select-option></ion-select>
       }
+      </section>
       <p class="hint">{{ editing ? '保存后保留原启停状态；已发出的动作不会撤回。' : '新建后先保存为未启用，检查无误后再启用。' }}</p>
+      <div class="workflow-actions editor-actions">
       <ion-button [disabled]="!canSave" (click)="save()">{{ editing ? '保存修改' : '保存自动化' }}</ion-button>
       <ion-button fill="clear" [disabled]="automation.state().busy" (click)="leaveView()">取消</ion-button>
-    </section>
+      </div>
+    </div>
   }
   @if (view === 'detail') {
     @if (automation.state().detail; as detail) {
-      <section><h2>{{ ruleTitle(detail.rule) }}</h2><p class="rule-status">{{ ruleStatus(detail.rule) }}</p>
-        <p>当：{{ automation.endpointLabel(detail.rule.source) }}{{ triggerText(detail.rule.condition, detail.rule.source) }}</p>
-        <p>执行：{{ actionText(detail.rule) }}</p>
+      <section class="surface-card rule-detail"><header class="rule-heading"><h2>{{ ruleTitle(detail.rule) }}</h2><p class="workflow-status rule-status">{{ ruleStatus(detail.rule) }}</p></header>
+        <dl class="rule-summary"><div><dt>当</dt><dd>{{ automation.endpointLabel(detail.rule.source) }}{{ triggerText(detail.rule.condition, detail.rule.source) }}</dd></div>
+          <div><dt>执行</dt><dd>{{ actionText(detail.rule) }}</dd></div></dl>
         <p class="hint">{{ conditionText(detail.rule.condition, detail.rule.source) }}。每次动作间隔至少 30 秒。</p>
-        @if (detail.rule.targetOutcomeUnknown) { <p role="status">上次执行结果待确认，不会自动重发；删除规则也不会撤回已发出的动作。</p> }
+        @if (detail.rule.targetOutcomeUnknown) { <p class="workflow-feedback warning" role="status">上次执行结果待确认，不会自动重发；删除规则也不会撤回已发出的动作。</p> }
+        <div class="workflow-actions">
         @if (detail.rule.retiredAtMs === null) {
           <ion-button [disabled]="!automation.state().ready || automation.state().busy || hasPending(detail.rule.ruleId)" (click)="automation.toggle(detail.rule)">{{ detail.rule.enabled ? '停用' : '启用' }}</ion-button>
           <ion-button fill="outline" [disabled]="!automation.state().ready || automation.state().busy || hasPending(detail.rule.ruleId)" (click)="startEdit(detail.rule)">编辑</ion-button>
           <ion-button color="danger" fill="clear" [disabled]="!automation.state().ready || automation.state().busy || hasPending(detail.rule.ruleId)" (click)="retire(detail.rule)">删除</ion-button>
         }
         @if (automation.state().reviewed; as reviewed) { <ion-button [disabled]="automation.state().busy" (click)="acceptChanged(reviewed)">已核对，停止本机跟踪</ion-button> }
-        <details><summary>技术详情</summary><code>{{ detail.rule.ruleId }}</code>
+        </div>
+        <details class="workflow-details"><summary>技术详情</summary><code>{{ detail.rule.ruleId }}</code>
           <p>配置版本 {{ detail.rule.definitionRevision }} · 源类型 {{ detail.rule.source.valueType }}</p>
           <p>{{ detail.rule.source.deviceId }} / {{ detail.rule.source.key }} → {{ detail.rule.target.deviceId }} / {{ detail.rule.target.key }}</p>
           <p>{{ statusText[detail.rule.status] }}</p>
         </details>
       </section>
-      <section><h2>最近执行</h2><details><summary>执行结果说明</summary><p>“设备已确认”表示设备收到并确认命令，不代表实物动作已完成。</p></details>
+      <section class="surface-card execution-history"><h2>最近执行</h2><details class="workflow-details"><summary>执行结果说明</summary><p>“设备已确认”表示设备收到并确认命令，不代表实物动作已完成。</p></details>
+        <div class="execution-list">
         @for (execution of detail.recentExecutions; track execution.executionId) {
           <p>{{ execution.createdAtMs | date:'MM-dd HH:mm:ss' }} · {{ executionText[execution.state] }}</p>
         } @empty { <p>暂无执行记录。保存或启用不等于已经触发。</p> }
+        </div>
       </section>
     }
   }

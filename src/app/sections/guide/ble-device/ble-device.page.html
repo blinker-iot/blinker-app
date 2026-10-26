@@ -8,7 +8,7 @@
 </ion-header>
 
 <ion-content class="method-ble" fullscreen="true">
-  <main>
+  <main [attr.aria-busy]="busy">
     @if (phase !== 'ready') {
     @if (pendingEnrollments.length) {
       <section class="setup-card ble-recovery" aria-labelledby="ble-recovery-heading">
@@ -58,6 +58,7 @@
       <span>{{ 'DEVICE_GUIDE.KEY_DEVICE_NAME' | translate }}</span>
       <input
         type="text"
+        autocomplete="off"
         maxlength="128"
         [disabled]="busy"
         [placeholder]="'DEVICE_GUIDE.KEY_DEVICE_NAME_PLACEHOLDER' | translate"
@@ -101,7 +102,7 @@
     </button>
     }
     } @else {
-      <section class="enrollment-result ready" aria-live="polite">
+      <section class="enrollment-result ready" role="status" aria-live="polite">
         <i class="fa-light fa-circle-check" aria-hidden="true"></i>
         <h2>{{ 'DEVICE_GUIDE.BLE_READY_TITLE' | translate }}</h2>
         <p>{{ 'DEVICE_GUIDE.BLE_READY_DESCRIPTION' | translate }}</p>

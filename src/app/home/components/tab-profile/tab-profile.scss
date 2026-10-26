@@ -1,8 +1,17 @@
+@use '../../../../theme/settings-surface' as settings;
+
 :host {
+  @include settings.tokens;
+
   --top-scroll-mask-height: calc(var(--ion-safe-area-top, 0px) + 64px);
   display: block;
   height: 100%;
-  color: var(--blinker-text-primary);
+}
+
+// A negative end margin puts part of the action outside Ionic's toolbar clip
+// and can move the title when the browser scrolls to a focused action.
+ion-header.main-tab-header ion-toolbar ion-buttons {
+  margin-inline-end: 0;
 }
 
 ion-content {
@@ -11,62 +20,45 @@ ion-content {
 }
 
 .profile-content {
+  @include settings.page;
+
   min-height: 100%;
-  padding: calc(var(--ion-safe-area-top, 0px) + 64px) 18px 18px;
-  background: var(--blinker-bg);
+  padding-top: calc(var(--ion-safe-area-top, 0px) + 80px);
+  padding-inline: max(16px, var(--ion-safe-area-left, 0px)) max(16px, var(--ion-safe-area-right, 0px));
+  padding-bottom: calc(88px + var(--ion-safe-area-bottom, 0px));
 }
 
-.version-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ion-color-primary);
-  box-shadow: 0 0 0 2px var(--blinker-bg);
-}
-
-.notice-badge {
-  position: absolute;
-  top: 3px;
-  right: 1px;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
-  border: 2px solid var(--blinker-bg);
-  border-radius: 9px;
-  background: var(--ion-color-primary);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1;
+.account-card {
+  @include settings.card;
 }
 
 .user-info {
-  width: 100%;
-  margin: 13px 0 22px;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  @include settings.interaction;
+
   display: flex;
   align-items: center;
-  color: var(--blinker-text-primary);
-  text-align: left;
+  gap: 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
 }
 
 .avatar {
-  width: 66px;
-  height: 66px;
-  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.75);
   border-radius: 50%;
-  background: linear-gradient(145deg, #71b7ff, #3069de);
-  box-shadow: 0 8px 22px rgba(var(--ion-color-primary-rgb), 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: var(--blinker-surface-muted);
+  color: var(--ion-color-primary);
 
   img {
     width: 100%;
@@ -74,128 +66,167 @@ ion-content {
     object-fit: cover;
   }
 
-  span {
-    color: white;
-    font-size: 25px;
-    font-weight: 600;
-  }
+  span { font-size: 1.5rem; font-weight: 600; }
 }
 
 .info {
   min-width: 0;
   flex: 1;
-  padding-left: 16px;
 
   .name {
-    overflow: hidden;
-    color: var(--blinker-text-primary);
-    font-size: 21px;
+    overflow-wrap: anywhere;
+    font-size: 1.25rem;
     font-weight: 600;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.5;
   }
 }
 
 .profile-arrow {
-  color: var(--blinker-text-tertiary);
-  font-size: 13px;
+  flex: 0 0 auto;
+  color: var(--blinker-text-secondary);
+  font-size: 12px;
 }
 
-.account-card {
-  padding: 16px;
-  border: 1px solid var(--blinker-border);
-  border-radius: 14px;
-  background: var(--blinker-surface);
-  box-shadow: var(--blinker-shadow-soft);
-}
-
-.account-card-heading {
+.account-card-details {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-
-  h2 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-  }
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--blinker-divider);
 }
 
 .account-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  padding: 6px 0 6px 8px;
-  border: 0;
-  background: transparent;
-  color: var(--ion-color-primary);
-  font-size: 12px;
+  @include settings.icon-button;
 
-  &:disabled { opacity: 0.55; }
+  color: var(--ion-color-primary);
 }
 
 .account-entitlements {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  gap: 16px;
-  margin: 18px 0 14px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1;
+  gap: 8px 12px;
+  margin: 0;
 
   dt {
     color: var(--blinker-text-secondary);
-    font-size: 12px;
+    font-size: 0.75rem;
+    line-height: 1.5;
   }
 
   dd {
-    margin: 8px 0 0;
+    margin: 0;
     overflow-wrap: anywhere;
-    font-size: 16px;
+    font-size: 0.9375rem;
     font-weight: 600;
+    line-height: 1.5;
   }
 }
 
+.account-plan,
+.account-quota { min-width: 0; }
+
+.account-quota { flex: 1 1 9rem; }
+
 .plan-badge {
   display: inline-block;
+  max-width: 100%;
   padding: 3px 9px;
-  border-radius: 6px;
-  background: rgba(var(--ion-color-primary-rgb), 0.08);
+  border-radius: 8px;
+  background: var(--blinker-surface-muted);
   color: var(--blinker-text-secondary);
-  font-size: 13px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 
   &.pro { color: var(--ion-color-primary); }
 }
 
 .account-hint,
 .account-status {
-  margin: 0;
-  color: var(--blinker-text-tertiary);
-  font-size: 11px;
-  line-height: 1.6;
+  margin: 8px 0 0;
+  color: var(--blinker-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
-.account-status {
-  margin-bottom: 6px;
-  color: var(--ion-color-warning-shade);
+.account-status { color: var(--ion-color-danger); }
+
+.profile-menu-group { min-width: 0; }
+
+app-menu-list { display: block; }
+
+.profile-support { text-align: center; }
+
+.support-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 8px;
 }
 
-app-menu-list {
-  display: block;
-  margin-top: 12px;
+.support-links button,
+.support-logout {
+  @include settings.icon-button;
+
+  flex: 0 1 auto;
+  padding: 12px 8px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
+
+.support-logout { margin-top: 8px; color: var(--ion-color-danger); }
 
 .profile-version {
-  margin-top: 14px;
-  color: var(--blinker-text-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 11px;
+  gap: 8px;
+  color: var(--blinker-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.5;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .version-dot {
+  width: 6px;
+  height: 6px;
   flex: 0 0 auto;
-  box-shadow: none;
+  border-radius: 50%;
+  background: var(--ion-color-primary);
+}
+
+.notice-badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  min-height: 18px;
+  padding: 0 4px;
+  border: 2px solid var(--blinker-bg);
+  border-radius: 10px;
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

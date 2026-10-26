@@ -66,7 +66,7 @@ export class DeviceStoragePage implements OnDestroy {
     }));
     this.subscriptions.add(visibility.active.subscribe(active => {
       if (!active) this.cancelAndClear();
-      else if (this.visible && this.accountCurrent()) void this.refresh();
+      else if (this.visible && this.accountCurrent() && !this.state().error) void this.refresh();
     }));
     this.subscriptions.add(data.deviceDataLoader.subscribe(() => {
       if (this.visible && !this.available) {
@@ -120,7 +120,10 @@ export class DeviceStoragePage implements OnDestroy {
   }
   ionViewWillLeave(): void { this.close(); }
   ngOnDestroy(): void { this.destroyed = true; this.close(); this.subscriptions.unsubscribe(); }
-  close(): void { this.visible = false; this.account = undefined; this.cancelAndClear(); }
+  close(): void {
+    this.visible = false; this.account = undefined; this.cancelAndClear();
+    this.state.update(s => ({ ...s, error: '' }));
+  }
   private cancelAndClear(): void {
     ++this.generation; this.controller?.abort(); this.controller = undefined;
     this.state.update(s => ({ ...s, busy: false, ready: false, rows: [], nextCursor: null, policyConfirmed: false }));

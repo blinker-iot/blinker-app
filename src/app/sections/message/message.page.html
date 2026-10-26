@@ -1,9 +1,9 @@
-<ion-header class="message-header">
+<ion-header class="message-header control-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       @if (detailItem) {
       <ion-button class="header-back" aria-label="返回消息列表" (click)="closeDetail()">
-        <i class="fa-light fa-chevron-left"></i>
+        <i class="fa-light fa-chevron-left" aria-hidden="true"></i>
       </ion-button>
       } @else {
       <ion-back-button text="" defaultHref="/home/device"></ion-back-button>
@@ -22,9 +22,9 @@
         (click)="markAllRead()"
       >
         @if (markingAllRead) {
-        <ion-spinner name="crescent"></ion-spinner>
+        <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
         } @else {
-        <i class="fa-light fa-check-double"></i>
+        <i class="fa-light fa-check-double" aria-hidden="true"></i>
         }
 
       </ion-button>
@@ -39,9 +39,9 @@
         (click)="deleteMessage(detailItem, $event)"
       >
         @if (isDeleting(detailItem)) {
-        <ion-spinner name="crescent"></ion-spinner>
+        <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
         } @else {
-        <i class="fa-light fa-trash-can"></i>
+        <i class="fa-light fa-trash-can" aria-hidden="true"></i>
         }
 
       </ion-button>
@@ -52,25 +52,25 @@
 </ion-header>
 
 <ion-content fullscreen="true">
-  <div class="message-content">
+  <main class="message-content">
 
     @if (actionError && !detailItem) {
     <div class="status-banner" role="status">
-      <i class="fa-light fa-circle-info"></i>
+      <i class="fa-light fa-circle-info" aria-hidden="true"></i>
       <span>{{ actionError }}</span>
     </div>
     }
 
     @if (detailItem) {
       @if (detailLoading) {
-      <div class="message-state" data-testid="message-detail-loading">
-        <ion-spinner name="crescent"></ion-spinner>
+      <div class="message-state" role="status" data-testid="message-detail-loading">
+        <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
         <strong>正在加载消息详情</strong>
       </div>
       } @else {
         @if (detailError) {
         <div class="status-banner status-banner--error" role="alert">
-          <i class="fa-light fa-circle-exclamation"></i>
+          <i class="fa-light fa-circle-exclamation" aria-hidden="true"></i>
           <span>{{ detailError }}</span>
           <button type="button" (click)="retryDetail()">重试</button>
         </div>
@@ -106,26 +106,26 @@
       </article>
       }
     } @else if (initialLoading) {
-    <div class="message-state" data-testid="message-loading">
-      <ion-spinner name="crescent"></ion-spinner>
+    <div class="message-state" role="status" data-testid="message-loading">
+      <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
       <strong>正在加载消息</strong>
     </div>
     } @else if (pageError && messages.length === 0) {
     <div class="message-state message-state--error" role="alert" data-testid="message-error">
-      <i class="fa-light fa-cloud-exclamation"></i>
+      <i class="fa-light fa-cloud-exclamation" aria-hidden="true"></i>
       <strong>{{ pageError }}</strong>
       <button type="button" (click)="loadFirst()">重试</button>
     </div>
     } @else if (messageService.hasLoaded && messages.length === 0) {
-    <div class="message-state" data-testid="message-empty">
-      <i class="fa-light fa-inbox"></i>
+    <div class="message-state" role="status" data-testid="message-empty">
+      <i class="fa-light fa-inbox" aria-hidden="true"></i>
       <strong>暂无消息</strong>
       <span>新消息将显示在这里</span>
     </div>
     } @else if (messages.length > 0) {
       @if (messageService.errorMessage) {
       <div class="status-banner status-banner--error" role="alert">
-        <i class="fa-light fa-circle-exclamation"></i>
+        <i class="fa-light fa-circle-exclamation" aria-hidden="true"></i>
         <span>{{ messageService.errorMessage }}</span>
         <button type="button" (click)="loadFirst()">重试</button>
       </div>
@@ -141,7 +141,7 @@
         <strong>{{ unreadTotal }} 条未读</strong>
       </span>
     </div>
-    <section class="message-list">
+    <section class="message-list" aria-label="消息列表">
       @for (message of messages; track message.id) {
       <article class="message-item" [class.is-unread]="message.unread">
         <button
@@ -184,18 +184,18 @@
           (click)="deleteMessage(message, $event)"
         >
           @if (isDeleting(message)) {
-          <ion-spinner name="crescent"></ion-spinner>
+          <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
           } @else {
-            <i class="fa-light fa-trash-can"></i>
+            <i class="fa-light fa-trash-can" aria-hidden="true"></i>
           }
         </button>
       </article>
       }
 
     </section>
-    <div class="inbox-hint">
+    <div class="inbox-hint" role="status">
       @if (messageService.loadingMore) {
-      <ion-spinner name="dots"></ion-spinner>
+      <ion-spinner name="dots" aria-hidden="true"></ion-spinner>
       <strong>正在加载更多消息</strong>
       } @else if (!messageService.hasMore) {
       <strong>以上是全部消息</strong>
@@ -204,7 +204,7 @@
     </div>
     }
 
-  </div>
+  </main>
 
   @if (!detailItem) {
   <ion-refresher slot="fixed" (ionRefresh)="refreshMessages($event)">

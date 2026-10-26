@@ -129,6 +129,7 @@ export const routes: Routes = [
     path: 'automation-manager',
     canMatch: [deploymentGuard('automation')],
     loadComponent: () => import('./sections/scene/automation/automation.page').then(m => m.AutomationPage),
+    canDeactivate: [(component: { canDeactivate(): Promise<boolean> | boolean }) => component.canDeactivate()],
   },
   {
     path: 's/:token',

@@ -39,6 +39,8 @@
     "ABOUT_US": "Über uns"
   },
   "SETTINGS": {
+    "LANGUAGE_SAVE_FAILED": "Die gewählte Sprache konnte nicht angewendet werden. Bitte erneut versuchen.",
+    "REGION_CHANGE_FAILED": "Der Regionswechsel wurde nicht abgeschlossen. Aktuelle Region prüfen und erneut versuchen.",
     "SERVICE_REGION": "Serviceregion",
     "SERVICE_REGION_HINT": "Nach dem Wechsel der Serviceregion müssen Sie sich erneut anmelden",
     "TITLE": "Einstellungen",
@@ -75,6 +77,16 @@
     "FEATURE_PENDING": "Diese Funktion ist bald verfügbar"
   },
   "COMMUNITY": {
+    "PRODUCT_PREVIEW": "Produktvorschau",
+    "PREVIOUS_PAGE": "Vorherige Seite",
+    "NEXT_PAGE": "Nächste Seite",
+    "PAGE_STATUS": "Seite {{page}} von {{total}}",
+    "PAGINATION": "Inhaltsseiten",
+    "SEARCH": "Inhalte suchen",
+    "CLOSE_SEARCH": "Suche schließen",
+    "CATEGORY_FILTER": "Inhalte nach Kategorie filtern",
+    "LOCAL_PREVIEW_NOTE": "Nur lokale Beispiele, keine tatsächliche Ankündigung eines Marktstarts.",
+    "PRODUCT_PREVIEW_STATUS": "Produktbeispiel · Keine Marktstartankündigung",
     "SEARCH_PLACEHOLDER": "Ideen, Produkte und Tipps suchen",
     "CATEGORY_RECOMMENDED": "Empfohlen",
     "CATEGORY_INSPIRATION": "Smarte Ideen",
@@ -93,13 +105,15 @@
     "KITCHEN_AIR_TITLE": "Ratgeber für gute Küchenluft",
     "KITCHEN_AIR_DESCRIPTION": "Dunsterkennung mit Luftreinigung verbinden",
     "KITCHEN_AIR_META": "6 Min. Lesezeit · 8.643 Aufrufe",
-    "NO_RESULTS": "Keine passenden Inhalte. Versuchen Sie ein anderes Suchwort.",
+    "NO_RESULTS": "Keine passenden Inhalte. Wechseln Sie die Kategorie oder ändern Sie den Suchbegriff.",
     "COMING_SOON": "Demnächst verfügbar",
     "OMNI_STATION_NAME": "Omni-Basisstation",
     "OMNI_STATION_DESCRIPTION": "Reinigung, Staubaufnahme und Trocknung in einem",
     "OMNI_STATION_LAUNCH": "Verfügbar ab Q3 2026"
   },
   "PROFILE": {
+    "DEVICE_MANAGEMENT": "Geräteverwaltung",
+    "CONNECTION_AND_SERVICES": "Verbindungen und Dienste",
     "TITLE": "Profil",
     "USER_AVATAR": "Benutzeravatar",
     "VERSION": "Version {{version}}",

@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@capacitor/clipboard';
 
@@ -8,11 +8,7 @@ import {
   IonButtons,
   IonContent,
   IonHeader,
-  IonItem,
-  IonList,
-  IonPopover,
-  IonRadio,
-  IonRadioGroup,
+  IonModal,
   IonSpinner,
   IonTitle,
   IonToolbar,
@@ -56,6 +52,7 @@ import { RoomService, roomErrorMessage } from '../../room/room.service';
 import { DeviceCardEditor } from '../../../home/device-card-editor.service';
 import { DeviceCardSettingsPanel } from '../../../home/components/device-card-settings/device-card-settings';
 import { environment } from 'src/environments/environment';
+import { PanelModeSelectorComponent } from './panel-mode-selector/panel-mode-selector.component';
 
 import {
   MenuListComponent,
@@ -68,6 +65,13 @@ type ManagedDevice = BlinkerDevice
   & Partial<DeviceKeyLogicalDevice>
   & Partial<DeviceKeyContext>;
 
+interface PanelModeSelectionScope {
+  device: ManagedDevice;
+  id: string;
+  accountId: string | undefined;
+  sessionEpoch: number;
+}
+
 @Component({
   selector: 'app-device-settings',
   standalone: true,
@@ -79,11 +83,7 @@ type ManagedDevice = BlinkerDevice
     IonButtons,
     IonContent,
     IonHeader,
-    IonItem,
-    IonList,
-    IonPopover,
-    IonRadio,
-    IonRadioGroup,
+    IonModal,
     IonSpinner,
     IonTitle,
     IonToolbar,
@@ -92,6 +92,7 @@ type ManagedDevice = BlinkerDevice
     MenuListComponent,
     TranslatePipe,
     DeviceCardSettingsPanel,
+    PanelModeSelectorComponent,
   ],
 })
 
@@ -104,6 +105,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   imageSaving = false;
   panelModeSaving = false;
   panelModeLoading = false;
+  panelModeSelectionOpen = false;
+  panelModeError = '';
+  private panelModeSelectionScope?: PanelModeSelectionScope;
+  @ViewChild('panelModeDialog') private panelModeDialog?: IonModal;
+  readonly canDismissPanelMode = (_data?: unknown, role?: string): boolean =>
+    role === 'scope-change' || !this.panelModeSaving;
   debugModeSaving = false;
   roomSelectionBusy = false;
   secretKey = '';
@@ -194,14 +201,16 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       {
         id: 'location',
         title: '地理位置',
+        icon: 'fa-location-dot',
         description: this.isSharedDevice ? '地理位置暂不向分享用户开放'
           : '在地图上查看或调整设备位置',
         route: `/device-manager/${this.id}/location`,
       },
       {
         id: 'logs',
-        title: '运行日志',
-        description: '当前尚未接入真实设备运行日志',
+        title: '活动记录',
+        icon: 'fa-list-check',
+        description: this.isSharedDevice ? '活动记录暂不向分享用户开放' : '查看最近 7 天保留的云端控制投递',
         route: `/device-manager/${this.id}/logs`,
       },
       {
@@ -227,6 +236,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       items.push({
         id: 'shortcut',
         title: '添加桌面快捷方式',
+        icon: 'fa-arrow-up-right-from-square',
         description: '使用设备图片创建直达该设备的桌面图标',
       });
     }
@@ -241,6 +251,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       {
         id: 'rooms',
         title: '所属区域',
+        icon: 'fa-house',
         description: this.device?.config.isPreview ? '预览设备不支持分配区域'
           : this.roomSelectionBusy ? '正在设置区域…'
           : this.dataService.roomRevision === null ? '选择设备所属区域'
@@ -250,6 +261,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       {
         id: 'update',
         title: '固件更新',
+        icon: 'fa-microchip',
         description: '检查版本并更新设备固件',
         badge: this.hasNewVersion ? '有新版本' : undefined,
         route: `/device-manager/${this.id}/update`,
@@ -257,11 +269,13 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       {
         id: 'guide',
         title: '设备配置',
+        icon: 'fa-gear',
         description: '重新配置该设备网络和密钥',
       },
       {
         id: 'uic',
         title: '界面配置',
+        icon: 'fa-pen-ruler',
         description: '配置该设备的界面',
         route: `/device-manager/${this.id}/uic`,
       },
@@ -271,6 +285,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       items.push({
         id: 'component-preview',
         title: '组件预览',
+        icon: 'fa-grid-2',
         description: '查看所有组件与主题效果',
         route: `/device-manager/${this.id}/component-preview`,
       });
@@ -280,6 +295,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       items.push({
         id: 'components',
         title: '组件配置中心',
+        icon: 'fa-sliders',
         description: '选择控制页面显示的设备字段',
         route: `/device-manager/${this.id}/components`,
       });
@@ -289,6 +305,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       items.push({
         id: 'sharing',
         title: '设备共享',
+        icon: 'fa-share-nodes',
         description: '邀请其他用户共同控制这台设备',
         route: `/share-manager/${this.id}?from=device-settings`,
       });
@@ -298,6 +315,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       {
         id: 'unbind',
         title: this.isSharedDevice ? '退出设备共享' : '解除设备绑定',
+        icon: 'fa-link-slash',
         description: this.isSharedDevice
           ? '移除这台由其他用户共享的设备'
           : '从账户中移除设备及其关联自动化',
@@ -308,15 +326,6 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
     return items;
   }
-
-  settingList = [
-    'CustomName',
-    'CustomIcon',
-    'LoadingExample',
-    'VoiceAssistant',
-    'AddShortcut',
-    'UpdateFirmware',
-  ];
 
   constructor(
     private readonly activatedRoute: ActivatedRoute,
@@ -340,6 +349,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.subscriptions.add(this.activatedRoute.paramMap.subscribe(params => {
       const nextId = params.get('id') ?? '';
+      if (nextId !== this.id) this.closePanelModeSelector(true);
       if (this.id && nextId !== this.id) this.cardEditor?.cancel();
       this.id = nextId;
       this.logicalDeviceId = this.id;
@@ -353,6 +363,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       if (loaded) this.bindDevice();
     }));
     this.subscriptions.add(this.dataService.authDataChanged?.subscribe(() => {
+      this.closePanelModeSelector(true);
       ++this.displayGeneration; this.displayBusy = false; this.displayOpen = false;
       this.displayMetadata = undefined; this.displayRows = []; this.displayError = '';
       this.bindDevice();
@@ -366,6 +377,7 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     const previous = this.device;
 
     this.device = this.dataService.getDevice(this.logicalDeviceId) as ManagedDevice;
+    if (previous !== this.device) this.closePanelModeSelector(true);
 
     this.supportsWifiProvisioning = environment.deployment.directAccess && this.isOwner
       && this.hasDeviceKeyContext
@@ -402,8 +414,61 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     }
   }
 
+  openPanelModeSelector(): void {
+    if (this.destroyed || !this.device || this.panelModeSelectionScope || this.panelModeSaving
+      || this.panelModeLoading || this.debugModeSaving) return;
+    this.panelModeSelectionScope = {
+      device: this.device, id: this.id,
+      accountId: this.dataService.auth?.uuid, sessionEpoch: this.dataService.sessionEpoch,
+    };
+    this.panelModeError = '';
+    this.panelModeSelectionOpen = true;
+  }
+
+  closePanelModeSelector(force = false): void {
+    if (this.panelModeSaving && !force) return;
+    this.panelModeSelectionOpen = false;
+    // Keep the modal mounted until Ionic has cleaned up focus and scroll locks.
+    if (force) void this.panelModeDialog?.dismiss(undefined, 'scope-change');
+  }
+
+  panelModeDismissed(): void {
+    this.panelModeSelectionOpen = false;
+    this.panelModeSelectionScope = undefined;
+    this.panelModeError = '';
+  }
+
+  private panelModeScopeCurrent(scope: PanelModeSelectionScope): boolean {
+    return !this.destroyed && this.panelModeSelectionOpen && this.panelModeSelectionScope === scope
+      && this.device === scope.device && this.id === scope.id
+      && this.dataService.auth?.uuid === scope.accountId && this.dataService.sessionEpoch === scope.sessionEpoch;
+  }
+
+  async confirmPanelMode(mode: PanelMode): Promise<void> {
+    const scope = this.panelModeSelectionScope;
+    if (!scope || !this.panelModeScopeCurrent(scope)) {
+      this.closePanelModeSelector(true);
+      return;
+    }
+    if ((mode !== 'normal' && mode !== 'custom') || this.panelModeSaving || this.panelModeLoading
+      || this.debugModeSaving || (mode === 'custom' && this.isSharedDevice && !this.device.config.customPanel)) return;
+    this.panelModeError = '';
+    if (mode === 'custom' && !this.device.config.customPanel) {
+      // Creating content is navigation, not a successful mode switch.
+      this.closePanelModeSelector();
+      await this.setPanelMode(mode);
+      return;
+    }
+    await this.setPanelMode(mode);
+    if (!this.panelModeScopeCurrent(scope)) return;
+    if (this.panelMode === mode) this.closePanelModeSelector();
+    else this.panelModeError = '未能保存显示模式，请重试。当前使用的模式未改变。';
+    this.cd.markForCheck();
+  }
+
   async setPanelMode(mode: PanelMode): Promise<void> {
-    if (!this.device || this.panelModeSaving || this.panelModeLoading || this.debugModeSaving || mode === this.panelMode) return;
+    if (!this.device || (mode !== 'normal' && mode !== 'custom') || this.panelModeSaving
+      || this.panelModeLoading || this.debugModeSaving) return;
 
     const device = this.device;
 
@@ -414,6 +479,8 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
       return;
     }
+
+    if (mode === this.panelMode) return;
 
     this.panelModeSaving = true;
 
@@ -486,10 +553,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
   ionViewWillLeave(): void {
     // Ionic may cache this page rather than destroy it on navigation.
     this.cardEditor?.cancel();
+    this.closePanelModeSelector(true);
   }
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.closePanelModeSelector(true);
     this.cardEditor?.cancel();
     ++this.displayGeneration;
     this.subscriptions.unsubscribe();

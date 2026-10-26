@@ -1,11 +1,14 @@
 import { normalizeUiTheme, UiTheme } from './ui-theme';
 import { DeviceUiEndpoint, DeviceUiSnapshot } from './device-ui.port';
 import {
-  COLOR_MAXIMUM, PAGE_WIDGET_TYPES, PAGE_WIDGET_VARIANTS, PageWidgetOptions, PageWidgetType, PageWidgetVariant,
-  MAX_EXTRA_KEYS, acceptsExtras, fitSize, parseWidgetOptions, parseWidgetVariant, sizeAllowed, widgetVariant,
+  PAGE_WIDGET_TYPES, PAGE_WIDGET_TITLE_MAX_BYTES, PageWidgetOptions, PageWidgetType, PageWidgetVariant,
+  MAX_EXTRA_KEYS, acceptsExtras, parseWidgetOptions, parseWidgetVariant, sizeAllowed, widgetVariant,
 } from './page-widget';
+import { variantsFor } from './page-widget-bindings';
+import { presetForVariant } from './widget-presets';
 
 export type { PageWidgetOptions, PageWidgetType, PageWidgetVariant } from './page-widget';
+export { variantsFor } from './page-widget-bindings';
 
 export const PAGE_LAYOUT_SCHEMA_VERSION = 1 as const;
 export const PAGE_LAYOUT_COLUMNS = 8 as const;
@@ -51,11 +54,6 @@ export interface PageLayoutDiff {
 const appearances: readonly PageWidgetAppearance[] = ['default', 'compact', 'emphasized'];
 const legacyWidgetTypes: readonly PageWidgetType[] = ['switch', 'button', 'slider', 'input', 'value'];
 
-// Default size of each type's default variant, as width x height.
-const DEFAULT_SIZES: Readonly<Record<PageWidgetType, [number, number]>> = {
-  switch: [2, 2], button: [2, 2], value: [2, 2], slider: [4, 1], select: [4, 2], input: [4, 2], color: [4, 4],
-};
-
 export function generateDefaultPageLayout(snapshot: DeviceUiSnapshot): PageLayout {
   if (!snapshot.manifestAccepted || !snapshot.manifestFingerprint) {
     throw new Error('accepted Manifest is required to generate PageLayout');
@@ -66,13 +64,15 @@ export function generateDefaultPageLayout(snapshot: DeviceUiSnapshot): PageLayou
       const binding = defaultBinding(endpoint);
       if (!binding) return [];
       const { type, variant } = binding;
+      const preset = presetForVariant(variant);
       const widget: PageLayoutWidget = {
         widgetId: `endpoint-${endpoint.id}`,
         type,
         endpointKey: endpoint.key,
         // Written out only when the endpoint cannot take its type's default variant.
         ...(variant !== widgetVariant(type) ? { variant } : {}),
-        grid: { x: 0, y: index, ...fitSize(variant, ...DEFAULT_SIZES[type]) },
+        options: { ...preset.options },
+        grid: { x: 0, y: index, width: preset.width, height: preset.height },
       };
       return [widget];
     }));
@@ -153,15 +153,21 @@ export function parsePageLayout(input: unknown, endpoints?: readonly DeviceUiEnd
 }
 
 // Shared presentation validation for V2 layouts and legacy device panels.
-export function parsePageWidgets(input: unknown, endpoints?: readonly DeviceUiEndpoint[]): PageLayoutWidget[] {
-  // New panels have no original schema-1 grid sizes to retain.
-  return parsePageWidgetsDocument(input, endpoints, false);
+export function parsePageWidgets(
+  input: unknown,
+  endpoints?: readonly DeviceUiEndpoint[],
+  previousWidgets: readonly PageLayoutWidget[] = [],
+): PageLayoutWidget[] {
+  // Only existing schema-1 widgets may retain their original dimensions during
+  // editing. New widgets and explicit presentation changes still use strict sizes.
+  return parsePageWidgetsDocument(input, endpoints, false, previousWidgets);
 }
 
 function parsePageWidgetsDocument(
   input: unknown,
   endpoints: readonly DeviceUiEndpoint[] | undefined,
   allowLegacySizes: boolean,
+  previousWidgets: readonly PageLayoutWidget[] = [],
 ): PageLayoutWidget[] {
   if (!Array.isArray(input) || input.length > PAGE_LAYOUT_MAX_WIDGETS) {
     throw new Error('PageLayout widgets are invalid');
@@ -171,8 +177,9 @@ function parsePageWidgetsDocument(
     ? new Map(endpoints.map(endpoint => [endpoint.key, endpoint]))
     : undefined;
   const ids = new Set<string>();
+  const previousById = new Map(previousWidgets.map(widget => [widget.widgetId, widget]));
   const widgets = input.map((value, index) => {
-    const widget = parseWidget(value, index, allowLegacySizes);
+    const widget = parseWidget(value, index, allowLegacySizes, previousById);
     if (ids.has(widget.widgetId)) throw new Error('PageLayout widgetId is duplicated');
     ids.add(widget.widgetId);
     const endpoint = endpointByKey?.get(widget.endpointKey);
@@ -252,7 +259,12 @@ export function migratePageLayout(input: unknown, snapshot: DeviceUiSnapshot, ad
   }, snapshot.endpoints);
 }
 
-function parseWidget(input: unknown, index: number, allowLegacySizes: boolean): PageLayoutWidget {
+function parseWidget(
+  input: unknown,
+  index: number,
+  allowLegacySizes: boolean,
+  previousById: ReadonlyMap<string, PageLayoutWidget>,
+): PageLayoutWidget {
   const label = `PageLayout widget ${index}`;
   const value = object(input, label);
   exactKeys(value, ['widgetId', 'type', 'endpointKey', 'extraKeys', 'title', 'appearance', 'variant', 'options', 'grid'], label);
@@ -260,7 +272,7 @@ function parseWidget(input: unknown, index: number, allowLegacySizes: boolean): 
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(widgetId)) throw new Error(`${label} widgetId is invalid`);
   const type = enumeration(value['type'], PAGE_WIDGET_TYPES, `${label} type`);
   const endpointKey = text(value['endpointKey'], 64, `${label} endpointKey`);
-  const title = value['title'] === undefined ? undefined : text(value['title'], 64, `${label} title`, true);
+  const title = value['title'] === undefined ? undefined : text(value['title'], PAGE_WIDGET_TITLE_MAX_BYTES, `${label} title`, true);
   const appearance = value['appearance'] === undefined
     ? undefined
     : enumeration(value['appearance'], appearances, `${label} appearance`);
@@ -282,7 +294,12 @@ function parseWidget(input: unknown, index: number, allowLegacySizes: boolean): 
   if (grid.x + grid.width > PAGE_LAYOUT_COLUMNS) throw new Error(`${label} exceeds the grid`);
   // Mirror Gateway: original schema-1 widgets accepted every bounded grid size.
   // An explicit variant, options or extra readings belongs to the newer contract.
-  const legacySize = allowLegacySizes && legacyWidgetTypes.includes(type)
+  const previous = previousById.get(widgetId);
+  // Moving/reordering or renaming does not change an existing size contract.
+  const retainsLegacySize = previous?.type === type && previous.endpointKey === endpointKey
+    && previous.variant === undefined && previous.options === undefined && previous.extraKeys === undefined
+    && previous.grid.width === grid.width && previous.grid.height === grid.height;
+  const legacySize = (allowLegacySizes || retainsLegacySize) && legacyWidgetTypes.includes(type)
     && value['variant'] === undefined && value['options'] === undefined && value['extraKeys'] === undefined;
   if (!legacySize && !sizeAllowed(widgetVariant(type, variant), grid.width, grid.height)) {
     throw new Error(`${label} size is not allowed for its variant`);
@@ -321,54 +338,8 @@ function defaultBinding(endpoint: DeviceUiEndpoint): { type: PageWidgetType; var
   return null;
 }
 
-// The variants a widget of `type` may take on this endpoint, the endpoint's
-// default first; empty when the type cannot bind it. Most variants fit every
-// endpoint of their type, but a few are made for one kind of endpoint only.
-export function variantsFor(type: PageWidgetType, endpoint: DeviceUiEndpoint): readonly PageWidgetVariant[] {
-  const all: readonly PageWidgetVariant[] = PAGE_WIDGET_VARIANTS[type];
-  const numeric = endpoint.valueType === 'integer' || endpoint.valueType === 'number';
-
-  if (type === 'switch') {
-    return endpoint.role === 'property' && endpoint.writable && endpoint.valueType === 'boolean' ? all : [];
-  }
-  if (type === 'button') {
-    if (endpoint.role !== 'action' || !endpoint.writable) return [];
-    if (endpoint.valueType === 'boolean' || endpoint.valueType === 'null') return ['action'];
-    // 指令键盘; four or five choices also read as up, down, left, right (and centre).
-    const choices = endpoint.valueType === 'text' ? endpoint.choices?.length ?? 0 : 0;
-    if (!choices) return [];
-    return choices === 4 || choices === 5 ? ['keys', 'dpad'] : ['keys'];
-  }
-  if (type === 'slider') {
-    if (!endpoint.writable || !numeric || !Number.isFinite(endpoint.minimum) || !Number.isFinite(endpoint.maximum)) return [];
-    // An action has no state to show, so it only takes the stepper: pick a value, then send it.
-    if (endpoint.role === 'action') return ['stepper'];
-    return endpoint.role === 'property' ? all : [];
-  }
-  if (type === 'select') return isChoice(endpoint) ? all : [];
-  if (type === 'color') return isColor(endpoint) ? all : [];
-  if (type === 'input') return endpoint.writable && (numeric || endpoint.valueType === 'text') ? all : [];
-
-  if (!endpoint.readable && !endpoint.notifies && endpoint.role !== 'event') return [];
-
-  const displayVariants = all.filter(variant => !['uptime', 'memory'].includes(variant)
-    || (endpoint.role === 'property' && numeric));
-  // An event is an occurrence: the status card shows when it last happened.
-  return endpoint.role === 'event' ? ['status', ...displayVariants.filter(variant => variant !== 'status')] : displayVariants;
-}
-
 function isCompatible(widget: Pick<PageLayoutWidget, 'type' | 'variant'>, endpoint: DeviceUiEndpoint): boolean {
   return variantsFor(widget.type, endpoint).includes(widgetVariant(widget.type, widget.variant));
-}
-
-function isChoice(endpoint: DeviceUiEndpoint): boolean {
-  return endpoint.role === 'property' && endpoint.writable && endpoint.valueType === 'text'
-    && !!endpoint.choices?.length;
-}
-
-function isColor(endpoint: DeviceUiEndpoint): boolean {
-  return endpoint.role === 'property' && endpoint.writable && endpoint.valueType === 'integer'
-    && endpoint.minimum === 0 && endpoint.maximum === COLOR_MAXIMUM;
 }
 
 function uniqueWidgetId(base: string, used: ReadonlySet<string>): string {

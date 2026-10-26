@@ -1,4 +1,8 @@
 @use './panel/panel-grid' as grid;
+@use '../../../theme/control-page-chrome' as chrome;
+
+@include chrome.header;
+@include chrome.action;
 
 // Always embedded in the device page, which paints the themed backdrop.
 :host {
@@ -8,18 +12,6 @@
   flex-direction: column;
 
   color: var(--blinker-text-primary);
-}
-
-ion-title {
-  .name {
-    font-size: 15px;
-  }
-
-  .state {
-    color: var(--blinker-text-secondary);
-
-    font-size: 10px;
-  }
 }
 
 ion-content {
@@ -34,7 +26,10 @@ ion-content {
   min-height: 100%;
   margin: 0 auto;
 
-  padding: calc(var(--transparent-page-content-top) + grid.$page-inset) grid.$page-inset grid.$page-bottom-inset;
+  padding: calc(var(--transparent-page-content-top) + grid.$page-inset)
+    max(#{grid.$page-inset}, var(--ion-safe-area-right, 0px))
+    calc(#{grid.$page-bottom-inset} + var(--ion-safe-area-bottom, 0px))
+    max(#{grid.$page-inset}, var(--ion-safe-area-left, 0px));
 }
 
 // The document owns its spacing and scrolling. The host only reserves chrome.
@@ -69,7 +64,8 @@ ion-content {
 .field,
 .event {
   border: 1px solid var(--blinker-border);
-  border-radius: var(--blinker-radius-control);
+  min-width: 0;
+  border-radius: var(--blinker-radius-card);
   background: var(--blinker-surface);
 }
 
@@ -81,10 +77,16 @@ ion-content {
 
 .notice {
   display: flex;
+  flex-wrap: wrap;
 
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+
+  > span { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+  > ion-button { flex-shrink: 0; margin-inline-start: auto; }
 }
 
 .notice.error,
@@ -99,26 +101,66 @@ ion-content {
 
 .telemetry-freshness {
   color: var(--blinker-text-secondary);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .telemetry-freshness.stale {
   color: var(--ion-color-warning-shade);
 }
 
-.summary {
+.live-data {
+  margin-top: 16px;
+  min-width: 0;
+  padding: 0 16px;
+  border-radius: var(--blinker-radius-card);
+  background: var(--blinker-surface);
+
+  summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    min-height: 56px;
+    padding-block: 12px;
+    cursor: pointer;
+    touch-action: manipulation;
+    list-style: none;
+
+    &::-webkit-details-marker { display: none; }
+    &::after { content: '+'; margin-inline-start: auto; color: var(--blinker-text-secondary); }
+    &:focus-visible { outline: 2px solid var(--ion-color-primary); outline-offset: -2px; border-radius: 8px; }
+  }
+
+  &[open] { padding-bottom: 16px; }
+  &[open] summary::after { content: '−'; }
+}
+
+.live-data-title { font-size: 14px; font-weight: 600; }
+
+.telemetry-summary, .live-data-hint {
   color: var(--blinker-text-secondary);
   font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
+
+.live-data-hint { margin: 0 0 12px; }
 
 .live-fields {
   display: grid;
   margin-top: 12px;
   gap: 10px;
+
+  &:empty { display: none; }
 }
 
 .field {
-  padding: 14px;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--blinker-divider);
+  background: transparent;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -152,6 +194,11 @@ ion-content {
   align-items: center;
   justify-content: center;
   flex-direction: column;
+  padding: 24px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .event {
@@ -162,11 +209,10 @@ ion-content {
 
   color: var(--blinker-text-secondary);
 
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.5;
 
   span {
     overflow-wrap: anywhere;
   }
 }
-
-ion-content { --background: transparent; }

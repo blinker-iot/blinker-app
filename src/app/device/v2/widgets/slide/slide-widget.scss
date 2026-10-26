@@ -3,25 +3,50 @@
 
 @include c.base;
 
-:host { justify-content: space-between; }
+:host {
+  flex-direction: row;
+  align-items: center;
+  padding-block: 8px;
+  gap: 12px;
+}
+
+.hd {
+  position: relative;
+  flex: 0 1 34%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+
+  &:has(.hd-ico) { padding-left: 28px; }
+}
+
+.hd-ico { position: absolute; top: 50%; left: 0; transform: translateY(-50%); }
+.hd-t { flex: none; max-width: 100%; }
 
 // A knob dragged along a pill. The accent builds up behind it as it travels
 // (--slide 0…1): plain at rest, solid when on. The knob sits in the padding,
 // so the ring around it is --gap on every side.
 .slide {
   --gap: 4px;
-  --knob: 40px;
+  --knob: 48px;
   --ease: 0.32s cubic-bezier(0.3, 0.7, 0.4, 1);
   // Width of the accent behind the knob, shared by the fill and the lit hint.
   --fill-w: calc(var(--knob) + 2 * var(--gap) + (100% - var(--knob) - 2 * var(--gap)) * var(--slide));
   position: relative;
+  flex: 1 0 56px;
+  min-width: 56px;
+  height: 56px;
   isolation: isolate;
   padding: var(--gap);
   overflow: hidden;
   border-radius: 999px;
   background: var(--ui-track);
 
-  @include theme.electronic { border: 1.5px dotted var(--ui-muted); background: none; }
+  @include theme.electronic {
+    --gap: 2.5px;
+    border: 1.5px dotted var(--ui-muted);
+    background: none;
+  }
 }
 
 .slide-fill {
@@ -49,6 +74,8 @@
   padding-left: calc(var(--knob) + var(--gap));
   color: var(--ui-muted);
   font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
   letter-spacing: var(--ui-tracking);
   text-transform: var(--ui-case);
   opacity: max(1 - 2 * var(--slide), 2 * var(--slide) - 1);
@@ -70,26 +97,39 @@
 
 .slide-knob {
   position: relative;
+  isolation: isolate;
   display: grid;
   place-items: center;
   width: var(--knob);
   height: var(--knob);
   margin-left: calc((100% - var(--knob)) * var(--slide));
-  padding: 11px;
+  padding: 15px;
   border-radius: 50%;
-  background: var(--ui-knob);
-  box-shadow: var(--ui-knob-shadow);
   color: var(--ui-accent);
   cursor: grab;
   touch-action: none;
   transition: margin-left var(--ease);
+
+  // A 40px visible knob inside a 48px drag/keyboard target.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--ui-knob);
+    box-shadow: var(--ui-knob-shadow);
+  }
 
   &:active { cursor: grabbing; }
 
   app-ui-icon { transition: transform var(--ease); }
   .flip { transform: rotate(180deg); }
 
-  @include theme.electronic { background: var(--ui-ink); color: var(--ui-bg); }
+  @include theme.electronic {
+    color: var(--ui-bg);
+    &::before { background: var(--ui-ink); }
+  }
 }
 
 // Follow the pointer exactly while dragging; ease only on release.

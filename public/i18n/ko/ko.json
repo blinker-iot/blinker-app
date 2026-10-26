@@ -39,6 +39,8 @@
     "ABOUT_US": "정보"
   },
   "SETTINGS": {
+    "LANGUAGE_SAVE_FAILED": "선택한 언어를 적용하지 못했습니다. 다시 시도하세요.",
+    "REGION_CHANGE_FAILED": "서비스 지역 변경이 완료되지 않았습니다. 현재 지역을 확인한 후 다시 시도하세요.",
     "SERVICE_REGION": "서비스 지역",
     "SERVICE_REGION_HINT": "서비스 지역을 변경하면 다시 로그인해야 합니다",
     "TITLE": "설정",
@@ -75,6 +77,16 @@
     "FEATURE_PENDING": "이 기능은 곧 제공될 예정입니다"
   },
   "COMMUNITY": {
+    "PRODUCT_PREVIEW": "제품 미리보기",
+    "PREVIOUS_PAGE": "이전 페이지",
+    "NEXT_PAGE": "다음 페이지",
+    "PAGE_STATUS": "{{total}}페이지 중 {{page}}페이지",
+    "PAGINATION": "콘텐츠 페이지",
+    "SEARCH": "콘텐츠 검색",
+    "CLOSE_SEARCH": "검색 닫기",
+    "CATEGORY_FILTER": "카테고리별 콘텐츠 필터",
+    "LOCAL_PREVIEW_NOTE": "이 페이지는 로컬 예시이며 실제 제품 출시 예고가 아닙니다.",
+    "PRODUCT_PREVIEW_STATUS": "제품 예시 · 실제 출시 예고 아님",
     "SEARCH_PLACEHOLDER": "아이디어, 제품 및 팁 검색",
     "CATEGORY_RECOMMENDED": "추천",
     "CATEGORY_INSPIRATION": "스마트 아이디어",
@@ -93,13 +105,15 @@
     "KITCHEN_AIR_TITLE": "주방 공기 관리 가이드",
     "KITCHEN_AIR_DESCRIPTION": "연기 감지와 공기 정화를 연동하세요",
     "KITCHEN_AIR_META": "6분 분량 · 조회 8,643회",
-    "NO_RESULTS": "일치하는 콘텐츠가 없습니다. 다른 키워드를 사용해 보세요.",
+    "NO_RESULTS": "일치하는 콘텐츠가 없습니다. 카테고리를 바꾸거나 검색 키워드를 수정해 보세요.",
     "COMING_SOON": "출시 예정",
     "OMNI_STATION_NAME": "올인원 베이스 스테이션",
     "OMNI_STATION_DESCRIPTION": "청소, 먼지 수집, 건조를 하나로",
     "OMNI_STATION_LAUNCH": "2026년 3분기 출시 예정"
   },
   "PROFILE": {
+    "DEVICE_MANAGEMENT": "기기 관리",
+    "CONNECTION_AND_SERVICES": "연결 및 서비스",
     "TITLE": "프로필",
     "USER_AVATAR": "사용자 아바타",
     "VERSION": "버전 {{version}}",

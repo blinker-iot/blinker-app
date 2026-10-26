@@ -112,6 +112,46 @@ describe('UserPage account cancellation', () => {
     vi.useRealTimers();
   });
 
+  it('derives the read-only identity from actual account data', () => {
+    expect(page.draftName).toBe('Person');
+    expect(page.draftEmail).toBe('person@example.com');
+    expect(page.avatar).toBe('');
+    expect(authService.logout).not.toHaveBeenCalled();
+    expect(userService.requestAccountDeletionCode).not.toHaveBeenCalled();
+    expect(userService.cancelBlinkerAccount).not.toHaveBeenCalled();
+  });
+
+  it('does not fabricate a verified security status or profile editing action', () => {
+    expect(page.securityMenuItems).toEqual([{
+      id: 'cancel-account',
+      title: '注销账号',
+      icon: 'fa-user-xmark',
+      danger: true,
+      showChevron: false,
+    }]);
+  });
+
+  it('updates read-only identity without writing account data', () => {
+    dataService.user.nickname = '  Another person  ';
+    dataService.user.email = ' another@example.com ';
+    dataService.userDataLoader.next(true);
+
+    expect(page.draftName).toBe('Another person');
+    expect(page.draftEmail).toBe('another@example.com');
+    expect(dataService.user.nickname).toBe('  Another person  ');
+    expect(dataService.user.email).toBe(' another@example.com ');
+    expect(userService.cancelBlinkerAccount).not.toHaveBeenCalled();
+  });
+
+  it('does not retain the previous account identity when the source is empty', () => {
+    dataService.user.nickname = '';
+    dataService.user.email = '';
+    dataService.userDataLoader.next(true);
+
+    expect(page.draftName).toBe('');
+    expect(page.draftEmail).toBe('');
+  });
+
   it('uses server-derived delivery details and expiry for the countdown', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-21T00:00:00Z'));

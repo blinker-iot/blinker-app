@@ -6,29 +6,37 @@ import { taskOperationText } from './device-timer.models';
 @Component({
   selector: 'app-task-status', imports: [IonButton, IonSpinner],
   template: `
-    <section class="task-summary" aria-label="任务容量与来源">
+    <section class="task-summary surface-card" aria-label="任务容量与来源">
       <strong class="capacity-text">{{ timer.capacityText }}</strong>
       <p class="source-text">{{ timer.sourceText }}</p>
     </section>
-    @if (timer.busy) { <p role="status"><ion-spinner name="crescent" />{{ timer.statusText }}</p> }
-    @if (timer.error) { <p role="alert">{{ timer.error }}</p> }
-    @if (error) { <p role="alert">{{ error }}</p> }
-    @if (timer.notice) { <p role="status">{{ timer.notice }}</p> }
-    @if (timer.timingText) {
+    @if (timer.busy) { <p class="workflow-feedback task-busy" role="status"><ion-spinner name="crescent" aria-hidden="true" />{{ timer.statusText }}</p> }
+    @if (timer.error) { <p class="workflow-feedback error" role="alert">{{ timer.error }}</p> }
+    @if (error) { <p class="workflow-feedback error" role="alert">{{ error }}</p> }
+    @if (timer.notice) { <p class="workflow-feedback" role="status">{{ timer.notice }}</p> }
+    @if (timer.timingText || timer.ready) {
+      <section class="task-diagnostics surface-card" aria-label="查询与耗时说明">
+      @if (timer.timingText) {
       <details class="task-timing-details"><summary>客户端操作耗时</summary>
         <p>{{ timer.timingText }}</p>
         <p>提交准备包含本地请求记录和发送节拍；确认段包含响应校验和请求记录整理。HTTP开始不是设备收到指令的时刻，确认也不代表到期动作已执行。</p>
       </details>
-    }
-    @if (timer.ready) {
+      }
+      @if (timer.ready) {
       <details class="task-query-details"><summary>查询与操作说明</summary>
         <p>当前查询修订 {{ timer.revision }}。设备有写入配额和开始冷却；被限流时稍后手动核对，不连续点击或自动重试。</p>
       </details>
+      }
+      </section>
     }
-    @if (!timer.busy && !timer.ready) { <ion-button fill="outline" (click)="timer.refresh()">重新查询</ion-button> }
-    @if (timer.canInitialize) { <ion-button (click)="initialize()">{{ timer.journal.authority ? '恢复原授权同步' : '启用/同步本机任务授权' }}</ion-button> }
+    @if ((!timer.busy && !timer.ready) || timer.canInitialize) {
+      <div class="workflow-actions task-recovery-actions">
+        @if (!timer.busy && !timer.ready) { <ion-button fill="outline" (click)="timer.refresh()">重新查询</ion-button> }
+        @if (timer.canInitialize) { <ion-button (click)="initialize()">{{ timer.journal.authority ? '恢复原授权同步' : '启用/同步本机任务授权' }}</ion-button> }
+      </div>
+    }
     @if (timer.pending) {
-      <section aria-label="未确认请求">
+      <section class="task-pending surface-card" aria-label="未确认请求">
         <strong>尚未确认：{{ operationText(timer.pending.operation) }}</strong>
         <p>断线不代表未执行；原请求和日志已保留，不自动生成新请求。</p>
         @if (timer.journal.held) { <p>原操作已暂停重提。同步授权不证明原操作未执行；请查询核对后明确停止本地追踪，不会替你重新开始任务。</p> }
@@ -38,13 +46,15 @@ import { taskOperationText } from './device-timer.models';
           <p>原操作请求号：<code>{{ timer.pending.requestId }}</code></p>
           @if (timer.journal.authority) { <p>授权同步请求号：<code>{{ timer.journal.authority.requestId }}</code></p> }
         </details>
-        <ion-button [disabled]="!timer.canRetry" (click)="retry()">恢复原请求</ion-button>
+        <div class="workflow-actions">
+        <ion-button fill="outline" [disabled]="!timer.canRetry" (click)="retry()">恢复原请求</ion-button>
         <ion-button fill="outline" [disabled]="timer.busy" (click)="timer.refresh()">查询当前任务</ion-button>
         <ion-button fill="clear" [disabled]="!timer.canReviewPending" (click)="forget()">已核对，停止追踪原请求</ion-button>
+        </div>
       </section>
     }
   `,
-  styles: ['p { overflow-wrap: anywhere; font-size: 12px; line-height: 1.6; } section { padding: 12px; border: 1px solid var(--blinker-border); border-radius: 12px; } .task-summary { margin-bottom: 12px; } .task-summary p { margin-bottom: 0; color: var(--blinker-text-secondary); } details { margin: 10px 0; font-size: 12px; color: var(--blinker-text-secondary); }'],
+  styleUrls: ['./task-status.component.scss'],
 })
 export class TaskStatusComponent {
   @Input({ required: true }) timer!: TimerService;

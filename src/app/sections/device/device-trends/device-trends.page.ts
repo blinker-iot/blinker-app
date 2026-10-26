@@ -42,6 +42,8 @@ export class DeviceTrendsPage implements OnDestroy {
   // This is only an uncertainty guard, not a replay queue. No request body or
   // account data is persisted; recovery always reads the authoritative policy.
   private needsConfirmation = false;
+  // Read failures require a user action; uncertain saves still recover by reading.
+  private readFailed = false;
 
   constructor(private readonly route: ActivatedRoute, private readonly data: DataService,
     private readonly history: DeviceV2PeriodicHistoryService, private readonly visibility: AppVisibilityService) {
@@ -49,7 +51,7 @@ export class DeviceTrendsPage implements OnDestroy {
       if (this.account && !this.accountCurrent()) { this.close(); this.needsConfirmation = false; }
     }));
     this.subscriptions.add(visibility.active.subscribe(active => {
-      if (!active) this.clear(true); else if (this.canQuery) void this.refresh();
+      if (!active) this.clear(true); else if (this.canQuery && !this.readFailed) void this.refresh();
     }));
     this.subscriptions.add(data.deviceDataLoader.subscribe(() => {
       if (this.visible && !this.available) { this.clear(); this.state.update(s => ({ ...s, error: '设备或访问权限已变化，请返回设备列表。' })); }
@@ -106,8 +108,10 @@ export class DeviceTrendsPage implements OnDestroy {
   close(): void { this.visible = false; this.account = undefined; this.clear(); }
   private clear(preserveFilter = false): void {
     ++this.generation; this.controller?.abort(); this.controller = undefined;
+    if (!preserveFilter) this.readFailed = false;
     this.state.update(s => ({ ...s, busy: false, ready: false, detail: null, rows: [], nextCursor: null,
-      draftKeys: [], draftEnabled: false, key: preserveFilter ? s.key : '', writeBlocked: this.needsConfirmation, error: '', notice: '' }));
+      draftKeys: [], draftEnabled: false, key: preserveFilter ? s.key : '', writeBlocked: this.needsConfirmation,
+      error: preserveFilter && this.readFailed ? s.error : '', notice: '' }));
   }
   selectField(key: string, selected: boolean): void {
     const s = this.state();
@@ -220,6 +224,7 @@ export class DeviceTrendsPage implements OnDestroy {
       manifestFingerprint: detail.manifestFingerprint, keys: [...s.draftKeys] };
   }
   private begin() {
+    this.readFailed = false;
     const request = { id: this.id, generation: ++this.generation, controller: this.controller = new AbortController() };
     this.state.update(s => ({ ...s, busy: true, error: '' })); return request;
   }
@@ -238,6 +243,7 @@ export class DeviceTrendsPage implements OnDestroy {
   }
   private fail(request: { id: string; generation: number; controller: AbortController }, error: unknown): void {
     if (!this.current(request)) return;
+    this.readFailed = true;
     const denied = error instanceof GatewayHttpError && [403, 404].includes(error.httpStatus);
     this.state.update(s => ({ ...s, ready: false, rows: [], nextCursor: null, ...(denied ? { detail: null, draftKeys: [], draftEnabled: false } : {}),
       error: denied ? '设备不存在或访问权限已变化，请返回设备列表。' : '尚未取得有效在线趋势，请手动刷新；不会使用缓存或演示点代替。' }));

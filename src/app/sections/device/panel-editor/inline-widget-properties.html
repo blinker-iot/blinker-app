@@ -1,0 +1,36 @@
+<header class="inline-heading">
+  <button type="button" class="cancel" aria-label="取消部件属性修改" (click)="canceled.emit()">×</button>
+  <h2>部件属性</h2>
+  <button type="button" class="apply" [disabled]="invalid || !widget || disabled" (click)="apply()">应用</button>
+</header>
+
+<div class="property-page">
+  @if (previewCard; as preview) {
+    <section class="preview-region" aria-label="组件只读外观预览">
+      <div class="panel">
+        <div class="cell" style="--col: 1; --row: 1"
+          [style.--span]="preview.widget.grid.width" [style.--rows]="preview.widget.grid.height">
+          <app-page-widget [card]="preview" [interactive]="false" />
+        </div>
+      </div>
+    </section>
+
+    <section class="property-scroll" aria-label="部件属性设置">
+      <div class="property-settings">
+        @if (error) { <p class="error" role="alert">{{ error }}</p> }
+        <p class="save-scope">应用到当前页面草稿；退出编辑时统一保存。</p>
+        @if (invalid) { <p class="validation-hint" role="status">请先修正标出的属性，再应用。</p> }
+        <app-widget-inspector [widget]="preview.widget" [field]="preview.field"
+          [extraCandidates]="extraCandidates" [draftVersion]="draftVersion" [disabled]="disabled"
+          (widgetChange)="updateWidget($event)" (invalidChange)="invalid = $event" />
+        <div class="order-actions" aria-label="无需拖动的排序操作">
+          <button type="button" [disabled]="disabled || !canMoveEarlier" (click)="moved.emit(-1)">前移</button>
+          <button type="button" [disabled]="disabled || !canMoveLater" (click)="moved.emit(1)">后移</button>
+        </div>
+        <button class="remove-button" type="button" [disabled]="disabled" (click)="removed.emit()">
+          <i class="fa-light fa-trash" aria-hidden="true"></i>移除此展示
+        </button>
+      </div>
+    </section>
+  }
+</div>

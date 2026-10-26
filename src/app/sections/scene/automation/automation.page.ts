@@ -2,16 +2,20 @@ import { ChangeDetectorRef, Component } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { AlertController, IonicModule } from '@ionic/angular';
+import { AlertController } from '@ionic/angular';
+import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonInput, IonProgressBar,
+  IonSelect, IonSelectOption, IonTitle, IonToolbar } from '@ionic/angular/standalone';
 import { AutomationCondition, AutomationIntent, AutomationRule, automationCondition, automationName } from '../../../core/device-v2/automation/contract';
 import { AutomationService } from './automation.service';
 import { automationChoiceValue, automationConditionText, automationExecutionText, automationRuleStatus, automationStatusText, automationTriggerText } from './automation.models';
 
 @Component({ selector: 'app-automation', templateUrl: './automation.page.html', styleUrls: ['./automation.page.scss'],
-  imports: [IonicModule, FormsModule, DatePipe, RouterLink], providers: [AutomationService] })
+  imports: [IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonInput, IonProgressBar,
+    IonSelect, IonSelectOption, IonTitle, IonToolbar, FormsModule, DatePipe, RouterLink], providers: [AutomationService] })
 export class AutomationPage {
   private generation = 0;
   private capabilityVisitScope?: string;
+  private discardConfirmation?: Promise<boolean>;
   view: 'list' | 'editor' | 'detail' = 'list';
   editing?: AutomationRule;
   name = ''; source = ''; target = ''; value: boolean | number | string | null = true;
@@ -120,8 +124,20 @@ export class AutomationPage {
   }
   backToList(): void { ++this.generation; this.capabilityVisitScope = undefined; this.resetForm(); this.setView('list'); }
   async leaveView(): Promise<void> {
-    if (this.view === 'editor' && this.draftChanged && !(await this.confirm('放弃尚未保存的修改？'))) return;
+    if (!await this.confirmDiscard()) return;
     this.backToList();
+  }
+  canDeactivate(): Promise<boolean> | boolean {
+    if (this.capabilityVisitScope && this.capabilityVisitScope === this.automation.accountScope) return true;
+    return this.confirmDiscard();
+  }
+  private async confirmDiscard(): Promise<boolean> {
+    if (this.view !== 'editor' || !this.draftChanged) return true;
+    if (!this.discardConfirmation) {
+      this.discardConfirmation = this.confirm('放弃尚未保存的修改？')
+        .finally(() => { this.discardConfirmation = undefined; });
+    }
+    return this.discardConfirmation;
   }
   get draftChanged(): boolean {
     if (!this.editing) return !!(this.name || this.source || this.target || this.threshold !== null || this.hysteresis !== null || !this.value);

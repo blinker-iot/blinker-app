@@ -4,6 +4,7 @@
 
 export const PAGE_WIDGET_TYPES = ['switch', 'button', 'slider', 'select', 'input', 'value', 'color'] as const;
 export type PageWidgetType = typeof PAGE_WIDGET_TYPES[number];
+export const PAGE_WIDGET_TITLE_MAX_BYTES = 64;
 
 // The first variant of each type is its default. Each variant is one component
 // of the 「Blinker 控件库」 design (docs/2026-10-10/设备组件库设计稿.html);

@@ -9,6 +9,17 @@ beforeEach(() => { environment.deployment = localCapabilities; });
 afterEach(() => { environment.deployment = originalDeployment; });
 
 describe('profile automation entry', () => {
+  it('groups device management and connections without burying existing support routes', () => {
+    const groups = createProfileMenuGroups({ roomNum: 0, sharedDeviceNum: 0 }, (key, params) => `${key}:${JSON.stringify(params)}`);
+    expect(groups.map(group => group.id)).toEqual(['devices', 'connections', 'support']);
+    expect(groups[0].title).toBe('PROFILE.DEVICE_MANAGEMENT:undefined');
+    expect(groups[0].items.map(item => item.id)).toEqual(['room', 'automation', 'sharing']);
+    expect(groups[0].items[0].value).toContain('"count":0');
+    expect(groups[1].title).toBe('PROFILE.CONNECTION_AND_SERVICES:undefined');
+    expect(groups[1].items.map(item => item.route)).toEqual(['/self-hosted-server', '/third-party-services']);
+    expect(groups[2].items.map(item => item.route)).toEqual(['/feedback', '/about', undefined]);
+    expect(groups[2].items.at(-1)).toMatchObject({ id: 'logout', danger: true, showChevron: false });
+  });
   it('hides closed automation while retaining non-directed sharing', () => {
     environment.deployment = cloudBetaCapabilities;
     try {

@@ -9,7 +9,7 @@
 // The box takes the viewBox's proportions and the largest size that fits.
 .dl-wrap {
   flex: 1;
-  min-height: 0;
+  min-height: 48px;
   display: grid;
   place-items: center;
   container-type: size;
@@ -18,6 +18,7 @@
 .dl-box {
   position: relative;
   width: min(100cqw, 100cqh * 220 / var(--vh));
+  min-width: calc(48px * max(1, 220 / var(--vh)));
   aspect-ratio: 220 / var(--vh);
 }
 
@@ -89,10 +90,57 @@
 }
 
 // A little more air under the dial than the card's own gap.
-.dl-btns { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.dl-btns {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+
+  // Keep the original 40px round keys inside independent 48px targets.
+  // Do not enlarge the shared .rbtn used by other widget families.
+  .rbtn {
+    position: relative;
+    isolation: isolate;
+    width: 48px;
+    height: 48px;
+    border: 0;
+    background: none;
+
+    @include theme.electronic { border: 0; }
+
+    &::before {
+      content: '';
+      box-sizing: border-box;
+      position: absolute;
+      inset: 4px;
+      z-index: -1;
+      border-radius: inherit;
+      background: var(--ui-well);
+      transition: transform 0.15s;
+      pointer-events: none;
+
+      @include theme.electronic { border: 1.5px dotted var(--ui-faint); background: none; }
+    }
+
+    &:active { transform: none; }
+    &:active:not(:disabled)::before { transform: scale(0.92); }
+    &:focus-visible { outline-offset: -2px; }
+  }
+}
 
 .dl-range {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
   color: var(--ui-muted);
   font-family: var(--ui-font-mono);
   font-size: 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host, .dl-btns .rbtn, .dl-btns .rbtn::before { transition: none; }
+  .dl-btns .rbtn:active::before { transform: none; }
 }

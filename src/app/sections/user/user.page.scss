@@ -1,8 +1,12 @@
-.profile-editor-header {
-  ion-title {
-    font-size: 17px;
-    font-weight: 600;
-  }
+@use '../../../theme/settings-surface' as settings;
+
+:host {
+  @include settings.tokens;
+}
+
+.profile-editor-header ion-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
 }
 
 ion-content {
@@ -10,37 +14,32 @@ ion-content {
 }
 
 .editor-content {
-  min-height: 100%;
+  @include settings.page;
 
-  padding: 0 18px calc(28px + env(safe-area-inset-bottom));
-  background:
-    radial-gradient(circle at 50% 5%, rgba(var(--ion-color-primary-rgb), 0.12), transparent 23%),
-    var(--blinker-bg);
+  padding-bottom: calc(32px + env(safe-area-inset-bottom));
 }
 
-.avatar-display {
-  position: relative;
-  width: 116px;
-  height: 116px;
-  margin: 2px auto 0;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  display: block;
+.account-card {
+  @include settings.card;
+}
+
+.account-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
 }
 
 .avatar-preview {
-  width: 116px;
-  height: 116px;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
   overflow: hidden;
-  border: 3px solid rgba(255, 255, 255, 0.8);
   border-radius: 50%;
-  background: linear-gradient(145deg, #a5d4ff, #4f85ea);
-  box-shadow: 0 13px 32px rgba(var(--ion-color-primary-rgb), 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: var(--ion-color-primary);
+  background: var(--blinker-surface-muted);
 
   img {
     width: 100%;
@@ -49,23 +48,73 @@ ion-content {
   }
 
   span {
-    color: white;
-    font-size: 42px;
+    font-size: 1.5rem;
     font-weight: 600;
   }
 }
 
-.profile-menu-list {
-  display: block;
-  margin-top: 24px;
+.account-copy {
+  min-width: 0;
+
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: var(--blinker-text-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
 }
 
-app-menu-list {
-  display: block;
+.account-details {
+  margin: 0;
+}
+
+.read-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+  align-items: start;
+  gap: 16px;
+  min-height: 56px;
+  padding: 16px 0;
+  border-top: 1px solid var(--blinker-divider);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+
+  dt { color: var(--blinker-text-secondary); }
+
+  dd {
+    min-width: 0;
+    margin: 0;
+    text-align: end;
+    overflow-wrap: anywhere;
+  }
+}
+
+.security-section {
+  min-width: 0;
+
+  app-menu-list { display: block; }
 }
 
 .section-label {
-  margin: 21px 4px 9px;
+  margin: 0 4px 8px;
   color: var(--blinker-text-secondary);
-  font-size: 11px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.section-help {
+  margin: 8px 4px 0;
+  color: var(--blinker-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }

@@ -3,31 +3,46 @@
     <ion-buttons slot="start">
       <ion-back-button text="" defaultHref="/home/profile"></ion-back-button>
     </ion-buttons>
-    <ion-title>用户资料</ion-title>
+    <ion-title>账号</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content fullscreen="true">
-  <div class="editor-content">
-    <div class="avatar-display" aria-label="用户头像">
-      <div class="avatar-preview">
-        @if (avatar) {
-        <img [src]="avatar" alt="用户头像" />
-        } @else {
-        <span>{{ draftName.slice(0, 1) || 'A' }}</span>
-        }
+  <main class="editor-content">
+    <section class="account-card" aria-labelledby="account-name">
+      <div class="account-identity">
+        <div class="avatar-preview" aria-hidden="true">
+          @if (avatar) {
+          <img [src]="avatar" alt="" width="56" height="56" />
+          } @else {
+          <span>{{ draftName.slice(0, 1) || 'B' }}</span>
+          }
+        </div>
+        <div class="account-copy">
+          <h1 id="account-name">{{ draftName || '账号资料' }}</h1>
+          <p>资料仅支持查看</p>
+        </div>
       </div>
-    </div>
-    <app-menu-list
-      class="profile-menu-list"
-      [items]="profileMenuItems"
-      (itemSelected)="selectMenuItem($event)"
-    ></app-menu-list>
+      <dl class="account-details">
+        <div class="read-row">
+          <dt>昵称</dt>
+          <dd>{{ draftName || '—' }}</dd>
+        </div>
+        <div class="read-row">
+          <dt>邮箱</dt>
+          <dd>{{ draftEmail || '—' }}</dd>
+        </div>
+      </dl>
+    </section>
 
-    <div class="section-label">账户安全</div>
-    <app-menu-list
-      [items]="securityMenuItems"
-      (itemSelected)="selectMenuItem($event)"
-    ></app-menu-list>
-  </div>
+    <section class="security-section" aria-labelledby="account-security-heading">
+      <h2 id="account-security-heading" class="section-label">账户安全</h2>
+      <app-menu-list
+        appearance="settings"
+        [items]="securityMenuItems"
+        (itemSelected)="selectMenuItem($event)"
+      ></app-menu-list>
+      <p class="section-help">注销需先解除全部设备绑定，并完成专用邮箱验证码验证。</p>
+    </section>
+  </main>
 </ion-content>

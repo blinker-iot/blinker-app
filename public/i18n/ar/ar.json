@@ -39,6 +39,8 @@
     "ABOUT_US": "حول التطبيق"
   },
   "SETTINGS": {
+    "LANGUAGE_SAVE_FAILED": "تعذّر تطبيق اللغة المحددة. حاول مرة أخرى.",
+    "REGION_CHANGE_FAILED": "لم يكتمل تغيير منطقة الخدمة. تحقّق من المنطقة الحالية ثم حاول مجددًا.",
     "SERVICE_REGION": "منطقة الخدمة",
     "SERVICE_REGION_HINT": "يتطلب تغيير منطقة الخدمة تسجيل الدخول مرة أخرى",
     "TITLE": "الإعدادات",
@@ -75,6 +77,16 @@
     "FEATURE_PENDING": "ستتوفر هذه الميزة قريبًا"
   },
   "COMMUNITY": {
+    "PRODUCT_PREVIEW": "معاينة المنتجات",
+    "PREVIOUS_PAGE": "الصفحة السابقة",
+    "NEXT_PAGE": "الصفحة التالية",
+    "PAGE_STATUS": "الصفحة {{page}} من {{total}}",
+    "PAGINATION": "صفحات المحتوى",
+    "SEARCH": "البحث في المحتوى",
+    "CLOSE_SEARCH": "إغلاق البحث",
+    "CATEGORY_FILTER": "تصفية المحتوى حسب الفئة",
+    "LOCAL_PREVIEW_NOTE": "أمثلة محلية فقط، وليست إعلانًا فعليًا عن طرح منتجات.",
+    "PRODUCT_PREVIEW_STATUS": "مثال لمنتج · ليس إعلانًا عن طرحه",
     "SEARCH_PLACEHOLDER": "البحث عن أفكار ومنتجات ونصائح",
     "CATEGORY_RECOMMENDED": "مقترح",
     "CATEGORY_INSPIRATION": "أفكار ذكية",
@@ -93,13 +105,15 @@
     "KITCHEN_AIR_TITLE": "دليل إدارة هواء المطبخ",
     "KITCHEN_AIR_DESCRIPTION": "اربط اكتشاف الأدخنة بتنقية الهواء",
     "KITCHEN_AIR_META": "قراءة 6 دقائق · 8,643 مشاهدة",
-    "NO_RESULTS": "لا يوجد محتوى مطابق. جرّب كلمة بحث أخرى.",
+    "NO_RESULTS": "لا يوجد محتوى مطابق. غيّر الفئة أو عدّل كلمة البحث.",
     "COMING_SOON": "قريبًا",
     "OMNI_STATION_NAME": "المحطة الأساسية الشاملة",
     "OMNI_STATION_DESCRIPTION": "التنظيف وجمع الغبار والتجفيف في جهاز واحد",
     "OMNI_STATION_LAUNCH": "متاح في الربع الثالث من 2026"
   },
   "PROFILE": {
+    "DEVICE_MANAGEMENT": "إدارة الأجهزة",
+    "CONNECTION_AND_SERVICES": "الاتصال والخدمات",
     "TITLE": "الملف الشخصي",
     "USER_AVATAR": "صورة المستخدم",
     "VERSION": "الإصدار {{version}}",

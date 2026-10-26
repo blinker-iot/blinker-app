@@ -1,4 +1,4 @@
-<ion-header class="tool-page-header">
+<ion-header class="tool-page-header control-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/home/tools" text="" [disabled]="isBusy"></ion-back-button>
@@ -18,23 +18,23 @@
       <input #firmwareInput class="file-input" type="file" accept=".bin,application/octet-stream" (change)="chooseFirmware($event)" />
       @if (firmwareFile) {
         <div class="file-result">
-          <span class="result-icon"><i class="fa-light fa-file-binary"></i></span>
+          <span class="result-icon"><i aria-hidden="true" class="fa-light fa-file-binary"></i></span>
           <span class="result-copy"><strong>{{ firmwareFile.name }}</strong><small>{{ formatBytes(firmwareFile.size) }}</small></span>
-          <button type="button" aria-label="移除固件" [disabled]="isBusy" (click)="clearFirmware()"><i class="fa-light fa-xmark"></i></button>
+          <button type="button" aria-label="移除固件" [disabled]="isBusy" (click)="clearFirmware()"><i aria-hidden="true" class="fa-light fa-xmark"></i></button>
         </div>
       } @else {
         <button type="button" class="file-picker" [disabled]="isBusy" (click)="firmwareInput.click()">
-          <i class="fa-light fa-arrow-up-from-bracket"></i>
+          <i aria-hidden="true" class="fa-light fa-arrow-up-from-bracket"></i>
           <span><strong>选择 .bin 固件</strong><small>最大 32 MB</small></span>
         </button>
       }
 
       <div class="mode-selector" role="group" aria-label="升级分区">
-        <button type="button" [class.active]="updateType === 'flash'" [disabled]="isBusy" (click)="updateType = 'flash'">
-          <i class="fa-light fa-microchip"></i><span><strong>应用固件</strong><small>Flash</small></span>
+        <button type="button" [class.active]="updateType === 'flash'" [attr.aria-pressed]="updateType === 'flash'" [disabled]="isBusy" (click)="updateType = 'flash'">
+          <i aria-hidden="true" class="fa-light fa-microchip"></i><span><strong>应用固件</strong><small>Flash</small></span>
         </button>
-        <button type="button" [class.active]="updateType === 'filesystem'" [disabled]="isBusy" (click)="updateType = 'filesystem'">
-          <i class="fa-light fa-folder-tree"></i><span><strong>文件系统</strong><small>LittleFS / SPIFFS</small></span>
+        <button type="button" [class.active]="updateType === 'filesystem'" [attr.aria-pressed]="updateType === 'filesystem'" [disabled]="isBusy" (click)="updateType = 'filesystem'">
+          <i aria-hidden="true" class="fa-light fa-folder-tree"></i><span><strong>文件系统</strong><small>LittleFS / SPIFFS</small></span>
         </button>
       </div>
     </section>
@@ -46,20 +46,20 @@
       </div>
 
       <button type="button" class="secondary-button" [disabled]="isBusy" (click)="toggleScan()">
-        <i [class]="isScanning ? 'fa-light fa-stop' : 'fa-light fa-radar'"></i>{{ scanButtonLabel }}
+        <i aria-hidden="true" [class]="isScanning ? 'fa-light fa-stop' : 'fa-light fa-radar'"></i>{{ scanButtonLabel }}
       </button>
 
       <div class="result-list device-results">
         @for (device of devices; track device.deviceId) {
-          <button type="button" class="result-row" [class.selected]="selectedDevice?.deviceId === device.deviceId" [disabled]="isBusy" (click)="selectDevice(device)">
-            <span class="result-icon"><i [class]="signalIcon(device.rssi)"></i></span>
+          <button type="button" class="result-row" [class.selected]="selectedDevice?.deviceId === device.deviceId" [attr.aria-pressed]="selectedDevice?.deviceId === device.deviceId" [disabled]="isBusy" (click)="selectDevice(device)">
+            <span class="result-icon"><i aria-hidden="true" [class]="signalIcon(device.rssi)"></i></span>
             <span class="result-copy"><strong>{{ deviceName(device) }}</strong><small>{{ device.deviceId }}</small></span>
             @if (device.rssi !== undefined) { <span class="result-meta">{{ device.rssi }} dBm</span> }
-            <i [class]="selectedDevice?.deviceId === device.deviceId ? 'fa-solid fa-circle-check' : 'fa-light fa-chevron-right'"></i>
+            <i aria-hidden="true" [class]="selectedDevice?.deviceId === device.deviceId ? 'fa-solid fa-circle-check' : 'fa-light fa-chevron-right'"></i>
           </button>
         } @empty {
           <div class="result-empty">
-            <i [class]="isScanning ? 'fa-light fa-radar fa-spin' : 'fa-light fa-bluetooth'"></i>
+            <i aria-hidden="true" [class]="isScanning ? 'fa-light fa-radar fa-spin' : 'fa-light fa-bluetooth'"></i>
             <strong>{{ isScanning ? '正在发现设备…' : '等待扫描' }}</strong>
             <span>设备需运行兼容的 BLE OTA 固件</span>
           </div>
@@ -68,7 +68,7 @@
     </section>
 
     <button type="button" class="primary-button" [disabled]="!canUpload" (click)="upload()">
-      <i [class]="isBusy ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-cloud-arrow-up'"></i>
+      <i aria-hidden="true" [class]="isBusy ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-cloud-arrow-up'"></i>
       {{ isBusy ? '正在升级…' : '开始 BLE OTA' }}
     </button>
 
@@ -76,15 +76,15 @@
       <section class="ota-status" [class.success]="state === 'success'" [class.error]="state === 'error'" [class.cancelled]="state === 'cancelled'">
         <div class="status-heading">
           <span class="status-icon">
-            @if (state === 'success') { <i class="fa-solid fa-check"></i> }
-            @else if (state === 'error') { <i class="fa-solid fa-exclamation"></i> }
-            @else if (state === 'cancelled') { <i class="fa-light fa-ban"></i> }
-            @else { <i [class]="isBusy ? 'fa-light fa-arrows-rotate fa-spin' : 'fa-light fa-circle-info'"></i> }
+            @if (state === 'success') { <i aria-hidden="true" class="fa-solid fa-check"></i> }
+            @else if (state === 'error') { <i aria-hidden="true" class="fa-solid fa-exclamation"></i> }
+            @else if (state === 'cancelled') { <i aria-hidden="true" class="fa-light fa-ban"></i> }
+            @else { <i aria-hidden="true" [class]="isBusy ? 'fa-light fa-arrows-rotate fa-spin' : 'fa-light fa-circle-info'"></i> }
           </span>
-          <span class="status-copy"><strong>{{ statusMessage }}</strong><small>{{ statusDetail }}</small></span>
+          <span class="status-copy" role="status" aria-live="polite" aria-atomic="true"><strong>{{ statusMessage }}</strong><small>{{ statusDetail }}</small></span>
           <b>{{ progress }}%</b>
         </div>
-        <div class="progress-track"><span [style.width.%]="progress"></span></div>
+        <div class="progress-track" role="progressbar" aria-label="固件传输进度" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="progress"><span [style.width.%]="progress"></span></div>
         @if (isBusy) {
           <div class="progress-meta">
             <span>{{ formatBytes(bytesSent) }} / {{ firmwareFile ? formatBytes(firmwareFile.size) : '—' }}</span>
@@ -96,7 +96,7 @@
     }
 
     <div class="ota-notice">
-      <i class="fa-light fa-triangle-exclamation"></i>
+      <i aria-hidden="true" class="fa-light fa-triangle-exclamation"></i>
       <span>升级期间请勿关闭 App、断开蓝牙或切断设备电源。</span>
     </div>
   </main>

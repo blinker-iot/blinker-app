@@ -1,4 +1,4 @@
-<ion-header class="third-party-header">
+<ion-header class="third-party-header control-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/home/profile" text=""></ion-back-button>
@@ -9,8 +9,9 @@
 
 <ion-content fullscreen="true">
   <main>
-    <div class="section-label">天气服务设置</div>
-    <form class="service-card" (ngSubmit)="saveWeatherServices()" novalidate>
+    <section class="service-section" aria-labelledby="weather-services-heading">
+    <h2 class="section-label" id="weather-services-heading">天气服务设置</h2>
+    <form class="service-card" aria-labelledby="weather-services-heading" (ngSubmit)="saveWeatherServices()" novalidate>
       <div class="service-card-heading">
         <span class="service-icon" aria-hidden="true">
           <i class="fa-light fa-cloud-sun"></i>
@@ -47,10 +48,7 @@
 
       @for (provider of weatherProviders; track provider.id) {
       @if (selectedWeatherProvider === provider.id) {
-      <div
-        class="field"
-        [class.field-active]="selectedWeatherProvider === provider.id"
-      >
+      <div class="field">
         <label class="field-label" [for]="'weather-' + provider.id">
           <span>{{ provider.name }}</span>
           @if (weatherValidationStatus === 'validating') {
@@ -130,9 +128,13 @@
       }
     </form>
 
-    <div class="section-label">地理信息服务设置</div>
+    </section>
+
+    <section class="service-section" aria-labelledby="geolocation-services-heading">
+    <h2 class="section-label" id="geolocation-services-heading">地理信息服务设置</h2>
     <form
       class="service-card"
+      aria-labelledby="geolocation-services-heading"
       (ngSubmit)="saveGeolocationServices()"
       novalidate
     >
@@ -172,10 +174,7 @@
 
       @for (provider of geolocationProviders; track provider.id) {
       @if (selectedGeolocationProvider === provider.id) {
-      <div
-        class="field"
-        [class.field-active]="selectedGeolocationProvider === provider.id"
-      >
+      <div class="field">
         <label class="field-label" [for]="'geolocation-' + provider.id">
           <span>{{ provider.name }}</span>
           @if (geolocationValidationStatus === 'validating') {
@@ -256,6 +255,8 @@
       </button>
       }
     </form>
+
+    </section>
 
     <aside class="privacy-tip">
       <i class="fa-light fa-shield-check" aria-hidden="true"></i>

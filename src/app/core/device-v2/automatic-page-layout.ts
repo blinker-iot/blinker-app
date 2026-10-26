@@ -1,8 +1,6 @@
 import type { DeviceUiSnapshot } from './device-ui.port';
 import { generateDefaultPageLayout, parsePageLayout, reflowPageWidgets, type PageLayout } from './page-layout';
-import { fitSize, widgetVariant } from './page-widget';
 import type { UiTheme } from './ui-theme';
-import { presetForVariant } from './widget-presets';
 
 const labels: Record<string, string> = {
   switch: '电源开关', temperature: '温度', humidity: '湿度', brightness: '亮度',
@@ -27,16 +25,11 @@ export function generateAutomaticPageLayout(
   return parsePageLayout({
     ...base,
     ...(style ? { style } : {}),
-    widgets: reflowPageWidgets(widgets.map((widget, index) => {
-      const preset = presetForVariant(widgetVariant(widget.type, widget.variant));
-
-      return {
-        ...widget,
-        title: labels[widget.endpointKey] || widget.endpointKey,
-        appearance: style && index === 0 ? 'emphasized' : 'default',
-        options: { ...preset.options },
-        grid: { x: 0, y: index, ...fitSize(preset.variant, preset.width, preset.height) },
-      };
-    })),
+    widgets: reflowPageWidgets(widgets.map((widget, index) => ({
+      ...widget,
+      title: labels[widget.endpointKey] || widget.endpointKey,
+      appearance: style && index === 0 ? 'emphasized' : 'default',
+      grid: { ...widget.grid, x: 0, y: index },
+    }))),
   }, snapshot.endpoints);
 }

@@ -4,11 +4,13 @@
 @include c.base;
 @include c.fills-rows;
 
+:host { gap: 8px; }
+
 $ring-mask: radial-gradient(farthest-side, transparent calc(100% - var(--rw)), #000 calc(100% - var(--rw) + 0.5px));
 
 .cw-wrap {
   flex: 1;
-  min-height: 0;
+  min-height: 48px;
   display: grid;
   place-items: center;
 }
@@ -16,6 +18,8 @@ $ring-mask: radial-gradient(farthest-side, transparent calc(100% - var(--rw)), #
 .cw-box {
   position: relative;
   height: 100%;
+  min-width: 48px;
+  min-height: 48px;
   max-width: 100%;
   aspect-ratio: 1;
   container-type: size;
@@ -80,24 +84,47 @@ $ring-mask: radial-gradient(farthest-side, transparent calc(100% - var(--rw)), #
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  min-width: 0;
+  min-height: 48px;
   gap: 8px;
 
-  &.big { flex: 1; align-content: center; gap: 12px; }
-
-  // Under the wheel: a little more air than the card's own gap.
-  .cw-wrap + & { margin-top: 6px; }
-  &.big .swc { width: 36px; height: 36px; }
+  // A dense palette stays inside its saved row budget. The wheel's palette
+  // is a single scrollable strip, so it cannot consume the drawing area.
+  &:not(.big) { flex: none; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; }
+  &.big { flex: 1; align-content: safe center; gap: 12px; overflow-y: auto; }
+  &.big .swc::before { width: 36px; height: 36px; }
 }
 
 .swc {
-  width: 26px;
-  height: 26px;
+  flex: 0 0 48px;
+  position: relative;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: var(--c);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
-  transition: transform 0.15s;
+  touch-action: manipulation;
 
-  &.on { outline: 2px solid var(--ui-ink); outline-offset: 2px; }
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 26px;
+    height: 26px;
+    translate: -50% -50%;
+    border-radius: inherit;
+    background: var(--c);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    transition: transform 0.15s;
+    pointer-events: none;
+  }
 
+  &.on::before { outline: 2px solid var(--ui-ink); outline-offset: 2px; }
+  &:focus-visible { outline-offset: -2px; }
+  &:active:not(:disabled)::before { transform: scale(0.92); }
+  &:disabled { cursor: default; }
   @include theme.electronic { border-radius: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host, .cw-mid, .swc::before { transition: none; }
+  .swc:active::before { transform: none; }
 }

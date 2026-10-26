@@ -1,4 +1,4 @@
-<ion-header class="feedback-header">
+<ion-header class="feedback-header control-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button text="" defaultHref="/home/profile"></ion-back-button>
@@ -20,11 +20,11 @@
       </button>
     </section>
     } @else {
-    <form class="feedback-form" (ngSubmit)="submit()" novalidate>
-      <div class="section-label">
+    <form class="feedback-form" (ngSubmit)="submit()" [attr.aria-busy]="isSubmitting" novalidate>
+      <h2 class="section-label" id="feedback-type-heading">
         反馈类型 <span aria-hidden="true">*</span>
-      </div>
-      <section class="type-card" aria-label="反馈类型">
+      </h2>
+      <section class="type-card" aria-labelledby="feedback-type-heading">
         <div class="type-options" role="radiogroup" aria-label="请选择反馈类型">
           @for (type of feedbackTypes; track type.value) {
           <button
@@ -56,15 +56,18 @@
         </div>
       </section>
 
-      <div class="section-label form-section-label">
+      <h2 class="section-label form-section-label" id="feedback-content-heading">
         反馈内容
-      </div>
-      <section class="form-card">
+      </h2>
+      <section class="form-card" aria-labelledby="feedback-content-heading">
         <label class="form-field title-field">
           <span class="field-label">标题 <b aria-hidden="true">*</b></span>
           <input
             type="text"
+            id="feedback-title"
             name="feedbackTitle"
+            aria-required="true"
+            aria-describedby="feedback-title-count"
             [(ngModel)]="title"
             (ngModelChange)="onFormChange()"
             maxlength="80"
@@ -72,13 +75,16 @@
             autocomplete="off"
             [disabled]="isSubmitting"
           />
-          <span class="field-count">{{ title.length }}/80</span>
+          <span class="field-count" id="feedback-title-count">{{ title.length }}/80</span>
         </label>
 
         <label class="form-field content-field">
           <span class="field-label">问题描述 <b aria-hidden="true">*</b></span>
           <textarea
+            id="feedback-content"
             name="feedbackContent"
+            aria-required="true"
+            aria-describedby="feedback-content-count"
             [(ngModel)]="content"
             (ngModelChange)="onFormChange()"
             maxlength="2000"
@@ -86,7 +92,7 @@
             placeholder="请详细说明发生了什么、如何复现，以及你期望的结果……"
             [disabled]="isSubmitting"
           ></textarea>
-          <span class="field-count">{{ content.length }}/2000</span>
+          <span class="field-count" id="feedback-content-count">{{ content.length }}/2000</span>
         </label>
 
         <label class="form-field email-field">
@@ -95,6 +101,7 @@
           </span>
           <input
             type="email"
+            id="feedback-email"
             name="feedbackEmail"
             [(ngModel)]="email"
             (ngModelChange)="onFormChange()"
@@ -135,7 +142,7 @@
       </button>
 
       <p class="draft-hint">
-        <i class="fa-light fa-cloud-check" aria-hidden="true"></i>
+        <i class="fa-light fa-floppy-disk" aria-hidden="true"></i>
         未提交的内容会自动保存在本机
       </p>
     </form>

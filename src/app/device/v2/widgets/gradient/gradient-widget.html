@@ -5,9 +5,10 @@
 </div>
 
 <div class="gs-wrap" [class]="'h-' + (options.trackSize ?? 'mid')">
-  <div class="gs-track" [class]="track" role="slider" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
+  <div class="gs-track" role="slider" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
     [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" (pointerdown)="dragStart($event)"
     (pointermove)="dragMove($event)" (pointerup)="dragEnd($event)" (pointercancel)="dragEnd($event)" (keydown)="key($event)">
+    <span class="gs-strip" [class]="track" aria-hidden="true"></span>
     <i class="gs-knob" [class]="options.knob ?? 'ring'" [style.--p]="percent"></i>
   </div>
   <i class="gs-mark" [style.--p]="percent"></i>

@@ -50,7 +50,7 @@
   flex: 1;
 
   min-width: 0;
-  min-height: 0;
+  min-height: 48px;
   padding: 0;
   border: 0;
   background: none;
@@ -58,7 +58,7 @@
   color: var(--ui-ink);
 
   font: inherit;
-  font-size: 14px;
+  font-size: 16px;
   outline: none;
   resize: none;
 
@@ -94,25 +94,35 @@
 }
 
 .tx-send {
+  position: relative;
+  isolation: isolate;
+  flex: none;
   display: grid;
 
   place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 8px;
+  width: 48px;
+  height: 48px;
+  padding: 16px;
   border-radius: 50%;
 
-  background: var(--ui-accent);
   color: var(--ui-on-accent);
   transition: opacity 0.2s, transform 0.15s;
   &:active { transform: scale(0.92); }
   &:disabled { opacity: 0.35; cursor: default; }
 
+  // The visible key remains 32px; its independent hit area is 48px.
+  &::before {
+    content: '';
+    box-sizing: border-box;
+    position: absolute;
+    inset: 8px;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--ui-accent);
+  }
+
   @include theme.electronic {
-    border: 1.5px dotted var(--ui-accent);
-
-    background: none;
-
+    &::before { border: 1.5px dotted var(--ui-accent); background: none; }
     color: var(--ui-accent);
   }
 }

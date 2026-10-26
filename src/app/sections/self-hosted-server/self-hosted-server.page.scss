@@ -1,229 +1,212 @@
+@use '../../../theme/settings-surface' as settings;
+
 :host {
+  @include settings.tokens;
+
   display: block;
   height: 100%;
-  color: var(--blinker-text-primary);
-  background: var(--blinker-bg);
 }
 
-.server-header {
-  ion-toolbar {
-    --color: var(--ion-toolbar-color);
-  }
+.server-header ion-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
 }
 
 ion-content {
   --background: var(--blinker-bg);
 }
 
-.section-label {
-  margin: 22px 4px 9px;
-  color: var(--blinker-text-secondary);
-  font-size: 12px;
-  letter-spacing: 0.02em;
+// Native IME scrolling must see the real visible viewport, not the area under
+// the transparent toolbar. Keep the page background, but move only this form's
+// scroll surface below the existing safe-area/header budget.
+ion-content::part(scroll) {
+  top: var(--transparent-page-content-top);
+}
+
+main::before {
+  // The scroll surface now owns this inset; do not add the shared spacer twice.
+  display: none !important;
+}
+
+main {
+  @include settings.page;
+
+  padding-bottom: calc(32px + env(safe-area-inset-bottom));
 }
 
 .server-form {
-  padding: 18px;
-  border: 1px solid var(--blinker-border);
-  border-radius: var(--blinker-radius-card);
-  background: var(--blinker-surface);
-  box-shadow: var(--blinker-shadow-soft);
+  @include settings.card;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section-heading {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .field {
-  display: block;
-  margin-bottom: 19px;
+  min-width: 0;
 }
 
 .field-label {
-  margin: 0 2px 8px;
+  margin: 0 0 8px;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  color: var(--blinker-text-primary);
-  font-size: 13px;
-  font-weight: 650;
+  gap: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
 
   small {
-    color: var(--blinker-text-tertiary);
-    font-size: 10px;
-    font-weight: 500;
+    color: var(--blinker-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 400;
   }
 }
 
 .input-shell {
-  min-height: 50px;
-  padding: 0 13px;
-  border: 1px solid var(--blinker-border);
-  border-radius: var(--blinker-radius-control);
-  background: var(--blinker-bg-elevated);
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 10px;
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    background-color 160ms ease;
+  gap: 8px;
+  min-width: 0;
+  min-height: 48px;
+  padding-inline: 12px 4px;
+  border: 1px solid var(--blinker-border);
+  border-radius: 12px;
+  background: var(--blinker-surface-muted);
 
   &:focus-within {
-    border-color: var(--ion-color-primary);
-    background: var(--blinker-surface);
-    box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.1);
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: 2px;
   }
 
   > i {
-    width: 18px;
-    flex: 0 0 18px;
-    color: var(--ion-color-primary);
+    width: 20px;
+    flex: 0 0 20px;
+    color: var(--blinker-text-secondary);
     text-align: center;
   }
 
   input {
-    width: 100%;
+    box-sizing: border-box;
+    flex: 1;
+    width: 0;
     min-width: 0;
-    height: 48px;
-    padding: 0;
+    min-height: 48px;
+    padding: 12px 0;
     border: 0;
+    border-radius: 0;
     outline: 0;
     color: var(--blinker-text-primary);
     background: transparent;
     font: inherit;
-    font-size: 14px;
+    font-size: 1rem;
+    line-height: 1.5;
 
-    &::placeholder {
-      color: var(--blinker-text-tertiary);
-    }
+    &::placeholder { color: var(--blinker-text-secondary); }
   }
 }
 
 .field-invalid .input-shell {
   border-color: var(--ion-color-danger);
-  box-shadow: 0 0 0 3px rgba(var(--ion-color-danger-rgb), 0.08);
 }
 
 .field-help,
 .field-error {
-  margin: 7px 3px 0;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--blinker-text-tertiary);
-  font-size: 11px;
-  line-height: 1.45;
+  margin: 8px 0 0;
+  display: block;
+  color: var(--blinker-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .field-error {
   color: var(--ion-color-danger);
+
+  i { margin-inline-end: 4px; }
+}
+
+.operation-error {
+  margin: 0;
 }
 
 .key-toggle {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
-  padding: 0;
-  border: 0;
-  border-radius: 9px;
-  color: var(--blinker-text-secondary);
-  background: transparent;
-  font-size: 15px;
-
-  &:active {
-    background: var(--blinker-surface-active);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--ion-color-primary);
-    outline-offset: 1px;
-  }
+  @include settings.icon-button;
 }
 
 .save-success {
-  min-height: 38px;
-  margin: -2px 0 13px;
-  padding: 8px 11px;
-  border-radius: 10px;
-  color: var(--ion-color-success);
-  background: rgba(var(--ion-color-success-rgb), 0.09);
   display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 600;
+  align-items: start;
+  gap: 8px;
+  color: var(--blinker-text-primary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+
+  i {
+    margin-top: 3px;
+    color: var(--ion-color-primary);
+  }
 }
 
 .save-button,
 .clear-button {
-  appearance: none;
+  @include settings.button;
+
   width: 100%;
-  min-height: 48px;
-  border: 0;
-  border-radius: var(--blinker-radius-control);
-  font-size: 14px;
-  font-weight: 650;
-  cursor: pointer;
 }
 
 .save-button {
   color: var(--ion-color-primary-contrast);
   background: var(--ion-color-primary);
-  box-shadow: 0 8px 20px rgba(var(--ion-color-primary-rgb), 0.23);
 
-  i {
-    margin-right: 7px;
-  }
+  i { margin-inline-end: 8px; }
 
-  &:active {
-    transform: scale(0.99);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--ion-color-primary);
-    outline-offset: 3px;
+  &:active:not(:disabled) {
+    background: var(--ion-color-primary);
+    opacity: 0.85;
   }
 }
 
 .clear-button {
-  min-height: 42px;
-  margin-top: 8px;
-  color: var(--blinker-text-secondary);
+  color: var(--ion-color-danger);
   background: transparent;
-
-  &:active {
-    background: var(--blinker-surface-muted);
-  }
 }
 
 .privacy-tip {
-  margin-top: 14px;
-  padding: 14px 15px;
-  border: 1px solid var(--blinker-border);
-  border-radius: var(--blinker-radius-control);
-  color: var(--blinker-text-secondary);
-  background: rgba(var(--ion-color-primary-rgb), 0.035);
   display: flex;
-  align-items: flex-start;
-  gap: 11px;
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+  padding-inline: 4px;
+  color: var(--blinker-text-secondary);
 
   > i {
-    margin-top: 1px;
-    color: var(--ion-color-primary);
-    font-size: 17px;
+    flex: 0 0 20px;
+    margin-top: 2px;
+    font-size: 18px;
   }
+
+  div { min-width: 0; }
 
   strong {
     color: var(--blinker-text-primary);
-    font-size: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.5;
   }
 
   p {
     margin: 4px 0 0;
-    font-size: 11px;
+    font-size: 0.8125rem;
     line-height: 1.5;
-  }
-}
-
-@media (max-width: 380px) {
-  .server-form {
-    padding: 15px;
+    overflow-wrap: anywhere;
   }
 }

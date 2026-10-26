@@ -1,4 +1,4 @@
-<ion-header class="manager-header">
+<ion-header class="control-page-header manager-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button text="" [defaultHref]="defaultBackHref"></ion-back-button>
@@ -8,7 +8,7 @@
 
     <ion-buttons slot="end">
       @if (loaded && roomDataList.length) {
-      <ion-button [disabled]="saving" (click)="switchMode()">
+      <ion-button class="text-action" [disabled]="saving" (click)="switchMode()" [attr.aria-pressed]="editMode">
         {{ editMode ? '完成' : '编辑' }}
       </ion-button>
       }
@@ -21,10 +21,16 @@
 
 <ion-content fullscreen="true">
   <main>
+    <p class="hint">按区域整理设备。编辑时可调整顺序，删除区域不会删除设备。</p>
+
+    @if (saving) {
+    <p class="save-status" role="status">正在保存区域设置…</p>
+    }
+
     @if (error) {
     <div class="error-message" role="alert">
       <span>{{ error }}</span>
-      <button type="button" (click)="load()">重新加载</button>
+      <button type="button" [disabled]="saving" (click)="load()">重新加载</button>
     </div>
     }
 
@@ -38,6 +44,7 @@
         @for (roomName of roomDataList; track roomName) {
         <app-menu-item
           [id]="roomName"
+          [height]="0"
           [disabled]="saving"
           [showArrow]="true"
           (delete)="delRoomAlert(roomName)"
@@ -52,12 +59,12 @@
       </app-menu-list>
     </section>
     } @else if (loaded) {
-    <section class="empty-state">
+    <section class="empty-state" aria-label="暂无区域">
       <p>还没有区域</p>
       <button type="button" (click)="addRoom()" [disabled]="saving">新建区域</button>
     </section>
     } @else if (!error) {
-    <p class="loading-state">正在加载…</p>
+    <p class="loading-state" role="status">正在读取区域…</p>
     }
   </main>
 </ion-content>

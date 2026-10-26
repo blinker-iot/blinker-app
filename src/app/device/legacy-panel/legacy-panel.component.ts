@@ -1,12 +1,14 @@
 import { CustomPanelFrameComponent } from '../custom-panel/custom-panel-frame.component';
 import { readDevicePanelMode } from '../device-panel-mode';
-import { ChangeDetectionStrategy, Component, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { IonButton, IonRouterLink } from '@ionic/angular/standalone';
 import type { BlinkerDevice } from '../../core/model/device.model';
 import { DeviceService } from '../../core/services/device.service';
-import { DevicePanelService } from '../../core/services/device-panel.service';
+import { DevicePanelService, DevicePanelRecord } from '../../core/services/device-panel.service';
+import { PanelEditorPage } from '../../sections/device/panel-editor/panel-editor.page';
+import { EmbeddedPanelSession, SavedPanelEdit } from '../../sections/device/panel-editor/embedded-panel-session';
 import { canEditConsole } from '../../core/services/device-console.service';
 import { legacyCommand, legacyField, legacyRoot, readLegacyPanel, type LegacyPanel } from '../../core/device-v2/legacy-panel';
 import { PageLayoutPanelComponent, type PanelAction, type PanelCard } from '../v2/panel/page-layout-panel';
@@ -14,10 +16,14 @@ import { PageLayoutPanelComponent, type PanelAction, type PanelCard } from '../v
 @Component({
   selector: 'app-legacy-panel',
   standalone: true,
-  imports: [PageLayoutPanelComponent, CustomPanelFrameComponent, IonButton, IonRouterLink, RouterLink],
+  imports: [PageLayoutPanelComponent, CustomPanelFrameComponent, IonButton, IonRouterLink, RouterLink, PanelEditorPage],
   changeDetection: ChangeDetectionStrategy.Eager,
   host: { '[class.custom-panel]': '!!customPanel' },
   template: `
+    @if (panelEditSession; as session) {
+      <app-panel-editor [embeddedSession]="session" [hostRevision]="panelRecord?.revision ?? 0" [editingActive]="viewActive"
+        (changed)="panelEditChanged.emit()" (saved)="acceptPanelEdit($event)" />
+    } @else {
     @if (error) { <p class="error" role="alert">{{ error }}</p> }
     @if (customPanel) {
       <app-custom-panel-frame [document]="customPanel" [cards]="cards" [interactive]="true"
@@ -33,25 +39,33 @@ import { PageLayoutPanelComponent, type PanelAction, type PanelCard } from '../v
     } @else if (panel) {
       <app-page-layout-panel [cards]="cards" [interactive]="true" (action)="act($event)" />
     }
-  `,
-  styles: [`
-    :host { display: block; padding: 16px; }
-    :host.custom-panel { display: flex; flex-direction: column; min-height: 0; padding: 0; }
-    .error { flex-shrink: 0; color: var(--ui-alert); padding: 16px; }
-
-    .empty {
-      min-height: 42vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: var(--blinker-text-secondary);
-      text-align: center;
     }
-  `],
+  `,
+  styleUrls: ['./legacy-panel.component.scss'],
 })
 
 export class LegacyPanelComponent implements OnChanges, OnDestroy {
+  @ViewChild(PanelEditorPage) panelEditor?: PanelEditorPage;
+  @Output() panelEditChanged = new EventEmitter<void>();
+  panelEditSession?: EmbeddedPanelSession;
+  panelRecord?: DevicePanelRecord | null;
+
+  beginPanelEdit(): boolean {
+    if (this.customMode || !this.canEdit || !this.panel || this.panelRecord === undefined) return false;
+    this.panelEditSession = { device: this.device, document: this.panel.document,
+      bindings: this.panel.bindings, legacyRecord: this.panelRecord };
+    return true;
+  }
+
+  endPanelEdit(): void { this.panelEditSession = undefined; }
+
+  acceptPanelEdit(saved: SavedPanelEdit): void {
+    if (!this.panelEditSession || !saved.legacyRecord) return;
+    this.panelRecord = saved.legacyRecord;
+    this.panel = readLegacyPanel(this.device);
+    this.refresh();
+    this.endPanelEdit();
+  }
   @Input() device!: BlinkerDevice;
   @Input() viewActive = true;
 
@@ -98,6 +112,7 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
   ngOnDestroy(): void { this.loadVersion++; this.subscription?.unsubscribe(); }
 
   act(action: PanelAction): void {
+    if (this.panelEditSession) return;
     const binding = this.panel?.bindings[action.widgetId || ''];
 
     if (!binding || !binding.field.writable || !this.viewActive
@@ -135,6 +150,7 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
 
   private async load(): Promise<void> {
     const version = ++this.loadVersion;
+    this.panelRecord = undefined;
 
     try {
       this.panel = readLegacyPanel(this.device);
@@ -144,6 +160,7 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
       const saved = await this.panels.get(this.device);
 
       if (version !== this.loadVersion) return;
+      this.panelRecord = saved;
       if (saved) this.panels.install(this.device, saved);
 
       this.panel = readLegacyPanel(this.device);

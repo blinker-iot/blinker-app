@@ -1,6 +1,6 @@
 import type { PageWidgetOptions, PageWidgetType, PageWidgetVariant } from './page-widget';
 import type { DeviceUiEndpoint } from './device-ui.port';
-import { variantsFor } from './page-layout';
+import { variantsFor } from './page-widget-bindings';
 
 export interface WidgetPreset {
   type: PageWidgetType;

@@ -46,6 +46,8 @@ export class PanelWidgetEditorPage {
   widget?: PageLayoutWidget;
 
   saving = false;
+  invalid = false;
+  draftVersion = 0;
   error = '';
 
   constructor(route: ActivatedRoute, private readonly nav: NavController,
@@ -64,6 +66,8 @@ export class PanelWidgetEditorPage {
   ionViewWillEnter(): void {
     this.context = this.contexts.get(this.deviceId, this.widgetId);
     this.widget = this.context ? structuredClone(this.context.card.widget) : undefined;
+    this.invalid = false;
+    this.draftVersion++;
     this.error = '';
 
     if (!this.context) void this.nav.navigateBack(this.editorUrl, { replaceUrl: true });
@@ -76,8 +80,12 @@ export class PanelWidgetEditorPage {
     this.error = '';
   }
 
+  setInvalid(invalid: boolean): void {
+    if (!this.saving) this.invalid = invalid;
+  }
+
   async save(): Promise<void> {
-    if (!this.context || !this.widget || this.saving) return;
+    if (!this.context || !this.widget || this.saving || this.invalid) return;
 
     await this.submit(() => this.context!.save(this.widget!));
   }

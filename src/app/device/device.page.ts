@@ -16,6 +16,8 @@ import { CommonModule } from '@angular/common';
 import {
   ActivatedRoute,
   NavigationEnd,
+  NavigationCancel,
+  NavigationError,
   NavigationStart,
   Router,
   RouterModule,
@@ -50,6 +52,7 @@ import { DevicePanelService } from '../core/services/device-panel.service';
 import { normalizeUiTheme, UI_THEMES, UiTheme } from '../core/device-v2/ui-theme';
 import { readDeviceTheme, saveDeviceTheme } from './device-theme';
 import { readDevicePanelMode } from './device-panel-mode';
+import type { PanelEditorPage } from '../sections/device/panel-editor/panel-editor.page';
 
 interface LoadedDeviceComponent {
   device?: BlinkerDevice;
@@ -60,7 +63,12 @@ interface LoadedDeviceComponent {
   stateLabel?: string;
   layoutTheme?: UiTheme;
 
-  canDeactivate?: () => Observable<boolean> | boolean;
+  canDeactivate?: () => Observable<boolean> | Promise<boolean> | boolean;
+  panelEditSession?: unknown;
+  panelEditor?: PanelEditorPage;
+  panelEditChanged?: Observable<void>;
+  beginPanelEdit?: () => boolean;
+  endPanelEdit?: () => void;
 }
 
 @Component({
@@ -161,6 +169,7 @@ export class DevicePage implements OnInit, OnDestroy {
   private readonly subscriptions = new Subscription();
   private deviceSubject?: Subscription;
   private deviceComponentRef?: ComponentRef<unknown>;
+  private panelEditSubscription?: Subscription;
   private deviceViewContainer?: ViewContainerRef;
   private loadedComponentConfig = '';
   private loadingDevice = false;
@@ -198,6 +207,39 @@ export class DevicePage implements OnInit, OnDestroy {
   get isPreview(): boolean {
     return !!this.device?.config?.isPreview;
   }
+
+  private get editablePanel(): LoadedDeviceComponent | undefined {
+    return this.deviceComponentRef?.instance as LoadedDeviceComponent | undefined;
+  }
+
+  get panelEditing(): boolean { return !!this.editablePanel?.panelEditSession; }
+  get panelEditor(): PanelEditorPage | undefined { return this.editablePanel?.panelEditor; }
+
+  async beginPanelEdit(): Promise<void> {
+    if (!this.canEdit || this.panelEditing) return;
+    if (this.customMode || this.debugMode || !this.editablePanel?.beginPanelEdit) {
+      await this.router.navigate(['/device', this.id, 'edit', ...(this.customMode ? ['custom'] : [])]);
+      return;
+    }
+    if (!this.editablePanel.beginPanelEdit()) {
+      await this.notice.showToast('布局或设备能力尚未就绪，请稍后再编辑。');
+      return;
+    }
+    this.themePickerOpen = false;
+    this.clickTime = 0;
+    if (this.debugTimer) { window.clearTimeout(this.debugTimer); this.debugTimer = undefined; }
+    this.deviceComponentRef?.changeDetectorRef.detectChanges();
+    this.cd.markForCheck();
+  }
+
+  async cancelPanelEdit(): Promise<void> {
+    if (!this.panelEditor || !await this.panelEditor.canDeactivate()) return;
+    this.editablePanel?.endPanelEdit?.();
+    this.deviceComponentRef?.changeDetectorRef.detectChanges();
+    this.cd.markForCheck();
+  }
+
+  async savePanelEdit(): Promise<void> { await this.panelEditor?.save(false); }
 
   // Decided from the config, not the loaded component: the template must pick
   // its branch before loading, or a throwaway ion-content is created and torn down.
@@ -245,6 +287,7 @@ export class DevicePage implements OnInit, OnDestroy {
     this.subscriptions.add(this.router.events.subscribe(event => {
       if (event instanceof NavigationStart) this.updateViewActive(event.url);
       if (event instanceof NavigationEnd) this.updateViewActive(event.urlAfterRedirects);
+      if (event instanceof NavigationCancel || event instanceof NavigationError) this.updateViewActive(this.router.url);
     }));
 
     this.subscriptions.add(
@@ -260,6 +303,7 @@ export class DevicePage implements OnInit, OnDestroy {
     this.viewEpoch++;
     this.subscriptions.unsubscribe();
     this.deviceSubject?.unsubscribe();
+    this.panelEditSubscription?.unsubscribe();
 
     this.deviceHeaderActions = null;
 
@@ -315,7 +359,16 @@ export class DevicePage implements OnInit, OnDestroy {
     }
   }
 
-  canDeactivate(): Observable<boolean> | boolean {
+  canDeactivate(): Observable<boolean> | Promise<boolean> | boolean {
+    if (this.panelEditing) {
+      const panel = this.editablePanel;
+      const editor = this.panelEditor;
+      if (!editor) return false;
+      return editor.canDeactivate().then(allowed => {
+        if (allowed) panel?.endPanelEdit?.();
+        return allowed;
+      });
+    }
     const component = this.deviceComponentRef?.instance as LoadedDeviceComponent;
 
     return component?.canDeactivate?.() ?? true;
@@ -469,6 +522,7 @@ export class DevicePage implements OnInit, OnDestroy {
       if (!this.deviceViewContainer) return;
 
       this.deviceViewContainer.clear();
+      this.panelEditSubscription?.unsubscribe();
 
       this.deviceComponentRef =
         this.deviceViewContainer.createComponent(componentType);
@@ -493,6 +547,7 @@ export class DevicePage implements OnInit, OnDestroy {
 
       const componentRef = this.deviceComponentRef;
       const component = componentRef.instance as LoadedDeviceComponent;
+      this.panelEditSubscription = component.panelEditChanged?.subscribe(() => this.cd.markForCheck());
       const headerActions = component.headerActions ?? null;
 
       queueMicrotask(() => {
@@ -565,6 +620,7 @@ export class DevicePage implements OnInit, OnDestroy {
   private debugTimer?: number;
 
   enterDebug(): void {
+    if (this.panelEditing) return;
     if (typeof this.debugTimer !== 'undefined') {
       window.clearTimeout(this.debugTimer);
     }
@@ -585,13 +641,19 @@ export class DevicePage implements OnInit, OnDestroy {
   }
 
   private async showDebugModal(): Promise<void> {
-    if (!this.device) return;
+    if (!this.device || this.panelEditing) return;
+    const device = this.device;
 
     const modal = await this.modalCtrl.create({
       component: DebugComponent,
       backdropDismiss: false,
       componentProps: { device: this.device },
     });
+
+    if (this.panelEditing || this.device !== device || this.subscriptions.closed) {
+      modal.remove();
+      return;
+    }
 
     await modal.present();
   }

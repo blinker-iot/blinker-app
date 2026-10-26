@@ -1,21 +1,29 @@
-<ion-header>
+<ion-header class="control-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button [disabled]="saving" (click)="cancel()">取消</ion-button>
+      <ion-button class="text-action" [disabled]="saving" (click)="cancel()">取消</ion-button>
     </ion-buttons>
     <ion-title>区域设置</ion-title>
     <ion-buttons slot="end">
-      <ion-button [disabled]="!loaded || saving" (click)="save()">{{ saving ? '保存中…' : '保存' }}</ion-button>
+      <ion-button class="text-action" [disabled]="!loaded || saving" (click)="save()">{{ saving ? '保存中…' : '保存' }}</ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content fullscreen="true">
   <main>
+    <p class="hint">修改仅在保存后生效；保存失败会保留当前修改。</p>
+
+    @if (saving) {
+    <p class="save-status" role="status">正在保存区域设置…</p>
+    }
+
     @if (error) {
     <div class="error-message" role="alert">
       <span>{{ error }}</span>
-      <button type="button" (click)="load()">重新加载</button>
+      @if (!loaded) {
+      <button type="button" [disabled]="saving" (click)="load()">重新加载</button>
+      }
     </div>
     }
 
@@ -26,9 +34,9 @@
       <i class="fa-light fa-pen" aria-hidden="true"></i>
     </button>
 
-    <h2>设备 <small>{{ currentRoomData.length }} 台已选择</small></h2>
+    <h2 id="room-devices-heading">设备 <small>{{ currentRoomData.length }} 台已选择</small></h2>
 
-    <section class="device-list" aria-label="区域设备">
+    <section class="device-list" aria-labelledby="room-devices-heading" [attr.aria-busy]="saving">
       @for (deviceId of deviceDataList; track deviceId) {
       <button
         type="button"
@@ -46,7 +54,7 @@
       }
     </section>
     } @else if (!error) {
-    <p class="empty-state">正在加载…</p>
+    <p class="loading-state" role="status">正在读取区域…</p>
     }
   </main>
 </ion-content>

@@ -66,6 +66,27 @@ describe('MenuListComponent', () => {
 
     expect(selected).toHaveBeenCalledWith(items[0]);
   });
+
+  it('preserves the default detailed appearance until settings is selected', () => {
+    const menu = fixture.nativeElement.querySelector('.menu-list');
+
+    expect(fixture.componentInstance.appearance).toBe('default');
+    expect(menu.classList).toContain('menu-list--detailed');
+    expect(menu.classList).not.toContain('menu-list--settings');
+
+    fixture.componentRef.setInput('appearance', 'settings');
+    fixture.detectChanges();
+
+    expect(menu.classList).toContain('menu-list--settings');
+    expect(menu.classList).toContain('menu-list--detailed');
+    expect(menu.querySelectorAll('.menu-row')).toHaveLength(items.length);
+
+    fixture.componentRef.setInput('appearance', 'default');
+    fixture.detectChanges();
+
+    expect(menu.classList).not.toContain('menu-list--settings');
+    expect(menu.classList).toContain('menu-list--detailed');
+  });
 });
 
 @Component({

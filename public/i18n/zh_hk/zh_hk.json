@@ -39,6 +39,8 @@
     "ABOUT_US": "關於我們"
   },
   "SETTINGS": {
+    "LANGUAGE_SAVE_FAILED": "未能套用所選語言，請重試。",
+    "REGION_CHANGE_FAILED": "服務區域切換未完成，請核對目前區域後重試。",
     "SERVICE_REGION": "服務區域",
     "SERVICE_REGION_HINT": "切換服務區域後需要重新登入",
     "TITLE": "設定",
@@ -75,6 +77,16 @@
     "FEATURE_PENDING": "功能尚未推出"
   },
   "COMMUNITY": {
+    "PRODUCT_PREVIEW": "產品預覽",
+    "PREVIOUS_PAGE": "上一頁",
+    "NEXT_PAGE": "下一頁",
+    "PAGE_STATUS": "第 {{page}} / {{total}} 頁",
+    "PAGINATION": "內容分頁",
+    "SEARCH": "搜尋內容",
+    "CLOSE_SEARCH": "關閉搜尋",
+    "CATEGORY_FILTER": "按分類篩選內容",
+    "LOCAL_PREVIEW_NOTE": "本頁僅展示本地範例，並非真實產品上市預告。",
+    "PRODUCT_PREVIEW_STATUS": "產品範例 · 非真實上市預告",
     "SEARCH_PLACEHOLDER": "搜尋靈感、產品與技巧",
     "CATEGORY_RECOMMENDED": "推薦",
     "CATEGORY_INSPIRATION": "智能靈感",
@@ -93,13 +105,15 @@
     "KITCHEN_AIR_TITLE": "廚房空氣管理指南",
     "KITCHEN_AIR_DESCRIPTION": "油煙偵測與空氣淨化聯動",
     "KITCHEN_AIR_META": "閱讀時間 6 分鐘 · 8,643 次瀏覽",
-    "NO_RESULTS": "暫時沒有相符內容，請嘗試其他關鍵字",
+    "NO_RESULTS": "暫無相符內容，請切換分類或調整搜尋關鍵字。",
     "COMING_SOON": "即將推出",
     "OMNI_STATION_NAME": "全能基站",
     "OMNI_STATION_DESCRIPTION": "集清潔、集塵與烘乾於一體",
     "OMNI_STATION_LAUNCH": "敬請期待 · 2026 年第 3 季推出"
   },
   "PROFILE": {
+    "DEVICE_MANAGEMENT": "裝置管理",
+    "CONNECTION_AND_SERVICES": "連線與服務",
     "TITLE": "用戶中心",
     "USER_AVATAR": "用戶頭像",
     "VERSION": "版本 {{version}}",

@@ -1,5 +1,6 @@
 import { DeviceConsoleService, cloudConsole, canEditConsole, consoleLayout, installConsole } from '../../../core/services/device-console.service';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostBinding, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, HostBinding, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 
@@ -40,6 +41,11 @@ import { VARIANT_LABELS } from '../widget-inspector/widget-labels';
 import { PanelWidgetEditorContext, PanelWidgetEditorContextService } from './panel-widget-editor-context.service';
 
 import { PanelSortableDirective, PanelSortItemDirective, PanelSortMove } from './panel-sortable.directive';
+import { EmbeddedPanelSession, SavedPanelEdit } from './embedded-panel-session';
+import { InlineWidgetPropertiesComponent } from './inline-widget-properties';
+import { readDevicePanelMode } from '../../../device/device-panel-mode';
+import { API } from '../../../configs/api.config';
+import { assertDeviceV2AccountContext, captureDeviceV2AccountContext, DeviceV2AccountContext, DeviceV2AccountSource } from '../../../core/device-v2/account-scope';
 type EditorMode = 'edit' | 'layout' | 'preview';
 
 @Component({
@@ -61,12 +67,23 @@ type EditorMode = 'edit' | 'layout' | 'preview';
     PageWidgetComponent,
     PanelSortableDirective,
     PanelSortItemDirective,
+    NgTemplateOutlet,
+    InlineWidgetPropertiesComponent,
   ],
   templateUrl: './panel-editor.page.html', styleUrls: ['./panel-editor.page.scss'],
   changeDetection: ChangeDetectionStrategy.Eager,
 })
 
-export class PanelEditorPage implements OnInit, OnDestroy {
+export class PanelEditorPage implements OnInit, OnChanges, OnDestroy {
+  @Input() embeddedSession?: EmbeddedPanelSession;
+  @Input() liveSnapshot?: DeviceUiSnapshot;
+  @Input() hostRevision?: number;
+  @Input() editingActive = true;
+  @Output() changed = new EventEmitter<void>();
+  @Output() saved = new EventEmitter<SavedPanelEdit>();
+  propertyCard?: PanelCard;
+  @ViewChild(InlineWidgetPropertiesComponent) private propertyEditor?: InlineWidgetPropertiesComponent;
+  @HostBinding('class.inline-panel-editor') get embedded(): boolean { return !!this.embeddedSession; }
   readonly id: string;
   readonly variantLabels = VARIANT_LABELS;
   readonly themes = UI_THEMES;
@@ -114,6 +131,16 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   private fieldErrors = new Map<string, string>();
   private drafts = new Map<string, string>();
   private propertyContext?: PanelWidgetEditorContext;
+  private editContext?: DeviceV2AccountContext;
+  private hiddenAtStart = '';
+  private propertySession = 0;
+  private discardRequest?: { propertyOnly: boolean; result: Promise<boolean> };
+  private discardAlert?: HTMLIonAlertElement;
+
+  readonly canDismissProperty = (): Promise<boolean> => {
+    if (this.destroyed || !this.propertyCard || !this.propertyEditor?.hasUnappliedChanges) return Promise.resolve(true);
+    return this.confirmDiscard(true);
+  };
 
   constructor(route: ActivatedRoute, private readonly data: DataService,
     private readonly devices: DeviceService, private readonly deviceUi: DeviceUiPort,
@@ -132,6 +159,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
 
   get isV2(): boolean { return this.device?.config.mode === 'bbp2'; }
   get canUndo(): boolean { return this.previous.length > 0; }
+  get dragOriginActive(): boolean { return !!this.dragOrigin; }
 
   private get canControl(): boolean {
     if (this.device?.config.isShared && this.device.data.canCommand !== true) return false;
@@ -147,8 +175,42 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   get stale(): boolean {
-    return this.isV2 && !!this.document && (!this.snapshot?.manifestAccepted
-      || this.snapshot.manifestFingerprint !== this.loadedFingerprint);
+    if (!this.document) return false;
+    if (this.embedded && (JSON.stringify(this.device?.config.hiddenEndpointKeys ?? []) !== this.hiddenAtStart
+      || readDevicePanelMode(this.device) !== 'normal'
+      || (this.hostRevision !== undefined && this.hostRevision !== (this.isV2 ? this.record?.revision ?? 0 : this.legacyRecord?.revision ?? 0)))) return true;
+    return this.isV2 && (!this.snapshot?.manifestAccepted || this.snapshot.manifestFingerprint !== this.loadedFingerprint);
+  }
+
+  get editingAllowed(): boolean {
+    if (!this.embedded) return !this.saving && !this.stale;
+    return this.editingActive && this.appActive && !this.saving && !this.editBlockedReason;
+  }
+
+  get editBlockedReason(): string {
+    if (!this.embedded) return '';
+    let reason = '';
+    try { this.assertEditContext(); }
+    catch { reason = '账号、设备、权限或服务已改变'; }
+    if (!reason && this.stale) reason = '设备能力或布局已改变';
+    return reason ? `${reason}，当前草稿已保留。请用详情页左上角×取消，再重新进入编辑。` : '';
+  }
+
+  private assertEditContext(): void {
+    if (!this.editContext || !this.device || this.destroyed
+      || this.data.device?.dict?.[this.id] !== this.device || !canEditConsole(this.device)
+      || this.device.config.canEditConsole === false) throw new Error('编辑作用域已失效');
+    assertDeviceV2AccountContext(this.editAccountSource(), this.editContext);
+    if (this.editContext.authority !== API.BASE_URL) throw new Error('服务已切换');
+  }
+
+  private editAccountSource(): DeviceV2AccountSource {
+    // Anonymous demo panels are local-only in DevicePanelService. This sentinel
+    // fences their draft lifetime; it is never an account credential or sent.
+    if (this.device?.config.isPreview && !this.isV2 && !this.data.auth?.uuid && !this.data.user?.id) {
+      return { auth: { uuid: 'anonymous-preview' }, sessionEpoch: this.data.sessionEpoch };
+    }
+    return this.data;
   }
 
   private loadedFingerprint = '';
@@ -189,12 +251,15 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    void this.load();
+    if (this.embeddedSession) this.startEmbedded(this.embeddedSession);
+    else void this.load();
 
     this.subscriptions.add(this.deviceUi.appActive.subscribe(active => {
       this.appActive = active;
 
-      if (!active) this.disconnect();
+      if (this.embedded) {
+        if (!active) this.cancelDragPreview();
+      } else if (!active) this.disconnect();
       else if (this.pageVisible && this.isV2 && (!this.connection || this.connection.signal.aborted)) this.connect();
 
       this.refreshCards();
@@ -203,6 +268,37 @@ export class PanelEditorPage implements OnInit, OnDestroy {
     this.subscriptions.add(this.data.userDataLoader.subscribe(loaded => {
       if (loaded && !this.device) void this.load();
     }));
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!this.embedded) return;
+    if (changes['liveSnapshot'] && this.liveSnapshot) {
+      this.snapshot = this.liveSnapshot;
+      this.refreshCards();
+    }
+    if (changes['editingActive'] && !this.editingActive) this.cancelDragPreview();
+  }
+
+  private startEmbedded(session: EmbeddedPanelSession): void {
+    this.device = session.device;
+    this.mode = 'layout';
+    try {
+      this.editContext = captureDeviceV2AccountContext(this.editAccountSource(), API.BASE_URL);
+      this.assertEditContext();
+      this.record = structuredClone(session.record ?? null);
+      this.legacyRecord = structuredClone(session.legacyRecord ?? null);
+      this.document = structuredClone(session.document);
+      this.hiddenAtStart = JSON.stringify(this.device.config.hiddenEndpointKeys ?? []);
+      this.bindings = structuredClone(session.bindings ?? {});
+      this.snapshot = this.liveSnapshot ?? session.snapshot;
+      this.loadedFingerprint = this.snapshot?.manifestFingerprint ?? '';
+      this.ready();
+      if (!this.isV2) this.deviceSubscription = this.device.subject.subscribe(() => this.refreshCards());
+    } catch {
+      this.loading = false;
+      this.error = '无法进入编辑，请重新读取设备。原布局未修改。';
+      this.changed.emit();
+    }
   }
 
   ionViewWillEnter(): void {
@@ -218,6 +314,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    if (this.discardAlert) void this.closeDiscardAlert(this.discardAlert);
     this.releasePropertyContext();
 
     this.loadVersion++;
@@ -293,7 +390,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   private connect(): void {
-    if (!this.device || !this.pageVisible || !this.appActive) return;
+    if (this.embedded || !this.device || !this.pageVisible || !this.appActive) return;
 
     this.disconnect();
     const connection = this.deviceUi.openConnection(this.device.deviceName);
@@ -354,7 +451,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   setMode(mode: EditorMode): void {
-    if (this.saving) return;
+    if (this.embedded || this.saving) return;
 
     this.mode = mode;
 
@@ -363,8 +460,9 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   openLibrary(): void {
+    if (this.embedded && !this.editingAllowed) return;
     this.error = '';
-    this.fieldKey = this.availableFields[0]?.key || (this.isV2 ? '' : '__new__');
+    this.fieldKey = this.availableFields[0]?.key || (this.isV2 || this.embedded ? '' : '__new__');
     this.libraryOpen = true;
   }
 
@@ -372,6 +470,14 @@ export class PanelEditorPage implements OnInit, OnDestroy {
     const card = this.cards.get(widgetId);
 
     if (!card || this.saving) return;
+
+    if (this.embedded) {
+      if (this.editingAllowed) {
+        this.propertySession++;
+        this.propertyCard = card;
+      }
+      return;
+    }
 
     const editor = this;
     this.propertyContext = {
@@ -396,7 +502,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   add(id: WidgetPresetId): void {
-    if (!this.document || this.saving) return;
+    if (!this.document || this.saving || (this.embedded && !this.editingAllowed)) return;
 
     const preset: WidgetPreset = WIDGET_PRESETS[id];
     const field = this.libraryField(preset);
@@ -436,7 +542,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   updateWidget(widget: PageLayoutWidget): void {
-    if (!this.document || this.saving) return;
+    if (!this.document || this.saving || (this.embedded && !this.editingAllowed)) return;
 
     try {
       const placed = placeWidget(widget, this.document.widgets.filter(item => item.widgetId !== widget.widgetId));
@@ -446,12 +552,13 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   private removeWidget(widgetId: string): void {
-    if (!this.document || this.saving) return;
+    if (!this.document || this.saving || (this.embedded && !this.editingAllowed)) return;
 
     this.commit(this.document.widgets.filter(widget => widget.widgetId !== widgetId));
   }
 
   undo(): void {
+    if (this.embedded && !this.editingAllowed) return;
     const previous = this.previous.pop();
 
     if (!previous || this.saving) return;
@@ -465,7 +572,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   previewAction(card: PanelCard, action: WidgetAct): void {
-    if (this.mode !== 'preview' || !card.field.writable) return;
+    if (this.embedded || this.mode !== 'preview' || !card.field.writable) return;
 
     if (action.kind === 'draft') {
       this.drafts.set(card.field.key, String(action.value ?? ''));
@@ -572,14 +679,21 @@ export class PanelEditorPage implements OnInit, OnDestroy {
 
   async save(returnToDevice = true): Promise<boolean> {
     if (!this.document || !this.device || this.saving || !canEditConsole(this.device)) return false;
+    if (this.embedded && !this.editingAllowed) {
+      this.error = '编辑作用域或布局已改变，草稿已保留。请返回后重新编辑。';
+      this.changed.emit();
+      return false;
+    }
     if (this.stale) {
       this.error = '设备字段已改变，请返回编辑页重新读取。';
       return false;
     }
 
     this.saving = true;
+    this.changed.emit();
     this.error = '';
     let layoutSaved = false;
+    let consoleRevision: number | undefined;
 
     try {
       const component = this.isV2 ? 'DeviceV2' : 'Layouter2Component';
@@ -596,23 +710,30 @@ export class PanelEditorPage implements OnInit, OnDestroy {
           const source = await this.consoles.save(this.device.deviceName,
             { layout: candidate, uiConfig: { panelMode: 'normal' } });
           if (epoch !== this.data.sessionEpoch) throw new Error('账号已切换');
+          if (this.embedded) this.assertEditContext();
           this.record = consoleLayout(source);
+          consoleRevision = source.revision;
           installConsole(this.device, source);
         } else {
-          this.record = await this.layouts.saveCandidate(this.device.deviceName, candidate, this.snapshot!.endpoints, revision);
+          const record = await this.layouts.saveCandidate(this.device.deviceName, candidate, this.snapshot!.endpoints, revision);
+          if (this.embedded) this.assertEditContext();
+          this.record = record;
         }
 
         layoutSaved = true;
       } else {
-        this.legacyRecord = await this.panels.save(this.device, this.document, this.bindings, this.legacyRecord?.revision ?? 0);
+        const record = await this.panels.save(this.device, this.document, this.bindings, this.legacyRecord?.revision ?? 0);
+        if (this.embedded) this.assertEditContext();
+        this.legacyRecord = record;
 
         this.panels.install(this.device, this.legacyRecord);
       }
 
       if (this.isV2 && !cloudConsole(this.device) && !this.device.config.isPreview && !await this.devices.saveDeviceConfig(this.device, config)) throw new Error('config-save-failed');
+      if (this.embedded) this.assertEditContext();
 
       Object.assign(this.device.config, config);
-      this.device.subject.next({ key: 'component', value: component, source: 'panel-editor' });
+      if (!this.embedded) this.device.subject.next({ key: 'component', value: component, source: 'panel-editor' });
 
       this.dirty = false;
       this.savedState = this.serialize();
@@ -621,18 +742,45 @@ export class PanelEditorPage implements OnInit, OnDestroy {
 
       this.saving = false;
 
-      if (returnToDevice) await this.nav.navigateBack(`/device/${encodeURIComponent(this.id)}`);
+      if (this.embedded) this.saved.emit({ record: this.record, legacyRecord: this.legacyRecord, consoleRevision });
+      else if (returnToDevice) await this.nav.navigateBack(`/device/${encodeURIComponent(this.id)}`);
 
       return true;
     } catch (error) {
       const code = (error as { code?: string })?.code;
 
       this.error = code === 'DEVICE_V2_PAGE_LAYOUT_CONFLICT' || code === 'DEVICE_V2_PAGE_LAYOUT_MANIFEST_STALE' || code === 'DEVICE_PANEL_CONFLICT'
-        ? '布局或设备能力已在其他位置更新。当前草稿已保留，请重新读取后再编辑。'
+        ? `布局或设备能力已在其他位置更新。当前草稿已保留，${this.embedded ? '请取消当前编辑，再重新进入读取最新布局。' : '请重新读取后再编辑。'}`
         : layoutSaved ? '布局已保存，但面板切换失败。请重试保存以完成切换。' : '保存失败，当前草稿已保留，请重试。';
 
       return false;
-    } finally { this.saving = false; }
+    } finally { this.saving = false; this.changed.emit(); }
+  }
+
+  applyProperty(widget: PageLayoutWidget): void {
+    if (!this.editingAllowed || !this.propertyCard || widget.widgetId !== this.propertyCard.widget.widgetId) return;
+    this.error = '';
+    const current = this.document?.widgets.find(item => item.widgetId === widget.widgetId);
+    if (!current) return;
+    this.updateWidget({ ...widget, grid: { ...widget.grid, x: current.grid.x, y: current.grid.y } });
+    if (!this.error) this.propertyCard = undefined;
+  }
+
+  removeProperty(): void {
+    if (!this.editingAllowed || !this.propertyCard) return;
+    this.removeWidget(this.propertyCard.widget.widgetId);
+    this.propertyCard = undefined;
+  }
+
+  get propertyIndex(): number { return this.items.findIndex(item => item.widgetId === this.propertyCard?.widget.widgetId); }
+
+  moveProperty(direction: number): void {
+    if (!this.editingAllowed || !this.propertyCard || Math.abs(direction) !== 1) return;
+    const target = this.items[this.propertyIndex + direction];
+    if (!target) return;
+    this.startDrag();
+    this.moveDrag({ from: this.propertyCard.widget.widgetId, to: target.widgetId });
+    this.finishDrag(false);
   }
 
   private async saveWidgetChange(change: () => void): Promise<boolean> {
@@ -667,25 +815,57 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   async canDeactivate(nextUrl?: string): Promise<boolean> {
     if (this.saving) return false;
     if (this.propertyContext && nextUrl?.split('?')[0] === this.widgetUrl(this.propertyContext.widgetId)) return true;
-    if (!this.dirty) {
+    if (!this.dirty && !this.propertyEditor?.hasUnappliedChanges) {
       this.releasePropertyContext();
       return true;
     }
 
-    const alert = await this.alerts.create({ header: '放弃未保存的修改？',
-      message: '已保存的设备面板不会改变。',
-      buttons: [{ text: '继续编辑', role: 'cancel' }, { text: '放弃修改', role: 'destructive' }] });
-
-    await alert.present();
-
-    const discard = (await alert.onDidDismiss()).role === 'destructive';
+    const discard = await this.confirmDiscard(false);
 
     if (discard) this.releasePropertyContext();
 
     return discard;
   }
 
-  async reload(): Promise<void> { if (await this.canDeactivate()) await this.load(); }
+  private confirmDiscard(propertyOnly: boolean): Promise<boolean> {
+    if (this.discardRequest) return this.discardRequest.propertyOnly === propertyOnly
+      ? this.discardRequest.result : Promise.resolve(false);
+
+    const property = this.propertyEditor, version = property?.draftVersion;
+    const session = this.propertySession, document = this.document;
+    const current = () => !this.destroyed && session === this.propertySession && document === this.document
+      && (!propertyOnly || (!!this.propertyCard && property === this.propertyEditor && version === property?.draftVersion));
+    const result = (async () => {
+      const alert = await this.alerts.create({ header: propertyOnly ? '放弃未应用的属性？' : '放弃未保存的修改？',
+        message: propertyOnly ? '本次属性调整尚未应用，已应用到页面的草稿不会改变。' : '已保存的设备面板不会改变。',
+        buttons: [{ text: '继续编辑', role: 'cancel' }, { text: '放弃修改', role: 'destructive' }] });
+      if (!current()) { alert.remove(); return false; }
+
+      this.discardAlert = alert;
+      try {
+        await alert.present();
+        return (await alert.onDidDismiss()).role === 'destructive' && current();
+      } catch {
+        await this.closeDiscardAlert(alert);
+        return false;
+      } finally {
+        if (this.discardAlert === alert) this.discardAlert = undefined;
+      }
+    })().catch(() => false).finally(() => { this.discardRequest = undefined; });
+
+    this.discardRequest = { propertyOnly, result };
+    return result;
+  }
+
+  private async closeDiscardAlert(alert: HTMLIonAlertElement): Promise<void> {
+    try { if (!await alert.dismiss(undefined, 'cancel')) alert.remove(); }
+    catch { alert.remove(); }
+  }
+
+  async reload(): Promise<void> {
+    if (this.embedded) { this.error = '请取消当前编辑，再重新进入以读取最新布局。'; return; }
+    if (await this.canDeactivate()) await this.load();
+  }
 
   private widgetUrl(widgetId: string): string {
     return `/device/${encodeURIComponent(this.id)}/edit/widget/${encodeURIComponent(widgetId)}`;
@@ -697,7 +877,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   private libraryField(preset: WidgetPreset): DeviceUiEndpoint | undefined {
-    if (!this.isV2 && this.fieldKey === '__new__') {
+    if (!this.isV2 && !this.embedded && this.fieldKey === '__new__') {
       const choices = this.choices.split(',').map(value => value.trim()).filter(Boolean);
 
       const field: DeviceUiEndpoint = {
@@ -745,7 +925,13 @@ export class PanelEditorPage implements OnInit, OnDestroy {
 
       return field ? [[widget.widgetId, this.cardFor(widget, field)] as const] : [];
     }));
+    if (this.propertyCard) {
+      const live = this.cards.get(this.propertyCard.widget.widgetId);
+      // Keep the property draft's seed stable while showing fresh readings.
+      if (live) this.propertyCard = { ...live, widget: this.propertyCard.widget };
+    }
     this.cd.markForCheck();
+    this.changed.emit();
   }
 
   private rebuildItems(): void {
@@ -758,7 +944,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   private commit(widgets: PageLayoutWidget[], bindings = this.bindings): void {
     if (!this.document) return;
 
-    const parsed = parsePageWidgets(widgets, this.isV2 ? this.endpoints : undefined);
+    const parsed = parsePageWidgets(widgets, this.isV2 ? this.endpoints : undefined, this.document.widgets);
 
     if (JSON.stringify(parsed) === JSON.stringify(this.document.widgets) && bindings === this.bindings) return;
 
@@ -777,9 +963,15 @@ export class PanelEditorPage implements OnInit, OnDestroy {
   }
 
   startDrag(): void {
-    if (!this.document || this.saving || this.stale) return;
+    if (!this.document || this.saving || this.stale || (this.embedded && !this.editingAllowed)) return;
 
     this.dragOrigin = { items: [...this.items], widgets: this.document.widgets };
+  }
+
+  private cancelDragPreview(): void {
+    if (!this.dragOrigin) return;
+    this.dragOrigin = undefined;
+    this.rebuildItems();
   }
 
   moveDrag(move: PanelSortMove): void {
@@ -805,7 +997,7 @@ export class PanelEditorPage implements OnInit, OnDestroy {
 
     if (!origin) return;
     if (canceled || !this.document || this.document.widgets !== origin.widgets
-      || this.mode !== 'layout' || this.saving || this.stale) {
+      || this.mode !== 'layout' || this.saving || this.stale || (this.embedded && !this.editingAllowed)) {
       this.rebuildItems();
       this.cd.detectChanges();
       return;

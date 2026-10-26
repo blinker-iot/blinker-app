@@ -1,0 +1,219 @@
+@use '../../../theme/settings-surface' as settings;
+@use '../../../theme/control-page-chrome' as chrome;
+
+// Opt-in only: both OTA pages share presentation, not transport or state.
+@mixin page {
+  @include chrome.header;
+
+  :host {
+    @include settings.tokens;
+    --ota-accent: var(--ion-color-primary);
+    display: block;
+    height: 100%;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  ion-header ion-title { font-size: 1.0625rem; font-weight: 600; }
+
+  ion-content::part(scroll) {
+    top: var(--transparent-page-content-top);
+    scroll-padding-block: 16px;
+  }
+
+  main.tool-page-shell {
+    @include settings.page;
+    --section-main-display: flex;
+    --section-main-padding-inline: 16px;
+    --section-main-padding-bottom: 32px;
+    --section-main-accent-opacity: 0;
+    min-height: 100%;
+    max-width: 720px;
+    padding-bottom: calc(32px + var(--ion-safe-area-bottom, 0px));
+  }
+
+  main::before { display: none !important; }
+  .ota-card, .ota-status { @include settings.card; }
+  .section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    > div { min-width: 0; flex: 1 1 10rem; }
+    > div > span { color: var(--blinker-text-secondary); font-size: .875rem; }
+    h2 { margin: 4px 0 0; font-size: 1.125rem; line-height: 1.5; overflow-wrap: anywhere; }
+  }
+
+  .meta-chip {
+    max-width: 100%;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: var(--blinker-surface-muted);
+    color: var(--blinker-text-secondary);
+    font-size: .875rem;
+    overflow-wrap: anywhere;
+    &.selected { color: var(--ota-accent); }
+  }
+  .file-input { display: none; }
+  button { font: inherit; }
+  .file-picker, .secondary-button, .primary-button, .toggle-chip, .cancel-button {
+    @include settings.button;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .file-picker, .secondary-button, .primary-button { width: 100%; }
+  .file-picker {
+    justify-content: flex-start;
+    gap: 12px;
+    > i { flex: 0 0 24px; font-size: 1.5rem; }
+    > span { min-width: 0; display: flex; flex-direction: column; gap: 4px; text-align: start; }
+    strong { color: var(--blinker-text-primary); }
+    small { color: var(--blinker-text-secondary); font-size: .875rem; font-weight: 400; }
+  }
+  .primary-button {
+    background: var(--ota-accent);
+    color: var(--ion-color-primary-contrast);
+    &:active:not(:disabled) { background: color-mix(in srgb, var(--ota-accent) 88%, var(--blinker-text-primary)); }
+  }
+  .toggle-chip { flex-wrap: wrap; }
+  .toggle-chip.active { outline: 1px solid var(--ota-accent); outline-offset: -1px; }
+  .file-result, .result-row {
+    box-sizing: border-box;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 12px;
+    border-radius: 12px;
+    text-align: start;
+  }
+  .file-result { background: var(--blinker-surface-muted); }
+  .file-result > button, .inline-button { @include settings.icon-button; }
+  .result-icon, .status-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--blinker-surface-muted);
+    color: var(--ota-accent);
+    font-size: 1.25rem;
+  }
+  .result-copy, .status-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-wrap: anywhere;
+    strong { color: var(--blinker-text-primary); font-size: 1rem; font-weight: 600; }
+    small { color: var(--blinker-text-secondary); font-size: .875rem; }
+  }
+  .mode-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+    gap: 8px;
+    margin-top: 16px;
+    button {
+      @include settings.button;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: start;
+      > span { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+      small { font-size: .875rem; color: var(--blinker-text-secondary); font-weight: 400; }
+      &.active { outline: 1px solid var(--ota-accent); outline-offset: -1px; }
+    }
+  }
+  .result-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+  .result-row {
+    @include settings.interaction;
+    min-height: 56px;
+    border: 0;
+    background: var(--blinker-surface-muted);
+    color: var(--blinker-text-primary);
+    &.selected { outline: 1px solid var(--ota-accent); outline-offset: -1px; }
+    > i:last-child { grid-column: 3; grid-row: 1; color: var(--ota-accent); }
+    .result-meta { grid-column: 2; color: var(--blinker-text-secondary); font-size: .875rem; }
+  }
+  .result-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 120px;
+    padding: 16px 0;
+    color: var(--blinker-text-secondary);
+    text-align: center;
+    overflow-wrap: anywhere;
+    > i { color: var(--ota-accent); font-size: 1.5rem; }
+    strong { color: var(--blinker-text-primary); font-size: 1rem; }
+    span { font-size: .875rem; }
+    &.compact { min-height: 80px; }
+  }
+  .field-row { display: flex; flex-wrap: wrap; gap: 16px; }
+  .field-group {
+    display: flex;
+    flex: 1 1 11rem;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+    > span:first-child { font-weight: 600; overflow-wrap: anywhere; }
+    small { font-size: .875rem; color: var(--blinker-text-secondary); font-weight: 400; }
+  }
+  .input-shell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 48px;
+    padding-inline: 12px;
+    border: 1px solid var(--blinker-border);
+    border-radius: 12px;
+    background: var(--blinker-surface-muted);
+    > i { flex: 0 0 20px; color: var(--blinker-text-secondary); text-align: center; }
+    input {
+      @include settings.field;
+      flex: 1;
+      padding-inline: 0;
+      border: 0;
+      background: transparent;
+      scroll-margin-block: 16px;
+    }
+  }
+  .target-preview {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: var(--blinker-text-secondary);
+    font-size: .875rem;
+    > i { padding-top: .25em; }
+    > span { min-width: 0; overflow-wrap: anywhere; }
+  }
+  .status-heading { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+  .status-copy { flex: 1 1 8rem; }
+  .status-heading > b { color: var(--ota-accent); font-size: 1rem; }
+  .ota-status.error .status-icon { color: var(--ion-color-danger); }
+  .ota-status.success .status-icon { color: var(--ion-color-success); }
+  .ota-status.cancelled .status-icon { color: var(--blinker-text-secondary); }
+  .progress-track {
+    height: 6px;
+    margin-top: 16px;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--blinker-surface-muted);
+    > span { display: block; height: 100%; border-radius: inherit; background: var(--ota-accent); }
+  }
+  .progress-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 8px; color: var(--blinker-text-secondary); font-size: .875rem; overflow-wrap: anywhere; }
+  .cancel-button { width: 100%; margin-top: 16px; color: var(--ion-color-danger); }
+  .ota-notice { display: flex; align-items: flex-start; gap: 12px; color: var(--blinker-text-secondary); font-size: .875rem; overflow-wrap: anywhere; }
+  .ota-notice > i { flex: 0 0 20px; margin-top: .25em; }
+  @media (prefers-reduced-motion: reduce) { .fa-spin { animation: none; } }
+}

@@ -1,5 +1,4 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { RouterModule } from '@angular/router';
 
 import {
   AlertController,
@@ -66,7 +65,6 @@ const ACCOUNT_DELETION_ERROR_MESSAGES: Readonly<Record<string, string>> = {
     IonTitle,
     IonToolbar,
     MenuListComponent,
-    RouterModule,
   ],
 })
 export class UserPage implements OnInit, OnDestroy {
@@ -91,37 +89,8 @@ export class UserPage implements OnInit, OnDestroy {
     return this.user?.avatar || '';
   }
 
-  get profileMenuItems(): readonly MenuListItem[] {
-    return [
-      {
-        id: 'username',
-        title: '昵称',
-        icon: 'fa-user',
-        value: this.draftName || '—',
-        disabled: true,
-        showChevron: false,
-      },
-      {
-        id: 'email',
-        title: '邮箱',
-        icon: 'fa-envelope',
-        value: this.draftEmail || '—',
-        disabled: true,
-        showChevron: false,
-      },
-    ];
-  }
-
   get securityMenuItems(): readonly MenuListItem[] {
     return [
-      {
-        id: 'security',
-        title: '账号与安全',
-        icon: 'fa-shield-check',
-        value: '已保护',
-        disabled: true,
-        showChevron: false,
-      },
       {
         id: 'cancel-account',
         title: '注销账号',

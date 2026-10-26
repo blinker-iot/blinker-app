@@ -6,9 +6,12 @@
 </ion-header>
 <ion-content [fullscreen]="true">
   <main>
-    <h1 class="device-context">{{ deviceName }}</h1>
-    <p class="source-note">仅记录服务器已确认的开关、数值与文字属性状态。未送达服务器的蓝牙或局域网本地变化不补录；实时采样、字节、容器与空值暂不归档。时间为服务器确认时间（UTC），不是设备采集或实际发生时间。</p>
+    <section class="surface-card data-heading" aria-label="状态历史来源">
+      <h1 class="device-context">{{ deviceName }}</h1>
+      <p class="source-summary">云端状态变化 · 服务器确认时间（UTC）</p>
+    </section>
     <section class="surface-card query-form" aria-label="历史查询范围">
+      <h2>查询范围</h2>
       <label>时间范围
         <select [ngModel]="state().rangeMs" (ngModelChange)="changeRange($event)" [disabled]="!canQuery">
           @for (range of ranges; track range.value) { <option [ngValue]="range.value">{{ range.label }}</option> }
@@ -22,15 +25,21 @@
       </label>
       <button class="secondary-action refresh-action" type="button" [disabled]="!canQuery || state().busy" (click)="refresh()">刷新</button>
     </section>
-    @if (state().policyConfirmed) {
-      <p class="policy-note">服务器最多保留 30 天、每设备最多 10,000 条；容量上限可能使较早记录提前移除，不保证完整时间覆盖。</p>
-    }
-    @if (state().error) { <p class="error-note" role="alert">{{ state().error }}</p> }
-    @if (state().busy) { <div class="query-loading" role="status"><ion-spinner name="crescent"></ion-spinner><span>正在查询真实状态记录…</span></div> }
+    <details class="surface-card source-disclosure">
+      <summary>记录来源与限制</summary>
+      <div class="disclosure-body">
+        <p class="source-note">仅记录服务器已确认的开关、数值与文字属性状态。未送达服务器的蓝牙或局域网本地变化不补录；实时采样、字节、容器与空值暂不归档。时间为服务器确认时间（UTC），不是设备采集或实际发生时间。</p>
+        @if (state().policyConfirmed) {
+          <p class="policy-note">服务器最多保留 30 天、每设备最多 10,000 条；容量上限可能使较早记录提前移除，不保证完整时间覆盖。</p>
+        }
+      </div>
+    </details>
+    @if (state().error) { <p class="error-note workflow-feedback error" role="alert">{{ state().error }}</p> }
+    @if (state().busy) { <div class="query-loading workflow-feedback" role="status"><ion-spinner name="crescent"></ion-spinner><span>正在查询真实状态记录…</span></div> }
     @if (state().ready) {
       <p class="range-note">{{ utcText(state().from) }} 至 {{ utcText(state().to) }}（不含结束时刻）</p>
       @if (!state().rows.length) {
-        <p class="empty-state">该范围暂无服务器观测的状态记录；不代表设备没有变化，也不会生成测试数据。</p>
+        <p class="surface-card empty-state" role="status">该范围暂无服务器观测的状态记录；不代表设备没有变化，也不会生成测试数据。</p>
       } @else {
         <p class="section-label">已读取 {{ state().rows.length }} 条，最新记录在前</p>
         <section class="surface-card history-list" aria-label="真实状态历史">
@@ -45,7 +54,7 @@
         </section>
       }
       @if (canLoadMore) { <button class="secondary-action load-more-action" type="button" (click)="loadMore()">查看更早记录</button> }
-      @if (bounded) { <p class="bounded-note">已达到本页 {{ viewLimit }} 条显示上限，仍有更早记录未显示。可按功能筛选或调整范围重新查询。</p> }
+      @if (bounded) { <p class="bounded-note workflow-feedback">已达到本页 {{ viewLimit }} 条显示上限，仍有更早记录未显示。可按功能筛选或调整范围重新查询。</p> }
     }
   </main>
 </ion-content>

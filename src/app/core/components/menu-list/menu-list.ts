@@ -61,6 +61,7 @@ export class MenuListComponent
   }
 
   @Input() detailed = false;
+  @Input() appearance: 'default' | 'settings' = 'default';
   @Input()
   set editMode(value: boolean) {
     this._editMode = value;

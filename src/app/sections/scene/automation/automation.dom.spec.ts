@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { provideIonicAngular } from '@ionic/angular/standalone';
@@ -136,6 +137,39 @@ describe('automation rendered form management flow (local API/cache/storage doub
     element.click();
     await settled();
   }
+
+  it('uses self-registering standalone input/select controls and retains the real form bindings', async () => {
+    await click('新建自动化');
+    for (const tag of ['ion-input', 'ion-select', 'ion-select-option']) {
+      const element = fixture.debugElement.query(By.css(tag));
+      expect(element, tag).not.toBeNull();
+      // A legacy IonicModule proxy can accept ngModel without ever defining its
+      // web component under standalone bootstrap. Check the production proxy,
+      // not a test import that would register the missing controls itself.
+      expect(element.componentInstance.constructor.ɵcmp.standalone, tag).toBe(true);
+      expect(customElements.get(tag), tag).toBeDefined();
+    }
+    await input('ion-input', '名称', '原生表单草稿');
+    await input('ion-select', '源属性', 'source:1');
+    expect(fixture.componentInstance.name).toBe('原生表单草稿');
+    expect(fixture.componentInstance.source).toBe('source:1');
+    expect(api.write).not.toHaveBeenCalled();
+  });
+
+  it('self-registers the progress component while the existing refresh is pending', async () => {
+    let finish!: (value: ReturnType<typeof automationPage>) => void;
+    api.list.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const refresh = service.refresh();
+    fixture.detectChanges();
+    const progress = fixture.debugElement.query(By.css('ion-progress-bar'));
+    expect(progress).not.toBeNull();
+    expect(progress.componentInstance.constructor.ɵcmp.standalone).toBe(true);
+    expect(customElements.get('ion-progress-bar')).toBeDefined();
+    finish(automationPage({ rules: [], nextAfter: null }));
+    await refresh; await settled();
+    expect(fixture.nativeElement.querySelector('ion-progress-bar')).toBeNull();
+    expect(api.write).not.toHaveBeenCalled();
+  });
 
   it('explains missing Manifest separately from unsupported devices and offers control links only within the existing profile', async () => {
     cachedManifests = {};
