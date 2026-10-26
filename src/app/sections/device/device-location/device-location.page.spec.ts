@@ -88,13 +88,57 @@ describe('Device location server-authoritative manual production template', () =
     }
   });
 
+  it('uses a source-neutral WGS84 label without starting phone location', async () => {
+    const f = await render({ record: recorded });
+    f.page.startEditing(); await f.settle();
+    expect(f.element.querySelector('.coordinate-note')?.textContent?.trim()).toBe('WGS84 经纬度');
+    expect(f.getCurrentPosition).not.toHaveBeenCalled();
+    expect(f.browserLocation).not.toHaveBeenCalled();
+    expect(f.saveDeviceConfig).not.toHaveBeenCalled();
+    f.http.expectNone(() => true);
+  });
+
+  it('keeps the saved map and panel in one header-safe flow container', async () => {
+    const f = await render({ record: recorded });
+    const content = f.element.querySelector('ion-content')!;
+    const wrapper = content.firstElementChild!;
+    const mapArea = wrapper.querySelector('.map-area')!;
+    const panel = wrapper.querySelector('.location-panel')!;
+    // JSDOM cannot measure layout; the real handset verifies attribution hit-testing.
+    expect(wrapper.classList.contains('location-content')).toBe(true);
+    expect(wrapper.parentElement).toBe(content);
+    expect(mapArea.parentElement).toBe(wrapper);
+    expect(mapArea.nextElementSibling).toBe(panel);
+    expect(f.element.querySelectorAll('app-location-map')).toHaveLength(1);
+    expect(f.getCurrentPosition).not.toHaveBeenCalled();
+    f.http.expectNone(() => true);
+  });
+
+  it('keeps the unset prompt in the same header-safe flow without activating the map', async () => {
+    const f = await render();
+    const wrapper = f.element.querySelector('ion-content')!.firstElementChild!;
+    const mapArea = wrapper.querySelector<HTMLElement>('.map-area')!;
+    const prompt = wrapper.querySelector('.empty-state')!;
+    expect(wrapper.classList.contains('location-content')).toBe(true);
+    expect(mapArea.parentElement).toBe(wrapper);
+    expect(mapArea.nextElementSibling).toBe(prompt);
+    expect(prompt.querySelector('.setup')).not.toBeNull();
+    expect(mapArea.hidden).toBe(true);
+    expect(f.element.querySelectorAll('app-location-map')).toHaveLength(1);
+    expect(f.map()!.active).toBe(false);
+    expect(f.getCurrentPosition).not.toHaveBeenCalled();
+    f.http.expectNone(() => true);
+  });
+
   it('reads the unset state and asks permission to set it without starting GPS, a map or unrelated writes', async () => {
     const f = await render();
     expect(f.element.querySelector('h1')!.textContent).toBe('要设置设备位置吗？');
     expect(f.page.longitude).toBe(''); expect(f.page.latitude).toBe('');
     expect(f.element.querySelector('.setup')?.textContent).toContain('设置位置'); expect(f.element.textContent).toContain('暂不设置');
     expect(f.element.textContent).not.toMatch(/杭州|上海|成都|123\.456|45\.678/);
-    expect(f.element.querySelector('app-location-map, .map-preview, .preset-list')).toBeNull();
+    expect(f.map()!.active).toBe(false);
+    expect(f.element.querySelector<HTMLElement>('.map-area')!.hidden).toBe(true);
+    expect(f.element.querySelector('.leaflet-pane, .map-preview, .preset-list')).toBeNull();
     expect(f.getCurrentPosition).not.toHaveBeenCalled(); expect(f.saveDeviceConfig).not.toHaveBeenCalled();
     f.http.expectNone(() => true);
   });
@@ -241,7 +285,8 @@ describe('Device location server-authoritative manual production template', () =
   it('starts one phone fix only after the unset-state setup action and never saves the obtained point automatically', async () => {
     const f = await render(); let resolve!: (point: unknown) => void;
     f.getCurrentPosition.mockImplementation(() => new Promise(done => { resolve = done; }));
-    expect(f.getCurrentPosition).not.toHaveBeenCalled(); expect(f.map()).toBeUndefined();
+    expect(f.getCurrentPosition).not.toHaveBeenCalled(); expect(f.map()!.active).toBe(false);
+    expect(f.element.querySelector<HTMLElement>('.map-area')!.hidden).toBe(true);
     f.element.querySelector<HTMLButtonElement>('.setup')!.click(); await f.settle();
     expect(f.page.editing).toBe(true); expect(f.page.locating).toBe(true); expect(f.map()?.editable).toBe(true);
     expect(f.getCurrentPosition).toHaveBeenCalledOnce(); expect(f.getCurrentPosition.mock.calls[0][0]).toBeInstanceOf(AbortSignal);
@@ -271,7 +316,8 @@ describe('Device location server-authoritative manual production template', () =
     f.element.querySelector<HTMLButtonElement>('.cancel')!.click(); await f.settle(); expect(signal.aborted).toBe(true);
     resolve({ longitude: 20, latitude: 30, coordinateSystem: 'WGS84' }); await f.settle();
     expect(f.page.editing).toBe(false); expect(f.page.longitude).toBe(''); expect(f.page.draftPoint).toBeNull();
-    expect(f.map()).toBeUndefined(); expect(f.getCurrentPosition).toHaveBeenCalledOnce(); f.http.expectNone(() => true);
+    expect(f.map()!.active).toBe(false); expect(f.element.querySelector<HTMLElement>('.map-area')!.hidden).toBe(true);
+    expect(f.getCurrentPosition).toHaveBeenCalledOnce(); f.http.expectNone(() => true);
   });
   it.each(['map', 'input'] as const)('keeps the newer %s selection when an older phone fix arrives late', async source => {
     const f = await render(); let resolve!: (point: unknown) => void;
@@ -314,7 +360,10 @@ describe('Device location server-authoritative manual production template', () =
     else { f.data.auth = { uuid: 'other', accessToken: 'other', refreshToken: 'other' }; f.data.sessionEpoch++; f.data.authDataChanged.next(); }
     await f.settle(); expect(signal.aborted).toBe(mode !== 'background'); expect(f.stateSnapshot.observers).toHaveLength(0);
     resolve({ longitude: 99, latitude: 88, coordinateSystem: 'WGS84' }); await work; await f.settle();
-    expect(f.page.record).toBeNull(); expect(f.map()).toBeUndefined(); expect(f.page.longitude).not.toBe('99.000000');
+    expect(f.page.record).toBeNull(); expect(f.page.longitude).not.toBe('99.000000');
+    if (mode === 'background') {
+      expect(f.map()!.active).toBe(false); expect(f.element.querySelector<HTMLElement>('.map-area')!.hidden).toBe(true);
+    } else expect(f.map()).toBeUndefined();
     expect(f.page.canSave).toBe(false); expect(f.getCurrentPosition).toHaveBeenCalledOnce(); f.http.expectNone(() => true);
   });
   it('allows a cancelled empty draft to recover from a fresh null record without getting stuck', async () => {
@@ -325,7 +374,8 @@ describe('Device location server-authoritative manual production template', () =
     f.visibility.active.next(true); await f.read(empty);
     expect(f.page.reviewRequired).toBe(true); expect(f.page.canSave).toBe(false);
     f.element.querySelector<HTMLButtonElement>('.cancel')!.click(); await f.settle();
-    expect(f.map()).toBeUndefined(); expect(f.element.querySelector('.review')).not.toBeNull();
+    expect(f.map()!.active).toBe(false); expect(f.element.querySelector<HTMLElement>('.map-area')!.hidden).toBe(true);
+    expect(f.element.querySelector('.review')).not.toBeNull();
     f.element.querySelector<HTMLButtonElement>('.review')!.click(); await f.settle();
     expect(f.page.canMutate).toBe(true);
     expect(f.element.querySelector<HTMLButtonElement>('.setup')!.disabled).toBe(false);
@@ -349,7 +399,8 @@ describe('Device location server-authoritative manual production template', () =
     f.element.querySelector<HTMLButtonElement>('.setup')!.click(); await f.settle();
     const signal = f.getCurrentPosition.mock.calls[0][0] as AbortSignal;
     f.visibility.active.next(false); await f.settle();
-    expect(signal.aborted).toBe(false); expect(f.map()).toBeUndefined();
+    expect(signal.aborted).toBe(false); expect(f.map()!.active).toBe(false);
+    expect(f.element.querySelector<HTMLElement>('.map-area')!.hidden).toBe(true);
     f.visibility.active.next(true); await f.settle();
     if (order === 'read-first') await f.read(empty);
     resolve({ longitude: 99, latitude: 88, coordinateSystem: 'WGS84' }); await f.settle();

@@ -6,10 +6,10 @@
   } @else if (mapState !== 'inactive') {
     <div class="map-message" role="status">
       <i class="fa-light fa-map-location-dot" aria-hidden="true"></i>
-      <strong>{{ mapState === 'missing-key' ? '请检查地图服务配置' : '地图暂时无法加载' }}</strong>
+      <strong>{{ mapMessage }}</strong>
+      @if (retryHint) { <span>{{ retryHint }}</span> }
       <div class="message-actions">
         <button type="button" (click)="refresh()">重试</button>
-        <button type="button" class="secondary" (click)="openMapSettings()">地图设置</button>
       </div>
     </div>
   }

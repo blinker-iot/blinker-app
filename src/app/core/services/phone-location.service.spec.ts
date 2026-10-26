@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-const native = vi.hoisted(() => ({ get: vi.fn(), watch: vi.fn(), check: vi.fn(), request: vi.fn() }));
+const native = vi.hoisted(() => ({ get: vi.fn(), watch: vi.fn(), check: vi.fn(), request: vi.fn(), cancel: vi.fn(), android: false }));
+vi.mock('@capacitor/core', () => ({
+  Capacitor: { getPlatform: () => native.android ? 'android' : 'web' },
+}));
 vi.mock('@capacitor/geolocation', () => ({ Geolocation: {
   getCurrentPosition: native.get, watchPosition: native.watch,
-  checkPermissions: native.check, requestPermissions: native.request,
+  checkPermissions: native.check, requestPermissions: native.request, cancelCurrentPosition: native.cancel,
 } }));
 import { PhoneLocationService } from './phone-location.service';
 
@@ -11,7 +14,7 @@ const position = (longitude: unknown = 0, latitude: unknown = 0) => ({ timestamp
 
 describe('PhoneLocationService explicit one-shot native location', () => {
   let service: PhoneLocationService;
-  beforeEach(() => { vi.useFakeTimers(); vi.resetAllMocks(); service = new PhoneLocationService(); });
+  beforeEach(() => { vi.useFakeTimers(); vi.resetAllMocks(); native.android = false; service = new PhoneLocationService(); });
   afterEach(() => {
     expect(native.watch).not.toHaveBeenCalled(); expect(native.check).not.toHaveBeenCalled();
     expect(native.request).not.toHaveBeenCalled(); expect(vi.getTimerCount()).toBe(0);
@@ -22,7 +25,7 @@ describe('PhoneLocationService explicit one-shot native location', () => {
     expect(native.get).not.toHaveBeenCalled(); native.get.mockResolvedValue(position());
     const controller = new AbortController(), remove = vi.spyOn(controller.signal, 'removeEventListener');
     await expect(service.current(controller.signal)).resolves.toEqual({ longitude: 0, latitude: 0,
-      coordinateSystem: 'WGS84', accuracyMeters: 8, measuredAt: 1000 });
+      source: 'unknown', coordinateSystem: 'WGS84', accuracyMeters: 8, measuredAt: 1000 });
     expect(native.get).toHaveBeenCalledExactlyOnceWith({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
     expect(remove).toHaveBeenCalledWith('abort', expect.any(Function));
   });
@@ -40,6 +43,22 @@ describe('PhoneLocationService explicit one-shot native location', () => {
   it('does not invent accuracy or a measurement time if the plugin has no valid metadata', async () => {
     native.get.mockResolvedValue({ ...position(), timestamp: NaN, coords: { ...position().coords, accuracy: -1 } });
     await expect(service.current(new AbortController().signal)).resolves.toMatchObject({ accuracyMeters: null, measuredAt: null });
+  });
+  it.each(['system-network', 'gnss'])('preserves native %s source and measurement metadata', async source => {
+    native.get.mockResolvedValue({ ...position(10, 20), source, coordinateSystem: 'WGS84' });
+    await expect(service.current(new AbortController().signal)).resolves.toEqual({ longitude: 10, latitude: 20,
+      source, coordinateSystem: 'WGS84', accuracyMeters: 8, measuredAt: 1000 });
+    expect(native.get).toHaveBeenCalledOnce();
+  });
+  it.each([undefined, 'unknown', 'private native provider details', null])('does not guess an unsupported source %j', async source => {
+    native.get.mockResolvedValue({ ...position(), source });
+    await expect(service.current(new AbortController().signal)).resolves.toMatchObject({ source: 'unknown', coordinateSystem: 'WGS84' });
+    expect(native.get).toHaveBeenCalledOnce();
+  });
+  it.each(['GCJ02', 'unknown', null])('rejects an explicit unsupported coordinate system %j', async coordinateSystem => {
+    native.get.mockResolvedValue({ ...position(), source: 'gnss', coordinateSystem });
+    await expect(service.current(new AbortController().signal)).rejects.toMatchObject({ kind: 'unavailable' });
+    expect(native.get).toHaveBeenCalledOnce();
   });
   it.each([
     ['OS-PLUG-GLOC-0003', 'permission'], ['OS-PLUG-GLOC-0008', 'permission'],
@@ -72,19 +91,42 @@ describe('PhoneLocationService explicit one-shot native location', () => {
     await expect(service.current(new AbortController().signal)).resolves.toMatchObject({ longitude: 30, latitude: 40 });
     expect(native.get).toHaveBeenCalledTimes(2);
   });
-  it('bounds an unresponsive permission/native call and ignores late failure without a second call', async () => {
+  it('reports native still pending at the UI deadline and ignores late failure without a second call', async () => {
     let reject!: (error: unknown) => void;
     native.get.mockImplementation(() => new Promise((_done, fail) => { reject = fail; }));
     const controller = new AbortController(), remove = vi.spyOn(controller.signal, 'removeEventListener');
-    const result = service.current(controller.signal), rejected = expect(result).rejects.toMatchObject({ kind: 'timeout' });
+    const result = service.current(controller.signal), rejected = expect(result).rejects.toMatchObject({ kind: 'pending',
+      message: '系统定位仍未返回，可先在地图上选点。' });
     await vi.advanceTimersByTimeAsync(12000); await rejected;
     await expect(service.current(new AbortController().signal)).rejects.toMatchObject({ kind: 'pending' });
     reject({ code: 'OS-PLUG-GLOC-0003' }); await Promise.resolve(); controller.abort();
-    await expect(result).rejects.toMatchObject({ kind: 'timeout' });
+    await expect(result).rejects.toMatchObject({ kind: 'pending' });
     expect(native.get).toHaveBeenCalledOnce(); expect(remove).toHaveBeenCalledWith('abort', expect.any(Function));
     native.get.mockResolvedValue(position());
     await expect(service.current(new AbortController().signal)).resolves.toMatchObject({ longitude: 0, latitude: 0 });
     expect(native.get).toHaveBeenCalledTimes(2);
+  });
+  it('rejects an overdue native success if resume delivers it before the suspended timer', async () => {
+    let resolve!: (value: unknown) => void;
+    native.get.mockImplementation(() => new Promise(done => { resolve = done; }));
+    const result = service.current(new AbortController().signal);
+    const rejected = expect(result).rejects.toMatchObject({ kind: 'timeout' });
+    // Move wall time without running any timers: reproduce a suspended WebView.
+    vi.setSystemTime(Date.now() + 13000);
+    resolve(position(10, 20)); await rejected;
+    expect(native.get).toHaveBeenCalledOnce();
+    native.get.mockResolvedValue(position());
+    await expect(service.current(new AbortController().signal)).resolves.toMatchObject({ longitude: 0, latitude: 0 });
+    expect(native.get).toHaveBeenCalledTimes(2);
+  });
+  it('keeps an overdue native success cancelled when its page has already aborted', async () => {
+    let resolve!: (value: unknown) => void;
+    native.get.mockImplementation(() => new Promise(done => { resolve = done; }));
+    const controller = new AbortController(), result = service.current(controller.signal);
+    const rejected = expect(result).rejects.toMatchObject({ kind: 'aborted' });
+    vi.setSystemTime(Date.now() + 13000); controller.abort();
+    resolve(position(10, 20)); await rejected;
+    expect(native.get).toHaveBeenCalledOnce();
   });
   it('sanitizes a synchronous plugin failure and releases its deadline/listener', async () => {
     native.get.mockImplementation(() => { throw Error('private native details'); });
@@ -93,5 +135,34 @@ describe('PhoneLocationService explicit one-shot native location', () => {
     native.get.mockResolvedValue(position());
     await expect(service.current(new AbortController().signal)).resolves.toMatchObject({ longitude: 0, latitude: 0 });
     expect(native.get).toHaveBeenCalledTimes(2);
+  });
+  it('links Android cancel to the same request and waits for its original terminal before unlocking', async () => {
+    native.android = true; native.cancel.mockResolvedValue(undefined);
+    let reject!: (error: unknown) => void;
+    native.get.mockImplementation(() => new Promise((_done, fail) => { reject = fail; }));
+    const controller = new AbortController(), result = service.current(controller.signal);
+    const rejected = expect(result).rejects.toMatchObject({ kind: 'aborted' });
+    const requestId = native.get.mock.calls[0][0].requestId;
+    expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
+    controller.abort(); await rejected;
+    expect(native.cancel).toHaveBeenCalledExactlyOnceWith({ requestId });
+    await expect(service.current(new AbortController().signal)).rejects.toMatchObject({ kind: 'pending' });
+    reject({ code: 'BLINKER_LOCATION_CANCELLED' }); await Promise.resolve();
+    native.get.mockResolvedValue(position());
+    await expect(service.current(new AbortController().signal)).resolves.toMatchObject({ longitude: 0 });
+    expect(native.get.mock.calls[1][0].requestId).not.toBe(requestId);
+    expect(native.cancel).toHaveBeenCalledOnce();
+  });
+  it('requests one Android cancellation at the UI deadline without retrying or trusting its acknowledgement', async () => {
+    native.android = true; native.cancel.mockRejectedValue(Error('bridge unavailable'));
+    let reject!: (error: unknown) => void;
+    native.get.mockImplementation(() => new Promise((_done, fail) => { reject = fail; }));
+    const result = service.current(new AbortController().signal);
+    const rejected = expect(result).rejects.toMatchObject({ kind: 'pending' });
+    await vi.advanceTimersByTimeAsync(12000); await rejected;
+    expect(native.cancel).toHaveBeenCalledOnce();
+    await expect(service.current(new AbortController().signal)).rejects.toMatchObject({ kind: 'pending' });
+    expect(native.get).toHaveBeenCalledOnce();
+    reject({ code: 'OS-PLUG-GLOC-0010' }); await Promise.resolve();
   });
 });

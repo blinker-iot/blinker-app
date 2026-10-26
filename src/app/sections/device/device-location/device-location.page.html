@@ -8,14 +8,16 @@
 <ion-content [fullscreen]="true">
   @if (state !== 'owner') {
   <section class="empty-state" aria-live="polite"><h1>{{ state === 'shared' ? '暂无位置访问权限' : '位置暂不可用' }}</h1><p>{{ message }}</p></section>
-  } @else if (!present) {
+  } @else {
+  <div class="location-content">
+  <div class="map-area" [hidden]="!present || (!record?.location && !editing)">
+    <app-location-map [point]="point" [name]="deviceName" [editable]="editing && !busy && !viewingSaved"
+      [active]="present && (!!record?.location || editing)" (pointChange)="selectPoint($event)" />
+  </div>
+  @if (!present) {
   <section class="empty-state"><p>位置查看已暂停</p></section>
   } @else if (record || editing) {
     @if (record?.location || editing) {
-    <div class="map-area">
-      <app-location-map [point]="point" [name]="deviceName" [editable]="editing && !busy && !viewingSaved" [active]="present"
-        (pointChange)="selectPoint($event)" />
-    </div>
     <section class="location-panel" [class.editor]="editing">
       <div class="device-heading"><span class="device-glyph" aria-hidden="true"><i class="fal fa-map-marker-alt"></i></span>
         <div><h1>{{ deviceName }}</h1><p>{{ viewingSaved ? '已保存的位置' : editing ? '拖动标记或点选地图' : '设备安装位置' }}</p></div>
@@ -35,7 +37,7 @@
             [ngModel]="longitude" (ngModelChange)="edit('longitude', $event)" [disabled]="!!busy" /></label>
           <label>纬度<input name="latitude" inputmode="decimal" autocomplete="off" placeholder="-90 ～ 90"
             [ngModel]="latitude" (ngModelChange)="edit('latitude', $event)" [disabled]="!!busy" /></label></div>
-          <p class="coordinate-note">GPS / WGS84 坐标</p>
+          <p class="coordinate-note">WGS84 经纬度</p>
         </details>
         <button class="primary-action save" type="submit" [disabled]="!canSave">{{ busy === 'write' ? '保存中…' : '保存位置' }}</button>
       </form>
@@ -76,5 +78,7 @@
     <p>{{ busy === 'read' ? '正在加载位置…' : error || '位置暂不可用' }}</p>
     @if (!busy) { <button class="secondary-action reload" type="button" (click)="reload()">重试</button> }
   </section>
+  }
+  </div>
   }
 </ion-content>

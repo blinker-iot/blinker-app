@@ -21,6 +21,9 @@ export const APP_FILES = [
   'android/build.gradle', 'android/settings.gradle', 'android/variables.gradle',
   'android/gradle.properties', 'android/gradlew', 'android/gradlew.bat',
   'android/app/build.gradle', 'android/app/proguard-rules.pro',
+  'android/geolocation/build.gradle', 'android/geolocation/README.md',
+  'android/geolocation/LICENSE.capacitor-geolocation', 'android/geolocation/LICENSE.iongeolocation',
+  'android/geolocation/upstream-core.json',
   'device-template/package.json', 'device-template/tsconfig.json',
   'device-template/vite.config.ts', 'device-template/index.html',
   'tests/fixtures/time_sync_golden_vectors.properties',
@@ -28,7 +31,7 @@ export const APP_FILES = [
   'tools/sync-cloud-beta.mjs', 'tools/cloud-beta.test.mjs',
   'tools/custom-panel/pack.mjs',
 ];
-export const APP_TREES = ['src', 'public', 'android/app/src', 'android/gradle',
+export const APP_TREES = ['src', 'public', 'android/app/src', 'android/gradle', 'android/geolocation/src',
   'device-template/src', 'device-template/tests'];
 export const PLUGIN_FILES = ['package.json', 'package-lock.json', 'tsconfig.json',
   'rollup.config.mjs', 'LICENSE', 'README.md', 'android/build.gradle'];

@@ -1,4 +1,4 @@
-import { locationMapTileConfiguration, mapTileConfiguration, validMapPoint } from './map-tiles';
+import { mapTileConfiguration, validMapPoint } from './map-tiles';
 
 describe('configured map tiles and WGS84 point boundary', () => {
   it('requires the selected provider key and never supplies a fallback', () => {
@@ -34,16 +34,4 @@ describe('configured map tiles and WGS84 point boundary', () => {
       { longitude: 181, latitude: 0 }, { longitude: 0, latitude: -91 }]) expect(validMapPoint(point)).toBe(false);
   });
 
-  it('uses attributed, viewport-only public OSM only for the dedicated location map with no selected key', () => {
-    const config = locationMapTileConfiguration(null)!;
-    expect(config.name).toBe('OpenStreetMap'); expect(config.layers).toHaveLength(1);
-    expect(config.layers[0].url).toBe('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
-    expect(config.layers[0].options).toMatchObject({ referrerPolicy: 'strict-origin-when-cross-origin',
-      updateWhenIdle: true, updateWhenZooming: false, keepBuffer: 0 });
-    expect(config.layers[0].options.attribution).toContain('https://www.openstreetmap.org/copyright');
-    const selected = { provider: 'geoapify' as const, key: 'unit-key' };
-    expect(locationMapTileConfiguration(selected)).toEqual(mapTileConfiguration(selected));
-    expect(locationMapTileConfiguration({ ...selected, key: '' })).toBeNull();
-    expect(mapTileConfiguration(null)).toBeNull();
-  });
 });

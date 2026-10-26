@@ -93,3 +93,26 @@ test('Android beta stays separate from debug local trust and has a guarded nativ
   assert.doesNotMatch(gradle, /android\.sourceSets\.beta/);
   assert.match(read('android/app/src/beta/AndroidManifest.xml'), /usesCleartextTraffic="false"/);
 });
+
+test('maintained Geolocation keeps one registered plugin and fixed reviewed sources', () => {
+  const settings = read('android/settings.gradle');
+  assert(settings.indexOf("apply from: 'capacitor.settings.gradle'") < settings.indexOf("project(':capacitor-geolocation').projectDir"));
+  const native = read('android/geolocation/build.gradle');
+  assert.match(native, /version != '8\.2\.2'/);
+  assert.doesNotMatch(native, /implementation.*io\.ionic\.libs:iongeolocation-android/);
+  assert.match(read('tools/source-handoff.mjs'), /APP_TREES[^;]+android\/geolocation/);
+  assert.match(read('android/geolocation/README.md'), /Default is off/);
+});
+
+test('system one-shot uses the existing owner without Google acquisition or another deadline', () => {
+  const plugin = read('android/geolocation/src/main/kotlin/com/capacitorjs/plugins/geolocation/GeolocationPlugin.kt');
+  const oneShot = plugin.slice(plugin.indexOf('private fun getPosition('), plugin.indexOf('private fun getJSObjectForSystemLocation('));
+  assert.match(oneShot, /SystemLocationProvider\(/);
+  assert(oneShot.indexOf('owner.linkCancellation') < oneShot.indexOf('provider.start()'));
+  assert.doesNotMatch(oneShot, /controller\.getCurrentPosition|CoroutineStart|postDelayed/);
+  assert.match(plugin, /IONGLOCController by lazy/);
+  for (const key of ['source', 'timestamp', 'coordinateSystem']) assert(plugin.includes(`put("${key}"`));
+  const adapter = read('android/geolocation/src/main/kotlin/com/capacitorjs/plugins/geolocation/SystemLocationProvider.kt');
+  assert.doesNotMatch(adapter, /FusedLocationProviderClient|LocationServices|postDelayed/);
+  assert.match(adapter, /LocationRequestCompat\.Builder\(1000\)/);
+});

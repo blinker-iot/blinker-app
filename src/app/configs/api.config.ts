@@ -47,6 +47,11 @@ export const API = {
     LIST: API_V2_URL + '/automations',
     RULE: (ruleId: string) => API_V2_URL + '/automations/' + encodeURIComponent(ruleId),
   },
+  MAPS: {
+    CONFIG: API_V2_URL + '/maps/config',
+    TILE: (layer: 'base' | 'annotation', z: number, x: number, y: number) =>
+      `${API_V2_URL}/maps/tiles/${layer}/${z}/${x}/${y}`,
+  },
   DEVICE_V2: {
     LIST: API_V2_URL + '/devices',
     CREATE: API_V2_URL + '/devices',
@@ -182,8 +187,19 @@ export function isGatewayUrl(url: string): boolean {
     || url === API.MESSAGE.MARK_ALL_READ
     || url === API.NOTIFICATION_INSTALLATIONS.COLLECTION
     || url.startsWith(API.NOTIFICATION_INSTALLATIONS.COLLECTION + '/')
+    || isManagedMapUrl(url)
     || isAutomationManagementUrl(url)
     || isDeviceKeyManagementUrl(url);
+}
+
+function isManagedMapUrl(url: string): boolean {
+  if (url === API.MAPS.CONFIG) return true;
+  const prefix = API_V2_URL + '/maps/tiles/';
+  if (!url.startsWith(prefix)) return false;
+  const match = /^(base|annotation)\/([1-9]\d?)\/(0|[1-9]\d*)\/(0|[1-9]\d*)$/.exec(url.slice(prefix.length));
+  if (!match) return false;
+  const z = Number(match[2]), x = Number(match[3]), y = Number(match[4]);
+  return z <= 18 && Number.isSafeInteger(x) && Number.isSafeInteger(y) && x < 2 ** z && y < 2 ** z;
 }
 
 function isAutomationManagementUrl(url: string): boolean {

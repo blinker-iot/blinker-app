@@ -14,7 +14,6 @@
 .message-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 button { padding: 9px 14px; border: 0; border-radius: 20px; background: var(--ion-color-primary, #3b82f6); color: white;
   font-size: 12px; cursor: pointer; }
-button.secondary { color: var(--ion-color-primary, #3b82f6); background: transparent; border: 1px solid currentColor; }
 button:focus-visible { outline: 2px solid var(--ion-color-primary, #3b82f6); outline-offset: 3px; }
 :host ::ng-deep .blinker-location-pin { background: none; border: 0; }
 :host ::ng-deep .blinker-location-pin > span { display: block; width: 28px; height: 28px; background: var(--ion-color-primary, #3b82f6);

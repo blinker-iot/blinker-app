@@ -40,20 +40,6 @@ export function mapTileConfiguration(
   }
 }
 
-// Only the dedicated location page opts into the public, best-effort base map.
-// Existing custom-page widgets keep their original explicit-key requirement.
-export function locationMapTileConfiguration(
-  service: ActiveThirdPartyService<GeolocationServiceProvider> | null,
-  retina = false,
-): MapTileConfiguration | null {
-  if (service) return mapTileConfiguration(service, retina);
-  return { name: 'OpenStreetMap', layers: [{ url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    options: { maxZoom: 19, noWrap: true, updateWhenIdle: true, updateWhenZooming: false, keepBuffer: 0,
-      referrerPolicy: 'strict-origin-when-cross-origin',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' },
-  }] };
-}
-
 /** Coordinates are always WGS84; this is not a GPS reading or saved record. */
 export interface Wgs84MapPoint { longitude: number; latitude: number; }
 
