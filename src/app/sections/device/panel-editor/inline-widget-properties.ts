@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, HostBinding, Input, Output } from '@angular/core';
+import { LegacyPanelSizingDirective } from '../../../core/directives/legacy-panel-sizing.directive';
 import type { PageLayoutWidget } from '../../../core/device-v2/page-layout';
 import type { UiTheme } from '../../../core/device-v2/ui-theme';
 import { PageWidgetComponent } from '../../../device/v2/panel/page-widget';
@@ -9,7 +10,7 @@ import { WidgetInspectorComponent } from '../widget-inspector/widget-inspector';
 @Component({
   selector: 'app-inline-widget-properties',
   standalone: true,
-  imports: [PageWidgetComponent, WidgetInspectorComponent],
+  imports: [PageWidgetComponent, WidgetInspectorComponent, LegacyPanelSizingDirective],
   templateUrl: './inline-widget-properties.html',
   styleUrls: ['./panel-widget-editor.page.scss', './inline-widget-properties.scss'],
   changeDetection: ChangeDetectionStrategy.Eager,

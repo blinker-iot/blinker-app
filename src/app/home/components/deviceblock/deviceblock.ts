@@ -413,6 +413,9 @@ export class Deviceblock implements AfterViewInit {
     const element = this.cardElement.nativeElement;
     const width = element.getBoundingClientRect().width;
     if (!Number.isFinite(width) || width <= 0) return false;
+    if (typeof CSS !== 'undefined' && !CSS.supports('height', '100cqw')) {
+      element.style.setProperty('--device-card-side', `${this.wide ? (width - 12) / 2 : width}px`);
+    }
     const rootFont = Number.parseFloat(getComputedStyle(element.ownerDocument.documentElement).fontSize);
     const minimum = Number.isFinite(rootFont) ? Math.max(44, rootFont * 3) : 48;
     if (width === this.measuredWidth && minimum === this.tileMinimum) return false;

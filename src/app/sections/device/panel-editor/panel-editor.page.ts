@@ -1,6 +1,7 @@
 import { DeviceConsoleService, cloudConsole, canEditConsole, consoleLayout, installConsole } from '../../../core/services/device-console.service';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, HostBinding, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { LegacyPanelSizingDirective } from '../../../core/directives/legacy-panel-sizing.directive';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 
@@ -51,6 +52,7 @@ type EditorMode = 'edit' | 'layout' | 'preview';
 @Component({
   selector: 'app-panel-editor', standalone: true,
   imports: [
+    LegacyPanelSizingDirective,
     IonBackButton,
     IonButton,
     IonButtons,

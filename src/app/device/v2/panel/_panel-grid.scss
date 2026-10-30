@@ -54,6 +54,15 @@ $compact-max-width: 660px;
   }
 
   .cell.feedback { contain: none; }
+
+  .panel[data-legacy-grid] > .cell {
+    --row-h: var(--legacy-row-h);
+  }
+
+  .panel[data-legacy-grid='compact'] > .cell {
+    grid-column: span var(--legacy-span);
+    grid-row: span var(--rows);
+  }
 }
 
 @mixin compact {

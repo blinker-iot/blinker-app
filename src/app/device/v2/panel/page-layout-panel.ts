@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { LegacyPanelSizingDirective } from '../../../core/directives/legacy-panel-sizing.directive';
 import type { UiTheme } from '../../../core/device-v2/ui-theme';
 import { PageWidgetComponent } from './page-widget';
 import { type PanelAction, type PanelCard, type WidgetAct } from '../widgets/widget-kit';
@@ -8,7 +9,7 @@ export type { PanelAction, PanelCard } from '../widgets/widget-kit';
 @Component({
   selector: 'app-page-layout-panel',
   standalone: true,
-  imports: [PageWidgetComponent],
+  imports: [PageWidgetComponent, LegacyPanelSizingDirective],
   templateUrl: './page-layout-panel.html',
   styleUrls: ['./page-layout-panel.scss'],
 })

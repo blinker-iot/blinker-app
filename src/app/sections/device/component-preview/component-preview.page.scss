@@ -231,7 +231,7 @@ button {
   .bench { grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; }
 }
 
-@media (max-width: 900px) {
+@mixin compact-inspector {
   .insp-idle { display: none; }
   .bench { grid-template-columns: minmax(0, 1fr); }
   // Phones: the inspector is a bottom sheet over a scrim, shown only while a
@@ -271,6 +271,15 @@ button {
   }
 
   .insp.open { transform: none; visibility: visible; transition-delay: 0s; }
+}
+
+@media (max-width: 900px) {
+  @include compact-inspector;
+}
+
+// The desktop mobile shell stays narrow even when the viewport is wide.
+:host-context(.pc-mobile-view) {
+  @include compact-inspector;
 }
 
 @media (prefers-reduced-motion: reduce) {

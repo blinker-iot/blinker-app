@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, HostBinding } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { LegacyPanelSizingDirective } from '../../../core/directives/legacy-panel-sizing.directive';
 
 import {
   IonBackButton,
@@ -22,6 +23,7 @@ import { PanelWidgetEditorContext, PanelWidgetEditorContextService } from './pan
   selector: 'app-panel-widget-editor',
   standalone: true,
   imports: [
+    LegacyPanelSizingDirective,
     IonBackButton,
     IonButton,
     IonButtons,

@@ -39,6 +39,28 @@ describe('device card production template (state/connectivity/image doubles)', (
 
   const card = () => fixture.nativeElement.querySelector('.device-card') as HTMLElement;
 
+  it('uses measured pixels on old WebViews, including wide cards and resizing', () => {
+    vi.stubGlobal('CSS', { supports: () => false });
+    const bounds = vi.spyOn(card(), 'getBoundingClientRect');
+    bounds.mockReturnValue({ width: 136 } as DOMRect);
+    (fixture.componentInstance as any).measureCard();
+    expect(card().style.getPropertyValue('--device-card-side')).toBe('136px');
+    fixture.componentRef.setInput('wide', true);
+    bounds.mockReturnValue({ width: 284 } as DOMRect);
+    (fixture.componentInstance as any).measureCard();
+    expect(card().style.getPropertyValue('--device-card-side')).toBe('136px');
+    bounds.mockReturnValue({ width: 360 } as DOMRect);
+    (fixture.componentInstance as any).measureCard();
+    expect(card().style.getPropertyValue('--device-card-side')).toBe('174px');
+  });
+
+  it('leaves supported container sizing to native CSS', () => {
+    vi.stubGlobal('CSS', { supports: () => true });
+    vi.spyOn(card(), 'getBoundingClientRect').mockReturnValue({ width: 136 } as DOMRect);
+    (fixture.componentInstance as any).measureCard();
+    expect(card().style.getPropertyValue('--device-card-side')).toBe('');
+  });
+
   it('uses one header, image and single footer in either size, leaving the wide side empty', () => {
     expect(card().children.length).toBe(3);
     expect(card().querySelector('.device-heading .device-name-text')?.textContent).toBe('客厅设备');
