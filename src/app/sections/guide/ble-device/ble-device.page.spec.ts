@@ -1,5 +1,5 @@
 import { GatewayHttpError } from '../../../core/model/response.model';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 
 import { BleDeviceGuidePage } from './ble-device.page';
 
@@ -8,11 +8,13 @@ describe('BleDeviceGuidePage', () => {
     const changes = new Subject<void>();
     const data = { auth: { accessToken: 'fixture' }, sessionEpoch: 1, authDataChanged: changes };
     const ble = { pendingEnrollmentLogicalDeviceIds: vi.fn().mockResolvedValue(['ble_pending']),
+      accessRegistrationSources: vi.fn().mockResolvedValue([]), accessRegistrationCheckpoints: vi.fn().mockResolvedValue([]),
       resume: vi.fn(), enroll: vi.fn(), discoverProvisioningDevices: vi.fn() };
     const nav = { navigateRoot: vi.fn().mockResolvedValue(true) };
     const users = { getAllInfo: vi.fn().mockResolvedValue(true) };
     const page = new BleDeviceGuidePage(ble as any, data as any, users as any, nav as any,
-      { instant: (key: string) => key } as any, { markForCheck: () => {} } as any);
+      { instant: (key: string) => key } as any, { markForCheck: () => {} } as any,
+      { active: new BehaviorSubject(true) } as any);
     const session = { close: vi.fn().mockResolvedValue(undefined),
       store: { snapshot: () => ({ manifest: { fields: [{ key: 'power' }] } }) } };
     return { page, ble, data, changes, nav, session, users };
@@ -106,6 +108,7 @@ describe('BleDeviceGuidePage', () => {
       { auth: { accessToken: 'token' }, sessionEpoch: 1, authDataChanged: new Subject<void>() } as any,
       {} as any, nav as any, { instant: (key: string) => key } as any,
       { markForCheck: () => undefined } as any,
+      { active: new BehaviorSubject(true) } as any,
     );
     page.phase = 'selecting';
     await page.selectCandidate({} as any);
@@ -131,6 +134,7 @@ describe('BleDeviceGuidePage', () => {
       nav as any,
       { instant: (key: string) => key } as any,
       { markForCheck: () => undefined } as any,
+      { active: new BehaviorSubject(true) } as any,
     );
     page.logicalDeviceId = logicalDeviceId;
     (page as any).session = { close };
@@ -162,6 +166,7 @@ describe('BleDeviceGuidePage', () => {
       {} as any,
       { instant: (key: string) => key } as any,
       { markForCheck: () => undefined } as any,
+      { active: new BehaviorSubject(true) } as any,
     );
 
     await page.startDiscovery();
@@ -191,6 +196,7 @@ describe('BleDeviceGuidePage', () => {
       nav as any,
       { instant: (key: string) => key } as any,
       { markForCheck: () => undefined } as any,
+      { active: new BehaviorSubject(true) } as any,
     );
     page.logicalDeviceId = 'ble_account_a';
     page.phase = 'ready';

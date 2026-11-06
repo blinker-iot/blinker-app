@@ -29,6 +29,9 @@ $compact-max-width: 660px;
   .cell {
     --row-h: calc((100cqw - 7 * var(--gap)) / 8);
     --fill-h: calc(var(--rows) * var(--row-h) + (var(--rows) - 1) * var(--gap));
+    // Reserve the largest one-row track (56px) plus a 4px border allowance.
+    // Only inner spacing adapts; saved rows and square grid units do not.
+    --ui-card-pad-block: clamp(0px, calc((var(--fill-h) - 60px) / 2), 14px);
 
     grid-column: var(--col) / span var(--span);
     grid-row: var(--row) / span var(--rows);

@@ -5,17 +5,32 @@ import android.content.Context;
 import com.wifiprov.capacitor.BleDiscovery;
 import java.util.Collections;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 // Only the scan port changes; the WiFiProv SDK still owns Security1 and GATT.
 public final class WiFiProvDiscovery implements BleDiscovery {
-    private final AndroidBleScanner scanner;
+    interface ScanPort {
+        void start(String id, AndroidBleScanner.Listener listener);
+        void stop(String id, Consumer<Boolean> completed);
+    }
+    private final ScanPort scanner;
     private String active;
-    public WiFiProvDiscovery(Context context) { scanner = AndroidBleScanner.get(context); }
+    private String stopping;
+    public WiFiProvDiscovery(Context context) {
+        this(new ScanPort() {
+            private final AndroidBleScanner nativeScanner = AndroidBleScanner.get(context);
+            public void start(String id, AndroidBleScanner.Listener listener) {
+                nativeScanner.start(id, Collections.emptyList(), 10_000, listener);
+            }
+            public void stop(String id, Consumer<Boolean> completed) { nativeScanner.stop(id, completed); }
+        });
+    }
+    WiFiProvDiscovery(ScanPort scanner) { this.scanner = scanner; }
 
     public synchronized void start(String prefix, BleDiscovery.Listener listener) {
         if (active != null) { listener.ended("BLE_SCAN_BUSY"); return; }
         String id = UUID.randomUUID().toString(); active = id;
-        scanner.start(id, Collections.emptyList(), 10_000, new AndroidBleScanner.Listener() {
+        scanner.start(id, new AndroidBleScanner.Listener() {
             public void started() {}
             public void result(ScanResult value) {
                 synchronized (WiFiProvDiscovery.this) {
@@ -27,8 +42,10 @@ public final class WiFiProvDiscovery implements BleDiscovery {
             public void ended(String error, long retryAfterMs) {
                 synchronized (WiFiProvDiscovery.this) {
                     if (!id.equals(active)) return;
+                    boolean expectedCancel = id.equals(stopping) && "BLE_SCAN_CANCELLED".equals(error);
+                    stopping = null;
                     if (!"BLE_SCAN_CLOSE_FAILED".equals(error)) active = null;
-                    listener.ended("BLE_SCAN_DEADLINE".equals(error) ? null : error);
+                    listener.ended("BLE_SCAN_DEADLINE".equals(error) || expectedCancel ? null : error);
                 }
             }
         });
@@ -37,9 +54,14 @@ public final class WiFiProvDiscovery implements BleDiscovery {
     public synchronized void stop(BleDiscovery.Completion completed) {
         String id = active;
         if (id == null) { completed.complete(null); return; }
+        // Only this owner's explicit pending stop makes cancellation expected.
+        stopping = id;
         // Completion and any pending createDevice settle only after native stop.
         scanner.stop(id, ok -> {
-            synchronized (WiFiProvDiscovery.this) { if (ok && id.equals(active)) active = null; }
+            synchronized (WiFiProvDiscovery.this) {
+                if (id.equals(stopping)) stopping = null;
+                if (ok && id.equals(active)) active = null;
+            }
             completed.complete(ok ? null : "BLE_SCAN_CLOSE_FAILED");
         });
     }

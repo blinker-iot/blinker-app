@@ -5,6 +5,7 @@ import { AlertController } from '@ionic/angular';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 import type { AutomationDetail, AutomationEndpoint, AutomationIntent, AutomationRule } from '../../../core/device-v2/automation/contract';
 import type { AutomationChoice } from './automation.models';
+import { automationErrorText } from './automation.models';
 import { AutomationPage } from './automation.page';
 import { AutomationService } from './automation.service';
 
@@ -75,6 +76,32 @@ describe('UI5 automation grouped production template', () => {
     button('启用', cards[0]).click();
     expect(service.toggle).toHaveBeenCalledExactlyOnceWith(rule);
     expect(service.create).not.toHaveBeenCalled(); expect(service.recover).not.toHaveBeenCalled();
+  });
+
+  it('counts four disabled non-retired rules toward capacity without invoking any rule action', () => {
+    const rules = Array.from({ length: 4 }, (_, index) => ({ ...rule, ruleId: `disabled-${index}`,
+      enabled: false, retiredAtMs: null }));
+    service.state.update(s => ({ ...s, rules })); render();
+    expect(button('新建自动化').disabled).toBe(true);
+    expect(fixture.nativeElement.querySelectorAll('.rule-card')).toHaveLength(4);
+    const hint = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.hint')]
+      .find(node => node.textContent?.includes('目前最多保留 4 条自动化'));
+    expect(hint?.textContent).toContain('包含停用规则');
+    expect(hint?.textContent).toContain('删除不再使用的规则可腾出名额');
+    for (const action of [service.toggle, service.create, service.edit, service.retire, service.recover, service.acceptChanged]) {
+      expect(action).not.toHaveBeenCalled();
+    }
+  });
+
+  it('renders a neutral capacity alert without suggesting history deletion or forcing a retry', () => {
+    service.state.update(s => ({ ...s, error: automationErrorText({ code: 'AUTOMATION_CAPACITY' }) })); render();
+    const alert = fixture.nativeElement.querySelector('.error[role="alert"]') as HTMLElement;
+    expect(alert.textContent).toBe('自动化容量已达上限。停用不会释放名额；未达到账号上限时，请联系管理员核对服务容量。');
+    expect(alert.textContent).not.toMatch(/删除历史|退役|重试/);
+    for (const action of [service.toggle, service.create, service.edit, service.retire, service.recover, service.acceptChanged]) {
+      expect(action).not.toHaveBeenCalled();
+    }
+    expect(service.refresh).not.toHaveBeenCalled(); expect(service.retryRefresh).not.toHaveBeenCalled();
   });
 
   it('keeps confirmed configuration separate from refreshing and a subsequent read failure', () => {

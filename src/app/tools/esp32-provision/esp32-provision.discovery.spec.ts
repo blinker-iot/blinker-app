@@ -1,6 +1,7 @@
 import '@angular/compiler';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WiFiProv } from 'capacitor-wifiprov';
+import { BehaviorSubject } from 'rxjs';
 import { bleScanner } from '../../core/bluetooth/scan';
 import { Esp32ProvisionPage } from './esp32-provision.page';
 
@@ -14,14 +15,15 @@ const deferred = () => { let resolve!: () => void;
 function fixture() {
   const page = new Esp32ProvisionPage({ run: (cb: () => void) => cb() } as any,
     { detectChanges: vi.fn() } as any, {} as any, {} as any, {} as any,
-    {} as any, {} as any, {} as any, {} as any, {} as any);
+    {} as any, {} as any, { snapshot: { queryParamMap: { get: () => null } } } as any, {} as any, {} as any,
+    { active: new BehaviorSubject(true) } as any);
   Object.defineProperty(page, 'nativeSupported', { value: true });
   return page;
 }
 beforeEach(() => {
   vi.resetAllMocks(); vi.useFakeTimers();
   vi.spyOn(bleScanner, 'acquireExclusive');
-  vi.mocked(WiFiProv.requestPermissions).mockResolvedValue({} as any);
+  vi.mocked(WiFiProv.requestPermissions).mockResolvedValue({ bluetooth: 'granted', location: 'granted', nearbyWifi: 'granted' });
   vi.mocked(WiFiProv.startBleScan).mockResolvedValue({ started: true });
   vi.mocked(WiFiProv.stopBleScan).mockResolvedValue(undefined);
   vi.mocked(WiFiProv.clearState).mockResolvedValue(undefined);
@@ -78,7 +80,9 @@ describe('WiFiProv discovery ownership', () => {
 
   it('leaving during permissions prevents late acquisition and SDK start', async () => {
     const permission = deferred(), page = fixture();
-    vi.mocked(WiFiProv.requestPermissions).mockImplementation(async () => { await permission.promise; return {} as any; });
+    vi.mocked(WiFiProv.requestPermissions).mockImplementation(async () => {
+      await permission.promise; return { bluetooth: 'granted', location: 'granted', nearbyWifi: 'granted' };
+    });
     const start = page.startBleScan(); await turn(); page.ngOnDestroy(); permission.resolve(); await start;
     await (page as any).releasePlugin();
     expect(bleScanner.acquireExclusive).not.toHaveBeenCalled(); expect(WiFiProv.startBleScan).not.toHaveBeenCalled();

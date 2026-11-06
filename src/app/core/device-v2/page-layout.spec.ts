@@ -115,6 +115,12 @@ describe('PageLayout v1', () => {
       }
     });
 
+  it('does not persist generated labels as explicit titles that can mask later capability aliases', () => {
+    const layout = generateAutomaticPageLayout(snapshot());
+    expect(layout.widgets.every(widget => widget.title === undefined)).toBe(true);
+    expect(layout.widgets.find(widget => widget.endpointKey === 'power')?.endpointKey).toBe('power');
+  });
+
   it('rejects executable/unknown fields, invalid bindings, and overlapping widgets', () => {
     const layout = generateDefaultPageLayout(snapshot());
     expect(() => parsePageLayout({ ...layout, script: 'alert(1)' }, snapshot().endpoints))

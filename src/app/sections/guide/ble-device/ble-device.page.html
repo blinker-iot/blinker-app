@@ -10,6 +10,81 @@
 <ion-content class="method-ble" fullscreen="true">
   <main [attr.aria-busy]="busy">
     @if (phase !== 'ready') {
+    <button type="button" class="ble-registration-refresh" [disabled]="registrationBlocked" (click)="registration.loadLocal()">
+      {{ 'DEVICE_GUIDE.BLE_REGISTRATION_LOAD_RECORDS' | translate }}
+    </button>
+    @if (registration.sources.length) {
+      <section class="setup-card ble-recovery ble-registration-sources" aria-labelledby="ble-registration-sources-heading">
+        <h2 id="ble-registration-sources-heading">{{ 'DEVICE_GUIDE.BLE_REGISTRATION_TITLE' | translate }}</h2>
+        <p>{{ 'DEVICE_GUIDE.BLE_REGISTRATION_DESCRIPTION' | translate }}</p>
+        <div class="ble-candidates">
+        @for (source of registration.sources; track source.logicalDeviceId) {
+          <button type="button" [disabled]="registrationBlocked || registration.sourceBlocked(source.logicalDeviceId)"
+            (click)="registration.selectSource(source)">
+            <i class="fa-brands fa-bluetooth-b" aria-hidden="true"></i>
+            <span><strong>{{ source.displayName }}</strong></span>
+          </button>
+        }
+        </div>
+      </section>
+    }
+    @if (registration.records.length) {
+      <section class="setup-card ble-recovery ble-registration-records" aria-labelledby="ble-registration-records-heading">
+        <h2 id="ble-registration-records-heading">{{ 'DEVICE_GUIDE.BLE_REGISTRATION_RECORDS' | translate }}</h2>
+        <div class="ble-candidates">
+        @for (record of registration.records; track record.request.requestId) {
+          <strong>{{ record.request.name }}</strong>
+          @if (record.phase !== 'rejected') {
+          <button type="button" class="ble-registration-read" [disabled]="registrationBlocked" (click)="registration.recover(record)">
+            {{ 'DEVICE_GUIDE.BLE_REGISTRATION_READ' | translate }}
+          </button>
+          } @else {
+            <p role="status">{{ 'DEVICE_GUIDE.BLE_REGISTRATION_REJECTED' | translate }}</p>
+          }
+          @if (registration.canContinue(record)) {
+            <button type="button" class="ble-registration-continue" [disabled]="registrationBlocked" (click)="registration.continuePrepared(record)">
+              {{ 'DEVICE_GUIDE.BLE_REGISTRATION_CONTINUE' | translate }}
+            </button>
+            <button type="button" class="ble-registration-cancel" [disabled]="registrationBlocked" (click)="registration.cancelPrepared(record)">
+              {{ 'DEVICE_GUIDE.BLE_REGISTRATION_CANCEL' | translate }}
+            </button>
+          }
+          @if (registration.canClear(record)) {
+            <button type="button" [disabled]="registrationBlocked" (click)="registration.clearResolved(record)">
+              {{ 'DEVICE_GUIDE.BLE_REGISTRATION_CLEAR' | translate }}
+            </button>
+          }
+        }
+        </div>
+      </section>
+    }
+    @if (registration.phase === 'selecting') {
+      <section class="setup-card ble-registration-targets" aria-labelledby="ble-registration-targets-heading">
+        <h2 id="ble-registration-targets-heading">{{ 'DEVICE_GUIDE.BLE_REGISTRATION_SELECT_TARGET' | translate }}</h2>
+        <div class="ble-candidates">
+        @for (target of registration.targets; track target.device.deviceId) {
+          <button type="button" (click)="registration.selectTarget(target, registrationName)">
+            <i class="fa-brands fa-bluetooth-b" aria-hidden="true"></i>
+            <span><strong>{{ candidateName(target) }}</strong><small>{{ candidateId(target) }}</small></span>
+          </button>
+        }
+        </div>
+      </section>
+    }
+    @if (registration.busy || registration.phase === 'selecting') {
+      @if (registration.busy) {
+        <p role="status">{{ 'DEVICE_GUIDE.BLE_REGISTRATION_WORKING' | translate }}</p>
+      }
+      <button type="button" class="ble-registration-stop" (click)="registration.retire(); registration.loadLocal()">
+        {{ 'DEVICE_GUIDE.BLE_REGISTRATION_CANCEL_OPERATION' | translate }}
+      </button>
+    }
+    @if (registration.noticeKey) {
+      <aside class="method-tip" role="status"><p>{{ registration.noticeKey | translate }}</p></aside>
+    }
+    @if (registration.errorKey) {
+      <aside class="enrollment-result error" role="alert"><p>{{ registration.errorKey | translate }}</p></aside>
+    }
     @if (pendingEnrollments.length) {
       <section class="setup-card ble-recovery" aria-labelledby="ble-recovery-heading">
         <h2 id="ble-recovery-heading">{{ 'DEVICE_GUIDE.BLE_RECOVERY_TITLE' | translate }}</h2>
@@ -95,7 +170,7 @@
       </section>
     }
 
-    @if (phase !== 'selecting') {
+    @if (phase !== 'selecting' && !cloudIdentityConflict) {
     <button type="button" class="primary-action" [disabled]="busy" (click)="startDiscovery()">
       <i [class]="busy ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-radar'" aria-hidden="true"></i>
       {{ actionKey | translate }}
@@ -104,19 +179,23 @@
     } @else {
       <section class="enrollment-result ready" role="status" aria-live="polite">
         <i class="fa-light fa-circle-check" aria-hidden="true"></i>
-        <h2>{{ 'DEVICE_GUIDE.BLE_READY_TITLE' | translate }}</h2>
-        <p>{{ 'DEVICE_GUIDE.BLE_READY_DESCRIPTION' | translate }}</p>
+        <h2>{{ (registrationReady ? 'DEVICE_GUIDE.BLE_REGISTRATION_READY_TITLE' : 'DEVICE_GUIDE.BLE_READY_TITLE') | translate }}</h2>
+        <p>{{ (registrationReady ? 'DEVICE_GUIDE.BLE_REGISTRATION_READY_DESCRIPTION' : 'DEVICE_GUIDE.BLE_READY_DESCRIPTION') | translate }}</p>
+        @if (registrationReady && registration.presenceSetupPending) {
+          <p class="ble-registration-presence-pending">{{ 'DEVICE_GUIDE.BLE_REGISTRATION_PRESENCE_PENDING' | translate }}</p>
+        }
         <dl>
           <div>
             <dt>{{ 'DEVICE_GUIDE.BLE_DEVICE_ID' | translate }}</dt>
             <dd>{{ logicalDeviceId }}</dd>
           </div>
-          <div>
+          @if (!registrationReady) {<div>
             <dt>{{ 'DEVICE_GUIDE.BLE_ENDPOINT_COUNT' | translate }}</dt>
             <dd>{{ endpointCount }}</dd>
-          </div>
+          </div>}
         </dl>
       </section>
+      @if (error) {<aside class="enrollment-result error" role="alert"><p>{{ error }}</p></aside>}
       <button type="button" class="primary-action" (click)="finish()">
         <i class="fa-light fa-check" aria-hidden="true"></i>
         {{ 'DEVICE_GUIDE.COMPLETE' | translate }}

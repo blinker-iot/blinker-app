@@ -14,6 +14,7 @@ export const REBUILD_CONFIGURATIONS = Object.freeze([
   'production', 'local,local-device', 'local,ble-priority-test',
 ]);
 export const APP_FILES = [
+  '.github/workflows/device-v2-access.yml',
   'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'readme.md',
   'angular.json', 'capacitor.config.ts',
   'tsconfig.json', 'tsconfig.app.json', 'tsconfig.spec.json', 'vitest.config.ts',
@@ -28,7 +29,14 @@ export const APP_FILES = [
   'device-template/vite.config.ts', 'device-template/index.html',
   'tests/fixtures/time_sync_golden_vectors.properties',
   'tools/source-handoff.mjs', 'tools/source-handoff.test.mjs',
-  'tools/sync-cloud-beta.mjs', 'tools/cloud-beta.test.mjs',
+  'tools/test-access-registration.mjs', 'tools/test-access-registration.tsconfig.json',
+  'tools/test-access-registration.vitest.mts', 'tools/test-access-registration.setup.ts',
+  'tools/access-ci.mjs', 'tools/access-ci.test.mjs',
+  'tools/access-source-selection.mjs', 'tools/access-source-selection.test.mjs',
+  'tools/access-source-files.json', 'tools/prepare-access-sources.mjs', 'tools/prepare-access-sources.test.mjs',
+  'tools/sync-cloud-beta.mjs', 'tools/cloud-beta.test.mjs', 'tools/cloud-bc5-profile.test.mjs',
+  'tools/test-initial-network.mjs', 'tools/test-initial-network.tsconfig.json',
+  'tools/test-initial-network.vitest.mts', 'tools/initial-network-gradle.test.mjs',
   'tools/custom-panel/pack.mjs',
 ];
 export const APP_TREES = ['src', 'public', 'android/app/src', 'android/gradle', 'android/geolocation/src',
@@ -57,6 +65,15 @@ function safeName(name) {
   if (typeof name !== 'string' || !name || /[\\:]/.test(name)
       || name.split('/').some(p => !p || p === '.' || p === '..')) throw Error('Unsafe source path');
   return name;
+}
+
+// The reviewed source selector uses exactly the existing App export boundary,
+// but reads unchanged inputs from Git instead of copying the whole dirty tree.
+export function isAppSourceInput(name) {
+  safeName(name);
+  const selected = APP_FILES.includes(name) || APP_TREES.some(tree => name.startsWith(tree + '/'));
+  if (selected && PRIVATE.test(name)) throw Error('Private or generated artifact in selected source');
+  return selected && !GENERATED.test(name);
 }
 
 export function inventory(directory) {

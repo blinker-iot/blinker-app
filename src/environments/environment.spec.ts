@@ -19,10 +19,10 @@ describe('build-time device communication profiles', () => {
       expect(Object.values(profile.deployment).every(Boolean)).toBe(true);
     }
   });
-  it('opens only existing automation and Task routes in beta without changing ordinary profiles', () => {
+  it('opens existing Direct access, automation and Task routes in beta without changing ordinary profiles', () => {
     expect(cloudBeta).toEqual({ ...production, deployment: {
       notifications: false, messages: false, tasks: true, automation: true,
-      directAccess: false, directedSharing: false, consoleLinks: false,
+      directAccess: true, directedSharing: false, consoleLinks: false,
     } });
     expect(Object.isFrozen(cloudBetaCapabilities)).toBe(true);
     expect(cloudBeta.gatewayBaseUrl).toBe('https://iot.yiyu.pro');

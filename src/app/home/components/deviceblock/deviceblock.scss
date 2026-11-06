@@ -73,6 +73,17 @@
   font-size: 0.875rem;
 }
 
+.device-nearby {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--ion-color-primary);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
 .device-card.status-reachable .device-status {
   color: var(--ion-color-primary);
 }

@@ -8,11 +8,6 @@ import { bleScanner } from '../bluetooth/scan';
 import { BleApplicationMode, BleDirectCrypto } from '../device-v2/ble-direct';
 import { DeviceV2BleService } from './device-v2-ble.service';
 
-function createService(http: any, cache: any, data: any): DeviceV2BleService {
-  data.deviceDataLoader ??= new BehaviorSubject(false);
-  return new DeviceV2BleService(http, cache, data, { active: new BehaviorSubject(true) } as any);
-}
-
 const originalDeployment = environment.deployment;
 beforeEach(() => { environment.deployment = localCapabilities; });
 afterEach(() => { environment.deployment = originalDeployment; });
@@ -22,8 +17,10 @@ describe('BLE presence evidence lifetime', () => {
   afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
   const turn = async () => { for (let i = 0; i < 24; ++i) await Promise.resolve(); };
   const harness = () => {
-    const data = { auth: { uuid: 'a' }, user: { id: 'a' }, sessionEpoch: 1, authDataChanged: new Subject<void>() };
-    const service = createService({} as any, { save: vi.fn() } as any, data as any);
+    const data = { auth: { uuid: 'a' }, user: { id: 'a' }, sessionEpoch: 1, authDataChanged: new Subject<void>(),
+      deviceDataLoader: new BehaviorSubject(false), getDevice: vi.fn() };
+    const active = new BehaviorSubject(true);
+    const service = new DeviceV2BleService({} as any, { save: vi.fn() } as any, data as any, { active } as any);
     const internal = service as any;
     vi.spyOn(BleClient, 'initialize').mockResolvedValue();
     vi.spyOn(internal, 'credentialStore').mockReturnValue({ load: async () => ({
@@ -31,11 +28,11 @@ describe('BLE presence evidence lifetime', () => {
       deviceInstanceId: new Uint8Array(16).fill(1), controllerId: new Uint8Array(16).fill(2), controllerSecret: new Uint8Array(32).fill(3),
       presenceKeys: [{ accessEpoch: 1, version: 1, key: new Uint8Array(16).fill(4) }],
     }) });
-    return { data, service, internal, close: () => internal.resetAccountSession() };
+    return { data, service, internal, active, close: () => service.ngOnDestroy() };
   };
-  const advertisement = () => ({ device: { deviceId: 'physical-address' },
+  const advertisement = (mode = BleApplicationMode.Direct) => ({ device: { deviceId: 'physical-address' },
     serviceData: { '5f6d0001-3f5b-4e4f-9f4d-626c696e6b32': new DataView(Uint8Array.of(
-      1, BleApplicationMode.Direct, 3, 0x51, 0, 1, 2, 3, 4, 9, 9, 9, 9,
+      1, mode, 3, 0x51, 0, 1, 2, 3, 4, 9, 9, 9, 9,
     ).buffer) } });
   const driver = () => {
     let observe!: (value: any, finish: () => void) => void;
@@ -47,8 +44,85 @@ describe('BLE presence evidence lifetime', () => {
         signal?.addEventListener('abort', () => reject(Error('BLE_SCAN_CANCELLED')), { once: true });
       });
     });
-    return { emit: () => observe(advertisement(), () => undefined), finish: () => finish(), fail: (error: Error) => fail(error) };
+    return { emit: (mode?: BleApplicationMode) => observe(advertisement(mode), () => undefined),
+      finish: () => finish(), fail: (error: Error) => fail(error) };
   };
+
+  const aliasHarness = () => {
+    const h = harness();
+    const cards = new Map(['device', 'alias', 'other'].map(id => [id, { cloudEnabled: id !== 'device',
+      config: { isShared: false, disabled: false, isPreview: false } }]));
+    h.data.getDevice.mockImplementation(id => cards.get(id));
+    // Preserve the normal fixture's credential, plus a distinct previous key.
+    const loadSource = h.internal.credentialStore().load;
+    const readBc5NearbySource = vi.fn(async (id: string) => id === 'alias' ? {
+      reference: { sourceLogicalDeviceId: 'device', targetLogicalDeviceId: 'alias', accessEpoch: 1,
+        presenceVersion: 1, rootBindingId: 'root', bindingRevision: 1 },
+      deviceInstanceId: new Uint8Array(16).fill(1), key: new Uint8Array(16).fill(4),
+    } : undefined);
+    vi.mocked(h.internal.credentialStore).mockReturnValue({ readBc5NearbySource, load: async (id: string) => {
+      if (id !== 'device') return undefined;
+      const credential = await loadSource();
+      credential.presenceKeys[0].state = 'current';
+      credential.presenceKeys.push({ state: 'previous', accessEpoch: 1, version: 2, key: new Uint8Array(16).fill(5) });
+      return credential;
+    } });
+    const states: boolean[] = [];
+    h.service.watchNearbyAlias('alias').subscribe(value => states.push(value));
+    return { ...h, cards, readBc5NearbySource, states };
+  };
+
+  it('projects only the exact current Direct observation without connecting the alias or adding a scan/HMAC', async () => {
+    const h = aliasHarness(), d = driver();
+    const hmac = vi.spyOn(BleDirectCrypto.prototype, 'hmac').mockImplementation(async key =>
+      new Uint8Array(32).fill(key[0] === 4 ? 9 : 3));
+    const scan = h.service.refreshPresence(['alias', 'other', 'device', 'alias']); await turn();
+    d.emit(); await turn();
+    expect(h.service.nearbySnapshot('device')).toBe(true);
+    expect(h.states).toEqual([false, true]);
+    expect(h.service.nearbySnapshot('alias')).toBe(false);
+    expect(h.service.connectionSnapshot('alias')).toBe('idle');
+    expect(await h.service.hasActiveCredential('alias')).toBe(false);
+    expect(hmac).toHaveBeenCalledTimes(2); // current and previous, not alias
+    expect(bleScanner.run).toHaveBeenCalledOnce();
+    d.finish(); await scan;
+    h.active.next(false);
+    expect(h.states).toEqual([false, true, false]); h.close();
+  });
+
+  it.each(['previous-only', 'different-material', 'source-disabled', 'target-shared', 'target-missing', 'wifi-provisioning'])
+  ('does not project a nearby-only alias for %s', async reason => {
+    const h = aliasHarness(), d = driver();
+    if (reason === 'different-material') {
+      const read = h.readBc5NearbySource.getMockImplementation()!;
+      h.readBc5NearbySource.mockImplementation(async id => {
+        const item = await read(id);
+        item?.key.fill(7);
+        return item;
+      });
+    }
+    if (reason === 'source-disabled') h.cards.get('device')!.config.disabled = true;
+    if (reason === 'target-shared') h.cards.get('alias')!.config.isShared = true;
+    if (reason === 'target-missing') h.cards.delete('alias');
+    vi.spyOn(BleDirectCrypto.prototype, 'hmac').mockImplementation(async key =>
+      new Uint8Array(32).fill(key[0] === (reason === 'previous-only' ? 5 : 4) ? 9 : 3));
+    const scan = h.service.refreshPresence(['device', 'alias']); await turn();
+    d.emit(reason === 'wifi-provisioning' ? BleApplicationMode.Provisioning : BleApplicationMode.Direct); await turn();
+    expect(h.states).toEqual([false]);
+    expect(h.service.nearbySnapshot('device')).toBe(reason !== 'wifi-provisioning');
+    d.finish(); await scan; h.close();
+  });
+
+  it('invalidates an already-published alias when the source leaves inventory', async () => {
+    const h = aliasHarness(), d = driver();
+    vi.spyOn(BleDirectCrypto.prototype, 'hmac').mockImplementation(async key => new Uint8Array(32).fill(key[0] === 4 ? 9 : 3));
+    const scan = h.service.refreshPresence(['device', 'alias']); await turn();
+    d.emit(); await turn();
+    expect(h.states).toEqual([false, true]);
+    h.cards.delete('device'); h.data.deviceDataLoader.next(true);
+    expect(h.states).toEqual([false, true, false]);
+    d.finish(); await scan; h.close();
+  });
 
   it.each(['miss', 'BLE_SCAN_BUSY', 'BLE_SCAN_THROTTLED'])(
     '%s preserves the original deadline but does not keep a device nearby indefinitely', async outcome => {

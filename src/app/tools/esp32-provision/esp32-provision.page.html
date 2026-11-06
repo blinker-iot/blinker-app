@@ -8,13 +8,60 @@
 </ion-header>
 
 <ion-content class="tool-page-content" [fullscreen]="true">
-  <main class="tool-page-shell" [attr.aria-busy]="isConnecting || isProvisioning">
-    @if (reconfiguring && phase !== 'success') {
+  <main class="tool-page-shell" [attr.aria-busy]="phase === 'context' || isConnecting || isProvisioning">
+    @if (unknownRecoveryLoading || unknownRecoveryError) {
+      <section class="notice warning" role="status" aria-live="polite" [attr.aria-busy]="unknownRecoveryLoading">
+        <div>
+          <strong>{{ unknownRecoveryLoading ? '正在读取配网核对记录…' : unknownRecoveryError }}</strong>
+          @if (!unknownRecoveryLoading) {
+            <button type="button" class="retry-button" [disabled]="operationBusy || wifiReceiptUnknown || sessionReady" (click)="reloadUnknownRecoveries()">重新读取本地记录</button>
+          }
+        </div>
+      </section>
+    }
+    @if (unknownRecoveries.length && !wifiReceiptUnknown) {
+      <section class="form-card" aria-labelledby="unknown-recoveries-title">
+        <div class="section-title"><div><h2 id="unknown-recoveries-title">待核对的配网</h2></div></div>
+        @for (entry of unknownRecoveries; track entry.requestId) {
+          <article class="device-copy">
+            <strong>{{ entry.name }}</strong>
+            <span>{{ unknownRecoveryMessage(entry) }}</span>
+            <div class="handoff-actions" role="group" [attr.aria-label]="entry.name + ' 配网核对'">
+              <button type="button" class="primary-button" [disabled]="!canRecoverUnknown(entry)" (click)="recoverUnknownWiFi(entry)">核对云状态</button>
+              <button type="button" class="retry-button" [disabled]="operationBusy || wifiCloudState === 'checking'" (click)="dismissUnknownRecovery(entry)">移除恢复提示</button>
+            </div>
+          </article>
+        }
+      </section>
+    }
+    @if (sealedRecoveries.length || sealedRecoveryMessage) {
+      <section class="form-card" aria-labelledby="sealed-recoveries-title">
+        <div class="section-title"><div><h2 id="sealed-recoveries-title">待核对的设备接入</h2></div></div>
+        @for (entry of sealedRecoveries; track entry.requestId; let index = $index) {
+          <article class="device-copy">
+            <strong>接入记录 {{ index + 1 }}</strong>
+            <span>{{ entry.recipientPublicKey ? '仅查询原设备卡，不发送配置。' : '创建请求未发出。原记录保留。' }}</span>
+            @if (entry.recipientPublicKey) {
+              <div class="handoff-actions">
+                <button type="button" class="primary-button" [disabled]="!canReconcileSealed(entry)"
+                  [attr.aria-label]="'核对接入记录 ' + (index + 1) + ' 的设备卡'" (click)="checkSealedInstallation(entry)">核对设备卡</button>
+              </div>
+            }
+          </article>
+        }
+        <p role="status" aria-live="polite" aria-atomic="true">{{ sealedRecoveryMessage }}</p>
+      </section>
+    }
+    @if (reconfiguring && phase !== 'success' && !completion) {
       <div class="notice warning" role="note">
         <i class="fa-light fa-rotate" aria-hidden="true"></i>
         <div>
           <strong>这是原设备重新配网</strong>
-          <span>App 会核对设备实例与原设备记录，不创建第二个设备。若已清除接入信息，本次操作会刷新 Key，使旧云端凭据失效；原本地授权需重新获取。</span>
+          @if (usesRekeyPilot) {
+            <span>{{ rekeyPilotReady ? '使用匹配固件和设备配网码，换网络并更新 Key。原设备卡及本地授权保留。' : '本次验证仅在 Android 的 Development 区域可用。' }}</span>
+          } @else {
+            <span>App 会核对设备实例与原设备记录，不创建第二个设备。若已清除接入信息，本次操作会刷新 Key，使旧云端凭据失效；原本地授权需重新获取。</span>
+          }
         </div>
       </div>
     }
@@ -29,7 +76,7 @@
       </div>
     }
 
-    @if (!sessionReady && phase !== 'success') {
+    @if (!completion && !wifiReceiptUnknown && !sessionReady && phase !== 'success' && !isProvisioning && !acquisitionWaiting) {
       <section class="form-card">
         <div class="section-title">
           <div><span>步骤 1</span><h2>连接配网设备</h2></div>
@@ -37,12 +84,32 @@
         </div>
 
         <div class="transport-switch" role="group" aria-label="配网传输方式">
-          <button type="button" [class.active]="transport === 'ble'" [attr.aria-pressed]="transport === 'ble'" (click)="setTransport('ble')">
+          <button type="button" [class.active]="transport === 'ble'" [attr.aria-pressed]="transport === 'ble'" [disabled]="!canOperate || operationBusy || isScanning" (click)="setTransport('ble')">
             <i class="fa-brands fa-bluetooth-b" aria-hidden="true"></i>BLE
           </button>
-          <button type="button" [class.active]="transport === 'softap'" [attr.aria-pressed]="transport === 'softap'" (click)="setTransport('softap')">
+          <button type="button" [class.active]="transport === 'softap'" [attr.aria-pressed]="transport === 'softap'" [disabled]="usesRekeyPilot || (!canOperate && !canBeginWifiReconfigure) || operationBusy || isScanning" (click)="setTransport('softap')">
             <i class="fa-light fa-router" aria-hidden="true"></i>SoftAP
           </button>
+        </div>
+
+        <div class="field-group">
+          <label for="provisioning-pop">设备配网码（PoP）<span>{{ requiresBlePoP ? '必填' : transport === 'ble' ? '按固件配置填写' : '自动选填 · 手动必填' }}</span></label>
+          <div class="input-shell">
+            <i class="fa-light fa-key" aria-hidden="true"></i>
+            <input id="provisioning-pop" [type]="provisioningPoPVisible && !operationBusy && !isScanning ? 'text' : 'password'" autocomplete="off"
+              autocapitalize="none" spellcheck="false" [(ngModel)]="provisioningPoP"
+              (ngModelChange)="provisioningPoPError = ''" (blur)="validateProvisioningPoP(requiresBlePoP)"
+              [attr.aria-invalid]="provisioningPoPError ? 'true' : null"
+              [attr.aria-describedby]="provisioningPoPError ? 'provisioning-pop-help provisioning-pop-error' : 'provisioning-pop-help'"
+              [disabled]="(!canOperate && !canBeginWifiReconfigure) || operationBusy || isScanning" />
+            <button type="button" class="inline-action pop-visibility" aria-label="显示或隐藏配网码"
+              [attr.aria-pressed]="provisioningPoPVisible && !operationBusy && !isScanning" [disabled]="(!canOperate && !canBeginWifiReconfigure) || operationBusy || isScanning"
+              (click)="provisioningPoPVisible = !provisioningPoPVisible">
+              <i [class]="provisioningPoPVisible && !operationBusy && !isScanning ? 'fa-light fa-eye-slash' : 'fa-light fa-eye'" aria-hidden="true"></i>
+            </button>
+          </div>
+          <p id="provisioning-pop-help">{{ requiresBlePoP ? '填写匹配固件提供的配网码，仅本次使用。' : transport === 'ble' ? '填写固件提供的配网码，未配置可留空；仅本次使用。' : '自动连接按设备要求填写；手动首次接入或重新配网必填。不是热点密码，仅本次使用。' }}</p>
+          @if (provisioningPoPError) { <p id="provisioning-pop-error" class="field-error" role="alert">{{ provisioningPoPError }}</p> }
         </div>
 
         @if (transport === 'ble') {
@@ -51,10 +118,10 @@
               <label for="device-prefix">设备名称前缀</label>
               <div class="input-shell">
                 <i class="fa-light fa-filter" aria-hidden="true"></i>
-                <input id="device-prefix" type="text" placeholder="默认 BLINKER_" [(ngModel)]="devicePrefix" [disabled]="isConnecting || isScanning" />
+                <input id="device-prefix" type="text" placeholder="默认 BLINKER_" [(ngModel)]="devicePrefix" [disabled]="!canOperate || operationBusy || isScanning" />
               </div>
             </div>
-            <button type="button" class="primary-button compact" [disabled]="isConnecting || !nativeSupported" (click)="toggleBleScan()">
+            <button type="button" class="primary-button compact" [disabled]="!canOperate || operationBusy || !nativeSupported" (click)="toggleBleScan()">
               <i [class]="isScanning ? 'fa-light fa-stop' : 'fa-light fa-radar'" aria-hidden="true"></i>
               {{ isScanning ? '停止扫描' : '扫描 ESP32' }}
             </button>
@@ -62,7 +129,7 @@
 
           <div class="device-list">
             @for (device of devices; track device.id) {
-              <button type="button" class="device-row" [disabled]="isConnecting" (click)="selectBleDevice(device)">
+              <button type="button" class="device-row" [disabled]="!canOperate || operationBusy" (click)="selectBleDevice(device)">
                 <span class="device-icon"><i [class]="signalBars(device.rssi)" aria-hidden="true"></i></span>
                 <span class="device-copy">
                   <strong>{{ device.name || '未命名 ESP32' }}</strong>
@@ -84,68 +151,100 @@
             <label for="device-name">ESP32 临时热点名称</label>
             <div class="input-shell">
               <i class="fa-light fa-router" aria-hidden="true"></i>
-              <input id="device-name" type="text" placeholder="例如 BLINKER_123456789ABC" [(ngModel)]="deviceName" [disabled]="isConnecting" />
+              <input id="device-name" type="text" placeholder="例如 BLINKER_123456789ABC" [(ngModel)]="deviceName" [disabled]="(!canOperate && !canBeginWifiReconfigure) || operationBusy" />
             </div>
           </div>
           <div class="field-group">
             <label for="softap-password">热点密码 <span>无密码可留空</span></label>
             <div class="input-shell">
               <i class="fa-light fa-lock-keyhole" aria-hidden="true"></i>
-              <input id="softap-password" type="password" placeholder="ESP32 SoftAP 密码" [(ngModel)]="softApPassword" [disabled]="isConnecting" />
+              <input id="softap-password" type="password" placeholder="ESP32 SoftAP 密码" [(ngModel)]="softApPassword" [disabled]="!canOperate || operationBusy" />
             </div>
           </div>
-          <button type="button" class="primary-button" [disabled]="isConnecting || !nativeSupported" (click)="connectSoftAp()">
+          <button type="button" class="primary-button" [disabled]="!canOperate || operationBusy || !nativeSupported" (click)="connectSoftAp()">
             <i [class]="isConnecting ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-link'" aria-hidden="true"></i>
             {{ isConnecting ? '正在连接…' : '连接 ESP32 热点' }}
           </button>
+          @if (!reconfiguring || canUseWifiReconfigure) {
+            <div class="manual-connection">
+              @if (!reconfiguring) {
+              <p id="system-connected-help">自动连接不可用时，可先在系统 WLAN 连接上面的热点，返回后只读查看。不会写入身份或 Wi-Fi 配置。</p>
+              <button type="button" class="system-connected-button" aria-describedby="system-connected-help"
+                [disabled]="!canUseSystemConnectedReadOnly || !canOperate || operationBusy || isScanning || phase !== 'idle'"
+                (click)="connectSoftAp('system-connected')">已连接热点，只读查看</button>
+              @if (!canUseSystemConnectedReadOnly) {
+                <span>需要支持手动只读连接的新版 Android 插件。</span>
+              } @else if (phase === 'error') {
+                <span>请先点击“重新开始”关闭原会话。</span>
+              }
+              }
+              @if (canUseFirstInstall || canUseWifiReconfigure) {
+                <details class="first-install-options">
+                  <summary>{{ reconfiguring ? '保留身份重新配网' : '新设备首次接入' }}</summary>
+                  @if (reconfiguring) {
+                    <p id="wifi-reconfigure-help">让原设备进入配网模式，在系统 WLAN 连接其热点后继续。保留原设备卡和授权，不清除身份。</p>
+                  }
+                  <button type="button" class="system-connected-button" [id]="reconfiguring ? 'wifi-reconfigure-connect' : 'first-install-connect'"
+                    [attr.aria-describedby]="reconfiguring ? 'wifi-reconfigure-help' : null"
+                    [disabled]="reconfiguring ? !canBeginWifiReconfigure : !canOperate || operationBusy || isScanning || phase !== 'idle'"
+                    (click)="reconfiguring ? connectWifiReconfigureSoftAp() : connectFirstInstallSoftAp()">{{ reconfiguring ? '已连接原设备热点，重新配网' : '已连接热点，首次接入' }}</button>
+                </details>
+              }
+            </div>
+          }
         }
       </section>
     }
 
-    @if (sessionReady) {
+    @if (!completion && sessionReady && !wifiReceiptUnknown) {
       <section class="connected-card">
         <span class="connected-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
         <div>
           <strong>{{ selectedDevice?.name }}</strong>
-          <span>{{ selectedDevice?.transport === 'ble' ? 'BLE' : 'SoftAP' }} · Security {{ selectedDevice?.security }} · 安全会话已连接</span>
+          <span>{{ selectedDevice?.transport === 'ble' ? 'BLE' : 'SoftAP' }} · {{ readOnlySoftAp ? '手动只读连接' : wifiReconfigureSoftAp ? '保留身份重新配网' : firstInstallSoftAp ? '新设备首次接入' : 'Security ' + selectedDevice?.security + ' · 安全会话已连接' }}</span>
         </div>
-        <button type="button" (click)="startOver()">更换</button>
+        <button type="button" [disabled]="!canOperate || operationBusy" (click)="startOver()">更换</button>
       </section>
 
       <section class="form-card wifi-card">
         <div class="section-title">
-          <div><span>步骤 2</span><h2>选择目标 Wi-Fi</h2></div>
-          <button type="button" class="refresh-button" [disabled]="scanningNetworks" (click)="scanWifiNetworks()">
+          <div><span>步骤 2</span><h2>{{ readOnlySoftAp ? '设备扫描结果（只读）' : '选择目标 Wi-Fi' }}</h2></div>
+          <button type="button" class="refresh-button" [disabled]="!canOperate || operationBusy" (click)="scanWifiNetworks()">
             <i class="fa-light fa-rotate" [class.fa-spin]="scanningNetworks" aria-hidden="true"></i>刷新
           </button>
         </div>
 
+        @if (!readOnlySoftAp) {
         <div class="field-group">
           <label for="blinker-device-name">Blinker 设备名称</label>
           <div class="input-shell">
             <i class="fa-light fa-microchip" aria-hidden="true"></i>
-            <input id="blinker-device-name" type="text" maxlength="128" placeholder="例如 ESP32 WiFiBLE" [(ngModel)]="blinkerDeviceName" [disabled]="isProvisioning || reconfiguring" />
+            <input id="blinker-device-name" type="text" maxlength="128" placeholder="例如 ESP32 WiFiBLE" [(ngModel)]="blinkerDeviceName" [disabled]="!canOperate || operationBusy || reconfiguring" />
           </div>
         </div>
+        }
 
         @if (networks.length) {
           <div class="network-list">
             @for (network of networks; track network.ssid + network.bssid) {
-              <button type="button" class="network-row" [class.selected]="ssid === network.ssid" [attr.aria-pressed]="ssid === network.ssid" (click)="selectNetwork(network)">
+              <button type="button" class="network-row" [disabled]="readOnlySoftAp || !canOperate || operationBusy" [class.selected]="!readOnlySoftAp && ssid === network.ssid" [attr.aria-pressed]="!readOnlySoftAp && ssid === network.ssid" (click)="selectNetwork(network)">
                 <i class="fa-light fa-wifi" aria-hidden="true"></i>
                 <span><strong>{{ network.ssid || '隐藏网络' }}</strong><small>信道 {{ network.channel || '—' }} · {{ wifiSecurityLabel(network.security) }}</small></span>
                 <b>{{ network.rssi }} dBm</b>
-                @if (ssid === network.ssid) { <i class="fa-solid fa-circle-check" aria-hidden="true"></i> }
+                @if (!readOnlySoftAp && ssid === network.ssid) { <i class="fa-solid fa-circle-check" aria-hidden="true"></i> }
               </button>
             }
           </div>
         }
 
+        @if (readOnlySoftAp) {
+          <p class="readonly-note" role="note">仅查看扫描结果；不选择网络、不发送配置。</p>
+        } @else {
         <div class="field-group">
           <label for="wifi-ssid">Wi-Fi 名称</label>
           <div class="input-shell">
             <i class="fa-light fa-signal-stream" aria-hidden="true"></i>
-            <input id="wifi-ssid" type="text" autocomplete="off" placeholder="选择网络或手动输入 SSID" [(ngModel)]="ssid" [disabled]="isProvisioning" />
+            <input id="wifi-ssid" type="text" autocomplete="off" placeholder="选择网络或手动输入 SSID" [(ngModel)]="ssid" [disabled]="!canOperate || operationBusy" />
           </div>
         </div>
 
@@ -153,14 +252,14 @@
           <label for="wifi-password">Wi-Fi 密码</label>
           <div class="input-shell">
             <i class="fa-light fa-lock-keyhole" aria-hidden="true"></i>
-            <input id="wifi-password" [type]="passwordVisible ? 'text' : 'password'" autocomplete="off" placeholder="开放网络可留空" [(ngModel)]="password" [disabled]="isProvisioning" />
-            <button type="button" class="inline-action" aria-label="显示或隐藏密码" [attr.aria-pressed]="passwordVisible" (click)="passwordVisible = !passwordVisible">
+            <input id="wifi-password" [type]="passwordVisible ? 'text' : 'password'" autocomplete="off" placeholder="开放网络可留空" [(ngModel)]="password" [disabled]="!canOperate || operationBusy" />
+            <button type="button" class="inline-action" aria-label="显示或隐藏密码" [disabled]="!canOperate || operationBusy" [attr.aria-pressed]="passwordVisible" (click)="passwordVisible = !passwordVisible">
               <i [class]="passwordVisible ? 'fa-light fa-eye-slash' : 'fa-light fa-eye'" aria-hidden="true"></i>
             </button>
           </div>
         </div>
 
-        <button type="button" class="remember-row" [class.selected]="rememberNetwork" [attr.aria-pressed]="rememberNetwork" (click)="toggleRemember()">
+        <button type="button" class="remember-row" [disabled]="!canOperate || operationBusy" [class.selected]="rememberNetwork" [attr.aria-pressed]="rememberNetwork" (click)="toggleRemember()">
           <span class="checkbox"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
           <span>记住此 Wi-Fi</span>
         </button>
@@ -169,17 +268,89 @@
           <i [class]="isProvisioning ? 'fa-light fa-spinner-third fa-spin' : 'fa-light fa-paper-plane-top'" aria-hidden="true"></i>
           {{ isProvisioning ? '正在配置网络…' : '发送 Wi-Fi 配置' }}
         </button>
+        }
       </section>
     }
 
-    @if (phase !== 'idle' && phase !== 'ready') {
-      <section role="status" aria-live="polite" class="status-card" [class.success]="phase === 'success'" [class.error]="phase === 'error'">
+    @if (completion; as completed) {
+      <section class="status-card completion-card" role="status" aria-live="polite" aria-labelledby="completion-title"
+        [attr.aria-busy]="completionChecking" [class.success]="completed.outcome === 'ready'" [class.error]="completed.outcome === 'failed'">
+        <div class="status-head">
+          <span class="status-icon" aria-hidden="true">
+            <i [class]="completed.outcome === 'ready' ? 'fa-solid fa-check' : completed.outcome === 'checking' ? 'fa-light fa-arrows-rotate fa-spin' : 'fa-light fa-circle-info'"></i>
+          </span>
+          <div>
+            <strong id="completion-title">
+              @switch (completed.outcome) {
+                @case ('checking') { 正在确认设备是否上线 }
+                @case ('ready') { 设备已上线 }
+                @case ('wifi-connected') { 已连接 Wi-Fi，云端尚未就绪 }
+                @case ('failed') { 设备未能连接 Wi-Fi }
+                @default { 暂未能确认设备是否联网 }
+              }
+            </strong>
+            <span class="completion-message">
+              @if (completed.outcome === 'ready') {
+                {{ completed.officialReceipt === 'unknown' ? '已通过云端确认设备在线。' : 'Wi-Fi 连接和云端上线均已确认。' }}
+              } @else if (completed.cloud === 'blocked') {
+                核对条件已变化或连接退出尚未确认，请检查账号与网络后重新进入；不会重发配置。
+              } @else if (completed.outcome === 'failed') {
+                {{ completionFailureMessage || '请检查目标网络和密码。' }}本次不会自动重发配置。
+              } @else if (completed.outcome === 'checking') {
+                正在只读检查设备状态，完成后会显示结果。
+              } @else if (usesRekeyPilot) {
+                尚未确认本次换网后的云连接，不会自动进入设备或重发配置。
+              } @else if (completed.reason === 'cancelled') {
+                状态检查已停止；返回本页不会自动重新检查。
+              } @else if (completed.reason === 'timeout') {
+                本次检查已结束，这不代表设备联网失败；可稍后再次检查状态。
+              } @else {
+                暂时无法完成云端确认，请检查手机网络后手动再次检查。
+              }
+            </span>
+          </div>
+        </div>
+        <details class="completion-diagnostics">
+          <summary>查看配网详情</summary>
+          <dl>
+            <div><dt>Wi-Fi 回执</dt><dd>{{ completed.officialReceipt === 'confirmed' ? '设备已确认连接' : completed.officialReceipt === 'rejected' ? '设备明确拒绝' : '未收到确认' }}</dd></div>
+            <div><dt>云端确认</dt><dd>{{ completed.cloud === 'online' ? '本次上线已确认' : completed.cloud === 'checking' ? '正在检查' : completed.cloud === 'blocked' ? '已停止核对' : completed.cloud === 'unavailable' ? '暂不可用' : '尚未确认' }}</dd></div>
+          </dl>
+          @if (completed.officialReceipt === 'unknown') {
+            <p>原本地配网回执仍未知；云端结果不会改写原回执或重发配置。</p>
+          }
+          @if (wifiCheckpointState === 'unconfirmed') {
+            <p>恢复记录保存未确认，关闭页面后可能无法找回本次核对入口。</p>
+          }
+        </details>
+        <div class="handoff-actions" role="group" aria-label="入网结果操作">
+          @if (canOpenCompletion) {
+            <button type="button" class="primary-button" (click)="openCompletionDevice()">进入设备</button>
+          }
+          @if (completed.officialReceipt !== 'rejected' && completed.outcome !== 'ready' && (!usesRekeyPilot || canCheckCompletion)) {
+            <button type="button" class="retry-button" [disabled]="!canCheckCompletion" (click)="checkCompletionCloud()">{{ completionChecking ? '正在检查…' : '再次检查状态' }}</button>
+          }
+          @if (completed.outcome !== 'ready') {
+            <button type="button" class="retry-button" data-action="return-to-devices" [disabled]="!canReturnToDeviceList"
+              (click)="returnToDeviceList()">返回设备列表</button>
+          }
+        </div>
+        @if (completionActionMessage) {
+          <p class="completion-action-message" role="status">{{ completionActionMessage }}</p>
+        }
+      </section>
+    }
+
+    @if (!completion && (acquisitionWaiting || handoffWaiting || (phase !== 'idle' && phase !== 'ready'))) {
+      <section role="status" aria-live="polite" class="status-card" [attr.aria-busy]="wifiCloudState === 'checking'" [class.success]="phase === 'success'" [class.error]="phase === 'error' && !wifiReceiptUnknown">
         <div class="status-head">
           <span class="status-icon">
             @if (phase === 'success') {
               <i class="fa-solid fa-check" aria-hidden="true"></i>
             } @else if (phase === 'error') {
               <i class="fa-solid fa-exclamation" aria-hidden="true"></i>
+            } @else if (handoffWaiting || acquisitionWaiting) {
+              <i class="fa-light fa-network-wired" aria-hidden="true"></i>
             } @else {
               <i class="fa-light fa-arrows-rotate fa-spin" aria-hidden="true"></i>
             }
@@ -189,23 +360,47 @@
             @if (result?.ipAddress) { <span>设备 IP：{{ result?.ipAddress }}</span> }
           </div>
         </div>
+        @if (acquisitionWaiting) {
+          <div class="acquisition-actions handoff-actions" role="group" aria-label="热点连接恢复">
+            <button type="button" class="primary-button" [disabled]="!canContinueAcquisition" (click)="continueAcquisition()">继续连接设置</button>
+            <button type="button" class="retry-button" (click)="cancelAcquisition()">取消本次连接</button>
+          </div>
+        }
+        @if (handoffWaiting) {
+          <div class="handoff-actions" role="group" aria-label="配网阶段切换">
+            <button type="button" class="primary-button" (click)="continueHandoff()">{{ handoffWaiting === 'cloud' ? '继续云端步骤' : '重连原设备并继续' }}</button>
+            <button type="button" class="retry-button" (click)="cancelHandoff()">取消本次配网</button>
+          </div>
+        }
         @if (isProvisioning || phase === 'success') {
           <div class="progress-track"><span [style.width.%]="progress"></span></div>
         }
-        @if (phase === 'success' || phase === 'error') {
-          <button type="button" class="retry-button" (click)="phase === 'success' ? openProvisionedDevice() : startOver()">
+        @if (!wifiReceiptUnknown && !acquisitionWaiting && !handoffWaiting && (phase === 'success' || phase === 'error')) {
+          <button type="button" class="retry-button" [disabled]="isProvisioning" (click)="phase === 'success' ? openProvisionedDevice() : startOver()">
             <i [class]="phase === 'success' ? 'fa-light fa-arrow-right' : 'fa-light fa-rotate-right'" aria-hidden="true"></i>{{ phase === 'success' ? '进入设备' : '重新开始' }}
           </button>
         }
       </section>
     }
 
+    @if (phase === 'error' || (completion && completion.outcome !== 'ready')) {
+      <details class="tips recovery-help">
+        <summary>重试与重置帮助</summary>
+        <ol>
+          <li>连接超时可点击“重新开始”后重连。设备明确拒绝 Wi-Fi 时，返回设备列表，从原设备卡重新配网；不会自动重发配置。结果未确认时，可先检查状态。</li>
+          <li>普通重启不会清除身份，也不等于恢复出厂设置。</li>
+          <li>仅清网络会保留身份，应从原设备卡重新配网。更换网络应使用支持更新接入凭据的匹配固件。</li>
+          <li>清除身份或完整抹除后按新设备添加，会生成新设备卡；旧卡仍保留，可自行移除。重置按设备说明操作，本页不会远程擦除。</li>
+        </ol>
+      </details>
+    }
+
     <details class="tips">
       <summary>配网说明</summary>
       <ol>
       <li>ESP32 固件需使用 Espressif network_provisioning 或 Arduino WiFiProv。</li>
-      <li>Blinker 教育设备固定使用 Security 1；当前物理配网窗口不要求 PoP。</li>
-      <li>{{ reconfiguring ? '重新配网只替换 Wi-Fi；刷新 Key 是设备设置中的独立操作。' : 'App 会先创建 DeviceKey 并完成 Blinker access bootstrap，再发送 Wi-Fi 凭据。' }}</li>
+      <li>SoftAP 手动首次接入需固件 PoP；其他方式沿用原配置。</li>
+      <li>{{ usesRekeyPilot ? '设备确认安装新 Key 后，才会下发 Wi-Fi；回执未知时不会自动重发。' : reconfiguring ? '请从原设备卡重新配网，使用支持换网及更新接入凭据的匹配固件。' : 'App 会先创建 DeviceKey 并完成 Blinker access bootstrap，再发送 Wi-Fi 凭据。' }}</li>
       <li>大多数 ESP32 仅支持连接 2.4 GHz Wi-Fi。</li>
       </ol>
     </details>

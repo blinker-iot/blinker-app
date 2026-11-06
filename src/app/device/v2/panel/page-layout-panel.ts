@@ -29,6 +29,8 @@ export class PageLayoutPanelComponent {
   }
 
   emit(card: PanelCard, act: WidgetAct): void {
-    if (this.interactive) this.action.emit({ ...act, field: card.field, widgetId: card.widget.widgetId });
+    const target = act.hold?.target;
+    if (this.interactive) this.action.emit({ ...act, field: target?.field ?? card.field,
+      widgetId: target?.widgetId ?? card.widget.widgetId });
   }
 }

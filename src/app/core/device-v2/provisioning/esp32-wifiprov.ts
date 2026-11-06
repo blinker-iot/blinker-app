@@ -32,6 +32,7 @@ export interface BlinkerConfigInfo {
   hasDeviceKey: boolean;
   supportsAccessBootstrap: boolean;
   hasAccessState: boolean;
+  supportsRekey?: true;
 }
 
 export interface BlinkerAccessBootstrap {
@@ -108,13 +109,13 @@ export function encodeBlinkerConfigBootstrap(
   return request;
 }
 
-export function decodeBlinkerConfigInfo(response: Uint8Array): BlinkerConfigInfo {
+export function decodeBlinkerConfigInfo(response: Uint8Array, rekeyCandidate = false): BlinkerConfigInfo {
   validateResponseHeader(response, BlinkerConfigOperation.GetInfo);
   if (response.length !== 4 + DEVICE_INSTANCE_ID_BYTES + 4) {
     throw new BlinkerConfigError('Blinker config info response has an invalid size');
   }
   const flags = response[3];
-  if ((flags & ~0x07) !== 0) {
+  if ((flags & ~(rekeyCandidate ? 0x0f : 0x07)) !== 0) {
     throw new BlinkerConfigError('Blinker config info contains unknown flags');
   }
   return {
@@ -123,6 +124,7 @@ export function decodeBlinkerConfigInfo(response: Uint8Array): BlinkerConfigInfo
     hasDeviceKey: (flags & 0x01) !== 0,
     supportsAccessBootstrap: (flags & 0x02) !== 0,
     hasAccessState: (flags & 0x04) !== 0,
+    ...((flags & 0x08) !== 0 ? { supportsRekey: true as const } : {}),
   };
 }
 

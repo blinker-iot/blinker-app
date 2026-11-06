@@ -76,6 +76,10 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
   private subscription?: Subscription;
   private drafts = new Map<string, string>();
   private loadVersion = 0;
+  private controlEpoch = 0;
+  private controlOwner = '';
+  private controlAvailable = false;
+  private destroyed = false;
 
   constructor(private readonly devices: DeviceService, private readonly panels: DevicePanelService) {}
 
@@ -91,7 +95,11 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
   get layoutTheme() { return this.customPanel?.theme || this.panel?.document.style; }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (!changes['device']) return;
+    if (!changes['device']) {
+      if (changes['viewActive']) this.refresh();
+
+      return;
+    }
 
     this.subscription?.unsubscribe();
     this.load();
@@ -109,14 +117,32 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void { this.loadVersion++; this.subscription?.unsubscribe(); }
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    this.controlEpoch++;
+    this.loadVersion++;
+    this.subscription?.unsubscribe();
+  }
 
   act(action: PanelAction): void {
-    if (this.panelEditSession) return;
+    if (this.destroyed || this.panelEditSession) return;
     const binding = this.panel?.bindings[action.widgetId || ''];
+    const card = this.cards.find(item => item.widget.widgetId === action.widgetId);
 
     if (!binding || !binding.field.writable || !this.viewActive
-      || this.cards.find(card => card.widget.widgetId === action.widgetId)?.disabled) return;
+      || card?.disabled) return;
+
+    if (Object.hasOwn(action, 'hold')) {
+      const hold = action.hold, target = hold?.target, field = target?.field;
+
+      // Legacy has no protocol-session epoch or confirmed-release queue. This
+      // local owner only refuses stale Hold events instead of retargeting them.
+      if (!hold || !target || !field || !card?.controlAvailable || target.scope !== this.controlScope()
+        || card.controlScope !== target.scope || target.widgetId !== action.widgetId
+        || !['press', 'release'].includes(hold.phase) || action.kind !== 'toggle' || action.value !== (hold.phase === 'press')
+        || field.id !== binding.field.id || field.key !== binding.field.key
+        || field.role !== binding.field.role || field.valueType !== binding.field.valueType) return;
+    }
 
     if (action.kind === 'draft') {
       this.drafts.set(binding.field.key, String(action.value ?? ''));
@@ -177,6 +203,15 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
   private refresh(): void {
     if (!this.panel) return;
 
+    const owner = this.device.deviceName || this.device.id || '';
+    const available = this.viewActive && (this.device.config.isPreview === true || !!this.device.data?.enable
+      || this.device.data?.state === 'connected' || this.devices.islocalDevice(this.device));
+
+    if (owner !== this.controlOwner || this.controlAvailable && !available) this.controlEpoch++;
+
+    this.controlOwner = owner;
+    this.controlAvailable = available;
+
     const fields = Object.values(this.panel.bindings).map(binding => legacyField(binding, this.device));
 
     this.cards = this.panel.document.widgets.map(widget => {
@@ -189,8 +224,11 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
 
           return extra ? [{ field: extra, value: extra.value }] : [];
         }),
-        error: '', disabled: !this.device.config.isPreview && !this.device.data?.enable
-          && this.device.data?.state !== 'connected' && !this.devices.islocalDevice(this.device) };
+        error: '', disabled: !available, controlScope: this.controlScope(), controlAvailable: available && field.writable };
     });
+  }
+
+  private controlScope(): string {
+    return 'legacy:' + JSON.stringify([this.device.deviceName || this.device.id || '', this.controlEpoch]);
   }
 }

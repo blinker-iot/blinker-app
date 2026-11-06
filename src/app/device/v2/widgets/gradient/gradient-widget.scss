@@ -28,7 +28,7 @@
   height: 100%;
   border-radius: 999px;
   cursor: pointer;
-  touch-action: none;
+  touch-action: var(--ui-control-touch-action, none);
   outline-offset: -2px;
 }
 

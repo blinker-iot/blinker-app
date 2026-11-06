@@ -38,6 +38,38 @@ async function opened() { const f = setup(); f.instance.ionViewWillEnter(); awai
 function draft(f: ReturnType<typeof setup>) { f.instance.selectField('reading', true); f.instance.setEnabled(true); }
 describe('Online trends page lifecycle and save confirmation', () => {
   afterEach(() => vi.restoreAllMocks());
+  it('QA-2 timezone projection updates an unedited end on foreground without retrying a failed read', async () => {
+    const offset = vi.spyOn(Date.prototype, 'getTimezoneOffset').mockReturnValue(0);
+    vi.spyOn(Date, 'now').mockReturnValue(now); const f = await opened();
+    const window = { from: f.instance.state().from, to: f.instance.state().to };
+    f.history.read.mockRejectedValueOnce(Error('network')); await f.instance.refresh();
+    const calls = f.history.read.mock.calls.length, detailCalls = f.history.detail.mock.calls.length;
+    f.visibility.active.next(false); offset.mockReturnValue(-480); f.visibility.active.next(true); await settled(f.instance);
+    expect(f.instance.state().endInput).toBe(new Date(window.to + 8 * 3600000).toISOString().slice(0, 19));
+    expect({ from: f.instance.state().from, to: f.instance.state().to }).toEqual(window);
+    expect(f.instance.windowPending).toBe(false); expect(f.history.read).toHaveBeenCalledTimes(calls);
+    expect(f.history.detail).toHaveBeenCalledTimes(detailCalls); expect(f.history.save).not.toHaveBeenCalled(); f.instance.ngOnDestroy();
+  });
+  it('QA-2 New_York keeps an applied repeated-hour window pending-free without another query', async () => {
+    const to = Date.parse('2026-11-01T06:30:00Z'); vi.spyOn(Date, 'now').mockReturnValue(to);
+    expect(new Date(to).getTimezoneOffset()).toBe(300); const f = await opened();
+    expect(f.instance.state().endInput).toBe('2026-11-01T01:30:00');
+    expect(f.instance.windowPending).toBe(false); expect(f.instance.windowError).toBe('');
+    expect(f.history.read.mock.calls[0][1]).toEqual({ from: to - 86400000, to, limit: 50 });
+    expect(f.history.read).toHaveBeenCalledTimes(1); expect(f.history.save).not.toHaveBeenCalled(); f.instance.ngOnDestroy();
+  });
+  it('QA-2 timezone projection preserves an edited end and read-failure write fence without automatic requests', async () => {
+    const offset = vi.spyOn(Date.prototype, 'getTimezoneOffset').mockReturnValue(0);
+    vi.spyOn(Date, 'now').mockReturnValue(now); const f = await opened();
+    f.instance.editEnd('2023-11-12T12:34:56');
+    f.history.read.mockRejectedValueOnce(Error('network')); await f.instance.refresh();
+    const calls = f.history.read.mock.calls.length, window = { from: f.instance.state().from, to: f.instance.state().to };
+    f.visibility.active.next(false); offset.mockReturnValue(-480); f.visibility.active.next(true); await settled(f.instance);
+    expect(f.instance.state().endInput).toBe('2023-11-12T12:34:56');
+    expect({ from: f.instance.state().from, to: f.instance.state().to }).toEqual(window);
+    expect(f.instance.canSave).toBe(false);
+    expect(f.history.read).toHaveBeenCalledTimes(calls); expect(f.history.save).not.toHaveBeenCalled(); f.instance.ngOnDestroy();
+  });
   it('performs only initial policy/range reads and uses compatible names and explicit receipt time', async () => {
     vi.spyOn(Date, 'now').mockReturnValue(now); const f = await opened();
     expect(f.history.detail).toHaveBeenCalledTimes(1); expect(f.history.read).toHaveBeenCalledTimes(1);
@@ -176,18 +208,18 @@ describe('Online trends page lifecycle and save confirmation', () => {
     f.instance.shiftWindow(1); await settled(f.instance); expect(f.instance.state().to).toBe(now);
     f.instance.ngOnDestroy();
   });
-  it.each(['', '2026-02-30T12:00', '2030-01-01T00:00', '1970-01-01T01:00'])('does not query or mislabel existing rows for invalid UTC end %s', async value => {
+  it.each(['', '2026-02-30T12:00', '2030-01-01T00:00', '1970-01-01T01:00'])('does not query or mislabel existing rows for invalid local end %s', async value => {
     vi.spyOn(Date, 'now').mockReturnValue(now); const f = await opened(), previous = f.instance.state();
     f.instance.editEnd(value); expect(f.instance.windowPending).toBe(true); expect(f.instance.windowError).not.toBe('');
     expect(f.instance.canApplyWindow).toBe(false); f.instance.applyWindow();
     expect(f.history.read).toHaveBeenCalledTimes(1); expect(f.instance.state().rows).toEqual(previous.rows);
     expect(f.instance.state().to).toBe(previous.to); expect(f.history.save).not.toHaveBeenCalled(); f.instance.ngOnDestroy();
   });
-  it('applies a UTC end only on request and retries failures in that same window', async () => {
+  it('applies a local end only on request and retries failures in that same UTC window', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(now); const f = await opened();
     f.instance.editEnd('2023-11-12T12:00'); expect(f.history.read).toHaveBeenCalledTimes(1);
     f.history.read.mockRejectedValueOnce(Error('network')); f.instance.applyWindow(); await settled(f.instance);
-    const to = Date.parse('2023-11-12T12:00:00Z');
+    const to = new Date(2023, 10, 12, 12, 0).getTime();
     expect(f.instance.state().to).toBe(to); expect(f.instance.state().rows).toEqual([]); expect(f.instance.state().writeBlocked).toBe(true);
     clock.mockReturnValue(now + 7200000); await f.instance.refresh();
     expect(f.history.read.mock.calls.at(-1)![1]).toEqual({ from: to - 86400000, to, limit: 50 });

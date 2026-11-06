@@ -6,5 +6,7 @@ export const environment = {
   deviceV2BleBootstrapPriorityEnabled: false,
   consoleWebBaseUrl: '',
   gatewayBaseUrl: 'https://iot.yiyu.pro',
+  wifiProvRekeyPilotOperation: undefined as string | undefined,
+  wifiProvSealedFirstInstall: false,
   deployment: cloudBetaCapabilities,
 };

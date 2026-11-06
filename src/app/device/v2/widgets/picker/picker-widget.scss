@@ -25,7 +25,7 @@ $ring-mask: radial-gradient(farthest-side, transparent calc(100% - var(--rw)), #
   container-type: size;
   border-radius: 50%;
   cursor: grab;
-  touch-action: none;
+  touch-action: var(--ui-control-touch-action, none);
 }
 
 .cw {

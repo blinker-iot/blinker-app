@@ -1,8 +1,10 @@
 import '@angular/compiler';
 import { describe, expect, it, vi } from 'vitest';
+import { BehaviorSubject } from 'rxjs';
 
 import { BlinkerConfigOperation } from '../../core/device-v2/provisioning/esp32-wifiprov';
 import { Esp32ProvisionPage } from './esp32-provision.page';
+import { wiFiProvCompletionResult } from '../../core/device-v2/provisioning/wifiprov-completion';
 
 describe('Esp32ProvisionPage existing-device flow', () => {
   const logicalDeviceId = 'device_11111111-1111-4111-8111-111111111111';
@@ -18,6 +20,8 @@ describe('Esp32ProvisionPage existing-device flow', () => {
 
   function harness(reconfigure = true) {
     const management = {
+      readDeviceContextV2: vi.fn(async () => ({ logicalDeviceId, credentialVersion: 1,
+        locator: 'AQEBAQEBAQEBAQEBAQEBAQ' })),
       getDirectAdminV2: vi.fn().mockResolvedValue(null),
       resetDirectAdminV2: vi.fn(async (id: string, value: any) => ({ logicalDeviceId: id,
         accessEpoch: value.expectedAccessEpoch + 1, controllerId: value.controllerId, credentialVersion: 1 })),
@@ -72,6 +76,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
       route as any,
       nav as any,
       alerts as any,
+      { active: new BehaviorSubject(true) } as any,
     );
     const requests: Uint8Array[] = [];
     (page as any).provisioningTransport = {
@@ -92,6 +97,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
       save: vi.fn(async (value: any) => { stored = copy(value); }),
       load: vi.fn(async () => copy(stored)),
       remove: vi.fn(async () => { stored = undefined; }),
+      removeDeletedRegistration: vi.fn(async () => { stored = undefined; return { cleanupPending: false }; }),
       findWiFiProv: vi.fn().mockResolvedValue(undefined),
     };
     (page as any).controllerCredentials = credentials;
@@ -113,13 +119,48 @@ describe('Esp32ProvisionPage existing-device flow', () => {
       }),
     };
     (page as any).allocationStore = allocations;
-    (page as any).selectedDevice = { id: 'android:AA:BB', connected: true };
+    (page as any).selectedDevice = { id: 'android:AA:BB', connected: true, transport: 'ble' };
     return { page, management, credentials, allocations, requests, nav, alerts, deviceUi, data };
   }
 
   const newDeviceResponse = () => ({ status: 201, data: { replayed: false, device: {
     logicalDeviceId, credentialVersion: 1, locator: 'AQEBAQEBAQEBAQEBAQEBAQ', state: 'active', deviceType: 'diy',
   } } });
+
+  // These existing cases exercise navigation/journal cleanup, not Cloud proof.
+  // Supply the now-required completed phase; completion has its own real-chain suite.
+  function confirmedCompletion(page: Esp32ProvisionPage): void {
+    const value = page as any;
+    const context = value.confirmedIdentityContext ?? value.reconfigureContext ?? {
+      logicalDeviceId, credentialVersion: 1, locator: 'AQEBAQEBAQEBAQEBAQEBAQ',
+    };
+    value.confirmedIdentityContext = { ...context };
+    value.allocation.deviceInstanceId ??= info().slice(4, 20);
+    value.completionAttempt = { identity: { ...context }, deviceInstanceId: value.allocation.deviceInstanceId.slice(),
+      attemptedAt: Date.now(), account: value.currentAccount() };
+    page.completion = wiFiProvCompletionResult('confirmed', 'online');
+    page.result = { success: true }; page.phase = 'success';
+  }
+
+  async function existingRootHarness() {
+    const h = harness();
+    const context = { logicalDeviceId, credentialVersion: 1, locator: 'AQEBAQEBAQEBAQEBAQEBAQ' };
+    (h.page as any).provisioningTransport.request = vi.fn(async (_endpoint: string, payload: Uint8Array) => {
+      h.requests.push(payload.slice()); return info(0x07, 7);
+    });
+    h.management.resolveDeviceInstanceV2.mockResolvedValue({ status: 200,
+      data: { device: { ...context, name: 'Hybrid light' } } });
+    const credential = () => ({ source: 'wifiprov', state: 'active', logicalDeviceId,
+      deviceInstanceId: info().slice(4, 20), accessEpoch: 7,
+      controllerId: new Uint8Array(16).fill(0x21), controllerSecret: new Uint8Array(32).fill(0x22),
+      credentialVersion: 1, permissions: 0x0f, cloudContext: { credentialVersion: 1, locator: context.locator },
+      intentId: new Uint8Array(16).fill(0x23), commitId: new Uint8Array(16).fill(0x24), receipt: Uint8Array.of(1) });
+    h.credentials.load.mockImplementation(async () => credential());
+    h.management.getDirectAdminV2.mockResolvedValue({ logicalDeviceId, accessEpoch: 7,
+      controllerId: btoa(String.fromCharCode(...credential().controllerId)).replace(/=/g, ''), credentialVersion: 1 });
+    await expect((h.page as any).loadReconfigureContext()).resolves.toBe(true);
+    return h;
+  }
 
   it('re-enters after explicit removal with an empty root, retires only old recovery and creates a new device', async () => {
     const first = harness(false); first.management.createDeviceKeyV2.mockResolvedValue(newDeviceResponse());
@@ -135,7 +176,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
     await (next.page as any).installBlinkerIdentity();
     expect(next.alerts.create).toHaveBeenCalledWith(expect.objectContaining({ header: '原设备已移除' }));
     expect(next.management.deleteDeviceV2).toHaveBeenCalledExactlyOnceWith(logicalDeviceId);
-    expect(first.credentials.remove).toHaveBeenCalledExactlyOnceWith(logicalDeviceId);
+    expect(first.credentials.removeDeletedRegistration).toHaveBeenCalledExactlyOnceWith(logicalDeviceId, info().slice(4, 20));
     expect(first.allocations.complete).toHaveBeenCalledExactlyOnceWith(info().slice(4, 20), logicalDeviceId);
     expect(next.management.createDeviceKeyV2).toHaveBeenCalledOnce();
     expect(next.management.rotateDeviceKeyV2).not.toHaveBeenCalled();
@@ -180,12 +221,12 @@ describe('Esp32ProvisionPage existing-device flow', () => {
     expect(first.allocations.complete).not.toHaveBeenCalled();
   });
 
-  it('does not repeat Bootstrap when post-association journal cleanup fails', async () => {
+  it('retains the original journal and never repeats Bootstrap through completed navigation', async () => {
     const h = harness(false); h.management.createDeviceKeyV2.mockResolvedValue(newDeviceResponse());
     await (h.page as any).installBlinkerIdentity();
     vi.spyOn(h.page as any, 'releasePlugin').mockResolvedValue(undefined);
-    h.management.resolveDeviceInstanceV2.mockResolvedValue({ status: 200, data: { device: { logicalDeviceId } } });
-    h.allocations.complete.mockRejectedValueOnce(Error('cleanup disk'));
+    h.management.resolveDeviceInstanceV2.mockResolvedValue({ ...newDeviceResponse(), status: 200 });
+    confirmedCompletion(h.page);
     await h.page.openProvisionedDevice();
     expect(h.nav.navigateRoot).toHaveBeenCalled();
     expect(await h.allocations.load(new Uint8Array(16).fill(1))).toBeDefined();
@@ -195,7 +236,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
     await h.page.openProvisionedDevice();
     expect(h.management.createDeviceKeyV2).toHaveBeenCalledOnce();
     expect(h.requests.filter(request => request[1] === BlinkerConfigOperation.Bootstrap)).toHaveLength(1);
-    expect(h.allocations.complete).toHaveBeenCalledTimes(2);
+    expect(h.allocations.complete).not.toHaveBeenCalled();
   });
 
   it.each(['resume', 'lookup-error', 'ambiguous', 'epoch-mismatch', 'revoked'])(
@@ -244,18 +285,19 @@ describe('Esp32ProvisionPage existing-device flow', () => {
     expect(h.requests).toHaveLength(1);
   });
 
-  it('keeps the exact recovery ID while cloud association is absent, then clears after confirmation', async () => {
+  it('retains the exact recovery ID before and after an explicit confirmed navigation', async () => {
     const h = harness(false); h.management.createDeviceKeyV2.mockResolvedValue(newDeviceResponse());
     await (h.page as any).installBlinkerIdentity();
     vi.spyOn(h.page as any, 'releasePlugin').mockResolvedValue(undefined);
+    confirmedCompletion(h.page);
     await h.page.openProvisionedDevice();
     expect(h.allocations.complete).not.toHaveBeenCalled();
     expect(h.nav.navigateRoot).toHaveBeenCalled();
     expect(await h.allocations.load(new Uint8Array(16).fill(1))).toMatchObject({ context: { logicalDeviceId } });
-    h.management.resolveDeviceInstanceV2.mockResolvedValue({ status: 200, data: { device: { logicalDeviceId } } });
+    h.management.resolveDeviceInstanceV2.mockResolvedValue({ ...newDeviceResponse(), status: 200 });
     await h.page.openProvisionedDevice();
-    expect(h.allocations.complete).toHaveBeenCalledOnce();
-    expect(await h.allocations.load(new Uint8Array(16).fill(1))).toBeUndefined();
+    expect(h.allocations.complete).not.toHaveBeenCalled();
+    expect(await h.allocations.load(new Uint8Array(16).fill(1))).toMatchObject({ context: { logicalDeviceId } });
   });
 
   it('does not select a different server identity over an unfinished first allocation', async () => {
@@ -277,7 +319,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
       status: 200,
       data: { logicalDeviceId, credentialVersion: 2, locator: 'AgICAgICAgICAgICAgICAg', deviceKey },
     });
-    expect((page as any).loadReconfigureContext()).toBe(true);
+    await expect((page as any).loadReconfigureContext()).resolves.toBe(true);
 
     await (page as any).installBlinkerIdentity();
 
@@ -306,7 +348,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
         status: 200,
         data: { logicalDeviceId, credentialVersion: 2, locator: 'AgICAgICAgICAgICAgICAg', deviceKey },
       });
-    expect((page as any).loadReconfigureContext()).toBe(true);
+    await expect((page as any).loadReconfigureContext()).resolves.toBe(true);
 
     await expect((page as any).installBlinkerIdentity()).rejects.toThrow('timeout');
     await (page as any).installBlinkerIdentity();
@@ -320,7 +362,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
   it('rejects malformed existing Admin metadata before rotating Key or overwriting the secure checkpoint', async () => {
     const { page, management, credentials, requests } = harness();
     management.getDirectAdminV2.mockResolvedValue({ accessEpoch: 1 });
-    expect((page as any).loadReconfigureContext()).toBe(true);
+    await expect((page as any).loadReconfigureContext()).resolves.toBe(true);
     await expect((page as any).installBlinkerIdentity()).rejects.toThrow('EPOCH_CONFLICT');
     expect(management.rotateDeviceKeyV2).not.toHaveBeenCalled();
     expect(credentials.save).not.toHaveBeenCalled();
@@ -333,7 +375,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
       controllerId: 'AQEBAQEBAQEBAQEBAQEBAQ' });
     management.rotateDeviceKeyV2.mockResolvedValue({ status: 200,
       data: { logicalDeviceId, credentialVersion: 2, locator: 'AgICAgICAgICAgICAgICAg', deviceKey } });
-    expect((page as any).loadReconfigureContext()).toBe(true);
+    await expect((page as any).loadReconfigureContext()).resolves.toBe(true);
     await (page as any).installBlinkerIdentity();
     expect(management.resetDirectAdminV2).toHaveBeenCalledTimes(1);
     expect(management.registerDirectAdminV2).not.toHaveBeenCalled();
@@ -351,14 +393,14 @@ describe('Esp32ProvisionPage existing-device flow', () => {
   it('a new reconfigure page resumes prepared rotation after an ambiguous response with the same request id', async () => {
     const first = harness();
     first.management.rotateDeviceKeyV2.mockRejectedValueOnce(Error('lost'));
-    expect((first.page as any).loadReconfigureContext()).toBe(true);
+    await expect((first.page as any).loadReconfigureContext()).resolves.toBe(true);
     await expect((first.page as any).installBlinkerIdentity()).rejects.toThrow('lost');
     const next = harness();
     (next.page as any).controllerCredentials = first.credentials;
     (next.page as any).deviceManagement = first.management;
     first.management.rotateDeviceKeyV2.mockResolvedValueOnce({ status: 200,
       data: { logicalDeviceId, credentialVersion: 2, locator: 'AgICAgICAgICAgICAgICAg', deviceKey } });
-    expect((next.page as any).loadReconfigureContext()).toBe(true);
+    await expect((next.page as any).loadReconfigureContext()).resolves.toBe(true);
     await (next.page as any).installBlinkerIdentity();
     expect(first.management.rotateDeviceKeyV2.mock.calls[1]).toEqual(first.management.rotateDeviceKeyV2.mock.calls[0]);
     expect(first.management.createDeviceKeyV2).not.toHaveBeenCalled();
@@ -389,7 +431,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
     const { page, management } = harness();
     management.rotateDeviceKeyV2.mockResolvedValue({ status: 200,
       data: { logicalDeviceId, credentialVersion: 2, locator: 'AgICAgICAgICAgICAgICAg', deviceKey } });
-    expect((page as any).loadReconfigureContext()).toBe(true);
+    await expect((page as any).loadReconfigureContext()).resolves.toBe(true);
     await (page as any).installBlinkerIdentity();
     await expect((page as any).installBlinkerIdentity()).rejects.toThrow('接入根已变化');
     expect(management.rotateDeviceKeyV2).toHaveBeenCalledTimes(1);
@@ -397,7 +439,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
 
   it('does not install identity after an account change during Key rotation', async () => {
     const { page, management, credentials, requests, data } = harness();
-    expect((page as any).loadReconfigureContext()).toBe(true);
+    await expect((page as any).loadReconfigureContext()).resolves.toBe(true);
     management.rotateDeviceKeyV2.mockImplementation(async () => {
       data.auth.uuid = 'other'; data.sessionEpoch++;
       return { data: { logicalDeviceId, credentialVersion: 2, locator: 'AgICAgICAgICAgICAgICAg', deviceKey } };
@@ -426,7 +468,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
       status: 200,
       data: { logicalDeviceId, credentialVersion: 2, locator: 'AgICAgICAgICAgICAgICAg', deviceKey },
     });
-    expect((page as any).loadReconfigureContext()).toBe(true);
+    await expect((page as any).loadReconfigureContext()).resolves.toBe(true);
 
     await (page as any).installBlinkerIdentity();
 
@@ -459,7 +501,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
         },
       },
     });
-    expect((page as any).loadReconfigureContext()).toBe(true);
+    await expect((page as any).loadReconfigureContext()).resolves.toBe(true);
 
     await (page as any).installBlinkerIdentity();
 
@@ -476,48 +518,16 @@ describe('Esp32ProvisionPage existing-device flow', () => {
   });
 
   it('preserves the matching Direct credential during a network-only reset', async () => {
-    const { page, management, credentials, requests } = harness();
-    const deviceInstanceId = Uint8Array.from(
-      { length: 16 },
-      (_, index) => index + 1,
-    );
-    (page as any).provisioningTransport.request = vi.fn(
-      async (_endpoint: string, payload: Uint8Array) => {
-        requests.push(payload.slice());
-        return info(0x07, 7);
-      },
-    );
-    management.resolveDeviceInstanceV2.mockResolvedValue({
-      status: 200,
-      data: {
-        device: {
-          logicalDeviceId,
-          name: 'Hybrid light',
-          credentialVersion: 1,
-          locator: 'AQEBAQEBAQEBAQEBAQEBAQ',
-        },
-      },
-    });
-    credentials.load.mockResolvedValue({
-      source: 'wifiprov',
-      state: 'active',
-      logicalDeviceId,
-      deviceInstanceId,
-      accessEpoch: 7,
-      controllerId: new Uint8Array(16).fill(0x21),
-      controllerSecret: new Uint8Array(32).fill(0x22),
-      credentialVersion: 1,
-      permissions: 0x0f,
-      intentId: new Uint8Array(16).fill(0x23),
-      commitId: new Uint8Array(16).fill(0x24),
-      receipt: Uint8Array.of(1),
-    });
-    expect((page as any).loadReconfigureContext()).toBe(true);
+    const { page, management, credentials, requests, allocations } = await existingRootHarness();
 
     await (page as any).installBlinkerIdentity();
 
     expect(management.rotateDeviceKeyV2).not.toHaveBeenCalled();
+    expect(management.revealDeviceKeyV2).not.toHaveBeenCalled();
+    expect(management.registerDirectAdminV2).not.toHaveBeenCalled();
     expect(credentials.remove).not.toHaveBeenCalled();
+    expect(credentials.save).not.toHaveBeenCalled();
+    expect(allocations.load).not.toHaveBeenCalled();
     expect(requests.map(request => request[1])).toEqual([
       BlinkerConfigOperation.GetInfo,
     ]);
@@ -526,8 +536,52 @@ describe('Esp32ProvisionPage existing-device flow', () => {
       preserveAccess: true,
       accessEpoch: 7,
       credentialStored: true,
+      networkOnlyReconfiguration: true,
     }));
   });
+
+  it('preserves historical allocation and UNKNOWN through explicit network-only success cleanup', async () => {
+    const h = await existingRootHarness();
+    h.allocations.load.mockResolvedValue({ context: { logicalDeviceId }, wifiUnknown: { attemptedAt: 1 } });
+    await (h.page as any).installBlinkerIdentity();
+    vi.spyOn(h.page as any, 'releasePlugin').mockResolvedValue(undefined);
+    confirmedCompletion(h.page);
+    await h.page.openProvisionedDevice();
+    expect(h.nav.navigateRoot).toHaveBeenCalledExactlyOnceWith(`/device/${logicalDeviceId}`);
+    for (const operation of ['load', 'prepare', 'bind', 'complete'] as const) expect(h.allocations[operation]).not.toHaveBeenCalled();
+    expect(h.management.resolveDeviceInstanceV2).toHaveBeenCalledOnce();
+    expect(h.management.revealDeviceKeyV2).not.toHaveBeenCalled();
+    expect(h.management.registerDirectAdminV2).not.toHaveBeenCalled();
+  });
+
+  it.each(['pending', 'rotation', 'permissions', 'epoch', 'context', 'admin', 'account'])(
+    'does not resume, reveal or mutate an explicit complete-root reconfiguration after %s mismatch', async failure => {
+      const h = await existingRootHarness(), originalLoad = h.credentials.load.getMockImplementation()!;
+      if (['pending', 'rotation', 'permissions', 'epoch'].includes(failure)) h.credentials.load.mockImplementation(async () => {
+        const value = await originalLoad();
+        if (failure === 'pending') value.state = 'pending';
+        if (failure === 'rotation') value.keyRotation = {};
+        if (failure === 'permissions') value.permissions = 3;
+        if (failure === 'epoch') value.accessEpoch++;
+        return value;
+      });
+      if (failure === 'context') h.management.resolveDeviceInstanceV2.mockResolvedValue({ status: 200,
+        data: { device: { logicalDeviceId, name: 'Changed', credentialVersion: 2, locator: 'AQEBAQEBAQEBAQEBAQEBAQ' } } });
+      if (failure === 'admin') h.management.getDirectAdminV2.mockResolvedValue(null);
+      if (failure === 'account') h.management.getDirectAdminV2.mockImplementation(async () => {
+        h.data.sessionEpoch++; return null;
+      });
+      await expect((h.page as any).installBlinkerIdentity()).rejects.toThrow();
+      expect((h.page as any).allocation).toBeUndefined();
+      expect(h.management.revealDeviceKeyV2).not.toHaveBeenCalled();
+      expect(h.management.registerDirectAdminV2).not.toHaveBeenCalled();
+      expect(h.management.rotateDeviceKeyV2).not.toHaveBeenCalled();
+      expect(h.management.createDeviceKeyV2).not.toHaveBeenCalled();
+      expect(h.credentials.save).not.toHaveBeenCalled();
+      expect(h.allocations.load).not.toHaveBeenCalled();
+      expect(h.requests.map(value => value[1])).toEqual([BlinkerConfigOperation.GetInfo]);
+    },
+  );
 
   it('rejects a different physical device during network-only reconfiguration', async () => {
     const { page, management } = harness();
@@ -543,7 +597,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
         },
       },
     });
-    expect((page as any).loadReconfigureContext()).toBe(true);
+    await expect((page as any).loadReconfigureContext()).resolves.toBe(true);
 
     await expect((page as any).installBlinkerIdentity()).rejects.toThrow(
       '不是当前重新配网的原设备',
@@ -555,6 +609,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
     const { page, nav, deviceUi } = harness();
     const order: string[] = [];
     (page as any).allocation = { logicalDeviceId };
+    confirmedCompletion(page);
     vi.spyOn(page as any, 'releasePlugin').mockImplementation(async () => {
       order.push('release');
     });
@@ -606,7 +661,7 @@ describe('Esp32ProvisionPage existing-device flow', () => {
   });
 
   it.each([0x06, 0x07])(
-    'enables Wi-Fi on the same BLE identity without replacing direct access (flags %i)',
+    'does not fall back to same-ID Cloud enablement for an existing BLE root (flags %i)',
     async (flags) => {
       const { page, management, credentials, requests } = harness(false);
       // A retired WiFiProv checkpoint for this instance must never win over
@@ -667,23 +722,47 @@ describe('Esp32ProvisionPage existing-device flow', () => {
         receipt: Uint8Array.of(1),
       });
 
-      await (page as any).installBlinkerIdentity();
+      await expect((page as any).installBlinkerIdentity()).rejects.toThrow();
 
       expect(management.createDeviceKeyV2).not.toHaveBeenCalled();
       expect(management.rotateDeviceKeyV2).not.toHaveBeenCalled();
-      expect(management.enableDeviceCloudV2).toHaveBeenCalledWith(deviceInstanceId);
-      expect(credentials.findWiFiProv).not.toHaveBeenCalled();
-      expect(credentials.load).toHaveBeenCalledWith(logicalDeviceId);
+      expect(management.enableDeviceCloudV2).not.toHaveBeenCalled();
       expect(credentials.save).not.toHaveBeenCalled();
       expect(credentials.remove).not.toHaveBeenCalled();
       expect(requests.map(request => request[1])).toEqual([
         BlinkerConfigOperation.GetInfo,
-        BlinkerConfigOperation.Install,
       ]);
-      expect((page as any).allocation.logicalDeviceId).toBe(logicalDeviceId);
-      expect((page as any).allocation.preserveAccess).toBe(true);
+      expect((page as any).allocation).toBeUndefined();
     },
   );
+
+  it('selects the Cloud product context even when a distinct BLE card shares the same instance', async () => {
+    const h = await existingRootHarness();
+    const context = { logicalDeviceId, credentialVersion: 1, locator: 'AQEBAQEBAQEBAQEBAQEBAQ' };
+    h.management.resolveDeviceInstanceV2.mockImplementation(async (_instance: Uint8Array, product?: string) => {
+      if (product !== 'cloud') throw Object.assign(Error('legacy two-card ambiguity'), { code: 'DEVICE_INSTANCE_AMBIGUOUS' });
+      return { status: 200, data: { device: { ...context, name: 'Cloud card' } } };
+    });
+    await (h.page as any).installBlinkerIdentity();
+    expect(h.management.resolveDeviceInstanceV2).toHaveBeenCalledExactlyOnceWith(info().slice(4, 20), 'cloud');
+    expect(h.credentials.load).toHaveBeenCalledWith(logicalDeviceId);
+    expect(h.management.createDeviceKeyV2).not.toHaveBeenCalled();
+    expect(h.management.enableDeviceCloudV2).not.toHaveBeenCalled();
+    expect(h.requests.map(value => value[1])).toEqual([BlinkerConfigOperation.GetInfo]);
+  });
+
+  it('does not interpret a missing Cloud card as permission to create over an existing BLE product', async () => {
+    const h = harness(false);
+    h.management.resolveDeviceInstanceV2.mockImplementation(async (_instance: Uint8Array, product?: string) => ({
+      status: 200, data: { device: product === 'ble_direct'
+        ? { logicalDeviceId: 'ble_AAECAwQFBgcICQoLDA0ODw', registrationProduct: 'ble_direct', name: 'BLE card' } : null },
+    }));
+    await expect((h.page as any).installBlinkerIdentity()).rejects.toMatchObject({ code: 'ACCESS_REGISTRATION_CAPABILITY_REQUIRED' });
+    expect(h.management.resolveDeviceInstanceV2.mock.calls.map(call => call[1])).toEqual(['cloud', 'ble_direct']);
+    expect(h.management.createDeviceKeyV2).not.toHaveBeenCalled();
+    expect(h.management.enableDeviceCloudV2).not.toHaveBeenCalled();
+    expect(h.requests.map(value => value[1])).toEqual([BlinkerConfigOperation.GetInfo]);
+  });
 
   it.each(['absent', 'offline', 'account-change'])('does not fall back to cached authority when instance resolution is %s', async failure => {
     const { page, management, credentials, data } = harness(false);

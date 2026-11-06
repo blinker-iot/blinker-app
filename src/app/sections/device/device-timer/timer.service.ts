@@ -40,6 +40,7 @@ export class TimerService implements OnDestroy {
   // view without injecting a view's ChangeDetectorRef into this service.
   private readonly state = signal({ id: '', busy: false, ready: false, error: '', notice: '',
     phase: 'idle' as TaskPhase, timings: emptyTimings(),
+    observedCapacity: null as number | null,
     capacity: null as number | null, revision: 0, records: [] as TaskRecord[], targets: [] as TaskTarget[], journal: { held: false } as TaskPendingState });
   get id(): string { return this.state().id; }
   set id(value: string) { this.state.update(s => ({ ...s, id: value })); }
@@ -89,6 +90,7 @@ export class TimerService implements OnDestroy {
   private account?: DeviceV2AccountContext;
   private readonly subscription: Subscription;
   private viewGeneration = 0;
+  private readFailed = false;
   get generation(): number { return this.viewGeneration; }
   constructor(@Inject(TASK_CLIENT) private readonly client: DeviceTaskClient,
     private readonly data: DataService, private readonly manifests: DeviceV2ManifestCache,
@@ -99,11 +101,22 @@ export class TimerService implements OnDestroy {
       }
     });
     if (visibility) this.subscription.add(visibility.active.subscribe(active => {
-      if (!active && this.controller) {
-        const id = this.id; this.close(); this.resumeId = id;
+      if (!active && (this.controller || this.readFailed)) {
+        const id = this.id;
+        // Preserve a failed read as a manual recovery state, not a foreground
+        // retry trigger. Still abort and release all work while hidden.
+        if (this.readFailed) this.stopView(); else this.close();
+        this.resumeId = id;
       } else if (active && this.resumeId) {
         const id = this.resumeId; this.resumeId = undefined;
-        void this.open(id); // Read only. Never resume/retry an unresolved write.
+        if (this.readFailed) {
+          // Retained display evidence still belongs to the original account
+          // and owner view, even if a hidden-page change emitted no event.
+          try {
+            this.assertAccount();
+            if (!taskEntryState(this.data.device?.dict?.[id]).available) throw new Error('TASK_PAGE_UNAVAILABLE');
+          } catch (error) { this.close(); this.fail(error); }
+        } else void this.open(id); // Interrupted work may reconcile read-only; failed reads wait for a click.
       }
     }));
   }
@@ -130,7 +143,9 @@ export class TimerService implements OnDestroy {
     return this.canWrite && this.targets.length > 0 && this.capacity !== null && this.records.length < this.capacity;
   }
   get capacityText(): string {
-    return this.ready && this.capacity !== null ? `已用 ${this.records.length} / ${this.capacity} 条` : '容量尚未确认';
+    if (this.ready && this.capacity !== null) return `已用 ${this.records.length} / ${this.capacity} 条`;
+    const observed = this.state().observedCapacity;
+    return observed === null ? '容量尚未确认' : `设备容量 ${observed} 条；任务列表尚未读完`;
   }
   get creationHint(): string {
     if (this.busy) return '正在查询或确认任务，请稍候。';
@@ -145,7 +160,7 @@ export class TimerService implements OnDestroy {
     return this.foreground && !this.busy && !!this.controller && !this.recoveryUnsupported
       && (!!this.journal.authority || ['TASK_SCOPE_REQUIRED', 'TASK_AUTHORITY_REQUIRED'].includes(this.lastCode));
   }
-  get canRetry(): boolean { return !!this.pending && !this.busy && !this.journal.held && !this.canInitialize && !this.recoveryUnsupported; }
+  get canRetry(): boolean { return this.foreground && !!this.controller && !!this.pending && !this.busy && !this.journal.held && !this.canInitialize && !this.recoveryUnsupported; }
   private get recoveryUnsupported(): boolean { return this.lastCode === 'TASK_AUTHORITY_RECOVERY_UNSUPPORTED'; }
   private lastCode = '';
   async open(id: string): Promise<void> {
@@ -160,36 +175,59 @@ export class TimerService implements OnDestroy {
       const journal = await this.client.inspect(id); this.assertCurrent(controller);
       this.journal = journal; this.busy = false;
       await this.refresh();
-    } catch (error) { if (generation === this.viewGeneration) { this.busy = false; this.fail(error); } }
+    } catch (error) {
+      if (generation === this.viewGeneration) {
+        this.busy = false; this.readFailed = !!this.controller; this.fail(error);
+      }
+    }
   }
   close(): void {
-    ++this.viewGeneration;
+    this.stopView();
     this.resumeId = undefined;
-    this.controller?.abort(); this.controller = undefined;
-    this.clearTable(); this.busy = false;
+    this.clearTable(); this.readFailed = false;
     this.phase = 'idle'; this.timings = emptyTimings(); this.notice = '';
     this.journal = { held: false };
     this.lastCode = '';
   }
-  private clearTable(): void {
-    this.state.update(s => ({ ...s, ready: false, capacity: null, revision: 0, records: [], targets: [] }));
+  private stopView(): void {
+    ++this.viewGeneration;
+    this.controller?.abort(); this.controller = undefined;
+    this.busy = false; this.phase = 'idle';
+  }
+  private clearTable(preserveObservation = false): void {
+    this.state.update(s => ({ ...s, ready: false, capacity: null, revision: 0, records: [], targets: [],
+      observedCapacity: preserveObservation ? s.observedCapacity : null }));
   }
   ngOnDestroy(): void { this.close(); this.subscription.unsubscribe(); }
   async refresh(): Promise<void> {
     if (this.busy || !this.foreground) return;
     if (!this.controller) { if (this.id) await this.open(this.id); return; }
     const controller = this.controller, started = performance.now();
-    this.busy = true; this.phase = 'refreshing'; this.clearTable(); this.error = ''; this.lastCode = '';
+    this.busy = true; this.phase = 'refreshing'; this.clearTable(); this.readFailed = false; this.error = ''; this.lastCode = '';
     this.timings = { ...this.timings, refreshMs: null };
     try {
-      const { catalog, table } = await this.client.snapshot(this.id, controller.signal);
+      const { catalog, table } = await this.client.snapshot(this.id, controller.signal, capacity => {
+        this.assertCurrent(controller);
+        this.state.update(s => ({ ...s, observedCapacity: capacity }));
+      });
       const journal = await this.client.inspect(this.id);
       this.assertCurrent(controller);
       if (table.records.length > catalog.capacity) throw new Error('TASK_CONTRACT_INVALID');
       this.targets = taskTargets(catalog, this.manifests.load(this.id));
       this.capacity = catalog.capacity; this.revision = table.revision; this.records = table.records;
       this.journal = journal; this.ready = true;
-    } catch (error) { if (this.controller === controller) this.fail(error); }
+    } catch (error) {
+      if (this.controller === controller) {
+        this.readFailed = true;
+        try { this.assertCurrent(controller); } catch (changed) { error = changed; }
+        // Only a transient connection loss can keep the current read's narrow
+        // hint. Auth/contract/UNKNOWN failures cannot reuse it as permission.
+        const preserve = ['TASK_DEVICE_OFFLINE', 'TASK_CONNECTION_NOT_READY', 'TASK_CONNECTION_CHANGED',
+          'TASK_CONNECTION_AMBIGUOUS'].includes(taskErrorCode(error))
+          && taskEntryState(this.data.device?.dict?.[this.id]).available;
+        this.fail(error, preserve);
+      }
+    }
     finally {
       if (this.controller === controller) {
         this.timings = { ...this.timings, refreshMs: Math.max(0, performance.now() - started) };
@@ -227,7 +265,7 @@ export class TimerService implements OnDestroy {
   private async mutate(send: (signal: AbortSignal, onDispatch: () => void) => Promise<TaskResponse>, refreshAfter = true, authorityRecovery = false): Promise<boolean> {
     const controller = this.controller; if (!controller) return false;
     const started = performance.now(); let dispatched: number | undefined;
-    this.busy = true; this.phase = 'submitting'; this.timings = emptyTimings();
+    this.busy = true; this.phase = 'submitting'; this.timings = emptyTimings(); this.readFailed = false;
     this.clearTable(); this.error = ''; this.notice = ''; let confirmed = false;
     try {
       const response = await send(controller.signal, () => {
@@ -268,11 +306,18 @@ export class TimerService implements OnDestroy {
   }
   private assertCurrent(controller: AbortController): void {
     controller.signal.throwIfAborted();
-    if (this.controller !== controller || this.account?.accountId !== this.data.auth?.uuid
+    if (this.controller !== controller) throw new Error('TASK_ACCOUNT_CHANGED');
+    this.assertAccount();
+  }
+  private assertAccount(): void {
+    if (!this.account || this.account.accountId !== this.data.auth?.uuid
       || this.account.sessionEpoch !== this.data.sessionEpoch) throw new Error('TASK_ACCOUNT_CHANGED');
   }
-  private fail(error: unknown): void {
-    this.clearTable();
-    this.lastCode = taskErrorCode(error); this.error = taskErrorText(error);
+  private fail(error: unknown, preserveObservation = false): void {
+    this.clearTable(preserveObservation);
+    this.lastCode = taskErrorCode(error);
+    const entry = taskEntryState(this.data.device?.dict?.[this.id]);
+    this.error = this.lastCode === 'TASK_PAGE_UNAVAILABLE' && !entry.available
+      ? entry.description : taskErrorText(error);
   }
 }

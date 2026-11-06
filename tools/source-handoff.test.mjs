@@ -78,6 +78,63 @@ test('six-source closure includes untracked inputs but no caches, signing materi
   assert.throws(() => f.create(), /must not exist/);
 });
 
+const accessTestTools = [
+  'tools/test-access-registration.mjs',
+  'tools/test-access-registration.tsconfig.json',
+  'tools/test-access-registration.vitest.mts',
+  'tools/test-access-registration.setup.ts',
+];
+
+test('matched CI and source-selection maintenance entries have a complete export allowlist', () => {
+  for (const file of ['.github/workflows/device-v2-access.yml',
+    'tools/access-ci.mjs', 'tools/access-ci.test.mjs',
+    'tools/access-source-selection.mjs', 'tools/access-source-selection.test.mjs',
+    'tools/access-source-files.json', 'tools/prepare-access-sources.mjs', 'tools/prepare-access-sources.test.mjs']) {
+    assert.ok(APP_FILES.includes(file), `Missing maintenance input: ${file}`);
+    assert.ok(fs.statSync(new URL('../' + file, import.meta.url)).isFile());
+  }
+});
+
+test('independent-access public test entry and sibling native sources survive source export', t => {
+  const f = fixture(t);
+  for (const file of accessTestTools) {
+    f.put('blinker-app', file, fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8'));
+  }
+  const inputs = [
+    ['blinker-app', 'src/app/core/device-v2/ble-direct/access-registration-ports.spec.ts'],
+    ['blinker-app', 'src/app/core/services/device-v2-ble-access-registration.spec.ts'],
+    ['blinker-app', 'src/app/core/services/device-v2-ble-registration-presence.spec.ts'],
+    ['blinker-app', 'src/app/sections/guide/ble-device/ble-device-registration.render.spec.ts'],
+    ['blinker-app', 'src/test-setup.ts'],
+    ['capacitor-wifiprov', 'src/index.ts'],
+    ['capacitor-wifiprov', 'src/definitions.ts'],
+    ['capacitor-wifiprov', 'src/web.ts'],
+    ['capacitor-wifiprov', 'android/src/main/AndroidManifest.xml'],
+    ['capacitor-wifiprov', 'android/src/main/java/com/wifiprov/capacitor/SoftApWorkerService.java'],
+  ];
+  for (const [repo, file] of inputs) f.put(repo, file, `fixture: ${file}`);
+  const m = f.create();
+  for (const [repo, file] of [
+    ...accessTestTools.map(file => ['blinker-app', file]),
+    ['blinker-app', 'tsconfig.spec.json'], ['blinker-app', 'vitest.config.ts'],
+    ...inputs,
+  ]) {
+    assert.ok(m.files[`${repo}/${file}`], `Missing exported input: ${repo}/${file}`);
+    assert.deepEqual(fs.readFileSync(path.join(f.bundle, 'source', repo, file)),
+      fs.readFileSync(path.join(f.workspace, repo, file)));
+  }
+  assert.deepEqual(verifySource(f.bundle), m);
+});
+
+test('independent-access missing public runner is rejected instead of producing an incomplete source manifest', t => {
+  const f = fixture(t);
+  // Still a required source input, even though this tool never runs the tests.
+  const file = f.put('blinker-app', accessTestTools[0], 'fixture');
+  fs.unlinkSync(file);
+  assert.throws(f.create, /ENOENT/);
+  assert.equal(fs.existsSync(path.join(f.bundle, 'manifest.json')), false);
+});
+
 test('package/lock drift and missing fifth plugin fail before export', t => {
   const f = fixture(t);
   const file = path.join(f.workspace, 'capacitor-wechat/package-lock.json'), before = fs.readFileSync(file);

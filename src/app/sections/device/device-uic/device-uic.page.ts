@@ -1,4 +1,4 @@
-import { DeviceConsoleService, cloudConsole, canEditConsole, consoleLayout, installConsole } from '../../../core/services/device-console.service';
+import { DeviceConsoleService, cloudConsole, canEditConsole, consoleLayout, consoleWriteConflict, installConsole } from '../../../core/services/device-console.service';
 import { CustomPanelEditorComponent } from './custom-panel-editor.component';
 import { GenerationDurationComponent } from './generation-duration.component';
 import type { PanelMode } from '../../../core/device-v2/custom-panel';
@@ -28,11 +28,13 @@ import { DeviceV2PageLayoutService } from '../../../core/services/device-v2-page
 import type { HistoryPoint } from '../../../core/device-v2/endpoint-history';
 import { arrangeTiles, capabilityTiles, displayValue, InterfaceTile, toPageLayout } from './interface-draft';
 import { generateAutomaticPageLayout } from '../../../core/device-v2/automatic-page-layout';
+import { capabilityDisplayName } from '../../../core/device-v2/display-metadata';
 import { readLegacyPanel } from '../../../core/device-v2/legacy-panel';
 import { DevicePanelRecord, DevicePanelService } from '../../../core/services/device-panel.service';
 import { PageLayoutPanelComponent, type PanelCard } from '../../../device/v2/panel/page-layout-panel';
 import { InterfaceGenerationService, type InterfaceGenerationOptions } from './interface-generation.service';
 import { interfaceGenerationErrorMessage } from './interface-generation-error';
+import { interfaceGenerationOwner } from './interface-generation-owner';
 import { UI_THEMES, UiTheme } from '../../../core/device-v2/ui-theme';
 import { legacyPreviewCards } from './legacy-preview-cards';
 
@@ -113,6 +115,11 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   private generationController?: AbortController;
   private previousDraft?: { tiles: InterfaceTile[]; summary: string; generated: boolean; warning?: string };
   snapshot?: DeviceUiSnapshot;
+  // Aggregate Console CAS token, independent of the layout revision below.
+  consoleRevision?: number;
+  consoleRefreshRequired = false;
+  private consoleSession?: number;
+  private saveEpoch = 0;
   private revision = 0;
   private layoutReady = false;
   private fingerprint = '';
@@ -132,11 +139,16 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   private telemetryValues = new Map<string, DeviceUiValue | undefined>();
   private readonly previewHistory = new Map<string, HistoryPoint[]>();
   private destroyed = false;
+  private deviceSession?: number;
   private legacyRecord?: DevicePanelRecord | null;
 
   @ViewChild(CustomPanelEditorComponent) private customEditor?: CustomPanelEditorComponent;
   get customReady() { return this.layoutReady; }
   get customRecord() { return this.legacyRecord; }
+  get generationActive(): boolean { return !this.destroyed && this.pageVisible && this.appActive; }
+  private get generationOwner(): string {
+    return interfaceGenerationOwner(this.device, this.data.sessionEpoch, this.fingerprint);
+  }
 
   canDeactivate(): Promise<boolean> | boolean { return this.customEditor?.canDeactivate() ?? !this.saving; }
   @ViewChild('studioContent') private content?: IonContent;
@@ -173,8 +185,9 @@ export class DeviceUicPage implements OnInit, OnDestroy {
   }
 
   get canApply(): boolean {
-    return !!this.selected && !!this.device && this.canEdit && !this.saving && !this.generating
+    return this.generationActive && !!this.selected && !!this.device && this.canEdit && !this.saving && !this.generating
       && (this.selected === 'classic' || (!!this.tiles.length && this.layoutReady
+        && (!cloudConsole(this.device) || this.consoleRevision !== undefined && this.consoleSession === this.data.sessionEpoch)
         && ((this.selected === 'automatic' && this.isV2) || this.generated)));
   }
 
@@ -198,7 +211,9 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
       const value = this.previewValue(field);
 
-      return { widget, field, value, extras, history: this.previewHistory.get(field.key), display: displayValue(value),
+      return { widget: { ...widget, title: capabilityDisplayName(this.device,
+        { key: field.key, kind: field.manifestKind, type: field.manifestType, valueType: field.valueType }, widget.title) },
+        field, value, extras, history: this.previewHistory.get(field.key), display: displayValue(value),
         draft: value == null ? '' : String(value), error: '', disabled: false };
     });
   }
@@ -209,10 +224,13 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.bindDevice();
-    this.subscriptions.add(this.data.userDataLoader.subscribe(loaded => { if (loaded) this.bindDevice(); }));
+    // Account reset emits false before restored inventory. Retire the previous
+    // generation then, not only when the new account finishes loading.
+    this.subscriptions.add(this.data.userDataLoader.subscribe(() => this.bindDevice()));
 
     this.subscriptions.add(this.deviceUi.appActive.subscribe(active => {
       this.appActive = active;
+      if (!active) this.cancelGeneration();
 
       this.refreshPreviewTelemetry();
       this.render();
@@ -232,6 +250,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
     this.releasePreviewTelemetry();
     this.cancelGeneration();
+    this.customEditor?.cancel();
     this.epoch++;
     this.refreshVersion++;
 
@@ -241,12 +260,14 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     this.connection?.close();
 
     this.connection = undefined;
+    this.render();
   }
 
   ngOnDestroy(): void {
     this.cancelGeneration();
 
     this.destroyed = true;
+    this.saveEpoch++;
 
     this.releasePreviewTelemetry();
     this.epoch++;
@@ -340,6 +361,9 @@ export class DeviceUicPage implements OnInit, OnDestroy {
       if (version !== this.refreshVersion) return;
 
       this.revision = record?.revision || 0;
+      this.consoleRevision = source?.revision;
+      this.consoleSession = source ? epoch : undefined;
+      this.consoleRefreshRequired = false;
       this.layoutReady = true;
     } catch {
       if (version === this.refreshVersion) this.error = '设备能力或已保存布局暂不可用，请确认设备连接后重试。';
@@ -355,7 +379,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
     const base = refining ? { tiles: this.tiles, summary: this.summary } : undefined;
 
-    if (this.selected !== 'ai' || !this.device || !this.canEdit) return;
+    if (!this.generationActive || this.selected !== 'ai' || !this.device || !this.canEdit) return;
     if (this.generating || this.saving) return;
 
     if (!this.sourceTiles.length) {
@@ -371,7 +395,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     if (this.device?.config.isPreview) { this.error = '体验设备可预览布局；请登录并选择自己的设备后使用 AI 生成。'; return; }
 
     const epoch = ++this.epoch;
-    const fingerprint = this.fingerprint;
+    const owner = this.generationOwner;
     const controller = new AbortController();
 
     this.generationController = controller;
@@ -393,14 +417,14 @@ export class DeviceUicPage implements OnInit, OnDestroy {
         base,
         snapshot: this.isV2 ? this.snapshot : undefined,
         onProgress: message => {
-          if (epoch !== this.epoch || this.destroyed || fingerprint !== this.fingerprint) return;
+          if (epoch !== this.epoch || !this.generationActive || owner !== this.generationOwner) return;
 
           this.progressMessage = message;
 
           this.render();
         },
         onPreview: result => {
-          if (epoch !== this.epoch || this.destroyed || fingerprint !== this.fingerprint) return;
+          if (epoch !== this.epoch || !this.generationActive || owner !== this.generationOwner) return;
 
           this.tiles = this.withLiveValues(result.tiles);
           this.previewCount = result.tiles.length;
@@ -414,9 +438,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
         ? this.generation.refine(prompt, this.sourceTiles, this.style, { ...options, base, snapshot: this.snapshot })
         : this.generation.generate(prompt, this.sourceTiles, this.style, options));
 
-      if (epoch !== this.epoch || this.destroyed) return;
-      if (fingerprint !== this.fingerprint) throw new Error('设备能力已更新，请重新生成');
-
+      if (epoch !== this.epoch || !this.generationActive || owner !== this.generationOwner) return;
       this.tiles = this.withLiveValues(result.tiles);
       this.summary = result.summary;
       this.generationWarning = result.warning;
@@ -426,7 +448,7 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
       this.previousDraft = undefined;
     } catch (error) {
-      if (epoch === this.epoch) {
+      if (epoch === this.epoch && this.generationActive && owner === this.generationOwner) {
         this.restoreDraft();
 
         this.error = interfaceGenerationErrorMessage(error)
@@ -482,6 +504,9 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
     const device = this.device;
 
+    const session = this.data.sessionEpoch, owner = this.generationOwner, operation = ++this.saveEpoch;
+    const current = () => operation === this.saveEpoch && !this.destroyed && this.device === device
+      && session === this.data.sessionEpoch && owner === this.generationOwner;
     this.saving = true;
     this.error = '';
 
@@ -506,11 +531,12 @@ export class DeviceUicPage implements OnInit, OnDestroy {
           const epoch = this.data.sessionEpoch;
 
           const source = await this.consoles.save(device.deviceName,
-            { layout: candidate, uiConfig: { panelMode: 'normal' } });
+            { layout: candidate, uiConfig: { panelMode: 'normal' } }, this.consoleRevision!);
 
-          if (epoch !== this.data.sessionEpoch) throw new Error('账号已切换');
+          if (epoch !== this.data.sessionEpoch || !current()) return;
 
           this.revision = source.layout?.revision || 0;
+          this.consoleRevision = source.revision;
 
           installConsole(device, source);
         } else {
@@ -532,26 +558,34 @@ export class DeviceUicPage implements OnInit, OnDestroy {
 
       const saved = !this.isV2 || cloudConsole(device) || device.config.isPreview || await this.devices.saveDeviceConfig(device, config);
 
+      if (!current()) return;
       if (!saved) throw new Error('config-save-failed');
 
       Object.assign(device.config, config);
       device.subject.next({ key: 'component', value: component, source: 'device-uic' });
       await this.notice.showToast('新界面已应用');
+      if (!current()) return;
       await this.nav.navigateRoot(`/device/${encodeURIComponent(this.id)}`);
     } catch (error) {
+      if (!current()) return;
       const code = (error as { code?: string })?.code;
 
-      if (code === 'DEVICE_V2_PAGE_LAYOUT_CONFLICT' || code === 'DEVICE_V2_PAGE_LAYOUT_MANIFEST_STALE' || code === 'DEVICE_PANEL_CONFLICT') {
+      if (consoleWriteConflict(error) || code === 'DEVICE_V2_PAGE_LAYOUT_CONFLICT' || code === 'DEVICE_PANEL_CONFLICT') {
         this.layoutReady = false;
-        this.error = '设备能力或布局已在其他位置更新，请刷新后重新预览。';
+        this.consoleRevision = undefined;
+        this.consoleRefreshRequired = true;
+        this.error = '界面已在其他位置更新，请重新读取后确认。当前预览已保留。';
       } else this.error = layoutSaved ? '布局已保存，但界面切换失败，请重试应用。' : '保存失败，当前界面未切换。请重试应用。';
-    } finally { this.saving = false; this.render(); }
+    } finally { if (current()) { this.saving = false; this.render(); } }
   }
 
   private bindDevice(): void {
     const device = this.data.device?.dict?.[this.id];
 
-    if (device === this.device) return;
+    if (device === this.device && this.deviceSession === this.data.sessionEpoch) return;
+    this.deviceSession = this.data.sessionEpoch;
+    this.saveEpoch++;
+    this.saving = false;
 
     this.cancelGeneration();
     this.refreshVersion++;
@@ -577,6 +611,9 @@ export class DeviceUicPage implements OnInit, OnDestroy {
     this.generationWarning = undefined;
     this.layoutReady = false;
     this.revision = 0;
+    this.consoleRevision = undefined;
+    this.consoleRefreshRequired = false;
+    this.consoleSession = undefined;
     this.loading = false;
     this.generating = false;
     this.sourceTiles = device ? capabilityTiles(device) : [];
@@ -613,6 +650,8 @@ export class DeviceUicPage implements OnInit, OnDestroy {
         this.sourceTiles = capabilityTiles(device, snapshot, this.selected === 'custom');
 
         if (changed) {
+          this.saveEpoch++;
+          this.saving = false;
           this.cancelGeneration();
           this.previewHistory.clear();
 

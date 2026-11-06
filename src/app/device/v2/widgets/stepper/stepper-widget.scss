@@ -68,13 +68,15 @@
 // One row high: icon, title and range, then − value +.
 
 :host(.rowc) {
-  padding: 6px 10px;
+  padding-inline: 10px;
+  padding-block: min(6px, var(--ui-card-pad-block, 6px));
 }
 
 .rc-body {
   flex: 1;
   min-width: 0;
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 12px;
 }
@@ -137,14 +139,14 @@
 
 .hd .ns-go { margin-block: -14px; }
 
-// A legacy half-card may be only 166px wide. Preserve its saved grid and
-// make the title and controls fit the single 78px row instead of clipping +.
+// Compact cards still have one measured row, not a fixed 78px allowance.
+// Keep the title beside the 48px controls; narrow controls scroll sideways.
 @container (max-width: 380px) {
-  .rc-body { flex-direction: column; align-items: stretch; gap: 2px; }
+  .rc-body { gap: 8px; }
   .rc-ico, .rc-copy small { display: none; }
-  .rc-copy { flex: none; }
+  .rc-copy { flex: 0 1 30%; min-width: 48px; }
   .rc-copy strong { font-size: 12px; line-height: 14px; }
-  .rc-controls { justify-content: space-between; gap: 4px; }
+  .rc-controls { flex: 1 1 auto; justify-content: space-between; gap: 4px; }
   .ns-v.ns-sm { min-width: 0; font-size: 20px; }
   .ns-v.ns-sm small { font-size: 11px; }
   .ns.split .ns-v { font-size: 32px; }

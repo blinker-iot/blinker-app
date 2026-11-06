@@ -22,7 +22,7 @@
   border-radius: inherit;
   background: var(--ui-track);
   cursor: grab;
-  touch-action: none;
+  touch-action: var(--ui-control-touch-action, none);
   outline-offset: -3px;
 
   @include theme.electronic {

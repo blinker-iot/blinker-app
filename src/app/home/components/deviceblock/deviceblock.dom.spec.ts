@@ -95,8 +95,8 @@ describe('device card production template (state/connectivity/image doubles)', (
     const metric = card().querySelector('.device-metric') as HTMLElement;
     expect(metric.textContent?.replace(/\s/g, '')).toBe('23.5℃');
     expect(metric.querySelector('small')).toBeNull();
-    expect(metric.getAttribute('aria-label')).toBe('temperature：23.5℃');
-    expect(metric.getAttribute('title')).toBe('temperature：23.5℃');
+    expect(metric.getAttribute('aria-label')).toBe('温度：23.5℃');
+    expect(metric.getAttribute('title')).toBe('温度：23.5℃');
     state.next({ ...state.value, endpoints: [{ ...state.value.endpoints[0], value: 0 }] });
     fixture.detectChanges();
     expect(metric.textContent?.replace(/\s/g, '')).toBe('0℃');
@@ -111,6 +111,75 @@ describe('device card production template (state/connectivity/image doubles)', (
     expect(card().classList.contains('status-offline')).toBe(false);
     connectivity.next({ ...connectivity.value, bleAdapterEnabled: false }); fixture.detectChanges();
     expect(card().classList.contains('status-offline')).toBe(true);
+  });
+
+  it.each(['scanning', 'ready'] as const)('QA-2 keeps Cloud primary and shows BLE nearby separately while BLE is %s', bleState => {
+    connectivity.next({ ...connectivity.value, bleNearby: true, bleState }); fixture.detectChanges();
+    const primary = card().querySelector('.device-status')!;
+    expect(primary.getAttribute('aria-label')).toBe('云端已同步');
+    expect(primary.querySelector('i')?.classList.contains('fa-wifi')).toBe(true);
+    expect(card().classList.contains('status-ready')).toBe(true);
+    const nearby = card().querySelector('.device-nearby')!;
+    expect(nearby.getAttribute('aria-label')).toBe('蓝牙在附近，非当前控制通道');
+    expect(nearby.textContent?.trim()).toBe('附近');
+    expect(nearby.querySelector('i')?.classList.contains('fa-bluetooth-b')).toBe(true);
+    expect(nearby.getAttribute('aria-live')).toBeNull();
+  });
+
+  it('QA-2 keeps LAN primary beside BLE proximity and never claims fresh State from a connected BLE link alone', () => {
+    fixture.componentInstance.device.data.cloudReachable = false;
+    connectivity.next({ ...connectivity.value, activeTransport: 'lan', bleNearby: true }); fixture.detectChanges();
+    expect(card().querySelector('.device-status')?.getAttribute('aria-label')).toBe('局域网已同步');
+    expect(card().querySelector('.device-status i')?.classList.contains('fa-network-wired')).toBe(true);
+    expect(card().querySelector('.device-nearby')).not.toBeNull();
+    connectivity.next({ ...connectivity.value, activeTransport: 'ble', bleState: 'ready' });
+    state.next({ ...state.value, stateFresh: false }); fixture.detectChanges();
+    expect(card().querySelector('.device-nearby')).toBeNull();
+    expect(card().classList.contains('status-ready')).toBe(false);
+    expect(card().classList.contains('status-reachable')).toBe(true);
+    expect(card().querySelector('.device-status')?.getAttribute('aria-label')).toBe('蓝牙已连接，数据待同步');
+  });
+
+  it('QA-2 uses only permitted recent nearby evidence and consumes refreshed snapshots after foreground return', () => {
+    connectivity.next({ ...connectivity.value, bleNearby: true }); fixture.detectChanges();
+    expect(card().querySelector('.device-nearby')).not.toBeNull();
+    for (const denied of [{ bleAccess: false }, { bleAccess: null }, { bleAdapterEnabled: false }, { bleNearby: false }, { bleNearby: undefined }]) {
+      connectivity.next({ ...connectivity.value, bleAccess: true, bleAdapterEnabled: true, bleNearby: true, ...denied });
+      fixture.detectChanges(); expect(card().querySelector('.device-nearby')).toBeNull();
+      expect(card().querySelector('.device-status')?.getAttribute('aria-label')).toBe('云端已同步');
+    }
+    port.appActive.next(false);
+    connectivity.next({ ...connectivity.value, bleAccess: true, bleAdapterEnabled: true, bleNearby: false });
+    state.next({ ...state.value, stateFresh: false }); port.appActive.next(true); fixture.detectChanges();
+    expect(card().querySelector('.device-nearby')).toBeNull();
+    expect(card().querySelector('.device-status')?.getAttribute('aria-label')).toBe('云端在线');
+    expect(card().classList.contains('status-ready')).toBe(false);
+    expect(port.watchState).toHaveBeenCalledOnce(); expect(port.watchConnectivity).toHaveBeenCalledOnce();
+  });
+
+  it('shows verified nearby-only evidence without changing Cloud status or Direct access', () => {
+    connectivity.next({ ...connectivity.value, bleAccess: false, directConnectAllowed: false,
+      bleNearby: false, bleNearbyOnly: true });
+    fixture.detectChanges();
+    const nearby = card().querySelector('.device-nearby')!;
+    expect(nearby.textContent?.trim()).toBe('附近');
+    expect(nearby.getAttribute('aria-label')).toBe('蓝牙在附近，非当前控制通道');
+    expect(nearby.querySelector('i')?.getAttribute('aria-hidden')).toBe('true');
+    expect(card().querySelector('.device-status')?.getAttribute('aria-label')).toBe('云端已同步');
+    expect(card().querySelector('.device-status i')?.classList.contains('fa-wifi')).toBe(true);
+    port.appActive.next(false); fixture.detectChanges();
+    expect(card().querySelector('.device-nearby')).toBeNull();
+    connectivity.next({ ...connectivity.value, bleNearbyOnly: false, bleState: 'ready' });
+    port.appActive.next(true); fixture.detectChanges();
+    expect(card().querySelector('.device-nearby')).toBeNull();
+    expect(card().querySelector('.device-status')?.getAttribute('aria-label')).toBe('云端已同步');
+  });
+
+  it.each(['disabled', 'isPreview'] as const)('does not show a nearby-only badge for %s cards', flag => {
+    const device = source();
+    fixture.componentRef.setInput('device', { ...device, config: { ...device.config, [flag]: true } });
+    connectivity.next({ ...connectivity.value, bleAccess: false, bleNearbyOnly: true }); fixture.detectChanges();
+    expect(card().querySelector('.device-nearby')).toBeNull();
   });
 
   it('marks old readings as cached without removing their positions', () => {
@@ -383,7 +452,7 @@ describe('device card production template (state/connectivity/image doubles)', (
       const toggle = card().querySelector('button[role="switch"]') as HTMLButtonElement;
       expect(toggle.textContent?.trim()).toBe(text);
       expect(toggle.querySelector('small')).toBeNull();
-      expect(toggle.getAttribute('aria-label')).toContain('power');
+      expect(toggle.getAttribute('aria-label')).toContain('电源开关');
       expect(toggle.getAttribute('aria-label')).toContain(message);
       expect(toggle.getAttribute('title')).toContain(message);
       expect(toggle.disabled).toBe(true);
@@ -415,7 +484,7 @@ describe('device card production template (state/connectivity/image doubles)', (
     const tiles = [...card().querySelectorAll('.device-metric')] as HTMLElement[];
     expect(tiles).toHaveLength(3);
     expect(tiles[0].querySelector('.device-switch-track')).not.toBeNull();
-    expect(tiles[0].textContent?.trim()).toBe(''); expect(tiles[0].getAttribute('aria-label')).toContain('power');
+    expect(tiles[0].textContent?.trim()).toBe(''); expect(tiles[0].getAttribute('aria-label')).toContain('电源开关');
     expect(tiles[1].querySelector('.device-action-icon')).not.toBeNull();
     expect(tiles[1].textContent?.trim()).toBe(''); expect(tiles[1].getAttribute('aria-label')).toContain('button');
     for (const tile of tiles) tile.click();

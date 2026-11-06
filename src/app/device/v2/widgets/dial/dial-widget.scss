@@ -29,7 +29,7 @@
   height: 100%;
   overflow: visible;
   cursor: grab;
-  touch-action: none;
+  touch-action: var(--ui-control-touch-action, none);
 }
 
 .arc-tick {

@@ -12,10 +12,11 @@ import { AppVisibilityService } from '../../../core/services/app-visibility.serv
 import { DataService } from '../../../core/services/data.service';
 import { DeviceV2ActivityService } from '../../../core/services/device-v2-activity.service';
 
-type PageStatus = 'inactive' | 'ready' | 'signed-out' | 'account-changed' | 'unavailable'
+type PageStatus = 'inactive' | 'restoring' | 'ready' | 'signed-out' | 'account-changed' | 'unavailable'
   | 'preview' | 'unsupported' | 'shared' | 'owner-unconfirmed' | 'forbidden';
 const UNAVAILABLE = {
   inactive: ['请从设备设置重新进入', '此页面没有后台活动采集或本地记录缓存。'],
+  restoring: ['正在恢复账号', '正在读取本机登录信息，不会重新登录或重试失败请求。'],
   'signed-out': ['请先登录当前账号', '登录后请从设备列表重新进入设备设置。'],
   'account-changed': ['登录账号已变化', '请返回设备列表，重新进入当前账号的设备。'],
   unavailable: ['设备不存在或当前不可用', '设备可能已移除、停用或权限已变化，请返回设备列表确认。'],
@@ -46,19 +47,28 @@ export class DeviceLogComponent implements OnDestroy {
   private generation = 0;
   private controller?: AbortController;
   private account?: DeviceV2AccountContext;
+  private initialAuthWait?: { authority: string; sessionEpoch: number; accountId?: string };
   private readonly subscriptions = new Subscription();
 
   constructor(private readonly data: DataService, private readonly route: ActivatedRoute,
     private readonly navigation: NavController, private readonly activity: DeviceV2ActivityService,
     private readonly visibility: AppVisibilityService) {
     this.foreground.set(visibility.active.value);
-    this.subscriptions.add(data.authDataChanged.subscribe(() => this.reconcile()));
+    this.subscriptions.add(data.authDataChanged.subscribe(() => this.reconcileAuth()));
     this.subscriptions.add(data.deviceDataLoader.subscribe(() => this.reconcile()));
+    this.subscriptions.add(data.authRestoreCompleted.subscribe(completed => {
+      if (completed) this.finishInitialAuth();
+    }));
     this.subscriptions.add(visibility.active.subscribe(active => {
       if (this.foreground() === active) return;
       this.foreground.set(active);
-      if (!active) { this.cancelAndClear(true); this.deviceName.set(''); }
-      else if (this.visible() && this.reconcile() && !this.state().error) void this.refresh();
+      if (!active) {
+        if (this.initialAuthWait) this.show('inactive');
+        else { this.cancelAndClear(true); this.deviceName.set(''); }
+      } else if (this.visible()) {
+        if (this.initialAuthWait) this.finishInitialAuth();
+        else if (this.reconcile() && !this.state().error) void this.refresh();
+      }
     }));
   }
 
@@ -85,6 +95,13 @@ export class DeviceLogComponent implements OnDestroy {
   ionViewWillEnter(): void {
     if (this.destroyed) return;
     this.close(); this.visible.set(true); this.id = this.route.snapshot.paramMap.get('id') || '';
+    if (!this.data.authRestoreCompleted.value) {
+      this.initialAuthWait = { authority: API.BASE_URL, sessionEpoch: this.data.sessionEpoch, accountId: this.data.auth?.uuid };
+      this.show('restoring'); return;
+    }
+    this.enterAccount();
+  }
+  private enterAccount(): void {
     if (!this.data.auth?.uuid) { this.show('signed-out'); return; }
     try {
       this.account = captureDeviceV2AccountContext(this.data, API.BASE_URL);
@@ -142,6 +159,27 @@ export class DeviceLogComponent implements OnDestroy {
     if (!this.account || this.account.authority !== API.BASE_URL || !this.data.auth?.uuid) return false;
     try { assertDeviceV2AccountContext(this.data, this.account); return true; } catch { return false; }
   }
+  private reconcileAuth(): void {
+    const waiting = this.initialAuthWait;
+    if (!waiting) { this.reconcile(); return; }
+    const accountId = this.data.auth?.uuid;
+    if (waiting.authority !== API.BASE_URL
+      || (waiting.accountId && (waiting.accountId !== accountId || waiting.sessionEpoch !== this.data.sessionEpoch))
+      || (!accountId && waiting.sessionEpoch !== this.data.sessionEpoch)) {
+      this.show(accountId ? 'account-changed' : 'signed-out'); return;
+    }
+    // The first restored account notification precedes the completion signal.
+    // Later account/epoch changes retire this entry instead of adopting it.
+    if (!waiting.accountId && accountId) this.initialAuthWait = { ...waiting, accountId, sessionEpoch: this.data.sessionEpoch };
+  }
+  private finishInitialAuth(): void {
+    if (!this.initialAuthWait || !this.present || !this.data.authRestoreCompleted.value) return;
+    this.reconcileAuth();
+    if (!this.initialAuthWait) return;
+    if (this.id !== (this.route.snapshot.paramMap.get('id') || '')) { this.show('inactive'); return; }
+    this.initialAuthWait = undefined; // One initial read, never a failed-read retry.
+    this.enterAccount();
+  }
   private reconcile(): boolean {
     if (!this.visible() || this.destroyed || !this.account) return false;
     if (!this.accountCurrent()) { this.show(this.data.auth?.uuid ? 'account-changed' : 'signed-out'); return false; }
@@ -166,6 +204,7 @@ export class DeviceLogComponent implements OnDestroy {
     return id === this.id && generation === this.generation && controller === this.controller && this.canQuery;
   }
   private show(status: Exclude<PageStatus, 'ready'>): void {
+    if (status !== 'restoring') this.initialAuthWait = undefined;
     this.cancelAndClear(); this.account = undefined; this.deviceName.set(''); this.status.set(status);
   }
   private cancelAndClear(preserveReadError = false): void {

@@ -14,6 +14,7 @@ import {
 import { Subscription } from 'rxjs';
 import { assertDeviceV2AccountContext, captureDeviceV2AccountContext, DeviceV2AccountContext } from '../../../core/device-v2/account-scope';
 import { capabilityBooleanLabel, capabilityDisplayName, deviceDisplayName } from '../../../core/device-v2/display-metadata';
+import { historyLocalText } from '../../../core/device-v2/history-window';
 import { StateHistoryItem, StateHistoryQuery, STATE_HISTORY_PAGE_LIMIT, STATE_HISTORY_RECORDED_TYPES,
   STATE_HISTORY_VIEW_LIMIT } from '../../../core/device-v2/state-history';
 import { API } from '../../../configs/api.config';
@@ -52,6 +53,7 @@ export class DeviceStoragePage implements OnDestroy {
   private readonly subscriptions = new Subscription();
   private visible = false;
   private destroyed = false;
+  private readonly foreground = signal(true);
   private generation = 0;
   private controller?: AbortController;
   private account?: DeviceV2AccountContext;
@@ -65,6 +67,8 @@ export class DeviceStoragePage implements OnDestroy {
       }
     }));
     this.subscriptions.add(visibility.active.subscribe(active => {
+      // Notify the template even when a failed read blocks automatic refresh.
+      this.foreground.set(active);
       if (!active) this.cancelAndClear();
       else if (this.visible && this.accountCurrent() && !this.state().error) void this.refresh();
     }));
@@ -80,7 +84,7 @@ export class DeviceStoragePage implements OnDestroy {
     const device = this.data.device?.dict?.[this.id];
     return !!device && device.config.mode === 'bbp2' && !device.config.isPreview && !device.config.disabled;
   }
-  get canQuery(): boolean { return this.visible && !this.destroyed && this.visibility.active.value
+  get canQuery(): boolean { return this.visible && !this.destroyed && this.foreground()
     && this.available && this.accountCurrent(); }
   get canLoadMore(): boolean { return this.canQuery && this.state().ready && !this.state().busy
     && !!this.state().nextCursor && this.state().rows.length < this.viewLimit; }
@@ -107,7 +111,7 @@ export class DeviceStoragePage implements OnDestroy {
   }
   typeLabel(row: StateHistoryItem): string { return TYPE_LABELS[row.type]; }
   utcDate(at: number): string { return new Date(at).toISOString(); }
-  utcText(at: number): string { return this.utcDate(at).replace('T', ' ').replace('Z', ' UTC'); }
+  localText(at: number): string { return historyLocalText(at); }
 
   ionViewWillEnter(): void {
     this.close(); this.id = this.route.snapshot.paramMap.get('id') || ''; this.visible = true;

@@ -45,7 +45,7 @@ describe('inline panel editor borrowed-session boundary', () => {
     const legacyRecord: DevicePanelRecord | null = hasRecord ? { panelId: 'inline-legacy', revision: 7,
       createdAt: 1, updatedAt: 2, panel: { device: { protocol: 'mqtt', source: 'test', key: id },
         document: structuredClone(document), bindings: structuredClone(bindings), view: 'normal' } } : null;
-    const seed: EmbeddedPanelSession = { device, document, snapshot,
+    const seed: EmbeddedPanelSession = { device, document, snapshot, consoleRevision: 101,
       record: options.legacy ? undefined : record, bindings: options.legacy ? bindings : undefined,
       legacyRecord: options.legacy ? legacyRecord : undefined };
     const data = { auth: options.anonymous ? null : { uuid: 'inline-account' },
@@ -62,7 +62,7 @@ describe('inline panel editor borrowed-session boundary', () => {
       onDidDismiss: vi.fn(async () => ({ role: dismissal })) })) };
     const contexts = new PanelWidgetEditorContextService();
     const makeConsole = (candidate = record?.layout): DeviceConsole => ({ logicalDeviceId: id,
-      name: '测试设备', deviceType: 'WiFi', revision: 101,
+      name: '测试设备', deviceType: 'WiFi', revision: 103,
       layout: candidate ? { ...structuredClone(candidate), revision: hasRecord ? 8 : 1 } : null,
       uiConfig: { panelMode: 'normal' }, defaultMode: 'normal', availableModes: ['normal'],
       capabilities: { canRead: true, canCommand: true, commandEndpointKeys: null, canEditConsole: true, canManageSharing: true } });
@@ -206,8 +206,8 @@ describe('inline panel editor borrowed-session boundary', () => {
     const draft = structuredClone(f.page.document);
     expect(await f.page.save(false)).toBe(true);
     expect(f.consoles.save).toHaveBeenCalledExactlyOnceWith(f.id, { layout: { ...draft, revision: 7,
-      manifestFingerprint: f.snapshot.manifestFingerprint }, uiConfig: { panelMode: 'normal' } });
-    expect(f.saved).toHaveBeenCalledOnce(); expect(f.saved.mock.calls[0][0]).toMatchObject({ record: { revision: 8 }, consoleRevision: 101 });
+      manifestFingerprint: f.snapshot.manifestFingerprint }, uiConfig: { panelMode: 'normal' } }, 101);
+    expect(f.saved).toHaveBeenCalledOnce(); expect(f.saved.mock.calls[0][0]).toMatchObject({ record: { revision: 8 }, consoleRevision: 103 });
     expect(f.events).not.toHaveBeenCalled(); expect(f.nav.navigateBack).not.toHaveBeenCalled();
     expect(f.page.dirty).toBe(false); f.noOwnedConnection();
   });
@@ -218,6 +218,28 @@ describe('inline panel editor borrowed-session boundary', () => {
     expect(f.consoles.save.mock.calls[0][1].layout?.revision).toBe(1);
     expect(f.saved.mock.calls[0][0]).toMatchObject({ record: { revision: 1 } });
     f.noOwnedConnection();
+  });
+
+  it('passes the actual aggregate response to the host and rejects further writes from the retired inline layout base', async () => {
+    const f = setup(); f.page.updateWidget({ ...f.page.document!.widgets[0], title: '第一次修改' });
+    expect(await f.page.save(false)).toBe(true);
+    expect(f.saved.mock.calls[0][0].consoleRevision).toBe(103);
+    f.page.updateWidget({ ...f.page.document!.widgets[0], title: '第二次修改' });
+    // The real host accepts the returned record and ends this inline session.
+    // This fixture deliberately retains hostRevision=7 against saved record=8.
+    expect(f.page.stale).toBe(true); expect(await f.page.save(false)).toBe(false);
+    expect(f.consoles.save.mock.calls.map(call => (call as any)[2])).toEqual([101]);
+    f.noOwnedConnection();
+  });
+
+  it('does not rebase or resubmit an aggregate conflict and retains the whole draft', async () => {
+    const f = setup(); f.page.updateWidget({ ...f.page.document!.widgets[0], title: '冲突草稿' });
+    const draft = f.page.document;
+    f.consoles.save.mockRejectedValueOnce({ code: 'DEVICE_CONSOLE_CONFLICT' });
+    expect(await f.page.save(false)).toBe(false); expect(f.page.document).toBe(draft);
+    expect(f.page.error).toContain('当前草稿已保留');
+    expect(await f.page.save(false)).toBe(false); expect(f.consoles.save).toHaveBeenCalledOnce();
+    expect(f.saved).not.toHaveBeenCalled(); f.noOwnedConnection();
   });
 
   it.each([false, true])('passes the exact legacy PageLayout CAS token when the borrowed record exists=%s', async hasRecord => {

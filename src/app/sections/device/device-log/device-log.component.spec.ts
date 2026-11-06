@@ -27,12 +27,13 @@ function deferred<T>() { let resolve!: (value: T) => void; const promise = new P
 
 // Real production template; only the new read adapter and native visibility are
 // controlled. No device connection, Manifest, State or request journal is faked.
-async function render(options: { device?: BlinkerDevice | null; signedOut?: boolean; id?: string; active?: boolean;
+async function render(options: { device?: BlinkerDevice | null; signedOut?: boolean; restoring?: boolean; id?: string; active?: boolean;
   read?: (id: string, query: ActivityQuery, signal: AbortSignal) => Promise<ActivityPage> } = {}) {
   const item = options.device === undefined ? device() : options.device;
   const data = { auth: options.signedOut ? null : { uuid: 'owner' } as { uuid: string } | null,
     user: { id: 'stale-profile-owner' }, sessionEpoch: 1,
-    authDataChanged: new Subject<void>(), deviceDataLoader: new BehaviorSubject(true),
+    authDataChanged: new Subject<void>(), authRestoreCompleted: new BehaviorSubject(!options.restoring),
+    deviceDataLoader: new BehaviorSubject(true),
     device: { dict: (item ? { [ID]: item } : {}) as Record<string, BlinkerDevice> },
     getDevice(id: string) { return this.device.dict[id]; } };
   const route = { id: options.id === undefined ? ID : options.id };
@@ -53,6 +54,89 @@ async function render(options: { device?: BlinkerDevice | null; signedOut?: bool
 
 describe('Device activity production template and bounded lifecycle', () => {
   afterEach(() => { TestBed.resetTestingModule(); vi.restoreAllMocks(); });
+
+  it('captures the restored owner and reads once when initial auth completes after page entry', async () => {
+    const f = await render({ signedOut: true, restoring: true });
+    expect(f.activity.read).not.toHaveBeenCalled();
+    f.data.auth = { uuid: 'owner' }; f.data.sessionEpoch++; f.data.authDataChanged.next();
+    f.data.deviceDataLoader.next(true); f.data.authRestoreCompleted.next(true); await f.settle();
+    expect(f.activity.read).toHaveBeenCalledTimes(1);
+    expect(f.element.querySelector<HTMLButtonElement>('[data-action="refresh"]')?.disabled).toBe(false);
+    f.data.authDataChanged.next(); f.data.deviceDataLoader.next(true); f.data.authRestoreCompleted.next(true);
+    await f.settle(); expect(f.activity.read).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a restoration status rather than a false signout before the initial account result', async () => {
+    const f = await render({ signedOut: true, restoring: true });
+    expect(f.element.querySelector('.availability-card h1')?.textContent).toBe('正在恢复账号');
+    expect(f.element.querySelector('.availability-card')?.getAttribute('role')).toBe('status');
+    expect(f.element.textContent).not.toContain('请先登录当前账号');
+    expect(f.element.querySelector('[data-action="refresh"]')).toBeNull();
+    expect(f.activity.read).not.toHaveBeenCalled();
+  });
+
+  it('ends initial restoration as signed out when the completed account result is empty', async () => {
+    const f = await render({ signedOut: true, restoring: true });
+    f.data.authRestoreCompleted.next(true); await f.settle();
+    expect(f.element.querySelector('.availability-card h1')?.textContent).toBe('请先登录当前账号');
+    f.data.auth = { uuid: 'owner' }; f.data.sessionEpoch++; f.data.authDataChanged.next();
+    f.data.deviceDataLoader.next(true); await f.settle();
+    expect(f.activity.read).not.toHaveBeenCalled();
+  });
+
+  it.each(['leave', 'background'] as const)('retires initial waiting on %s and requires explicit reentry after restoration', async reason => {
+    const f = await render({ signedOut: true, restoring: true });
+    if (reason === 'leave') f.page.ionViewWillLeave();
+    else f.visibility.active.next(false);
+    f.data.auth = { uuid: 'owner' }; f.data.sessionEpoch++; f.data.authDataChanged.next();
+    f.data.authRestoreCompleted.next(true); f.visibility.active.next(true); await f.settle();
+    expect(f.activity.read).not.toHaveBeenCalled(); expect(f.page.status()).toBe('inactive');
+    expect(f.element.textContent).not.toContain('正在恢复账号');
+    f.page.ionViewWillEnter(); await f.settle(); expect(f.activity.read).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['account', 'session', 'signout', 'authority'] as const)('does not adopt a changed %s while waiting for the initial completion', async reason => {
+    const f = await render({ restoring: true });
+    const authority = Object.getOwnPropertyDescriptor(API, 'BASE_URL')!;
+    try {
+      if (reason === 'account') f.data.auth = { uuid: 'other' };
+      if (reason === 'session') f.data.sessionEpoch++;
+      if (reason === 'signout') { f.data.auth = null; f.data.sessionEpoch++; }
+      if (reason === 'authority') Object.defineProperty(API, 'BASE_URL', { ...authority, value: 'https://other.invalid' });
+      f.data.authDataChanged.next(); f.data.authRestoreCompleted.next(true); await f.settle();
+      expect(f.activity.read).not.toHaveBeenCalled(); expect(f.page.status()).not.toBe('restoring');
+      expect(f.element.querySelector('[data-action="refresh"]')).toBeNull();
+    } finally { Object.defineProperty(API, 'BASE_URL', authority); }
+  });
+
+  it.each(['shared', 'missing'] as const)('rechecks current owner availability after initial auth rather than reading a stale %s catalog', async kind => {
+    const f = await render({ signedOut: true, restoring: true });
+    f.data.auth = { uuid: 'owner' }; f.data.sessionEpoch++; f.data.authDataChanged.next();
+    if (kind === 'shared') f.data.device.dict[ID].config.isShared = true;
+    else delete f.data.device.dict[ID];
+    f.data.authRestoreCompleted.next(true); await f.settle();
+    expect(f.activity.read).not.toHaveBeenCalled(); expect(f.page.status()).toBe(kind === 'shared' ? 'shared' : 'unavailable');
+  });
+
+  it('never turns duplicate initial completion or foreground notifications into a failed-read retry', async () => {
+    const f = await render({ signedOut: true, restoring: true, read: async () => { throw Error('PRIVATE_READ_FAILURE'); } });
+    f.data.auth = { uuid: 'owner' }; f.data.sessionEpoch++; f.data.authDataChanged.next();
+    f.data.authRestoreCompleted.next(true); await f.settle();
+    expect(f.activity.read).toHaveBeenCalledTimes(1); expect(f.page.state().error).not.toBe('');
+    f.data.authRestoreCompleted.next(true); f.data.authDataChanged.next(); f.data.deviceDataLoader.next(true);
+    f.visibility.active.next(false); f.visibility.active.next(true); await f.settle();
+    expect(f.activity.read).toHaveBeenCalledTimes(1);
+    f.activity.read.mockImplementation(async (_id, q) => result(q));
+    f.element.querySelector<HTMLButtonElement>('[data-action="refresh"]')!.click(); await f.settle();
+    expect(f.activity.read).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not use a pending entry after its route ID changes without explicit reentry', async () => {
+    const f = await render({ signedOut: true, restoring: true });
+    f.data.auth = { uuid: 'owner' }; f.data.sessionEpoch++; f.data.authDataChanged.next();
+    f.route.id = 'device_other'; f.data.authRestoreCompleted.next(true); await f.settle();
+    expect(f.activity.read).not.toHaveBeenCalled(); expect(f.page.status()).toBe('inactive');
+  });
 
   it('reads once on owned foreground entry and shows exact statuses without claiming physical execution', async () => {
     const statuses: ActivityItem['status'][] = ['inflight', 'acknowledged', 'rejected', 'outcome_unknown', 'not_sent'];
@@ -320,6 +404,7 @@ describe('Device activity production template and bounded lifecycle', () => {
     const [, query, signal] = f.activity.read.mock.calls[0]; f.fixture.destroy();
     expect(signal.aborted).toBe(true); expect(f.data.authDataChanged.observers).toHaveLength(0);
     expect(f.data.deviceDataLoader.observers).toHaveLength(0); expect(f.visibility.active.observers).toHaveLength(0);
+    expect(f.data.authRestoreCompleted.observers).toHaveLength(0);
     pending.resolve(result(query, [row()])); await Promise.resolve();
     f.page.ionViewWillEnter(); f.page.openHistory('storage'); await f.page.refresh();
     expect(f.page.state().rows).toEqual([]); expect(f.activity.read).toHaveBeenCalledTimes(1);

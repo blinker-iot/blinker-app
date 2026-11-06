@@ -1,5 +1,9 @@
 # App Android：源码闭包与隔离重建
 
+**当前交付整理（2026-11-06）**：取[核心稳定交付方案§18](../../blinker-library/docs/DEVICE_V2_CORE_DELIVERY_AND_STABILITY_EXECUTION_PLAN.md#18-ds-5一次匹配app交付及两页只读差异2026-11-06)。DS-5分享页与H2草稿修正已一次匹配构建／原位安装及两页只读差异收口，当前beta APK `ae5d7736…176c2f`；65份原文件、21项安全存储及2份checkpoint／journal保持，策略及其它业务写入0。构建报告`PASS_BUILD_ONLY`，2138项App／24项原生输入及索引守卫已落盘通过，但插件仍为受守卫junction，`nativeIndependentSnapshot=false`、`formalRelease=false`，不是正式同提交CI；旧§14快照缺证不反写。下一批仅§18.4的DS-6必要交付清单，不追加审计／重跑矩阵。本批未改服务、设备、授权、TaskStore或UNKNOWN，完整日志保留；必要源码仍未提交，主要开发未实际交接，暂不提交／推送。以下旧包与“当前”均仅保留历史。
+
+2026-10-31 现行入口：[标准接入／共存收口§11](../../blinker-library/docs/DEVICE_V2_STANDARD_DELIVERY_AND_RULE_COEXISTENCE_PLAN.md#11-10收口后的最小修正与源码交付索引2026-10-31)。以下 10-11 及旧快照只描述当时交付，不能将其中旧 WiFiProv 提交／“已推送”说明作为当前新 owner／IPC 实现的来源。当前工作树含尚未提交的必要源码，暂不提交推送，尚无可供全新 Git 拉取的匹配冻结提交；不复制旧 dist 或把 HEAD 当完整候选。六仓目录及插件原 npm 锁显式构建 → App 原 pnpm 锁安装 → 正常 sync 的顺序保持。
+
 当前入口（2026-10-11）：同事从设备库、App、Service各自当前Git分支及五个插件仓拉取源码，自行编译并完成有限短验收。统一操作取[Git拉取、编译与独立短验收手册](../../blinker-library/docs/DEVICE_V2_INDEPENDENT_ACCEPTANCE.md)，不再使用本地交接包、预编译APK或冻结源码快照作为交付入口。M1～M5、N1～N5及H1只保留已准入范围；同事独立签收仍待完成，不能由发送方的本机验证代替。
 
 App和五插件必须保留六个相邻目录，沿用现有`file:../...`依赖。五插件的必要原生源码已在各自远端，按手册固定提交，不另推候选实现或复制旧`dist`。已测工具链为Node22.22.3、插件npm10.9.8、App pnpm11.19.0、JDK21及Android SDK36；插件分别按npm锁构建，App按唯一pnpm锁安装，再构建模板、类型、Web和Android。Capacitor生成路径由接收方sync，不复制本机生成文件；两个LocalAccess回归使用相邻设备库的公共golden fixture。
@@ -176,3 +180,50 @@ pnpm11.19.0属于维护者外部工具，需先按团队工具链安装；传入
 - 测试网络／ADB入口已撤，保留匹配新App／Gateway50和命名历史；不恢复旧APK或业务库。正式release签名、可公开服务profile、iOS／其他平台及接收人独立验收不由本机成功代签。
 
 公开进度取[主线§8.86](../../blinker-library/docs/DEVICE_V2_NEXT_EXECUTION_PLAN.md#886-第八十六批m5本机新版app与两设备产品验收2026-10-10)。本地`build/automation-product-m5-live-20261010`保存source／APK审计、真实UI、数据库及Flash私有备份；不得整体上传或交付。第83交接目录／镜像索引仍为当批历史，不能冒充本次产品候选。没有Git暂存／提交／推送或正式发布。
+
+## 10. IP-4 独立接入的必要源码与有限复跑（2026-11-03）
+
+本节只更新当前独立注册增量，前面历史制品不重写。权威范围与剩余边界见[独立接入计划§15](../../blinker-library/docs/DEVICE_V2_INDEPENDENT_ACCESS_REGISTRATION_EXECUTION_PLAN.md#15-必要源码审阅选择器与发布冻结对齐2026-11-03)。本批没有安装App、操作设备／账号、修改运行逻辑、提交或推送。
+
+审阅增量为checkpoint、coordinator、`device-v2-ble.service.ts`、注册guide及HTML共5项生产文件，ports／Service registration／Service presence／guide真实模板4份spec和11份locale。它们及5项安全store／API／matcher基线共25项，当前源及stage哈希均与已验`46ca8474…54bd6`精确匹配；不为交付重写IP-3基线、秘密归属或执行链。
+
+按现有锁文件准备依赖后，从App目录执行公开有限入口：
+
+```sh
+node tools/test-access-registration.mjs --preflight
+node tools/test-access-registration.mjs
+```
+
+入口顺序调用现有Vitest的2份核心spec，再调用原Angular `ng test app`的2份presence／真实模板spec，固定4文件、单worker、无watch／coverage／自动重试。实际完整执行为55／55与40／40，共95项通过；仅证明这个有限集合，不代表全App测试、原生插件或真机验收。后来仅补前置文件存在性检查并通过syntax／preflight，不重跑95项。
+
+此前直接用主tsconfig指定4个include，仍因其包含其它旧spec类型错误与落后的插件声明而在测试前停止；窄tsconfig之后的2份相对`vi.mock`又被Angular runner禁止。保留这两个停点，既不修无关spec，也不改原测试语义／全局配置。新4个`tools/test-access-registration*`只是原runner的公开薄入口、有限tsconfig及原JIT依赖导入，不需要忽略目录里的私有runner或build材料，不安装／升级依赖。
+
+### 10.1 匹配WiFiProv是既有源码前置，不是只拉当前HEAD
+
+App原`package.json`／pnpm锁已声明`capacitor-wifiprov=file:../capacitor-wifiprov`，须与App同级准备**匹配源码**。窄tsconfig沿这一既有路径读取`src/index.ts`及其definitions／web依赖，避免旧打包声明代替已验合同。
+
+本轮核到插件`main`的当前HEAD `1240a0771b746022c06825684fbe75f15c38d783`，但匹配46ca的`definitions.ts`和`web.ts`仍有既有未提交修订，原Android／iOS实现及配套类也必须按已验来源一起冻结。`index.ts`仅LF／CRLF字节差异，Git无语义修改，不能据raw hash把它误列为新改动。因此目前只能说完整当前源码集合可有限复跑，不能说“只拉App或插件当前公开HEAD即可”。
+
+preflight只检查原依赖声明、三份源码和runner存在，不证明插件revision、类型／原生合同匹配，更不代签APK。后续实际Git交付须包含匹配插件修订及必要实现；当前不替用户提交旁仓或复制node_modules、私有备份、账号／Key、网络密钥及构建产物。
+
+### 10.2 原源码导出入口已补齐（2026-11-03）
+
+原`tools/source-handoff.mjs`的白名单现包含四个`tools/test-access-registration*`文件；四spec／setup及父配置仍走原`src`树和配置白名单，不新建交付格式。匹配WiFiProv的TS及Android源已在原五旁仓导出规则内，不扩大本工具明示的Android范围。
+
+新增两项反例先复现遗漏和缺失未拒绝，再修正白名单；`node --test tools/source-handoff.test.mjs`共14／14通过，覆盖逐字节导出、缺失拒绝和原私有路径／锁／摘要保护。测试fixture已自动清理，没有导出当前工作树、构建或安装App，也未重跑95项。
+
+这里只关闭公开测试入口的导出缺口，不代表已经提交匹配插件、完成同提交CI或向同事交付。必要源码闭包及下一步边界取[独立接入计划§16](../../blinker-library/docs/DEVICE_V2_INDEPENDENT_ACCESS_REGISTRATION_EXECUTION_PLAN.md#16-公开回归入口的源码导出闭合2026-11-03)；运行授权与私有记录不动，暂不提交推送。
+
+### 10.3 匹配提交的审选清单与 CI 范围（2026-11-03）
+
+当前单一文件清单取[IP-4源码提交计划§4](../../blinker-library/docs/DEVICE_V2_IP4_SOURCE_SUBMISSION_PLAN.md#4-app-提交审选)，CI取该页§5。既有25项匹配不是完整Git闭包；原Cloud／Local、配网页、Settings删除及credential失效消费者也需随基线审选。API配置、locale和大型Service／页面不可整文件夹带其它方案，生成的`android/capacitor.settings.gradle`不提交。
+
+§17整理时App及WiFiProv没有远端工作流；后续按精确App＋插件SHA及其余四旁仓基线检出。实施状态以本页§10.4及提交计划§7为准，不把目录存在、snapshot自洽或本机95／14项旧结果当匹配提交已过CI。尚未提交推送，原账号／授权和完整日志保持。
+
+### 10.4 接入原子候选与CI接线（2026-11-03）
+
+实际差异审阅后，不为提交历史重构原Service或配网页。`tools/access-source-files.json`明确前置／接入／投影／维护146输入；纯投影只取注册API和11locale的26＋1键，原定位、分享计数及其它dirty保持。`prepare-access-sources.mjs --out build/NEW_DIRECTORY`仅读固定Git基线，写入新的Git忽略子目录，不更改源码或索引；未知形状、覆盖、链接和越界拒绝。
+
+新增维护工具与workflow已纳入原导出白名单。App `.github/workflows/device-v2-access.yml`仅手动、精确SHA／原锁，Android显式选择；私有旁仓缺权限失败，不借服务端部署凭据。固定base测试保留历史，不用提交后的新HEAD作旧输入。Git源码CI需相应历史，不能把无Git的旧交接快照当完整维护测试环境。
+
+新增维护回归、一次隔离产品TS检查及失败停点取[提交计划§7](../../blinker-library/docs/DEVICE_V2_IP4_SOURCE_SUBMISSION_PLAN.md#7-混合源码隔离与匹配-ci-实施2026-11-03)；未重跑95项、构建APK、安装App、发码或真机重测。尚未触发远端CI或提交推送，私有golden发行HOLD不变。

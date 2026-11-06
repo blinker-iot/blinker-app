@@ -191,7 +191,7 @@ export class Deviceblock implements AfterViewInit {
     if (this.connectivity.activeTransport === 'lan') return this.canControl ? 'ready' : 'reachable';
     if (this.blePrimary) {
       if (this.connectivity.bleAdapterEnabled === false) return 'offline';
-      if (this.connectivity.bleState === 'ready') return 'ready';
+      if (this.connectivity.bleState === 'ready') return this.canControl ? 'ready' : 'reachable';
       return this.connectivity.bleNearby === true ? 'reachable' : 'unknown';
     }
 
@@ -207,6 +207,14 @@ export class Deviceblock implements AfterViewInit {
     return this.blePrimary ? 'fa-brands fa-bluetooth-b' : 'fa-light fa-wifi';
   }
 
+  get showBleNearby(): boolean {
+    const config = this.current?.config;
+    return !!config && !config.disabled && !config.isPreview && this.appActive && !this.blePrimary
+      && this.connectivity.bleAdapterEnabled !== false
+      && (this.connectivity.bleNearbyOnly === true
+        || (this.connectivity.bleAccess === true && this.connectivity.bleNearby === true));
+  }
+
   get statusText(): string {
     if (this.connectivity.activeTransport === 'lan') return this.canControl ? '局域网已同步' : '局域网已连接';
     if (this.status === 'ready') return this.blePrimary
@@ -215,7 +223,7 @@ export class Deviceblock implements AfterViewInit {
 
     if (this.status === 'reachable') {
       if (!this.blePrimary) return '云端在线';
-      return '蓝牙在附近';
+      return this.connectivity.bleState === 'ready' ? '蓝牙已连接，数据待同步' : '蓝牙在附近';
     }
     if (this.blePrimary) {
       if (this.connectivity.bleAdapterEnabled === false) return '蓝牙不可用';
@@ -446,10 +454,7 @@ export class Deviceblock implements AfterViewInit {
   }
 
   private get blePrimary(): boolean {
-    if (this.directOnly) return true;
-    if (this.connectivity.bleAccess !== true) return false;
-    return this.connectivity.bleAdapterEnabled !== false
-      && (this.connectivity.bleNearby === true || this.connectivity.bleState === 'ready');
+    return this.connectivity.activeTransport === 'ble';
   }
 
   constructor(

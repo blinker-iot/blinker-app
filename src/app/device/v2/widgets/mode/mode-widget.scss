@@ -57,7 +57,7 @@
 
 .modes.segmented {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   flex-shrink: 1;
   min-height: 54px;
   align-self: stretch;
@@ -66,10 +66,13 @@
   padding: 3px;
   border-radius: var(--ui-radius-sm);
   background: var(--ui-well);
+  overflow-x: auto;
+  overflow-y: hidden;
 
-  // Equal shares until the full-size targets need another line.
+  // Equal shares within the existing row budget. Narrow historical cards can
+  // scroll horizontally; wrapping would create a second vertical scroller.
   .mode {
-    flex: 1 0 64px;
+    flex: 1 0 48px;
     flex-direction: row;
     justify-content: center;
     gap: 5px;

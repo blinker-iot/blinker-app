@@ -1,4 +1,4 @@
-import { DeviceConsoleService, cloudConsole, canEditConsole, consoleLayout, installConsole } from '../../../core/services/device-console.service';
+import { DeviceConsoleService, cloudConsole, canEditConsole, consoleLayout, consoleWriteConflict, installConsole } from '../../../core/services/device-console.service';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, HostBinding, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -111,6 +111,8 @@ export class PanelEditorPage implements OnInit, OnChanges, OnDestroy {
 
   private bindings: Record<string, LegacyBinding> = {};
   private record?: DeviceV2PageLayoutRecord | null;
+  private consoleRevision?: number;
+  private consoleConflict = false;
   private connection?: DeviceUiConnection;
   private connectionSubscription?: Subscription;
   private connectionReady = false;
@@ -183,12 +185,13 @@ export class PanelEditorPage implements OnInit, OnChanges, OnDestroy {
   }
 
   get editingAllowed(): boolean {
-    if (!this.embedded) return !this.saving && !this.stale;
+    if (!this.embedded) return !this.saving && !this.stale && !this.consoleConflict;
     return this.editingActive && this.appActive && !this.saving && !this.editBlockedReason;
   }
 
   get editBlockedReason(): string {
     if (!this.embedded) return '';
+    if (this.consoleConflict) return '界面已在其他位置更新，当前草稿已保留。请取消当前编辑，再重新进入读取后确认。';
     let reason = '';
     try { this.assertEditContext(); }
     catch { reason = '账号、设备、权限或服务已改变'; }
@@ -286,6 +289,7 @@ export class PanelEditorPage implements OnInit, OnChanges, OnDestroy {
       this.editContext = captureDeviceV2AccountContext(this.editAccountSource(), API.BASE_URL);
       this.assertEditContext();
       this.record = structuredClone(session.record ?? null);
+      this.consoleRevision = session.consoleRevision;
       this.legacyRecord = structuredClone(session.legacyRecord ?? null);
       this.document = structuredClone(session.document);
       this.hiddenAtStart = JSON.stringify(this.device.config.hiddenEndpointKeys ?? []);
@@ -337,6 +341,8 @@ export class PanelEditorPage implements OnInit, OnChanges, OnDestroy {
     this.error = '';
     this.document = undefined;
     this.record = undefined;
+    this.consoleRevision = undefined;
+    this.consoleConflict = false;
     this.previous = [];
     this.fieldErrors.clear();
     this.drafts.clear();
@@ -356,10 +362,16 @@ export class PanelEditorPage implements OnInit, OnChanges, OnDestroy {
         this.connect();
 
         const epoch = this.data.sessionEpoch;
+        const context = cloudConsole(device) ? captureDeviceV2AccountContext(this.data, API.BASE_URL) : undefined;
         const source = cloudConsole(device) ? await this.consoles.get(device.deviceName) : undefined;
         if (epoch !== this.data.sessionEpoch || this.destroyed || version !== this.loadVersion) return;
         if (source && !source.capabilities.canEditConsole) throw new Error('你没有编辑此控制台的权限。');
-        if (source) installConsole(device, source);
+        if (source) {
+          assertDeviceV2AccountContext(this.data, context!);
+          this.editContext = context;
+          this.consoleRevision = source.revision;
+          installConsole(device, source);
+        }
         const record = source ? consoleLayout(source) : await this.layouts.get(device.deviceName);
 
         if (this.destroyed || version !== this.loadVersion) return;
@@ -679,6 +691,10 @@ export class PanelEditorPage implements OnInit, OnChanges, OnDestroy {
 
   async save(returnToDevice = true): Promise<boolean> {
     if (!this.document || !this.device || this.saving || !canEditConsole(this.device)) return false;
+    if (this.consoleConflict) {
+      this.error = '界面已在其他位置更新，请重新读取后确认。当前草稿已保留。';
+      return false;
+    }
     if (this.embedded && !this.editingAllowed) {
       this.error = '编辑作用域或布局已改变，草稿已保留。请返回后重新编辑。';
       this.changed.emit();
@@ -706,13 +722,15 @@ export class PanelEditorPage implements OnInit, OnChanges, OnDestroy {
           ...this.document, revision: Math.max(1, revision), manifestFingerprint: this.loadedFingerprint,
         };
         if (cloudConsole(this.device)) {
+          this.assertEditContext();
           const epoch = this.data.sessionEpoch;
           const source = await this.consoles.save(this.device.deviceName,
-            { layout: candidate, uiConfig: { panelMode: 'normal' } });
+            { layout: candidate, uiConfig: { panelMode: 'normal' } }, this.consoleRevision!);
           if (epoch !== this.data.sessionEpoch) throw new Error('账号已切换');
-          if (this.embedded) this.assertEditContext();
+          this.assertEditContext();
           this.record = consoleLayout(source);
           consoleRevision = source.revision;
+          this.consoleRevision = source.revision;
           installConsole(this.device, source);
         } else {
           const record = await this.layouts.saveCandidate(this.device.deviceName, candidate, this.snapshot!.endpoints, revision);
@@ -748,8 +766,9 @@ export class PanelEditorPage implements OnInit, OnChanges, OnDestroy {
       return true;
     } catch (error) {
       const code = (error as { code?: string })?.code;
+      if (consoleWriteConflict(error)) this.consoleConflict = true;
 
-      this.error = code === 'DEVICE_V2_PAGE_LAYOUT_CONFLICT' || code === 'DEVICE_V2_PAGE_LAYOUT_MANIFEST_STALE' || code === 'DEVICE_PANEL_CONFLICT'
+      this.error = this.consoleConflict || code === 'DEVICE_V2_PAGE_LAYOUT_CONFLICT' || code === 'DEVICE_PANEL_CONFLICT'
         ? `布局或设备能力已在其他位置更新。当前草稿已保留，${this.embedded ? '请取消当前编辑，再重新进入读取最新布局。' : '请重新读取后再编辑。'}`
         : layoutSaved ? '布局已保存，但面板切换失败。请重试保存以完成切换。' : '保存失败，当前草稿已保留，请重试。';
 

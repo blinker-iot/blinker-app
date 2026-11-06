@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import vm from 'node:vm';
-import { cloudBetaEnvironment, verifyNativeInputs } from './sync-cloud-beta.mjs';
+import { bc5Profile, cloudBetaEnvironment, verifyNativeInputs } from './sync-cloud-beta.mjs';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
@@ -11,6 +11,12 @@ const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8'
 const beta = { appId: 'iot.diandeng.tech.beta', loggingBehavior: 'none',
   server: { androidScheme: 'https', cleartext: false } };
 const plugins = [{ pkg: '@aparajita/capacitor-secure-storage', classpath: 'SecureStorage' }];
+const cleanNetworkSecurityXml = xml => xml.replace(/^\uFEFF/, '')
+  .replace(/^\s*<\?xml\s+[^?]*\?>\s*/, '').replace(/<!--[\s\S]*?-->/g, '').trim();
+// A deliberately narrow static resource contract, not a second runtime policy
+// implementation: exactly one fixed AP domain and no trust/CA overrides.
+const assertProvisioningCleartextScope = xml => assert.match(cleanNetworkSecurityXml(xml),
+  /^<network-security-config>\s*<base-config\s+cleartextTrafficPermitted="false"\s*\/>\s*<domain-config\s+cleartextTrafficPermitted="true">\s*<domain\s+includeSubdomains="false">\s*192\.168\.4\.1\s*<\/domain>\s*<\/domain-config>\s*<\/network-security-config>$/);
 
 test('cloud beta has an explicit production Web build followed by official native sync', () => {
   const pkg = JSON.parse(read('package.json'));
@@ -22,7 +28,7 @@ test('cloud beta has an explicit production Web build followed by official nativ
     .fileReplacements[0].with, 'src/environments/environment.cloud-beta.ts');
 });
 
-test('the actual beta opens only automation and Task routes without mutating production', () => {
+test('the actual beta opens automation, Task and Direct without mutating production', () => {
   const production = { production: true, gatewayBaseUrl: 'https://iot.yiyu.pro', deployment: Object.freeze({
     notifications: false, messages: false, tasks: false, automation: false,
     directAccess: false, directedSharing: false, consoleLinks: false,
@@ -35,9 +41,15 @@ test('the actual beta opens only automation and Task routes without mutating pro
   } };
   vm.runInNewContext(compiled, sandbox);
   const selected = JSON.parse(JSON.stringify(sandbox.exports.environment));
-  assert.deepEqual(selected, { ...production, deployment: { ...production.deployment, automation: true, tasks: true } });
+  assert.deepEqual(selected, { ...production, wifiProvSealedFirstInstall: false,
+    deployment: { ...production.deployment, automation: true, tasks: true, directAccess: true } });
   assert.equal(production.deployment.automation, false);
   assert.equal(production.deployment.tasks, false);
+  assert.equal(production.deployment.directAccess, false);
+  const explicit = { ...sandbox, exports: {}, BLINKER_WIFIPROV_SEALED_FIRST_INSTALL: true };
+  vm.runInNewContext(compiled, explicit);
+  assert.equal(explicit.exports.environment.wifiProvSealedFirstInstall, true);
+  assert.throws(() => vm.runInNewContext(compiled, { ...explicit, exports: {}, BLINKER_BC5_GATEWAY_ORIGIN: 'https://example.com', URL }));
 });
 
 test('the existing panel packer declares its direct build dependency from the lock', () => {
@@ -61,13 +73,18 @@ test('actual Capacitor config selects a parallel package with HTTPS and no argum
   const compiled = ts.transpileModule(read('capacitor.config.ts'),
     { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
   function config(env) {
-    const sandbox = { exports: {}, process: { env }, require: () => ({}) };
+    const sandbox = { exports: {}, process: { env }, require: () => ({ bc5Profile }) };
     vm.runInNewContext(compiled, sandbox);
     return sandbox.exports.default;
   }
   assert.equal(config({}).appId, 'iot.diandeng.tech');
   const selected = config(cloudBetaEnvironment({}));
   verifyNativeInputs(selected, plugins);
+  const sealed = config(cloudBetaEnvironment({ BLINKER_WIFIPROV_SEALED_FIRST_INSTALL: '1' }));
+  verifyNativeInputs(sealed, plugins, undefined, undefined, true);
+  assert.throws(() => verifyNativeInputs(sealed, plugins));
+  assert.throws(() => config({ BLINKER_WIFIPROV_SEALED_FIRST_INSTALL: '1' }));
+  assert.throws(() => cloudBetaEnvironment({ BLINKER_WIFIPROV_SEALED_FIRST_INSTALL: '1', BLINKER_BC5_CANDIDATE: '1' }));
   assert.equal(selected.appName, 'Blinker 内测');
   assert.throws(() => config({ BLINKER_APP_PROFILE: 'cloud-beta', BLINKER_LOCAL_CLEARTEXT: '1' }));
   assert.throws(() => config({ BLINKER_APP_PROFILE: 'unknown' }));
@@ -92,6 +109,36 @@ test('Android beta stays separate from debug local trust and has a guarded nativ
   assert.match(gradle, /android\.sourceSets\.debug\.manifest/);
   assert.doesNotMatch(gradle, /android\.sourceSets\.beta/);
   assert.match(read('android/app/src/beta/AndroidManifest.xml'), /usesCleartextTraffic="false"/);
+});
+
+test('beta references the fixed provisioning-only network policy without enabling global cleartext', () => {
+  const manifest = read('android/app/src/beta/AndroidManifest.xml');
+  const application = manifest.match(/<application\b[^>]*>/)?.[0];
+  assert(application, 'beta application overlay is required');
+  assert.match(application, /android:usesCleartextTraffic="false"/);
+  assert.match(application, /android:networkSecurityConfig="@xml\/wifiprov_network_security_config"/);
+  const replaced = application.match(/tools:replace="([^"]+)"/)?.[1].split(',').map(value => value.trim());
+  assert(replaced?.includes('android:usesCleartextTraffic'));
+  assert(replaced?.includes('android:networkSecurityConfig'));
+  assert.doesNotMatch(read('android/app/src/main/AndroidManifest.xml'), /wifiprov_network_security_config/);
+  verifyNativeInputs(beta, plugins); // The Capacitor HTTPS/cleartext=false contract is unchanged.
+});
+
+test('provisioning cleartext policy admits only the exact AP, never Cloud, LAN ranges or CA overrides', () => {
+  const xml = cleanNetworkSecurityXml(read('android/app/src/beta/res/xml/wifiprov_network_security_config.xml'));
+  assertProvisioningCleartextScope(xml);
+  for (const invalid of [
+    xml.replace(/(<base-config\s+cleartextTrafficPermitted=)"false"/, '$1"true"'),
+    xml.replace('includeSubdomains="false"', 'includeSubdomains="true"'),
+    xml.replace('192.168.4.1', '*.192.168.4.1'),
+    xml.replace('192.168.4.1', '192.168.0.0/16'),
+    xml.replace('192.168.4.1', '192.168.1.1'),
+    xml.replace('192.168.4.1', 'iot.yiyu.pro'),
+    xml.replace('192.168.4.1', 'mqtt.yiyu.pro'),
+    xml.replace('</domain-config>', '<domain includeSubdomains="false">192.168.1.2</domain></domain-config>'),
+    xml.replace('</network-security-config>', '<domain-config cleartextTrafficPermitted="true"><domain includeSubdomains="false">example.com</domain></domain-config></network-security-config>'),
+    xml.replace('</network-security-config>', '<debug-overrides><trust-anchors><certificates src="user"/></trust-anchors></debug-overrides></network-security-config>'),
+  ]) assert.throws(() => assertProvisioningCleartextScope(invalid));
 });
 
 test('maintained Geolocation keeps one registered plugin and fixed reviewed sources', () => {

@@ -15,6 +15,11 @@
         </span>
       }
     </div>
+    @if (showBleNearby) {
+      <span class="device-nearby" role="img" aria-label="蓝牙在附近，非当前控制通道" title="蓝牙在附近，非当前控制通道">
+        <i class="fa-brands fa-bluetooth-b" aria-hidden="true"></i><span>附近</span>
+      </span>
+    }
     <span class="device-status" role="img" [attr.aria-label]="statusText" [attr.title]="statusText">
       <i [class]="'device-state-icon ' + transportIcon" aria-hidden="true"></i>
     </span>

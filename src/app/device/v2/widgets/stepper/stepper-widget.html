@@ -1,12 +1,12 @@
 <ng-template #dec>
   <button type="button" class="rbtn" aria-label="减少" [disabled]="card.disabled || value <= min"
-    (pointerdown)="repeatStart($event, -1, hold)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()">
+    (pointerdown)="repeatStart($event, -1, hold)" (pointerup)="repeatStop()" (pointercancel)="repeatCancel($event)">
     <app-ui-icon name="minus" /></button>
 </ng-template>
 
 <ng-template #inc>
   <button type="button" class="rbtn" aria-label="增加" [disabled]="card.disabled || value >= max"
-    (pointerdown)="repeatStart($event, 1, hold)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()">
+    (pointerdown)="repeatStart($event, 1, hold)" (pointerup)="repeatStop()" (pointercancel)="repeatCancel($event)">
     <app-ui-icon name="plus" /></button>
 </ng-template>
 

@@ -59,7 +59,7 @@
         } @empty { <div class="surface-card workflow-empty"><p>{{ automation.state().retired ? '暂无已删除记录。' : '还没有自动化。选择一个条件和一个动作开始。' }}</p></div> }
         @if (automation.state().nextAfter) { <ion-button [disabled]="automation.state().busy" (click)="automation.more()">加载更多</ion-button> }
       </section>
-      @if (!automation.state().retired && automation.state().rules.length >= 4) { <p class="hint">目前最多保留 4 条自动化；删除不再使用的规则可腾出名额。</p> }
+      @if (!automation.state().retired && automation.state().rules.length >= 4) { <p class="hint">目前最多保留 4 条自动化（包含停用规则）；删除不再使用的规则可腾出名额。</p> }
     }
     <details class="help surface-card workflow-details"><summary>使用说明与支持范围</summary>
       <p>目前支持所属账号的普通 WiFi 设备，一条自动化包含一个条件和一个开关或非负整数属性动作。按钮、多步骤、延时暂不支持。</p>

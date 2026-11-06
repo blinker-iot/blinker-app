@@ -495,6 +495,38 @@ describe('fresh catalog anchored task snapshot', () => {
     expect(f.execute.mock.calls.slice(1).every(([, r]) => 'expectedRevision' in r && r.expectedRevision === 4)).toBe(true);
     expect(catalog).not.toHaveProperty('tableRevision'); expect(catalog).not.toHaveProperty('count');
   });
+  it('QA-3 exposes only a fresh capacity observation when a later target page is offline, never a partial cache or table', async () => {
+    const f = snapshotFixture(), capacity = vi.fn();
+    f.execute.mockImplementation(async (_, request) => {
+      if (request.operation === 'catalog' && request.index !== null) throw new Error('TASK_DEVICE_OFFLINE');
+      return f.answer(request);
+    });
+    await expect(f.client.snapshot(id, new AbortController().signal, capacity)).rejects.toThrow('TASK_DEVICE_OFFLINE');
+    expect(capacity.mock.calls).toEqual([[4]]);
+    expect(f.execute.mock.calls.map(([, r]) => [r.operation, 'index' in r ? r.index : null]))
+      .toEqual([['catalog', null], ['catalog', 0]]);
+    expect(f.data.size).toBe(0);
+    f.execute.mockImplementation(async (_, request) => f.answer(request)); f.execute.mockClear();
+    await f.client.snapshot(id);
+    expect(f.execute.mock.calls.map(([, r]) => r.operation)).toEqual(['catalog', 'catalog', 'catalog', 'read']);
+  });
+  it('QA-3 does not observe capacity from historical metadata, cancelled reads or a replaced account', async () => {
+    for (const invalid of ['historical', 'cancelled', 'account']) {
+      const f = snapshotFixture(), capacity = vi.fn(), aborter = new AbortController();
+      f.execute.mockImplementationOnce(async (_, request) => {
+        if (invalid === 'cancelled') aborter.abort();
+        if (invalid === 'account') f.account.sessionEpoch++;
+        return invalid === 'historical' ? response(request, true) : f.answer(request);
+      });
+      await expect(f.client.snapshot(id, aborter.signal, capacity)).rejects.toThrow();
+      expect(capacity).not.toHaveBeenCalled(); expect(f.execute).toHaveBeenCalledTimes(1);
+    }
+  });
+  it('QA-3 cancels immediately after a display observation without dispatching the next page', async () => {
+    const f = snapshotFixture(), aborter = new AbortController();
+    await expect(f.client.snapshot(id, aborter.signal, () => aborter.abort())).rejects.toThrow();
+    expect(f.execute).toHaveBeenCalledTimes(1); expect(f.data.size).toBe(0);
+  });
   it('requires a new catalog exchange for every empty snapshot and never reuses an old empty header', async () => {
     const f = snapshotFixture(0, 0);
     for (const revision of [0, 4]) {

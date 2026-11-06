@@ -42,6 +42,38 @@ describe('WiFiProv first allocation journal', () => {
     expect(SecureStorage.setItem).not.toHaveBeenCalled();
   });
 
+  it('fresh-only allocation persists a new request and refuses to reuse it after response loss', async () => {
+    const h = harness(); h.management.createDeviceKeyV2.mockRejectedValueOnce(Error('CREATE unknown'));
+    await expect(h.client().createNew(instance, 'Fresh')).rejects.toThrow('CREATE unknown');
+    const original = [...storage.values.entries()];
+    await expect(h.client().createNew(instance, 'Fresh again')).rejects.toMatchObject({ code: 'WIFIPROV_IDENTITY_UNCONFIRMED' });
+    expect([...storage.values.entries()]).toEqual(original);
+    expect(h.management.createDeviceKeyV2).toHaveBeenCalledOnce();
+    expect(h.management.revealDeviceKeyV2).not.toHaveBeenCalled();
+  });
+
+  it('fresh-only preparation rejects both an intervening prepared record and a bound context under the store lock', async () => {
+    const h = harness();
+    await expect(h.store().load(instance)).resolves.toBeUndefined();
+    const record = await h.store().prepare(instance, 'Intervening');
+    const before = [...storage.values.entries()];
+    await expect(h.client().createNew(instance, 'New')).rejects.toMatchObject({ code: 'WIFIPROV_IDENTITY_UNCONFIRMED' });
+    expect([...storage.values.entries()]).toEqual(before);
+    await h.store().bind(instance, record.requestId, context);
+    await expect(h.client().createNew(instance, 'New')).rejects.toMatchObject({ code: 'WIFIPROV_IDENTITY_UNCONFIRMED' });
+    expect(h.management.createDeviceKeyV2).not.toHaveBeenCalled();
+  });
+
+  it('fresh-only creation has no resume fallback for an older store and completes one new allocation normally', async () => {
+    const h = harness(), older = { prepare: vi.fn() };
+    const unsupported = new WiFiProvAllocation(older as any, h.management as any, () => undefined);
+    await expect(unsupported.createNew(instance, 'Fresh')).rejects.toThrow('FRESH_ALLOCATION_UNSUPPORTED');
+    expect(older.prepare).not.toHaveBeenCalled();
+    await expect(h.client().createNew(instance, 'Fresh')).resolves.toMatchObject({ ...context, deviceKey });
+    expect(h.management.createDeviceKeyV2).toHaveBeenCalledOnce();
+    expect(await h.store().load(instance)).toMatchObject({ name: 'Fresh', context });
+  });
+
   it('finds only the exact device in this account and authority without removing records', async () => {
     const h = harness(); await h.client().create(instance, 'Lamp');
     const other = new CapacitorWiFiProvAllocationStore(() => ({ ...scope, accountId: 'other' }));

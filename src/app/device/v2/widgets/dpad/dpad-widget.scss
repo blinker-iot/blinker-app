@@ -35,7 +35,7 @@
   place-items: center;
   border-radius: 14px;
   color: var(--ui-muted);
-  touch-action: none;
+  touch-action: var(--ui-control-touch-action, none);
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;

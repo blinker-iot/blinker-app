@@ -4,14 +4,33 @@ const record = () => ({ logicalDeviceId: 'device_a', revision: 3, name: '客厅�
   { key: 'power', kind: 0, type: 0, displayName: '电源开关', trueLabel: '亮', falseLabel: '灭' },
 ] });
 describe('shared display metadata (not protocol semantics or authority)', () => {
+  it('resolves typed power defaults without renaming unknown types or protocol keys', () => {
+    expect(capabilityDisplayName(undefined, { key: 'power', kind: 0, type: 0 })).toBe('电源开关');
+    for (const type of [1, 2, 3, 4]) {
+      expect(capabilityDisplayName(undefined, { key: 'power', kind: 0, type })).toBe('功率');
+    }
+    for (const type of [undefined, 5, 9]) {
+      expect(capabilityDisplayName(undefined, { key: 'power', kind: 0, type })).toBe('power');
+    }
+    expect(capabilityDisplayName(undefined, { ...{ key: 'power', valueType: 'boolean' } })).toBe('电源开关');
+    expect(capabilityDisplayName(undefined, { ...{ key: 'power', valueType: 'number' } })).toBe('功率');
+    expect(capabilityDisplayName(undefined, { ...{ key: 'power', type: 5, valueType: 'boolean' } })).toBe('power');
+    expect(capabilityDisplayName(undefined, { key: 'customPower', type: 0 })).toBe('customPower');
+    for (const key of ['constructor', '__proto__', 'toString']) {
+      expect(capabilityDisplayName(undefined, { key, type: 0 })).toBe(key);
+    }
+  });
   it('resolves stable key/kind/type and ignores incompatible or orphan aliases', () => {
     const metadata = parseDeviceDisplayMetadata(record()), device = { name: 'old', displayMetadata: metadata };
     expect(deviceDisplayName(device)).toBe('客厅灯');
     expect(capabilityDisplayName(device, { key: 'power', kind: 0, type: 0 })).toBe('电源开关');
+    expect(capabilityDisplayName(device, { key: 'power', kind: 0, type: 0 }, '我的开关')).toBe('我的开关');
+    expect(capabilityDisplayName(device, { key: 'power', kind: 0, type: 0 }, 'power')).toBe('power');
     expect(capabilityBooleanLabel(device, { key: 'power', kind: 0, type: 0 }, true)).toBe('亮');
     expect(capabilityBooleanLabel(device, { key: 'power', kind: 0, type: 0 }, false)).toBe('灭');
-    for (const endpoint of [{ key: 'power', kind: 1, type: 0 }, { key: 'power', kind: 0, type: 2 }, { key: 'missing', kind: 0, type: 0 }]) {
-      expect(capabilityDisplayName(device, endpoint)).toBe(endpoint.key);
+    for (const [endpoint, name] of [[{ key: 'power', kind: 1, type: 0 }, '电源开关'],
+      [{ key: 'power', kind: 0, type: 2 }, '功率'], [{ key: 'missing', kind: 0, type: 0 }, 'missing']] as const) {
+      expect(capabilityDisplayName(device, endpoint)).toBe(name);
       expect(capabilityBooleanLabel(device, endpoint, true)).toBe('开');
     }
     expect(capabilityDisplayName(device, { key: 'power' })).toBe('power');

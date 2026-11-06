@@ -21,6 +21,7 @@ export class LocationMapComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() name = '';
   @Input() editable = false;
   @Input() active = true;
+  @Input() followPoint = true;
   @Output() readonly pointChange = new EventEmitter<Wgs84MapPoint>();
   @ViewChild('mapContainer', { static: true }) private container!: ElementRef<HTMLElement>;
 
@@ -73,7 +74,9 @@ export class LocationMapComponent implements AfterViewInit, OnChanges, OnDestroy
     if (this.destroyed) return;
     if (!this.viewReady) { this.mapState = this.available ? 'loading' : 'inactive'; return; }
     if (changes['active']) { this.synchronizeActivity(); return; }
-    if (changes['point'] || changes['name'] || changes['editable']) this.updateMarker();
+    if (changes['point'] || changes['name'] || changes['editable'] || changes['followPoint']) {
+      this.updateMarker(!!changes['followPoint']);
+    }
   }
   ngOnDestroy(): void { this.destroyed = true; this.subscriptions.unsubscribe(); this.releaseMap(); }
 
@@ -180,7 +183,7 @@ export class LocationMapComponent implements AfterViewInit, OnChanges, OnDestroy
     if (!this.available || !this.session?.current() || !this.editable || !validMapPoint(candidate)) return;
     this.zone.run(() => this.pointChange.emit({ ...candidate }));
   }
-  private updateMarker(): void {
+  private updateMarker(recenter = false): void {
     if (!this.map || !this.available || !this.session?.current()) return;
     if (!this.hasPoint) {
       this.marker?.off().remove(); this.marker = null;
@@ -202,7 +205,7 @@ export class LocationMapComponent implements AfterViewInit, OnChanges, OnDestroy
     const label = document.createElement('span'); label.textContent = this.name || '选择的位置';
     this.marker.unbindTooltip().bindTooltip(label, { direction: 'top', offset: L.point(0, -30) });
     if (firstPoint) this.map.setView(latlng, 15, { animate: false });
-    else this.map.panTo(latlng, { animate: false });
+    else if (recenter || this.followPoint) this.map.panTo(latlng, { animate: false });
   }
   private setState(state: MapState): void {
     if (this.destroyed) return;

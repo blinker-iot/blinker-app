@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { Bbp2MessageKind } from '../../protocol/device-v2';
+import { Bbp2FrameFlag, Bbp2MessageKind, encodeFrame } from '../../protocol/device-v2';
 import { DirectSecureInitiator } from './crypto';
 import { BleDirectSecureChannel } from './secure-channel';
 import { BleDirectRecordLink, BleDirectTarget } from './transport';
@@ -62,6 +62,30 @@ class ConcurrentProbeLink implements BleDirectRecordLink {
 }
 
 describe('BleDirectSecureChannel', () => {
+  it.each([Bbp2MessageKind.InitialCloudNetworkHandoff, Bbp2MessageKind.InitialCloudNetworkAccepted])(
+    'keeps new reserved kind %i unavailable to ordinary Direct', async kind => {
+      const secure = new ConcurrentProbeSecure(), link = new ConcurrentProbeLink();
+      const channel = new BleDirectSecureChannel('device_child', link, secure as unknown as DirectSecureInitiator, 512, 0);
+      await expect(channel.send(channel.createFrame(kind, 0, new Uint8Array(36)))).rejects.toThrow('PURPOSE_REQUIRED');
+      expect(link.sent).toBe(0);
+    });
+
+  it('does not mix install and installed-Key network purposes', async () => {
+    for (const [purpose, foreign] of [['installed-key-network', Bbp2MessageKind.InitialCloudKeyInstall],
+      ['key-registration', Bbp2MessageKind.InitialCloudNetworkHandoff]] as const) {
+      const secure = new ConcurrentProbeSecure(), link = new ConcurrentProbeLink(), check = vi.fn();
+      const channel = new BleDirectSecureChannel('device_child', link, secure as unknown as DirectSecureInitiator, 512, 0, check, purpose);
+      await expect(channel.send(channel.createFrame(foreign, 0, new Uint8Array(36)))).rejects.toThrow('FRAME_INVALID');
+      expect(check).not.toHaveBeenCalled(); expect(link.sent).toBe(0);
+    }
+    const secure = new ConcurrentProbeSecure(), link = new ConcurrentProbeLink();
+    link.receiveRecord = async () => encodeFrame({ kind: Bbp2MessageKind.TimeRequest, flags: Bbp2FrameFlag.IsResponse,
+      sequence: 1, body: new Uint8Array(36) });
+    const network = new BleDirectSecureChannel('device_child', link, secure as unknown as DirectSecureInitiator,
+      512, 0, () => undefined, 'installed-key-network');
+    await expect(network.receive()).rejects.toThrow('INITIAL_CLOUD_NETWORK_ACK_INVALID');
+    expect(link.sent).toBe(0);
+  });
   it('bounds active plus queued sends at two without poisoning the accepted writes', async () => {
     const secure = new ConcurrentProbeSecure(), link = new ConcurrentProbeLink();
     const channel = new BleDirectSecureChannel('device_child', link, secure as unknown as DirectSecureInitiator, 512, 0);

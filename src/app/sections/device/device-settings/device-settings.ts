@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@capacitor/clipboard';
+import { Capacitor } from '@capacitor/core';
 
 import {
   AlertController,
@@ -28,6 +29,7 @@ import { BlinkerDevice } from 'src/app/core/model/device.model';
 import {
   DeviceKeyContext,
   DeviceKeyLogicalDevice,
+  DeviceRemovalResponse,
   GatewayHttpError,
 } from 'src/app/core/model/response.model';
 
@@ -47,6 +49,7 @@ import { API } from 'src/app/configs/api.config';
 import { assertDeviceV2AccountContext, captureDeviceV2AccountContext } from 'src/app/core/device-v2/account-scope';
 import { CapacitorWiFiProvAllocationStore } from 'src/app/core/device-v2/provisioning/wifiprov-allocation-store';
 import { CapacitorBleControllerCredentialStore } from 'src/app/core/device-v2/ble-direct/credential-store';
+import { invalidateKnownCredentialRoot } from 'src/app/core/device-v2/ble-direct/credential-root-lifecycle';
 import { WiFiProvRetirement } from 'src/app/core/device-v2/provisioning/wifiprov-retirement';
 import { RoomService, roomErrorMessage } from '../../room/room.service';
 import { DeviceCardEditor } from '../../../home/device-card-editor.service';
@@ -731,6 +734,12 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
     if (!confirmed) return;
 
+    const expected = captureDeviceV2AccountContext(this.dataService, API.BASE_URL);
+    const current = () => {
+      if (this.destroyed || this.logicalDeviceId !== context.logicalDeviceId) throw Error('DEVICE_KEY_CONTEXT_CHANGED');
+      assertDeviceV2AccountContext(this.dataService, expected);
+      return expected;
+    };
     this.rotateIdempotencyKey ||= this.requestId('device-key-rotate');
     this.keyOperation = 'rotate';
     this.keyError = '';
@@ -739,10 +748,15 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
     this.cd.markForCheck();
 
     try {
+      current();
       const response = await this.management.rotateDeviceKeyV2(
         context,
         this.rotateIdempotencyKey,
       );
+      current();
+      if (response.status !== 200 || response.data.logicalDeviceId !== context.logicalDeviceId
+        || response.data.credentialVersion !== context.credentialVersion + 1
+        || !response.data.locator || response.data.locator === context.locator) throw Error('DEVICE_KEY_CONTEXT_CHANGED');
 
       this.applyContext(response.data);
 
@@ -750,10 +764,22 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
       this.keyVisible = true;
       this.rotateIdempotencyKey = '';
 
+      await this.noticeService.showToast('设备 Key 已刷新，旧 Key 已失效').catch(() => undefined);
+      try {
+        if (Capacitor.isNativePlatform()) await invalidateKnownCredentialRoot(
+          new CapacitorBleControllerCredentialStore(current), context.logicalDeviceId, current,
+          { cloudCredentialVersion: context.credentialVersion },
+        );
+      } catch {
+        current();
+        this.keyError = '设备 Key 已刷新；本机蓝牙授权记录待核对，勿重复刷新 Key';
+      }
+      current();
       await this.userService.getAllInfo().catch(() => false);
+      current();
       this.bindDevice();
-      await this.noticeService.showToast('设备 Key 已刷新，旧 Key 已失效');
     } catch (error) {
+      try { current(); } catch { return; }
       // A timeout can happen after commit; a retry must keep the same request id.
       this.keyError = this.keyErrorMessage(error, '刷新失败；重试会继续同一笔刷新事务');
     } finally {
@@ -1074,15 +1100,17 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
         const retirement = new WiFiProvRetirement(new CapacitorWiFiProvAllocationStore(current),
           new CapacitorBleControllerCredentialStore(current), this.management, current);
 
-        const { response: result, allocationCleanupPending } = await retirement.removeOwned(id);
-
-        this.clearSecret();
-
-        await this.noticeService.showToast(allocationCleanupPending
-          ? '云端授权已撤销，本机配网记录清理未完成；重置设备后再次配网可重试清理'
-          : result.data.brokerCleanupPending || result.data.realtimeRefreshPending
-          ? '云端授权已撤销，通信清理中；本地权限尚未确认清除'
-          : '设备已从云端移除；本地权限尚未确认清除');
+        let confirmation: Promise<void> | undefined;
+        const { allocationCleanupPending } = await retirement.removeOwned(id, result => {
+          current();
+          this.clearSecret(); this.cd.markForCheck();
+          confirmation = this.noticeService.showToast(this.removalConfirmationMessage(result));
+          void confirmation.catch(() => undefined);
+        });
+        await confirmation?.catch(() => undefined);
+        if (allocationCleanupPending) await this.noticeService.showToast(
+          '设备已移除，本机授权或未决记录待核对；其它设备卡不受影响',
+        );
 
         return true;
       }
@@ -1102,6 +1130,14 @@ export class DeviceSettingsPage implements OnInit, OnDestroy {
 
       return false;
     }
+  }
+
+  private removalConfirmationMessage(result: DeviceRemovalResponse): string {
+    return result.data.rootDisposition === 'retained_for_other_registration'
+      ? '设备已移除；同一设备的其它设备卡保留，本地权限尚未确认清除'
+      : result.data.brokerCleanupPending || result.data.realtimeRefreshPending
+        ? '云端授权已撤销，通信清理中；本地权限尚未确认清除'
+        : '设备已从云端移除；本地权限尚未确认清除';
   }
 
   private applyContext(context: DeviceKeyContext): void {

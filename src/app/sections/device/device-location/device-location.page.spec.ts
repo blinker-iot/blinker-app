@@ -9,12 +9,15 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { API } from '../../../configs/api.config';
 import { ServerInterceptor } from '../../../core/injectable/server.interceptor';
 import { DeviceLocationRecord } from '../../../core/device-v2/device-location';
+import { DeviceLocationTelemetryLatest } from '../../../core/device-v2/device-location-telemetry';
+import { DeviceNetworkLocation } from '../../../core/device-v2/device-network-location';
 import { DeviceUiPort, DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
 import { LocationMapComponent, Wgs84MapPoint } from '../../../core/components/location-map/location-map.component';
 import { AppVisibilityService } from '../../../core/services/app-visibility.service';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceService } from '../../../core/services/device.service';
 import { PhoneLocationError, PhoneLocationService } from '../../../core/services/phone-location.service';
+import { DeviceV2NetworkLocationService } from '../../../core/services/device-v2-network-location.service';
 import { HomeCardPreferencesStore } from '../../../home/device-card-preferences';
 import { DeviceLocationPage } from './device-location.page';
 
@@ -29,6 +32,7 @@ class TestLocationMapComponent {
   @Input() name = '';
   @Input() editable = false;
   @Input() active = true;
+  @Input() followPoint = true;
   @Output() readonly pointChange = new EventEmitter<Wgs84MapPoint>();
 }
 async function render(options: { record?: DeviceLocationRecord; config?: Record<string, unknown>;
@@ -76,6 +80,46 @@ async function render(options: { record?: DeviceLocationRecord; config?: Record<
   const map = () => fixture.debugElement.query(By.directive(TestLocationMapComponent))?.componentInstance as TestLocationMapComponent | undefined;
   return { fixture, page, data, device, visibility, http, element, getCurrentPosition, browserLocation, saveDeviceConfig,
     deviceUi, stateSnapshot, map, settle, read, type, submit };
+}
+
+function reportedDetail(sample = true): DeviceLocationTelemetryLatest {
+  return { logicalDeviceId: id, source: 'device-gnss', coordinateSystem: 'WGS84',
+    capability: { codec: 'device-gnss-v1', endpointId: 3, manifestFingerprint: 'a'.repeat(64) },
+    sample: sample ? { latitudeE7: 0, longitudeE7: 0, horizontalAccuracyCm: null, capturedAtUtcMillis: null,
+      timeQuality: 0, ageMillisAtReceipt: 0, receivedAt: Date.now() } : null,
+    ageMillis: sample ? 0 : null, fresh: sample };
+}
+async function showReported(f: Awaited<ReturnType<typeof render>>, detail: DeviceLocationTelemetryLatest) {
+  f.element.querySelector<HTMLButtonElement>('.device-location-source')!.click(); await f.settle();
+  f.http.expectOne(API.DEVICE_V2.LOCATION_LATEST(id)).flush({ status: 200, data: detail }, { headers: { 'Cache-Control': 'no-store' } });
+  await f.settle();
+  if (detail.capability) {
+    const open = f.http.expectOne(API.DEVICE_V2.LOCATION_LEASE(id));
+    expect(open.request.body).toMatchObject({ operation: 'open', intervalMs: 5000 });
+    open.flush({ status: 200, data: { logicalDeviceId: id, leaseId: open.request.body.leaseId, phase: 'active',
+      intervalMs: 5000, expiresAt: Date.now() + 30000, leaseMs: 30000 } }, { headers: { 'Cache-Control': 'no-store' } });
+    await f.settle();
+  }
+}
+async function closeReported(f: Awaited<ReturnType<typeof render>>) {
+  f.page.ionViewWillLeave(); await f.settle();
+  const close = f.http.expectOne(API.DEVICE_V2.LOCATION_LEASE(id)); expect(close.request.body.operation).toBe('close');
+  close.flush({ status: 200, data: { logicalDeviceId: id, leaseId: close.request.body.leaseId, phase: 'closed',
+    intervalMs: 5000, expiresAt: Date.now(), leaseMs: 0 } }, { headers: { 'Cache-Control': 'no-store' } });
+  await f.settle();
+}
+
+function networkDetail(): DeviceNetworkLocation {
+  const now = Date.now();
+  return { logicalDeviceId: id, source: 'network-ip', status: 'available',
+    region: { countryCode: 'CN', country: '中国', subdivision: '浙江省', city: '杭州' },
+    observedAt: now - 1000, queriedAt: now, dataVersion: '2026-10',
+    attribution: { text: 'IP Geolocation by DB-IP', url: 'https://db-ip.com', license: 'CC BY 4.0' },
+    coordinateSystem: null, coordinates: null };
+}
+async function chooseNetwork(f: Awaited<ReturnType<typeof render>>) {
+  f.element.querySelector<HTMLButtonElement>('.network-location-source')!.click();
+  await f.settle();
 }
 
 describe('Device location server-authoritative manual production template', () => {
@@ -459,5 +503,209 @@ describe('Device location server-authoritative manual production template', () =
     expect(f.deviceUi.watchState).toHaveBeenCalledTimes(2);
     f.page.ionViewWillLeave(); await f.settle(); expect(f.stateSnapshot.observers).toHaveLength(0); expect(f.page.summary).toEqual([]);
     f.http.expectNone(() => true);
+  });
+
+  it('opens reported location only by explicit choice and keeps manual location separate and read-only', async () => {
+    const f = await render({ record: recorded });
+    f.http.expectNone(API.DEVICE_V2.LOCATION_LATEST(id));
+    await showReported(f, reportedDetail());
+    expect(f.page.record).toEqual(recorded); expect(f.map()!.point).toEqual({ latitude: 0, longitude: 0 });
+    expect(f.map()!.editable).toBe(false); expect(f.map()!.followPoint).toBe(false);
+    expect(f.page.canMutate).toBe(false); await f.page.clearLocation(); await f.page.save();
+    expect(f.element.querySelector('form, .coordinate-entry, .setup, .remove')).toBeNull();
+    expect(f.element.querySelector('.reported-status')!.textContent).toContain('最近位置');
+    expect(f.element.querySelector('.reported-details')!.textContent).toContain('WGS84');
+    expect(f.element.querySelector('.reported-details')!.textContent).toContain('未知');
+    expect(f.getCurrentPosition).not.toHaveBeenCalled(); expect(f.saveDeviceConfig).not.toHaveBeenCalled();
+    expect(f.page.locationTime(Number.MAX_SAFE_INTEGER)).toBe('未知');
+    f.http.expectNone(() => true); await closeReported(f);
+    expect(f.map()).toBeUndefined(); f.http.expectNone(() => true);
+  });
+
+  it('does not open or map unsupported capability, or turn a no-fix response into a zero point', async () => {
+    const f = await render();
+    await showReported(f, { ...reportedDetail(false), capability: null });
+    expect(f.page.reported.phase).toBe('unsupported'); expect(f.map()!.active).toBe(false);
+    expect(f.map()!.point).toBeNull(); f.http.expectNone(API.DEVICE_V2.LOCATION_LEASE(id));
+    f.page.refreshReported(); await f.settle();
+    f.http.expectOne(API.DEVICE_V2.LOCATION_LATEST(id)).flush({ status: 200, data: reportedDetail(false) }, { headers: { 'Cache-Control': 'no-store' } });
+    await f.settle();
+    const open = f.http.expectOne(API.DEVICE_V2.LOCATION_LEASE(id));
+    open.flush({ status: 200, data: { logicalDeviceId: id, leaseId: open.request.body.leaseId, phase: 'active',
+      intervalMs: 5000, expiresAt: Date.now() + 30000, leaseMs: 30000 } }, { headers: { 'Cache-Control': 'no-store' } });
+    await f.settle(); expect(f.page.reportedTitle).toBe('等待设备定位'); expect(f.map()!.point).toBeNull();
+    expect(f.getCurrentPosition).not.toHaveBeenCalled(); await closeReported(f);
+  });
+
+  it('keeps a fenced last point old even when its reported age is small and precision is explicitly zero', async () => {
+    const f = await render({ record: recorded }), detail = reportedDetail();
+    detail.fresh = false; detail.sample!.horizontalAccuracyCm = 0;
+    await showReported(f, detail);
+    expect(f.page.reportedTitle).toBe('上次位置'); expect(f.page.reportedAccuracy).toBe('0 米');
+    expect(f.map()!.point).toEqual({ latitude: 0, longitude: 0 });
+    expect(f.page.record).toEqual(recorded); await closeReported(f);
+  });
+
+  it('keeps a failed reported read terminal across background return until explicit refresh', async () => {
+    const f = await render(); f.page.selectSource('device'); await f.settle();
+    f.http.expectOne(API.DEVICE_V2.LOCATION_LATEST(id)).flush({ status: 503 }, { status: 503, statusText: 'Unavailable' });
+    await f.settle(); expect(f.page.reported.phase).toBe('error');
+    f.visibility.active.next(false); await f.settle(); f.visibility.active.next(true); await f.settle();
+    f.http.expectNone(() => true); expect(f.page.reported.phase).toBe('error');
+    expect(f.element.querySelector<HTMLButtonElement>('.reported-refresh')!.disabled).toBe(false);
+    f.element.querySelector<HTMLButtonElement>('.reported-refresh')!.click(); await f.settle();
+    f.http.expectOne(API.DEVICE_V2.LOCATION_LATEST(id)).flush({ status: 200,
+      data: { ...reportedDetail(false), capability: null } }, { headers: { 'Cache-Control': 'no-store' } });
+    await f.settle(); expect(f.page.reported.phase).toBe('unsupported'); f.http.expectNone(() => true);
+  });
+
+  it('releases the private watch on background and returns with a new lease without touching manual CAS', async () => {
+    const f = await render({ record: recorded }); await showReported(f, reportedDetail());
+    f.visibility.active.next(false); await f.settle(); expect(f.map()!.active).toBe(false);
+    const close = f.http.expectOne(API.DEVICE_V2.LOCATION_LEASE(id));
+    expect(close.request.body.operation).toBe('close');
+    close.flush({ status: 200, data: { logicalDeviceId: id, leaseId: close.request.body.leaseId, phase: 'closed',
+      intervalMs: 5000, expiresAt: Date.now(), leaseMs: 0 } }, { headers: { 'Cache-Control': 'no-store' } });
+    await f.settle(); f.visibility.active.next(true); await f.settle();
+    f.http.expectNone(url());
+    f.http.expectOne(API.DEVICE_V2.LOCATION_LATEST(id)).flush({ status: 200, data: reportedDetail() }, { headers: { 'Cache-Control': 'no-store' } });
+    await f.settle(); const open = f.http.expectOne(API.DEVICE_V2.LOCATION_LEASE(id));
+    expect(open.request.body.leaseId).not.toBe(close.request.body.leaseId);
+    open.flush({ status: 200, data: { logicalDeviceId: id, leaseId: open.request.body.leaseId, phase: 'active',
+      intervalMs: 5000, expiresAt: Date.now() + 30000, leaseMs: 30000 } }, { headers: { 'Cache-Control': 'no-store' } });
+    await f.settle(); expect(f.map()!.active).toBe(true); expect(f.getCurrentPosition).not.toHaveBeenCalled();
+    await closeReported(f);
+  });
+
+  it('clears private data on owner revocation without borrowing the new permission to close', async () => {
+    const f = await render(); await showReported(f, reportedDetail());
+    f.device.config.isShared = true; f.data.deviceDataLoader.next(true); await f.settle();
+    expect(f.page.state).toBe('shared'); expect(f.page.reportedMapPoint).toBeNull(); expect(f.map()).toBeUndefined();
+    f.page.selectSource('device'); f.page.refreshReported(); f.http.expectNone(() => true);
+  });
+
+  it('selects network reference without querying, then performs one explicit read without mapping or changing manual state', async () => {
+    const f = await render({ record: recorded }), detail = networkDetail();
+    f.http.expectNone(API.DEVICE_V2.LOCATION_NETWORK(id));
+    await chooseNetwork(f);
+    expect(f.page.locationSource).toBe('network'); expect(f.page.networkPhase).toBe('idle');
+    expect(f.page.networkLocation).toBeNull(); expect(f.page.point).toBeNull();
+    expect(f.map()!.active).toBe(false); expect(f.map()!.point).toBeNull();
+    expect(f.element.querySelector<HTMLElement>('.map-area')!.hidden).toBe(true);
+    expect(f.stateSnapshot.observers).toHaveLength(0); f.http.expectNone(() => true);
+    expect(f.element.querySelector('.network-panel')!.textContent).toContain('非 GPS');
+    f.element.querySelector<HTMLButtonElement>('.network-query')!.click(); await f.settle();
+    const request = f.http.expectOne(API.DEVICE_V2.LOCATION_NETWORK(id));
+    expect(request.request.method).toBe('GET'); expect(request.request.body).toBeNull();
+    expect(f.element.querySelector<HTMLButtonElement>('.network-query')!.disabled).toBe(true);
+    void f.page.queryNetwork(); f.http.expectNone(() => true);
+    request.flush({ status: 200, data: detail }, { headers: { 'Cache-Control': 'private, no-store' } }); await f.settle();
+    expect(f.page.networkPhase).toBe('done'); expect(f.page.networkLocation).toEqual(detail);
+    expect(f.element.querySelector('.network-details')!.textContent).toContain('杭州');
+    for (const text of ['中国', 'CN', '浙江省', '认证时网络出口', '观测时间', '查询时间']) {
+      expect(f.element.querySelector('.network-details')!.textContent).toContain(text);
+    }
+    const attribution = f.element.querySelector<HTMLAnchorElement>('.network-attribution a')!;
+    expect(attribution.getAttribute('href')).toBe('https://db-ip.com');
+    expect(attribution.textContent).toBe('IP Geolocation by DB-IP');
+    expect(attribution.rel).toContain('noopener'); expect(attribution.rel).toContain('noreferrer');
+    expect(f.element.querySelector('.network-attribution')!.textContent).toContain('CC BY 4.0');
+    expect(f.element.querySelector('.network-attribution')!.textContent).toContain('2026-10');
+    expect(f.page.canMutate).toBe(false); await f.page.save(); await f.page.clearLocation();
+    expect(f.page.record).toEqual(recorded); expect(f.page.longitude).toBe('120'); expect(f.page.latitude).toBe('30');
+    expect(f.element.querySelector('form, .coordinate-entry, .setup, .remove')).toBeNull();
+    expect(f.getCurrentPosition).not.toHaveBeenCalled(); expect(f.browserLocation).not.toHaveBeenCalled();
+    expect(f.saveDeviceConfig).not.toHaveBeenCalled(); f.http.expectNone(() => true);
+  });
+
+  it.each([false, true])('shows a genuine unknown network result without inventing a marker (origin=%s)', async hasOrigin => {
+    const f = await render({ record: recorded }); await chooseNetwork(f);
+    f.element.querySelector<HTMLButtonElement>('.network-query')!.click(); await f.settle();
+    const detail: DeviceNetworkLocation = { ...networkDetail(), status: 'unknown', region: null,
+      ...(hasOrigin ? {} : { observedAt: null, dataVersion: null }) };
+    f.http.expectOne(API.DEVICE_V2.LOCATION_NETWORK(id)).flush({ status: 200, data: detail },
+      { headers: { 'Cache-Control': 'private, no-store' } }); await f.settle();
+    expect(f.page.networkPhase).toBe('done'); expect(f.element.querySelector('.network-result')!.textContent).toContain('暂无可用的网络参考');
+    expect(f.element.querySelector('.network-details')!.textContent).not.toContain('杭州');
+    expect(f.element.querySelector('.network-attribution a')).not.toBeNull();
+    expect(f.map()!.active).toBe(false); expect(f.map()!.point).toBeNull(); expect(f.page.point).toBeNull();
+    expect(f.page.record).toEqual(recorded); f.http.expectNone(() => true);
+  });
+
+  it.each([503, 429, 404])('keeps a network %s failure readonly and requires an explicit query after background return', async status => {
+    const f = await render({ record: recorded }); await chooseNetwork(f);
+    f.element.querySelector<HTMLButtonElement>('.network-query')!.click(); await f.settle();
+    f.http.expectOne(API.DEVICE_V2.LOCATION_NETWORK(id)).flush({ status, errorCode: 'NETWORK_REFERENCE_UNAVAILABLE' },
+      { status, statusText: 'Unavailable' }); await f.settle();
+    expect(f.page.networkPhase).toBe('error'); expect(f.page.networkLocation).toBeNull(); expect(f.page.state).toBe('owner');
+    expect(f.element.querySelector('[role=alert]')!.textContent).toContain(status === 429 ? '较频繁' : '手动重试');
+    f.visibility.active.next(false); await f.settle(); f.visibility.active.next(true); await f.settle();
+    expect(f.page.networkLocation).toBeNull(); f.http.expectNone(() => true);
+    expect(f.element.querySelector<HTMLButtonElement>('.network-query')!.disabled).toBe(false);
+    f.element.querySelector<HTMLButtonElement>('.network-query')!.click(); await f.settle();
+    f.http.expectOne(API.DEVICE_V2.LOCATION_NETWORK(id)).flush({ status: 200, data: networkDetail() },
+      { headers: { 'Cache-Control': 'private, no-store' } }); await f.settle();
+    expect(f.page.networkPhase).toBe('done'); expect(f.page.networkError).toBe('');
+    expect(f.page.point).toBeNull(); expect(f.page.canMutate).toBe(false); f.http.expectNone(() => true);
+  });
+
+  it.each(['background', 'source', 'leave', 'destroy'] as const)('aborts an in-flight network read on %s without retry or implicit lease', async mode => {
+    const f = await render({ record: recorded }); await chooseNetwork(f);
+    f.element.querySelector<HTMLButtonElement>('.network-query')!.click(); await f.settle();
+    const request = f.http.expectOne(API.DEVICE_V2.LOCATION_NETWORK(id));
+    if (mode === 'background') f.visibility.active.next(false);
+    else if (mode === 'source') f.page.selectSource('installation');
+    else if (mode === 'leave') f.page.ionViewWillLeave();
+    else f.fixture.destroy();
+    await f.settle(); expect(request.cancelled).toBe(true); expect(f.page.networkLocation).toBeNull();
+    expect(f.page.networkPhase).toBe('idle');
+    if (mode === 'background') {
+      f.visibility.active.next(true); await f.settle();
+      expect(f.element.querySelector<HTMLButtonElement>('.network-query')!.disabled).toBe(false);
+    } else if (mode === 'source') {
+      await chooseNetwork(f); expect(f.page.networkPhase).toBe('idle');
+    }
+    f.http.expectNone(() => true); expect(f.getCurrentPosition).not.toHaveBeenCalled();
+  });
+
+  it.each([401, 403])('clears network data on HTTP %s without auth refresh or replay', async status => {
+    const f = await render({ record: recorded }); await chooseNetwork(f);
+    f.element.querySelector<HTMLButtonElement>('.network-query')!.click(); await f.settle();
+    f.http.expectOne(API.DEVICE_V2.LOCATION_NETWORK(id)).flush({ status, errorCode: status === 401 ? 'AUTH_TOKEN_EXPIRED' : 'DEVICE_V2_NETWORK_LOCATION_ACCESS_CHANGED' },
+      { status, statusText: status === 401 ? 'Unauthorized' : 'Forbidden' }); await f.settle();
+    expect(f.page.state).toBe('unavailable'); expect(f.page.networkLocation).toBeNull();
+    expect(f.element.textContent).toContain(status === 401 ? '重新登录' : '无位置访问权限');
+    expect(f.element.querySelector('.network-panel, app-location-map')).toBeNull();
+    await f.page.queryNetwork(); f.http.expectNone(API.AUTH.REFRESH); f.http.expectNone(() => true);
+  });
+
+  it.each(['account', 'epoch', 'owner'] as const)('drops a late network response after %s changes even if transport ignores cancellation', async mode => {
+    const f = await render({ record: recorded }); await chooseNetwork(f);
+    let resolve!: (detail: DeviceNetworkLocation) => void;
+    const service = TestBed.inject(DeviceV2NetworkLocationService);
+    const pending = vi.spyOn(service, 'read').mockImplementation(() => new Promise(done => { resolve = done; }));
+    f.element.querySelector<HTMLButtonElement>('.network-query')!.click(); await f.settle();
+    const signal = pending.mock.calls[0][1];
+    if (mode === 'account') { f.data.auth!.uuid = 'another-owner'; f.data.authDataChanged.next(); }
+    else if (mode === 'epoch') { f.data.sessionEpoch++; f.data.authDataChanged.next(); }
+    else { f.device.config.isShared = true; f.data.deviceDataLoader.next(true); }
+    await f.settle(); expect(signal.aborted).toBe(true);
+    resolve(networkDetail()); await f.settle();
+    expect(f.page.networkLocation).toBeNull(); expect(f.page.record).toBeNull();
+    expect(f.page.state).toBe(mode === 'owner' ? 'shared' : 'unavailable');
+    expect(f.element.textContent).not.toContain('杭州'); expect(f.map()).toBeUndefined();
+    await f.page.queryNetwork(); f.http.expectNone(() => true);
+  });
+
+  it('clears a completed network result when hidden and does not fetch it again on foreground return', async () => {
+    const f = await render({ record: recorded }); await chooseNetwork(f);
+    f.element.querySelector<HTMLButtonElement>('.network-query')!.click(); await f.settle();
+    f.http.expectOne(API.DEVICE_V2.LOCATION_NETWORK(id)).flush({ status: 200, data: networkDetail() },
+      { headers: { 'Cache-Control': 'private, no-store' } }); await f.settle();
+    expect(f.page.networkLocation?.region?.city).toBe('杭州');
+    f.visibility.active.next(false); await f.settle(); expect(f.page.networkLocation).toBeNull();
+    f.visibility.active.next(true); await f.settle(); expect(f.page.networkLocation).toBeNull();
+    expect(f.element.querySelector('.network-details')).toBeNull(); expect(f.map()!.active).toBe(false);
+    expect(f.element.querySelector<HTMLButtonElement>('.network-query')!.disabled).toBe(false); f.http.expectNone(() => true);
   });
 });

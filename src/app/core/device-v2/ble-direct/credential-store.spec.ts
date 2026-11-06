@@ -22,6 +22,7 @@ import {
   CapacitorBleControllerCredentialStore,
 } from './credential-store';
 import { base64UrlEncode } from './wire';
+import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 
 describe('BLE controller credential storage', () => {
   const accountA = { authority: 'https://gateway.test', accountId: 'account-a' };
@@ -36,6 +37,88 @@ describe('BLE controller credential storage', () => {
     credentialVersion: 1, permissions: 15,
     cloudContext: { credentialVersion: 2, locator: 'AQEBAQEBAQEBAQEBAQEBAQ' },
     intentId: new Uint8Array(), commitId: new Uint8Array(), receipt: new Uint8Array(),
+  });
+
+  const enrollment = (): BleControllerCredential => ({
+    ...wifiPending('ble_AAECAwQFBgcICQoLDA0ODw'), source: 'enrollment', cloudContext: undefined,
+    intentId: new Uint8Array(16).fill(7), commitId: new Uint8Array(16).fill(8), receipt: new Uint8Array(16).fill(9),
+  });
+
+  it('rekey CAS changes only the confirmed Cloud metadata and preserves the original Admin', async () => {
+    const store = new CapacitorBleControllerCredentialStore(() => accountA);
+    const value = { ...wifiPending(), state: 'active' as const };
+    await store.save(value);
+    const expected = { deviceInstanceId: base64UrlEncode(value.deviceInstanceId), accessEpoch: value.accessEpoch,
+      controllerId: base64UrlEncode(value.controllerId), adminVersion: value.credentialVersion, previous: value.cloudContext! };
+    const next = { credentialVersion: 3, locator: base64UrlEncode(new Uint8Array(16).fill(4)) };
+    const original = JSON.parse([...secureValues.values()][0]);
+    await expect(store.recordWiFiProvRekey(value.logicalDeviceId, { ...expected, adminVersion: 2 }, next, () => {}))
+      .rejects.toThrow('REKEY_CONTEXT_CHANGED');
+    await store.recordWiFiProvRekey(value.logicalDeviceId, expected, next, () => {});
+    const stored = JSON.parse([...secureValues.values()][0]);
+    expect(stored).toEqual({ ...original, cloudContext: next });
+    await expect(store.recordWiFiProvRekey(value.logicalDeviceId, expected, next, () => {})).rejects.toThrow('REKEY_CONTEXT_CHANGED');
+  });
+
+  it('finds legacy active WiFiProv for provisioning without widening WiFiProv recovery filters', async () => {
+    const store = new CapacitorBleControllerCredentialStore(() => accountA);
+    const value = { ...wifiPending(), state: 'active' as const, cloudContext: undefined };
+    await store.save(value); const before = [...secureValues.entries()];
+    await expect(store.findWiFiProv(value.deviceInstanceId)).resolves.toBeUndefined();
+    await expect(store.findPending(value.deviceInstanceId)).resolves.toBeUndefined();
+    const found = await store.findForProvisioning(value.deviceInstanceId);
+    expect(found?.logicalDeviceId).toBe(value.logicalDeviceId); expect(found?.state).toBe('active');
+    expect(found?.cloudContext).toBeUndefined(); found?.controllerSecret.fill(0);
+    expect([...secureValues.entries()]).toEqual(before);
+  });
+
+  it('finds enrollment provisioning records only in the same account and rejects an in-flight scope change', async () => {
+    let scope = accountA;
+    const store = new CapacitorBleControllerCredentialStore(() => scope), value = enrollment();
+    await store.save(value); const before = [...secureValues.entries()];
+    const found = await store.findForProvisioning(value.deviceInstanceId);
+    expect(found?.source).toBe('enrollment'); expect(found?.state).toBe('pending'); found?.controllerSecret.fill(0);
+    const pending = await store.findPending(value.deviceInstanceId);
+    expect(pending?.logicalDeviceId).toBe(value.logicalDeviceId); pending?.controllerSecret.fill(0);
+    await expect(store.findWiFiProv(value.deviceInstanceId)).resolves.toBeUndefined();
+    await store.save({ ...value, state: 'active' });
+    const active = await store.findForProvisioning(value.deviceInstanceId);
+    expect(active?.state).toBe('active'); active?.controllerSecret.fill(0);
+    await expect(store.findPending(value.deviceInstanceId)).resolves.toBeUndefined();
+    await expect(new CapacitorBleControllerCredentialStore(() => accountB).findForProvisioning(value.deviceInstanceId))
+      .resolves.toBeUndefined();
+    await expect(new CapacitorBleControllerCredentialStore(() => ({ ...accountA, authority: 'https://other.test' }))
+      .findForProvisioning(value.deviceInstanceId)).resolves.toBeUndefined();
+    const saved = [...secureValues.entries()];
+    vi.mocked(SecureStorage.getItem).mockImplementationOnce(async (key: string) => {
+      scope = accountB; return secureValues.get(key) ?? null;
+    });
+    await expect(store.findForProvisioning(value.deviceInstanceId)).rejects.toThrow('SCOPE_CHANGED');
+    expect([...secureValues.entries()]).toEqual(saved); expect(before).toHaveLength(1);
+  });
+
+  it('rejects cross-source ambiguity or malformed records without rewriting storage and clears decoded matches', async () => {
+    const store = new CapacitorBleControllerCredentialStore(() => accountA), wifi = wifiPending(), enrolled = enrollment();
+    await store.save(wifi); await store.save(enrolled); const before = [...secureValues.entries()];
+    const wifiMatch = await store.findWiFiProv(wifi.deviceInstanceId), enrollmentMatch = await store.findPending(wifi.deviceInstanceId);
+    expect(wifiMatch?.source).toBe('wifiprov'); expect(enrollmentMatch?.source).toBe('enrollment');
+    wifiMatch?.controllerSecret.fill(0); enrollmentMatch?.controllerSecret.fill(0);
+    const fill = Uint8Array.prototype.fill, cleared: Uint8Array[] = [];
+    const spy = vi.spyOn(Uint8Array.prototype, 'fill').mockImplementation(function (this: Uint8Array, value, start, end) {
+      const result = fill.call(this, value, start, end);
+      if (value === 0 && this.length === 32) cleared.push(this);
+      return result;
+    });
+    try {
+      await expect(store.findForProvisioning(wifi.deviceInstanceId)).rejects.toThrow('AMBIGUOUS');
+      expect(cleared).toHaveLength(1); expect(cleared[0].every(value => value === 0)).toBe(true);
+      expect([...secureValues.entries()]).toEqual(before);
+      secureValues.set(before[1][0], 'malformed');
+      const malformed = [...secureValues.entries()];
+      await expect(store.findForProvisioning(wifi.deviceInstanceId)).rejects.toThrow();
+      expect(cleared).toHaveLength(2); expect(cleared[1].every(value => value === 0)).toBe(true);
+      expect([...secureValues.entries()]).toEqual(malformed);
+    } finally { spy.mockRestore(); }
   });
 
   it('persists WiFiProv pending before installation, without mixing it into BLE enrollment recovery', async () => {

@@ -127,14 +127,14 @@ export class DeviceTaskClient {
   }
   // Catalog/Target already authenticate the current table header. Keep that
   // header local to this read, never in the capability cache or mutation path.
-  async snapshot(id: string, signal = new AbortController().signal): Promise<{ catalog: TaskCatalog; table: TaskTable }> {
-    const account = this.capture(), { catalog, revision, count } = await this.readCatalog(id, signal);
+  async snapshot(id: string, signal = new AbortController().signal, onCapacity?: (capacity: number) => void): Promise<{ catalog: TaskCatalog; table: TaskTable }> {
+    const account = this.capture(), { catalog, revision, count } = await this.readCatalog(id, signal, onCapacity);
     signal.throwIfAborted(); this.assertAccount(account);
     const table = await this.readRecords(id, revision, count, signal, account);
     signal.throwIfAborted(); this.assertAccount(account);
     return { catalog, table };
   }
-  private async readCatalog(id: string, signal: AbortSignal): Promise<{ catalog: TaskCatalog; revision: number; count: number }> {
+  private async readCatalog(id: string, signal: AbortSignal, onCapacity?: (capacity: number) => void): Promise<{ catalog: TaskCatalog; revision: number; count: number }> {
     const account = this.capture(), key = this.key(account, id), generation = this.catalogGeneration;
     try {
       const metadata = await this.query(id, { operation: 'catalog', fingerprint: null, index: null }, signal);
@@ -142,6 +142,10 @@ export class DeviceTaskClient {
       this.assertAccount(account);
       if (metadata.evidence !== 'fresh' || metadata.result?.kind !== 'catalog') throw new Error('TASK_CATALOG_UNAVAILABLE');
       const { capacity, total, fingerprint } = metadata.result, cached = this.catalogs.get(key);
+      // Display-only evidence for this read. Never expose a partial directory,
+      // table revision or write authority when a later page cannot be read.
+      onCapacity?.(capacity);
+      signal.throwIfAborted(); this.assertAccount(account);
       let { tableRevision: revision, count } = metadata.result;
       if (cached?.capacity === capacity && cached.fingerprint === fingerprint && cached.targets.length === total) {
         this.rememberCatalog(key, cached); return { catalog: cached, revision, count };

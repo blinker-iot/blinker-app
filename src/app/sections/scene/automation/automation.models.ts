@@ -94,18 +94,20 @@ export const automationExecutionText: Record<AutomationExecution['state'], strin
   acknowledged: '设备已确认', rejected: '设备拒绝', outcome_unknown: '结果未知，不自动重发', expired: '未发送，已过期', cancelled: '未发送，已取消' };
 export function automationErrorText(error: unknown): string {
   const messages: Record<string, string> = {
+    NETWORK_ERROR: '网络连接异常，请检查网络后手动重新读取。若有未确认请求，仍会保留，不会自动重发。',
+    GATEWAY_TIMEOUT: '服务器响应超时，请稍后手动重新读取。若有未确认请求，仍会保留，不会自动重发。',
     AUTOMATION_UNAVAILABLE: '服务器尚未开启自动化或暂时不可用。', HTTP_404: '当前服务器尚未提供自动化管理入口。',
     AUTOMATION_FORBIDDEN: '仅设备所属账号可管理自动化，分享权限不包含规则管理。',
     AUTOMATION_REVISION: '规则版本已变化，请查询当前配置后明确确认，不会自动覆盖。',
     AUTOMATION_PENDING_CREATE: '已有未确认的新建请求，请先核对原规则，不能换一个 ID 重建。',
     AUTOMATION_PENDING_INTENT: '此规则已有未确认操作，请先查询原请求。',
-    AUTOMATION_CAPACITY: '规则名额已满，可先停用并退役不再使用的规则。',
+    AUTOMATION_CAPACITY: '自动化容量已达上限。停用不会释放名额；未达到账号上限时，请联系管理员核对服务容量。',
     AUTOMATION_STORAGE_CAPACITY: '自动化保留记录已达试点上限，不能通过删除历史绕过。',
     AUTOMATION_CAPABILITY_CHANGED: '设备能力已变化，请重新读取设备能力，再核对规则端点。',
     AUTOMATION_CAPABILITY_REQUIRED: '设备当前能力或目标值尚未确认，请确认在线、刷新能力并核对目标范围。',
     AUTOMATION_PROFILE: '当前试点仅支持同账号的普通 WiFi 设备，不包含网关和子设备。',
     AUTOMATION_DUPLICATE_RULE: '已有相同规则，请使用现有规则，不重复创建。',
-    AUTOMATION_TARGET_CONFLICT: '目标设备已有启用的自动化，请先停用相关规则或选择其他设备。',
+    AUTOMATION_TARGET_CONFLICT: '此目标属性存在可能同时触发的不同动作，请调整触发条件或目标。',
     AUTOMATION_CHAIN_FORBIDDEN: '当前试点不支持连锁自动化，请选择独立的源和目标。',
     AUTOMATION_RATE_LIMITED: '请求过于频繁，请稍后再操作。',
     AUTOMATION_JOURNAL_UNAVAILABLE: '请求日志无法持久保存或清理，请检查存储空间和 WebView；不会换 ID 重发。',

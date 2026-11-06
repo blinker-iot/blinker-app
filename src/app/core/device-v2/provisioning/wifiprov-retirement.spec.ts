@@ -7,7 +7,7 @@ function harness() {
   let current = true;
   const store = { findDevice: vi.fn(async () => instance), load: vi.fn(async () => ({ context: { logicalDeviceId: id } })),
     complete: vi.fn().mockResolvedValue(undefined) };
-  const credentials = { load: vi.fn().mockResolvedValue(undefined), remove: vi.fn().mockResolvedValue(undefined) };
+  const credentials = { removeDeletedRegistration: vi.fn().mockResolvedValue({ cleanupPending: false }) };
   const management = { deleteDeviceV2: vi.fn(async () => ({ status: 202, data: { logicalDeviceId: id,
     state: 'deleted', cloudAuthorization: 'revoked', localAccess: 'not_confirmed' } })),
     readDeviceStateV2: vi.fn().mockResolvedValue('deleted') };
@@ -17,22 +17,16 @@ function harness() {
   const confirm = vi.fn().mockResolvedValue(true);
   return { client, store, credentials, management, confirm, leave: () => { current = false; } };
 }
-function credential() {
-  return { source: 'wifiprov', logicalDeviceId: id, deviceInstanceId: instance.slice(),
-    controllerSecret: new Uint8Array(32).fill(3), presenceKeys: [{ key: new Uint8Array(32).fill(4) }] };
-}
-
 describe('WiFiProv exact allocation retirement', () => {
   it('confirms cloud deletion before retiring only its matching native Admin and journal', async () => {
-    const h = harness(), value = credential(); h.credentials.load.mockResolvedValue(value);
+    const h = harness();
     const result = await h.client.removeOwned(id);
     expect(result.allocationCleanupPending).toBe(false);
     expect(h.management.deleteDeviceV2).toHaveBeenCalledExactlyOnceWith(id);
-    expect(h.credentials.remove).toHaveBeenCalledExactlyOnceWith(id);
+    expect(h.credentials.removeDeletedRegistration).toHaveBeenCalledExactlyOnceWith(id, instance);
     expect(h.store.complete).toHaveBeenCalledExactlyOnceWith(instance, id);
-    expect(h.management.deleteDeviceV2.mock.invocationCallOrder[0]).toBeLessThan(h.credentials.remove.mock.invocationCallOrder[0]);
-    expect(h.credentials.remove.mock.invocationCallOrder[0]).toBeLessThan(h.store.complete.mock.invocationCallOrder[0]);
-    expect(value.controllerSecret.some(Boolean)).toBe(false);
+    expect(h.management.deleteDeviceV2.mock.invocationCallOrder[0]).toBeLessThan(h.credentials.removeDeletedRegistration.mock.invocationCallOrder[0]);
+    expect(h.credentials.removeDeletedRegistration.mock.invocationCallOrder[0]).toBeLessThan(h.store.complete.mock.invocationCallOrder[0]);
     expect(result.response.data.localAccess).toBe('not_confirmed');
   });
 
@@ -43,36 +37,43 @@ describe('WiFiProv exact allocation retirement', () => {
     await expect(h.client.removeOwned(id)).rejects.toThrow();
     expect(h.store.findDevice).not.toHaveBeenCalled();
     expect(h.store.complete).not.toHaveBeenCalled();
+    expect(h.credentials.removeDeletedRegistration).not.toHaveBeenCalled();
   });
 
-  it('does not touch an Admin if no allocation journal identifies this device', async () => {
+  it('retires only the independently deleted card when no WiFi allocation journal exists', async () => {
     const h = harness(); h.store.findDevice.mockResolvedValue(undefined as any);
     expect((await h.client.removeOwned(id)).allocationCleanupPending).toBe(false);
-    expect(h.credentials.load).not.toHaveBeenCalled();
+    expect(h.credentials.removeDeletedRegistration).toHaveBeenCalledExactlyOnceWith(id, undefined);
     expect(h.store.complete).not.toHaveBeenCalled();
   });
 
-  it.each(['source', 'instance', 'logical-id', 'remove-fails', 'journal-fails'])('retains retry evidence after %s', async failure => {
-    const h = harness(), value = credential();
-    if (failure === 'source') value.source = 'enrollment';
-    if (failure === 'instance') value.deviceInstanceId.fill(2);
-    if (failure === 'logical-id') value.logicalDeviceId = 'another';
-    h.credentials.load.mockResolvedValue(value);
-    if (failure === 'remove-fails') h.credentials.remove.mockRejectedValue(Error('disk'));
+  it.each(['local-pending', 'allocation-conflict', 'remove-fails', 'journal-fails'])('retains retry evidence after %s', async failure => {
+    const h = harness();
+    if (failure === 'local-pending') h.credentials.removeDeletedRegistration.mockResolvedValue({ cleanupPending: true });
+    if (failure === 'allocation-conflict') h.store.load.mockResolvedValue({ context: { logicalDeviceId: 'other' } } as any);
+    if (failure === 'remove-fails') h.credentials.removeDeletedRegistration.mockRejectedValue(Error('disk'));
     if (failure === 'journal-fails') h.store.complete.mockRejectedValue(Error('disk'));
     expect((await h.client.removeOwned(id)).allocationCleanupPending).toBe(true);
     if (failure !== 'journal-fails') expect(h.store.complete).not.toHaveBeenCalled();
-    if (!failure.endsWith('fails')) expect(h.credentials.remove).not.toHaveBeenCalled();
-    expect(value.controllerSecret.some(Boolean)).toBe(false);
+    if (failure === 'allocation-conflict') expect(h.credentials.removeDeletedRegistration).not.toHaveBeenCalled();
+  });
+
+  it('keeps an unresolved WiFi checkpoint but retires the deleted active card after confirmed deletion', async () => {
+    const h = harness();
+    h.store.load.mockResolvedValue({ context: { logicalDeviceId: id }, wifiUnknown: { attemptedAt: 1 } } as any);
+    const result = await h.client.removeOwned(id);
+    expect(result.response.data.state).toBe('deleted'); expect(result.allocationCleanupPending).toBe(true);
+    expect(h.credentials.removeDeletedRegistration).toHaveBeenCalledExactlyOnceWith(id, instance);
+    expect(h.store.complete).not.toHaveBeenCalled();
   });
 
   it('retries after Admin removal succeeded but journal deletion failed', async () => {
-    const h = harness(); h.credentials.load.mockResolvedValueOnce(credential());
+    const h = harness();
     h.store.complete.mockRejectedValueOnce(Error('disk'));
     expect((await h.client.removeOwned(id)).allocationCleanupPending).toBe(true);
     await h.client.recoverRemoved(info, h.confirm);
     expect(h.management.deleteDeviceV2).toHaveBeenCalledTimes(2);
-    expect(h.credentials.remove).toHaveBeenCalledTimes(1);
+    expect(h.credentials.removeDeletedRegistration).toHaveBeenCalledTimes(2);
     expect(h.store.complete).toHaveBeenCalledTimes(2);
     expect(h.confirm).toHaveBeenCalledOnce();
   });

@@ -1,5 +1,6 @@
 import { ChangeDetectorRef, Component, OnDestroy, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import {
   IonBackButton,
   IonButtons,
@@ -10,6 +11,7 @@ import {
 } from '@ionic/angular/standalone';
 import { PageLayoutWidget, reflowPageWidgets } from '../../../core/device-v2/page-layout';
 import { UI_THEMES, UiTheme } from '../../../core/device-v2/ui-theme';
+import { AppVisibilityService } from '../../../core/services/app-visibility.service';
 import { readDeviceTheme } from '../../../device/device-theme';
 import { PageLayoutPanelComponent, PanelAction, PanelCard } from '../../../device/v2/panel/page-layout-panel';
 import { numeric } from '../../../device/v2/widgets/widget-kit';
@@ -61,11 +63,20 @@ export class ComponentPreviewPage implements OnDestroy {
   readonly weatherPreview = createWeatherPreview();
   videoSettings: VideoPreviewSettings = { title: '实时视频', url: '', str: 'mjpg', mode: 1 };
   weatherSettings: WeatherPreviewSettings = { title: '城市天气', showMetrics: true, showForecast: true, showAlerts: true };
-  private readonly timer = setInterval(() => this.tick(), TICK_MS);
+  private timer?: ReturnType<typeof setInterval>;
+  private clockGeneration = 0;
+  private entered = false;
+  private active = false;
+  private destroyed = false;
+  private readonly visibilitySubscription: Subscription;
 
-  constructor(route: ActivatedRoute, private readonly cd: ChangeDetectorRef) {
+  constructor(route: ActivatedRoute, private readonly cd: ChangeDetectorRef, visibility: AppVisibilityService) {
     this.id = route.snapshot.paramMap.get('id') ?? '';
     this.theme = readDeviceTheme(this.id) ?? 'natural';
+    this.visibilitySubscription = visibility.active.subscribe(active => {
+      this.active = active;
+      this.syncClock();
+    });
   }
 
   get count(): number {
@@ -130,15 +141,38 @@ export class ComponentPreviewPage implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    clearInterval(this.timer);
+    this.destroyed = true;
+    this.visibilitySubscription.unsubscribe();
+    this.syncClock();
   }
 
   ionViewWillLeave(): void {
+    this.entered = false;
+    this.syncClock();
     this.videoPreview?.suspend();
   }
 
   ionViewDidEnter(): void {
+    this.entered = true;
+    this.syncClock();
     this.videoPreview?.resume();
+  }
+
+  // Ionic keeps cached pages alive. Only the visible foreground owns a clock;
+  // resuming starts a fresh period without replaying missed demo readings.
+  private syncClock(): void {
+    const running = this.entered && this.active && !this.destroyed;
+    if (running === (this.timer !== undefined)) return;
+
+    const generation = ++this.clockGeneration;
+    if (running) {
+      this.timer = setInterval(() => {
+        if (generation === this.clockGeneration) this.tick();
+      }, TICK_MS);
+    } else {
+      clearInterval(this.timer);
+      this.timer = undefined;
+    }
   }
 
   private commitDraft(card: PanelCard): PanelCard {

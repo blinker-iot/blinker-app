@@ -9,8 +9,15 @@ beforeEach(() => { environment.deployment = localCapabilities; });
 afterEach(() => { environment.deployment = originalDeployment; });
 
 describe('profile automation entry', () => {
+  it('does not invent a shared-device count when the received projection is unknown', () => {
+    const translate = vi.fn((key: string) => key);
+    const sharing = createProfileMenuGroups({ roomNum: 0, receivedDeviceNum: null }, translate)
+      .flatMap(group => group.items).find(item => item.id === 'sharing');
+    expect(sharing).toMatchObject({ route: '/share-manager', value: undefined });
+    expect(translate.mock.calls.some(([key]) => key.includes('DEVICE_COUNT'))).toBe(false);
+  });
   it('groups device management and connections without burying existing support routes', () => {
-    const groups = createProfileMenuGroups({ roomNum: 0, sharedDeviceNum: 0 }, (key, params) => `${key}:${JSON.stringify(params)}`);
+    const groups = createProfileMenuGroups({ roomNum: 0, receivedDeviceNum: 0 }, (key, params) => `${key}:${JSON.stringify(params)}`);
     expect(groups.map(group => group.id)).toEqual(['devices', 'connections', 'support']);
     expect(groups[0].title).toBe('PROFILE.DEVICE_MANAGEMENT:undefined');
     expect(groups[0].items.map(item => item.id)).toEqual(['room', 'automation', 'sharing']);
@@ -23,13 +30,13 @@ describe('profile automation entry', () => {
   it('hides closed automation while retaining non-directed sharing', () => {
     environment.deployment = cloudBetaCapabilities;
     try {
-      const items = createProfileMenuGroups({ roomNum: 0, sharedDeviceNum: 0 }, key => key).flatMap(group => group.items);
+      const items = createProfileMenuGroups({ roomNum: 0, receivedDeviceNum: 0 }, key => key).flatMap(group => group.items);
       expect(items.some(item => item.id === 'automation')).toBe(false);
       expect(items.find(item => item.id === 'sharing')?.route).toBe('/share-manager');
     } finally { environment.deployment = localCapabilities; }
   });
   it('opens the real automation list without a legacy scene count', () => {
-    const menu = createProfileMenuGroups({ roomNum: 2, sharedDeviceNum: 1 }, key => key);
+    const menu = createProfileMenuGroups({ roomNum: 2, receivedDeviceNum: 1 }, key => key);
     const automation = menu.flatMap(group => group.items).find(item => item.id === 'automation');
     expect(automation?.route).toBe('/automation-manager');
     expect(automation?.title).toBe('PROFILE.AUTOMATION');
@@ -37,7 +44,7 @@ describe('profile automation entry', () => {
   });
   it('adds only one automation entry when automation alone is available', () => {
     environment.deployment = cloudBetaCapabilities;
-    const stats = { roomNum: 2, sharedDeviceNum: 1 };
+    const stats = { roomNum: 2, receivedDeviceNum: 1 };
     const closed = createProfileMenuGroups(stats, key => key);
     environment.deployment = { ...cloudBetaCapabilities, automation: true };
     const opened = createProfileMenuGroups(stats, key => key);

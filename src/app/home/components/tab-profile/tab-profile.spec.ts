@@ -29,6 +29,51 @@ describe('profile account refresh', () => {
     expect(h.component.deviceQuotaLabel).toBe('PROFILE.DEVICE_QUOTA_COUNT:{"used":1,"limit":3}');
   });
 
+  function sharingFixture(received: { logicalDeviceId: string; share: { state: string } }[] = []) {
+    const h = harness();
+    Object.assign(h.data, { share: { received, byDevice: {
+      'owned-shared-device': { logicalDeviceId: 'owned-shared-device', shares: [
+        { state: 'active' }, { state: 'active' },
+      ], invitations: [{ state: 'pending' }, { state: 'expired' }] },
+    } }, configLoadError: new BehaviorSubject<unknown>(null) });
+    const sharing = () => h.component.menuGroups.flatMap(group => group.items).find(item => item.id === 'sharing');
+    return { ...h, sharing, configLoadError: (h.data as any).configLoadError as BehaviorSubject<unknown> };
+  }
+
+  it('QA-2 counts unique active received devices, not owners, members or revoked grants', () => {
+    const h = sharingFixture([
+      { logicalDeviceId: 'device_11111111-1111-4111-8111-111111111111', share: { state: 'active' } },
+      { logicalDeviceId: 'device_11111111-1111-4111-8111-111111111111', share: { state: 'active' } },
+      { logicalDeviceId: 'device_22222222-2222-4222-8222-222222222222', share: { state: 'active' } },
+      { logicalDeviceId: 'device_33333333-3333-4333-8333-333333333333', share: { state: 'revoked' } },
+    ]);
+    expect(h.sharing()?.value).toBe('PROFILE.RECEIVED_DEVICE_COUNT:{"count":2}');
+    expect(h.sharing()?.route).toBe('/share-manager');
+    expect(h.users.getAllInfo).not.toHaveBeenCalled();
+  });
+
+  it('QA-2 labels a confirmed empty received list as zero without calling owned sharing totals complete', () => {
+    const h = sharingFixture();
+    expect(h.sharing()?.value).toBe('PROFILE.RECEIVED_DEVICE_COUNT:{"count":0}');
+    expect(h.users.getAllInfo).not.toHaveBeenCalled();
+  });
+
+  it('QA-2 omits an unknown received count before inventory restoration or after logout', () => {
+    const h = sharingFixture(); h.data.ownedDeviceCount = null;
+    expect(h.sharing()?.value).toBeUndefined();
+    h.data.ownedDeviceCount = 1; h.data.auth = null;
+    expect(h.sharing()?.value).toBeUndefined();
+    expect(h.users.getAllInfo).not.toHaveBeenCalled();
+  });
+
+  it('QA-2 omits failed share or device refresh counts instead of presenting an empty fallback as zero', () => {
+    const h = sharingFixture(); h.configLoadError.next(new Error('received-read-failed'));
+    expect(h.sharing()?.value).toBeUndefined();
+    h.configLoadError.next(null); h.data.deviceLoadError.next(new Error('device-read-failed'));
+    expect(h.sharing()?.value).toBeUndefined();
+    expect(h.users.getAllInfo).not.toHaveBeenCalled();
+  });
+
   it('coalesces repeated refresh clicks and preserves the account data on failure', async () => {
     const h = harness();
     let done!: (value: boolean) => void;

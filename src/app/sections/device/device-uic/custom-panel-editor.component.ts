@@ -1,5 +1,5 @@
 import { DEVICE_CONSOLE_HOST, DeviceConsoleHost } from '../../../core/device-v2/console-host';
-import { DeviceConsoleService, cloudConsole, canEditConsole, installConsole } from '../../../core/services/device-console.service';
+import { DeviceConsoleService, cloudConsole, canEditConsole, consoleWriteConflict, installConsole } from '../../../core/services/device-console.service';
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Inject, Input, OnChanges, OnDestroy, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +17,9 @@ import { CUSTOM_PANEL_TEMPLATE } from '../../../device/custom-panel/custom-panel
 import { ATOM_GUIDE } from '../../../device/custom-panel/atom-catalog';
 import { GenerationDurationComponent } from './generation-duration.component';
 import { interfaceGenerationError, interfaceGenerationErrorMessage } from './interface-generation-error';
+import { interfaceGenerationOwner } from './interface-generation-owner';
 import type { PanelCard } from '../../../device/v2/widgets/widget-kit';
+import { customPanelGenerationFields } from './custom-panel-generation-fields';
 
 @Component({
   selector: 'app-custom-panel-editor', standalone: true,
@@ -30,7 +32,10 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) device!: BlinkerDevice;
   @Input() cards: PanelCard[] = [];
   @Input() ready = false;
+  @Input() active = true;
+  @Input() manifestFingerprint = '';
   @Input() record?: DevicePanelRecord | null;
+  @Input() consoleRevision?: number;
   @Output() busy = new EventEmitter<boolean>();
 
   readonly themes = UI_THEMES;
@@ -50,34 +55,63 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
   private savedState = '';
   private capabilityKey = '';
   private generation?: Subscription;
+  private readonly lifecycle = new Subscription();
+  private generationEpoch = 0;
+  private owner = '';
+  private ownerDevice?: BlinkerDevice;
+  private blockedDevice?: BlinkerDevice;
+  private sessionVersion: number;
+  private hostActive = true;
+  private baseConsoleRevision?: number;
+  private consoleConflict = false;
+  private saveEpoch = 0;
 
   constructor(private readonly http: HttpClient, private readonly devices: DeviceService,
     private readonly panels: DevicePanelService, private readonly nav: NavController,
     private readonly alerts: AlertController, private readonly cd: ChangeDetectorRef,
     private readonly consoles: DeviceConsoleService,
-    @Inject(DEVICE_CONSOLE_HOST) private readonly host: DeviceConsoleHost) {}
+    @Inject(DEVICE_CONSOLE_HOST) private readonly host: DeviceConsoleHost) {
+    this.sessionVersion = this.host.sessionVersion;
+    this.lifecycle.add(this.host.activeChanges.subscribe(active => {
+      this.hostActive = active;
+      if (!active) this.cancel();
+      this.cd.markForCheck();
+    }));
+    this.lifecycle.add(this.host.sessionChanges.subscribe(() => this.checkSession()));
+  }
 
   get selectedTheme() { return this.themes.find(option => option.id === this.theme)!; }
   get themeTriggerId() { return `custom-theme-${this.device.id || this.device.deviceName}`; }
 
+  get generationReady(): boolean {
+    return this.ready && this.initialized && this.active && this.hostActive
+      && !this.destroyed && !this.blockedDevice;
+  }
+
   get canApply(): boolean {
-    return this.ready && !!this.preview && !this.generating && !this.saving && canEditConsole(this.device);
+    return this.generationReady && !!this.preview && !this.generating && !this.saving && canEditConsole(this.device)
+      && !this.consoleConflict && (!cloudConsole(this.device) || this.baseConsoleRevision !== undefined);
   }
 
   ngOnChanges(): void {
+    this.checkSession();
+    if (this.blockedDevice === this.device) return;
+    this.blockedDevice = undefined;
+
+    const owner = interfaceGenerationOwner(this.device, this.host.sessionVersion, this.manifestFingerprint);
     const key = JSON.stringify(this.fields());
 
-    if (this.generating && key !== this.capabilityKey) {
-      this.cancel();
+    if (this.owner && (owner !== this.owner || key !== this.capabilityKey)) this.clearDraft();
 
-      this.error = '设备能力已变化，生成已取消。请使用最新字段重新生成。';
-    }
-
+    this.owner = owner;
+    this.ownerDevice = this.device;
     this.capabilityKey = key;
 
+    if (!this.active || !this.hostActive || !this.ready) this.cancel();
     if (!this.ready || this.initialized) return;
 
     this.initialized = true;
+    this.baseConsoleRevision = this.consoleRevision;
 
     const saved = this.device.config.customPanel;
     this.html = saved?.html || CUSTOM_PANEL_TEMPLATE;
@@ -87,7 +121,41 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
     if (saved) this.refreshPreview();
   }
 
-  ngOnDestroy(): void { this.destroyed = true; this.generation?.unsubscribe(); }
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    this.lifecycle.unsubscribe();
+    this.cancel();
+  }
+
+  private checkSession(): void {
+    if (this.sessionVersion === this.host.sessionVersion) return;
+
+    this.sessionVersion = this.host.sessionVersion;
+    // Account notifications precede the next device inventory. Never reload
+    // a saved panel from the previous account's still-bound object.
+    this.blockedDevice = this.ownerDevice || this.device;
+    this.ownerDevice = undefined;
+    this.owner = '';
+    this.capabilityKey = '';
+    this.clearDraft();
+    this.cd.markForCheck();
+  }
+
+  private clearDraft(): void {
+    this.cancel();
+    this.saveEpoch++;
+    if (this.saving) { this.saving = false; this.busy.emit(false); }
+    this.initialized = false;
+    this.preview = undefined;
+    this.html = CUSTOM_PANEL_TEMPLATE;
+    this.theme = 'natural';
+    this.prompt = '';
+    this.savedState = '';
+    this.error = '';
+    this.message = '';
+    this.baseConsoleRevision = undefined;
+    this.consoleConflict = false;
+  }
 
   private refreshPreview(): void {
     try {
@@ -97,7 +165,7 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
   }
 
   chooseTheme(theme: UiTheme): void {
-    if (this.generating || this.saving || theme === this.theme || !this.themes.some(option => option.id === theme)) return;
+    if (!this.generationReady || this.generating || this.saving || theme === this.theme || !this.themes.some(option => option.id === theme)) return;
 
     this.theme = theme;
 
@@ -105,7 +173,8 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
   }
 
   generate(): void {
-    if (this.generating || this.saving || !this.ready || !canEditConsole(this.device)) return;
+    this.checkSession();
+    if (this.generating || this.saving || !this.generationReady || !canEditConsole(this.device)) return;
 
     if (this.device.config.isPreview) { this.error = '请登录并选择自己的设备后使用 AI 生成。'; return; }
 
@@ -115,12 +184,26 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
 
     this.busy.emit(true);
 
-    this.generation = this.http.post(API.INTERFACE_WORKFLOW, {
+    const epoch = ++this.generationEpoch;
+    const owner = this.owner;
+    const capabilityKey = this.capabilityKey;
+    const theme = this.theme;
+    const current = () => {
+      this.checkSession();
+      return this.generating && epoch === this.generationEpoch && this.generationReady
+        && owner === this.owner
+        && owner === interfaceGenerationOwner(this.device, this.host.sessionVersion, this.manifestFingerprint)
+        && capabilityKey === JSON.stringify(this.fields());
+    };
+    const generation = new Subscription();
+    this.generation = generation;
+    generation.add(this.http.post(API.INTERFACE_WORKFLOW, {
       mode: 'custom',
-      prompt: this.prompt.trim() || this.selectedTheme.prompt, theme: this.theme, fields: this.fields(),
+      prompt: this.prompt.trim() || this.selectedTheme.prompt, theme, fields: this.fields(),
       catalog: ATOM_GUIDE, template: CUSTOM_PANEL_TEMPLATE, html: this.html,
     }, { responseType: 'text', headers: { Accept: 'application/x-ndjson' } }).pipe(timeout(190000)).subscribe({
       next: response => {
+        if (!current()) return;
         try {
           if (response.length > 2 * 1024 * 1024) throw interfaceGenerationError('INTERFACE_AI_OUTPUT_TOO_LARGE');
 
@@ -132,7 +215,7 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
           if (complete.length === 0) throw interfaceGenerationError('INTERFACE_AI_INCOMPLETE');
           if (complete.length !== 1) throw interfaceGenerationError('INTERFACE_AI_INVALID_RESPONSE');
 
-          const draft = parseCustomPanel({ version: 1, html: complete[0].data.html, theme: this.theme });
+          const draft = parseCustomPanel({ version: 1, html: complete[0].data.html, theme });
 
           this.html = draft.html;
           this.preview = draft;
@@ -147,15 +230,15 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
         this.finishGeneration();
       },
       error: error => {
+        if (!current()) return;
         this.error = interfaceGenerationErrorMessage(error) + (this.preview ? '当前预览已保留。' : '');
 
         this.finishGeneration();
       },
-    });
+    }));
   }
 
   cancel(): void {
-    this.generation?.unsubscribe();
     this.finishGeneration();
   }
 
@@ -163,6 +246,10 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
     if (!this.canApply) return;
 
     const session = this.host.sessionVersion;
+    const device = this.device;
+    const owner = this.owner, operation = ++this.saveEpoch;
+    const current = () => operation === this.saveEpoch && session === this.host.sessionVersion && !this.destroyed
+      && this.device === device && this.owner === owner;
 
     this.saving = true;
     this.error = '';
@@ -177,11 +264,12 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
 
         if (cloudConsole(this.device)) {
           const source = await this.consoles.save(this.device.deviceName,
-            { uiConfig: { customPanel, panelMode: 'custom' } });
+            { uiConfig: { customPanel, panelMode: 'custom' } }, this.baseConsoleRevision!);
 
-          if (session !== this.host.sessionVersion || this.destroyed) return;
+          if (!current()) return;
 
           installConsole(this.device, source);
+          this.baseConsoleRevision = source.revision;
         } else if (!this.device.config.isPreview && !await this.devices.saveDeviceConfig(this.device, config)) {
           throw new Error('保存失败，请重试。');
         }
@@ -192,10 +280,11 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
 
         this.record = await this.panels.save(this.device, legacy.document, legacy.bindings, this.record?.revision ?? 0, 'custom', customPanel);
 
+        if (!current()) return;
         this.panels.install(this.device, this.record);
       }
 
-      if (session !== this.host.sessionVersion || this.destroyed) return;
+      if (!current()) return;
 
       this.savedState = this.serialize();
       this.message = '自定义界面已应用。';
@@ -207,10 +296,14 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
       this.busy.emit(false);
       await this.nav.navigateRoot(`/device/${encodeURIComponent(this.device.id || this.device.deviceName)}`);
     } catch (error) {
-      this.error = ['DEVICE_PANEL_CONFLICT'].includes((error as { code?: string })?.code || '')
+      if (!current()) return;
+      if (consoleWriteConflict(error)) this.consoleConflict = true;
+      this.error = this.consoleConflict
+        ? '界面已在其他位置更新，请重新打开读取后确认。当前预览已保留，尚未保存。'
+        : ['DEVICE_PANEL_CONFLICT'].includes((error as { code?: string })?.code || '')
         ? '界面已在其他位置更新，请重新打开后再生成。当前预览尚未保存。'
         : error instanceof Error ? error.message : '保存失败，请重试。';
-    } finally { this.saving = false; this.busy.emit(false); this.cd.markForCheck(); }
+    } finally { if (current()) { this.saving = false; this.busy.emit(false); this.cd.markForCheck(); } }
   }
 
   async canDeactivate(): Promise<boolean> {
@@ -234,18 +327,19 @@ export class CustomPanelEditorComponent implements OnChanges, OnDestroy {
   }
 
   private fields() {
-    // Describe capabilities, never send readings, identifiers, credentials or old bindings to AI.
-    const unique = new Map(this.cards.map(card => [card.field.key, card]));
-
-    return [...unique.values()].map(({ field: { value: _value, ...field }, widget }) => ({ ...field, label: widget.title || field.key }));
+    return customPanelGenerationFields(this.cards);
   }
 
   private finishGeneration(): void {
+    if (!this.generating && !this.generation) return;
+    const generation = this.generation;
     this.generating = false;
     this.generation = undefined;
+    this.generationEpoch++;
+    generation?.unsubscribe();
 
     this.busy.emit(false);
-    this.cd.markForCheck();
+    if (!this.destroyed) this.cd.markForCheck();
   }
 
   private serialize(): string { return JSON.stringify([this.html, this.theme]); }

@@ -12,6 +12,7 @@ export interface EmbeddedPanelSession {
   document: PanelDocument;
   snapshot?: DeviceUiSnapshot;
   record?: DeviceV2PageLayoutRecord | null;
+  consoleRevision?: number;
   bindings?: Record<string, LegacyBinding>;
   legacyRecord?: DevicePanelRecord | null;
 }

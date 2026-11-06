@@ -1,6 +1,7 @@
 import '@angular/compiler';
 import { Component, Input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { AlertController } from '@ionic/angular/standalone';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { API } from '../../../configs/api.config';
 import { DeviceTaskClient, TaskApi } from '../../../core/device-v2/tasks/client';
@@ -8,6 +9,8 @@ import { TaskRecord, TaskRequest, TaskResponse } from '../../../core/device-v2/t
 import { base64UrlEncode } from '../../../core/device-v2/base64url';
 import { TimerService } from './timer.service';
 import { GatewayHttpError } from '../../../core/model/response.model';
+import { taskEntryState } from './device-timer.models';
+import { TaskStatusComponent } from './task-status.component';
 
 const id = 'device_task';
 @Component({ selector: 'task-view-child', template: '{{ timer.pending?.operation }} {{ timer.error }}' })
@@ -56,6 +59,182 @@ const definition = { schedule: { kind: 'countdown' as const, durationMillis: 300
   key: 'power', valueType: 'boolean' as const, value: false };
 
 describe('V2 task page lifecycle and original intent', () => {
+  it.each([
+    { config: { mode: 'bbp2', disabled: true } },
+    { config: { mode: 'bbp2' }, deviceType: 'ble' },
+    undefined,
+  ])('DS-4 preserves the actual denied-entry reason for %j without reading or granting capacity', async device => {
+    const f = fixture();
+    if (device) Object.assign(f.data.device.dict[id], device);
+    else delete (f.data.device.dict as Record<string, unknown>)[id];
+    const page = f.page(); await page.open(id);
+    expect(page.error).toBe(taskEntryState(device).description);
+    expect(page.ready).toBe(false); expect(page.capacity).toBeNull();
+    expect(page.canWrite).toBe(false); expect(page.canInitialize).toBe(false);
+    expect(f.execute).not.toHaveBeenCalled(); expect(f.storage.size).toBe(0);
+    page.ngOnDestroy();
+  });
+  it.each([{ isShared: true }, { disabled: true }])('DS-4 retains the original device rejection after failed-read background return: %j', async patch => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    f.execute.mockRejectedValueOnce(new Error('TASK_DEVICE_OFFLINE')); await page.refresh();
+    f.visibility.active.next(false);
+    Object.assign(f.data.device.dict[id].config, patch);
+    const calls = f.execute.mock.calls.length;
+    f.visibility.active.next(true);
+    expect(page.error).toBe(taskEntryState(f.data.device.dict[id]).description);
+    expect(page.error).not.toContain('尚未找到设备');
+    expect(page.ready).toBe(false); expect(page.capacity).toBeNull(); expect(page.canWrite).toBe(false);
+    expect(f.execute).toHaveBeenCalledTimes(calls); expect(f.storage.size).toBe(0);
+    page.ngOnDestroy();
+  });
+  it('DS-4 keeps account loss ahead of a changed local entry reason after background return', async () => {
+    const f = fixture(), page = f.page(); await page.open(id);
+    f.execute.mockRejectedValueOnce(new Error('TASK_DEVICE_OFFLINE')); await page.refresh();
+    f.visibility.active.next(false);
+    f.data.sessionEpoch++; Object.assign(f.data.device.dict[id].config, { disabled: true });
+    const calls = f.execute.mock.calls.length; f.visibility.active.next(true);
+    expect(page.error).toContain('账号会话已变化'); expect(page.error).not.toContain('设备已停用');
+    expect(f.execute).toHaveBeenCalledTimes(calls); expect(page.canWrite).toBe(false);
+    page.ngOnDestroy();
+  });
+  it('DS-4 denied reopen preserves an existing UNKNOWN journal byte for byte without dispatch or retry', async () => {
+    const f = fixture(), first = f.page(); await first.open(id);
+    f.execute.mockRejectedValueOnce(new Error('TASK_OUTCOME_UNKNOWN'));
+    await first.write({ operation: 'create', expectedRevision: 0, definition }, false);
+    expect(first.pending?.operation).toBe('create');
+    const original = [...f.storage], calls = f.execute.mock.calls.length;
+    first.ngOnDestroy(); Object.assign(f.data.device.dict[id].config, { isShared: true });
+    const next = f.page(); await next.open(id);
+    expect(next.error).toBe(taskEntryState(f.data.device.dict[id]).description);
+    expect([...f.storage]).toEqual(original); expect(f.execute).toHaveBeenCalledTimes(calls);
+    expect(next.canWrite).toBe(false); expect(next.canInitialize).toBe(false); expect(next.canRetry).toBe(false);
+    next.ngOnDestroy();
+  });
+  it('DS-4 does not replace a service refusal on an eligible entry with positive capability copy', async () => {
+    const f = fixture(), page = f.page();
+    f.execute.mockRejectedValueOnce(new Error('TASK_PAGE_UNAVAILABLE')); await page.open(id);
+    expect(page.error).toContain('仅支持当前账号拥有的普通 WiFi 设备');
+    expect(page.error).not.toBe(taskEntryState(f.data.device.dict[id]).description);
+    expect(page.capacity).toBeNull(); expect(page.canWrite).toBe(false); page.ngOnDestroy();
+  });
+  it('DS-4 renders the actual denied reason through the original status template without granting actions', async () => {
+    const f = fixture(); Object.assign(f.data.device.dict[id].config, { disabled: true });
+    const timer = f.page(); await timer.open(id);
+    TestBed.configureTestingModule({ imports: [TaskStatusComponent],
+      providers: [{ provide: AlertController, useValue: { create: vi.fn() } }] });
+    const view = TestBed.createComponent(TaskStatusComponent); view.componentInstance.timer = timer;
+    try {
+      view.detectChanges();
+      expect(view.nativeElement.querySelector('[role="alert"]').textContent.trim()).toBe('设备已停用，暂不能管理定时任务。');
+      expect(view.nativeElement.textContent).toContain('容量尚未确认');
+      expect(view.nativeElement.textContent).not.toContain('启用/同步本机任务授权');
+      expect(f.execute).not.toHaveBeenCalled(); expect(f.storage.size).toBe(0);
+    } finally { view.destroy(); timer.ngOnDestroy(); TestBed.resetTestingModule(); }
+  });
+  it('QA-3 retains confirmed capacity only as a hint after a later page is offline and recovers solely by manual read', async () => {
+    const f = fixture(), page = f.page(), execute = f.execute.getMockImplementation()!;
+    f.execute.mockImplementation(async (device, request, signal, onDispatch) => {
+      if (request.operation === 'catalog' && request.index !== null) throw new Error('TASK_DEVICE_OFFLINE');
+      return execute(device, request, signal, onDispatch);
+    });
+    try {
+      await page.open(id);
+      expect(page.capacityText).toBe('设备容量 4 条；任务列表尚未读完');
+      expect(page.ready).toBe(false); expect(page.capacity).toBeNull(); expect(page.revision).toBe(0);
+      expect(page.targets).toEqual([]); expect(page.records).toEqual([]); expect(page.canWrite).toBe(false);
+      expect(await page.write({ operation: 'create', expectedRevision: 0, definition })).toBe(false);
+      const calls = f.execute.mock.calls.length;
+      f.visibility.active.next(false); f.visibility.active.next(true); await new Promise(resolve => setTimeout(resolve, 0));
+      expect(f.execute).toHaveBeenCalledTimes(calls);
+      expect(page.capacityText).toBe('设备容量 4 条；任务列表尚未读完'); expect(page.error).toContain('云端连接');
+      f.execute.mockImplementation(execute); await page.refresh();
+      expect(page.ready).toBe(true); expect(page.capacityText).toBe('已用 0 / 4 条');
+      expect(f.execute.mock.calls.slice(calls).map(([, r]) => r.operation)).toEqual(['catalog', 'catalog']);
+      expect(f.storage.size).toBe(0);
+    } finally { page.ngOnDestroy(); }
+  });
+  it('QA-3 clears a partial capacity observation on an explicit failed metadata read, view leave or account loss', async () => {
+    for (const transition of ['manual failure', 'leave', 'account']) {
+      const f = fixture(), page = f.page(), execute = f.execute.getMockImplementation()!;
+      f.execute.mockImplementation(async (device, request, signal, onDispatch) => {
+        if (request.operation === 'catalog' && request.index !== null) throw new Error('TASK_DEVICE_OFFLINE');
+        return execute(device, request, signal, onDispatch);
+      });
+      try {
+        await page.open(id); expect(page.capacityText).toContain('设备容量 4 条');
+        if (transition === 'manual failure') {
+          f.execute.mockRejectedValueOnce(new Error('TASK_DEVICE_OFFLINE')); await page.refresh();
+        } else if (transition === 'leave') page.close();
+        else { f.data.sessionEpoch++; f.data.authDataChanged.next(); }
+        expect(page.capacityText).toBe('容量尚未确认'); expect(page.canWrite).toBe(false);
+        const calls = f.execute.mock.calls.length;
+        f.visibility.active.next(false); f.visibility.active.next(true); await new Promise(resolve => setTimeout(resolve, 0));
+        expect(f.execute).toHaveBeenCalledTimes(calls);
+      } finally { page.ngOnDestroy(); }
+    }
+  });
+  it('QA-3 never retries a failed read on visibility changes or changes an existing UNKNOWN journal', async () => {
+    const f = fixture(), page = f.page(); f.execute.mockRejectedValueOnce(new Error('TASK_OUTCOME_UNKNOWN'));
+    await expect(f.client.submit(id, { operation: 'create', expectedRevision: 0, definition })).rejects.toThrow();
+    const original = [...f.storage]; f.execute.mockRejectedValueOnce(new Error('TASK_CONNECTION_NOT_READY'));
+    try {
+      await page.open(id); const calls = f.execute.mock.calls.length;
+      f.visibility.active.next(false); f.visibility.active.next(true); await new Promise(resolve => setTimeout(resolve, 0));
+      expect(f.execute).toHaveBeenCalledTimes(calls); expect([...f.storage]).toEqual(original);
+      expect(page.canRetry).toBe(false); expect(page.canWrite).toBe(false);
+      await page.refresh(); expect(page.ready).toBe(true); expect(page.canWrite).toBe(false);
+      expect([...f.storage]).toEqual(original);
+      expect(f.execute.mock.calls.filter(([, r]) => r.operation === 'create')).toHaveLength(1);
+    } finally { page.ngOnDestroy(); }
+  });
+  it('QA-3 rechecks silent account or owner-view loss on a later foreground without exposing partial evidence', async () => {
+    for (const loss of ['epoch', 'owner']) {
+      const f = fixture(), page = f.page(), execute = f.execute.getMockImplementation()!;
+      f.execute.mockImplementation(async (device, request, signal, onDispatch) => {
+        if (request.operation === 'catalog' && request.index !== null) throw new Error('TASK_DEVICE_OFFLINE');
+        return execute(device, request, signal, onDispatch);
+      });
+      try {
+        await page.open(id);
+        f.visibility.active.next(false); f.visibility.active.next(true);
+        f.visibility.active.next(false);
+        if (loss === 'epoch') f.data.sessionEpoch++;
+        else Object.assign(f.data.device.dict[id].config, { isShared: true });
+        const calls = f.execute.mock.calls.length; f.visibility.active.next(true);
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(f.execute).toHaveBeenCalledTimes(calls); expect(page.capacityText).toBe('容量尚未确认');
+        expect(page.ready).toBe(false); expect(page.canWrite).toBe(false); expect(page.canRetry).toBe(false);
+      } finally { page.ngOnDestroy(); }
+    }
+  });
+  it('QA-3 does not keep an old account capacity when a late transport failure arrives after epoch loss', async () => {
+    const f = fixture(), page = f.page(), execute = f.execute.getMockImplementation()!;
+    f.execute.mockImplementation(async (device, request, signal, onDispatch) => {
+      if (request.operation === 'catalog' && request.index !== null) {
+        f.data.sessionEpoch++; throw new Error('TASK_DEVICE_OFFLINE');
+      }
+      return execute(device, request, signal, onDispatch);
+    });
+    try {
+      await page.open(id);
+      expect(page.capacityText).toBe('容量尚未确认'); expect(page.error).toContain('账号会话');
+      expect(page.canWrite).toBe(false); expect(f.execute).toHaveBeenCalledTimes(2);
+    } finally { page.ngOnDestroy(); }
+  });
+  it('QA-3 keeps a local journal read failure manual across background and foreground', async () => {
+    const f = fixture(), page = f.page();
+    const inspect = vi.spyOn(f.client, 'inspect').mockRejectedValueOnce(new Error('TASK_JOURNAL_UNAVAILABLE'));
+    try {
+      await page.open(id); expect(inspect).toHaveBeenCalledTimes(1); expect(f.execute).not.toHaveBeenCalled();
+      f.visibility.active.next(false); f.visibility.active.next(true);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(inspect).toHaveBeenCalledTimes(1); expect(f.execute).not.toHaveBeenCalled();
+      expect(page.error).toContain('请求日志'); expect(page.canRetry).toBe(false);
+      await page.refresh(); expect(page.ready).toBe(true); expect(inspect).toHaveBeenCalledTimes(3);
+      expect(f.execute.mock.calls.map(([, r]) => r.operation)).toEqual(['catalog', 'catalog']);
+      expect(f.storage.size).toBe(0);
+    } finally { inspect.mockRestore(); page.ngOnDestroy(); }
+  });
   it('returns confirmed before a deferred refresh and keeps stale revision unavailable for writes', async () => {
     const f = fixture(), page = f.page(); await page.open(id);
     const execute = f.execute.getMockImplementation()!;

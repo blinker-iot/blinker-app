@@ -57,6 +57,7 @@ export type DeviceUiValue = boolean | number | bigint | string | null | Uint8Arr
 
 interface ConnectionGroup {
   scopes: Set<DeviceUiConnectionScope>;
+  releaseOrdinaryDirect?: boolean;
   // Explicitly offline callers share one bounded physical Direct opportunity.
   direct?: DeviceUiConnectionScope;
   lan?: { controller: AbortController; ready: Promise<void>; account: DeviceV2AccountContext; generation: number;
@@ -124,6 +125,8 @@ export interface DeviceUiConnectivitySnapshot {
   // Recent authenticated advertisement evidence, independent of connection
   // work. Older/mock adapters may omit it; omission is not proof of proximity.
   bleNearby?: boolean;
+  // Authenticated alias projection for a badge, never Direct access/readiness.
+  bleNearbyOnly?: boolean;
   bleState: DeviceV2BleConnectionState;
   cloudSessionState: DeviceV2AccountState;
 }
@@ -255,8 +258,7 @@ export class DeviceUiPort {
     });
   }
 
-  // Page scopes own Cloud interest, telemetry and bounded gateway access.
-  // Ordinary Direct BLE sessions are retained by the root BLE service.
+  // Page scopes own Cloud interest and the demand for an ordinary Direct link.
   async connect(logicalDeviceId: string, signal?: AbortSignal): Promise<void> {
     const scope = this.createConnection(logicalDeviceId, false, signal);
 
@@ -269,8 +271,11 @@ export class DeviceUiPort {
 
   private createConnection(logicalDeviceId: string, persistent: boolean, signal?: AbortSignal): DeviceUiConnectionScope {
     let group = this.connections.get(logicalDeviceId);
+    const accountEpoch = this.data.sessionEpoch;
+    let releaseOrdinaryDirect = false;
 
     if (group && [...group.scopes].every(scope => scope.signal.aborted)) {
+      releaseOrdinaryDirect = group.releaseOrdinaryDirect === true;
       group.direct?.close();
       group.lan?.controller.abort();
       this.connections.delete(logicalDeviceId);
@@ -278,7 +283,7 @@ export class DeviceUiPort {
       group = undefined;
     }
 
-    if (!group) this.connections.set(logicalDeviceId, group = { scopes: new Set() });
+    if (!group) this.connections.set(logicalDeviceId, group = { scopes: new Set(), releaseOrdinaryDirect });
 
     const scope = new DeviceUiConnectionScope(current => this.connectTarget(logicalDeviceId, current, group, persistent), signal);
 
@@ -302,13 +307,34 @@ export class DeviceUiPort {
           this.selectTransport(logicalDeviceId, 'cloud');
         }
 
-        // Ordinary BLE remains owned by the root service across route changes.
+        if (group.releaseOrdinaryDirect) {
+          // A failed native release stays fenced by the BLE owner.
+          void this.retireOrdinaryDirect(logicalDeviceId, accountEpoch).catch(() => undefined);
+        }
       }
     });
 
     if (!this.active) scope.close();
 
     return scope;
+  }
+
+  private async retireOrdinaryDirect(id: string, accountEpoch: number): Promise<void> {
+    const inUse = () => {
+      if (!this.active || this.data.sessionEpoch !== accountEpoch) return true;
+      const successor = this.connections.get(id);
+      if (successor && [...successor.scopes].some(owner => !owner.signal.aborted)) {
+        // A Cloud-first successor may close before it attempts Direct. It still
+        // inherits responsibility for releasing the retained ordinary link.
+        successor.releaseOrdinaryDirect = true;
+        return true;
+      }
+      return this.directHandoffs.has(id);
+    };
+    // An existing WiFiProv handoff is another consumer, not a page leak.
+    const handoff = this.directHandoffs.get(id);
+    if (handoff) await handoff.catch(() => undefined);
+    if (!inUse()) await this.ble.releaseIdleOrdinary(id, inUse);
   }
 
   private async connectCloud(logicalDeviceId: string, scope: DeviceUiConnectionScope, persistent: boolean): Promise<void> {
@@ -362,6 +388,7 @@ export class DeviceUiPort {
     }
 
     if (!this.isCloudCapable(logicalDeviceId)) {
+      if (persistent) group.releaseOrdinaryDirect = true;
       void this.syncManagedPresence(logicalDeviceId);
       this.selectTransport(logicalDeviceId, 'ble');
       await this.ble.ensureReady(logicalDeviceId);
@@ -380,6 +407,7 @@ export class DeviceUiPort {
     // for the peripheral to replace its provisioning advertisement. Starting
     // the ordinary 5 s page scan in parallel would only churn Android GATT.
     if (this.directHandoffs.has(logicalDeviceId)) {
+      if (persistent) group.releaseOrdinaryDirect = true;
       this.selectTransport(logicalDeviceId, 'cloud');
       await this.connectCloud(logicalDeviceId, scope, persistent);
 
@@ -405,7 +433,7 @@ export class DeviceUiPort {
 
     const cloud = this.connectCloud(logicalDeviceId, scope, persistent);
 
-    const direct = this.prepareDirectCandidate(logicalDeviceId, scope)
+    const direct = this.prepareDirectCandidate(logicalDeviceId, scope, group)
       .then(ready => ready ? undefined : cloud);
 
     // Preserve the original Cloud error if neither path succeeds; no new
@@ -414,7 +442,7 @@ export class DeviceUiPort {
     signal.throwIfAborted();
   }
 
-  private async prepareDirectCandidate(logicalDeviceId: string, scope: DeviceUiConnectionScope): Promise<boolean> {
+  private async prepareDirectCandidate(logicalDeviceId: string, scope: DeviceUiConnectionScope, group?: ConnectionGroup): Promise<boolean> {
     const signal = scope.signal;
 
     const hasDirectAccess = await this.ble.hasActiveCredential(logicalDeviceId)
@@ -423,6 +451,7 @@ export class DeviceUiPort {
     signal.throwIfAborted();
 
     if (hasDirectAccess) {
+      if (group) group.releaseOrdinaryDirect = true;
       void this.syncManagedPresence(logicalDeviceId);
 
       try {
@@ -431,8 +460,8 @@ export class DeviceUiPort {
         // Method 2, so an ambiguous/stale transport address cannot force Cloud.
         await this.ble.ensureReady(logicalDeviceId, HYBRID_BLE_CONNECT_TIMEOUT_MS);
 
-        // The root owner may retain the link, but a retired page cannot
-        // select a transport after an account/background/navigation change.
+        // A retired page cannot select a transport after an account,
+        // background or navigation change.
         signal.throwIfAborted();
         // The global connection may become ready after its original page left.
         if (this.ble.connectionSnapshot(logicalDeviceId) !== 'ready') return false;
@@ -710,8 +739,10 @@ export class DeviceUiPort {
       let bleAdapterEnabled: boolean | null = null;
       let bleState = this.ble.connectionSnapshot(logicalDeviceId);
       let bleNearby = this.ble.nearbySnapshot?.(logicalDeviceId) ?? false;
+      let bleNearbyOnly: boolean | undefined;
       let cloudSessionState = this.deviceV2.state.value;
       let closed = false;
+      let accessRead = 0;
       let last = '';
 
       const publish = () => {
@@ -721,12 +752,13 @@ export class DeviceUiPort {
           bleAccess,
           bleAdapterEnabled,
           bleNearby,
+          ...(bleNearbyOnly ? { bleNearbyOnly } : {}),
           bleState,
           cloudSessionState,
         };
 
         const key = `${activeTransport}|${String(bleAccess)}|${String(bleAdapterEnabled)}`
-          + `|${bleNearby}|${bleState}|${cloudSessionState}`;
+          + `|${bleNearby}|${bleNearbyOnly === true}|${bleState}|${cloudSessionState}`;
         if (key === last) return;
 
         last = key;
@@ -756,6 +788,10 @@ export class DeviceUiPort {
         bleNearby = value;
         publish();
       });
+      const nearbyOnlySubscription = this.ble.watchNearbyAlias?.(logicalDeviceId).subscribe(value => {
+        bleNearbyOnly = value;
+        publish();
+      });
       const adapterSubscription = this.supportsDirectBle(logicalDeviceId)
         ? this.ble.watchAdapterEnabled().subscribe(value => {
           bleAdapterEnabled = value;
@@ -773,23 +809,36 @@ export class DeviceUiPort {
         publish();
       });
 
-      if (bleAccess === null) {
+      const refreshBleAccess = () => {
+        if (closed) return;
+        const read = ++accessRead;
+        if (!this.supportsDirectBle(logicalDeviceId)) {
+          bleAccess = false;
+          publish();
+          return;
+        }
+        bleAccess = null;
+        publish();
         void this.ble.hasActiveCredential(logicalDeviceId)
           .then(value => {
-            if (closed) return;
+            if (closed || read !== accessRead) return;
 
             bleAccess = value;
 
             publish();
           })
           .catch(() => {
-            if (closed) return;
+            if (closed || read !== accessRead) return;
 
             bleAccess = false;
 
             publish();
           });
-      }
+      };
+      // Storage mutation is an invalidation hint, never a connection demand.
+      const credentialSubscription = this.ble.watchCredentialChanges?.(logicalDeviceId)
+        .subscribe(() => refreshBleAccess());
+      if (bleAccess === null) refreshBleAccess();
 
       return () => {
         closed = true;
@@ -798,8 +847,10 @@ export class DeviceUiPort {
         cloudSubscription.unsubscribe();
         bleSubscription.unsubscribe();
         nearbySubscription?.unsubscribe();
+        nearbyOnlySubscription?.unsubscribe();
         adapterSubscription?.unsubscribe();
         deviceSubscription?.unsubscribe();
+        credentialSubscription?.unsubscribe();
       };
     });
   }

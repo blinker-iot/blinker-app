@@ -14,8 +14,10 @@ import {
 
 import { BlinkerDevice } from '../../core/model/device.model';
 import { generateDefaultPageLayout } from '../../core/device-v2/page-layout';
+import { generateAutomaticPageLayout } from '../../core/device-v2/automatic-page-layout';
 import { EndpointHistory } from '../../core/device-v2/endpoint-history';
 import { DeviceUiConnectionScope } from '../../core/device-v2/connection-scope';
+import { EndpointCommandGate } from '../../core/device-v2/endpoint-control';
 import { DeviceV2Page } from './device-v2.page';
 
 const logicalDeviceId = 'device_11111111-1111-4111-8111-111111111111';
@@ -89,6 +91,7 @@ function harness(
   pageLayouts?: any,
   openTelemetry?: () => Promise<DeviceUiTelemetryLease>,
   viewActive = true,
+  consoles?: any,
 ) {
   const state = new BehaviorSubject(initial);
   const events = new Subject<DeviceUiEvent>();
@@ -172,9 +175,10 @@ function harness(
     })),
   };
 
-  const page = new DeviceV2Page(port as any, localPageLayouts, {} as never, { sessionVersion: 0 } as never);
+  const page = new DeviceV2Page(port as any, localPageLayouts, consoles ?? {} as never, { sessionVersion: 0 } as never);
 
   page.device = device();
+  if (consoles) { page.device.config.mode = 'bbp2'; page.device.cloudEnabled = true; }
   page.viewActive = viewActive;
 
   page.ngOnInit();
@@ -183,6 +187,60 @@ function harness(
 }
 
 describe('DeviceV2Page UI port lifecycle', () => {
+  it.each(['carrier', 'readiness', 'freshness'] as const)(
+    'QA5 Hold retires old release and queued tails across a %s round trip', async boundary => {
+    const { page, port, connectivity, state } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    const card = page.panelCards.find(card => card.field.key === 'power')!;
+    let finish!: () => void;
+    port.sendCommand.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+    const target = { field: card.field, widgetId: card.widget.widgetId, scope: card.controlScope };
+    const release = { field: card.field, kind: 'toggle' as const, value: false,
+      hold: { id: 'carrier-hold', phase: 'release' as const, target } };
+    page.onPanelAction({ ...release, value: true, hold: { ...release.hold, phase: 'press' } });
+    page.onPanelAction(release);
+    if (boundary === 'carrier') {
+      connectivity.next({ ...connectivity.value, activeTransport: 'cloud' });
+      connectivity.next({ ...connectivity.value, activeTransport: 'ble' });
+    } else if (boundary === 'readiness') {
+      port.connectionState.next('retrying'); port.connectionState.next('ready');
+    } else {
+      state.next({ ...state.value, stateFresh: false }); state.next({ ...state.value, stateFresh: true });
+    }
+    expect(page.canControl).toBe(true);
+    expect(page.panelCards.find(card => card.field.key === 'power')!.controlScope).not.toBe(card.controlScope);
+    page.onPanelAction(release); finish(); await Promise.resolve(); await Promise.resolve();
+    expect(port.sendCommand).toHaveBeenCalledOnce();
+    page.ngOnDestroy();
+  });
+
+  it('QA5 Hold keeps the current paired release behind the existing confirmed-only queue', async () => {
+    const { page, port } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    const card = page.panelCards.find(card => card.field.key === 'power')!;
+    expect(card.controlAvailable).toBe(true); expect(card.controlScope).toBeTypeOf('string');
+    let finish!: () => void;
+    port.sendCommand.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+    const target = { field: card.field, widgetId: card.widget.widgetId, scope: card.controlScope };
+    page.onPanelAction({ field: card.field, kind: 'toggle', value: true, hold: { id: 'current-hold', phase: 'press', target } });
+    page.onPanelAction({ field: card.field, kind: 'toggle', value: false, hold: { id: 'current-hold', phase: 'release', target } });
+    expect(port.sendCommand).toHaveBeenCalledOnce();
+    finish();
+    await vi.waitFor(() => expect(port.sendCommand).toHaveBeenCalledTimes(2));
+    expect(port.sendCommand.mock.lastCall).toEqual([logicalDeviceId, 'power', false]);
+    page.ngOnDestroy();
+  });
+
+  it('QA5 Hold rejects an old control scope even when the endpoint is identical', async () => {
+    const { page, port } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    const field = page.snapshot.endpoints[0]!;
+    page.onPanelAction({ field, kind: 'toggle', value: false, hold: { id: 'old-hold', phase: 'release',
+      target: { field, widgetId: 'saved-hold', scope: 'retired-device-session' } } });
+    expect(port.sendCommand).not.toHaveBeenCalled();
+    page.ngOnDestroy();
+  });
+
   it('preserves a queued release only after the press is confirmed', async () => {
     const { page, port } = harness();
     await vi.waitFor(() => expect(page.canControl).toBe(true));
@@ -261,9 +319,25 @@ describe('DeviceV2Page UI port lifecycle', () => {
     expect(page.fieldTitle(widget, field)).toBe('电源开关');
     expect(page.fieldTitle({ ...widget, title: 'power' }, field)).toBe('电源开关');
     expect(page.fieldTitle({ ...widget, title: '我的按钮' }, field)).toBe('我的按钮');
-    expect(page.fieldTitle(widget, { ...field, manifestType: 2 })).toBe('power');
+    expect(page.fieldTitle(widget, { ...field, manifestType: 2 })).toBe('功率');
     expect(page.display(field)).toBe('亮');
     expect(page.value(field)).toBe(true);
+    expect(field.key).toBe('power');
+    page.ngOnDestroy();
+  });
+  it('uses dynamic power names in automatic panels while retaining saved explicit titles', () => {
+    const { page } = harness();
+    const field = endpoint({ manifestKind: 0, manifestType: 0, value: true });
+    const widget = generateAutomaticPageLayout({ ...snapshot(), endpoints: [field] }).widgets[0];
+    expect(page.fieldTitle(widget, field)).toBe('电源开关');
+    page.device.displayMetadata = { logicalDeviceId, revision: 1, name: '灯', capabilities: [
+      { key: 'power', kind: 0, type: 0, displayName: '客厅主灯' },
+    ] };
+    expect(page.fieldTitle(widget, field)).toBe('客厅主灯');
+    expect(page.fieldTitle({ ...widget, title: '功率' }, field)).toBe('功率');
+    expect(page.fieldTitle({ ...widget, title: '我的按钮' }, field)).toBe('我的按钮');
+    expect(page.fieldTitle(widget, { ...field, manifestType: 2, valueType: 'integer' })).toBe('功率');
+    expect(page.fieldTitle(widget, { ...field, manifestType: 5, valueType: 'text' })).toBe('power');
     expect(field.key).toBe('power');
     page.ngOnDestroy();
   });
@@ -457,6 +531,32 @@ describe('DeviceV2Page UI port lifecycle', () => {
     await Promise.resolve();
     expect(port.sendCommand).toHaveBeenCalledOnce();
     page.ngOnDestroy();
+  });
+
+  it.each([
+    ['DEVICE_UI_COMMAND_PENDING', '该控件的上一笔操作尚未结束，请等待结果', 1],
+    ['DEVICE_UI_COMMAND_CAPACITY', '当前操作较多，请稍后手动重试', 16],
+  ] as const)('explains a real %s gate rejection without sending again automatically', async (code, message, count) => {
+    const { page, port } = harness();
+    await vi.waitFor(() => expect(page.canControl).toBe(true));
+    const field = page.endpoint(page.widgets[0])!, gate = new EndpointCommandGate();
+    let release!: () => void;
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    const owners = Array.from({ length: count }, (_, index) => gate.run('held-' + index, () => blocked));
+    const dispatch = vi.fn().mockResolvedValue(undefined);
+    port.sendCommand.mockImplementation(() => gate.run(count === 1 ? 'held-0' : 'target', dispatch));
+    try {
+      await page.send(field, true);
+      expect(page.fieldError(field)).toBe(message);
+      expect(page.fieldError(field)).not.toContain(code);
+      expect(page.pending.size).toBe(0); expect(dispatch).not.toHaveBeenCalled();
+      await Promise.resolve(); await Promise.resolve();
+      expect(port.sendCommand).toHaveBeenCalledOnce();
+      release(); await Promise.all(owners);
+      await page.send(field, false); // A new explicit action, not a queued retry.
+      expect(port.sendCommand).toHaveBeenCalledTimes(2); expect(dispatch).toHaveBeenCalledOnce();
+      expect(page.fieldError(field)).toBe(''); expect(page.pending.size).toBe(0);
+    } finally { release(); await Promise.all(owners); page.ngOnDestroy(); }
   });
 
   it('keeps cached values but disables controls after a ready timeout', async () => {
@@ -1045,5 +1145,41 @@ describe('DeviceV2Page UI port lifecycle', () => {
 
     expect(page.layoutStale).toBeUndefined();
     expect(page.layout?.revision).toBe(5);
+  });
+
+  it('uses the read aggregate Console token for layout migration and passes the actual result to inline editing', async () => {
+    const current = snapshot(), old = { ...current, manifestFingerprint: '11'.repeat(32), endpoints: [current.endpoints[0]] };
+    const oldLayout = { ...generateDefaultPageLayout(old), revision: 4 };
+    const source = { logicalDeviceId, name: '测试', deviceType: 'WiFi', revision: 101, layout: oldLayout,
+      uiConfig: {}, defaultMode: 'normal', availableModes: ['normal'],
+      capabilities: { canRead: true, canCommand: true, commandEndpointKeys: null, canEditConsole: true, canManageSharing: true } };
+    const consoles = { get: vi.fn(async () => source), save: vi.fn(async (_id, change) => ({ ...source,
+      revision: 103, layout: { ...change.layout, revision: 5 } })) };
+    const { page } = harness(current, undefined, undefined, true, consoles);
+    try {
+      await vi.waitFor(() => expect(page.layoutStale).toBeDefined()); await page.updateLayout();
+      expect(consoles.save).toHaveBeenCalledExactlyOnceWith(logicalDeviceId,
+        { layout: expect.objectContaining({ manifestFingerprint: current.manifestFingerprint }) }, 101);
+      expect(consoles.get).toHaveBeenCalledOnce(); expect(page.layout?.revision).toBe(5);
+      expect(page.beginPanelEdit()).toBe(true); expect(page.panelEditSession?.consoleRevision).toBe(103);
+    } finally { page.ngOnDestroy(); }
+  });
+
+  it('does not use polling to rebase a Console migration conflict; only explicit retry reads again', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const current = snapshot(), old = { ...current, manifestFingerprint: '11'.repeat(32), endpoints: [current.endpoints[0]] };
+    const source = { logicalDeviceId, name: '测试', deviceType: 'WiFi', revision: 101,
+      layout: { ...generateDefaultPageLayout(old), revision: 4 }, uiConfig: {}, defaultMode: 'normal', availableModes: ['normal'],
+      capabilities: { canRead: true, canCommand: true, commandEndpointKeys: null, canEditConsole: true, canManageSharing: true } };
+    const consoles = { get: vi.fn(async () => source), save: vi.fn(async () => { throw { code: 'DEVICE_CONSOLE_CONFLICT' }; }) };
+    const { page } = harness(current, undefined, undefined, true, consoles);
+    try {
+      await vi.waitFor(() => expect(page.layoutStale).toBeDefined()); await page.updateLayout();
+      expect(page.error).toContain('重新读取后确认'); await page.updateLayout();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(consoles.save).toHaveBeenCalledOnce(); expect(consoles.get).toHaveBeenCalledOnce();
+      page.retry(); await vi.waitFor(() => expect(consoles.get).toHaveBeenCalledTimes(2));
+      expect(consoles.save).toHaveBeenCalledOnce();
+    } finally { page.ngOnDestroy(); vi.useRealTimers(); }
   });
 });

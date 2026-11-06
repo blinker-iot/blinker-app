@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { type PanelAction, type PanelCard } from '../v2/widgets/widget-kit';
+import { type HoldGesture, type PanelAction, type PanelCard } from '../v2/widgets/widget-kit';
 import { parseCustomPanel, type CustomPanelDocument } from '../../core/device-v2/custom-panel';
 
 let runtime: Promise<{ script: string; styles: string }> | undefined;
@@ -79,6 +79,7 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
   private html?: string;
   private ready = false;
   private readonly drafts = new Map<string, string>();
+  private readonly holds = new Map<string, HoldGesture['target']>();
   private destroyed = false;
   private timeout?: ReturnType<typeof setTimeout>;
   private readonly message = (event: MessageEvent) => this.receive(event);
@@ -88,12 +89,14 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    this.retireHolds();
     if ((changes['document'] && this.document?.html !== this.html) || changes['restricted']) void this.prepare();
     else this.push();
   }
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.holds.clear();
 
     clearTimeout(this.timeout);
     window.removeEventListener('message', this.message);
@@ -102,6 +105,7 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
   loaded(): void {
     // A navigation never inherits the previous document's device access.
     this.ready = false;
+    this.holds.clear();
   }
 
   async prepare(): Promise<void> {
@@ -117,6 +121,7 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
     this.sizeError = '';
 
     this.drafts.clear();
+    this.holds.clear();
 
     this.error = '';
 
@@ -232,6 +237,12 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
     // Never accept field metadata or bindings supplied by the frame.
     const card = this.cards.find(item => item.field.key === event.data.key);
 
+    if (Object.hasOwn(event.data, 'hold')) {
+      this.receiveHold(card, event.data);
+
+      return;
+    }
+
     if (!card || !card.field.writable || card.disabled) return;
 
     const action = this.validateAction(card, event.data);
@@ -244,6 +255,68 @@ export class CustomPanelFrameComponent implements OnChanges, OnDestroy {
     }
 
     this.action.emit({ field: card.field, widgetId: card.widget.widgetId, ...action });
+  }
+
+  private holdAvailable(card: PanelCard): boolean {
+    return card.controlScope === undefined ? card.controlAvailable !== false : card.controlAvailable === true;
+  }
+
+  private sameHoldTarget(left: HoldGesture['target'], right: HoldGesture['target']): boolean {
+    return left.widgetId === right.widgetId && left.scope === right.scope
+      && left.field.id === right.field.id && left.field.key === right.field.key
+      && left.field.role === right.field.role && left.field.valueType === right.field.valueType;
+  }
+
+  private cardTarget(card: PanelCard): HoldGesture['target'] {
+    return { field: card.field, widgetId: card.widget.widgetId, scope: card.controlScope };
+  }
+
+  private retireHolds(): void {
+    if (!this.ready || !this.active || !this.interactive) { this.holds.clear(); return; }
+
+    for (const [id, target] of this.holds) {
+      const card = this.cards.find(item => item.field.key === target.field.key);
+
+      if (!card || !card.field.writable || !this.holdAvailable(card)
+        || !this.sameHoldTarget(target, this.cardTarget(card))) this.holds.delete(id);
+    }
+  }
+
+  private receiveHold(card: PanelCard | undefined, input: { key?: unknown; kind?: unknown; value?: unknown; hold?: unknown }): void {
+    const hold = input.hold as HoldGesture | undefined;
+
+    if (!hold || typeof hold !== 'object' || typeof hold.id !== 'string' || !hold.id.length || hold.id.length > 128
+      || !['press', 'release'].includes(hold.phase) || !hold.target || typeof hold.target !== 'object'
+      || !hold.target.field || typeof hold.target.field !== 'object' || typeof hold.target.widgetId !== 'string'
+      || hold.target.scope !== undefined && typeof hold.target.scope !== 'string'
+      || input.key !== hold.target.field.key || input.kind !== 'toggle' || input.value !== (hold.phase === 'press')) return;
+
+    let target: HoldGesture['target'];
+
+    if (hold.phase === 'press') {
+      if (!card || card.disabled || !card.field.writable || card.field.valueType !== 'boolean' || !this.holdAvailable(card)
+        || !this.sameHoldTarget(hold.target, this.cardTarget(card)) || this.holds.has(hold.id) || this.holds.size >= 32) return;
+
+      // Only authoritative host metadata survives the untrusted frame boundary.
+      target = { ...this.cardTarget(card), field: { ...card.field } };
+      this.holds.set(hold.id, target);
+    } else {
+      const original = this.holds.get(hold.id);
+
+      if (!original || !this.sameHoldTarget(hold.target, original)) return;
+
+      this.holds.delete(hold.id);
+
+      // Busy may suppress new presses, but never an accepted owner's release.
+      // Availability, binding, permissions and the outer lifecycle remain fenced.
+      if (!card || !card.field.writable || !this.holdAvailable(card)
+        || !this.sameHoldTarget(original, this.cardTarget(card))) return;
+
+      target = original;
+    }
+
+    this.action.emit({ field: target.field, widgetId: target.widgetId, kind: 'toggle', value: input.value as boolean,
+      hold: { id: hold.id, phase: hold.phase, target } });
   }
 
   private validateAction(card: PanelCard, input: { kind?: unknown; value?: unknown }): Pick<PanelAction, 'kind' | 'value'> | undefined {

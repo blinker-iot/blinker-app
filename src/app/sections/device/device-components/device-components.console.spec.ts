@@ -106,11 +106,11 @@ describe('component settings Console/legacy routing', () => {
     f.page.updateStyleWidget({ ...f.page.editing!.widget, title: '新的温度名称' });
     await f.page.saveStyle();
     expect(f.consoles.save).toHaveBeenCalledExactlyOnceWith(f.id, { layout: { ...f.layout,
-      widgets: [f.layout.widgets[0], { ...f.layout.widgets[1], title: '新的温度名称' }] } });
+      widgets: [f.layout.widgets[0], { ...f.layout.widgets[1], title: '新的温度名称' }] } }, 101);
     expect(f.page.layout?.revision).toBe(8);
     expect(f.page.layout?.widgets[0]).toEqual(f.layout.widgets[0]);
     expect(f.page.editing).toBeUndefined();
-    expect(f.source().revision).toBe(102); // Console revision is deliberately not the layout's CAS token.
+    expect(f.source().revision).toBe(102); // Aggregate Console CAS remains separate from layout revision 7.
     f.oldApisUnused();
   });
 
@@ -122,7 +122,7 @@ describe('component settings Console/legacy routing', () => {
     }));
     f.replace(source); await f.page.load(); await f.page.openStyle('temperature');
     await f.page.saveStyle();
-    expect(f.consoles.save).toHaveBeenCalledExactlyOnceWith(f.id, { layout: source.layout });
+    expect(f.consoles.save).toHaveBeenCalledExactlyOnceWith(f.id, { layout: source.layout }, 101);
     expect(f.page.layout?.widgets).toEqual(source.layout!.widgets);
     f.oldApisUnused();
   });
@@ -130,7 +130,7 @@ describe('component settings Console/legacy routing', () => {
   it('hides a cloud field with a uiConfig-only Console change, leaving its saved layout intact', async () => {
     const f = setup(); await f.page.load();
     await f.page.setVisible('temperature', f.toggle(false));
-    expect(f.consoles.save).toHaveBeenCalledExactlyOnceWith(f.id, { uiConfig: { hiddenEndpointKeys: ['temperature'] } });
+    expect(f.consoles.save).toHaveBeenCalledExactlyOnceWith(f.id, { uiConfig: { hiddenEndpointKeys: ['temperature'] } }, 101);
     expect(f.page.layout).toEqual(f.layout);
     expect(f.device.config.hiddenEndpointKeys).toEqual(['temperature']);
     f.oldApisUnused();
@@ -139,7 +139,7 @@ describe('component settings Console/legacy routing', () => {
   it('restores a hidden cloud field already in the layout without rewriting the layout', async () => {
     const f = setup(), source = f.source(); source.uiConfig.hiddenEndpointKeys = ['temperature']; f.replace(source);
     await f.page.load(); await f.page.setVisible('temperature', f.toggle(true));
-    expect(f.consoles.save).toHaveBeenCalledExactlyOnceWith(f.id, { uiConfig: { hiddenEndpointKeys: [] } });
+    expect(f.consoles.save).toHaveBeenCalledExactlyOnceWith(f.id, { uiConfig: { hiddenEndpointKeys: [] } }, 101);
     expect(f.page.layout?.widgets).toEqual(f.layout.widgets);
     f.oldApisUnused();
   });
@@ -171,6 +171,26 @@ describe('component settings Console/legacy routing', () => {
     expect(f.page.configReady).toBe(true);
     expect(f.page.error).toBe('');
     expect(f.port.openConnection).toHaveBeenCalledOnce();
+  });
+
+  it('uses the displayed aggregate version for visibility without a hidden pre-write GET', async () => {
+    const f = setup(); await f.page.load();
+    await f.page.setVisible('temperature', f.toggle(false));
+    await f.page.setVisible('temperature', f.toggle(true));
+    expect(f.consoles.get).toHaveBeenCalledOnce();
+    expect(f.consoles.save.mock.calls.map(call => (call as any)[2])).toEqual([101, 102]);
+  });
+
+  it('keeps a stale style draft blocked until the user explicitly opens a fresh edit', async () => {
+    const f = setup(); await f.page.load(); await f.page.openStyle('temperature');
+    f.page.updateStyleWidget({ ...f.page.editing!.widget, title: '保留本地草稿' });
+    const draft = f.page.editing!.widget;
+    f.consoles.save.mockRejectedValueOnce({ code: 'DEVICE_CONSOLE_CONFLICT' });
+    await f.page.saveStyle();
+    expect(f.page.editing!.widget).toBe(draft); expect(f.page.error).toContain('重新读取后确认');
+    f.page.setStyleInvalid(false); await f.page.saveStyle();
+    expect(f.consoles.save).toHaveBeenCalledOnce(); expect(f.consoles.get).toHaveBeenCalledTimes(2);
+    expect(f.page.configReady).toBe(false);
   });
 
   it('retains the cloud property draft and previous layout after conflict, without automatically retrying', async () => {

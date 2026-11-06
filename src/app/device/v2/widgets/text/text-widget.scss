@@ -67,6 +67,14 @@
 
 .multi .tx-in { font-family: var(--ui-font-mono); font-size: 13px; line-height: 1.5; }
 
+// Two rows leave room for one full-size input band, not two stacked bands.
+// The textarea keeps its own long-text scroll; the card need not scroll.
+:host(.compact-multiline) .tx-box.multi {
+  min-height: 0;
+  flex-direction: row;
+  padding: 6px 6px 6px 14px;
+}
+
 .tx-foot {
   flex: none;
   display: flex;

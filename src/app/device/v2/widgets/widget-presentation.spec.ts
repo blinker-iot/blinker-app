@@ -30,6 +30,27 @@ describe('UI3 widget presentation preserves existing control contracts', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it('renders typed power defaults while preserving an explicit widget title', () => {
+    const fixture = TestBed.createComponent(TextWidgetComponent);
+    const original = card('text');
+    const value = { ...original, field: { ...original.field, key: 'power', manifestType: 0, valueType: 'boolean' as const },
+      widget: { ...original.widget, endpointKey: 'power', title: undefined } };
+    fixture.componentRef.setInput('card', value);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.title).toBe('电源开关');
+    expect(fixture.nativeElement.textContent).toContain('电源开关');
+    fixture.componentRef.setInput('card', { ...value, field: { ...value.field, manifestType: 2, valueType: 'integer' } });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('功率');
+    fixture.componentRef.setInput('card', { ...value, widget: { ...value.widget, title: 'power' } });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.title).toBe('Power');
+    fixture.componentRef.setInput('card', { ...value, widget: { ...value.widget, title: '我的按钮' } });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.title).toBe('我的按钮');
+    expect(value.field.key).toBe('power');
+  });
+
   it('keeps gradient strip appearance separate from its original slider handlers', () => {
     const fixture = TestBed.createComponent(GradientWidgetComponent);
     const value = card('gradient');

@@ -67,4 +67,10 @@
 .ble-candidates small { color: var(--blinker-text-secondary); font-size: 0.8125rem; line-height: 1.5; overflow-wrap: anywhere; }
 .candidate-rssi { margin-left: auto; flex-shrink: 0; }
 .primary-action { width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; }
+.ble-registration-refresh, .ble-registration-stop {
+  @include surface.button;
+  min-block-size: 48px;
+  width: 100%;
+  color: var(--blinker-text-primary);
+}
 @media (max-width: 360px) { .ble-candidates button { flex-wrap: wrap; } }

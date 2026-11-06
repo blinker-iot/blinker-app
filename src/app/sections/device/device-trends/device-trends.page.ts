@@ -7,7 +7,7 @@ import { Subscription } from 'rxjs';
 import { API } from '../../../configs/api.config';
 import { assertDeviceV2AccountContext, captureDeviceV2AccountContext, DeviceV2AccountContext } from '../../../core/device-v2/account-scope';
 import { capabilityDisplayName, deviceDisplayName } from '../../../core/device-v2/display-metadata';
-import { HistoryWindow, historyEndInput, historyWindow, parseHistoryEnd, shiftHistoryWindow } from '../../../core/device-v2/history-window';
+import { HistoryWindow, historyEndInput, historyLocalText, historyWindow, parseHistoryEnd, shiftHistoryWindow } from '../../../core/device-v2/history-window';
 import { PeriodicHistoryDetail, PeriodicHistoryItem, PeriodicHistoryPolicyInput, periodicHistoryCurves,
   PERIODIC_HISTORY_VIEW_LIMIT } from '../../../core/device-v2/periodic-history';
 import { GatewayHttpError } from '../../../core/model/response.model';
@@ -39,19 +39,27 @@ export class DeviceTrendsPage implements OnDestroy {
   private generation = 0;
   private visible = false;
   private destroyed = false;
+  private readonly foreground = signal(true);
   // This is only an uncertainty guard, not a replay queue. No request body or
   // account data is persisted; recovery always reads the authoritative policy.
   private needsConfirmation = false;
   // Read failures require a user action; uncertain saves still recover by reading.
   private readFailed = false;
+  private appliedEndInput = '';
 
   constructor(private readonly route: ActivatedRoute, private readonly data: DataService,
-    private readonly history: DeviceV2PeriodicHistoryService, private readonly visibility: AppVisibilityService) {
+    private readonly history: DeviceV2PeriodicHistoryService, visibility: AppVisibilityService) {
     this.subscriptions.add(data.authDataChanged.subscribe(() => {
       if (this.account && !this.accountCurrent()) { this.close(); this.needsConfirmation = false; }
     }));
     this.subscriptions.add(visibility.active.subscribe(active => {
-      if (!active) this.clear(true); else if (this.canQuery && !this.readFailed) void this.refresh();
+      // Notify the template before the independent read-failure/UNKNOWN gates.
+      this.foreground.set(active);
+      if (!active) this.clear(true);
+      else if (this.canQuery) {
+        this.syncEndInput();
+        if (!this.readFailed) void this.refresh();
+      }
     }));
     this.subscriptions.add(data.deviceDataLoader.subscribe(() => {
       if (this.visible && !this.available) { this.clear(); this.state.update(s => ({ ...s, error: '设备或访问权限已变化，请返回设备列表。' })); }
@@ -63,16 +71,16 @@ export class DeviceTrendsPage implements OnDestroy {
     const device = this.data.device?.dict?.[this.id];
     return !!device && device.config.mode === 'bbp2' && !device.config.isPreview && !device.config.disabled;
   }
-  get canQuery(): boolean { return this.visible && !this.destroyed && this.visibility.active.value && this.available && this.accountCurrent(); }
+  get canQuery(): boolean { return this.visible && !this.destroyed && this.foreground() && this.available && this.accountCurrent(); }
   get canConfigure(): boolean { return this.canQuery && !!this.state().detail?.canConfigure && !this.data.device?.dict?.[this.id]?.config.isShared; }
   get canSave(): boolean { return this.canConfigure && !this.state().busy && !this.state().writeBlocked && !!this.input(); }
   get canLoadMore(): boolean { const s = this.state(); return this.canQuery && s.ready && !s.busy && !!s.nextCursor && s.rows.length < this.viewLimit; }
   get bounded(): boolean { const s = this.state(); return s.ready && s.rows.length >= this.viewLimit && !!s.nextCursor; }
-  get windowPending(): boolean { const s = this.state(); return !!s.to && parseHistoryEnd(s.endInput) !== s.to; }
+  get windowPending(): boolean { const s = this.state(); return !!s.to && parseHistoryEnd(s.endInput, s.to) !== s.to; }
   get windowError(): string {
     const s = this.state(); if (!s.to) return '';
-    const to = parseHistoryEnd(s.endInput);
-    if (to === undefined) return '请输入有效的 UTC 结束日期和时间。';
+    const to = parseHistoryEnd(s.endInput, s.to);
+    if (to === undefined) return '请输入有效的手机本地结束时间，避开夏令时跳变或重复时刻。';
     if (to > Date.now()) return '结束时间不能晚于当前时间。';
     return historyWindow(to, s.rangeMs) ? '' : '时间窗口超出可查询范围。';
   }
@@ -92,9 +100,10 @@ export class DeviceTrendsPage implements OnDestroy {
     return capabilityDisplayName(this.data.device?.dict?.[this.id], { ...field, kind: 0 });
   }
   utcDate(at: number): string { return new Date(at).toISOString(); }
-  utcText(at: number): string { return this.utcDate(at).replace('T', ' ').replace('Z', ' UTC'); }
+  localText(at: number): string { return historyLocalText(at); }
   ionViewWillEnter(): void {
     this.close(); this.id = this.route.snapshot.paramMap.get('id') || ''; this.visible = true;
+    this.appliedEndInput = '';
     this.state.update(s => ({ ...s, rangeMs: DAY, from: 0, to: 0, endInput: '' }));
     try {
       if (!this.data.auth?.uuid) throw Error('PERIODIC_HISTORY_ACCOUNT_CHANGED');
@@ -124,22 +133,37 @@ export class DeviceTrendsPage implements OnDestroy {
   }
   async refresh(): Promise<void> {
     if (!this.canQuery || this.state().busy) return;
+    this.syncEndInput();
     const baseline = this.state();
     const window = baseline.to ? { from: baseline.from, to: baseline.to }
       : historyWindow(Math.floor(Date.now() / 1000) * 1000, baseline.rangeMs);
     if (!window) return;
+    const endInput = baseline.to ? baseline.endInput : historyEndInput(window.to);
+    if (!baseline.to) this.appliedEndInput = endInput;
     const { key } = baseline;
     const request = this.begin();
     this.state.update(s => ({ ...s, ready: false, rows: [], nextCursor: null, writeBlocked: true, ...window,
-      endInput: baseline.to ? s.endInput : historyEndInput(window.to) }));
+      endInput }));
     try {
       const [detail, page] = await Promise.all([this.history.detail(this.id, request.controller.signal),
         this.history.read(this.id, { ...window, limit: 50, ...(key ? { key } : {}) }, request.controller.signal)]);
       this.assertCurrent(request);
       const recovered = this.needsConfirmation; this.needsConfirmation = false;
+      // History queries do not discard edits or rebase them onto a new policy.
+      // An uncertain save must always recover the authoritative server settings.
+      const previous = baseline.detail;
+      const samePolicy = !!previous && previous.logicalDeviceId === detail.logicalDeviceId
+        && previous.manifestFingerprint === detail.manifestFingerprint
+        && (previous.policy?.revision ?? 0) === (detail.policy?.revision ?? 0)
+        && previous.policy?.manifestFingerprint === detail.policy?.manifestFingerprint;
+      const preserveDraft = !recovered && samePolicy && previous?.canConfigure && detail.canConfigure
+        && !this.data.device?.dict?.[this.id]?.config.isShared;
       this.state.update(s => ({ ...s, detail, ready: true, rows: page.items, nextCursor: page.nextCursor,
-        draftKeys: [...(detail.policy?.keys ?? [])], draftEnabled: detail.policy?.enabled ?? false, writeBlocked: false,
-        notice: recovered ? '已只读刷新服务器设置，请核对当前内容；不会自动重发之前的保存。' : s.notice }));
+        draftKeys: preserveDraft ? baseline.draftKeys : [...(detail.policy?.keys ?? [])],
+        draftEnabled: preserveDraft ? baseline.draftEnabled : detail.policy?.enabled ?? false, writeBlocked: false,
+        notice: recovered ? '已只读刷新服务器设置，请核对当前内容；不会自动重发之前的保存。'
+          : previous && (!samePolicy || previous.canConfigure !== detail.canConfigure)
+            ? '记录设置、设备能力或权限已变化，已读取服务器设置，请核对当前内容。' : s.notice }));
     } catch (error) { this.fail(request, error); }
     finally { this.finish(request); }
   }
@@ -169,7 +193,7 @@ export class DeviceTrendsPage implements OnDestroy {
   }
   applyWindow(): void {
     if (!this.canApplyWindow) return;
-    const window = historyWindow(parseHistoryEnd(this.state().endInput)!, this.state().rangeMs);
+    const window = historyWindow(parseHistoryEnd(this.state().endInput, this.state().to)!, this.state().rangeMs);
     if (window) this.queryWindow(window);
   }
   shiftWindow(direction: -1 | 1): void {
@@ -183,8 +207,15 @@ export class DeviceTrendsPage implements OnDestroy {
     if (window) this.queryWindow(window);
   }
   private queryWindow(window: HistoryWindow): void {
-    this.state.update(s => ({ ...s, ...window, endInput: historyEndInput(window.to) }));
+    const endInput = this.appliedEndInput = historyEndInput(window.to);
+    this.state.update(s => ({ ...s, ...window, endInput }));
     void this.refresh();
+  }
+  private syncEndInput(): void {
+    const s = this.state();
+    if (!s.to || s.endInput !== this.appliedEndInput) return;
+    const endInput = this.appliedEndInput = historyEndInput(s.to);
+    if (endInput !== s.endInput) this.state.update(current => ({ ...current, endInput }));
   }
   changeKey(key: string): void {
     if (!this.canQuery || this.state().busy || key && !this.keyOptions.some(field => field.key === key)) return;

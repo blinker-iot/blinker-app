@@ -5,6 +5,18 @@ ion-content { --background: var(--blinker-surface); }
 .toolbar-action, .text-action { border: 0; background: none; color: var(--ion-color-primary); padding: 12px; min-height: 44px; font: inherit; font-size: 14px; text-decoration: none; }
 button:disabled { opacity: .45; }
 .toolbar-action { margin-right: 8px; }
+.source-switch { display: flex; gap: 8px; padding: 8px 16px; background: var(--blinker-surface); button { flex: 1; min-width: 0; min-height: 48px; padding: 8px 12px; border: 1px solid transparent; border-radius: 12px; font: inherit; font-size: 15px; color: var(--blinker-text-secondary); background: transparent; cursor: pointer; touch-action: manipulation; } button[aria-pressed='true'], button:active { border-color: var(--blinker-border); background: var(--blinker-bg-elevated); } button[aria-pressed='true'] { color: var(--ion-color-primary); } }
+.reported-refresh { min-width: 48px; min-height: 48px; margin-left: auto; flex-shrink: 0; }
+.reported-refresh:active { background: var(--blinker-bg-elevated); }
+.reported-details { margin: 20px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; dt { color: var(--blinker-text-secondary); font-size: 13px; } dd { margin: 6px 0 0; font-size: 15px; overflow-wrap: anywhere; } }
+.empty-reported { padding-top: 32px; }
+.network-panel { padding-top: 32px; }
+.network-query { width: 100%; min-height: 48px; margin-top: 24px; }
+.network-result { min-height: 48px; margin-top: 16px; }
+.network-disclaimer, .network-attribution { margin-top: 16px; overflow-wrap: anywhere; }
+.network-attribution a { display: inline-flex; align-items: center; min-height: 48px; color: var(--ion-color-primary); }
+.network-attribution a:focus-visible { outline: 2px solid var(--ion-color-primary); outline-offset: 2px; }
+.source-switch button:focus-visible, .reported-refresh:focus-visible { outline: 2px solid var(--ion-color-primary); outline-offset: 2px; }
 .empty-state { min-height: 65vh; max-width: 420px; margin: auto; padding: 32px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
 h1, p { margin: 0; }
 h1 { font-size: 18px; font-weight: 650; }

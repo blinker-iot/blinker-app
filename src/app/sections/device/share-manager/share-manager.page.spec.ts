@@ -1,5 +1,5 @@
 import { ShareManagerPage } from './share-manager.page';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 
 describe('ShareManagerPage input and inventory', () => {
   function fixture() {
@@ -7,7 +7,7 @@ describe('ShareManagerPage input and inventory', () => {
       listPendingInvitations: vi.fn().mockResolvedValue({ items: [], nextCursor: null }) };
     const data: any = { auth: { uuid: 'reader', accessToken: 'test-access' }, sessionEpoch: 1,
       device: { list: [], dict: {} }, share: { byDevice: {}, received: [] },
-      authDataChanged: new Subject<void>(), deviceDataLoader: new Subject<boolean>() };
+      authDataChanged: new Subject<void>(), deviceDataLoader: new BehaviorSubject(false) };
     const users = { getAllInfo: vi.fn().mockResolvedValue(true) };
     const notices = { showToast: vi.fn() };
     const alerts = { create: vi.fn().mockResolvedValue({ present: async () => {} }) };
@@ -18,6 +18,78 @@ describe('ShareManagerPage input and inventory', () => {
       invitation as any, nav as any, bookmarks as any, { markForCheck: vi.fn() } as any);
     return { page, sharing, data, alerts, invitation, nav, notices };
   }
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>(done => { resolve = done; });
+    return { promise, resolve };
+  }
+  it('DS-5 warm entry reads received, each owner and inbox once rather than treating the initial snapshot as a new load', async () => {
+    const f = fixture(), received = deferred<any[]>(), owner = deferred<any>(), inbox = deferred<any>();
+    f.data.device = { list: ['owned'], dict: { owned: { config: { isShared: false } } } };
+    f.data.deviceDataLoader.next(true);
+    f.sharing.listReceived.mockReturnValue(received.promise);
+    f.sharing.listDevice.mockReturnValue(owner.promise);
+    f.sharing.listPendingInvitations.mockReturnValue(inbox.promise);
+    try {
+      f.page.ngOnInit(); f.page.ionViewWillEnter();
+      expect(f.sharing.listReceived).toHaveBeenCalledTimes(1);
+      expect(f.sharing.listDevice).toHaveBeenCalledTimes(1);
+      expect(f.sharing.listDevice).toHaveBeenCalledWith('owned');
+      expect(f.sharing.listPendingInvitations).toHaveBeenCalledTimes(1);
+      expect(f.sharing.acceptInvitation).not.toHaveBeenCalled(); expect(f.sharing.leaveShare).not.toHaveBeenCalled();
+    } finally {
+      received.resolve([]); owner.resolve({ logicalDeviceId: 'owned', shares: [], invitations: [] });
+      inbox.resolve({ items: [], nextCursor: null }); await Promise.resolve(); await Promise.resolve();
+      f.page.ngOnDestroy();
+    }
+  });
+  it('DS-5 cold replay remains inert while later real loaded notifications still refresh', async () => {
+    const f = fixture();
+    try {
+      f.page.ngOnInit(); expect(f.sharing.listReceived).not.toHaveBeenCalled();
+      f.page.ionViewWillEnter(); await vi.waitFor(() => expect(f.page.loaded).toBe(true));
+      expect(f.sharing.listReceived).toHaveBeenCalledTimes(1);
+      f.data.deviceDataLoader.next(false); expect(f.sharing.listReceived).toHaveBeenCalledTimes(1);
+      f.data.deviceDataLoader.next(true);
+      expect(f.sharing.listReceived).toHaveBeenCalledTimes(2);
+      await Promise.resolve(); await Promise.resolve();
+      expect(f.sharing.listPendingInvitations).toHaveBeenCalledTimes(2);
+      expect(f.sharing.acceptInvitation).not.toHaveBeenCalled(); expect(f.sharing.leaveShare).not.toHaveBeenCalled();
+    } finally { f.page.ngOnDestroy(); }
+  });
+  it('DS-5 a failed warm read waits for explicit refresh rather than getting a second initial request', async () => {
+    const f = fixture(); f.data.deviceDataLoader.next(true);
+    f.sharing.listReceived.mockRejectedValueOnce(new Error('offline'));
+    try {
+      f.page.ngOnInit(); f.page.ionViewWillEnter(); await vi.waitFor(() => expect(f.page.loaded).toBe(true));
+      expect(f.sharing.listReceived).toHaveBeenCalledTimes(1); expect(f.page.loadError).toContain('部分');
+      await Promise.resolve(); await Promise.resolve(); expect(f.sharing.listReceived).toHaveBeenCalledTimes(1);
+      await f.page.loadShares(); expect(f.sharing.listReceived).toHaveBeenCalledTimes(2); expect(f.page.loadError).toBe('');
+      expect(f.sharing.acceptInvitation).not.toHaveBeenCalled(); expect(f.sharing.leaveShare).not.toHaveBeenCalled();
+    } finally { f.page.ngOnDestroy(); }
+  });
+  it.each(['account', 'destroy'])('DS-5 retires the single warm read after %s without restoring stale owner or inbox state', async change => {
+    const f = fixture(), received = deferred<any[]>(), owner = deferred<any>(), inbox = deferred<any>();
+    f.data.device = { list: ['owned'], dict: { owned: { config: { isShared: false } } } };
+    f.data.deviceDataLoader.next(true);
+    f.sharing.listReceived.mockReturnValueOnce(received.promise);
+    f.sharing.listDevice.mockReturnValue(owner.promise);
+    f.sharing.listPendingInvitations.mockReturnValueOnce(inbox.promise);
+    f.page.ngOnInit(); f.page.ionViewWillEnter();
+    if (change === 'account') {
+      f.data.auth = { uuid: 'next-owner', accessToken: 'next-test-access' };
+      f.data.sessionEpoch++; f.data.device = { list: [], dict: {} }; f.data.authDataChanged.next();
+    } else f.page.ngOnDestroy();
+    received.resolve([]); owner.resolve({ logicalDeviceId: 'owned', shares: [], invitations: [] });
+    inbox.resolve({ items: [], nextCursor: null });
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    expect(f.data.share.byDevice).toEqual({}); expect(f.page.pendingInvitations).toEqual([]);
+    f.page.ngOnDestroy();
+    const calls = f.sharing.listReceived.mock.calls.length;
+    f.data.deviceDataLoader.next(true); f.data.authDataChanged.next();
+    expect(f.sharing.listReceived).toHaveBeenCalledTimes(calls);
+    expect(f.sharing.acceptInvitation).not.toHaveBeenCalled(); expect(f.sharing.leaveShare).not.toHaveBeenCalled();
+  });
   it('keeps owner and received categories and sends paste to confirmation, never directly accepts', async () => {
     const f = fixture();
     expect(f.page.tab).toBe('sharing');

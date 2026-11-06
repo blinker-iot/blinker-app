@@ -1,7 +1,13 @@
-import { of } from 'rxjs';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { NavController } from '@ionic/angular/standalone';
+import { of, Subject } from 'rxjs';
 import { DeviceV2ManagementService } from './device-v2-management.service';
 import { API, isGatewayUrl } from '../../configs/api.config';
 import { base64UrlEncode } from '../device-v2/ble-direct/wire';
+import { GATEWAY_NO_AUTH_REPLAY, ServerInterceptor } from '../injectable/server.interceptor';
+import { DataService } from './data.service';
 
 describe('Device V2 display metadata CAS', () => {
   const value = { logicalDeviceId: 'device_a', revision: 2, name: '客厅灯',
@@ -32,6 +38,24 @@ describe('Device V2 display metadata CAS', () => {
   });
 });
 
+describe('AR-4l identity prerequisite HTTP does not opt in to auth replay', () => {
+  it('marks Admin, Key and instance reads as no-auth-replay without changing their wire body', async () => {
+    const id = 'device_11111111-1111-4111-8111-111111111111';
+    const context = { logicalDeviceId: id, credentialVersion: 1, locator: 'AQEBAQEBAQEBAQEBAQEBAQ' };
+    const http = { get: vi.fn((_url: string, _options: any) => of({ status: 200, headers: { get: () => 'private, no-store' },
+      body: { status: 200, data: { record: null } } })),
+      post: vi.fn((_url: string, _body: unknown, _options: unknown) => of({ status: 200,
+        headers: { get: () => 'private, no-store' }, body: { status: 200, data: context } })) };
+    const service = new DeviceV2ManagementService(http as any);
+    await service.getDirectAdminV2(id); await service.revealDeviceKeyV2(context);
+    await service.resolveDeviceInstanceV2(new Uint8Array(16).fill(1));
+    expect(http.get.mock.calls[0][1].context.get(GATEWAY_NO_AUTH_REPLAY)).toBe(true);
+    for (const call of http.post.mock.calls) expect((call[2] as any).context.get(GATEWAY_NO_AUTH_REPLAY)).toBe(true);
+    expect(http.post.mock.calls[0][1]).toEqual({});
+    expect(http.post.mock.calls[1][1]).toEqual({ deviceInstanceId: context.locator });
+  });
+});
+
 describe('Device V2 exact owner state lookup', () => {
   const id = 'device_11111111-1111-4111-8111-111111111111';
   it('accepts only a 200 exact owner state, never absence or an arbitrary response as deletion', async () => {
@@ -46,6 +70,126 @@ describe('Device V2 exact owner state lookup', () => {
       const http = { get: vi.fn(() => of({ status: value.status, body: value })) };
       await expect(new DeviceV2ManagementService(http as any).readDeviceStateV2(id)).rejects.toThrow();
     }
+  });
+});
+
+describe('Device V2 fresh reconfigure context owner read', () => {
+  const id = 'device_11111111-1111-4111-8111-111111111111';
+  const locator = base64UrlEncode(new Uint8Array(16).fill(1));
+  const context = { logicalDeviceId: id, credentialVersion: 1, locator };
+  const value = { ...context, state: 'active', cloudEnabled: true,
+    name: 'Device', deviceKey: 'never-return', controllerSecret: 'never-return' };
+  const headers = { 'Cache-Control': 'private, no-store' };
+  const url = () => API.DEVICE_V2.DETAIL(id);
+  let service: DeviceV2ManagementService, http: HttpTestingController;
+  let data: { auth: any; authDataChanged: Subject<void>; replaceAuthData: ReturnType<typeof vi.fn> };
+  let nav: { navigateRoot: ReturnType<typeof vi.fn> };
+  const read = (target = id, signal = new AbortController().signal) => service.readDeviceContextV2(target, signal);
+
+  beforeEach(() => {
+    data = { auth: { uuid: 'owner', accessToken: 'access-test', refreshToken: 'refresh-test' },
+      authDataChanged: new Subject<void>(), replaceAuthData: vi.fn() };
+    nav = { navigateRoot: vi.fn() };
+    TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting(),
+      { provide: HTTP_INTERCEPTORS, useClass: ServerInterceptor, multi: true },
+      { provide: DataService, useValue: data }, { provide: NavController, useValue: nav }] });
+    service = TestBed.inject(DeviceV2ManagementService); http = TestBed.inject(HttpTestingController);
+  });
+  afterEach(() => { http.verify(); TestBed.resetTestingModule(); vi.useRealTimers(); vi.restoreAllMocks(); });
+
+  it('projects one fresh exact owner GET to only the three public context fields', async () => {
+    const promise = read(), request = http.expectOne(url());
+    expect(request.request.method).toBe('GET'); expect(request.request.body).toBeNull();
+    expect(request.request.params.keys()).toEqual([]);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer access-test');
+    expect(request.request.headers.get('X-Request-ID')).toBeTruthy();
+    expect(request.request.context.get(GATEWAY_NO_AUTH_REPLAY)).toBe(true);
+    expect(isGatewayUrl(url())).toBe(true);
+    request.flush({ status: 200, data: value }, { headers });
+    await expect(promise).resolves.toEqual(context);
+    http.expectNone(API.DEVICE_V2.LIST); http.expectNone(() => true);
+  });
+
+  it('accepts the uint32 upper version bound and never caches a later explicit read', async () => {
+    for (const credentialVersion of [0xffffffff, 2]) {
+      const promise = read();
+      http.expectOne(url()).flush({ status: 200, data: { ...value, credentialVersion } }, { headers });
+      await expect(promise).resolves.toEqual({ ...context, credentialVersion });
+    }
+    http.expectNone(() => true);
+  });
+
+  it('uses cancellation without requiring the newer throwIfAborted method', async () => {
+    const controller = new AbortController();
+    Object.defineProperty(controller.signal, 'throwIfAborted', { value: undefined });
+    const promise = read(id, controller.signal).catch(error => error);
+    const requests = http.match(url());
+    requests[0]?.flush({ status: 200, data: value }, { headers });
+    await expect(promise).resolves.toEqual(context);
+    expect(requests).toHaveLength(1);
+  });
+
+  it('rejects a wrong status, envelope or freshness contract without follow-up requests', async () => {
+    for (const candidate of [
+      { status: 201, body: { status: 201, data: value }, cache: 'no-store' },
+      { status: 200, body: { status: 201, data: value }, cache: 'no-store' },
+      { status: 200, body: { status: 200, data: value }, cache: 'private, max-age=0' },
+      { status: 200, body: { status: 200, data: value }, cache: '' },
+      { status: 200, body: { status: 200, data: null }, cache: 'no-store' },
+      { status: 200, body: value, cache: 'no-store' },
+    ]) {
+      const promise = read(), rejected = expect(promise).rejects.toThrow();
+      http.expectOne(url()).flush(candidate.body, { status: candidate.status, statusText: 'OK',
+        headers: { 'Cache-Control': candidate.cache } });
+      await rejected; http.expectNone(() => true);
+    }
+  });
+
+  it('requires the exact active cloud-enabled device, canonical nonzero locator and integer version', async () => {
+    for (const patch of [
+      { logicalDeviceId: 'device_22222222-2222-4222-8222-222222222222' },
+      { state: 'deleted' }, { state: undefined }, { cloudEnabled: false }, { cloudEnabled: 'true' },
+      { credentialVersion: 0 }, { credentialVersion: -1 }, { credentialVersion: 1.5 },
+      { credentialVersion: '1' }, { credentialVersion: 0x100000000 },
+      { locator: '' }, { locator: locator + '==' }, { locator: locator.slice(0, -1) + 'R' },
+      { locator: base64UrlEncode(new Uint8Array(16)) },
+      { locator: base64UrlEncode(new Uint8Array(15).fill(1)) },
+    ]) {
+      const promise = read(), rejected = expect(promise).rejects.toThrow();
+      http.expectOne(url()).flush({ status: 200, data: { ...value, ...patch } }, { headers });
+      await rejected; http.expectNone(() => true);
+    }
+  });
+
+  it.each([[401, 'AUTH_TOKEN_EXPIRED'], [403, 'DEVICE_ACCESS_DENIED'], [404, 'DEVICE_NOT_FOUND'],
+    [429, 'RATE_LIMIT_EXCEEDED'], [503, 'SERVICE_UNAVAILABLE']])(
+    'preserves HTTP %s without credential refresh, replay or account change', async (status, code) => {
+      const promise = read(), rejected = expect(promise).rejects.toMatchObject({ httpStatus: status, code });
+      http.expectOne(url()).flush({ status, errorCode: code }, { status: Number(status), statusText: 'Rejected' });
+      await rejected; http.expectNone(API.AUTH.REFRESH); http.expectNone(() => true);
+      expect(data.replaceAuthData).not.toHaveBeenCalled(); expect(nav.navigateRoot).not.toHaveBeenCalled();
+      expect(data.auth.accessToken).toBe('access-test');
+    });
+
+  it('rejects invalid IDs and an already cancelled read before HTTP', async () => {
+    for (const target of ['', 'a/b', ' ' + id]) await expect(read(target)).rejects.toThrow();
+    const controller = new AbortController(); controller.abort();
+    await expect(read(id, controller.signal)).rejects.toThrow(); http.expectNone(() => true);
+  });
+
+  it('unsubscribes a pending read on cancellation without another HTTP call', async () => {
+    const controller = new AbortController(), promise = read(id, controller.signal);
+    const rejected = expect(promise).rejects.toThrow(), request = http.expectOne(url());
+    controller.abort(); await rejected; expect(request.cancelled).toBe(true); http.expectNone(() => true);
+  });
+
+  it('cancels the single request at its 15-second deadline without retry', async () => {
+    vi.useFakeTimers();
+    const promise = read(), rejected = expect(promise).rejects.toThrow();
+    const request = http.expectOne(url());
+    await vi.advanceTimersByTimeAsync(14999); expect(request.cancelled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1); await rejected;
+    expect(request.cancelled).toBe(true); http.expectNone(() => true);
   });
 });
 

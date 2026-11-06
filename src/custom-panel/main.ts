@@ -199,7 +199,7 @@ async function start(): Promise<void> {
 
           this.ref = createComponent(PageWidgetComponent, { environmentInjector: app.injector, hostElement: this.mount });
 
-          this.ref.instance.action.subscribe(action => act(this.getAttribute('field') || '', action));
+          this.ref.instance.action.subscribe(action => act(action.hold?.target.field.key ?? this.getAttribute('field') ?? '', action));
           app.attachView(this.ref.hostView);
         }
 

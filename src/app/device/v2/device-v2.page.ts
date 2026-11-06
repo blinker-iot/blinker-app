@@ -1,7 +1,7 @@
 import { Inject } from '@angular/core';
 import { readDevicePanelMode } from '../device-panel-mode';
 import { formatValue } from './widgets/widget-kit';
-import { DeviceConsoleService, cloudConsole, consoleLayout, installConsole, canEditConsole } from '../../core/services/device-console.service';
+import { DeviceConsoleService, cloudConsole, consoleLayout, consoleWriteConflict, installConsole, canEditConsole } from '../../core/services/device-console.service';
 import { DEVICE_CONSOLE_HOST, DeviceConsoleHost } from '../../core/device-v2/console-host';
 import { CustomPanelFrameComponent } from '../custom-panel/custom-panel-frame.component';
 import { EndpointHistory } from '../../core/device-v2/endpoint-history';
@@ -125,8 +125,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   beginPanelEdit(): boolean {
     if (this.customMode || !this.canEdit || this.device.config.canEditConsole === false
       || !this.panelLayoutReady || !this.layout || !this.snapshot.manifestAccepted || this.pending.size || this.layoutStale || this.layoutError) return false;
+    if (cloudConsole(this.device) && (this.consoleRevision === undefined || this.consoleSession !== this.host.sessionVersion
+      || this.consoleDevice !== this.device || this.consoleConflict)) return false;
     this.panelEditSession = { device: this.device, document: this.layout,
-      snapshot: this.snapshot, record: this.storedLayout ?? null };
+      snapshot: this.snapshot, record: this.storedLayout ?? null, consoleRevision: this.consoleRevision };
     this.releaseTelemetry();
     this.requestRender();
     return true;
@@ -180,6 +182,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private destroyed = false;
   private renderPending = false;
   private commandGeneration = 0;
+  private holdEpoch = 0;
   private logicalDeviceId = '';
   private syncing?: Promise<void>;
   private syncAbort?: AbortController;
@@ -192,6 +195,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private layoutError = '';
   private storedCapabilitiesLoading = false;
   private consoleRevision?: number;
+  private consoleConflict = false;
+  private consoleSession?: number;
+  private consoleDevice?: BlinkerDevice;
   private consoleTimer?: ReturnType<typeof setInterval>;
   private consoleRefreshing = false;
   private appActive = true;
@@ -216,7 +222,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private readonly eventValues = new Map<string, DeviceUiValue | undefined>();
   // The newest value waiting behind a field's command in flight; sent once that
   // settles, so a release (false, stop) is never lost behind its press.
-  private readonly queued = new Map<string, unknown>();
+  private readonly queued = new Map<string, { value: unknown; controlScope?: string }>();
   private history?: EndpointHistory;
   private readonly drafts = new Map<string, string>();
   private readonly fieldErrors = new Map<string, string>();
@@ -326,7 +332,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
         value: this.value(field), extras: this.extras(widget),
         history: this.history?.points(field.key),
         display: this.display(field), draft: this.draft(field), error: this.fieldError(field),
-        disabled: !this.readOnly && (this.pending.has(field.key) || !this.canControl || !this.allowedEndpoint(field)) }] : [];
+        disabled: !this.readOnly && (this.pending.has(field.key) || !this.canControl || !this.allowedEndpoint(field)),
+        controlScope: this.controlScope, controlAvailable: this.canControl && this.allowedEndpoint(field) }] : [];
     });
   }
 
@@ -343,12 +350,17 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     if (this.panelEditSession) return;
     const { field, value } = action;
 
+    // A Hold release belongs to the original command lifetime, not just a key
+    // which a newly selected device or carrier happens to expose as well.
+    if (action.hold && (action.hold.target.scope !== this.controlScope
+      || action.hold.target.field.id !== field.id || action.hold.target.field.key !== field.key)) return;
+
     if (!this.allowedEndpoint(field)) return;
 
     if (action.kind === 'invoke') void this.execute(field);
 
     else if (action.kind === 'commit') void this.commit(field);
-    else if (action.kind === 'toggle' && typeof value === 'boolean') void this.send(field, value);
+    else if (action.kind === 'toggle' && typeof value === 'boolean') void this.send(field, value, action.hold?.target.scope);
     else if (action.kind === 'range' && typeof value === 'number' && Number.isFinite(value)) void this.send(field, value);
     else if (action.kind === 'select' && typeof value === 'string') void this.send(field, value);
     else if (action.kind === 'draft' && typeof value === 'string') {
@@ -381,6 +393,11 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   get canControl(): boolean {
     return !this.readOnly && this.connectionReady;
+  }
+
+  private get controlScope(): string {
+    return JSON.stringify([this.logicalDeviceId, this.host.sessionVersion, this.commandGeneration,
+      this.holdEpoch, this.snapshot.manifestFingerprint]);
   }
 
   private get connectionReady(): boolean {
@@ -423,10 +440,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   fieldTitle(widget: PageLayoutWidget, field: DeviceUiEndpoint): string {
-    // Older generated layouts used the raw key as their default title.
-    // A genuine custom widget title remains local to that widget.
-    return widget.title && widget.title !== field.key ? widget.title
-      : capabilityDisplayName(this.device, { key: field.key, kind: field.manifestKind, type: field.manifestType });
+    // Preserve this page's existing raw-key legacy-title fallback, not a global migration.
+    return capabilityDisplayName(this.device, { key: field.key, kind: field.manifestKind,
+      type: field.manifestType, valueType: field.valueType }, widget.title === field.key ? undefined : widget.title);
   }
 
   get lastEventText(): string {
@@ -494,6 +510,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   retry(): void {
+    this.consoleConflict = false;
+    if (cloudConsole(this.device)) { this.consoleRevision = undefined; this.consoleSession = undefined; }
     this.layoutLoadKey = '';
 
     this.resetBleReconnect();
@@ -504,7 +522,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   async updateLayout(): Promise<void> {
-    if (!this.logicalDeviceId || !this.storedLayout || !this.layoutStale || this.layoutUpdating || !this.canEdit) return;
+    if (!this.logicalDeviceId || !this.storedLayout || !this.layoutStale || this.layoutUpdating || !this.canEdit || this.consoleConflict) return;
 
     this.layoutUpdating = true;
     this.error = '';
@@ -514,10 +532,14 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       let record: DeviceV2PageLayoutRecord;
 
       if (cloudConsole(this.device)) {
+        if (this.consoleRevision === undefined || this.consoleSession !== this.host.sessionVersion || this.consoleDevice !== this.device) {
+          throw new Error('请重新读取控制台后确认。');
+        }
         const session = this.host.sessionVersion;
-        const source = await this.consoles.save(this.logicalDeviceId, { layout: candidate });
+        const device = this.device, id = this.logicalDeviceId;
+        const source = await this.consoles.save(id, { layout: candidate }, this.consoleRevision);
 
-        if (session !== this.host.sessionVersion || this.destroyed) return;
+        if (session !== this.host.sessionVersion || this.destroyed || this.device !== device || this.logicalDeviceId !== id) return;
 
         this.consoleRevision = source.revision;
 
@@ -530,7 +552,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
       this.applyStoredLayout(record, this.snapshot);
     } catch (error) {
-      if (this.errorCode(error) === 'DEVICE_V2_PAGE_LAYOUT_CONFLICT') {
+      if (consoleWriteConflict(error)) {
+        this.consoleConflict = true;
+        this.error = '界面已在其他位置更新，请重新读取后确认。';
+      } else if (this.errorCode(error) === 'DEVICE_V2_PAGE_LAYOUT_CONFLICT') {
         this.layoutLoadKey = '';
 
         this.applySnapshot(this.snapshot);
@@ -570,6 +595,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.layoutStale = undefined;
     this.layoutUpdating = false;
     this.storedLayout = undefined;
+    this.consoleRevision = undefined;
+    this.consoleConflict = false;
+    this.consoleSession = undefined;
+    this.consoleDevice = undefined;
     this.panelLayoutReady = false;
     this.panelEditSession = undefined;
     this.storedCapabilitiesLoading = false;
@@ -609,6 +638,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
     try {
       this.deviceSubscriptions.add(this.deviceUi.watchConnection(nextId).subscribe(state => {
+        if (this.accountState === 'ready' && state !== 'ready') this.holdEpoch += 1;
         this.accountState = state;
 
         this.requestRender();
@@ -628,6 +658,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
           // Retire the old stream before accepting a new source or its samples.
           const carrier = connectivity.activeTransport;
           if (this.activeTransport !== carrier) {
+            this.holdEpoch += 1;
             this.activeTransport = carrier;
             this.releaseTelemetry();
             this.refreshTelemetry();
@@ -669,6 +700,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private applySnapshot(snapshot: DeviceUiSnapshot): void {
+    if (this.snapshot.stateFresh && !snapshot.stateFresh) this.holdEpoch += 1;
     if (this.snapshot.manifestFingerprint !== snapshot.manifestFingerprint) {
       this.retireCommands();
       this.history?.reset();
@@ -736,10 +768,14 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
     try {
       const session = this.host.sessionVersion;
+      const device = this.device;
       const source = cloudConsole(this.device) ? await this.consoles.get(logicalDeviceId) : undefined;
 
-      if (session !== this.host.sessionVersion || !this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
-      if (source) { installConsole(this.device, source); this.consoleRevision = source.revision; }
+      if (session !== this.host.sessionVersion || this.device !== device || !this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
+      if (source) {
+        installConsole(this.device, source); this.consoleRevision = source.revision;
+        this.consoleSession = session; this.consoleDevice = device;
+      }
 
       const record = source ? consoleLayout(source) : await this.pageLayouts.get(logicalDeviceId);
 
@@ -770,22 +806,24 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private async refreshConsole(): Promise<void> {
-    if (this.destroyed || !this.pageVisible || !this.appActive || !cloudConsole(this.device) || this.consoleRefreshing) return;
+    if (this.destroyed || !this.pageVisible || !this.appActive || !cloudConsole(this.device) || this.consoleRefreshing || this.consoleConflict) return;
 
     const id = this.logicalDeviceId;
 
     if (!id) return;
 
     const session = this.host.sessionVersion;
+    const device = this.device;
 
     this.consoleRefreshing = true;
 
     try {
       const source = await this.consoles.get(id);
 
-      if (this.destroyed || session !== this.host.sessionVersion || id !== this.logicalDeviceId) return;
+      if (this.destroyed || session !== this.host.sessionVersion || id !== this.logicalDeviceId || this.device !== device) return;
 
       installConsole(this.device, source);
+      this.consoleSession = session; this.consoleDevice = device;
 
       if (source.revision !== this.consoleRevision && this.snapshot.manifestAccepted) {
         this.consoleRevision = source.revision;
@@ -1060,6 +1098,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     void connection.closed.then(() => {
       if (this.connection !== connection) return;
 
+      this.holdEpoch += 1;
       this.synchronized = false;
 
       this.requestRender();
@@ -1214,15 +1253,16 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     if (resetAttempt) this.bleReconnectAttempt = 0;
   }
 
-  async send(field: DeviceUiEndpoint, value: unknown): Promise<void> {
+  async send(field: DeviceUiEndpoint, value: unknown, controlScope?: string): Promise<void> {
     if (this.panelEditSession) return;
+    if (controlScope !== undefined && controlScope !== this.controlScope) return;
     if (!this.allowedEndpoint(field)) return;
     if (!this.logicalDeviceId || !this.canControl) return;
     const current = this.endpointsByKey.get(field.key);
     if (!current || current.id !== field.id || current.valueType !== field.valueType || current.role !== field.role) return;
 
     if (this.pending.has(field.key)) {
-      this.queued.set(field.key, value);
+      this.queued.set(field.key, { value, controlScope });
 
       return;
     }
@@ -1252,11 +1292,11 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.pending = pending;
 
       if (this.queued.has(field.key)) {
-        const next = this.queued.get(field.key);
+        const next = this.queued.get(field.key)!;
 
         this.queued.delete(field.key);
         // Never turn an unknown/rejected command into an automatic follow-up.
-        if (confirmed) void this.send(current, next);
+        if (confirmed) void this.send(current, next.value, next.controlScope);
       }
 
       this.requestRender();
@@ -1293,6 +1333,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     if (code === 'DEVICE_V2_COMMAND_OUTCOME_UNKNOWN') return '操作结果尚未确认，请先检查设备状态，勿重复操作';
 
     const message = error instanceof Error ? error.message : '';
+    if (message === 'DEVICE_UI_COMMAND_PENDING') return '该控件的上一笔操作尚未结束，请等待结果';
+    if (message === 'DEVICE_UI_COMMAND_CAPACITY') return '当前操作较多，请稍后手动重试';
     if (message === 'DIRECT_TELEMETRY_NOT_SUPPORTED') return '此设备固件暂不支持本地实时数据';
     if (message === 'DIRECT_TELEMETRY_OBSERVE_REQUIRED') return '没有实时数据查看权限';
     if (message === 'BLE_DIRECT_SCAN_TIMEOUT' || message === 'BLE_DIRECT_SCAN_FAILED') {

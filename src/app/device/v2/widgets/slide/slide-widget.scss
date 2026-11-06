@@ -6,7 +6,7 @@
 :host {
   flex-direction: row;
   align-items: center;
-  padding-block: 8px;
+  padding-block: min(8px, var(--ui-card-pad-block, 8px));
   gap: 12px;
 }
 
@@ -107,7 +107,7 @@
   border-radius: 50%;
   color: var(--ui-accent);
   cursor: grab;
-  touch-action: none;
+  touch-action: var(--ui-control-touch-action, none);
   transition: margin-left var(--ease);
 
   // A 40px visible knob inside a 48px drag/keyboard target.

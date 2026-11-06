@@ -1,7 +1,8 @@
 import { legacyField, readLegacyPanel } from '../../../core/device-v2/legacy-panel';
 import type { BlinkerDevice } from '../../../core/model/device.model';
-import type { DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
+import type { DeviceUiEndpoint, DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
 import { generateAutomaticPageLayout } from '../../../core/device-v2/automatic-page-layout';
+import { capabilityDisplayName } from '../../../core/device-v2/display-metadata';
 
 import {
   generateDefaultPageLayout, PageLayout, PageWidgetOptions, PageWidgetType, PageWidgetVariant, parsePageLayout, reflowPageWidgets,
@@ -45,6 +46,11 @@ export interface InterfaceProposal {
 
 const units: Record<string, string> = { temperature: '°C', humidity: '%', brightness: '%', soilMoisture: '%', co2: 'ppm', power: 'W', voltage: 'V' };
 
+function capabilityUnit(field: Pick<DeviceUiEndpoint, 'key' | 'unit' | 'valueType'>): string {
+  return field.unit ?? ((field.valueType === 'integer' || field.valueType === 'number') && Object.hasOwn(units, field.key)
+    ? units[field.key] : '');
+}
+
 export function displayValue(value: unknown): string {
   if (value === undefined || value === null) return '—';
   if (typeof value === 'boolean') return value ? '开启' : '关闭';
@@ -72,8 +78,9 @@ export function capabilityTiles(device: BlinkerDevice, snapshot?: DeviceUiSnapsh
       const field = snapshot.endpoints.find(endpoint => endpoint.key === widget.endpointKey)!;
       const preset = presetForVariant(widgetVariant(widget.type, widget.variant));
 
-      return { id: widget.widgetId, key: field.key, title: widget.title || field.key,
-        type: widget['type'], value: displayValue(field.value), level: sliderLevel(field.value, field.minimum, field.maximum), unit: field.unit || units[field.key] || '',
+      return { id: widget.widgetId, key: field.key, title: capabilityDisplayName(device,
+        { key: field.key, kind: field.manifestKind, type: field.manifestType, valueType: field.valueType }, widget.title),
+        type: widget['type'], value: displayValue(field.value), level: sliderLevel(field.value, field.minimum, field.maximum), unit: capabilityUnit(field),
         width: preset.width, height: preset.height,
         variant: preset.variant, emphasized: false };
     });

@@ -3,7 +3,7 @@ import { environment } from 'src/environments/environment';
 
 export interface ProfileMenuStats {
   roomNum: number;
-  sharedDeviceNum: number;
+  receivedDeviceNum: number | null;
 }
 
 export interface ProfileMenuGroup {
@@ -43,9 +43,8 @@ export function createProfileMenuGroups(
           id: 'sharing',
           title: translate('PROFILE.DEVICE_SHARING'),
           icon: 'fa-user-group',
-          value: translate('PROFILE.SHARED_DEVICE_COUNT', {
-            count: stats.sharedDeviceNum,
-          }),
+          value: stats.receivedDeviceNum === null ? undefined
+            : translate('PROFILE.RECEIVED_DEVICE_COUNT', { count: stats.receivedDeviceNum }),
           route: '/share-manager',
         },
       ],

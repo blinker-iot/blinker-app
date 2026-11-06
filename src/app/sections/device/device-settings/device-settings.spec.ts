@@ -5,6 +5,8 @@ import { DeviceSettingsPage } from './device-settings';
 import { GatewayHttpError } from '../../../core/model/response.model';
 import { CapacitorWiFiProvAllocationStore } from '../../../core/device-v2/provisioning/wifiprov-allocation-store';
 import { DeviceCardEditor } from '../../../home/device-card-editor.service';
+import { Capacitor } from '@capacitor/core';
+import { CapacitorBleControllerCredentialStore } from '../../../core/device-v2/ble-direct/credential-store';
 import { environment } from 'src/environments/environment';
 import { cloudBetaCapabilities, localCapabilities } from 'src/environments/deployment';
 
@@ -385,13 +387,47 @@ describe('DeviceSettingsPage V2 access flow', () => {
     expect(notice.showToast).toHaveBeenCalledWith('云端授权已撤销，通信清理中；本地权限尚未确认清除');
   });
 
+  it('confirms independent registration removal before waiting for local cleanup and keeps another card explicit', async () => {
+    const f = harness(); f.page.secretKey = deviceKey;
+    let release!: (value: undefined) => void, settled = false;
+    const pending = new Promise<undefined>(resolve => { release = resolve; });
+    const find = vi.spyOn(CapacitorWiFiProvAllocationStore.prototype, 'findDevice').mockReturnValueOnce(pending);
+    f.management.deleteDeviceV2.mockResolvedValue({ data: { brokerCleanupPending: false,
+      realtimeRefreshPending: false, rootDisposition: 'retained_for_other_registration' } });
+    try {
+      const work = (f.page as any).removeOwnedDevice().then((result: boolean) => { settled = true; return result; });
+      await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+      expect(f.page.secretKey).toBe(''); expect(settled).toBe(false);
+      expect(f.notice.showToast).toHaveBeenCalledWith('设备已移除；同一设备的其它设备卡保留，本地权限尚未确认清除');
+      release(undefined); expect(await work).toBe(true);
+    } finally { release(undefined); find.mockRestore(); f.page.ngOnDestroy(); }
+  });
+
+  it('keeps a confirmed Key rotation when local shared-root invalidation fails', async () => {
+    const f = harness();
+    const native = vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    const secret = new Uint8Array(32).fill(3);
+    const load = vi.spyOn(CapacitorBleControllerCredentialStore.prototype, 'load').mockResolvedValue({ logicalDeviceId,
+      rootCredentialRef: 'root', cloudContext: { credentialVersion: 1 }, controllerSecret: secret } as any);
+    const invalidate = vi.spyOn(CapacitorBleControllerCredentialStore.prototype, 'invalidateRootReferences').mockRejectedValue(Error('disk'));
+    f.management.rotateDeviceKeyV2.mockResolvedValue({ status: 200, data: { logicalDeviceId,
+      credentialVersion: 2, locator: 'locator-v2', deviceKey: 'B'.repeat(43) } });
+    try {
+      await f.page.refreshKey();
+      expect(invalidate).toHaveBeenCalledExactlyOnceWith('root'); expect(secret.some(Boolean)).toBe(false);
+      expect(f.device.credentialVersion).toBe(2); expect(f.page.secretKey).toBe('B'.repeat(43));
+      expect((f.page as any).rotateIdempotencyKey).toBe('');
+      expect(f.page.keyError).toContain('Key 已刷新'); expect(f.page.keyError).toContain('本机');
+    } finally { load.mockRestore(); invalidate.mockRestore(); native.mockRestore(); f.page.ngOnDestroy(); }
+  });
+
   it('reports local allocation cleanup failure separately from confirmed cloud removal', async () => {
     const { page, management, notice } = harness();
     management.deleteDeviceV2.mockResolvedValue({ data: { brokerCleanupPending: false, realtimeRefreshPending: false } });
     const find = vi.spyOn(CapacitorWiFiProvAllocationStore.prototype, 'findDevice').mockRejectedValue(Error('disk'));
     try {
       expect(await (page as any).removeOwnedDevice()).toBe(true);
-      expect(notice.showToast).toHaveBeenCalledWith('云端授权已撤销，本机配网记录清理未完成；重置设备后再次配网可重试清理');
+      expect(notice.showToast).toHaveBeenCalledWith('设备已移除，本机授权或未决记录待核对；其它设备卡不受影响');
     } finally { find.mockRestore(); }
   });
 

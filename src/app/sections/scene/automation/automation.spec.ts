@@ -1,10 +1,17 @@
 import '@angular/compiler';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { AlertController } from '@ionic/angular';
+import { provideIonicAngular } from '@ionic/angular/standalone';
 import { Subject } from 'rxjs';
 import { AutomationService } from './automation.service';
 import { AutomationPage } from './automation.page';
 import { routes } from '../../../app.routes';
 import { automationCapabilityGuidance, automationChoices, automationChoiceValue, automationConditionText, automationDeviceName, automationErrorText, automationExecutionText, automationRuleStatus } from './automation.models';
 import { AutomationDetail, AutomationIntent, AutomationRule, automationIntent } from '../../../core/device-v2/automation/contract';
+import { AutomationApi, AutomationClient } from '../../../core/device-v2/automation/client';
+import { GatewayHttpError } from '../../../core/model/response.model';
+import { API } from '../../../configs/api.config';
 const manifest = { revision: 1, fingerprint: 'ab'.repeat(32), fields: [
   { id: 1, key: 'power', kind: 0, type: 0, access: 7 }, { id: 2, key: 'button', kind: 1, type: 0, access: 7 },
   { id: 3, key: 'readOnly', kind: 0, type: 0, access: 1 }, { id: 4, key: 'value', kind: 0, type: 2, access: 7 }] };
@@ -24,7 +31,113 @@ function setup() {
   const page = new AutomationPage(service, alerts as any, { markForCheck: vi.fn() } as any); page.name = '测试自动化';
   return { data, client, service, alerts, page };
 }
+// The original client owns the journal; only its network port is replaced.
+function transportSetup() {
+  const data = { auth: { uuid: 'owner' }, sessionEpoch: 1, authDataChanged: new Subject<void>(), device: { dict: {
+    source: { deviceType: 'diy', config: { mode: 'bbp2', customName: 'Source' } },
+    target: { deviceType: 'diy', config: { mode: 'bbp2', customName: 'Target' } } } } };
+  const storage = new Map<string, string>();
+  const api = { list: vi.fn<AutomationApi['list']>(async () => ({ rules: [detail.rule], nextAfter: null })),
+    get: vi.fn<AutomationApi['get']>(async () => detail), write: vi.fn<AutomationApi['write']>(async () => detail) };
+  const client = new AutomationClient(api, {
+    getItem: key => storage.get(key) ?? null, setItem: (key, value) => { storage.set(key, value); },
+    removeItem: key => { storage.delete(key); },
+  }, () => ({ authority: API.BASE_URL, accountId: data.auth.uuid, sessionEpoch: data.sessionEpoch }));
+  const submit = vi.spyOn(client, 'submit'), recover = vi.spyOn(client, 'recover');
+  const service = new AutomationService(client, data as any, { load: () => manifest } as any);
+  return { api, client, storage, service, submit, recover };
+}
+const transportErrors = [
+  { code: 'NETWORK_ERROR', httpStatus: 0, cause: '网络连接异常' },
+  { code: 'GATEWAY_TIMEOUT', httpStatus: 504, cause: '服务器响应超时' },
+];
+function transportError(value: typeof transportErrors[number]): GatewayHttpError {
+  return new GatewayHttpError({ code: value.code, httpStatus: value.httpStatus, message: 'Transport did not return a usable response' });
+}
+function expectTransportGuidance(message: string, cause: string): void {
+  expect(message).toContain(cause); expect(message).toContain('手动重新读取');
+  expect(message).toContain('若有未确认请求'); expect(message).toContain('不会自动重发');
+  expect(message).not.toMatch(/尚未确认操作结果|未能确认操作结果|已失败|未发送|无需核对/);
+}
+
 describe('minimal automation view lifecycle', () => {
+  it.each(transportErrors)('DS-4 identifies a read-only $code without implying a write exists or automatically retrying', async failure => {
+    const f = transportSetup(); f.api.list.mockRejectedValueOnce(transportError(failure));
+    try {
+      await f.service.open();
+      expectTransportGuidance(f.service.state().error, failure.cause);
+      expect(f.service.state()).toMatchObject({ ready: false, busy: false, pending: [], rules: [] });
+      expect(f.storage.size).toBe(0); expect(f.submit).not.toHaveBeenCalled(); expect(f.recover).not.toHaveBeenCalled();
+      await Promise.resolve(); await Promise.resolve(); expect(f.api.list).toHaveBeenCalledTimes(1);
+      expect(f.api.write).not.toHaveBeenCalled();
+      await f.service.refresh(); // A new explicit read, not a retry scheduled by the error.
+      expect(f.api.list).toHaveBeenCalledTimes(2); expect(f.service.state().ready).toBe(true);
+      expect(f.service.state().error).toBe(''); expect(f.storage.size).toBe(0); expect(f.api.write).not.toHaveBeenCalled();
+    } finally { f.service.ngOnDestroy(); }
+  });
+  it.each(transportErrors)('DS-4 preserves a genuine UNKNOWN byte for byte across a read-only $code and manual recovery', async failure => {
+    const f = transportSetup();
+    try {
+      await f.service.open(); f.api.write.mockRejectedValueOnce(new Error('AUTOMATION_OUTCOME_UNKNOWN'));
+      await f.service.retire(detail.rule);
+      expect(f.service.state().pending).toHaveLength(1); expect(f.storage.size).toBe(1);
+      const before = [...f.storage], pending = f.service.state().pending, writes = f.api.write.mock.calls.length;
+      f.api.list.mockRejectedValueOnce(transportError(failure)); await f.service.refresh();
+      expectTransportGuidance(f.service.state().error, failure.cause);
+      expect(f.service.state()).toMatchObject({ ready: false, busy: false, pending });
+      expect([...f.storage]).toEqual(before); expect(f.api.write).toHaveBeenCalledTimes(writes); expect(f.recover).not.toHaveBeenCalled();
+      await Promise.resolve(); await Promise.resolve(); expect(f.api.list).toHaveBeenCalledTimes(2);
+      await f.service.refresh(); expect(f.api.list).toHaveBeenCalledTimes(3); expect(f.service.state().ready).toBe(true);
+      expect([...f.storage]).toEqual(before); expect(f.service.state().pending).toEqual(pending);
+      expect(f.api.write).toHaveBeenCalledTimes(writes); expect(f.recover).not.toHaveBeenCalled();
+    } finally { f.service.ngOnDestroy(); }
+  });
+  it.each(transportErrors)('DS-4 does not turn a write $code into a known rejection or remove its pending intent', async failure => {
+    const f = transportSetup();
+    try {
+      await f.service.open(); f.api.write.mockRejectedValueOnce(transportError(failure));
+      await f.service.retire(detail.rule);
+      expectTransportGuidance(f.service.state().error, failure.cause);
+      expect(f.service.state().notice).toBe(''); expect(f.service.state().pending).toHaveLength(1);
+      expect(f.storage.size).toBe(1); expect(await f.client.pending()).toEqual(f.service.state().pending);
+      await Promise.resolve(); await Promise.resolve();
+      expect(f.api.write).toHaveBeenCalledTimes(1); expect(f.api.list).toHaveBeenCalledTimes(1); expect(f.recover).not.toHaveBeenCalled();
+    } finally { f.service.ngOnDestroy(); }
+  });
+  it('DS-4 exposes read transport guidance through the original alert and keeps refresh explicit', async () => {
+    const f = transportSetup(); f.api.list.mockRejectedValueOnce(transportError(transportErrors[0]));
+    await f.service.open();
+    TestBed.overrideComponent(AutomationPage, { set: { providers: [{ provide: AutomationService, useValue: f.service }] } });
+    await TestBed.configureTestingModule({ imports: [AutomationPage], providers: [provideRouter([]),
+      provideIonicAngular({ animated: false }), { provide: AlertController, useValue: { create: vi.fn() } },
+    ] }).compileComponents();
+    const view = TestBed.createComponent(AutomationPage);
+    try {
+      view.detectChanges();
+      const element = view.nativeElement as HTMLElement;
+      expectTransportGuidance(element.querySelector('.error[role="alert"]')!.textContent!, transportErrors[0].cause);
+      expect(element.querySelector('.pending')).toBeNull();
+      const button = [...element.querySelectorAll<HTMLElement>('ion-button')].find(item => item.textContent?.trim() === '刷新')!;
+      expect((button as HTMLElement & { disabled: boolean }).disabled).toBe(false);
+      expect(f.api.list).toHaveBeenCalledTimes(1);
+      button.click(); await view.whenStable(); view.detectChanges();
+      expect(f.api.list).toHaveBeenCalledTimes(2); expect(f.service.state().error).toBe('');
+      expect(f.api.write).not.toHaveBeenCalled(); expect(f.recover).not.toHaveBeenCalled(); expect(f.storage.size).toBe(0);
+    } finally { view.destroy(); TestBed.resetTestingModule(); f.service.ngOnDestroy(); }
+  });
+  it('QA4 capacity explains shared capacity without implying disabled rules free a slot', () => {
+    for (const error of [{ code: 'AUTOMATION_CAPACITY' }, new Error('AUTOMATION_CAPACITY')]) {
+      const text = automationErrorText(error);
+      expect(text).toContain('自动化容量已达上限');
+      expect(text).toContain('停用不会释放名额');
+      expect(text).toContain('未达到账号上限');
+      expect(text).toContain('管理员核对服务容量');
+      expect(text).not.toMatch(/停用并退役|删除历史|自动重试|升级套餐/);
+    }
+    expect(automationErrorText({ code: 'AUTOMATION_STORAGE_CAPACITY' }))
+      .toBe('自动化保留记录已达试点上限，不能通过删除历史绕过。');
+  });
+
   function routeCanLeave(page: AutomationPage): Promise<boolean> | boolean {
     const route = routes.find(item => item.path === 'automation-manager');
     expect(route?.canMatch).toHaveLength(1);
@@ -134,7 +247,8 @@ describe('minimal automation view lifecycle', () => {
     expect(f.service.state().choices.find(c => c.id === 'target:1')?.label).toBe('客厅灯 · 电源开关');
     expect(detail.rule.target).toEqual({ ...endpoint, deviceId: 'target', value: true });
     expect(f.service.endpointLabel({ ...detail.rule.target, valueType: 'uint32' })).toBe('客厅灯 · power');
-    expect(automationErrorText({ code: 'AUTOMATION_TARGET_CONFLICT' })).toContain('目标设备');
+    expect(automationErrorText({ code: 'AUTOMATION_TARGET_CONFLICT' }))
+      .toBe('此目标属性存在可能同时触发的不同动作，请调整触发条件或目标。');
     f.service.ngOnDestroy();
   });
   it('offers only owned ordinary WiFi scalar source Properties and boolean/uint32 targets; cache is not authority', () => {

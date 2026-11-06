@@ -16,7 +16,7 @@ const CONTROLLER_FEATURES = REQUIRED_FEATURES | FEATURE_AUTHENTICATION
 
 // Transport means the carrier has ALREADY verified its own authorization.
 // It is not a fallback for a failed controller Method 2 handshake.
-export type DirectHelloSecurity = 'controller' | 'transport';
+export type DirectHelloSecurity = 'controller' | 'transport' | 'precloud-controller';
 
 export interface DeviceDirectHello {
   features: number;
@@ -33,17 +33,20 @@ export function encodeDirectAppHelloBody(security: DirectHelloSecurity, maxFrame
   blePacketSize?: number, telemetryRequested = true): Uint8Array {
   if (!Number.isInteger(maxFrameSize) || maxFrameSize < 10 || maxFrameSize > 0xffff)
     throw new Error('DIRECT_APP_HELLO_LIMIT_INVALID');
+  const precloud = security === 'precloud-controller';
+  const features = precloud ? FEATURE_AUTHENTICATION
+    : (security === 'controller' ? CONTROLLER_FEATURES : REQUIRED_FEATURES)
+      | (telemetryRequested ? DIRECT_FEATURE_TELEMETRY : 0)
+      | (timeResponder && maxFrameSize >= DIRECT_TIME_MAX_FRAME_BYTES ? BBP2_FEATURE_TIME_SYNC : 0);
   const fields: Array<[number, Uint8Array]> = [
     [0, encodeCanonicalUnsigned(1)],
     [1, encodeCanonicalArray([encodeCanonicalUnsigned(2)])],
-    [2, encodeCanonicalUnsigned((security === 'controller' ? CONTROLLER_FEATURES : REQUIRED_FEATURES)
-      | (telemetryRequested ? DIRECT_FEATURE_TELEMETRY : 0)
-      | (timeResponder && maxFrameSize >= DIRECT_TIME_MAX_FRAME_BYTES ? BBP2_FEATURE_TIME_SYNC : 0))],
+    [2, encodeCanonicalUnsigned(features)],
     [3, encodeCanonicalUnsigned(maxFrameSize)],
     [4, encodeCanonicalUnsigned(maxFrameSize)],
   ];
-  if (security === 'controller') fields.push([8, encodeCanonicalArray([encodeCanonicalUnsigned(2)])]);
-  fields.push([9, encodeCanonicalUnsigned(security === 'controller' ? 4 : 1)]);
+  if (security !== 'transport') fields.push([8, encodeCanonicalArray([encodeCanonicalUnsigned(2)])]);
+  if (!precloud) fields.push([9, encodeCanonicalUnsigned(security === 'controller' ? 4 : 1)]);
   if (blePacketSize !== undefined) {
     if (!Number.isInteger(blePacketSize) || blePacketSize < 20 || blePacketSize > 244)
       throw new Error('DIRECT_APP_HELLO_BLE_LIMIT_INVALID');
@@ -63,7 +66,7 @@ export function decodeDirectDeviceHelloBody(body: Uint8Array, security: DirectHe
   let manifestRevision: number | undefined;
   let manifestFingerprint: Uint8Array | undefined;
   let methods: number[] | undefined;
-  let reliableWindow = 0;
+  let reliableWindowField: number | undefined;
   let blePacketSize: number | undefined;
   let previous = -1;
   for (let index = 0; index < count; index += 1) {
@@ -78,18 +81,25 @@ export function decodeDirectDeviceHelloBody(body: Uint8Array, security: DirectHe
     else if (key === 6) manifestRevision = reader.readUnsigned();
     else if (key === 7) manifestFingerprint = reader.readBytes(32);
     else if (key === 8) methods = readUnsignedArray(reader, 4, 0xffff);
-    else if (key === 9) reliableWindow = reader.readUnsigned(16);
+    else if (key === 9) reliableWindowField = reader.readUnsigned(16);
     else if (key === 12) blePacketSize = reader.readUnsigned(244);
     else throw new Error('DIRECT_HELLO_FIELD_UNSUPPORTED');
   }
   reader.finish();
+  const reliableWindow = reliableWindowField ?? 0;
+  const precloud = security === 'precloud-controller';
+  // This is a purpose-specific authenticated peer with no generic control
+  // surfaces. Never interpret a normal/transport Hello as this profile.
+  const precloudMismatch = features !== FEATURE_AUTHENTICATION || versions?.length !== 1
+    || methods?.length !== 1 || methods[0] !== 2 || reliableWindowField !== undefined
+    || manifestRevision !== undefined || manifestFingerprint !== undefined;
   const knownFeatures = 0x2eff | BBP2_FEATURE_TIME_SYNC;
   if (role !== 0 || !versions?.includes(2) || features === undefined
     || (features & ~knownFeatures) !== 0 || maxFrameSize === undefined
     || maxFrameSize < 10 || maxReassemblySize === undefined
     || maxReassemblySize < maxFrameSize
     || (security === 'controller' && ((features & FEATURE_AUTHENTICATION) === 0 || !methods?.includes(2)))
-    || (features & REQUIRED_FEATURES) !== REQUIRED_FEATURES
+    || (precloud ? precloudMismatch : (features & REQUIRED_FEATURES) !== REQUIRED_FEATURES)
     || ((features & FEATURE_RELIABLE) !== 0) !== (reliableWindow !== 0)
     || (manifestRevision === undefined) !== (manifestFingerprint === undefined)
     || (manifestFingerprint && manifestFingerprint.length !== 32)) {

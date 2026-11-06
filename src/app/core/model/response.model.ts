@@ -107,6 +107,8 @@ export interface DeviceRemovalResponse {
     brokerCleanupPending: boolean;
     realtimeRefreshPending: boolean;
     localAccess: 'not_confirmed';
+    registrationProduct?: 'cloud' | 'ble_direct' | null;
+    rootDisposition?: 'retained_for_other_registration' | 'not_confirmed';
   };
 }
 
@@ -166,6 +168,18 @@ export interface AccountConnectionResponse {
 export interface DeviceInstanceResolveResponse {
   status: number;
   data: { device: DeviceKeyLogicalDevice | null };
+}
+
+/** Separate from a provisioning RPC result; an observation never confirms a WiFi write. */
+export interface WiFiProvCloudReadResult {
+  device: DeviceKeyContext & { state: 'active'; cloudEnabled: true };
+  observation: {
+    kind: 'online' | 'unconfirmed' | 'unavailable';
+    observedAt: number;
+    deviceInstanceId: string | null;
+    issuedAt: number | null;
+    stateUpdatedAt: number | null;
+  };
 }
 
 export interface DeviceCloudEnableResponse {

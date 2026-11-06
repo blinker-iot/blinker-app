@@ -29,6 +29,7 @@ const FEEDBACK_DRAFT_STORAGE_KEY = 'blinker_feedback_draft';
 
 export class DataService {
   readonly authDataLoader = new BehaviorSubject(false);
+  readonly authRestoreCompleted = new BehaviorSubject(false);
   readonly userDataLoader = new BehaviorSubject(false);
   readonly deviceDataLoader = new BehaviorSubject(false);
   readonly initCompleted = new BehaviorSubject(false);
@@ -90,7 +91,12 @@ export class DataService {
 
   async init(): Promise<void> {
     this.removeLegacyAuthData();
-    await this.loadAuthData();
+    try { await this.loadAuthData(); }
+    finally {
+      // Account restoration finishes independently of the device catalog and
+      // can legitimately finish without an authenticated session.
+      if (!this.authRestoreCompleted.value) this.authRestoreCompleted.next(true);
+    }
   }
 
   async setAuthData(auth: AuthData): Promise<boolean> {
@@ -691,7 +697,13 @@ export class DataService {
 
   private configureSecureStorage(): Promise<void> {
     if (!this.secureStorageReady) {
-      this.secureStorageReady = SecureStorage.setKeyPrefix('blinker_');
+      const pending = SecureStorage.setKeyPrefix('blinker_').catch(error => {
+        // Do not retain a rejected initialization forever. Only a later caller
+        // may try again; this failure never starts another storage operation.
+        if (this.secureStorageReady === pending) this.secureStorageReady = null;
+        throw error;
+      });
+      this.secureStorageReady = pending;
     }
 
     return this.secureStorageReady;

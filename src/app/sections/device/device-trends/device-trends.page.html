@@ -5,7 +5,7 @@
 <ion-content [fullscreen]="true"><main>
   <section class="surface-card data-heading" aria-label="在线趋势来源">
     <h1 class="device-context">{{ deviceName }}</h1>
-    <p class="source-summary">云端周期归档 · 服务器接收时间（UTC）</p>
+    <p class="source-summary">云端周期归档 · 服务器接收时间 · 手机本地时间</p>
   </section>
   @if (state().detail; as detail) {
     <section class="surface-card policy-card" aria-label="在线记录设置">
@@ -31,7 +31,7 @@
     <label>窗口宽度<select class="window-width" [ngModel]="state().rangeMs" (ngModelChange)="changeRange($event)" [disabled]="!canQuery || state().busy">
       @for (range of ranges; track range.value) { <option [ngValue]="range.value">{{ range.label }}</option> }
     </select></label>
-    <label>结束时间（UTC，不含）<input class="window-end" type="datetime-local" step="1" [attr.aria-describedby]="'trends-window-status-' + id"
+    <label>结束时间（手机本地，不含）<input class="window-end" type="datetime-local" step="1" [attr.aria-describedby]="'trends-window-status-' + id"
       [ngModel]="state().endInput" (ngModelChange)="editEnd($event)" [attr.aria-invalid]="!!windowError"
       [disabled]="!canQuery || state().busy" /></label>
     <button class="secondary-action apply-window" type="button" [disabled]="!canApplyWindow" (click)="applyWindow()">查询窗口</button>
@@ -51,11 +51,11 @@
   </section>
   <details class="surface-card source-disclosure">
     <summary>归档来源与限制</summary>
-    <div class="disclosure-body"><p class="source-note">启用记录且设备云在线时，服务器每约 60 秒选样归档；不是设备所有消息都固定每 60 秒上传。关闭此页面不停止已启用的归档。时间为服务器接收时间（UTC），不是设备采集时间。不补离线数据，不保证每个样本送达；相同读数也会保留。</p></div>
+    <div class="disclosure-body"><p class="source-note">启用记录且设备云在线时，服务器每约 60 秒选样归档；不是设备所有消息都固定每 60 秒上传。关闭此页面不停止已启用的归档。记录时间为服务器接收时间，按手机本地时区显示；不是设备采集时间。不补离线数据，不保证每个样本送达；相同读数也会保留。</p></div>
   </details>
   @if (state().busy) { <div class="query-loading workflow-feedback" role="status"><ion-spinner name="crescent"></ion-spinner><span>正在与服务器确认…</span></div> }
   @if (state().ready) {
-    <p class="range-note">已查询：{{ utcText(state().from) }} 至 {{ utcText(state().to) }}（不含结束时刻）。刷新和筛选保持此窗口；保留期及容量限制可能使旧记录不完整。</p>
+    <p class="range-note">已查询：{{ localText(state().from) }} 至 {{ localText(state().to) }}（不含结束时刻）。刷新和筛选保持此窗口；保留期及容量限制可能使旧记录不完整。</p>
     @if (!state().rows.length) { <p class="surface-card empty-state" role="status">该范围暂无归档样本。未启用、离线或采样间断时不会补点。</p> }
     @for (curve of curves; track curve.key + ':' + curve.type) {
       <section class="surface-card chart-card" aria-label="有界接收时间曲线">
@@ -64,7 +64,7 @@
           @for (path of curve.paths; track $index) { <path [attr.d]="path" /> }
           @for (dot of curve.dots; track $index) { <circle [attr.cx]="dot.x" [attr.cy]="dot.y" r="1.8" /> }
         </svg>
-        <small>{{ utcText(curve.from) }} → {{ utcText(curve.to) }}；间断处分段显示，不补点。</small>
+        <small>{{ localText(curve.from) }} → {{ localText(curve.to) }}；间断处分段显示，不补点。</small>
       </section>
     }
     @if (state().rows.length) {
@@ -72,7 +72,7 @@
       <section class="surface-card history-list" aria-label="真实归档样本">
         @for (row of state().rows; track row.id) {
           <article class="history-row"><div class="history-main"><strong>{{ fieldLabel(row) }}</strong><span>{{ row.state.value }}</span></div>
-            <time [attr.datetime]="utcDate(row.receivedAt)">{{ utcText(row.receivedAt) }}</time>
+            <time [attr.datetime]="utcDate(row.receivedAt)">{{ localText(row.receivedAt) }}</time>
             <small>服务器接收时间 · 来源：云端实时采样</small>
           </article>
         }

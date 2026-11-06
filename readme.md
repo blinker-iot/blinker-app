@@ -35,6 +35,8 @@ src/app/device/layouter2/       保留的页面布局与组件实现
 
 App/页面模板仅使用 `pnpm-lock.yaml` 安装，版本固定为 packageManager 声明的 pnpm 11.19.0；不要在 App 根目录执行 npm install/ci 或重新生成 npm 锁。五个独立插件仍分别按其 npm 锁安装、显式构建，再安装 App。已有 npm run 脚本只执行任务，不解析依赖。
 
+首次拉取或相邻插件源码变化后，先在五个插件目录**分别**执行 `npm ci --ignore-scripts`、`npm run build`，再执行下面的 App 命令。尤其 `capacitor-wifiprov` 的类型入口来自 `dist`，没有 `prepare`／`postinstall` 自动构建；App 的构建或 Capacitor sync 不能代替这一步。不要以旧 `dist` 掩盖新原生接口不匹配。当前必要源码及尚未提交的交付边界见[收口计划§11](../blinker-library/docs/DEVICE_V2_STANDARD_DELIVERY_AND_RULE_COEXISTENCE_PLAN.md#11-10收口后的最小修正与源码交付索引2026-10-31)。
+
 ```bash
 pnpm install --frozen-lockfile --ignore-scripts
 npm test -- --watch=false
@@ -43,7 +45,7 @@ npm run build
 
 环境端点位于 `src/environments/`，在构建时选择，不在运行中切换或修改打包后的 JS：
 
-- 云端受限内测：`pnpm run build:cloud-beta`，使用 `https://iot.yiyu.pro`，复用当前 Aily 测试 Auth。该显式 beta 开放既有最小自动化及任务页面，须匹配服务器的 automation／单设备 Task 部署；普通 production／development 配置保持关闭。任务页面只允许所有者查询普通 WiFi 设备，实际准入名单、签发及容量仍由服务器和设备的新鲜结果确认，不代表所有设备均支持四槽。Direct、定向分享及通知／消息不因此开放；H1／H2和原控制沿用现有链路，权限与 CAS 不变。
+- 云端受限内测：`pnpm run build:cloud-beta`，使用 `https://iot.yiyu.pro`；当前 Gateway 对接统一正式 Auth `https://api.yiyu.pro`，不是旧 `api-test.yysc.tech` 测试账号环境。App 仍经 Gateway 鉴权入口，不直接移植另一环境的 token／设备／Key／scope。该显式 beta 开放既有最小自动化及任务页面，须匹配服务器的 automation／单设备 Task 部署；普通 production／development 配置保持关闭。任务页面只允许所有者查询普通 WiFi 设备，实际准入名单、签发及容量仍由服务器和设备的新鲜结果确认，不代表所有设备均支持四槽。Direct、定向分享及通知／消息不因此开放；H1／H2和原控制沿用现有链路，权限与 CAS 不变。
 - 浏览器本地：`ng build --configuration local`，使用 `environment.local.ts` 的 HTTP `127.0.0.1:17000`。
 - Android USB 联调：`npm run build:local-device`，叠加 `environment.local-device.ts`，使用 HTTPS `127.0.0.1:17000`；随后执行原 Capacitor copy 和 Android debug 构建。需要匹配的本机 HTTPS proxy、ADB reverse 和仓外 `BLINKER_DEBUG_NETWORK_CONFIG_DIR` CA 配置，不关闭证书校验。默认仍 `deviceV2LanEnabled=false`。
 - 生产：原 production 配置和 release 签名/信任链，不使用本地 authority 或 debug CA。

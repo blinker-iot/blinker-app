@@ -21,7 +21,7 @@
   <div class="cw-wrap">
     <div class="cw-box" role="slider" [attr.tabindex]="card.disabled ? -1 : 0" [attr.aria-disabled]="card.disabled" [attr.aria-label]="title + ' 色相'" aria-valuemin="0" aria-valuemax="360"
       [attr.aria-valuenow]="hue" [style.--rw]="ring + 'px'" [style.--a]="hue + 'deg'" (pointerdown)="turnStart($event)"
-      (pointermove)="turnMove($event)" (pointerup)="turnEnd($event)" (pointercancel)="turnEnd($event)" (keydown)="key($event)">
+      (pointermove)="turnMove($event)" (pointerup)="turnEnd($event)" (pointercancel)="turnCancel($event)" (keydown)="key($event)">
       <div class="cw"></div>
       <i class="cw-knob" [style.background]="hex"></i>
       <div class="cw-mid" [class.lt]="light" [class.dk]="!light" [style.--c]="hex"></div>

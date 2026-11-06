@@ -7,6 +7,10 @@
   @include theme.ui-theme;
   @include theme.ui-backdrop;
 
+  // Browsing the catalogue owns vertical pans; normal device controls keep
+  // their existing direct-manipulation policy outside this page.
+  --ui-control-touch-action: pan-y;
+
   color: var(--ui-ink);
   font-family: var(--ui-font);
 }

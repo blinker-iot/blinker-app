@@ -6,7 +6,7 @@ import type { DeviceUiConnectivitySnapshot } from '../../../core/device-v2/devic
 describe('device card presence evidence', () => {
   const harness = (cloud = true) => {
     const connectivity = new BehaviorSubject<DeviceUiConnectivitySnapshot>({
-      activeTransport: 'cloud', directConnectAllowed: true, bleAccess: true,
+      activeTransport: cloud ? 'cloud' : 'ble', directConnectAllowed: true, bleAccess: true,
       bleAdapterEnabled: true, bleNearby: false, bleState: 'idle', cloudSessionState: 'ready',
     });
     const state = new BehaviorSubject<any>({ stateFresh: true, endpoints: [] });
@@ -26,10 +26,10 @@ describe('device card presence evidence', () => {
     expect(direct.card.status).toBe('unknown');
   });
 
-  it('fresh matched evidence stays blue during another scan and falls back to Cloud when expired', () => {
+  it('QA-2 keeps the actual Cloud channel primary when a matched BLE advertisement is nearby', () => {
     const h = harness(); h.set({ bleNearby: true, bleState: 'scanning' });
-    expect(h.card.transportIcon).toBe('fa-brands fa-bluetooth-b');
-    expect(h.card.status).toBe('reachable'); expect(h.card.statusText).toBe('蓝牙在附近');
+    expect(h.card.transportIcon).toBe('fa-light fa-wifi');
+    expect(h.card.status).toBe('ready'); expect(h.card.statusText).toBe('云端已同步');
     h.set({ bleNearby: false }); expect(h.card.transportIcon).toBe('fa-light fa-wifi');
   });
 
@@ -38,6 +38,16 @@ describe('device card presence evidence', () => {
     expect(h.card.status).toBe('ready'); expect(h.card.canControl).toBe(true);
     h.set({ bleAdapterEnabled: false }); expect(h.card.status).toBe('offline');
     expect(h.card.canControl).toBe(false);
+  });
+
+  it('QA-2 does not mark a connected BLE channel ready before a fresh State is available', () => {
+    const h = harness(false); h.set({ activeTransport: 'ble', bleState: 'ready' });
+    h.state.next({ stateFresh: false, endpoints: [] });
+    expect(h.card.canControl).toBe(false); expect(h.card.status).toBe('reachable');
+    expect(h.card.statusText).toBe('蓝牙已连接，数据待同步');
+    h.state.next({ stateFresh: true, endpoints: [] });
+    expect(h.card.canControl).toBe(true); expect(h.card.status).toBe('ready');
+    expect(h.card.statusText).toBe('蓝牙已连接');
   });
 
   it('does not treat missing Cloud evidence as confirmed offline', () => {

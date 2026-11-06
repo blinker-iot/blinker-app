@@ -13,7 +13,7 @@
   flex-direction: column;
   gap: 10px;
   box-sizing: border-box;
-  padding: 14px 16px;
+  padding: var(--ui-card-pad-block, 14px) 16px;
   overflow: hidden;
 
   border: var(--ui-card-border);
@@ -36,7 +36,9 @@
     // Keep legacy compact layouts usable inside their prescribed frame. Never
     // crop a command or shrink a touch target just to satisfy a saved grid.
     overflow: auto;
-    overscroll-behavior: contain;
+    // Long content may still scroll locally, but its edge must not trap a
+    // vertical swipe that should continue through the surrounding page.
+    overscroll-behavior: auto;
     scrollbar-width: thin;
   }
   :host([aria-disabled='true']) { opacity: 0.55; pointer-events: none; }

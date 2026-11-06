@@ -3,6 +3,8 @@ import { deploymentGuard } from './core/injectable/deployment.guard';
 import { LayouterGuard } from './device/layouter2/layouter.guard';
 import { asHomeTabId } from './home/home-tab-state';
 
+declare const BLINKER_BC5_SOURCE_DIAGNOSTIC: boolean | undefined;
+
 export const routes: Routes = [
   { path: '', redirectTo: 'home/device', pathMatch: 'full' },
   {
@@ -229,6 +231,26 @@ export const routes: Routes = [
   {
     path: 'device-manager/:id',
     loadComponent: () => import('./sections/device/device-settings/device-settings').then(m => m.DeviceSettingsPage),
+  },
+  {
+    path: 'tools/bc5-acceptance',
+    pathMatch: 'full',
+    canMatch: [async () => {
+      const network = await import('./core/device-v2/ble-direct/initial-network-launch-profile')
+        .then(m => m.readInitialNetworkLaunchProfile()).catch(() => undefined);
+      return !!network || import('./core/device-v2/ble-direct/bc5-launch-profile')
+        .then(m => m.readBc5LaunchProfile()).then(Boolean).catch(() => false);
+    }],
+    loadComponent: () => import('./tools/bc5-acceptance/bc5-acceptance.page').then(m => m.Bc5AcceptancePage),
+  },
+  {
+    path: 'tools/bc5-acceptance/recovery',
+    pathMatch: 'full',
+    canMatch: [() => import('./core/device-v2/ble-direct/bc5-launch-profile')
+      .then(m => m.readBc5RecoveryProfile()).then(Boolean).catch(() => false)],
+    loadComponent: () => typeof BLINKER_BC5_SOURCE_DIAGNOSTIC !== 'undefined' && BLINKER_BC5_SOURCE_DIAGNOSTIC === true
+      ? import('./tools/bc5-acceptance/bc5-source-diagnostic.page').then(m => m.Bc5SourceDiagnosticPage)
+      : import('./tools/bc5-acceptance/bc5-recovery.page').then(m => m.Bc5RecoveryPage),
   },
   {
     path: 'tools/esp32-provision',

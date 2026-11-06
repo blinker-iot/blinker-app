@@ -22,6 +22,7 @@ const MIN_BELOW = 40;
 export class DialWidgetComponent extends RangeWidgetBase {
   private pointerId?: number;
   private startValue = 0;
+  private startLocal: number | null = null;
 
   get half(): number { return (this.options.sweep ?? 270) / 2; }
   get thickness(): number { return this.options.thickness ?? 12; }
@@ -59,6 +60,7 @@ export class DialWidgetComponent extends RangeWidgetBase {
     this.dragging = true;
     this.pointerId = event.pointerId;
     this.startValue = this.value;
+    this.startLocal = this.local();
     this.turnMove(event);
   }
 
@@ -76,5 +78,11 @@ export class DialWidgetComponent extends RangeWidgetBase {
     if (this.pointerId !== event.pointerId) return;
     this.pointerId = undefined;
     this.settle(this.startValue);
+  }
+
+  turnCancel(event: PointerEvent): void {
+    if (this.pointerId !== event.pointerId) return;
+    this.pointerId = undefined;
+    this.discardInteraction(this.startLocal);
   }
 }

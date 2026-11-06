@@ -8,6 +8,7 @@ import {
   DeviceV2Channel,
   DeviceV2RouteError,
   DeviceV2Session,
+  DeviceV2Store,
   DeviceV2TelemetryOperation,
   DeviceV2TelemetryStatusCode,
   bytesToHex,
@@ -19,6 +20,8 @@ import {
   hexToBytes,
   logicalDevicePeerId,
 } from './index';
+import { accountLogicalDevicePeerId } from '../../device-v2/account-peer-id';
+import { isLogicalDeviceReferenceId } from './logical-device-reference';
 
 const logicalDeviceId = 'device_01234567-89ab-cdef-0123-456789abcdef';
 const bleLogicalDeviceId = 'ble_ASNFZ4mrze8BI0VniavN7w';
@@ -208,6 +211,55 @@ function installServer(
 }
 
 describe('DeviceV2Session', () => {
+  it('does not infer an opaque or UUID card from an unbound inbound peer even with the account adapter', async () => {
+    const id = 'device_ASNFZ4mrze8BI0VniavN7w', channel = new FakeChannel(); installServer(channel, { presence: true });
+    const store = new DeviceV2Store(undefined, undefined, isLogicalDeviceReferenceId);
+    const session = new DeviceV2Session(channel, store, { peerId: accountLogicalDevicePeerId });
+    await session.start();
+    channel.emit(encodeFrame({ kind: Bbp2MessageKind.Delivery, flags: Bbp2FrameFlag.IsResponse, sequence: 201,
+      body: encodeDeliveryBody({ peerKind: Bbp2RoutePeerKind.LogicalDevice, peerId: accountLogicalDevicePeerId(id),
+        messageKind: Bbp2MessageKind.Presence, messageFlags: 0, messageBody: hexToBytes('a200f50101') }) }));
+    expect(session.state).toBe('closed');
+    expect(store.snapshot(id).cloudReachable).toBeNull();
+    expect(store.snapshot(logicalDeviceId).cloudReachable).toBeNull();
+    expect(channel.published).toHaveLength(1);
+    await session.close();
+  });
+  it('keeps opaque Cloud routing opt-in, correlates ACK by exact request and peer, and preserves the original card on State notifications', async () => {
+    const id = 'device_ASNFZ4mrze8BI0VniavN7w';
+    const channel = new FakeChannel(); installServer(channel);
+    const store = new DeviceV2Store(undefined, undefined, isLogicalDeviceReferenceId);
+    const session = new DeviceV2Session(channel, store, { requestId: requestIds(), peerId: accountLogicalDevicePeerId });
+    await session.start();
+    await session.ensureReady(id);
+    expect(store.snapshot(id).manifestAccepted).toBe(true);
+    await expect(session.command(id, 'power', true)).resolves.toMatchObject({ acknowledgedSequence: expect.any(Number) });
+    channel.emit(encodeFrame({ kind: Bbp2MessageKind.Delivery, flags: Bbp2FrameFlag.IsResponse, sequence: 201,
+      body: encodeDeliveryBody({ peerKind: Bbp2RoutePeerKind.LogicalDevice, peerId: accountLogicalDevicePeerId(id),
+        messageKind: Bbp2MessageKind.Patch, messageFlags: Bbp2FrameFlag.IdMode,
+        messageBody: hexToBytes('a30000010302a101f5') }) }));
+    expect(store.snapshot(id).values['power']?.value).toBe(true);
+    expect(store.snapshot(logicalDeviceId).stateRevision).toBeNull();
+    const respond = channel.responder!;
+    channel.responder = payload => {
+      const frame = decodeFrame(payload), request = decodeDeliveryBody(frame.body);
+      if (request.messageKind !== Bbp2MessageKind.Command) return respond(payload);
+      channel.emit(encodeFrame({ kind: Bbp2MessageKind.Delivery, flags: Bbp2FrameFlag.IsResponse, sequence: 202,
+        body: encodeDeliveryBody({ ...request, peerId: new Uint8Array(16).fill(9), messageKind: Bbp2MessageKind.Ack,
+          messageFlags: Bbp2FrameFlag.IsResponse, messageBody: ackBody(frame.sequence) }) }));
+    };
+    await expect(session.command(id, 'power', false)).rejects.toMatchObject({ code: 'DEVICE_V2_COMMAND_OUTCOME_UNKNOWN' });
+    await session.close();
+    expect(store.snapshot(id).stateFresh).toBe(false);
+
+    const strictChannel = new FakeChannel(); installServer(strictChannel);
+    const strict = new DeviceV2Session(strictChannel);
+    await strict.start();
+    expect(() => strict.ensureReady(id)).toThrow('logical device identity');
+    expect(strictChannel.published).toHaveLength(1);
+    await strict.close();
+    expect(() => logicalDevicePeerId(id)).toThrow();
+  });
   it('a typed Internal telemetry renewal stays on the ready session without retrying or sending a Command', async () => {
     vi.useFakeTimers();
     const channel = new FakeChannel();

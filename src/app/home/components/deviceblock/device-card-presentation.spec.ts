@@ -48,7 +48,8 @@ describe('bounded single-row card presentation', () => {
     ));
     expect(metrics.map(metric => metric.key)).toEqual(['temperature', 'power', 'missing']);
     expect(metrics.map(metric => metric.display)).toEqual(['0', '关', '—']);
-    expect(metrics[0].description).toBe('temperature：0℃');
+    expect(metrics[0].description).toBe('温度：0℃');
+    expect(metrics[1].label).toBe('电源开关');
   });
 
   it('reuses compatible names and boolean labels but does not reinterpret a changed type', () => {
@@ -59,7 +60,7 @@ describe('bounded single-row card presentation', () => {
     expect(deviceCardMetrics(source, snapshot(field('power', false, { valueType: 'boolean', manifestType: 0 })))[0]).toMatchObject({
       label: '电源', display: '待机', description: '电源：待机',
     });
-    expect(deviceCardMetrics(source, snapshot(field('power', 2)))[0].label).toBe('power');
+    expect(deviceCardMetrics(source, snapshot(field('power', 2)))[0].label).toBe('功率');
   });
 
   it('does not expose write-only or Action values, or non-finite/structured values', () => {

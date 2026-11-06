@@ -18,6 +18,7 @@ import {
 import { createProfileMenuGroups } from './profile-menu.config';
 import { environment } from 'src/environments/environment';
 import { profileEntitlements } from './profile-entitlements';
+import { profileReceivedDeviceCount } from './profile-sharing';
 
 @Component({
   selector: 'app-tab-profile',
@@ -39,7 +40,7 @@ export class TabProfileComponent implements OnInit {
     return createProfileMenuGroups(
       {
         roomNum: this.roomNum,
-        sharedDeviceNum: this.sharedDeviceNum,
+        receivedDeviceNum: this.receivedDeviceNum,
       },
       (key, params) => this.translate.instant(key, params)
     );
@@ -84,8 +85,13 @@ export class TabProfileComponent implements OnInit {
     return this.dataService.room?.list?.length ?? 0;
   }
 
-  get sharedDeviceNum() {
-    return this.dataService.share?.received?.length ?? 0;
+  get receivedDeviceNum(): number | null {
+    const count = this.dataService.ownedDeviceCount;
+    const available = !!this.dataService.auth && count !== null && Number.isSafeInteger(count) && count >= 0
+      && this.dataService.userLoadError?.value === null
+      && this.dataService.deviceLoadError?.value === null
+      && this.dataService.configLoadError?.value === null;
+    return profileReceivedDeviceCount(this.dataService.share?.received, available);
   }
 
   get showNewVersion() {

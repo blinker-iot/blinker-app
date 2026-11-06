@@ -10,12 +10,73 @@
   <section class="empty-state" aria-live="polite"><h1>{{ state === 'shared' ? '暂无位置访问权限' : '位置暂不可用' }}</h1><p>{{ message }}</p></section>
   } @else {
   <div class="location-content">
-  <div class="map-area" [hidden]="!present || (!record?.location && !editing)">
-    <app-location-map [point]="point" [name]="deviceName" [editable]="editing && !busy && !viewingSaved"
-      [active]="present && (!!record?.location || editing)" (pointChange)="selectPoint($event)" />
+  @if (!editing) {
+  <nav class="source-switch" aria-label="位置来源">
+    <button type="button" [attr.aria-pressed]="locationSource === 'installation'" [disabled]="!!busy"
+      (click)="selectSource('installation')">安装位置</button>
+    <button class="device-location-source" type="button" [attr.aria-pressed]="locationSource === 'device'" [disabled]="!!busy"
+      (click)="selectSource('device')">设备定位</button>
+    <button class="network-location-source" type="button" [attr.aria-pressed]="locationSource === 'network'" [disabled]="!!busy"
+      (click)="selectSource('network')">网络参考</button>
+  </nav>
+  }
+  <div class="map-area" [hidden]="!mapVisible">
+    <app-location-map [point]="point" [name]="deviceName" [editable]="locationSource === 'installation' && editing && !busy && !viewingSaved"
+      [followPoint]="locationSource === 'installation'" [active]="mapVisible" (pointChange)="selectPoint($event)" />
   </div>
   @if (!present) {
   <section class="empty-state"><p>位置查看已暂停</p></section>
+  } @else if (locationSource === 'network') {
+  <section class="location-panel network-panel" [attr.aria-busy]="networkPhase === 'loading'">
+    <div class="device-heading">
+      <span class="device-glyph" aria-hidden="true"><i class="fal fa-globe"></i></span>
+      <div><h1>{{ deviceName }}</h1><p>网络粗参考 · 非 GPS 定位</p></div>
+    </div>
+    <button class="secondary-action network-query" type="button" [disabled]="networkPhase === 'loading'" (click)="queryNetwork()">
+      {{ networkPhase === 'loading' ? '查询中…' : networkPhase === 'idle' ? '查询网络参考' : '重新查询' }}
+    </button>
+    <div class="network-result" role="status" aria-live="polite">
+      @if (networkPhase === 'idle') { <p>查询设备认证时的网络出口城市。</p> }
+      @if (networkPhase === 'loading') { <p>正在查询…</p> }
+      @if (networkPhase === 'done' && networkLocation?.status === 'unknown') {
+        <p>暂无可用的网络参考</p><p>来源可能已过期，或该网络暂无城市数据。</p>
+      }
+    </div>
+    @if (networkError) { <p class="error notice" role="alert">{{ networkError }}</p> }
+    @if (networkLocation; as detail) {
+    <dl class="reported-details network-details">
+      @if (detail.region; as region) {
+      <div><dt>国家／地区</dt><dd>{{ region.country || '未知' }}@if (region.countryCode) { （{{ region.countryCode }}） }</dd></div>
+      <div><dt>省／地区</dt><dd>{{ region.subdivision || '未知' }}</dd></div>
+      <div><dt>城市</dt><dd>{{ region.city || '未知' }}</dd></div>
+      }
+      <div><dt>来源</dt><dd>认证时网络出口</dd></div>
+      <div><dt>观测时间</dt><dd>{{ locationTime(detail.observedAt) }}</dd></div>
+      <div><dt>查询时间</dt><dd>{{ locationTime(detail.queriedAt) }}</dd></div>
+    </dl>
+    <p class="network-disclaimer">网络出口可能与设备实际位置不同，不用于地图标记。</p>
+    <p class="network-attribution"><a href="https://db-ip.com" target="_blank" rel="noopener noreferrer">IP Geolocation by DB-IP</a>
+      · CC BY 4.0@if (detail.dataVersion) { · {{ detail.dataVersion }} }</p>
+    }
+  </section>
+  } @else if (locationSource === 'device') {
+  <section class="location-panel reported-panel" [class.empty-reported]="!reported.latest?.sample">
+    <div class="device-heading">
+      <span class="device-glyph" aria-hidden="true"><i class="fal fa-map-marker-alt"></i></span>
+      <div><h1>{{ deviceName }}</h1><p class="reported-status" role="status">{{ reportedTitle }}@if (reported.latest?.sample) { · {{ reportedAge }} }</p></div>
+      <button class="text-action reported-refresh" type="button" [disabled]="reported.phase === 'loading'" (click)="refreshReported()">刷新</button>
+    </div>
+    @if (reported.phase === 'error') { <p class="error notice" role="alert">{{ reportedErrorText }}</p> }
+    @if (reported.phase === 'unsupported') { <p class="notice">可继续查看安装位置。</p> }
+    @if (reported.latest?.sample; as sample) {
+    <dl class="reported-details">
+      <div><dt>来源</dt><dd>设备上报 · WGS84</dd></div>
+      <div><dt>精度</dt><dd>{{ reportedAccuracy }}</dd></div>
+      <div><dt>采集时间</dt><dd>{{ locationTime(sample.capturedAtUtcMillis) }}</dd></div>
+      <div><dt>接收时间</dt><dd>{{ locationTime(sample.receivedAt) }}</dd></div>
+    </dl>
+    }
+  </section>
   } @else if (record || editing) {
     @if (record?.location || editing) {
     <section class="location-panel" [class.editor]="editing">

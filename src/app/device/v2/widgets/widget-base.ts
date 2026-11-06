@@ -1,6 +1,7 @@
 import { Directive, EventEmitter, HostBinding, Input, Output } from '@angular/core';
 import type { PageWidgetOptions } from '../../../core/device-v2/page-widget';
 import { optionsOf, PanelCard, toneOf, WidgetAct } from './widget-kit';
+import { capabilityDisplayName } from '../../../core/device-v2/display-metadata';
 
 // Inputs and host attributes shared by every widget; the host is the card.
 @Directive()
@@ -14,7 +15,9 @@ export abstract class WidgetBase {
   get options(): PageWidgetOptions { return optionsOf(this.card); }
 
   get title(): string {
-    const title = this.card.widget.title || this.card.field.key;
+    const { field, widget } = this.card;
+    const title = capabilityDisplayName(undefined, { key: field.key, kind: field.manifestKind,
+      type: field.manifestType, valueType: field.valueType }, widget.title);
 
     return title.charAt(0).toUpperCase() + title.slice(1);
   }

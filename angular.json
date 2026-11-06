@@ -124,6 +124,7 @@
               "aot": false,
               "optimization": false,
               "extractLicenses": false,
+              "externalDependencies": ["capacitor-wifiprov"],
               "styles": ["src/theme/variables.scss", "src/global.scss"],
               "scripts": [],
               "polyfills": []

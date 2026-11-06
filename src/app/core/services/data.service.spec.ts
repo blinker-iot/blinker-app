@@ -58,6 +58,101 @@ describe('DataService', () => {
     expect(SecureStorage.get).toHaveBeenCalledExactlyOnceWith('session');
   });
 
+  it('announces initial account restoration only after the native read settles and only once', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    let restore!: (saved: typeof auth) => void;
+    vi.mocked(SecureStorage.get).mockReturnValueOnce(new Promise(resolve => { restore = resolve; }));
+    const completed: boolean[] = [];
+    const subscription = service.authRestoreCompleted.subscribe(value => completed.push(value));
+    const loading = service.init();
+    await vi.waitFor(() => expect(restore).toBeDefined());
+    expect(completed).toEqual([false]); expect(service.auth).toBeNull();
+    restore(auth); await loading;
+    expect(service.auth?.uuid).toBe('user-a'); expect(completed).toEqual([false, true]);
+    vi.mocked(SecureStorage.get).mockResolvedValue(auth); await service.init();
+    expect(completed).toEqual([false, true]); subscription.unsubscribe();
+  });
+
+  it.each(['empty', 'read-failure'] as const)('finishes initial account restoration for %s without pretending the account or catalog is ready', async kind => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    if (kind === 'read-failure') vi.mocked(SecureStorage.get).mockRejectedValueOnce(Error('temporary read failure'));
+    await service.init();
+    expect(service.authRestoreCompleted.value).toBe(true); expect(service.auth).toBeNull();
+    expect(service.authDataLoader.value).toBe(false); expect(service.initCompleted.value).toBe(false);
+    expect(SecureStorage.get).toHaveBeenCalledOnce(); expect(SecureStorage.set).not.toHaveBeenCalled();
+  });
+
+  it('allows an explicit auth reload after transient native storage configuration failure, without an automatic retry', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    vi.mocked(SecureStorage.setKeyPrefix).mockRejectedValueOnce(Error('temporary configuration failure'));
+    vi.mocked(SecureStorage.get).mockResolvedValue(auth);
+
+    await service.loadAuthData();
+    await Promise.resolve();
+    expect(service.auth).toBeNull();
+    expect(SecureStorage.setKeyPrefix).toHaveBeenCalledOnce();
+    expect(SecureStorage.get).not.toHaveBeenCalled();
+    expect(SecureStorage.set).not.toHaveBeenCalled();
+    expect(SecureStorage.remove).not.toHaveBeenCalled();
+
+    await service.loadAuthData();
+    expect(SecureStorage.setKeyPrefix).toHaveBeenCalledTimes(2);
+    expect(SecureStorage.get).toHaveBeenCalledExactlyOnceWith('session');
+    expect(service.auth?.uuid).toBe('user-a');
+    expect(SecureStorage.set).not.toHaveBeenCalled();
+    expect(SecureStorage.remove).not.toHaveBeenCalled();
+  });
+
+  it('shares pending native configuration and keeps the successful configuration cached', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    let configure!: () => void;
+    vi.mocked(SecureStorage.setKeyPrefix).mockReturnValueOnce(new Promise<void>(resolve => { configure = resolve; }));
+    vi.mocked(SecureStorage.get).mockResolvedValue(auth);
+
+    const first = service.loadAuthData(), second = service.loadAuthData();
+    expect(SecureStorage.setKeyPrefix).toHaveBeenCalledOnce();
+    expect(SecureStorage.get).not.toHaveBeenCalled();
+    configure();
+    await Promise.all([first, second]);
+    expect(service.auth?.uuid).toBe('user-a');
+    await service.loadAuthData();
+    expect(SecureStorage.setKeyPrefix).toHaveBeenCalledExactlyOnceWith('blinker_');
+    expect(SecureStorage.set).not.toHaveBeenCalled();
+  });
+
+  it('does not discard successful configuration when only the native auth read fails', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    vi.mocked(SecureStorage.get).mockRejectedValueOnce(Error('temporary read failure')).mockResolvedValue(auth);
+
+    await service.loadAuthData();
+    expect(service.auth).toBeNull();
+    expect(SecureStorage.get).toHaveBeenCalledOnce();
+    await service.loadAuthData();
+    expect(service.auth?.uuid).toBe('user-a');
+    expect(SecureStorage.setKeyPrefix).toHaveBeenCalledOnce();
+    expect(SecureStorage.get).toHaveBeenCalledTimes(2);
+    expect(SecureStorage.remove).not.toHaveBeenCalled();
+  });
+
+  it('keeps logout authoritative when the old pending native configuration fails', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    let fail!: (reason: Error) => void;
+    vi.mocked(SecureStorage.setKeyPrefix).mockReturnValueOnce(new Promise<void>((_resolve, reject) => { fail = reject; }));
+    vi.mocked(SecureStorage.get).mockResolvedValue(auth);
+
+    const loading = service.loadAuthData(), logout = service.removeAuthData();
+    fail(Error('late configuration failure'));
+    await Promise.all([loading, logout]);
+    expect(service.auth).toBeNull();
+    expect(localStorage.getItem(AUTH_INVALIDATED_STORAGE_KEY)).toBe('1');
+    expect(SecureStorage.get).not.toHaveBeenCalled();
+
+    await service.loadAuthData();
+    expect(service.auth).toBeNull();
+    expect(SecureStorage.get).not.toHaveBeenCalled();
+    expect(SecureStorage.remove).toHaveBeenCalledExactlyOnceWith('session');
+  });
+
   it('clears old account view synchronously and does not restore another account catalog', async () => {
     saveDeviceCatalog(scope(), [item]);
     await service.setAuthData(auth);

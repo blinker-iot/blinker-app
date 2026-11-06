@@ -5,6 +5,15 @@
 
 :host(.inline) { justify-content: center; }
 
+:host(:not(.inline)) {
+  --ui-keypad-min-height: calc(var(--ui-keypad-rows, 1) * 48px + (var(--ui-keypad-rows, 1) - 1) * 8px);
+  // Keep all 48px keys and 8px gaps. The existing title/gap/border needs 34px;
+  // spend the remainder on padding, never on changing the saved grid rows.
+  padding-block: clamp(0px,
+    calc((var(--fill-h, calc(var(--ui-keypad-min-height) + 34px + 2 * 14px)) - var(--ui-keypad-min-height) - 34px) / 2),
+    var(--ui-card-pad-block, 14px));
+}
+
 .hd-v { color: var(--ui-accent); font-size: 12px; }
 
 .keys {

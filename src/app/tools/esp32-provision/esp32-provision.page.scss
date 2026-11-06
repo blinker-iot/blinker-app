@@ -38,6 +38,14 @@ main.tool-page-shell { max-width: 720px; min-height: auto; }
 .scan-options .field-group { margin-bottom: 0; }
 .primary-button, .refresh-button, .retry-button, .connected-card > button, .remember-row { @include surface.button; }
 .primary-button { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--ion-color-primary-contrast); background: var(--ion-color-primary); }
+.manual-connection { display: grid; gap: 8px; margin-top: 16px; }
+.manual-connection p, .readonly-note, .field-group > p { margin: 0; color: var(--blinker-text-secondary); font-size: 0.875rem; line-height: 1.6; overflow-wrap: anywhere; }
+.manual-connection > span { color: var(--blinker-text-secondary); font-size: 0.8125rem; line-height: 1.5; }
+.system-connected-button { @include surface.button; width: 100%; min-height: 48px; }
+.first-install-options { min-width: 0; }
+.first-install-options > summary { min-height: 48px; padding-block: 12px; cursor: pointer; }
+.pop-visibility { min-width: 48px; min-height: 48px; }
+.field-group > .field-error { color: var(--ion-color-danger-shade); }
 .connected-card { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .connected-card > div { flex: 1 1 140px; }
 .connected-icon, .status-icon { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 12px; background: var(--blinker-surface-muted); color: var(--ion-color-primary); font-size: 20px; }
@@ -74,7 +82,25 @@ main.tool-page-shell { max-width: 720px; min-height: auto; }
 .progress-track { height: 6px; overflow: hidden; border-radius: 3px; margin-top: 16px; background: var(--blinker-surface-muted); }
 .progress-track > span { display: block; height: 100%; background: var(--ion-color-primary); }
 .retry-button { width: 100%; margin-top: 16px; }
+.handoff-actions { display: grid; gap: 8px; margin-top: 16px; }
+.handoff-actions .retry-button { margin-top: 0; }
+.completion-card { min-width: 0; }
+.completion-card.success .status-icon { color: var(--ion-color-success-shade); }
+.completion-card button, .completion-diagnostics > summary { min-height: 48px; }
+.completion-diagnostics { margin-top: 12px; min-width: 0; }
+.completion-diagnostics > summary { display: list-item; padding-block: 12px; cursor: pointer; color: var(--blinker-text-primary); }
+.completion-diagnostics dl { display: grid; gap: 8px; margin: 0; }
+.completion-diagnostics dl > div { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.completion-diagnostics dt, .completion-diagnostics dd, .completion-diagnostics p { font-size: 0.875rem; line-height: 1.6; overflow-wrap: anywhere; }
+.completion-diagnostics dt { flex: 0 0 88px; color: var(--blinker-text-secondary); }
+.completion-diagnostics dd { flex: 1 1 120px; min-width: 0; margin: 0; }
+.completion-diagnostics p { color: var(--blinker-text-secondary); margin-block: 8px 0; }
+.completion-action-message { margin-bottom: 0; color: var(--blinker-text-secondary); font-size: 0.875rem; line-height: 1.6; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) {
+  .completion-card .fa-spin { animation: none; }
+}
 .tips ol { margin: 8px 0 0; padding-inline-start: 20px; }
+.tips > summary { min-height: 48px; padding-block: 12px; cursor: pointer; }
 .tips li { margin-block: 8px; overflow-wrap: anywhere; }
 @media (max-width: 360px) {
   .device-row, .network-row { flex-wrap: wrap; gap: 8px; }

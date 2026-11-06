@@ -7,6 +7,9 @@ import { Subscription } from 'rxjs';
 import { API } from '../../../configs/api.config';
 import { assertDeviceV2AccountContext, captureDeviceV2AccountContext, DeviceV2AccountContext } from '../../../core/device-v2/account-scope';
 import { DeviceLocationRecord, ManualDeviceLocation, manualLocationDraft } from '../../../core/device-v2/device-location';
+import { locationTelemetryMapPoint } from '../../../core/device-v2/device-location-telemetry';
+import { DeviceNetworkLocation } from '../../../core/device-v2/device-network-location';
+import { DeviceLocationWatch } from '../../../core/device-v2/device-location-watch';
 import { DeviceUiPort } from '../../../core/device-v2/device-ui.port';
 import { deviceDisplayName } from '../../../core/device-v2/display-metadata';
 import { LocationMapComponent, Wgs84MapPoint } from '../../../core/components/location-map/location-map.component';
@@ -14,6 +17,8 @@ import { GatewayHttpError } from '../../../core/model/response.model';
 import { AppVisibilityService } from '../../../core/services/app-visibility.service';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceV2LocationService } from '../../../core/services/device-v2-location.service';
+import { DeviceV2LocationTelemetryService } from '../../../core/services/device-v2-location-telemetry.service';
+import { DeviceV2NetworkLocationService } from '../../../core/services/device-v2-network-location.service';
 import { PhoneLocationError, PhoneLocationService } from '../../../core/services/phone-location.service';
 import { HomeCardPreferencesStore } from '../../../home/device-card-preferences';
 import { deviceCardMetrics } from '../../../home/components/deviceblock/device-card-presentation';
@@ -36,6 +41,12 @@ export class DeviceLocationPage implements OnDestroy {
   draftPoint: Wgs84MapPoint | null = null;
   summary: { label: string; value: string }[] = [];
   summaryStale = false;
+  locationSource: 'installation' | 'device' | 'network' = 'installation';
+  networkLocation: DeviceNetworkLocation | null = null;
+  networkPhase: 'idle' | 'loading' | 'done' | 'error' = 'idle';
+  networkError = '';
+  reportedMapPoint: Wgs84MapPoint | null = null;
+  private readonly locationWatch: DeviceLocationWatch;
   private dirty = false;
   private uncertain = false;
   private knownRevision?: number;
@@ -45,13 +56,29 @@ export class DeviceLocationPage implements OnDestroy {
   private generation = 0;
   private controller?: AbortController;
   private positionController?: AbortController;
+  private networkController?: AbortController;
   private stateSubscription?: Subscription;
   private readonly subscriptions = new Subscription();
 
   constructor(private readonly route: ActivatedRoute, private readonly data: DataService,
     private readonly locations: DeviceV2LocationService, private readonly visibility: AppVisibilityService,
     private readonly cd: ChangeDetectorRef, private readonly phoneLocation: PhoneLocationService,
-    private readonly deviceUi: DeviceUiPort) {
+    private readonly deviceUi: DeviceUiPort, deviceLocations: DeviceV2LocationTelemetryService,
+    private readonly networkLocations: DeviceV2NetworkLocationService) {
+    this.locationWatch = new DeviceLocationWatch(deviceLocations, () => {
+      const detail = this.locationWatch.snapshot.latest;
+      const point = detail ? locationTelemetryMapPoint(detail) : null;
+      if (point?.longitude !== this.reportedMapPoint?.longitude || point?.latitude !== this.reportedMapPoint?.latitude) {
+        this.reportedMapPoint = point;
+      }
+      const error = this.locationWatch.snapshot.error;
+      if (error instanceof GatewayHttpError && (error.httpStatus === 401 || error.httpStatus === 403
+        || (error.httpStatus === 404 && ['DEVICE_V2_LOCATION_NOT_FOUND', 'DEVICE_V2_DEVICE_NOT_FOUND',
+          'DEVICE_V2_LOCATION_LATEST_NOT_FOUND', 'DEVICE_V2_LOCATION_LEASE_NOT_FOUND'].includes(error.code)))) {
+        this.invalidate(error.httpStatus === 401 ? '请重新登录后查看位置。' : '设备不可用或无位置访问权限。'); return;
+      }
+      this.mark();
+    });
     this.subscriptions.add(data.authDataChanged.subscribe(() => this.syncAccess()));
     this.subscriptions.add(data.deviceDataLoader.subscribe(() => this.syncAccess()));
     this.subscriptions.add(visibility.active.subscribe(active => {
@@ -59,9 +86,14 @@ export class DeviceLocationPage implements OnDestroy {
       if (!active) {
         // A system permission sheet also pauses Android. Keep the original
         // one-shot GPS owner; only an active, unchanged page may accept it.
-        this.cancelHttp(); this.stopSummary(); this.record = null; this.fresh = false; this.mark();
+        this.locationWatch.pause(); this.cancelNetwork(); this.cancelHttp(); this.stopSummary(); this.record = null; this.fresh = false; this.mark();
       }
-      else if (this.syncAccess()) { this.observeSummary(); void this.reload(); }
+      else if (this.syncAccess()) {
+        if (this.locationSource !== 'network') this.observeSummary();
+        if (this.locationSource === 'device') this.observeLocation();
+        else if (this.locationSource === 'installation') void this.reload();
+        this.mark();
+      }
     }));
   }
 
@@ -71,13 +103,98 @@ export class DeviceLocationPage implements OnDestroy {
   }
   get canQuery(): boolean { return this.present && this.state === 'owner'; }
   get canMutate(): boolean {
-    return this.canQuery && !this.busy && this.fresh && !this.reviewRequired
+    return this.canQuery && this.locationSource === 'installation' && !this.busy && this.fresh && !this.reviewRequired
       && !!this.record && this.record.revision < 0x7fffffff;
   }
   get canSave(): boolean { return this.editing && !this.viewingSaved && !this.locating && this.canMutate && !!manualLocationDraft(this.longitude, this.latitude); }
   get canClear(): boolean { return this.canMutate && !!this.record?.location; }
   get deviceName(): string { return deviceDisplayName(this.data.device?.dict?.[this.id]); }
-  get point(): Wgs84MapPoint | null { return this.editing && !this.viewingSaved ? this.draftPoint : this.record?.location ?? null; }
+  get point(): Wgs84MapPoint | null {
+    return this.locationSource === 'network' ? null : this.locationSource === 'device' ? this.reportedMapPoint
+      : this.editing && !this.viewingSaved ? this.draftPoint : this.record?.location ?? null;
+  }
+  get reported() { return this.locationWatch.snapshot; }
+  get mapVisible(): boolean { return this.locationSource !== 'network' && this.present && (!!this.point || this.editing); }
+  get reportedTitle(): string {
+    if (this.reported.phase === 'error') return '位置读取失败';
+    if (this.reported.phase === 'unsupported') return '设备未提供定位';
+    if (this.reported.latest?.sample) return this.reported.fresh ? '最近位置' : '上次位置';
+    return this.reported.phase === 'loading' ? '正在获取位置…' : '等待设备定位';
+  }
+  get reportedAccuracy(): string {
+    const cm = this.reported.latest?.sample?.horizontalAccuracyCm;
+    return cm === null || cm === undefined ? '未知' : `${Number((cm / 100).toFixed(2))} 米`;
+  }
+  get reportedErrorText(): string {
+    const error = this.reported.error;
+    return error instanceof GatewayHttpError && error.httpStatus === 429 ? '访问较频繁，请稍后手动刷新。'
+      : error instanceof Error && error.message === 'DEVICE_V2_LOCATION_CAPABILITY_CHANGED' ? '设备定位能力已变化，请刷新。'
+        : '暂时无法获取设备位置，请手动刷新。';
+  }
+  get reportedAge(): string {
+    const age = this.reported.ageMillis;
+    if (age === null) return '时间未知';
+    const seconds = Math.floor(age / 1000);
+    return seconds < 60 ? `${seconds} 秒前` : seconds < 3600 ? `${Math.floor(seconds / 60)} 分钟前` : `${Math.floor(seconds / 3600)} 小时前`;
+  }
+  locationTime(value: number | null | undefined): string {
+    if (value === null || value === undefined) return '未知';
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date.toLocaleString() : '未知';
+  }
+  selectSource(source: 'installation' | 'device' | 'network'): void {
+    if (!this.canQuery || this.editing || this.busy || source === this.locationSource) return;
+    this.cancelPosition(); this.cancelNetwork(); this.locationSource = source;
+    if (source === 'device') this.observeLocation();
+    else {
+      this.locationWatch.pause();
+      if (source === 'network') this.stopSummary();
+      else if (!this.fresh) void this.reload();
+    }
+    if (source !== 'network') this.observeSummary();
+    this.mark();
+  }
+  async queryNetwork(): Promise<void> {
+    if (!this.canQuery || this.locationSource !== 'network' || this.networkController) return;
+    const controller = this.networkController = new AbortController(), account = this.account, id = this.id;
+    const current = () => this.canQuery && this.locationSource === 'network' && this.account === account
+      && this.id === id && this.networkController === controller && !controller.signal.aborted;
+    this.networkPhase = 'loading'; this.networkLocation = null; this.networkError = ''; this.mark();
+    try {
+      const result = await this.networkLocations.read(id, controller.signal);
+      if (current()) { this.networkLocation = result; this.networkPhase = 'done'; }
+    } catch (error) {
+      if (!current()) return;
+      if (error instanceof GatewayHttpError && (error.httpStatus === 401 || error.httpStatus === 403
+        || (error.httpStatus === 404 && error.code === 'DEVICE_V2_DEVICE_NOT_FOUND'))) {
+        this.invalidate(error.httpStatus === 401 ? '请重新登录后查看位置。' : '设备不可用或无位置访问权限。');
+        return;
+      }
+      this.networkPhase = 'error';
+      this.networkError = error instanceof GatewayHttpError && error.httpStatus === 429
+        ? '访问较频繁，请稍后手动查询。' : '暂时无法查询网络参考，请手动重试。';
+    } finally {
+      if (this.networkController === controller) { this.networkController = undefined; this.mark(); }
+    }
+  }
+  private cancelNetwork(): void {
+    this.networkController?.abort(); this.networkController = undefined;
+    this.networkLocation = null; this.networkPhase = 'idle'; this.networkError = '';
+  }
+  refreshReported(): void {
+    if (this.canQuery && this.locationSource === 'device') this.locationWatch.refresh();
+  }
+  private observeLocation(): void {
+    if (!this.canQuery || !this.account || this.locationSource !== 'device') return;
+    const account = this.account, id = this.id;
+    this.locationWatch.start(id, () => {
+      try {
+        assertDeviceV2AccountContext(this.data, account);
+        return API.BASE_URL === account.authority && this.data.auth?.uuid === account.accountId
+          && this.id === id && this.ownerAvailable();
+      } catch { return false; }
+    });
+  }
 
   ionViewWillEnter(): void {
     if (this.destroyed) return;
@@ -90,7 +207,7 @@ export class DeviceLocationPage implements OnDestroy {
     } catch { this.invalidate('请先登录，再从有效设备重新进入。'); }
   }
   ionViewWillLeave(): void { this.visible = false; this.reset(); }
-  ngOnDestroy(): void { this.destroyed = true; this.subscriptions.unsubscribe(); this.ionViewWillLeave(); }
+  ngOnDestroy(): void { this.destroyed = true; this.subscriptions.unsubscribe(); this.ionViewWillLeave(); this.locationWatch.destroy(); }
 
   edit(field: 'longitude' | 'latitude', value: string): void {
     if (!this.canQuery || this.busy || !this.editing) return;
@@ -102,7 +219,8 @@ export class DeviceLocationPage implements OnDestroy {
   }
 
   startEditing(): void {
-    if (!this.canMutate || !this.record) return;
+    if (!this.canMutate || !this.record || this.locationSource !== 'installation') return;
+    this.locationWatch.pause();
     this.editing = true; this.viewingSaved = false; this.clearPrompt = false; this.notice = ''; this.locationError = '';
     this.useRecord(this.record);
     this.mark();
@@ -147,7 +265,7 @@ export class DeviceLocationPage implements OnDestroy {
   }
 
   async reload(): Promise<void> {
-    if (!this.canQuery || this.busy) return;
+    if (!this.canQuery || this.busy || this.locationSource !== 'installation') return;
     const needsReview = this.dirty || this.uncertain || this.reviewRequired;
     const previousRevision = this.knownRevision;
     const request = this.begin('read'); this.fresh = false;
@@ -267,8 +385,9 @@ export class DeviceLocationPage implements OnDestroy {
   }
   private cancelPosition(): void { this.positionController?.abort(); this.positionController = undefined; this.locating = false; }
   private cancelHttp(): void { ++this.generation; this.controller?.abort(); this.controller = undefined; this.busy = null; }
-  private cancel(): void { this.cancelHttp(); this.cancelPosition(); }
+  private cancel(): void { this.cancelHttp(); this.cancelPosition(); this.cancelNetwork(); }
   private reset(): void {
+    this.locationWatch.stop(); this.reportedMapPoint = null; this.locationSource = 'installation';
     this.cancel(); this.stopSummary(); this.account = undefined; this.record = null; this.fresh = false; this.knownRevision = undefined;
     this.longitude = ''; this.latitude = ''; this.dirty = false; this.uncertain = false;
     this.reviewRequired = false; this.error = ''; this.notice = ''; this.state = 'unavailable'; this.mark();

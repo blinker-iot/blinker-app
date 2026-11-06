@@ -13,13 +13,23 @@ export interface DeviceDisplayMetadata {
   name: string;
   capabilities: CapabilityDisplayMetadata[];
 }
-export interface DisplayEndpoint { key: string; kind?: number; type?: number; }
+export interface DisplayEndpoint {
+  key: string;
+  kind?: number;
+  type?: number;
+  /** Presentation fallback only; an exact Manifest type always takes precedence. */
+  valueType?: string;
+}
 export interface DeviceDisplaySource {
   name?: string;
   displayMetadata?: DeviceDisplayMetadata;
   config?: { customName?: string };
 }
 const encoder = new TextEncoder();
+const defaultCapabilityNames: Readonly<Record<string, string>> = {
+  switch: '电源开关', temperature: '温度', humidity: '湿度', brightness: '亮度',
+  soilMoisture: '土壤湿度', co2: '二氧化碳', voltage: '电压',
+};
 
 export function displayText(value: unknown, label = false): string {
   if (typeof value !== 'string' || /[\u0000-\u001f\u007f-\u009f]/u.test(value)) throw Error('DEVICE_V2_DISPLAY_INVALID');
@@ -67,8 +77,17 @@ export function parseDeviceDisplayMetadata(value: unknown, expectedId?: string):
 export function deviceDisplayName(device: DeviceDisplaySource | undefined, fallback = '设备'): string {
   return device?.displayMetadata?.name?.trim() || device?.name?.trim() || device?.config?.customName?.trim() || fallback;
 }
-export function capabilityDisplayName(device: DeviceDisplaySource | undefined, endpoint: DisplayEndpoint): string {
-  return compatibleAlias(device, endpoint)?.displayName || endpoint.key;
+export function capabilityDisplayName(device: DeviceDisplaySource | undefined, endpoint: DisplayEndpoint, title?: string): string {
+  if (title) return title;
+  const alias = compatibleAlias(device, endpoint)?.displayName;
+  if (alias) return alias;
+  if (endpoint.key === 'power') {
+    if (endpoint.type === 0 || endpoint.type === undefined && endpoint.valueType === 'boolean') return '电源开关';
+    if (endpoint.type !== undefined && [1, 2, 3, 4].includes(endpoint.type) || endpoint.type === undefined
+      && (endpoint.valueType === 'integer' || endpoint.valueType === 'number')) return '功率';
+    return endpoint.key;
+  }
+  return Object.hasOwn(defaultCapabilityNames, endpoint.key) ? defaultCapabilityNames[endpoint.key] : endpoint.key;
 }
 export function capabilityBooleanLabel(device: DeviceDisplaySource | undefined, endpoint: DisplayEndpoint, value: boolean): string {
   const alias = endpoint.type === 0 ? compatibleAlias(device, endpoint) : undefined;

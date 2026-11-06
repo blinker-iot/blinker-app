@@ -48,3 +48,21 @@ describe('optional Direct BLE ATT limit', () => {
     expect(() => decodeDirectDeviceHelloBody(legacy, 'controller')).toThrow('DIRECT_HELLO_FIELD_UNSUPPORTED');
   });
 });
+
+describe('dedicated PreCloudDirect Hello', () => {
+  const narrow = [[0, u(0)], [1, a([u(2)])], [2, u(0x20)], [3, u(512)], [4, u(512)], [8, a([u(2)])]] as [number, Uint8Array][];
+
+  it('offers only Method 2 and accepts the actual auth-only peer, including the optional ATT limit', () => {
+    expect(encodeDirectAppHelloBody('precloud-controller', 512, true, 64))
+      .toEqual(hexToBytes('a7000101810202182003190200041902000881020c1840'));
+    const peer = m([...narrow, [12, u(64)]]);
+    expect(decodeDirectDeviceHelloBody(peer, 'precloud-controller')).toMatchObject({ features: 0x20, reliableWindow: 0, blePacketSize: 64 });
+    for (const normal of ['controller', 'transport'] as const)
+      expect(() => decodeDirectDeviceHelloBody(peer, normal)).toThrow('DIRECT_DEVICE_HELLO_INVALID');
+  });
+
+  it('rejects generic control, unsolicited reliable metadata and a mixed authentication method', () => {
+    for (const wrong of [hello(), m([...narrow, [9, u(0)]]), m([...narrow.slice(0, -1), [8, a([u(2), u(1)])]])])
+      expect(() => decodeDirectDeviceHelloBody(wrong, 'precloud-controller')).toThrow('DIRECT_DEVICE_HELLO_INVALID');
+  });
+});

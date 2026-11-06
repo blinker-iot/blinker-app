@@ -48,7 +48,20 @@ async function render(mode: 'real' | 'empty' | 'failed' | 'pending' = 'real') {
 
 describe('State history production template and read API', () => {
   afterEach(() => TestBed.resetTestingModule());
-  it('renders actual source, UTC, names and baseline values without fake quota, sample series or unit guesses', async () => {
+  it('QA-2 history renders phone-local time while retaining server-confirmation source and UTC machine time', async () => {
+    const at = new Date(2026, 9, 21, 0, 30, 0).getTime(); vi.spyOn(Date, 'now').mockReturnValue(at);
+    try {
+      const f = await render(), time = f.element.querySelector('time')!;
+      expect(f.element.querySelector('.source-summary')?.textContent).toContain('手机本地时间');
+      expect(f.element.querySelector('.source-summary')?.textContent).toContain('服务器确认时间');
+      expect(time.textContent).toContain('2026-10-21 00:29:59');
+      expect(time.getAttribute('datetime')).toBe(new Date(at - 1000).toISOString());
+      const query = new URL(f.http.get.mock.calls[0][0]).searchParams;
+      expect(Number(query.get('to'))).toBe(at); expect(Number(query.get('from'))).toBe(at - 86400000);
+      expect(f.http.get).toHaveBeenCalledTimes(1); f.page.ionViewWillLeave();
+    } finally { vi.restoreAllMocks(); }
+  });
+  it('renders actual source, local display and UTC machine time without fake quota, sample series or unit guesses', async () => {
     const f = await render();
     expect(f.element.querySelector('ion-title')?.textContent).toBe('状态历史');
     expect(f.element.querySelector('h1')?.textContent).toBe('客厅灯');
@@ -86,6 +99,38 @@ describe('State history production template and read API', () => {
     const last = new URL(f.http.get.mock.calls[2][0]).searchParams;
     expect(Number(last.get('to')) - Number(last.get('from'))).toBe(3600000); expect(last.get('limit')).toBe('50');
     expect(f.http.get.mock.calls.every(call => call[0].includes('/state-history?'))).toBe(true);
+  });
+  it('manual recovery template restores the refresh button on foreground without retrying the failed read', async () => {
+    const f = await render('failed');
+    const refresh = () => f.element.querySelector<HTMLButtonElement>('.refresh-action')!;
+    const error = f.element.querySelector('[role="alert"]')!.textContent;
+    expect(refresh().disabled).toBe(false);
+    f.visibility.active.next(false); await f.fixture.whenStable();
+    expect(refresh().disabled).toBe(true);
+    f.visibility.active.next(true); await f.fixture.whenStable();
+    expect(f.http.get).toHaveBeenCalledTimes(1);
+    expect(f.element.querySelector('[role="alert"]')!.textContent).toBe(error);
+    expect(refresh().disabled).toBe(false);
+
+    f.http.get.mockImplementation((url: string) => of(response(url)));
+    refresh().click(); await f.fixture.whenStable();
+    expect(f.http.get).toHaveBeenCalledTimes(2);
+    expect(f.element.querySelector('[role="alert"]')).toBeNull();
+    expect(f.element.querySelectorAll('.history-row')).toHaveLength(1);
+    f.page.ionViewWillLeave();
+  });
+  it.each(['account', 'disabled'] as const)('manual recovery template keeps refresh disabled after %s loss while hidden', async loss => {
+    const f = await render('failed');
+    f.visibility.active.next(false); await f.fixture.whenStable();
+    if (loss === 'account') { f.data.auth.uuid = 'other'; ++f.data.sessionEpoch; f.data.authDataChanged.next(); }
+    else { Object.assign(f.data.device.dict[id].config, { disabled: true }); f.data.deviceDataLoader.next(true); }
+    f.visibility.active.next(true); await f.fixture.whenStable();
+    const refresh = f.element.querySelector<HTMLButtonElement>('.refresh-action')!;
+    expect(refresh.disabled).toBe(true);
+    refresh.click(); await f.fixture.whenStable();
+    expect(f.http.get).toHaveBeenCalledTimes(1);
+    expect(f.element.querySelector('.history-row')).toBeNull();
+    f.page.ionViewWillLeave();
   });
   it('explains the 200-row display boundary without promising that a shorter range retrieves older records', async () => {
     const f = await render();

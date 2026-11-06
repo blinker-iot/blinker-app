@@ -25,7 +25,7 @@ import type { UiTheme } from '../../../core/device-v2/ui-theme';
 import { BlinkerDevice } from '../../../core/model/device.model';
 import { DataService } from '../../../core/services/data.service';
 import { DeviceService } from '../../../core/services/device.service';
-import { cloudConsole, consoleLayout, DeviceConsole, DeviceConsoleService, installConsole } from '../../../core/services/device-console.service';
+import { cloudConsole, consoleLayout, consoleWriteConflict, DeviceConsole, DeviceConsoleService, installConsole } from '../../../core/services/device-console.service';
 import { DeviceV2PageLayoutRecord, DeviceV2PageLayoutService } from '../../../core/services/device-v2-page-layout.service';
 import { readDeviceTheme } from '../../../device/device-theme';
 import { PageLayoutPanelComponent, PanelCard } from '../../../device/v2/panel/page-layout-panel';
@@ -61,12 +61,15 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
   error = '';
   configReady = false;
   // Widget being restyled in the editor, with the layout it belongs to.
-  editing?: { widget: PageLayoutWidget; layout: PageLayout; revision: number; invalid?: boolean };
+  editing?: { widget: PageLayoutWidget; layout: PageLayout; revision: number; consoleRevision?: number;
+    context?: DeviceV2AccountContext; invalid?: boolean; conflicted?: boolean };
 
   private connection?: DeviceUiConnection;
   private stateSubscription?: Subscription;
   private readonly subscriptions = new Subscription();
   private destroyed = false;
+  private consoleRevision?: number;
+  private consoleContext?: DeviceV2AccountContext;
 
   constructor(
     route: ActivatedRoute,
@@ -107,6 +110,8 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
     this.device = device;
     this.loading = true;
     this.configReady = false;
+    this.consoleRevision = undefined;
+    this.consoleContext = undefined;
     this.error = '';
     try {
       const context = captureDeviceV2AccountContext(this.data, API.BASE_URL);
@@ -158,6 +163,7 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
     const visible = event.detail.checked;
     const hidden = new Set(device.config.hiddenEndpointKeys ?? []);
     const previouslyVisible = !hidden.has(key);
+    const consoleRevision = this.consoleRevision;
     if (visible === previouslyVisible) return;
 
     this.saving = true;
@@ -169,7 +175,11 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
       // A newly generated layout may omit hidden fields. Restore their default
       // widget before making them visible again, without changing other widgets.
       if (visible) {
-        const record = await this.readLayout();
+        // Work from the displayed Console snapshot, not an automatic pre-write
+        // refresh which would silently replace this operation's CAS base.
+        const record = cloudConsole(device)
+          ? this.layout ? { layout: this.layout, revision: this.layout.revision, manifestFingerprint: this.layout.manifestFingerprint } : null
+          : await this.readLayout();
         assertDeviceV2AccountContext(this.data, context);
         if (this.destroyed) return;
         const layout = record
@@ -207,7 +217,7 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
         const source = await this.saveCloudConsole({
           ...(restoredLayout ? { layout: restoredLayout } : {}),
           uiConfig: { hiddenEndpointKeys },
-        }, context, restoredRevision);
+        }, context, consoleRevision, restoredRevision);
         this.layout = consoleLayout(source)?.layout;
       } else if (!await this.devices.saveDeviceConfig(device, { hiddenEndpointKeys })) throw new Error('save-failed');
       assertDeviceV2AccountContext(this.data, context);
@@ -215,9 +225,11 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
 
       device.config.hiddenEndpointKeys = hiddenEndpointKeys;
       device.subject.next({ key: 'hiddenEndpointKeys', value: hiddenEndpointKeys, source: 'component-settings' });
-    } catch {
+    } catch (error) {
       (event.target as HTMLIonToggleElement).checked = previouslyVisible;
-      if (!this.destroyed) this.error = '保存失败，开关已恢复。请重试。';
+      if (consoleWriteConflict(error)) this.configReady = false;
+      if (!this.destroyed) this.error = consoleWriteConflict(error)
+        ? '界面已在其他位置更新，请重新读取后确认。开关已恢复。' : '保存失败，开关已恢复。请重试。';
     } finally {
       this.saving = false;
       if (!this.destroyed) this.cd.markForCheck();
@@ -258,7 +270,7 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
       const { layout, revision } = await this.editableLayout();
       assertDeviceV2AccountContext(this.data, context);
       const widget = layout.widgets.find(item => item.endpointKey === key);
-      if (!this.destroyed && widget) this.editing = { widget, layout, revision };
+      if (!this.destroyed && widget) this.editing = { widget, layout, revision, consoleRevision: this.consoleRevision, context };
     } catch {
       if (!this.destroyed) this.error = '读取组件布局失败，请重试。';
     } finally {
@@ -268,16 +280,17 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
 
   async saveStyle(): Promise<void> {
     const editing = this.editing;
-    if (!editing || editing.invalid || this.saving || !this.snapshot?.manifestAccepted) return;
+    if (!editing || editing.invalid || editing.conflicted || this.saving || !this.snapshot?.manifestAccepted) return;
     this.saving = true;
     this.error = '';
     try {
-      const context = captureDeviceV2AccountContext(this.data, API.BASE_URL);
+      const context = editing.context ?? captureDeviceV2AccountContext(this.data, API.BASE_URL);
+      assertDeviceV2AccountContext(this.data, context);
       const placed = placeWidget(editing.widget, editing.layout.widgets.filter(widget => widget.widgetId !== editing.widget.widgetId));
       const widgets = editing.layout.widgets.map(widget => widget.widgetId === placed.widgetId ? placed : widget);
       const candidate = { ...editing.layout, revision: Math.max(1, editing.revision), widgets };
       const saved = cloudConsole(this.device)
-        ? consoleLayout(await this.saveCloudConsole({ layout: candidate }, context, editing.revision))
+        ? consoleLayout(await this.saveCloudConsole({ layout: candidate }, context, editing.consoleRevision, editing.revision))
         : await this.layouts.saveCandidate(this.id, candidate, this.snapshot.endpoints, editing.revision);
       if (!saved) throw new Error('layout-unavailable');
       assertDeviceV2AccountContext(this.data, context);
@@ -286,8 +299,10 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
       this.editing = undefined;
       // Same signal as Interface Studio: the device page reloads its panel.
       this.device?.subject.next({ key: 'component', value: 'DeviceV2', source: 'component-settings' });
-    } catch {
-      if (!this.destroyed) this.error = '样式保存失败，请重试。';
+    } catch (error) {
+      if (consoleWriteConflict(error)) { editing.conflicted = true; this.configReady = false; }
+      if (!this.destroyed) this.error = consoleWriteConflict(error)
+        ? '界面已在其他位置更新，请重新读取后确认。当前样式草稿已保留。' : '样式保存失败，请重试。';
     } finally {
       this.saving = false;
       if (!this.destroyed) this.cd.markForCheck();
@@ -329,6 +344,7 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
   private async saveCloudConsole(
     change: { layout?: PageLayout; uiConfig?: DeviceConsole['uiConfig'] },
     context: DeviceV2AccountContext,
+    expectedConsoleRevision: number | undefined,
     expectedRevision?: number,
   ): Promise<DeviceConsole> {
     const device = this.device!;
@@ -345,8 +361,10 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
       change = { ...change, layout };
     }
     assertDeviceV2AccountContext(this.data, context);
-    if (this.destroyed) throw new Error('component-settings-inactive');
-    const source = await this.consoles.save(this.id, change);
+    if (!this.consoleContext) throw new Error('console-not-read');
+    assertDeviceV2AccountContext(this.data, this.consoleContext);
+    if (this.destroyed || this.data.getDevice(this.id) !== device) throw new Error('component-settings-inactive');
+    const source = await this.consoles.save(this.id, change, expectedConsoleRevision!);
     this.acceptCloudConsole(device, source, context);
     return source;
   }
@@ -356,6 +374,8 @@ export class DeviceComponentsPage implements OnInit, OnDestroy {
     if (this.destroyed || this.device !== device || device.config.isShared
       || !source.capabilities.canEditConsole) throw new Error('component-settings-inactive');
     installConsole(device, source);
+    this.consoleRevision = source.revision;
+    this.consoleContext = context;
   }
 
   ionViewWillEnter(): void {

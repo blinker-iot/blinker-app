@@ -37,9 +37,11 @@ export class BleDirectCrypto {
     return new Uint8Array(await this.webCrypto.subtle.digest('SHA-256', bytes(concat(...parts))));
   }
 
-  async adminFingerprint(controllerId: Uint8Array, controllerSecret: Uint8Array): Promise<Uint8Array> {
+  async adminFingerprint(controllerId: Uint8Array, controllerSecret: Uint8Array, credentialVersion = 1): Promise<Uint8Array> {
+    if (!Number.isInteger(credentialVersion) || credentialVersion < 1 || credentialVersion > 0xffffffff)
+      throw new Error('BLE_DIRECT_CREDENTIAL_VERSION_INVALID');
     const version = new Uint8Array(4);
-    new DataView(version.buffer).setUint32(0, 1, false);
+    new DataView(version.buffer).setUint32(0, credentialVersion, false);
     return this.sha256(text.encode('blinker/direct-admin/fingerprint/v1'), Uint8Array.of(0),
       controllerId, version, controllerSecret);
   }
@@ -376,6 +378,13 @@ export class DirectSecureInitiator {
     );
     material.fill(0);
     return session;
+  }
+
+  // Only the explicit registration consumer copies this non-secret context.
+  // Never derive a second binding or expose the session keys.
+  copyRegistrationBinding(): Uint8Array {
+    if (!nonZero(this.binding)) throw new Error('BLE_DIRECT_SESSION_CLOSED');
+    return this.binding.slice();
   }
 
   async encrypt(plaintext: Uint8Array): Promise<Uint8Array> {

@@ -117,6 +117,23 @@ describe('LocationMapComponent managed map and controlled selection', () => {
     expect(content.textContent).toBe(f.component.name); expect(content.querySelector('img')).toBeNull();
   });
 
+  it('updates a reported marker without rebuilding or stealing the viewport', async () => {
+    const f = fixture(); f.component.followPoint = false;
+    f.component.point = { longitude: 120, latitude: 30 }; await f.start();
+    const map = f.map()!, marker = f.marker()!;
+    map.setView([20, 110], 8, { animate: false });
+    const center = map.getCenter(), pan = vi.spyOn(map, 'panTo');
+    f.component.point = { longitude: 121, latitude: 31 };
+    f.component.ngOnChanges({ point: new SimpleChange(null, f.component.point, false) });
+    expect(f.map()).toBe(map); expect(f.marker()).toBe(marker);
+    expect(marker.getLatLng()).toEqual(L.latLng(31, 121)); expect(map.getCenter()).toEqual(center);
+    expect(map.getZoom()).toBe(8); expect(pan).not.toHaveBeenCalled(); expect(f.createSession).toHaveBeenCalledOnce();
+    expect(f.changed).not.toHaveBeenCalled();
+    f.component.followPoint = true;
+    f.component.ngOnChanges({ followPoint: new SimpleChange(false, true, false) });
+    expect(pan).toHaveBeenCalledOnce();
+  });
+
   it('releases all owners on Ionic inactive and ignores stale events before a normal resume', async () => {
     const f = fixture(); f.component.editable = true; await f.start();
     const owner = f.owner(), tiles = f.tiles(), oldMap = f.map()!;

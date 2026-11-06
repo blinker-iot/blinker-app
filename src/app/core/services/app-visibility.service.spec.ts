@@ -31,7 +31,7 @@ describe('AppVisibilityService', () => {
   });
   const create = () => new AppVisibilityService({ run: (callback: () => void) => callback() } as any);
 
-  it('publishes native foreground state and removes both listeners', async () => {
+  it('publishes native foreground state and removes all lifecycle listeners', async () => {
     const service = new AppVisibilityService({
       run: (callback: () => void) => callback(),
     } as any);
@@ -56,6 +56,29 @@ describe('AppVisibilityService', () => {
     plugin.listeners.get('appStateChange')?.({ isActive: false });
     plugin.listeners.get('appStateChange')?.({ isActive: true });
     expect(service.active.value).toBe(true);
+    service.ngOnDestroy();
+  });
+
+  it('preserves pause then stop as distinct transitions even though active stays false', async () => {
+    const service = create(), events: { reason: string; sequence: number }[] = [];
+    const subscription = service.transitions.subscribe(value => events.push(value));
+    await vi.waitFor(() => expect(plugin.getState).toHaveBeenCalledOnce());
+    events.length = 0;
+    plugin.listeners.get('pause')?.(); plugin.listeners.get('appStateChange')?.({ isActive: false });
+    expect(service.active.value).toBe(false);
+    expect(events.map(x => x.reason)).toEqual(['pause', 'stop']);
+    expect(events[1].sequence).toBe(events[0].sequence + 1);
+    subscription.unsubscribe(); service.ngOnDestroy();
+  });
+
+  it('restores from a real resume when a dialog never produced stop/start', async () => {
+    const service = create(), reasons: string[] = [];
+    service.transitions.subscribe(value => reasons.push(value.reason));
+    await vi.waitFor(() => expect(plugin.getState).toHaveBeenCalledOnce());
+    plugin.listeners.get('pause')?.(); expect(service.active.value).toBe(false);
+    // The matched BridgeActivity emits this on onResume, even without onStop.
+    plugin.listeners.get('appStateChange')?.({ isActive: true }); expect(service.active.value).toBe(true);
+    expect(reasons.slice(-2)).toEqual(['pause', 'resume']);
     service.ngOnDestroy();
   });
 

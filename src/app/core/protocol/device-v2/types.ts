@@ -49,6 +49,11 @@ export enum Bbp2MessageKind {
   ControllerMutationReceipt = 0x33,
   PresenceKeyMutation = 0x34,
   PresenceKeyReceipt = 0x35,
+  InitialCloudKeyInstall = 0x38,
+  InitialCloudKeyReceipt = 0x39,
+  InitialCloudWifiHandoff = 0x3a,
+  InitialCloudNetworkHandoff = 0x3b,
+  InitialCloudNetworkAccepted = 0x3c,
 }
 
 export enum Bbp2FrameFlag {

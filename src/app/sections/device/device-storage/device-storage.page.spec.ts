@@ -50,11 +50,11 @@ describe('State history page existing account/read lifecycle', () => {
     const f = setup(); f.page.ionViewWillEnter(); await settled(f.page);
     const original = f.page.state().rows[0];
     const oldInteger = { ...original, type: 2, state: { type: 2, cbor: 'G___________', value: '18446744073709551615', encoding: 'uint64' as const } };
-    expect(f.page.fieldLabel(oldInteger)).toBe('power'); expect(f.page.valueLabel(oldInteger)).toBe('18446744073709551615');
+    expect(f.page.fieldLabel(oldInteger)).toBe('功率'); expect(f.page.valueLabel(oldInteger)).toBe('18446744073709551615');
     f.device.displayMetadata.capabilities[0].displayName = '新电源名称';
     expect(f.page.fieldLabel(original)).toBe('新电源名称');
-    expect(f.page.fieldLabel({ ...original, kind: 1 as any })).toBe('power');
-    expect(f.page.utcText(original.observedAt)).toContain(' UTC'); expect(f.page.utcDate(original.observedAt)).toMatch(/Z$/);
+    expect(f.page.fieldLabel({ ...original, kind: 1 as any })).toBe('电源开关');
+    expect(f.page.localText(original.observedAt)).toMatch(/ UTC[+-]\d{2}:\d{2}$/); expect(f.page.utcDate(original.observedAt)).toMatch(/Z$/);
     f.page.ngOnDestroy();
   });
   it('changes range/key exactly without trimming legal endpoint keys or polling', async () => {

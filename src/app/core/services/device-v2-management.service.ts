@@ -1,19 +1,27 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, fromEvent, takeUntil, timeout } from 'rxjs';
 
 import { API } from '../../configs/api.config';
 import {
   DeviceKeyContext,
   DeviceCloudEnableResponse,
   DeviceKeyCreateResponse,
+  DeviceKeyRevealData,
   DeviceKeyRevealResponse,
   DeviceKeyRotateResponse,
   DeviceInstanceResolveResponse,
   DeviceRemovalResponse,
+  WiFiProvCloudReadResult,
 } from '../model/response.model';
 import { base64UrlDecode, base64UrlEncode } from '../device-v2/ble-direct/wire';
 import { DeviceDisplayMetadata, parseDeviceDisplayMetadata } from '../device-v2/display-metadata';
+import { allocationContext } from '../device-v2/provisioning/wifiprov-allocation';
+import { openWiFiProvInstallTransfer, WIFI_PROV_INSTALL_CONTRACT } from '../device-v2/provisioning/wifiprov-install-transfer';
+import { normalizeSealedInstallationName, validateInstallationStatus, validateInstallationStatusRequest,
+  type WiFiProvInstallationStatus, type WiFiProvInstallationStatusRequest } from '../device-v2/provisioning/wifiprov-sealed-installation-contract';
+import { logicalDevicePeerId } from '../protocol/device-v2';
+import { GATEWAY_NO_AUTH_REPLAY } from '../injectable/server.interceptor';
 
 export interface DirectAdminRecord {
   logicalDeviceId: string;
@@ -38,6 +46,24 @@ export interface DirectAdminResetRequest {
 @Injectable({ providedIn: 'root' })
 export class DeviceV2ManagementService {
   constructor(private readonly http: HttpClient) {}
+
+  async readDeviceContextV2(logicalDeviceId: string, signal: AbortSignal): Promise<DeviceKeyContext> {
+    if (signal.aborted) throw signal.reason ?? new DOMException('Read cancelled', 'AbortError');
+    logicalDevicePeerId(logicalDeviceId);
+    const response = await firstValueFrom(this.http.get<{
+      status: number; data: DeviceKeyContext & { state: string; cloudEnabled: boolean };
+    }>(API.DEVICE_V2.DETAIL(logicalDeviceId), {
+      observe: 'response', context: new HttpContext().set(GATEWAY_NO_AUTH_REPLAY, true),
+    }).pipe(timeout(15000), takeUntil(fromEvent(signal, 'abort'))));
+    if (signal.aborted) throw signal.reason ?? new DOMException('Read cancelled', 'AbortError');
+    if (response.status !== 200) throw Error('DEVICE_V2_CONTEXT_RESPONSE_INVALID');
+    this.noStore(response.headers.get('Cache-Control'));
+    const device = this.body(response.body, response.status).data;
+    if (device.logicalDeviceId !== logicalDeviceId || device.state !== 'active' || device.cloudEnabled !== true) {
+      throw Error('DEVICE_V2_CONTEXT_RESPONSE_INVALID');
+    }
+    return allocationContext(device);
+  }
 
   async getDisplayMetadataV2(logicalDeviceId: string): Promise<DeviceDisplayMetadata> {
     const id = this.deviceId(logicalDeviceId);
@@ -66,7 +92,7 @@ export class DeviceV2ManagementService {
   async getDirectAdminV2(logicalDeviceId: string): Promise<DirectAdminRecord | null> {
     const id = this.deviceId(logicalDeviceId);
     const response = await firstValueFrom(this.http.get<{ status: number; data: { record: DirectAdminRecord | null } }>(
-      API.DEVICE_V2.DIRECT_ADMIN(id), { observe: 'response' },
+      API.DEVICE_V2.DIRECT_ADMIN(id), { observe: 'response', context: new HttpContext().set(GATEWAY_NO_AUTH_REPLAY, true) },
     ));
     this.noStore(response.headers.get('Cache-Control'));
     const record = this.body(response.body, response.status).data.record;
@@ -153,25 +179,147 @@ export class DeviceV2ManagementService {
     const response = await firstValueFrom(this.http.post<DeviceKeyRevealResponse>(
       API.DEVICE_V2.REVEAL(context.logicalDeviceId),
       {},
-      { observe: 'response' },
+      { observe: 'response', context: new HttpContext().set(GATEWAY_NO_AUTH_REPLAY, true) },
     ));
     this.noStore(response.headers.get('Cache-Control'));
     return this.body(response.body, response.status);
   }
 
+  async createDeviceForWiFiProvInstallV2(name: string, requestId: string, instance: Uint8Array,
+    beforeDispatch: (recipientPublicKey: string) => Promise<void>, signal?: AbortSignal): Promise<DeviceKeyRevealData> {
+    const normalized = normalizeSealedInstallationName(name);
+    if (typeof beforeDispatch !== 'function' || !(instance instanceof Uint8Array) || instance.length !== 16 || !instance.some(Boolean))
+      throw Error('WIFIPROV_INSTALL_REQUEST_INVALID');
+    const deviceInstanceId = base64UrlEncode(instance);
+    this.assertInstallationSignal(signal);
+    return openWiFiProvInstallTransfer(requestId, deviceInstanceId, async recipientPublicKey => {
+      this.assertInstallationSignal(signal);
+      await beforeDispatch(recipientPublicKey);
+      this.assertInstallationSignal(signal);
+      const pending = this.http.post<{ status: number; data: unknown }>(API.DEVICE_V2.CREATE,
+        { name: normalized, deviceType: 'diy', deviceInstanceId, recipientPublicKey }, {
+          headers: { 'Idempotency-Key': requestId, 'X-Blinker-Contract': WIFI_PROV_INSTALL_CONTRACT },
+          observe: 'response', context: new HttpContext().set(GATEWAY_NO_AUTH_REPLAY, true),
+        }).pipe(timeout(15000));
+      const response = await firstValueFrom(signal ? pending.pipe(takeUntil(fromEvent(signal, 'abort'))) : pending);
+      this.assertInstallationSignal(signal);
+      this.noStore(response.headers.get('Cache-Control'));
+      if (response.status !== 201) throw Error('WIFIPROV_INSTALL_RESPONSE_INVALID');
+      return this.body(response.body, response.status).data;
+    });
+  }
+
+  /** Only the owner-scoped public status of the original installation request. */
+  async readWiFiProvInstallationStatusV2(request: WiFiProvInstallationStatusRequest, signal: AbortSignal): Promise<WiFiProvInstallationStatus> {
+    this.assertInstallationSignal(signal);
+    const params = validateInstallationStatusRequest(request);
+    const response = await firstValueFrom(this.http.get<{ status: number; data: unknown }>(API.DEVICE_V2.INSTALL_STATUS, {
+      params: { ...params }, headers: { 'X-Blinker-Contract': WIFI_PROV_INSTALL_CONTRACT }, observe: 'response',
+      context: new HttpContext().set(GATEWAY_NO_AUTH_REPLAY, true),
+    }).pipe(timeout(15000), takeUntil(fromEvent(signal, 'abort'))));
+    this.assertInstallationSignal(signal);
+    if (response.status !== 200 || !response.body || Object.keys(response.body).length !== 2
+      || !Object.hasOwn(response.body, 'status') || !Object.hasOwn(response.body, 'data')) throw Error('WIFIPROV_INSTALL_RESPONSE_INVALID');
+    this.noStore(response.headers.get('Cache-Control'));
+    return validateInstallationStatus(this.body(response.body, response.status).data);
+  }
+
+  private assertInstallationSignal(signal?: AbortSignal): void {
+    if (signal?.aborted) throw signal.reason ?? Error('WIFIPROV_OPERATION_CANCELLED');
+  }
+
   async resolveDeviceInstanceV2(
     deviceInstanceId: Uint8Array,
+    registrationProduct?: 'cloud' | 'ble_direct',
   ): Promise<DeviceInstanceResolveResponse> {
     if (!(deviceInstanceId instanceof Uint8Array) || deviceInstanceId.length !== 16
       || !deviceInstanceId.some(byte => byte !== 0)) {
       throw new Error('设备实例号无效');
     }
+    if (registrationProduct !== undefined && registrationProduct !== 'cloud' && registrationProduct !== 'ble_direct') {
+      throw Error('ACCESS_REGISTRATION_REQUEST_INVALID');
+    }
     const response = await firstValueFrom(this.http.post<DeviceInstanceResolveResponse>(
       API.DEVICE_V2.RESOLVE_INSTANCE,
-      { deviceInstanceId: base64UrlEncode(deviceInstanceId) },
-      { observe: 'response' },
+      { deviceInstanceId: base64UrlEncode(deviceInstanceId), ...(registrationProduct ? { registrationProduct } : {}) },
+      { observe: 'response', context: new HttpContext().set(GATEWAY_NO_AUTH_REPLAY, true),
+        ...(registrationProduct ? { headers: { 'X-Blinker-Contract': 'access-registration-v1' } } : {}) },
     ));
-    return this.body(response.body, response.status);
+    const result = this.body(response.body, response.status);
+    if (registrationProduct !== undefined) {
+      this.noStore(response.headers.get('Cache-Control'));
+      const device = result.data?.device as (NonNullable<DeviceInstanceResolveResponse['data']['device']>
+        & { registrationProduct?: unknown }) | null | undefined;
+      if (response.status !== 200 || (device !== null && (!device || device.state !== 'active'
+        || device.registrationProduct !== registrationProduct))) throw Error('ACCESS_REGISTRATION_RESPONSE_CONTEXT_INVALID');
+      if (device) {
+        try {
+          logicalDevicePeerId(device.logicalDeviceId);
+          if (registrationProduct === 'cloud') {
+            if (device.cloudEnabled !== true) throw Error('Cloud access is not active');
+            allocationContext(device as DeviceKeyContext);
+          }
+        } catch { throw Error('ACCESS_REGISTRATION_RESPONSE_CONTEXT_INVALID'); }
+      }
+    }
+    return result;
+  }
+
+  /** One owner-scoped observation. Never resumes or confirms the earlier WiFi RPC. */
+  async readProvisioningCloudV2(
+    deviceInstanceId: Uint8Array, expected: DeviceKeyContext, signal: AbortSignal,
+  ): Promise<WiFiProvCloudReadResult> {
+    const cancelled = () => {
+      if (signal.aborted) throw signal.reason ?? new DOMException('Read cancelled', 'AbortError');
+    };
+    cancelled();
+    this.deviceInstanceId(deviceInstanceId);
+    const instance = base64UrlEncode(deviceInstanceId), context = allocationContext(expected);
+    const response = await firstValueFrom(this.http.post<{ status: number; data: WiFiProvCloudReadResult }>(
+      API.DEVICE_V2.RESOLVE_INSTANCE,
+      { deviceInstanceId: instance, expectedContext: context },
+      { observe: 'response', headers: { 'X-Blinker-Contract': 'provisioning-cloud-v1' },
+        context: new HttpContext().set(GATEWAY_NO_AUTH_REPLAY, true) },
+    ).pipe(timeout(15000), takeUntil(fromEvent(signal, 'abort')))).catch(error => {
+      cancelled(); throw error;
+    });
+    cancelled();
+    if (response.status !== 200) throw Error('WIFIPROV_CLOUD_RESPONSE_INVALID');
+    this.noStore(response.headers.get('Cache-Control'));
+    const data = this.body(response.body, response.status).data;
+    const exact = (value: unknown, keys: string[]): value is Record<string, unknown> => !!value
+      && typeof value === 'object' && !Array.isArray(value)
+      && Object.keys(value).length === keys.length && Object.keys(value).every(key => keys.includes(key));
+    const timestamp = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) > 0;
+    if (!exact(data, ['device', 'observation'])
+      || !exact(data.observation, ['kind', 'observedAt', 'deviceInstanceId', 'issuedAt', 'stateUpdatedAt'])) {
+      throw Error('WIFIPROV_CLOUD_RESPONSE_INVALID');
+    }
+    const observation = data.observation;
+    if (!['online', 'unconfirmed', 'unavailable'].includes(observation.kind)
+      || !timestamp(observation.observedAt)
+      || (observation.deviceInstanceId !== null
+        && (typeof observation.deviceInstanceId !== 'string'
+          || !base64UrlDecode(observation.deviceInstanceId, 16).some(Boolean)))
+      || (observation.issuedAt !== null && (!timestamp(observation.issuedAt) || observation.issuedAt > observation.observedAt))
+      || (observation.stateUpdatedAt !== null
+        && (!timestamp(observation.stateUpdatedAt) || observation.stateUpdatedAt > observation.observedAt))) {
+      throw Error('WIFIPROV_CLOUD_RESPONSE_INVALID');
+    }
+    const deviceContext = allocationContext(data.device);
+    if (deviceContext.logicalDeviceId !== context.logicalDeviceId || deviceContext.credentialVersion !== context.credentialVersion
+      || deviceContext.locator !== context.locator || data.device.state !== 'active' || data.device.cloudEnabled !== true) {
+      throw Error('WIFIPROV_CLOUD_RESPONSE_INVALID');
+    }
+    if (observation.kind === 'online' && (observation.deviceInstanceId !== instance
+      || !timestamp(observation.issuedAt) || !timestamp(observation.stateUpdatedAt)
+      || observation.stateUpdatedAt < observation.issuedAt)) throw Error('WIFIPROV_CLOUD_RESPONSE_INVALID');
+    cancelled();
+    // Expose neither the HTTP envelope nor unknown descriptor/credential fields.
+    return { device: { ...deviceContext, state: 'active', cloudEnabled: true }, observation: {
+      kind: observation.kind, observedAt: observation.observedAt, deviceInstanceId: observation.deviceInstanceId,
+      issuedAt: observation.issuedAt, stateUpdatedAt: observation.stateUpdatedAt,
+    } };
   }
 
   async enableDeviceCloudV2(
