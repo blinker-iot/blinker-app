@@ -3,7 +3,9 @@
 :host {
     @include settings.tokens;
     display: block;
+
     height: 100%;
+
     background: var(--blinker-bg);
 }
 
@@ -13,12 +15,13 @@ ion-toolbar {
 }
 
 ion-tab-bar {
-    // Ionic locks this host to content-box in its shadow stylesheet. Reserve
-    // the 7px padding inside the intended 64px physical navigation surface.
-    --home-navigation-height: 64px;
-    height: calc(var(--home-navigation-height) - 14px);
-    min-height: calc(var(--home-navigation-height) - 14px);
+    $navigation-padding: 4px;
+    $navigation-radius: 999px;
 
+    // Ionic uses content-box, so subtract both insets from the total height.
+    --home-navigation-height: 64px;
+    height: calc(var(--home-navigation-height) - #{2 * $navigation-padding});
+    min-height: calc(var(--home-navigation-height) - #{2 * $navigation-padding});
     --background: var(--blinker-surface);
     --border: 0;
     --color: var(--blinker-text-secondary);
@@ -26,16 +29,17 @@ ion-tab-bar {
     // Float over the page: the rounded exterior must show actual content,
     // not a rectangular flex spacer or a full-width fade behind the bar.
     position: absolute;
+
     right: max(12px, var(--ion-safe-area-right, 0px));
     bottom: calc(10px + var(--ion-safe-area-bottom, 0px));
     left: max(12px, var(--ion-safe-area-left, 0px));
     margin: 0;
 
-    padding: 7px 4px;
+    padding: $navigation-padding;
     overflow: hidden;
-    border-radius: 25px;
+    border-radius: $navigation-radius;
 
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--blinker-text-primary) 3%, transparent);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 9%);
 
     ion-tab-button {
         --background: transparent;
@@ -46,13 +50,12 @@ ion-tab-bar {
         position: relative;
         min-width: 48px;
         min-height: 48px;
-        border-radius: 18px;
+        border-radius: $navigation-radius;
         overflow: hidden;
 
         &.tab-selected {
             --background: var(--blinker-surface-muted);
         }
-
         &::part(native):focus-visible {
             outline: 2px solid var(--ion-color-primary);
             outline-offset: -3px;
@@ -65,6 +68,7 @@ ion-tab-bar {
 
     ion-label {
         margin: 3px 0 0;
+
         font-size: 0.625rem;
         font-weight: 500;
     }
@@ -87,7 +91,6 @@ ion-tab-bar {
         margin-top: 5%;
 
         color: #999999;
-
         font-size: 13px;
     }
 

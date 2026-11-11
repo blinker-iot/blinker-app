@@ -1,11 +1,13 @@
 @use '../../../../theme/ui-theme' as theme;
 
 // Workbench layout follows the component library design draft:
-// gallery on the left, inspector on the right (a bottom sheet on phones).
+// gallery on the left, inspector on the right (a bottom sheet in narrow layouts).
 
 :host {
   @include theme.ui-theme;
   @include theme.ui-backdrop;
+  // The desktop app frame can be narrower than the browser viewport.
+  container: component-preview / inline-size;
 
   // Browsing the catalogue owns vertical pans; normal device controls keep
   // their existing direct-manipulation policy outside this page.
@@ -32,7 +34,7 @@ button {
 // and outranks local rules, so it is tuned through its variables.
 .page {
   --section-main-max-width: 1380px;
-  --section-main-padding-inline: clamp(16px, 3vw, 36px);
+  --section-main-padding-inline: clamp(16px, 3cqw, 36px);
   --section-main-background: transparent;
   --section-main-accent-opacity: 0;
   // Room at the end so the last cards can scroll clear of the inspector sheet.
@@ -231,15 +233,14 @@ button {
   line-height: 1.6;
 }
 
-@media (max-width: 1080px) {
+@container component-preview (max-width: 1080px) {
   .bench { grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; }
 }
 
-@media (max-width: 900px) {
+@container component-preview (max-width: 900px) {
   .insp-idle { display: none; }
   .bench { grid-template-columns: minmax(0, 1fr); }
-  // Phones: the inspector is a bottom sheet over a scrim, shown only while a
-  // component is selected; tapping the scrim or × closes it.
+  // Show the sheet over a scrim only while a component is selected.
   .scrim {
     display: block;
     position: fixed;
@@ -262,7 +263,7 @@ button {
     inset: auto 0 0 0;
     top: auto;
     z-index: 20;
-    max-height: 78vh;
+    max-height: 78%;
 
     padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
     border-radius: var(--ui-radius) var(--ui-radius) 0 0;
