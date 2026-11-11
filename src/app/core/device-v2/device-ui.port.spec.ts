@@ -54,6 +54,269 @@ function inventory() {
 }
 
 describe('DeviceUiPort', () => {
+  it('does not mark a residual BLE ready state online when the adapter is disabled', () => {
+    let enabled: boolean | null = true;
+    const device = { data: { cloudReachable: false } };
+    const ble = { adapterEnabledSnapshot: vi.fn(() => enabled), connectionSnapshot: vi.fn(() => 'ready'),
+      watchAdapterEnabled: vi.fn(), ensureReady: vi.fn() };
+    const port = new DeviceUiPort({} as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, { getDevice: () => device } as any);
+    expect(port.isOnline(logicalDeviceId)).toBe(true);
+    enabled = false;
+    expect(port.isOnline(logicalDeviceId)).toBe(false);
+    device.data.cloudReachable = true;
+    expect(port.isOnline(logicalDeviceId)).toBe(true);
+    expect(ble.watchAdapterEnabled).not.toHaveBeenCalled();
+    expect(ble.ensureReady).not.toHaveBeenCalled();
+  });
+
+  it.each(['credential', 'radio'])('does not block a ready Cloud page on pending BLE %s', async phase => {
+    let finish!: (value?: any) => void;
+    const pending = new Promise<any>(resolve => { finish = resolve; });
+    const release = vi.fn();
+    const interest = { accepted: Promise.resolve(), closed: new Promise<any>(() => undefined), release };
+    const service = { acquireStateInterest: vi.fn(async () => interest), waitUntilReady: vi.fn(async () => undefined),
+      command: vi.fn(async () => undefined) };
+    const ble = { hasActiveCredential: vi.fn(() => phase === 'credential' ? pending : Promise.resolve(true)),
+      canManagePresenceCredential: vi.fn(async () => false), ensureReady: vi.fn(() => pending),
+      disconnect: vi.fn(async () => undefined), command: vi.fn(async () => undefined) };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    const page = port.openConnection(logicalDeviceId);
+    const ready = vi.fn(); void page.ready.then(ready).catch(() => undefined);
+    try {
+      await vi.waitFor(() => expect(ready).toHaveBeenCalledOnce(), { timeout: 250 });
+      expect(port.isBleDirect(logicalDeviceId)).toBe(false);
+      await port.sendCommand(logicalDeviceId, 'level', 30);
+      expect(service.command).toHaveBeenCalledOnce(); expect(ble.command).not.toHaveBeenCalled();
+      expect(service.acquireStateInterest).toHaveBeenCalledOnce();
+      page.close(); finish(true);
+      await vi.waitFor(() => expect(release).toHaveBeenCalledOnce());
+      expect(port.isBleDirect(logicalDeviceId)).toBe(false);
+      if (phase === 'credential') expect(ble.ensureReady).not.toHaveBeenCalled();
+    } finally { page.close(); finish(true); await page.ready.catch(() => undefined); }
+  });
+
+  it.each(['cloud-first', 'ble-first'])('retains Direct readiness when Cloud fails: %s', async order => {
+    let rejectCloud!: (error: Error) => void, finishBle!: () => void;
+    const cloud = new Promise<void>((_, reject) => { rejectCloud = reject; });
+    const direct = new Promise<void>(resolve => { finishBle = resolve; });
+    const service = { acquireStateInterest: vi.fn(async () => undefined), waitUntilReady: vi.fn(() => cloud) };
+    const ble = { hasActiveCredential: vi.fn(async () => true), canManagePresenceCredential: vi.fn(async () => false),
+      ensureReady: vi.fn(() => direct), connectionSnapshot: () => 'ready', disconnect: vi.fn(async () => undefined) };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    const page = port.openConnection(logicalDeviceId);
+    const result = page.ready.catch(error => error);
+    try {
+      await vi.waitFor(() => expect(service.waitUntilReady).toHaveBeenCalledOnce(), { timeout: 250 });
+      if (order === 'cloud-first') rejectCloud(Error('offline'));
+      finishBle(); expect(await result).toBeUndefined();
+      if (order === 'ble-first') rejectCloud(Error('offline'));
+      await Promise.resolve(); await Promise.resolve();
+      expect(port.isBleDirect(logicalDeviceId)).toBe(true); expect(page.signal.aborted).toBe(false);
+    } finally { page.close(); finishBle(); rejectCloud(Error('closed')); await result; }
+  });
+
+  it('preserves the Cloud error after both hybrid candidates fail', async () => {
+    const failure = Error('cloud unavailable');
+    const service = { acquireStateInterest: vi.fn(async () => undefined), waitUntilReady: vi.fn(async () => { throw failure; }) };
+    const ble = { hasActiveCredential: vi.fn(async () => true), canManagePresenceCredential: vi.fn(async () => false),
+      ensureReady: vi.fn(async () => { throw Error('BLE_DIRECT_SCAN_TIMEOUT'); }), disconnect: vi.fn(async () => undefined) };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    const page = port.openConnection(logicalDeviceId);
+    expect(await page.ready.catch(error => error)).toBe(failure);
+    expect(page.signal.aborted).toBe(true);
+  });
+
+  it.each(['page', 'background', 'account'])('retires its late Direct selection without interrupting the Cloud path on %s', async reason => {
+    let finishBle!: () => void;
+    const direct = new Promise<void>(resolve => { finishBle = resolve; });
+    const release = vi.fn(), active = new BehaviorSubject(true), authDataChanged = new Subject<void>();
+    const data = { ...inventory(), sessionEpoch: 1, authDataChanged };
+    const service = { acquireStateInterest: vi.fn(async () => ({ accepted: Promise.resolve(),
+      closed: new Promise<any>(() => undefined), release })), waitUntilReady: vi.fn(async () => undefined) };
+    const ble = { hasActiveCredential: vi.fn(async () => true), canManagePresenceCredential: vi.fn(async () => false),
+      ensureReady: vi.fn(() => direct), connectionSnapshot: () => 'ready', disconnect: vi.fn(async () => undefined),
+      releaseIdleOrdinary: vi.fn(async () => undefined) };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active } as any, data as any);
+    const page = port.openConnection(logicalDeviceId);
+    try {
+      await page.ready;
+      await vi.waitFor(() => expect(ble.ensureReady).toHaveBeenCalledOnce());
+      if (reason === 'background') active.next(false);
+      else if (reason === 'account') { data.sessionEpoch++; authDataChanged.next(); }
+      else page.close();
+      finishBle(); await page.closed;
+      await Promise.resolve(); await Promise.resolve();
+      // Background and account retirement already run the BLE service's global teardown.
+      if (reason === 'page') await vi.waitFor(() => expect(ble.releaseIdleOrdinary).toHaveBeenCalledOnce());
+      else expect(ble.releaseIdleOrdinary).not.toHaveBeenCalled();
+      expect(ble.disconnect).not.toHaveBeenCalled();
+      expect(page.signal.aborted).toBe(true); expect(release).toHaveBeenCalledOnce();
+      expect(port.isBleDirect(logicalDeviceId)).toBe(false);
+    } finally { page.close(); finishBle(); }
+  });
+
+  it('releases ordinary Direct only after the last scope, including a same-turn successor', async () => {
+    const service = { acquireStateInterest: vi.fn(async () => undefined), waitUntilReady: vi.fn(async () => undefined) };
+    const ble = { hasActiveCredential: vi.fn(async () => true), canManagePresenceCredential: vi.fn(async () => false),
+      ensureReady: vi.fn(async () => undefined), connectionSnapshot: () => 'ready',
+      releaseIdleOrdinary: vi.fn(async (_id: string, inUse: () => boolean) => { expect(inUse()).toBe(false); }) };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    const first = port.openConnection(logicalDeviceId), second = port.openConnection(logicalDeviceId);
+    let successor: typeof first | undefined;
+    try {
+      await Promise.all([first.ready, second.ready]);
+      await vi.waitFor(() => expect(ble.ensureReady).toHaveBeenCalledTimes(2));
+      first.close(); await first.closed;
+      expect(ble.releaseIdleOrdinary).not.toHaveBeenCalled();
+      second.close(); successor = port.openConnection(logicalDeviceId);
+      await successor.ready;
+      expect(ble.releaseIdleOrdinary).not.toHaveBeenCalled();
+      successor.close();
+      await vi.waitFor(() => expect(ble.releaseIdleOrdinary).toHaveBeenCalledWith(logicalDeviceId, expect.any(Function)));
+      expect(ble.releaseIdleOrdinary).toHaveBeenCalledOnce();
+    } finally { first.close(); second.close(); successor?.close(); }
+  });
+
+  it('keeps the existing Cloud snapshot when the last Direct page leaves', async () => {
+    const cloud = rawSnapshot(), state = new BehaviorSubject<any>('nearby');
+    const service = { state: new BehaviorSubject('ready'), snapshot: () => cloud, store: { subscribe: () => () => undefined },
+      acquireStateInterest: vi.fn(async () => undefined), waitUntilReady: vi.fn(async () => undefined) };
+    const ble = { hasActiveCredential: vi.fn(async () => true), canManagePresenceCredential: vi.fn(async () => false),
+      ensureReady: vi.fn(async () => state.next('ready')), connectionSnapshot: () => state.value, watchConnection: () => state,
+      snapshot: () => ({ ...cloud, stateFresh: false, values: {} }), subscribe: () => () => undefined,
+      releaseIdleOrdinary: vi.fn(async () => state.next('stopped')) };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    const watcher = port.watchConnection(logicalDeviceId).subscribe();
+    const page = port.openConnection(logicalDeviceId);
+    try {
+      await page.ready;
+      await vi.waitFor(() => expect(port.isBleDirect(logicalDeviceId)).toBe(true));
+      page.close();
+      await vi.waitFor(() => expect(port.isBleDirect(logicalDeviceId)).toBe(false));
+      const displayed = await firstValueFrom(port.watchState(logicalDeviceId).pipe(take(1)));
+      expect(displayed.stateFresh).toBe(true);
+      expect(displayed.endpoints[0].value).toBe(25);
+      expect(service.state.value).toBe('ready');
+    } finally { watcher.unsubscribe(); page.close(); }
+  });
+
+  it('passes release to a later Cloud-only successor while the old native owner is still in use', async () => {
+    let checkUse!: () => boolean, settle!: () => void;
+    const service = { acquireStateInterest: vi.fn(async () => undefined), waitUntilReady: vi.fn(async () => undefined) };
+    const ble = { hasActiveCredential: vi.fn(async () => false).mockResolvedValueOnce(true),
+      canManagePresenceCredential: vi.fn(async () => false), ensureReady: vi.fn(async () => undefined), connectionSnapshot: () => 'ready',
+      releaseIdleOrdinary: vi.fn(async (_id: string, _inUse: () => boolean) => undefined).mockImplementationOnce(async (_id, inUse) => {
+        checkUse = inUse; await new Promise<void>(resolve => { settle = resolve; });
+        expect(checkUse()).toBe(true);
+      }) };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    const first = port.openConnection(logicalDeviceId);
+    let successor: typeof first | undefined;
+    try {
+      await first.ready;
+      await vi.waitFor(() => expect(ble.ensureReady).toHaveBeenCalledOnce());
+      first.close();
+      await vi.waitFor(() => expect(ble.releaseIdleOrdinary).toHaveBeenCalledOnce());
+      successor = port.openConnection(logicalDeviceId);
+      await successor.ready;
+      settle(); await ble.releaseIdleOrdinary.mock.results[0].value;
+      expect(ble.ensureReady).toHaveBeenCalledOnce();
+      successor.close();
+      await vi.waitFor(() => expect(ble.releaseIdleOrdinary).toHaveBeenCalledTimes(2));
+    } finally { first.close(); successor?.close(); settle?.(); }
+  });
+
+  it.each(['ready', 'failed', 'cancelled'])('keeps Cloud selected until a Direct candidate is proved: %s', async outcome => {
+    let resolve!: () => void, reject!: (reason: Error) => void;
+    const pending = new Promise<void>((yes, no) => { resolve = yes; reject = no; });
+    const service = { command: vi.fn(async () => undefined),
+      acquireStateInterest: vi.fn(async () => undefined), waitUntilReady: vi.fn(async () => undefined) };
+    const ble = { hasActiveCredential: vi.fn(async () => true),
+      canManagePresenceCredential: vi.fn(async () => false), ensureReady: vi.fn(() => pending),
+      connectionSnapshot: () => 'ready',
+      disconnect: vi.fn(async () => undefined), command: vi.fn(async () => undefined) };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    const page = port.openConnection(logicalDeviceId), result = page.ready.catch(error => error);
+    try {
+      await vi.waitFor(() => expect(ble.ensureReady).toHaveBeenCalledOnce());
+      expect(port.isBleDirect(logicalDeviceId)).toBe(false);
+      await port.sendCommand(logicalDeviceId, 'level', 30);
+      expect(service.command).toHaveBeenCalledOnce(); expect(ble.command).not.toHaveBeenCalled();
+      if (outcome === 'cancelled') { page.close(); await result; }
+      if (outcome === 'failed') reject(Error('BLE_DIRECT_SCAN_TIMEOUT')); else resolve();
+      await result; await Promise.resolve(); await Promise.resolve();
+      expect(port.isBleDirect(logicalDeviceId)).toBe(outcome === 'ready');
+      expect(service.command).toHaveBeenCalledOnce(); expect(ble.command).not.toHaveBeenCalled();
+    } finally { page.close(); resolve(); await result; }
+  });
+
+  it.each(['idle', 'nearby', 'scanning', 'connecting', 'stopped', 'ready'])('discovery state %s cannot replace fresh Cloud unless Direct is ready', async state => {
+    const raw = rawSnapshot();
+    const service = { snapshot: () => raw, store: { subscribe: () => () => undefined } };
+    const ble = { refreshPresence: vi.fn(async () => undefined), connectionSnapshot: () => state,
+      snapshot: () => ({ ...raw, stateFresh: false, stateRevision: null, values: {} }), subscribe: () => () => undefined };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    await port.refreshBlePresence([logicalDeviceId]);
+    expect(port.isBleDirect(logicalDeviceId)).toBe(state === 'ready');
+    const snapshot = await firstValueFrom(port.watchState(logicalDeviceId).pipe(take(1)));
+    if (state !== 'ready') { expect(snapshot.stateFresh).toBe(true); expect(snapshot.endpoints[0].value).toBe(25); }
+  });
+
+  it('does not start a late Cloud fallback after the page cancels a BLE connection attempt', async () => {
+    const service = { acquireStateInterest: vi.fn(async () => undefined), waitUntilReady: vi.fn(), snapshot: () => rawSnapshot() };
+    let rejectBle!: (reason: unknown) => void;
+    const ble = {
+      hasActiveCredential: vi.fn(async () => true),
+      canManagePresenceCredential: vi.fn(async () => false),
+      ensureReady: vi.fn(() => new Promise<void>((_resolve, reject) => { rejectBle = reject; })),
+      disconnect: vi.fn(async () => undefined),
+    };
+    const port = new DeviceUiPort(service as any, ble as any,
+      { run: (callback: () => void) => callback() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    const controller = new AbortController();
+    const connecting = port.connect(logicalDeviceId, controller.signal).catch(error => error);
+    await vi.waitFor(() => expect(ble.ensureReady).toHaveBeenCalledOnce());
+    controller.abort();
+    await port.disconnect(logicalDeviceId);
+    rejectBle(new Error('late BLE failure'));
+    expect(await connecting).toMatchObject({ code: 'DEVICE_V2_READY_CANCELLED' });
+    expect(service.waitUntilReady).not.toHaveBeenCalled();
+  });
+  it.each([true, false, null])('keeps cached endpoint values but gates UI freshness on Presence=%s', async reachable => {
+    const raw = { ...rawSnapshot(), cloudReachable: reachable };
+    let publish: ((id: string, snapshot: DeviceV2TargetSnapshot) => void) | undefined;
+    const service = {
+      snapshot: () => raw,
+      store: { subscribe: (listener: typeof publish) => { publish = listener; return () => undefined; } },
+    };
+    const port = new DeviceUiPort(
+      service as any,
+      { subscribe: () => () => undefined } as any,
+      { run: (callback: () => void) => callback() } as any,
+      { active: new BehaviorSubject(true) } as any,
+      inventory() as any,
+    );
+    const snapshots: { stateFresh: boolean; endpoints: { value?: unknown }[] }[] = [];
+    const subscription = port.watchState(logicalDeviceId).subscribe(value => snapshots.push(value));
+    expect(snapshots.at(-1)?.stateFresh).toBe(reachable !== false);
+    expect(snapshots.at(-1)?.endpoints[0].value).toBe(25);
+    expect(raw.stateFresh).toBe(true);
+    publish?.(logicalDeviceId, { ...raw, cloudReachable: true });
+    expect(snapshots.at(-1)?.stateFresh).toBe(true);
+    subscription.unsubscribe();
+  });
+
   it('maps protocol snapshots to the small UI contract', async () => {
     let stateListener: ((id: string, snapshot: DeviceV2TargetSnapshot) => void) | undefined;
     let eventListener: ((event: DeviceV2Event) => void) | undefined;
@@ -71,6 +334,8 @@ describe('DeviceUiPort', () => {
         }),
       },
       ensureReady: vi.fn().mockResolvedValue(undefined),
+      acquireStateInterest: vi.fn(async () => undefined),
+      waitUntilReady: vi.fn().mockResolvedValue(undefined),
       command: vi.fn().mockResolvedValue({ acknowledgedSequence: 1 }),
       openTelemetry: vi.fn().mockResolvedValue({
         snapshot: {
@@ -79,6 +344,11 @@ describe('DeviceUiPort', () => {
           streamId: 1,
           epoch: 2,
           effectiveIntervalMs: 1000,
+          sampleSequence: 7,
+          sampleMonotonicMs: 6000,
+          receivedAtMs: 1700000000000,
+          receivedMonotonicMs: 8000,
+          missedSamples: 2,
           values: {
             temperature: {
               type: DeviceV2ValueType.Float32,
@@ -108,6 +378,7 @@ describe('DeviceUiPort', () => {
       ensureReady: vi.fn().mockResolvedValue(undefined),
       disconnect: vi.fn().mockResolvedValue(undefined),
       command: vi.fn().mockResolvedValue(undefined),
+      openTelemetryConnected: vi.fn().mockRejectedValue(new Error('BLE_DIRECT_SESSION_NOT_READY')),
     };
     const appActive = new BehaviorSubject(true);
     const port = new DeviceUiPort(
@@ -130,6 +401,8 @@ describe('DeviceUiPort', () => {
       endpoints: [{
         id: 1,
         key: 'level',
+        manifestKind: DeviceV2EndpointKind.Property,
+        manifestType: DeviceV2ValueType.UnsignedInteger,
         role: 'property',
         valueType: 'integer',
         readable: true,
@@ -161,13 +434,21 @@ describe('DeviceUiPort', () => {
 
     await port.connect(logicalDeviceId);
     await port.sendCommand(logicalDeviceId, 'level', 30);
-    expect(service.ensureReady).toHaveBeenCalledWith(logicalDeviceId);
+    expect(service.waitUntilReady).toHaveBeenCalledWith(logicalDeviceId, expect.any(AbortSignal));
     expect(service.command).toHaveBeenCalledWith(logicalDeviceId, 'level', 30);
 
     const telemetry = await port.openTelemetry(logicalDeviceId, ['temperature'], 1000);
     expect(telemetry.snapshot).toEqual({
       active: true,
+      source: 'cloud',
+      streamId: 1,
+      epoch: 2,
       effectiveIntervalMs: 1000,
+      sampleSequence: 7,
+      sampleMonotonicMs: 6000,
+      receivedAtMs: 1700000000000,
+      receivedMonotonicMs: 8000,
+      missedSamples: 2,
       values: { temperature: 21.5 },
     });
     await telemetry.setVisible(false);
@@ -188,7 +469,46 @@ describe('DeviceUiPort', () => {
     await port.refreshBlePresence([logicalDeviceId, directId]);
     expect(ble.refreshPresence).toHaveBeenCalledWith([logicalDeviceId, directId]);
     await expect(port.openTelemetry(directId, ['temperature'], 1000))
-      .rejects.toThrow('BLE_DIRECT_TELEMETRY_NOT_ENABLED');
+      .rejects.toThrow('BLE_DIRECT_SESSION_NOT_READY');
+  });
+
+  it('pins realtime to the existing BLE lease without acquiring or silently falling back to Cloud', async () => {
+    const snapshot: DeviceV2TelemetrySnapshot = { active: true, visible: true, streamId: 2, epoch: 3,
+      effectiveIntervalMs: 2000, missedSamples: 0, values: {} };
+    const lease = { snapshot, subscribe: vi.fn(listener => { listener(snapshot); return () => undefined; }),
+      setVisible: vi.fn(async () => undefined), close: vi.fn(async () => undefined) };
+    const service = { openTelemetry: vi.fn() };
+    const ble = { refreshPresence: vi.fn(async () => undefined), connectionSnapshot: () => 'ready',
+      openTelemetryConnected: vi.fn(async () => lease), ensureReady: vi.fn() };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    await port.refreshBlePresence([logicalDeviceId]);
+    const realtime = await port.openTelemetry(logicalDeviceId, ['temperature'], 1000);
+    expect(ble.openTelemetryConnected).toHaveBeenCalledExactlyOnceWith(logicalDeviceId, ['temperature'], 1000);
+    expect(realtime.snapshot.source).toBe('ble');
+    (port as any).transport(logicalDeviceId).next('cloud');
+    const observed = vi.fn();
+    realtime.subscribe(observed);
+    expect(observed).toHaveBeenCalledWith(expect.objectContaining({ source: 'ble' }));
+    await realtime.setVisible(false); await realtime.close();
+    expect(lease.setVisible).toHaveBeenCalledWith(false); expect(lease.close).toHaveBeenCalledOnce();
+    expect(ble.ensureReady).not.toHaveBeenCalled(); expect(service.openTelemetry).not.toHaveBeenCalled();
+    (port as any).transport(logicalDeviceId).next('ble');
+    ble.openTelemetryConnected.mockRejectedValueOnce(Error('DIRECT_TELEMETRY_NOT_SUPPORTED'));
+    await expect(port.openTelemetry(logicalDeviceId, ['temperature'], 1000))
+      .rejects.toThrow('DIRECT_TELEMETRY_NOT_SUPPORTED');
+    expect(service.openTelemetry).not.toHaveBeenCalled();
+  });
+
+  it('rejects LAN-selected realtime without a ready page-owned session instead of masquerading Cloud', async () => {
+    const lease = { snapshot: { active: true, streamId: 1, epoch: 1,
+      effectiveIntervalMs: 1000, missedSamples: 0, values: {} } };
+    const service = { openTelemetry: vi.fn(async () => lease) }, ble = { openTelemetryConnected: vi.fn() };
+    const port = new DeviceUiPort(service as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any, inventory() as any);
+    (port as any).transport(logicalDeviceId).next('lan');
+    await expect(port.openTelemetry(logicalDeviceId, ['temperature'], 1000)).rejects.toThrow('LOCAL_ACCESS_SESSION_NOT_READY');
+    expect(service.openTelemetry).not.toHaveBeenCalled(); expect(ble.openTelemetryConnected).not.toHaveBeenCalled();
   });
 
   it('uses a verified Manifest cache for an offline page without treating state as fresh', async () => {
@@ -232,6 +552,8 @@ describe('DeviceUiPort', () => {
         subscribeEvents: vi.fn(() => () => undefined),
       },
       ensureReady: vi.fn().mockResolvedValue(undefined),
+      acquireStateInterest: vi.fn(async () => undefined),
+      waitUntilReady: vi.fn().mockResolvedValue(undefined),
     };
     const ble = {
       watchConnection: vi.fn(() => new BehaviorSubject('idle')),
@@ -258,11 +580,11 @@ describe('DeviceUiPort', () => {
 
     expect(ble.syncPresenceCredential).toHaveBeenCalledWith(directId);
     expect(ble.ensureReady).toHaveBeenCalledWith(directId);
-    expect(service.ensureReady).not.toHaveBeenCalled();
+    expect(service.waitUntilReady).not.toHaveBeenCalled();
     expect(port.isBleDirect(directId)).toBe(true);
   });
 
-  it('syncs an owner PresenceKey before proving a hybrid Direct credential', async () => {
+  it.each(['diy', 'ble'])('syncs PresenceKey and selects ordinary Direct for native WiFi of original type %s', async deviceType => {
     const connection = new BehaviorSubject<any>('idle');
     const service = {
       state: new BehaviorSubject('ready'),
@@ -272,6 +594,8 @@ describe('DeviceUiPort', () => {
         subscribeEvents: vi.fn(() => () => undefined),
       },
       ensureReady: vi.fn().mockResolvedValue(undefined),
+      acquireStateInterest: vi.fn(async () => undefined),
+      waitUntilReady: vi.fn().mockResolvedValue(undefined),
       command: vi.fn().mockResolvedValue(undefined),
     };
     const ble = {
@@ -297,6 +621,7 @@ describe('DeviceUiPort', () => {
       inventory() as any,
     );
 
+    vi.spyOn((port as any).data, 'getDevice').mockReturnValue({ deviceType, cloudEnabled: true, gatewayRouted: false });
     const connectivity: any[] = [];
     const connectivitySubscription = port.watchConnectivity(logicalDeviceId).subscribe(
       value => connectivity.push(value),
@@ -305,12 +630,13 @@ describe('DeviceUiPort', () => {
     expect(port.isBleDirect(logicalDeviceId)).toBe(true);
     expect(ble.syncPresenceCredential).toHaveBeenCalledWith(logicalDeviceId);
     expect(ble.ensureReady).toHaveBeenCalledWith(logicalDeviceId, 5_000);
-    expect(service.ensureReady).not.toHaveBeenCalled();
+    expect(service.waitUntilReady).not.toHaveBeenCalled();
     expect(connectivity.at(-1)).toEqual({
       activeTransport: 'ble',
       directConnectAllowed: true,
       bleAccess: true,
       bleAdapterEnabled: true,
+      bleNearby: false,
       bleState: 'ready',
       cloudSessionState: 'ready',
     });
@@ -325,6 +651,17 @@ describe('DeviceUiPort', () => {
     connectivitySubscription.unsubscribe();
   });
 
+  it.each([false, true])('WiFiProv handoff follows topology, not the BLE-origin type (gateway=%s)', async gatewayRouted => {
+    const ble = { hasActiveCredential: vi.fn(async () => true),
+      canManagePresenceCredential: vi.fn(async () => false), ensureReady: vi.fn(async () => undefined) };
+    const port = new DeviceUiPort({} as any, ble as any, { run: f => f() } as any,
+      { active: new BehaviorSubject(true) } as any,
+      { getDevice: () => ({ deviceType: 'ble', cloudEnabled: true, gatewayRouted }) } as any);
+    await port.startDirectHandoff(logicalDeviceId);
+    expect(ble.ensureReady).toHaveBeenCalledTimes(gatewayRouted ? 0 : 1);
+    expect(port.isBleDirect(logicalDeviceId)).toBe(!gatewayRouted);
+  });
+
   it('uses cloud for a hybrid device without a local Direct credential', async () => {
     const service = {
       state: new BehaviorSubject('ready'),
@@ -334,6 +671,8 @@ describe('DeviceUiPort', () => {
         subscribeEvents: vi.fn(() => () => undefined),
       },
       ensureReady: vi.fn().mockResolvedValue(undefined),
+      acquireStateInterest: vi.fn(async () => undefined),
+      waitUntilReady: vi.fn().mockResolvedValue(undefined),
       command: vi.fn().mockResolvedValue(undefined),
     };
     const ble = {
@@ -360,13 +699,13 @@ describe('DeviceUiPort', () => {
     await port.connect(logicalDeviceId);
     await port.sendCommand(logicalDeviceId, 'level', 45);
 
-    expect(service.ensureReady).toHaveBeenCalledWith(logicalDeviceId);
+    expect(service.waitUntilReady).toHaveBeenCalledWith(logicalDeviceId, expect.any(AbortSignal));
     expect(service.command).toHaveBeenCalledWith(logicalDeviceId, 'level', 45);
     expect(ble.ensureReady).not.toHaveBeenCalled();
     expect(port.isBleDirect(logicalDeviceId)).toBe(false);
   });
 
-  it('does not contend with an online gateway for a BLE child connection', async () => {
+  it('never treats absent gateway Presence as permission to take over Direct', async () => {
     const presence = new Subject<unknown>();
     const device = {
       cloudEnabled: true,
@@ -378,6 +717,10 @@ describe('DeviceUiPort', () => {
     const service = {
       state: new BehaviorSubject('ready'),
       ensureReady: vi.fn().mockResolvedValue(undefined),
+      acquireStateInterest: vi.fn(async () => undefined),
+      waitUntilReady: vi.fn().mockResolvedValue(undefined),
+      acquireConnectionDemand: vi.fn(async () => ({ accepted: Promise.resolve(), closed: new Promise(() => undefined), release: vi.fn() })),
+      reserveDirectPriority: vi.fn(async () => { throw Error('Direct priority/Ready is not negotiated'); }),
     };
     const ble = {
       watchConnection: vi.fn(() => connection),
@@ -404,7 +747,7 @@ describe('DeviceUiPort', () => {
     await port.connect(logicalDeviceId);
     await port.refreshBlePresence([logicalDeviceId]);
 
-    expect(service.ensureReady).toHaveBeenCalledWith(logicalDeviceId);
+    expect(service.waitUntilReady).toHaveBeenCalledWith(logicalDeviceId, expect.any(AbortSignal));
     expect(ble.ensureReady).not.toHaveBeenCalled();
     expect(port.isBleDirect(logicalDeviceId)).toBe(false);
     expect(connectivity.at(-1).directConnectAllowed).toBe(false);
@@ -413,9 +756,14 @@ describe('DeviceUiPort', () => {
     presence.next({ cloudReachable: false });
     await port.connect(logicalDeviceId);
 
-    expect(ble.ensureReady).toHaveBeenCalledWith(logicalDeviceId, 5_000);
-    expect(port.isBleDirect(logicalDeviceId)).toBe(true);
-    expect(connectivity.at(-1).directConnectAllowed).toBe(true);
+    expect(ble.ensureReady).not.toHaveBeenCalled();
+    expect(service.reserveDirectPriority).not.toHaveBeenCalled();
+    // The connectivity observer may read local access for display; neither
+    // of the two connection callers waits on it or starts Direct acquisition.
+    expect(ble.hasActiveCredential).toHaveBeenCalledOnce();
+    expect(service.acquireConnectionDemand).toHaveBeenCalledTimes(2);
+    expect(port.isBleDirect(logicalDeviceId)).toBe(false);
+    expect(connectivity.at(-1).directConnectAllowed).toBe(false);
     subscription.unsubscribe();
   });
 
@@ -423,6 +771,8 @@ describe('DeviceUiPort', () => {
     const service = {
       state: new BehaviorSubject('ready'),
       ensureReady: vi.fn().mockResolvedValue(undefined),
+      acquireStateInterest: vi.fn(async () => undefined),
+      waitUntilReady: vi.fn().mockResolvedValue(undefined),
     };
     const ble = {
       hasActiveCredential: vi.fn().mockResolvedValue(true),
@@ -444,7 +794,7 @@ describe('DeviceUiPort', () => {
     await port.connect(logicalDeviceId);
     await port.refreshBlePresence([logicalDeviceId]);
 
-    expect(service.ensureReady).toHaveBeenCalledWith(logicalDeviceId);
+    expect(service.waitUntilReady).toHaveBeenCalledWith(logicalDeviceId, expect.any(AbortSignal));
     expect(ble.hasActiveCredential).not.toHaveBeenCalled();
     expect(ble.syncPresenceCredential).not.toHaveBeenCalled();
     expect(ble.ensureReady).not.toHaveBeenCalled();
@@ -462,6 +812,8 @@ describe('DeviceUiPort', () => {
         subscribeEvents: vi.fn(() => () => undefined),
       },
       ensureReady: vi.fn().mockResolvedValue(undefined),
+      acquireStateInterest: vi.fn(async () => undefined),
+      waitUntilReady: vi.fn().mockResolvedValue(undefined),
       command: vi.fn().mockResolvedValue(undefined),
     };
     const ble = {
@@ -487,7 +839,7 @@ describe('DeviceUiPort', () => {
     await port.connect(logicalDeviceId);
 
     expect(ble.ensureReady).toHaveBeenCalledWith(logicalDeviceId, 5_000);
-    expect(service.ensureReady).toHaveBeenCalledWith(logicalDeviceId);
+    expect(service.waitUntilReady).toHaveBeenCalledWith(logicalDeviceId, expect.any(AbortSignal));
     expect(port.isBleDirect(logicalDeviceId)).toBe(false);
 
     await port.disconnect(logicalDeviceId);
@@ -506,6 +858,8 @@ describe('DeviceUiPort', () => {
         subscribeEvents: vi.fn(() => () => undefined),
       },
       ensureReady: vi.fn().mockResolvedValue(undefined),
+      acquireStateInterest: vi.fn(async () => undefined),
+      waitUntilReady: vi.fn().mockResolvedValue(undefined),
       command: vi.fn().mockResolvedValue(undefined),
     };
     const ble = {
@@ -532,7 +886,7 @@ describe('DeviceUiPort', () => {
     await Promise.resolve();
     await port.connect(logicalDeviceId);
 
-    expect(service.ensureReady).toHaveBeenCalledWith(logicalDeviceId);
+    expect(service.waitUntilReady).toHaveBeenCalledWith(logicalDeviceId, expect.any(AbortSignal));
     expect(ble.ensureReady).toHaveBeenCalledWith(logicalDeviceId, 15_000);
     expect(port.isBleDirect(logicalDeviceId)).toBe(false);
 
@@ -551,6 +905,8 @@ describe('DeviceUiPort', () => {
         subscribeEvents: vi.fn(() => () => undefined),
       },
       ensureReady: vi.fn().mockResolvedValue(undefined),
+      acquireStateInterest: vi.fn(async () => undefined),
+      waitUntilReady: vi.fn().mockResolvedValue(undefined),
       command: vi.fn().mockResolvedValue(undefined),
     };
     const ble = {
@@ -585,7 +941,7 @@ describe('DeviceUiPort', () => {
 
     expect(port.isBleDirect(logicalDeviceId)).toBe(true);
     expect(states.at(-1)).toBe('ready');
-    expect(service.ensureReady).toHaveBeenCalledWith(logicalDeviceId);
+    expect(service.ensureReady).not.toHaveBeenCalled();
     subscription.unsubscribe();
   });
 
@@ -599,6 +955,8 @@ describe('DeviceUiPort', () => {
         subscribeEvents: vi.fn(() => () => undefined),
       },
       ensureReady: vi.fn().mockResolvedValue(undefined),
+      acquireStateInterest: vi.fn(async () => undefined),
+      waitUntilReady: vi.fn().mockResolvedValue(undefined),
       command: vi.fn().mockResolvedValue(undefined),
     };
     const ble = {
@@ -630,7 +988,7 @@ describe('DeviceUiPort', () => {
     expect(port.isBleDirect(logicalDeviceId)).toBe(true);
 
     connection.next('stopped');
-    await vi.waitFor(() => expect(service.ensureReady).toHaveBeenCalledWith(logicalDeviceId));
+    expect(service.ensureReady).not.toHaveBeenCalled();
 
     expect(port.isBleDirect(logicalDeviceId)).toBe(false);
     expect(states.at(-1)).toBe('ready');

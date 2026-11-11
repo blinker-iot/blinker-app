@@ -1,0 +1,22 @@
+{
+  "note": "Synthetic public metadata fixture; contains no device or controller secret.",
+  "intent": {
+    "intentId": "BAQEBAQEBAQEBAQEBAQEBA",
+    "sourceLogicalDeviceId": "device_11111111-1111-4111-8111-111111111111",
+    "targetLogicalDeviceId": "ble_AgICAgICAgICAgICAgICAg",
+    "registrationProduct": "ble_direct",
+    "rootBindingId": "CAgICAgICAgICAgICAgICA",
+    "bindingRevision": 1,
+    "expectedRoot": {
+      "deviceInstanceId": "AQEBAQEBAQEBAQEBAQEBAQ",
+      "accessEpoch": 1,
+      "controllerId": "AgICAgICAgICAgICAgICAg",
+      "credentialVersion": 1,
+      "adminFingerprint": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM",
+      "cloudCredentialVersion": 1
+    },
+    "clientNonce": "BgYGBgYGBgYGBgYGBgYGBg"
+  },
+  "authTranscriptDigest": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+  "expected": "fDv-bpbr3V9VkfzlIik8YJIfM3b2tu78Lf5_Hu5C9wY"
+}

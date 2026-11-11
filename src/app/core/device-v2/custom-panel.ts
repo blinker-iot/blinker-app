@@ -23,4 +23,3 @@ export function parseCustomPanel(value: unknown): CustomPanelDocument {
 
   return { version: 1, html: document.html, theme: document.theme };
 }
-

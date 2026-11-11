@@ -1,4 +1,4 @@
-<ion-header class="main-tab-header">
+<ion-header class="main-tab-header home-tab-header">
   <ion-toolbar>
     <ion-title>{{ 'NAVIGATION.TOOLS' | translate }}</ion-title>
 
@@ -9,12 +9,12 @@
   <div slot="fixed" class="top-scroll-mask" aria-hidden="true"></div>
 
   <div class="tools-page">
-    @for (group of groups; track group.title) {
-      <section class="tool-section">
-        <h2>{{ group.title }}</h2>
+    @for (group of groups; track group.title; let groupIndex = $index) {
+      <section class="tool-section" [attr.aria-labelledby]="'tools-group-' + groupIndex">
+        <h2 [id]="'tools-group-' + groupIndex">{{ group.title }}</h2>
         <app-menu-list
+          appearance="settings"
           [items]="group.tools"
-          [detailed]="true"
           (itemSelected)="openTool($event)"
         ></app-menu-list>
       </section>

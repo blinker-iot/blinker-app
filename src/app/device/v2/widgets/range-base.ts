@@ -14,6 +14,7 @@ interface LinearDrag {
   relative: boolean;
   vertical: boolean;
   startValue: number;
+  startLocal: number | null;
   startPosition: number;
   box: DOMRect;
 }
@@ -26,7 +27,7 @@ export abstract class RangeWidgetBase extends WidgetBase implements OnChanges, O
   private reported?: number;
   private timer?: ReturnType<typeof setTimeout>;
   private linear?: LinearDrag;
-  private repeater?: { start: number; timer?: ReturnType<typeof setTimeout> };
+  private repeater?: { pointerId: number; start: number; startLocal: number | null; timer?: ReturnType<typeof setTimeout> };
   private readonly displayed = new AnimatedNumber();
 
   get min(): number { return this.card.field.minimum ?? 0; }
@@ -103,7 +104,7 @@ export abstract class RangeWidgetBase extends WidgetBase implements OnChanges, O
     this.dragging = true;
 
     this.linear = {
-      pointerId: event.pointerId, relative, vertical, startValue: this.value,
+      pointerId: event.pointerId, relative, vertical, startValue: this.value, startLocal: this.local(),
       startPosition: vertical ? event.clientY : event.clientX, box: element.getBoundingClientRect(),
     };
 
@@ -141,6 +142,14 @@ export abstract class RangeWidgetBase extends WidgetBase implements OnChanges, O
     this.settle(start);
   }
 
+  // Native scrolling or interrupted ownership is not a submitted value.
+  dragCancel(event: PointerEvent): void {
+    if (this.linear?.pointerId !== event.pointerId) return;
+    const local = this.linear.startLocal;
+    this.linear = undefined;
+    this.discardInteraction(local);
+  }
+
   // − / + held down: steps on screen while held, one command on release.
   // Without `hold` each press is a single step.
   repeatStart(event: PointerEvent, direction: number, hold = true): void {
@@ -149,7 +158,7 @@ export abstract class RangeWidgetBase extends WidgetBase implements OnChanges, O
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
 
     this.dragging = true;
-    this.repeater = { start: this.value };
+    this.repeater = { pointerId: event.pointerId, start: this.value, startLocal: this.local() };
 
     this.preview(this.value + direction * this.step);
 
@@ -168,15 +177,35 @@ export abstract class RangeWidgetBase extends WidgetBase implements OnChanges, O
     this.settle(start);
   }
 
+  repeatCancel(event: PointerEvent): void {
+    if (this.repeater?.pointerId !== event.pointerId) return;
+    const local = this.repeater.startLocal;
+    clearTimeout(this.repeater.timer);
+    this.repeater = undefined;
+    this.discardInteraction(local);
+  }
+
   private repeat(direction: number, delay: number): void {
     const repeater = this.repeater;
 
     if (!repeater) return;
 
     repeater.timer = setTimeout(() => {
+      if (this.repeater !== repeater) return;
       this.preview(this.value + direction * this.step);
       this.repeat(direction, REPEAT_EVERY_MS);
     }, delay);
+  }
+
+  // Explicitly retire a binding's local input. Other range consumers keep
+  // their existing update policy unless they opt into this reset.
+  protected resetInput(): void {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    clearTimeout(this.repeater?.timer);
+    this.repeater = undefined;
+    this.linear = undefined;
+    this.discardInteraction(null);
   }
 
   // Ends any drag: commit a changed value, otherwise drop the preview.
@@ -189,6 +218,11 @@ export abstract class RangeWidgetBase extends WidgetBase implements OnChanges, O
     else this.setLocal(null);
   }
 
+  protected discardInteraction(local: number | null): void {
+    this.dragging = false;
+    this.setLocal(local);
+  }
+
   private setLocal(value: number | null): void {
     this.local.set(value);
     this.displayed.set(this.value);
@@ -199,5 +233,8 @@ export abstract class RangeWidgetBase extends WidgetBase implements OnChanges, O
 
     clearTimeout(this.timer);
     clearTimeout(this.repeater?.timer);
+    this.repeater = undefined;
+    this.linear = undefined;
+    this.dragging = false;
   }
 }

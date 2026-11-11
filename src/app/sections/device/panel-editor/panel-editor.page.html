@@ -1,4 +1,5 @@
-<ion-header class="ion-no-border">
+@if (!embedded) {
+<ion-header class="ion-no-border control-page-header">
   <ion-toolbar color="transparent">
     <ion-buttons slot="start">
       <ion-back-button text="" [defaultHref]="'/device/' + id" [disabled]="saving"></ion-back-button>
@@ -13,13 +14,21 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" [scrollY]="false">
-  <div class="workspace content-under-header">
-    <div class="editor-tools" [class.preview-tools]="mode === 'preview'">
+  <ng-container [ngTemplateOutlet]="workspace" />
+</ion-content>
+} @else {
+  <ng-container [ngTemplateOutlet]="workspace" />
+}
+<ng-template #workspace>
+  <div class="workspace content-under-header" [class.inline-workspace]="embedded">
+    <div class="editor-tools">
+      @if (!embedded) {
       <div class="mode-switch" role="group" aria-label="编辑模式">
         <button type="button" [attr.aria-pressed]="mode === 'edit'" (click)="setMode('edit')" [disabled]="saving">编辑</button>
         <button type="button" [attr.aria-pressed]="mode === 'layout'" (click)="setMode('layout')" [disabled]="saving">布局</button>
         <button type="button" [attr.aria-pressed]="mode === 'preview'" (click)="setMode('preview')" [disabled]="saving">预览</button>
       </div>
+      }
       <div class="tools-right">
         @if (mode === 'preview') {
           <div class="theme-switch" role="group" aria-label="预览主题">
@@ -34,37 +43,43 @@
         }
 
         @if (mode !== 'preview') {
-          <button class="icon-button" type="button" aria-label="撤销" title="撤销" [disabled]="!canUndo || saving" (click)="undo()">
-            <i class="fa-light fa-arrow-rotate-left"></i>
+          <button class="icon-button" type="button" aria-label="撤销" title="撤销" [disabled]="!canUndo || !editingAllowed" (click)="undo()">
+            <i class="fa-light fa-arrow-rotate-left" aria-hidden="true"></i>
           </button>
         }
 
-        @if (mode === 'edit') {
-          <button class="add-button" type="button" (click)="openLibrary()" [disabled]="!document || saving || stale">
-            <i class="fa-light fa-plus"></i><span>添加部件</span>
+        @if (mode === 'edit' || embedded) {
+          <button class="add-button" type="button" (click)="openLibrary()" [disabled]="!document || !editingAllowed">
+            <i class="fa-light fa-plus" aria-hidden="true"></i><span>{{ embedded ? '添加展示' : '添加部件' }}</span>
           </button>
         }
 
       </div>
     </div>
 
-    @if (mode === 'layout') { <p class="layout-hint">按住拖拽放置位置</p> }
+    @if (mode === 'layout') { <p class="layout-hint">{{ embedded ? '拖动调整位置，轻点修改属性；空白处可滚动。' : '按住拖拽放置位置' }}</p> }
+    @if (mode === 'preview') { <p class="layout-hint">此预览可控制设备，操作会实际下发。</p> }
     @if (message) { <p class="notice">{{ message }}</p> }
-    @if (stale) { <p class="error" role="alert">设备字段已改变，请重新读取后编辑。<button (click)="reload()">重新读取</button></p> }
-    @if (error) { <p class="error" role="alert">{{ error }}<button type="button" (click)="reload()" [disabled]="saving">重新读取</button></p> }
+    @if (editBlockedReason) { <p class="error" role="alert">{{ editBlockedReason }}</p> }
+    @if (!embedded && stale) { <p class="error" role="alert">设备能力或布局已改变，请重新读取后编辑。<button type="button" (click)="reload()">重新读取</button></p> }
+    @if (error && !editBlockedReason) { <p class="error" role="alert">{{ error }}@if (!embedded) { <button type="button" (click)="reload()" [disabled]="saving">重新读取</button> }</p> }
 
     @if (loading) {
       <div class="empty"><ion-spinner name="crescent" /><p>正在读取组件面板…</p></div>
     } @else if (document) {
       <div class="canvas" [attr.inert]="saving ? '' : null">
-        <div class="panel" panelSortable aria-label="组件面板网格"
-          (sortStarted)="startDrag()" (sortMoved)="moveDrag($event)" (sortFinished)="finishDrag($event)">
+        <div class="panel" panelSortable [sortInline]="embedded" aria-label="组件面板网格"
+          (sortTapped)="openWidget($event)" (sortStarted)="startDrag()" (sortMoved)="moveDrag($event)" (sortFinished)="finishDrag($event)">
           @for (item of items; track item.widgetId; let index = $index) {
             <div class="cell" [panelSortItem]="item.widgetId" [sortIndex]="index"
-              [sortDisabled]="mode !== 'layout' || saving || stale" [class.wide]="item.grid.width >= 4"
+              [class.feedback]="mode === 'preview' && !!cards.get(item.widgetId)?.error"
+              [sortDisabled]="mode !== 'layout' || !editingAllowed" [class.full]="item.grid.width === 8" [class.wide]="item.grid.width >= 4"
+              [attr.aria-label]="embedded ? '编辑 ' + (item.title || item.endpointKey) : null"
+              [style.--col]="mode === 'layout' && (!embedded || dragOriginActive) ? 'auto' : item.grid.x + 1"
+              [style.--row]="mode === 'layout' && (!embedded || dragOriginActive) ? 'auto' : item.grid.y + 1"
               [style.--span]="item.grid.width" [style.--rows]="item.grid.height">
               @if (cards.get(item.widgetId); as card) {
-                <app-page-widget [card]="card" [interactive]="mode === 'preview'" (action)="previewAction(card, $event)" />
+                <app-page-widget [card]="card" [interactive]="!embedded && mode === 'preview'" (action)="previewAction(card, $event)" />
 
                 @if (mode === 'preview' && card.error) {
                   <p class="widget-error" role="alert">{{ card.error }}</p>
@@ -75,7 +90,7 @@
                     [attr.aria-label]="'编辑 ' + (card.widget.title || card.field.key)"
                     (click)="openWidget(item.widgetId)"></button>
                 } @else if (mode === 'layout') {
-                  <div class="widget-overlay widget-drag" aria-hidden="true"></div>
+                  <div class="widget-overlay" [class.widget-drag]="!embedded" [class.widget-inline]="embedded" aria-hidden="true"></div>
                 }
               } @else { <div class="missing">字段暂不可用</div> }
 
@@ -85,8 +100,8 @@
         </div>
 
         @if (!items.length) {
-          <div class="empty-canvas"><i class="fa-light fa-grid-2-plus"></i><p>从一个部件开始</p>
-            @if (mode === 'edit') { <button type="button" (click)="openLibrary()">添加部件</button> }
+          <div class="empty-canvas"><i class="fa-light fa-grid-2-plus" aria-hidden="true"></i><p>从一个部件开始</p>
+            @if (mode === 'edit' || embedded) { <button type="button" (click)="openLibrary()" [disabled]="!editingAllowed">{{ embedded ? '添加展示' : '添加部件' }}</button> }
           </div>
         }
 
@@ -94,18 +109,19 @@
     }
 
   </div>
-</ion-content>
+</ng-template>
 <ion-modal class="library-modal" [isOpen]="libraryOpen" (didDismiss)="libraryOpen = false">
   <ng-template>
     <section class="sheet" [attr.data-ui-theme]="theme">
-      <header class="sheet-heading"><div><h2>添加部件</h2><p>选择字段，再挑选适合的部件。</p></div>
+      <header class="sheet-heading"><div><h2>{{ embedded ? '添加展示' : '添加部件' }}</h2><p>{{ isV2 ? '选择已有设备能力的展示，不会新增设备能力。' : '选择字段，再挑选适合的部件。' }}</p></div>
         <button type="button" class="icon-button" aria-label="关闭部件库" (click)="libraryOpen = false">×</button>
 
       </header>
+      @if (editBlockedReason) { <p class="error" role="alert">{{ editBlockedReason }}</p> }
       <div class="library-filters">
         <div class="field-select">
           <span>绑定字段</span>
-          <button class="field-trigger" type="button" [id]="'panel-field-' + id" aria-haspopup="dialog" aria-label="绑定字段">
+          <button class="field-trigger" type="button" [id]="'panel-field-' + id" aria-haspopup="dialog" aria-label="绑定字段" [disabled]="!editingAllowed">
             <span>{{ fieldKey === '__new__' ? '新字段…' : fieldKey || '选择字段' }}</span>
             <i class="fa-light fa-chevron-down" aria-hidden="true"></i>
           </button>
@@ -115,10 +131,10 @@
               <ion-radio-group class="field-options" aria-label="绑定字段" [value]="fieldKey"
                 (ionChange)="fieldKey = $event.detail.value; fieldPopover.dismiss()">
                 @for (field of availableFields; track field.key) {
-                  <ion-radio [value]="field.key" labelPlacement="start" justify="space-between">{{ field.key }}</ion-radio>
+                  <ion-radio [value]="field.key" [disabled]="!editingAllowed" labelPlacement="start" justify="space-between">{{ field.key }}</ion-radio>
                 }
-                @if (!isV2) {
-                  <ion-radio value="__new__" labelPlacement="start" justify="space-between">新字段…</ion-radio>
+                @if (!isV2 && !embedded) {
+                  <ion-radio value="__new__" [disabled]="!editingAllowed" labelPlacement="start" justify="space-between">新字段…</ion-radio>
                 }
               </ion-radio-group>
             </ng-template>
@@ -126,7 +142,7 @@
         </div>
       </div>
 
-      @if (!isV2 && fieldKey === '__new__') {
+      @if (!isV2 && !embedded && fieldKey === '__new__') {
         <div class="new-field">
           <label>字段 key<input [(ngModel)]="newKey" placeholder="与设备程序中的 key 一致" maxlength="64" /></label>
           <label>最小值<input type="number" [(ngModel)]="minimum" /></label>
@@ -137,17 +153,27 @@
         </div>
       }
 
-      <div class="catalogue">
+      <div class="catalogue-region"><div class="catalogue panel">
         @if (error) { <p class="error" role="alert">{{ error }}</p> }
 
         @for (entry of catalogue; track entry.id) {
-          <div class="preset" [class.wide]="entry.preset.width >= 4" [style.--span]="entry.preset.width <= 2 ? 1 : 2" [style.--rows]="entry.preset.height">
+          <div class="preset cell" [class.full]="entry.preset.width === 8" [class.wide]="entry.preset.width >= 4"
+            style="--col: auto; --row: auto" [style.--span]="entry.preset.width" [style.--rows]="entry.preset.height">
             <div class="preset-preview"><app-page-widget [card]="entry.card" /></div>
-            <button class="preset-pick" type="button" [attr.aria-label]="'添加' + variantLabels[entry.preset.variant]" (click)="add(entry.id)"></button>
+            <button class="preset-pick" type="button" [attr.aria-label]="'添加' + variantLabels[entry.preset.variant]" [disabled]="!editingAllowed" (click)="add(entry.id)"></button>
           </div>
         } @empty { <p class="catalogue-empty">当前字段没有适用的部件，请选择其他字段。</p> }
 
-      </div>
+      </div></div>
     </section>
+  </ng-template>
+</ion-modal>
+<ion-modal class="inline-properties-modal" [isOpen]="!!propertyCard" [canDismiss]="canDismissProperty" (didDismiss)="propertyCard = undefined">
+  <ng-template>
+    @if (propertyCard; as card) {
+      <app-inline-widget-properties [card]="card" [theme]="theme" [extraCandidates]="extraCandidates" [error]="editBlockedReason || error"
+        [disabled]="!editingAllowed" [canMoveEarlier]="propertyIndex > 0" [canMoveLater]="propertyIndex < items.length - 1"
+        (moved)="moveProperty($event)" (applied)="applyProperty($event)" (removed)="removeProperty()" (canceled)="propertyCard = undefined" />
+    }
   </ng-template>
 </ion-modal>

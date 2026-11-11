@@ -1,4 +1,5 @@
 import { environment } from '../../environments/environment';
+import { isLogicalDeviceReferenceId } from '../core/protocol/device-v2/logical-device-reference';
 
 const GATEWAY_BASE_URL = environment.gatewayBaseUrl.replace(/\/$/, '');
 const API_V1_URL = GATEWAY_BASE_URL + '/api/v1';
@@ -43,12 +44,32 @@ export const API = {
     CONNECTION: API_V2_URL + '/account/connection',
     REGIONS: API_V2_URL + '/account/regions',
   },
+  AUTOMATION: {
+    LIST: API_V2_URL + '/automations',
+    RULE: (ruleId: string) => API_V2_URL + '/automations/' + encodeURIComponent(ruleId),
+  },
+  MAPS: {
+    CONFIG: API_V2_URL + '/maps/config',
+    TILE: (layer: 'base' | 'annotation', z: number, x: number, y: number) =>
+      `${API_V2_URL}/maps/tiles/${layer}/${z}/${x}/${y}`,
+  },
   DEVICE_V2: {
     LIST: API_V2_URL + '/devices',
     CREATE: API_V2_URL + '/devices',
+    INSTALL_STATUS: API_V2_URL + '/devices:install-status',
     RESOLVE_INSTANCE: API_V2_URL + '/devices:resolve-instance',
     ENABLE_CLOUD: API_V2_URL + '/devices:enable-cloud',
     DETAIL: deviceKeyV2Url,
+    DISPLAY_METADATA: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/display-metadata',
+    LOCATION: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/location',
+    LOCATION_LATEST: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/location/latest',
+    LOCATION_LEASE: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/location/lease',
+    LOCATION_NETWORK: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/location/network',
+    ACTIVITY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/activity',
+    STATE_HISTORY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/state-history',
+    PERIODIC_HISTORY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/periodic-history',
+    PERIODIC_HISTORY_POLICY: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/periodic-history-policy',
+    TASKS: (logicalDeviceId: string) => deviceKeyV2Url(logicalDeviceId) + '/tasks:execute',
     MANIFEST: (id: string) => deviceKeyV2Url(id) + '/manifest',
     CONSOLE: (id: string) => deviceKeyV2Url(id) + "/console",
     CONSOLE_LINK: (id: string) => deviceKeyV2Url(id) + "/console-link",
@@ -85,6 +106,11 @@ export const API = {
       API_V2_URL + '/ble-enrollment/intents/' + encodeURIComponent(intentId) + '/commit',
     BLE_ENROLLMENT_CANCEL: (intentId: string) =>
       API_V2_URL + '/ble-enrollment/intents/' + encodeURIComponent(intentId) + '/cancel',
+    ACCESS_REGISTRATION_INTENTS: API_V2_URL + '/access-registrations/intents',
+    ACCESS_REGISTRATION_INTENT: (intentId: string) => API_V2_URL + '/access-registrations/intents/' + encodeURIComponent(intentId),
+    ACCESS_REGISTRATION_COMMIT: (intentId: string) => API_V2_URL + '/access-registrations/intents/' + encodeURIComponent(intentId) + '/commit',
+    ACCESS_REGISTRATION_CANCEL: (intentId: string) => API_V2_URL + '/access-registrations/intents/' + encodeURIComponent(intentId) + '/cancel',
+    ACCESS_REGISTRATION_PRESENCE: (logicalDeviceId: string) => API_V2_URL + '/access-registrations/presence/' + encodeURIComponent(logicalDeviceId),
     EDGE_GATEWAY_ATTACHMENTS: API_V2_URL + '/edge-gateway/attachments',
     EDGE_GATEWAY_ATTACHMENT: (operationId: string) =>
       API_V2_URL + '/edge-gateway/attachments/' + encodeURIComponent(operationId),
@@ -162,6 +188,7 @@ export function isGatewayUrl(url: string): boolean {
     || url.startsWith(API.DEVICE_V2.RECEIVED_SHARES + '/')
     || url === API.DEVICE_V2.BLE_ENROLLMENT_INTENTS
     || url.startsWith(API.DEVICE_V2.BLE_ENROLLMENT_INTENTS + '/')
+    || isAccessRegistrationUrl(url)
     || url === API.DEVICE_V2.EDGE_GATEWAY_ATTACHMENTS
     || url.startsWith(API.DEVICE_V2.EDGE_GATEWAY_ATTACHMENTS + '/')
     || url === API.DEVICE_V2.EDGE_GATEWAY_PERMIT_JOINS
@@ -171,10 +198,43 @@ export function isGatewayUrl(url: string): boolean {
     || url === API.MESSAGE.MARK_ALL_READ
     || url === API.NOTIFICATION_INSTALLATIONS.COLLECTION
     || url.startsWith(API.NOTIFICATION_INSTALLATIONS.COLLECTION + '/')
+    || isManagedMapUrl(url)
+    || isAutomationManagementUrl(url)
     || isDeviceKeyManagementUrl(url);
 }
 
+function isAccessRegistrationUrl(url: string): boolean {
+  const presence = API_V2_URL + '/access-registrations/presence/';
+  if (url.startsWith(presence)) return isLogicalDeviceReferenceId(url.slice(presence.length));
+  const collection = API.DEVICE_V2.ACCESS_REGISTRATION_INTENTS;
+  if (url === collection) return true;
+  if (!url.startsWith(collection + '/')) return false;
+  const rest = url.slice(collection.length + 1);
+  return /^(?!A{22}(?:\/|$))[A-Za-z0-9_-]{21}[AQgw](?:\/(?:commit|cancel))?$/.test(rest);
+}
+
+function isManagedMapUrl(url: string): boolean {
+  if (url === API.MAPS.CONFIG) return true;
+  const prefix = API_V2_URL + '/maps/tiles/';
+  if (!url.startsWith(prefix)) return false;
+  const match = /^(base|annotation)\/([1-9]\d?)\/(0|[1-9]\d*)\/(0|[1-9]\d*)$/.exec(url.slice(prefix.length));
+  if (!match) return false;
+  const z = Number(match[2]), x = Number(match[3]), y = Number(match[4]);
+  return z <= 18 && Number.isSafeInteger(x) && Number.isSafeInteger(y) && x < 2 ** z && y < 2 ** z;
+}
+
+function isAutomationManagementUrl(url: string): boolean {
+  const path = url.split(/[?#]/, 1)[0];
+  if (path === API.AUTOMATION.LIST) return true;
+  const prefix = API.AUTOMATION.LIST + '/';
+  return path.startsWith(prefix)
+    && /^[A-Za-z0-9_-]{1,128}(?:\/retire)?$/.test(path.slice(prefix.length));
+}
+
 function isDeviceKeyManagementUrl(url: string): boolean {
+  const originalUrl = url;
+  // Range/cursor query parameters must not bypass the account Bearer chain.
+  url = url.split(/[?#]/, 1)[0];
   if (url === API_V2_URL + '/devices') return true;
   if (url === API.DEVICE_V2.RESOLVE_INSTANCE) return true;
   if (url === API.DEVICE_V2.ENABLE_CLOUD) return true;
@@ -191,6 +251,7 @@ function isDeviceKeyManagementUrl(url: string): boolean {
   if (parts.length === 2) {
     return parts[1] === 'manifest'
       || parts[1] === 'device-key:reveal'
+      || parts[1] === 'tasks:execute'
       || parts[1] === 'local-access'
       || parts[1] === 'device-key:rotate'
       || parts[1] === 'presence-key'
@@ -199,6 +260,12 @@ function isDeviceKeyManagementUrl(url: string): boolean {
       || parts[1] === 'presence-key:sync'
       || parts[1] === 'presence-key:confirm'
       || parts[1] === 'page-layout'
+      || parts[1] === 'display-metadata'
+      || parts[1] === 'location'
+      || parts[1] === 'activity'
+      || parts[1] === 'state-history'
+      || parts[1] === 'periodic-history'
+      || parts[1] === 'periodic-history-policy'
       || parts[1] === 'ui-config'
       || parts[1] === 'console'
       || parts[1] === 'console-link'
@@ -210,5 +277,7 @@ function isDeviceKeyManagementUrl(url: string): boolean {
   return parts.length === 3
     && !!parts[2]
     && (parts[1] === 'share-invitations' || parts[1] === 'shares'
+      || (parts[1] === 'location' && (parts[2] === 'latest' || parts[2] === 'lease'
+        || (parts[2] === 'network' && originalUrl === url && /^[A-Za-z0-9_-]{1,128}$/.test(parts[0]))))
       || (parts[1] === 'direct-access' && parts[2] === 'admin'));
 }

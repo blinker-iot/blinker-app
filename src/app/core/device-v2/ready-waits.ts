@@ -27,11 +27,12 @@ export class DeviceV2ReadyWaits {
   constructor(
     private readonly prepare: () => Promise<ReadySession>,
     private readonly store: Pick<DeviceV2Store, 'snapshot' | 'subscribe'>,
+    private readonly isTargetId: (id: string) => boolean = isLogicalDeviceId,
   ) {}
 
   wait(logicalDeviceId: string, signal?: AbortSignal): Promise<void> {
     if (signal?.aborted) return Promise.reject(new DeviceV2ReadyWaitError('DEVICE_V2_READY_CANCELLED'));
-    if (!isLogicalDeviceId(logicalDeviceId)) return Promise.reject(new Error('Invalid logical device identity'));
+    if (!this.isTargetId(logicalDeviceId)) return Promise.reject(new Error('Invalid logical device identity'));
     let wait = this.waits.get(logicalDeviceId);
     if (wait && !this.current(logicalDeviceId, wait)) wait = undefined;
     if (!wait) {

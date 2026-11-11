@@ -199,7 +199,7 @@ async function start(): Promise<void> {
 
           this.ref = createComponent(PageWidgetComponent, { environmentInjector: app.injector, hostElement: this.mount });
 
-          this.ref.instance.action.subscribe(action => act(this.getAttribute('field') || '', action));
+          this.ref.instance.action.subscribe(action => act(action.hold?.target.field.key ?? this.getAttribute('field') ?? '', action));
           app.attachView(this.ref.hostView);
         }
 
@@ -207,6 +207,7 @@ async function start(): Promise<void> {
         this.ref.setInput('interactive', state.interactive);
         this.ref.changeDetectorRef.detectChanges();
         this.querySelector(':scope > .atom-error')?.remove();
+        this.classList.toggle('feedback', !!card.error);
 
         if (card.error) {
           const error = document.createElement('p');

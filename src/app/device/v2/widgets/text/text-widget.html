@@ -13,12 +13,12 @@
   @if (multiline) {
     <textarea class="tx-in" rows="2" [attr.maxlength]="limit" [attr.aria-label]="title" [placeholder]="options.placeholder ?? ''"
       [value]="card.draft" [readOnly]="readOnly" [disabled]="card.disabled" (input)="draft($any($event.target).value)"
-      (keydown.meta.enter)="send()" (keydown.control.enter)="send()"></textarea>
+      (keydown.meta.enter)="send($event)" (keydown.control.enter)="send($event)"></textarea>
   } @else {
     <input class="tx-in" [type]="numeric ? 'number' : 'text'" [attr.maxlength]="limit" [attr.aria-label]="title"
       [attr.min]="numeric ? card.field.minimum : null" [attr.max]="numeric ? card.field.maximum : null"
       [attr.step]="numeric ? card.field.step : null" [placeholder]="options.placeholder ?? ''" [value]="card.draft"
-      [readOnly]="readOnly" [disabled]="card.disabled" (input)="draft($any($event.target).value)" (keydown.enter)="send()" />
+      [readOnly]="readOnly" [disabled]="card.disabled" (input)="draft($any($event.target).value)" (keydown.enter)="send($event)" />
   }
 
   <div class="tx-foot">
@@ -29,7 +29,7 @@
     @if (options.showCounter !== false && !numeric) { <span class="tx-count">{{ counter }}</span> }
 
     <button type="button" class="tx-send" [attr.aria-label]="options.actionText ?? '发送'" [title]="options.actionText ?? '发送'"
-      [disabled]="card.disabled || !card.draft.trim()" (click)="send()"><app-ui-icon name="send" /></button>
+      [disabled]="!canSend" (click)="send()"><app-ui-icon name="send" /></button>
     }
 
   </div>

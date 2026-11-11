@@ -81,6 +81,14 @@
               "sourceMap": true,
               "namedChunks": true
             },
+            "cloud-beta": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.cloud-beta.ts"
+                }
+              ]
+            },
             "local": {
               "optimization": false,
               "extractLicenses": false,
@@ -101,6 +109,14 @@
                 }
               ]
             },
+            "ble-priority-test": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.ble-priority-test.ts"
+                }
+              ]
+            },
             "ci": {
               "progress": false
             },
@@ -108,6 +124,7 @@
               "aot": false,
               "optimization": false,
               "extractLicenses": false,
+              "externalDependencies": ["capacitor-wifiprov"],
               "styles": ["src/theme/variables.scss", "src/global.scss"],
               "scripts": [],
               "polyfills": []

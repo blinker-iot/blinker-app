@@ -21,11 +21,122 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
         }
+        beta {
+            initWith debug
+            applicationIdSuffix ".beta"
+            versionNameSuffix "-beta"
+            matchingFallbacks = ['debug']
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+// Beta shares the existing internal debug signer, but not its package/data or
+// local CA overlay. Sync the explicit cloud profile before assembling it.
+def bc5ProfileRequested = {
+    def flag = { name ->
+        def value = providers.environmentVariable(name).orNull
+        if (value != null && !(value in ['0', '1'])) throw new GradleException("${name} must be 0 or 1")
+        return value == '1'
+    }
+    def candidate = flag('BLINKER_BC5_CANDIDATE')
+    def recovery = flag('BLINKER_BC5_RECOVERY')
+    def network = flag('BLINKER_INITIAL_NETWORK_RECOVERY')
+    def sealedFirst = flag('BLINKER_WIFIPROV_SEALED_FIRST_INSTALL')
+    if ([candidate, recovery, network].count { it } > 1 || ((candidate || recovery || network) && sealedFirst)) {
+        throw new GradleException('Conflicting BC-5 or sealed first installation profile')
+    }
+    return candidate ? 'admission' : recovery ? 'recoveryAdmission' : network ? 'initialNetworkAdmission' : null
+}
+def bc5AssetProfile = { config ->
+    def wifi = config.plugins?.WiFiProv
+    def value = wifi?.initialCloudWifiCandidate
+    if (wifi?.containsKey('initialCloudWifiCandidate') && !(value instanceof Boolean)) throw new GradleException('Invalid BC-5 candidate asset flag')
+    def checkpoint = config.plugins?.BlinkerBc5Checkpoint
+    def hasCheckpoint = config.plugins?.containsKey('BlinkerBc5Checkpoint') == true
+    if (!hasCheckpoint && value != true) return null
+    def network = checkpoint instanceof Map && checkpoint.containsKey('initialNetworkAdmission')
+    def profile = network ? 'initialNetworkAdmission' : value == true ? 'admission' : 'recoveryAdmission'
+    if (!(checkpoint instanceof Map) || checkpoint.keySet() != ([profile] as Set) || !(checkpoint[profile] instanceof Map) ||
+        (profile == 'initialNetworkAdmission' && value != true) ||
+        config.plugins.containsKey('BlinkerWiFiProvAllocation')) {
+        throw new GradleException('Invalid BC-5 candidate admission asset')
+    }
+    return profile
+}
+def bc5AdmissionInput = { profile ->
+    def originalName = providers.environmentVariable('BLINKER_BC5_ADMISSION_FILE').orNull
+    def networkName = providers.environmentVariable('BLINKER_INITIAL_NETWORK_ADMISSION_FILE').orNull
+    if (!profile) {
+        if (originalName != null || networkName != null) throw new GradleException('BC-5 admission requires an explicit beta profile')
+        return null
+    }
+    def network = profile == 'initialNetworkAdmission'
+    if (network ? originalName != null : networkName != null) throw new GradleException('Conflicting BC-5 admission file')
+    def name = network ? networkName : originalName
+    def source = new File(name ?: '')
+    def maximumAdmissionSize = network ? 4096 : 2048
+    try {
+        if (!source.isAbsolute() || !java.nio.file.Files.isRegularFile(source.toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)
+            || source.length() < 1 || source.length() > maximumAdmissionSize) throw new IllegalArgumentException()
+        def admission = new groovy.json.JsonSlurper().parse(source)
+        def originalFields = ['origin', 'ownerUserId', 'tenantId', 'region', 'intentId', 'sourceLogicalDeviceId', 'expiresAt'] as Set
+        if (network) {
+            def original = admission instanceof Map ? admission.originalRecovery : null
+            def operation = admission instanceof Map ? admission.operation : null
+            if (!(admission instanceof Map) || admission.keySet() != (['originalRecovery', 'operation'] as Set)
+                || !(original instanceof Map) || original.keySet() != originalFields || !(operation instanceof Map)
+                || operation.keySet() != (['contract', 'operationId', 'sourceLogicalDeviceId', 'targetLogicalDeviceId',
+                    'expectedRoot', 'existingLocator', 'expiresAt', 'origin', 'region', 'tenantId', 'ownerUserId', 'cloudCredentialVersion'] as Set)
+                || operation.contract != 'blinker.installed-key-initial-network.v1'
+                || !(operation.expectedRoot instanceof Map) || operation.expectedRoot.keySet() != (['deviceInstanceId',
+                    'accessEpoch', 'controllerId', 'credentialVersion', 'adminFingerprint'] as Set)
+                || !['origin', 'region', 'tenantId', 'ownerUserId', 'sourceLogicalDeviceId'].every { operation[it] == original[it] }
+                || operation.operationId == original.intentId || operation.sourceLogicalDeviceId == operation.targetLogicalDeviceId)
+                throw new IllegalArgumentException()
+        } else if (!(admission instanceof Map) || admission.keySet() != originalFields) throw new IllegalArgumentException()
+        return admission
+    } catch (Exception ignored) {
+        throw new GradleException('BC-5 requires an explicit valid local admission file')
+    }
+}
+tasks.register('verifyCloudBetaConfig') {
+    doLast {
+        if (providers.environmentVariable('BLINKER_DEBUG_NETWORK_CONFIG_DIR').isPresent() ||
+            providers.environmentVariable('BLINKER_LOCAL_CLEARTEXT').getOrElse('0') == '1') {
+            throw new GradleException('Cloud beta forbids local network trust overrides')
+        }
+        def assets = file('src/main/assets')
+        def config = new groovy.json.JsonSlurper().parse(new File(assets, 'capacitor.config.json'))
+        def registry = new groovy.json.JsonSlurper().parse(new File(assets, 'capacitor.plugins.json'))
+        if (config.appId != 'iot.diandeng.tech.beta' || config.server?.androidScheme != 'https' ||
+            config.server?.cleartext != false || config.server?.containsKey('url') || config.loggingBehavior != 'none' ||
+            !registry.any { it.pkg == '@aparajita/capacitor-secure-storage' && it.classpath }) {
+            throw new GradleException('Run pnpm run sync:cloud-beta before assembling beta')
+        }
+        def profile = bc5ProfileRequested()
+        def admission = bc5AdmissionInput(profile)
+        if (bc5AssetProfile(config) != profile || (profile && config.plugins.BlinkerBc5Checkpoint[profile] != admission) ||
+            (profile in ['admission', 'initialNetworkAdmission'] && !registry.any { it.pkg == 'capacitor-wifiprov' && it.classpath == 'com.wifiprov.capacitor.WiFiProvPlugin' })) {
+            throw new GradleException('Re-sync cloud beta with the matching BC-5 profile and plugin registry')
+        }
+    }
+}
+tasks.register('verifyBc5CandidateDisabled') {
+    doLast {
+        def asset = file('src/main/assets/capacitor.config.json')
+        bc5AdmissionInput(null)
+        if (bc5ProfileRequested() || (asset.isFile() && bc5AssetProfile(new groovy.json.JsonSlurper().parse(asset)))) {
+            throw new GradleException('BC-5 profile assets are forbidden in debug/release; re-sync ordinary native inputs')
+        }
+    }
+}
+tasks.configureEach {
+    if (name == 'preBetaBuild') dependsOn 'verifyCloudBetaConfig'
+    if (name == 'preDebugBuild' || name == 'preReleaseBuild') dependsOn 'verifyBc5CandidateDisabled'
 }
 
 // Optional local hardware CA, supplied outside the repository. Only debug

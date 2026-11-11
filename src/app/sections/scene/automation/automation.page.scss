@@ -1,0 +1,102 @@
+@use '../../../../theme/workflow-surface' as workflow;
+
+@include workflow.page;
+
+.workflow-stack {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+}
+
+.workflow-section-heading > :last-child,
+.rule-heading > :last-child {
+  margin-bottom: 0;
+}
+
+.rule-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.rule-heading h2,
+.rule-heading h3 {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.workflow-status {
+  margin: 0;
+  color: var(--blinker-text-secondary, var(--ion-text-color));
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+.rule-summary {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.rule-summary > div {
+  display: grid;
+  grid-template-columns: 2.5em minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.rule-summary dt {
+  color: var(--blinker-text-secondary, var(--ion-text-color));
+}
+
+.rule-summary dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.form-section > h2,
+.execution-history > h2 {
+  margin-top: 0;
+}
+
+.form-section ion-input,
+.form-section ion-select {
+  margin-top: 12px;
+}
+
+.capability-guide {
+  margin-block: 16px;
+  padding-block: 16px;
+  border-block: 1px solid var(--blinker-divider, var(--ion-border-color));
+}
+
+.capability-guide h3 {
+  margin-top: 0;
+}
+
+.capability-guide article + article,
+.execution-list p + p {
+  padding-top: 16px;
+  border-top: 1px solid var(--blinker-divider, var(--ion-border-color));
+}
+
+.list-actions {
+  justify-content: space-between;
+}
+
+.rule-card .workflow-actions,
+.rule-detail .workflow-actions {
+  margin-top: 16px;
+}
+
+.editor-actions {
+  justify-content: flex-end;
+}
+
+.workflow-empty {
+  text-align: center;
+}

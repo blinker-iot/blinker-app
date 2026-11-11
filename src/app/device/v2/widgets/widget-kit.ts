@@ -20,14 +20,25 @@ export interface PanelCard {
   draft: string;
   error: string;
   disabled: boolean;
+  // Host-owned command lifetime. Unlike disabled, availability excludes pending.
+  controlScope?: string;
+  controlAvailable?: boolean;
 }
 
 export type PanelActionKind = 'toggle' | 'range' | 'select' | 'draft' | 'commit' | 'invoke';
 export type PanelActionValue = boolean | number | string;
 
+// App-internal Hold pairing only; never an authorization or device wire field.
+export interface HoldGesture {
+  id: string;
+  phase: 'press' | 'release';
+  target: { field: DeviceUiEndpoint; widgetId: string; scope?: string };
+}
+
 export interface WidgetAct {
   kind: PanelActionKind;
   value?: PanelActionValue;
+  hold?: HoldGesture;
 }
 
 export interface PanelAction extends WidgetAct {

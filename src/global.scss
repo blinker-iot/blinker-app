@@ -112,7 +112,7 @@ ion-modal.widget-editor-modal {
   --height: 100%;
 }
 
-// 四个主标签共用标题、操作区和安全区尺寸。
+// Keep the base header available to login; only home tabs opt into large titles.
 ion-header.main-tab-header {
   position: absolute;
   top: 0;
@@ -154,6 +154,27 @@ ion-header.main-tab-header {
     font-weight: 600;
     letter-spacing: 0;
     text-align: start;
+  }
+
+  &.home-tab-header {
+    ion-title {
+      min-width: 0;
+      font-size: 1.8125rem;
+      font-weight: 650;
+      line-height: 1.2;
+      letter-spacing: -1px;
+    }
+
+    ion-button.header-action {
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      min-height: 48px;
+    }
+
+    @media (max-width: 360px) {
+      ion-title { font-size: 1.6875rem; }
+    }
   }
 
   ion-buttons {

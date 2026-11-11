@@ -1,73 +1,92 @@
+@use '../../../../theme/settings-surface' as settings;
+@use '../../../../theme/control-page-chrome' as chrome;
+
+@include chrome.header;
+
 :host {
-  color: var(--blinker-text-primary);
+  @include settings.tokens;
+  background: var(--blinker-bg);
 }
 
+ion-content { --background: var(--blinker-bg); }
+
 main {
+  @include settings.page;
+  --section-main-display: flex;
   --section-main-background: transparent;
   --section-main-accent-opacity: 0;
+  --content-offset-gap: 0px;
+  padding-bottom: calc(32px + var(--ion-safe-area-bottom, 0px));
+}
+
+ion-header.control-page-header:not(.main-tab-header):not(.opaque-page-header) ion-toolbar ion-buttons ion-button.text-action {
+  width: auto;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 0.875rem;
+  white-space: normal;
+  &::part(native) { line-height: 1.4; white-space: normal; }
 }
 
 .name-row,
 .device-row {
-  display: flex;
-  align-items: center;
-  width: 100%;
+  @include settings.row;
+  @include settings.interaction;
   min-height: 60px;
-  gap: 12px;
-  padding: 12px 16px;
   border: 0;
   background: var(--blinker-surface);
   color: var(--blinker-text-primary);
-  text-align: left;
-  font-size: 14px;
-
-  &:disabled {
-    opacity: 0.5;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--ion-color-primary);
-    outline-offset: -2px;
-  }
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  &:focus-visible { outline-offset: -3px; }
 }
 
 .name-row {
-  border-radius: 16px;
+  border-radius: 22px;
+  flex-wrap: wrap;
 
   > span {
+    flex: 0 0 auto;
     color: var(--blinker-text-secondary);
   }
 
   strong {
+    min-width: 0;
+    flex: 1 1 80px;
     margin-left: auto;
     overflow-wrap: anywhere;
     font-weight: 500;
+    text-align: end;
   }
 
   i {
     color: var(--blinker-text-tertiary);
     font-size: 12px;
+    flex: 0 0 auto;
   }
 }
 
 h2 {
   display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   justify-content: space-between;
-  margin: 24px 4px 10px;
-  font-size: 13px;
+  margin: 8px 4px -8px;
+  font-size: 0.875rem;
   font-weight: 500;
 
   small {
-    color: var(--blinker-text-tertiary);
+    color: var(--blinker-text-secondary);
     font-weight: 400;
-    font-size: 12px;
+    font-size: 0.75rem;
+    line-height: 1.5;
   }
 }
 
 .device-list {
+  @include settings.card;
+  padding: 0;
   overflow: hidden;
-  border-radius: 16px;
-  background: var(--blinker-surface);
 }
 
 .device-row {
@@ -84,6 +103,7 @@ h2 {
   }
 
   i {
+    flex: 0 0 auto;
     color: var(--blinker-text-tertiary);
     font-size: 18px;
   }
@@ -98,24 +118,39 @@ h2 {
 }
 
 .empty-state {
+  margin: 0;
   padding: 24px;
   color: var(--blinker-text-secondary);
-  font-size: 13px;
+  font-size: 0.875rem;
+  line-height: 1.6;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .error-message {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 8px 16px;
   color: var(--ion-color-danger);
-  font-size: 13px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  > span { flex: 1 1 160px; min-width: 0; }
 
   button {
     flex: 0 0 auto;
-    padding: 0;
-    border: 0;
-    color: var(--ion-color-primary);
+    @include settings.button;
   }
 }
+
+.hint, .save-status, .loading-state {
+  margin: 0;
+  color: var(--blinker-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.loading-state { padding: 32px 0; text-align: center; }

@@ -23,10 +23,11 @@ export class DeviceV2PresenceSubscriptions {
     lost: (target: string) => void;
     terminal: (error: unknown) => boolean;
     failed: (error: unknown) => void;
+    validateTarget?: (target: string) => void;
   }) {}
 
   subscribe(target: string, restart = false): Promise<boolean> {
-    logicalDevicePeerId(target);
+    (this.ports.validateTarget ?? logicalDevicePeerId)(target);
     if (this.closed) return Promise.reject(new Error('Presence subscriptions closed'));
     let record = this.interests.get(target);
     if (record) {

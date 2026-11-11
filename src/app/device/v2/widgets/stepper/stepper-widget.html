@@ -1,12 +1,12 @@
 <ng-template #dec>
   <button type="button" class="rbtn" aria-label="减少" [disabled]="card.disabled || value <= min"
-    (pointerdown)="repeatStart($event, -1, hold)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()">
+    (pointerdown)="repeatStart($event, -1, hold)" (pointerup)="repeatStop()" (pointercancel)="repeatCancel($event)">
     <app-ui-icon name="minus" /></button>
 </ng-template>
 
 <ng-template #inc>
   <button type="button" class="rbtn" aria-label="增加" [disabled]="card.disabled || value >= max"
-    (pointerdown)="repeatStart($event, 1, hold)" (pointerup)="repeatStop()" (pointercancel)="repeatStop()">
+    (pointerdown)="repeatStart($event, 1, hold)" (pointerup)="repeatStop()" (pointercancel)="repeatCancel($event)">
     <app-ui-icon name="plus" /></button>
 </ng-template>
 
@@ -16,15 +16,19 @@
 </ng-template>
 
 @if (rows === 1) {
-  <span class="rc-ico"><app-ui-icon [name]="options.icon || 'gauge'" /></span>
-  <span class="rc-copy">
-    <strong>{{ title }}</strong>
-    @if (showRange) { <small>{{ min }}–{{ max }}{{ unit }}</small> }
-  </span>
-  <ng-container *ngTemplateOutlet="dec" />
-  <span class="ns-v ns-sm num"><span [valueTransition]="reading.text">{{ reading.text }}</span><small>{{ reading.unit }}</small></span>
-  <ng-container *ngTemplateOutlet="inc" />
-  @if (command) { <ng-container *ngTemplateOutlet="go" /> }
+  <div class="rc-body">
+    <span class="rc-ico"><app-ui-icon [name]="options.icon || 'gauge'" /></span>
+    <span class="rc-copy">
+      <strong>{{ title }}</strong>
+      @if (showRange) { <small>{{ min }}–{{ max }}{{ unit }}</small> }
+    </span>
+    <div class="rc-controls" role="group" [attr.aria-label]="title">
+      <ng-container *ngTemplateOutlet="dec" />
+      <span class="ns-v ns-sm num"><span [valueTransition]="reading.text">{{ reading.text }}</span><small>{{ reading.unit }}</small></span>
+      <ng-container *ngTemplateOutlet="inc" />
+      @if (command) { <ng-container *ngTemplateOutlet="go" /> }
+    </div>
+  </div>
 } @else {
   @if (showTitle) {
     <div class="hd">

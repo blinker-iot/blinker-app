@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
   IonBackButton,
   IonButtons,
   IonContent,
   IonHeader,
+  IonSpinner,
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
@@ -34,6 +35,7 @@ import {
     IonButtons,
     IonContent,
     IonHeader,
+    IonSpinner,
     IonTitle,
     IonToolbar,
     TranslatePipe,
@@ -44,7 +46,18 @@ export class SettingsPage {
   readonly defaultBackHref: string;
   readonly serviceRegions = SERVICE_REGIONS;
 
-  switchingRegion = false;
+  languageSaveFailed = false;
+  regionChangeFailed = false;
+  private readonly pendingLanguage = signal<LanguageCode | undefined>(undefined);
+  private readonly pendingRegion = signal<ServiceRegion | undefined>(undefined);
+
+  get languageSaving(): boolean {
+    return this.pendingLanguage() !== undefined;
+  }
+
+  get switchingRegion(): boolean {
+    return this.pendingRegion() !== undefined;
+  }
 
   get currentTheme(): AppTheme {
     return this.viewService.theme;
@@ -52,6 +65,19 @@ export class SettingsPage {
 
   get currentLanguage(): LanguageCode {
     return this.translationService.getSelectedLanguage();
+  }
+
+  get currentLanguageName(): string {
+    return this.languageList.find(language => language.code === this.currentLanguage)?.name
+      || this.currentLanguage;
+  }
+
+  get selectedLanguage(): LanguageCode {
+    return this.pendingLanguage() ?? this.currentLanguage;
+  }
+
+  get selectedRegion(): ServiceRegion {
+    return this.pendingRegion() ?? this.currentRegion;
   }
 
   get currentRegion(): ServiceRegion {
@@ -72,26 +98,36 @@ export class SettingsPage {
   }
 
   selectTheme(theme: AppTheme): void {
+    if (theme !== 'light' && theme !== 'dark') return;
     this.viewService.setTheme(theme);
   }
 
-  selectLanguage(language: LanguageCode): void {
-    void this.translationService.setLanguage(language);
-  }
-
-  async selectRegion(region: ServiceRegion): Promise<void> {
-    if (this.switchingRegion || region === this.currentRegion) return;
-
-    this.switchingRegion = true;
-
+  async selectLanguage(language: LanguageCode): Promise<void> {
+    if (this.languageSaving || language === this.currentLanguage
+      || !this.languageList.some(option => option.code === language)) return;
+    this.pendingLanguage.set(language);
+    this.languageSaveFailed = false;
     try {
-      await this.authService.logout(region);
+      await this.translationService.setLanguage(language);
+    } catch {
+      this.languageSaveFailed = true;
     } finally {
-      this.switchingRegion = false;
+      this.pendingLanguage.set(undefined);
     }
   }
 
-  getLanguageImage(language: LanguageCode): string {
-    return this.translationService.getLanguageImage(language);
+  async selectRegion(region: ServiceRegion): Promise<void> {
+    if (this.switchingRegion || region === this.currentRegion || !this.serviceRegions.includes(region)) return;
+
+    this.pendingRegion.set(region);
+    this.regionChangeFailed = false;
+
+    try {
+      await this.authService.logout(region);
+    } catch {
+      this.regionChangeFailed = true;
+    } finally {
+      this.pendingRegion.set(undefined);
+    }
   }
 }

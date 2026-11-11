@@ -15,7 +15,7 @@ const SENT_MS = 1200;
   imports: [UiIconComponent],
   templateUrl: './keys-widget.html',
   styleUrls: ['./keys-widget.scss'],
-  host: { '[class.inline]': 'rows === 1' },
+  host: { '[class.inline]': 'rows === 1', '[style.--ui-keypad-rows]': 'keypadRows' },
 })
 export class KeysWidgetComponent extends WidgetBase implements OnDestroy {
   readonly sent = signal<string | null>(null);
@@ -28,6 +28,8 @@ export class KeysWidgetComponent extends WidgetBase implements OnDestroy {
     const count = this.keys.length || 1;
     return Math.ceil(count / Math.min(count, this.rows));
   }
+
+  get keypadRows(): number { return Math.max(1, Math.ceil(this.keys.length / this.columns)); }
 
   press(label: string): void {
     if (this.card.disabled) return;

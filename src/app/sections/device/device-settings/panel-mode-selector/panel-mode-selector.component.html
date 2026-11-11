@@ -1,0 +1,66 @@
+<section class="mode-selector" [attr.aria-busy]="busy" [attr.aria-describedby]="selectorId + '-scope'">
+  <p class="scope-note" [id]="selectorId + '-scope'">
+    {{ shared ? '仅更改这台手机的显示偏好，不改变所有者的设置或共享权限。' : '选择设备控制页的显示方式，两套面板内容都会保留。' }}
+  </p>
+
+  <fieldset class="mode-options" [attr.aria-describedby]="selectorId + '-draft'">
+    <legend>选择显示模式</legend>
+
+    <label class="mode-option" [class.selected]="draftMode === 'normal'" [class.unavailable]="busy">
+      <span class="current-badge">{{ currentMode === 'normal' ? '当前使用' : '' }}</span>
+      <span class="page-preview components-preview" aria-hidden="true">
+        <span class="preview-heading"></span>
+        <span class="preview-caption"></span>
+        <span class="preview-grid">
+          <span class="preview-tile"><span></span></span>
+          <span class="preview-tile"><span></span></span>
+          <span class="preview-tile wide"><span></span></span>
+          <span class="preview-tile wide short"><span></span></span>
+        </span>
+        <span class="preview-kind">布局示意</span>
+      </span>
+      <span class="option-title">
+        <span>组件面板</span>
+        <input type="radio" [name]="selectorId" value="normal" [checked]="draftMode === 'normal'"
+          [disabled]="busy" (change)="selectMode('normal')" />
+      </span>
+      <span class="option-description">使用已有组件和布局</span>
+    </label>
+
+    <label class="mode-option" [class.selected]="draftMode === 'custom'" [class.unavailable]="busy || customUnavailable">
+      <span class="current-badge">{{ currentMode === 'custom' ? '当前使用' : '' }}</span>
+      <span class="page-preview custom-preview" aria-hidden="true">
+        @if (hasCustomPanel) {
+          <span class="preview-heading"></span>
+          <span class="preview-caption"></span>
+          <span class="custom-hero"><span></span><span></span></span>
+          <span class="custom-detail"><span></span><span></span><span></span></span>
+          <span class="preview-kind">布局示意</span>
+        } @else {
+          <span class="empty-preview-mark"></span>
+          <span class="empty-preview-label">尚未创建</span>
+        }
+      </span>
+      <span class="option-title">
+        <span>自定义面板</span>
+        <input type="radio" [name]="selectorId" value="custom" [checked]="draftMode === 'custom'"
+          [disabled]="busy || customUnavailable" (change)="selectMode('custom')" />
+      </span>
+      <span class="option-description">
+        {{ hasCustomPanel ? '使用 Agent 生成的页面' : shared ? '请所有者先创建面板' : '通过 Agent 创建页面' }}
+      </span>
+    </label>
+  </fieldset>
+
+  <p class="preview-note">缩略图仅为布局示意，不读取设备数据，也不会发送控制。</p>
+  <p class="draft-note" [id]="selectorId + '-draft'" role="status" aria-live="polite">{{ draftDescription }}</p>
+  @if (error) {
+    <p class="error-note" role="alert">{{ error }}</p>
+  }
+  <div class="mode-actions">
+    <button type="button" class="confirm-action" [disabled]="confirmDisabled" (click)="confirmSelection()">
+      {{ confirmLabel }}
+    </button>
+    <button type="button" class="cancel-action" [disabled]="busy" (click)="cancelDraft()">取消</button>
+  </div>
+</section>

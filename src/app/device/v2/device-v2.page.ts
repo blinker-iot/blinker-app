@@ -1,7 +1,7 @@
 import { Inject } from '@angular/core';
 import { readDevicePanelMode } from '../device-panel-mode';
 import { formatValue } from './widgets/widget-kit';
-import { DeviceConsoleService, cloudConsole, consoleLayout, installConsole, canEditConsole } from '../../core/services/device-console.service';
+import { DeviceConsoleService, cloudConsole, consoleLayout, consoleWriteConflict, installConsole, canEditConsole } from '../../core/services/device-console.service';
 import { DEVICE_CONSOLE_HOST, DeviceConsoleHost } from '../../core/device-v2/console-host';
 import { CustomPanelFrameComponent } from '../custom-panel/custom-panel-frame.component';
 import { EndpointHistory } from '../../core/device-v2/endpoint-history';
@@ -14,10 +14,13 @@ import {
   ChangeDetectorRef,
   Component,
   Input,
+  EventEmitter,
+  Output,
   OnChanges,
   OnDestroy,
   OnInit,
   SimpleChanges,
+  ViewChild,
 } from '@angular/core';
 
 import { RouterModule } from '@angular/router';
@@ -37,7 +40,8 @@ import {
 import { Subscription } from 'rxjs';
 import { BlinkerDevice } from '../../core/model/device.model';
 import { isNetworkUnavailable } from '../../core/functions/http-error';
-
+import { capabilityBooleanLabel, capabilityDisplayName } from '../../core/device-v2/display-metadata';
+import { canWriteDeviceEndpoint } from '../../core/device-v2/endpoint-control';
 import {
   DeviceUiConnectivitySnapshot,
   DeviceUiConnectionState,
@@ -47,6 +51,8 @@ import {
   DeviceUiPort,
   DeviceUiSnapshot,
   DeviceUiTelemetryLease,
+  DeviceUiTelemetrySnapshot,
+  DeviceUiTransport,
   DeviceUiValue,
 } from '../../core/device-v2/device-ui.port';
 
@@ -64,7 +70,16 @@ import {
   DeviceV2PageLayoutRecord,
   DeviceV2PageLayoutService,
 } from '../../core/services/device-v2-page-layout.service';
-
+import { TelemetryChartComponent } from './telemetry-chart.component';
+import { PanelEditorPage } from '../../sections/device/panel-editor/panel-editor.page';
+import { EmbeddedPanelSession, SavedPanelEdit } from '../../sections/device/panel-editor/embedded-panel-session';
+import {
+  TelemetryPresentation,
+  TelemetryFieldPresentation,
+  telemetryFreshnessLabel,
+  telemetryIntervalLabel,
+  telemetrySourceLabel,
+} from './telemetry-presentation';
 const BLE_FOREGROUND_RECONNECT_DELAYS_MS = [1000, 2500, 5000] as const;
 
 function emptySnapshot(): DeviceUiSnapshot {
@@ -93,14 +108,45 @@ function emptySnapshot(): DeviceUiSnapshot {
     IonTitle,
     IonToolbar,
     RouterModule,
+    TelemetryChartComponent,
     PageLayoutPanelComponent,
     CustomPanelFrameComponent,
+    PanelEditorPage,
   ],
   templateUrl: './device-v2.page.html',
   styleUrls: ['./device-v2.page.scss'],
 })
 
 export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
+  @ViewChild(PanelEditorPage) panelEditor?: PanelEditorPage;
+  @Output() panelEditChanged = new EventEmitter<void>();
+  panelEditSession?: EmbeddedPanelSession;
+  get panelRevision(): number { return this.storedLayout?.revision ?? 0; }
+
+  beginPanelEdit(): boolean {
+    if (this.customMode || !this.canEdit || this.device.config.canEditConsole === false
+      || !this.panelLayoutReady || !this.layout || !this.snapshot.manifestAccepted || this.pending.size || this.layoutStale || this.layoutError) return false;
+    if (cloudConsole(this.device) && (this.consoleRevision === undefined || this.consoleSession !== this.host.sessionVersion
+      || this.consoleDevice !== this.device || this.consoleConflict)) return false;
+    this.panelEditSession = { device: this.device, document: this.layout,
+      snapshot: this.snapshot, record: this.storedLayout ?? null, consoleRevision: this.consoleRevision };
+    this.releaseTelemetry();
+    this.requestRender();
+    return true;
+  }
+
+  endPanelEdit(): void {
+    this.panelEditSession = undefined;
+    this.refreshTelemetry();
+    this.requestRender();
+  }
+
+  acceptPanelEdit(saved: SavedPanelEdit): void {
+    if (!this.panelEditSession) return;
+    this.applyStoredLayout(saved.record ?? undefined, this.snapshot);
+    if (saved.consoleRevision !== undefined) this.consoleRevision = saved.consoleRevision;
+    this.endPanelEdit();
+  }
   @Input({ required: true }) device!: BlinkerDevice;
 
   // Navigation cancellation is a lifetime boundary, not a rendering effect.
@@ -135,6 +181,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   pending = new Set<string>();
   private initialized = false;
   private destroyed = false;
+  private renderPending = false;
+  private commandGeneration = 0;
+  private holdEpoch = 0;
   private logicalDeviceId = '';
   private syncing?: Promise<void>;
   private syncAbort?: AbortController;
@@ -143,10 +192,14 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private layoutLoadKey = '';
   private layoutEpoch = 0;
   private storedLayout?: DeviceV2PageLayoutRecord;
+  private panelLayoutReady = false;
   private layoutError = '';
   private consoleError = '';
   private storedCapabilitiesLoading = false;
   private consoleRevision?: number;
+  private consoleConflict = false;
+  private consoleSession?: number;
+  private consoleDevice?: BlinkerDevice;
   private consoleTimer?: ReturnType<typeof setInterval>;
   private consoleRefreshing = false;
   private appActive = true;
@@ -160,14 +213,18 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   private telemetryDetach?: () => void;
   private telemetryKey = '';
+  private activeTransport: DeviceUiTransport = 'cloud';
   private telemetryEpoch = 0;
   private telemetryOpening = false;
-  private telemetryValues = new Map<string, DeviceUiValue | undefined>();
+  private telemetrySnapshot?: DeviceUiTelemetrySnapshot;
+  private readonly telemetryPresentation = new TelemetryPresentation();
+  private telemetryFields = new Map<string, TelemetryFieldPresentation>();
+  private telemetryClockTimer?: ReturnType<typeof setInterval>;
   // Payload of each event endpoint's latest occurrence.
   private readonly eventValues = new Map<string, DeviceUiValue | undefined>();
   // The newest value waiting behind a field's command in flight; sent once that
   // settles, so a release (false, stop) is never lost behind its press.
-  private readonly queued = new Map<string, unknown>();
+  private readonly queued = new Map<string, { value: unknown; controlScope?: string }>();
   private history?: EndpointHistory;
   private readonly drafts = new Map<string, string>();
   private readonly fieldErrors = new Map<string, string>();
@@ -180,20 +237,22 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     private readonly pageLayouts: DeviceV2PageLayoutService,
     private readonly consoles: DeviceConsoleService,
     @Inject(DEVICE_CONSOLE_HOST) private readonly host: DeviceConsoleHost,
-    private readonly changeDetector: ChangeDetectorRef = { markForCheck: () => undefined } as ChangeDetectorRef,
+    private readonly changeDetector: ChangeDetectorRef = { detectChanges: () => undefined,
+      markForCheck: () => undefined } as ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
     this.pageVisible = this.viewActive;
     this.initialized = true;
-    this.consoleTimer = setInterval(() => void this.refreshConsole(), 4000);
 
     this.subscriptions.add(this.deviceUi.appActive.subscribe(active => {
       const resumed = active && !this.appActive;
 
       this.appActive = active;
+      this.reconcileConsoleTimer();
 
       if (!active) {
+        this.clearTelemetryPresentation();
         this.cancelSynchronization();
         this.cancelBleReconnect(false);
       } else if (resumed && this.pageVisible) {
@@ -214,8 +273,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
 
-    clearInterval(this.consoleTimer);
-    this.history?.flush();
+    this.reconcileConsoleTimer();
     this.cancelSynchronization();
     this.cancelBleReconnect();
     this.releaseTelemetry();
@@ -235,10 +293,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   get readOnly(): boolean { return this.device.config.isShared === true && this.device.data.canCommand !== true; }
 
   private allowedEndpoint(field: DeviceUiEndpoint): boolean {
-    if (!this.device.config.isShared) return true;
-
-    return this.device.data.canCommand === true && (this.device.data.commandEndpointKeys === null
-      || this.device.data.commandEndpointKeys?.includes(field.key) === true);
+    return canWriteDeviceEndpoint(this.device, field);
   }
 
   get widgets(): PageLayoutWidget[] {
@@ -275,10 +330,12 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     return this.widgets.flatMap(widget => {
       const field = this.endpoint(widget);
 
-      return field ? [{ widget, field, value: this.value(field), extras: this.extras(widget),
+      return field ? [{ widget: { ...widget, title: this.fieldTitle(widget, field) }, field,
+        value: this.value(field), extras: this.extras(widget),
         history: this.history?.points(field.key),
         display: this.display(field), draft: this.draft(field), error: this.fieldError(field),
-        disabled: !this.readOnly && (this.pending.has(field.key) || !this.canControl || !this.allowedEndpoint(field)) }] : [];
+        disabled: !this.readOnly && (this.pending.has(field.key) || !this.canControl || !this.allowedEndpoint(field)),
+        controlScope: this.controlScope, controlAvailable: this.canControl && this.allowedEndpoint(field) }] : [];
     });
   }
 
@@ -292,17 +349,26 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   onPanelAction(action: PanelAction): void {
+    if (this.panelEditSession) return;
     const { field, value } = action;
+
+    // A Hold release belongs to the original command lifetime, not just a key
+    // which a newly selected device or carrier happens to expose as well.
+    if (action.hold && (action.hold.target.scope !== this.controlScope
+      || action.hold.target.field.id !== field.id || action.hold.target.field.key !== field.key)) return;
 
     if (!this.allowedEndpoint(field)) return;
 
     if (action.kind === 'invoke') void this.execute(field);
 
     else if (action.kind === 'commit') void this.commit(field);
-    else if (action.kind === 'toggle' && typeof value === 'boolean') void this.send(field, value);
+    else if (action.kind === 'toggle' && typeof value === 'boolean') void this.send(field, value, action.hold?.target.scope);
     else if (action.kind === 'range' && typeof value === 'number' && Number.isFinite(value)) void this.send(field, value);
     else if (action.kind === 'select' && typeof value === 'string') void this.send(field, value);
-    else if (action.kind === 'draft' && typeof value === 'string') this.drafts.set(field.key, value);
+    else if (action.kind === 'draft' && typeof value === 'string') {
+      this.drafts.set(field.key, value);
+      this.setFieldError(field.key, '');
+    }
   }
 
   // Read by the hosting DevicePage, which applies the effective theme.
@@ -315,21 +381,32 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private get connectionStateLabel(): string {
+    if (this.connectionReady) {
+      return { ble: '蓝牙已连接', lan: '局域网已连接', cloud: '云端已连接' }[this.activeTransport];
+    }
     if (this.syncing) return '正在连接并同步';
-    if (this.direct && this.accountState === 'ready') return '蓝牙已连接';
-    if (!this.direct && this.device?.data?.cloudReachable === true) return '云端在线';
     if (this.accountState === 'retrying') return '正在重连';
     if (this.accountState === 'connecting') return '正在连接';
-    if (!this.direct && this.device?.data?.cloudReachable === null) return '状态未知';
-
+    if (this.accountState === 'ready') return this.snapshot.stateFresh ? '连接未就绪' : '设备状态未同步';
+    if (this.activeTransport === 'cloud' && this.accountState === 'idle'
+      && this.device?.data?.cloudReachable === null) return '状态未知';
     return '离线';
   }
 
   get canControl(): boolean {
+    return !this.readOnly && this.connectionReady;
+  }
+
+  private get controlScope(): string {
+    return JSON.stringify([this.logicalDeviceId, this.host.sessionVersion, this.commandGeneration,
+      this.holdEpoch, this.snapshot.manifestFingerprint]);
+  }
+
+  private get connectionReady(): boolean {
     // Both signals are scoped to the selected carrier by DeviceUiPort. Its
     // fresh snapshot already fences offline/lost cloud presence and stale
     // manifests. Inventory presence is only a hint, not LAN readiness or ACL.
-    return !this.readOnly && this.accountState === 'ready' && this.snapshot.manifestAccepted && this.snapshot.stateFresh && this.synchronized
+    return this.accountState === 'ready' && this.snapshot.manifestAccepted && this.snapshot.stateFresh && this.synchronized
       && this.connection?.signal.aborted === false && this.pageVisible && this.appActive;
   }
 
@@ -339,21 +416,46 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   value(field: DeviceUiEndpoint): DeviceUiValue | undefined {
-    if (this.telemetryValues.has(field.key)) return this.telemetryValues.get(field.key);
-    if (this.eventValues.has(field.key)) return this.eventValues.get(field.key);
+    const liveValue = this.telemetryFields.get(field.key)?.value;
+    return liveValue !== undefined ? liveValue : this.eventValues.has(field.key)
+      ? this.eventValues.get(field.key) : field.value;
+  }
 
-    return field.value;
+  telemetryField(field: DeviceUiEndpoint): TelemetryFieldPresentation | undefined {
+    return this.telemetryFields.get(field.key);
+  }
+
+  telemetryFreshness(field: TelemetryFieldPresentation): string {
+    return telemetryFreshnessLabel(field);
+  }
+
+  get telemetrySummary(): string {
+    const source = this.telemetrySnapshot?.source;
+    return source ? `${telemetrySourceLabel(source)} · ${telemetryIntervalLabel(this.telemetryIntervalMs)}` : '';
   }
 
   display(field: DeviceUiEndpoint): string {
-    return this.format(this.value(field));
+    const value = this.value(field);
+    return typeof value === 'boolean' && field.valueType === 'boolean'
+      ? capabilityBooleanLabel(this.device, { key: field.key, kind: field.manifestKind, type: field.manifestType }, value)
+      : this.format(value);
+  }
+
+  fieldTitle(widget: PageLayoutWidget, field: DeviceUiEndpoint): string {
+    // Preserve this page's existing raw-key legacy-title fallback, not a global migration.
+    return capabilityDisplayName(this.device, { key: field.key, kind: field.manifestKind,
+      type: field.manifestType, valueType: field.valueType }, widget.title === field.key ? undefined : widget.title);
   }
 
   get lastEventText(): string {
     if (!this.lastEvent) return '';
 
     return Object.entries(this.lastEvent.values)
-      .map(([key, value]) => `${key}: ${this.format(value)}`)
+      .map(([key, value]) => {
+        const field = this.endpointsByKey.get(key);
+        const name = capabilityDisplayName(this.device, { key, kind: field?.manifestKind, type: field?.manifestType });
+        return `${name}: ${this.format(value)}`;
+      })
       .join(', ');
   }
 
@@ -398,8 +500,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       value = raw;
     } else {
       value = Number(raw);
-
-      if (!Number.isFinite(value) || (field.valueType === 'integer' && !Number.isSafeInteger(value))) {
+      if (raw.trim() === '' || !Number.isFinite(value)
+        || (field.valueType === 'integer' && !Number.isSafeInteger(value))) {
         this.setFieldError(field.key, '请输入有效数值');
 
         return;
@@ -410,6 +512,8 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   retry(): void {
+    this.consoleConflict = false;
+    if (cloudConsole(this.device)) { this.consoleRevision = undefined; this.consoleSession = undefined; }
     this.layoutLoadKey = '';
 
     this.resetBleReconnect();
@@ -420,7 +524,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   async updateLayout(): Promise<void> {
-    if (!this.logicalDeviceId || !this.storedLayout || !this.layoutStale || this.layoutUpdating || !this.canEdit) return;
+    if (!this.logicalDeviceId || !this.storedLayout || !this.layoutStale || this.layoutUpdating || !this.canEdit || this.consoleConflict) return;
 
     this.layoutUpdating = true;
     this.error = '';
@@ -430,10 +534,14 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       let record: DeviceV2PageLayoutRecord;
 
       if (cloudConsole(this.device)) {
+        if (this.consoleRevision === undefined || this.consoleSession !== this.host.sessionVersion || this.consoleDevice !== this.device) {
+          throw new Error('请重新读取控制台后确认。');
+        }
         const session = this.host.sessionVersion;
-        const source = await this.consoles.save(this.logicalDeviceId, { layout: candidate });
+        const device = this.device, id = this.logicalDeviceId;
+        const source = await this.consoles.save(id, { layout: candidate }, this.consoleRevision);
 
-        if (session !== this.host.sessionVersion || this.destroyed) return;
+        if (session !== this.host.sessionVersion || this.destroyed || this.device !== device || this.logicalDeviceId !== id) return;
 
         this.consoleRevision = source.revision;
 
@@ -446,7 +554,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
       this.applyStoredLayout(record, this.snapshot);
     } catch (error) {
-      if (this.errorCode(error) === 'DEVICE_V2_PAGE_LAYOUT_CONFLICT') {
+      if (consoleWriteConflict(error)) {
+        this.consoleConflict = true;
+        this.error = '界面已在其他位置更新，请重新读取后确认。';
+      } else if (this.errorCode(error) === 'DEVICE_V2_PAGE_LAYOUT_CONFLICT') {
         this.layoutLoadKey = '';
 
         this.applySnapshot(this.snapshot);
@@ -463,7 +574,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   private bindDevice(): void {
     const nextId = this.device?.deviceName || this.device?.id || '';
 
-    if (nextId === this.logicalDeviceId) return;
+    if (nextId === this.logicalDeviceId) {
+      this.reconcileConsoleTimer();
+      return;
+    }
 
     this.cancelSynchronization();
     this.releaseTelemetry();
@@ -473,16 +587,22 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.directConnectAllowed = true;
     this.bleAdapterEnabled = null;
     this.logicalDeviceId = nextId;
+    this.reconcileConsoleTimer();
 
-    this.history?.flush();
-
-    this.history = nextId ? new EndpointHistory(nextId) : undefined;
+    this.history = nextId ? new EndpointHistory() : undefined;
     this.accountState = 'idle';
+    this.activeTransport = 'cloud';
     this.snapshot = emptySnapshot();
     this.layout = undefined;
     this.layoutStale = undefined;
     this.layoutUpdating = false;
     this.storedLayout = undefined;
+    this.consoleRevision = undefined;
+    this.consoleConflict = false;
+    this.consoleSession = undefined;
+    this.consoleDevice = undefined;
+    this.panelLayoutReady = false;
+    this.panelEditSession = undefined;
     this.storedCapabilitiesLoading = false;
     this.layoutError = '';
     this.consoleError = '';
@@ -521,6 +641,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
     try {
       this.deviceSubscriptions.add(this.deviceUi.watchConnection(nextId).subscribe(state => {
+        if (this.accountState === 'ready' && state !== 'ready') this.holdEpoch += 1;
         this.accountState = state;
 
         this.requestRender();
@@ -535,7 +656,19 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       }));
 
       this.deviceSubscriptions.add(this.deviceUi.watchConnectivity(nextId).subscribe(
-        connectivity => this.updateBleReconnect(connectivity),
+        connectivity => {
+          // Ready -> ready carrier changes do not emit watchConnection again.
+          // Retire the old stream before accepting a new source or its samples.
+          const carrier = connectivity.activeTransport;
+          if (this.activeTransport !== carrier) {
+            this.holdEpoch += 1;
+            this.activeTransport = carrier;
+            this.releaseTelemetry();
+            this.refreshTelemetry();
+            this.requestRender();
+          }
+          this.updateBleReconnect(connectivity);
+        },
       ));
 
       this.deviceSubscriptions.add(this.deviceUi.watchState(nextId).subscribe({
@@ -569,11 +702,12 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  private get direct(): boolean {
-    return this.deviceUi.isBleDirect(this.logicalDeviceId);
-  }
-
   private applySnapshot(snapshot: DeviceUiSnapshot): void {
+    if (this.snapshot.stateFresh && !snapshot.stateFresh) this.holdEpoch += 1;
+    if (this.snapshot.manifestFingerprint !== snapshot.manifestFingerprint) {
+      this.retireCommands();
+      this.history?.reset();
+    }
     if (!snapshot.manifestAccepted && this.layout) {
       // Keep the last verified panel visible while the connection resynchronizes.
       // Its fields remain read-only until a fresh manifest and state arrive.
@@ -637,10 +771,11 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
     try {
       const session = this.host.sessionVersion;
+      const device = this.device;
       const source = cloudConsole(this.device) ? await this.consoles.get(logicalDeviceId) : undefined;
 
-      if (session !== this.host.sessionVersion || !this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
-      if (source) installConsole(this.device, source);
+      if (session !== this.host.sessionVersion || this.device !== device || !this.layoutRequestIsCurrent(logicalDeviceId, loadKey, epoch)) return;
+      if (source) installConsole(device, source);
 
       const record = source ? consoleLayout(source) : await this.pageLayouts.get(logicalDeviceId);
 
@@ -653,6 +788,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
       if (source) {
         this.consoleRevision = source.revision;
+        this.consoleSession = session;
+        this.consoleDevice = device;
+
         this.clearConsoleError();
       }
     } catch (error) {
@@ -669,32 +807,44 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  private reconcileConsoleTimer(): void {
+    if (this.destroyed || !this.pageVisible || !this.appActive || !this.logicalDeviceId || !cloudConsole(this.device)) {
+      clearInterval(this.consoleTimer);
+      this.consoleTimer = undefined;
+    } else if (!this.consoleTimer) {
+      this.consoleTimer = setInterval(() => void this.refreshConsole(), 4000);
+    }
+  }
+
   private async refreshConsole(): Promise<void> {
-    if (this.destroyed || !this.pageVisible || !this.appActive || !cloudConsole(this.device) || this.consoleRefreshing) return;
+    if (this.destroyed || !this.pageVisible || !this.appActive || !cloudConsole(this.device) || this.consoleRefreshing || this.consoleConflict) return;
 
     const id = this.logicalDeviceId;
 
     if (!id) return;
 
     const session = this.host.sessionVersion;
+    const device = this.device;
 
     this.consoleRefreshing = true;
 
     try {
       const source = await this.consoles.get(id);
 
-      if (this.destroyed || session !== this.host.sessionVersion || id !== this.logicalDeviceId) return;
+      if (this.destroyed || session !== this.host.sessionVersion || id !== this.logicalDeviceId || this.device !== device) return;
 
       installConsole(this.device, source);
+      this.consoleSession = session; this.consoleDevice = device;
 
       if (source.revision !== this.consoleRevision && this.snapshot.manifestAccepted) {
         this.applyStoredLayout(consoleLayout(source) ?? undefined, this.snapshot);
+
         this.consoleRevision = source.revision;
       }
 
       this.clearConsoleError();
     } catch (error) {
-      if (session !== this.host.sessionVersion || id !== this.logicalDeviceId) return;
+      if (this.destroyed || session !== this.host.sessionVersion || id !== this.logicalDeviceId || this.device !== device) return;
       if (isNetworkUnavailable(error)) return;
 
       if (this.device.config.isShared) {
@@ -708,6 +858,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private applyStoredLayout(record: DeviceV2PageLayoutRecord | undefined, snapshot: DeviceUiSnapshot): void {
+    this.panelLayoutReady = true;
     this.storedLayout = record;
 
     if (!record || !record.layout.widgets.length) {
@@ -731,6 +882,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private refreshTelemetry(): void {
+    if (this.panelEditSession) { this.releaseTelemetry(); return; }
     if (this.accountState !== 'ready') {
       if (this.telemetry || this.telemetryOpening) this.releaseTelemetry();
 
@@ -744,8 +896,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
       return;
     }
-
-    const key = `${this.logicalDeviceId}\0${this.snapshot.manifestFingerprint}\0`
+    const key = `${this.logicalDeviceId}\0${this.snapshot.manifestFingerprint}\0${this.activeTransport}\0`
       + `${configuration.intervalMs}\0${configuration.endpointKeys.join('\0')}`;
 
     if (key !== this.telemetryKey) {
@@ -788,12 +939,20 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.telemetry = lease;
 
       this.telemetryDetach = lease.subscribe(snapshot => {
+        if (this.destroyed || !this.pageVisible || !this.appActive || this.telemetry !== lease
+          || this.telemetryEpoch !== epoch || this.telemetryKey !== key) return;
         this.telemetryActive = snapshot.active;
         this.telemetryIntervalMs = snapshot.effectiveIntervalMs;
-        this.telemetryValues = new Map(Object.entries(snapshot.values));
-
-        for (const [key, value] of this.telemetryValues) this.history?.record(key, value, false);
-
+        const newSample = snapshot.sampleSequence !== undefined && (snapshot.epoch !== this.telemetrySnapshot?.epoch
+          || snapshot.streamId !== this.telemetrySnapshot?.streamId
+          || snapshot.sampleSequence !== this.telemetrySnapshot?.sampleSequence);
+        this.telemetrySnapshot = snapshot;
+        this.telemetryPresentation.update(snapshot);
+        this.refreshTelemetryPresentation();
+        this.reconcileTelemetryClock();
+        if (newSample) {
+          for (const [key, value] of Object.entries(snapshot.values)) this.history?.record(key, value, false);
+        }
         this.telemetryError = '';
 
         this.requestRender();
@@ -834,6 +993,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   }
 
   private releaseTelemetry(): void {
+    if (this.telemetry || this.telemetryOpening || this.telemetryKey) this.history?.reset();
     this.telemetryEpoch += 1;
     this.telemetryOpening = false;
     this.telemetryKey = '';
@@ -847,17 +1007,43 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.telemetry = undefined;
     this.telemetryActive = false;
     this.telemetryIntervalMs = 0;
-
-    this.telemetryValues.clear();
-
+    this.clearTelemetryPresentation();
     if (lease) void lease.close().catch(() => undefined);
+  }
+
+  private refreshTelemetryPresentation(): void {
+    const now = performance.now();
+    this.telemetryFields = new Map((this.telemetrySnapshot ? this.telemetryConfiguration()?.endpointKeys ?? [] : [])
+      .map(key => [key, this.telemetryPresentation.field(key, now)]));
+  }
+
+  private reconcileTelemetryClock(): void {
+    const enabled = this.telemetryActive && this.pageVisible && this.appActive && !this.destroyed;
+    if (!enabled) {
+      clearInterval(this.telemetryClockTimer);
+      this.telemetryClockTimer = undefined;
+    } else if (!this.telemetryClockTimer) {
+      this.telemetryClockTimer = setInterval(() => {
+        this.refreshTelemetryPresentation();
+        this.requestRender();
+      }, 1000);
+    }
+  }
+
+  private clearTelemetryPresentation(): void {
+    this.telemetryActive = false;
+    this.telemetryIntervalMs = 0;
+    clearInterval(this.telemetryClockTimer);
+    this.telemetryClockTimer = undefined;
+    this.telemetrySnapshot = undefined;
+    this.telemetryPresentation.reset();
+    this.telemetryFields.clear();
   }
 
   private setTelemetryError(error: unknown): void {
     this.telemetryError = this.messageOf(error, '实时数据暂不可用');
     this.telemetryActive = false;
-
-    this.telemetryValues.clear();
+    this.clearTelemetryPresentation();
     this.requestRender();
   }
 
@@ -927,6 +1113,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     void connection.closed.then(() => {
       if (this.connection !== connection) return;
 
+      this.holdEpoch += 1;
       this.synchronized = false;
 
       this.requestRender();
@@ -938,6 +1125,7 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
         const previous = this.connection;
 
+        if (previous && previous !== connection) this.retireCommands();
         this.connection = connection;
         this.synchronized = true;
 
@@ -980,6 +1168,9 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
 
   private cancelSynchronization(): void {
     this.synchronized = false;
+    this.retireCommands();
+    this.history?.reset();
+    this.eventValues.clear();
 
     const controller = this.syncAbort;
 
@@ -992,12 +1183,19 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.connection = undefined;
   }
 
+  private retireCommands(): void {
+    this.commandGeneration += 1;
+    this.queued.clear();
+    this.pending = new Set<string>();
+  }
+
   private setPageVisible(visible: boolean): void {
     if (this.pageVisible === visible) return;
 
     this.pageVisible = visible;
-
+    if (!visible) this.clearTelemetryPresentation();
     if (!this.initialized || this.destroyed) return;
+    this.reconcileConsoleTimer();
 
     if (visible) {
       this.resetBleReconnect();
@@ -1076,12 +1274,16 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     if (resetAttempt) this.bleReconnectAttempt = 0;
   }
 
-  async send(field: DeviceUiEndpoint, value: unknown): Promise<void> {
+  async send(field: DeviceUiEndpoint, value: unknown, controlScope?: string): Promise<void> {
+    if (this.panelEditSession) return;
+    if (controlScope !== undefined && controlScope !== this.controlScope) return;
     if (!this.allowedEndpoint(field)) return;
     if (!this.logicalDeviceId || !this.canControl) return;
+    const current = this.endpointsByKey.get(field.key);
+    if (!current || current.id !== field.id || current.valueType !== field.valueType || current.role !== field.role) return;
 
     if (this.pending.has(field.key)) {
-      this.queued.set(field.key, value);
+      this.queued.set(field.key, { value, controlScope });
 
       return;
     }
@@ -1089,12 +1291,21 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     this.setFieldError(field.key, '');
 
     this.pending = new Set(this.pending).add(field.key);
+    const generation = this.commandGeneration;
+    const deviceId = this.logicalDeviceId;
+    const connection = this.connection;
+    const fingerprint = this.snapshot.manifestFingerprint;
+    const isCurrent = () => generation === this.commandGeneration && deviceId === this.logicalDeviceId
+      && connection === this.connection && fingerprint === this.snapshot.manifestFingerprint && !this.destroyed;
+    let confirmed = false;
 
     try {
-      await this.deviceUi.sendCommand(this.logicalDeviceId, field.key, value);
+      await this.deviceUi.sendCommand(deviceId, field.key, value);
+      confirmed = true;
     } catch (error) {
-      this.setFieldError(field.key, this.messageOf(error, '指令发送失败'));
+      if (isCurrent()) this.setFieldError(field.key, this.messageOf(error, '指令发送失败'));
     } finally {
+      if (!isCurrent()) return;
       const pending = new Set(this.pending);
 
       pending.delete(field.key);
@@ -1102,10 +1313,11 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
       this.pending = pending;
 
       if (this.queued.has(field.key)) {
-        const next = this.queued.get(field.key);
+        const next = this.queued.get(field.key)!;
 
         this.queued.delete(field.key);
-        void this.send(field, next);
+        // Never turn an unknown/rejected command into an automatic follow-up.
+        if (confirmed) void this.send(current, next.value, next.controlScope);
       }
 
       this.requestRender();
@@ -1115,7 +1327,17 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
   // Device events arrive outside the zone. markForCheck schedules a full pass,
   // so the host page's bindings derived from this view (theme, state) follow too.
   private requestRender(): void {
-    if (!this.destroyed) this.changeDetector.markForCheck();
+    if (this.destroyed || this.renderPending) return;
+    this.renderPending = true;
+    queueMicrotask(() => {
+      this.renderPending = false;
+      if (!this.destroyed) {
+        // The embedded shell also reads our status. A child-only refresh does
+        // not invalidate its parent after an async/native completion.
+        this.changeDetector.markForCheck();
+        this.changeDetector.detectChanges();
+      }
+    });
   }
 
   private setFieldError(key: string, message: string): void {
@@ -1132,7 +1354,10 @@ export class DeviceV2Page implements OnInit, OnChanges, OnDestroy {
     if (code === 'DEVICE_V2_COMMAND_OUTCOME_UNKNOWN') return '操作结果尚未确认，请先检查设备状态，勿重复操作';
 
     const message = error instanceof Error ? error.message : '';
-
+    if (message === 'DEVICE_UI_COMMAND_PENDING') return '该控件的上一笔操作尚未结束，请等待结果';
+    if (message === 'DEVICE_UI_COMMAND_CAPACITY') return '当前操作较多，请稍后手动重试';
+    if (message === 'DIRECT_TELEMETRY_NOT_SUPPORTED') return '此设备固件暂不支持本地实时数据';
+    if (message === 'DIRECT_TELEMETRY_OBSERVE_REQUIRED') return '没有实时数据查看权限';
     if (message === 'BLE_DIRECT_SCAN_TIMEOUT' || message === 'BLE_DIRECT_SCAN_FAILED') {
       return '未发现附近设备';
     }

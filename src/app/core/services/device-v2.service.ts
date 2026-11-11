@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, NgZone } from '@angular/core';
-import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { Injectable, NgZone, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Observable, defer, firstValueFrom, takeUntil, throwError } from 'rxjs';
 
 import { API } from '../../configs/api.config';
-import { DeviceV2AccountClient, DeviceV2AccountState } from '../device-v2/account-client';
+import { DeviceV2AccountClient, DeviceV2AccountState, DeviceV2AccountSuspendedError } from '../device-v2/account-client';
+import { wiFiProvCloudBoundary } from '../device-v2/provisioning/wifiprov-cloud-boundary';
 import { openMqttDeviceV2Channel } from '../device-v2/mqtt-channel';
 import { AccountConnectionResponse } from '../model/response.model';
 import {
@@ -21,11 +22,12 @@ import { DeviceV2DemandOwner, DeviceV2DirectOwner } from '../protocol/device-v2/
 export type { DeviceV2AccountState } from '../device-v2/account-client';
 
 @Injectable({ providedIn: 'root' })
-export class DeviceV2Service {
+export class DeviceV2Service implements OnDestroy {
   readonly state = new BehaviorSubject<DeviceV2AccountState>('idle');
   readonly store: DeviceV2Store;
   private readonly client: DeviceV2AccountClient;
   private accountId?: string;
+  private readonly unsubscribeBoundary: () => void;
 
   constructor(
     private readonly http: HttpClient,
@@ -34,12 +36,13 @@ export class DeviceV2Service {
     private readonly manifestCache: DeviceV2ManifestCache,
   ) {
     this.client = new DeviceV2AccountClient(
-      () => firstValueFrom(http.get<AccountConnectionResponse>(API.ACCOUNT.CONNECTION, {
-        params: { wire: 'bbp2', pv: '2', transport: 'websocket' },
-      })),
+      signal => this.readConnectionCredential(signal),
       response => openMqttDeviceV2Channel(response.mqtt),
     );
     this.store = this.client.store;
+    this.unsubscribeBoundary = wiFiProvCloudBoundary.subscribe(blocked => {
+      void this.client.setSuspended(blocked).catch(() => undefined);
+    });
     this.store.subscribe((logicalDeviceId, snapshot) => zone.run(() => {
       if (snapshot.manifestAccepted && snapshot.manifest) {
         manifestCache.save(logicalDeviceId, snapshot.manifest);
@@ -61,6 +64,31 @@ export class DeviceV2Service {
         || (this.accountId !== undefined && nextAccountId !== this.accountId);
       this.accountId = nextAccountId;
       if (identityChanged) void this.client.reset().catch(() => undefined);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.unsubscribeBoundary();
+    void this.client.stop().catch(() => undefined);
+  }
+
+  private readConnectionCredential(signal?: AbortSignal): Promise<AccountConnectionResponse> {
+    const abort = new Observable<void>(subscriber => {
+      const stop = () => { subscriber.next(); subscriber.complete(); };
+      if (signal?.aborted) { stop(); return; }
+      signal?.addEventListener('abort', stop, { once: true });
+      return () => signal?.removeEventListener('abort', stop);
+    });
+    return firstValueFrom(defer(() => {
+      if (wiFiProvCloudBoundary.blocked || signal?.aborted) {
+        return throwError(() => new DeviceV2AccountSuspendedError());
+      }
+      return this.http.get<AccountConnectionResponse>(API.ACCOUNT.CONNECTION, {
+        params: { wire: 'bbp2', pv: '2', transport: 'websocket' },
+      });
+    }).pipe(takeUntil(abort))).catch(error => {
+      if (signal?.aborted) throw signal.reason ?? error;
+      throw error;
     });
   }
 

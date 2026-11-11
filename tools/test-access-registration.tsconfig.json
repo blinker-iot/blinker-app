@@ -1,0 +1,24 @@
+{
+  "extends": "../tsconfig.spec.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "types": ["vitest/globals", "node"],
+    "paths": {
+      "capacitor-wifiprov": ["../capacitor-wifiprov/src/index.ts"]
+    }
+  },
+  "files": [],
+  "include": [
+    "../src/app/core/device-v2/ble-direct/access-registration-ports.spec.ts",
+    "../src/app/core/device-v2/ble-direct/bc5-acceptance-client.spec.ts",
+    "../src/app/core/device-v2/ble-direct/bc5-launch-profile.spec.ts",
+    "../src/app/core/device-v2/ble-direct/cloud-registration-install.spec.ts",
+    "../src/app/core/protocol/device-v2/direct-hello.spec.ts",
+    "../src/app/core/device-v2/provisioning/wifiprov-initial-cloud-observation.spec.ts",
+    "../src/app/core/services/device-v2-ble-access-registration.spec.ts",
+    "../src/app/core/services/device-v2-ble-registration-presence.spec.ts",
+    "../src/app/sections/guide/ble-device/ble-device-registration.render.spec.ts",
+    "../src/app/tools/bc5-acceptance/bc5-acceptance.page.ts",
+    "../src/test-setup.ts"
+  ]
+}

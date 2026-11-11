@@ -1,9 +1,11 @@
 @use '../../../../theme/ui-theme' as theme;
 @use '../../../device/v2/panel/panel-grid' as grid;
 @use '../field-select';
+@use '../../../../theme/control-page-chrome' as chrome;
 
+@include chrome.header;
 @include grid.layout;
-@include grid.compact;
+@include grid.responsive;
 
 :host {
   @include theme.ui-theme;
@@ -18,10 +20,11 @@ ion-content { --background: transparent; }
 ion-toolbar { --ion-color-contrast: var(--ui-ink); }
 .save { font-weight: 600; }
 button, input { font: inherit; }
-button { cursor: pointer; }
+button { cursor: pointer; touch-action: manipulation; }
 button:disabled { opacity: 0.4; cursor: default; }
 
-button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; }
+button:active:not(:disabled) { filter: brightness(0.94); }
 
 .workspace {
   --section-main-background: transparent;
@@ -31,21 +34,23 @@ button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; 
   flex-direction: column;
 
   height: 100%;
-  max-width: 1040px;
+  max-width: grid.$page-max-width;
   margin: auto;
 
-  padding: calc(var(--transparent-page-content-top) + 14px) 20px 16px;
+  padding: calc(var(--transparent-page-content-top) + 14px)
+    max(#{grid.$page-inset}, var(--ion-safe-area-right, 0px))
+    max(16px, var(--ion-safe-area-bottom, 0px))
+    max(#{grid.$page-inset}, var(--ion-safe-area-left, 0px));
 
   box-sizing: border-box;
 }
 
-.editor-tools { flex-wrap: wrap; margin-bottom: 16px; }
-.preview-tools { flex-wrap: nowrap; }
+.editor-tools { flex: none; flex-wrap: wrap; margin-bottom: 16px; }
 
 .theme-switch {
   display: flex;
-  gap: 2px;
-  padding: 3px;
+  gap: 8px;
+  padding: 4px;
   border: 1px solid var(--ui-line);
   border-radius: 999px;
   background: var(--ui-card);
@@ -53,8 +58,8 @@ button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; 
   button {
     display: grid;
     place-items: center;
-    width: 28px;
-    height: 28px;
+    min-width: 48px;
+    min-height: 48px;
     padding: 0;
     border: 0;
     border-radius: 50%;
@@ -74,6 +79,10 @@ button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; 
   gap: 12px;
 }
 
+.tools-right { flex-wrap: wrap; min-width: 0; }
+.sheet-heading > div { min-width: 0; }
+.sheet-heading h2, .sheet-heading p { overflow-wrap: anywhere; }
+
 .mode-switch {
   display: inline-flex;
   padding: 4px;
@@ -84,14 +93,17 @@ button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; 
   background: var(--ui-card);
 
   button {
-    padding: 8px 20px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 8px 16px;
     border: 0;
     border-radius: 999px;
     background: transparent;
 
     color: var(--ui-muted);
 
-    font-size: 13px;
+    font-size: 0.875rem;
+    line-height: 1.4;
   }
 
   [aria-pressed='true'] { background: var(--ui-accent); color: var(--ui-on-accent); }
@@ -100,8 +112,10 @@ button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; 
 .icon-button {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
 
@@ -115,24 +129,38 @@ button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; 
   display: inline-flex;
 
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 14px;
+  min-height: 48px;
+  padding: 10px 16px;
   border: 0;
   border-radius: 999px;
 
   background: var(--ui-accent);
   color: var(--ui-on-accent);
 
-  font-size: 13px;
+  font-size: 0.875rem;
   font-weight: 600;
+  line-height: 1.4;
 }
 
 .notice { margin: 14px 0; color: var(--ui-muted); font-size: 12px; line-height: 1.5; }
 .layout-hint { margin: 0 0 12px; color: var(--ui-muted); font-size: 12px; line-height: 1.5; }
 .error { color: var(--ui-alert); font-size: 13px; }
-.error button { margin-left: 8px; border: 0; background: none; color: inherit; text-decoration: underline; }
+.error button {
+  display: block;
+  min-height: 48px;
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-decoration: underline;
+}
 
 .canvas {
+  @include grid.viewport;
   position: relative;
 
   flex: 1;
@@ -142,6 +170,8 @@ button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; 
   border-radius: var(--ui-radius);
 
   overflow-y: auto;
+  // Reserve outline space without reducing the actual panel content width.
+  margin: -4px;
   padding: 4px;
 }
 
@@ -169,16 +199,37 @@ button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; 
   &:active { cursor: grabbing; }
 }
 
+// The detail host already owns the viewport, gutters and themed backdrop.
+:host(.inline-panel-editor) {
+  display: block;
+  background: none;
+  &::before, &::after { display: none; }
+}
+.workspace.inline-workspace {
+  height: auto;
+  padding: 0;
+  margin: 0;
+  .editor-tools { justify-content: flex-end; }
+  .canvas { flex: none; overflow: visible; }
+}
+.widget-inline { cursor: grab; }
+.inline-properties-modal {
+  --width: 720px;
+  --max-width: 100%;
+  --height: 90%;
+  --border-radius: 24px 24px 0 0;
+}
+
 .empty, .empty-canvas { padding: 36px 20px; color: var(--ui-muted); text-align: center; }
 .empty-canvas { position: absolute; top: 20%; left: 0; right: 0; pointer-events: none; }
 .empty-canvas i { font-size: 32px; }
-.empty-canvas button { pointer-events: auto; border: 0; background: none; color: var(--ui-accent); }
-.widget-error { margin: 0 6px; color: var(--ui-alert); font-size: 11px; }
+.empty-canvas button { pointer-events: auto; min-height: 48px; padding: 10px 16px; border: 0; background: none; color: var(--ui-accent); }
+.widget-error { flex: none; margin: 0 6px; color: var(--ui-alert); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .missing { padding: 16px; color: var(--ui-muted); }
 
 ion-modal {
   --width: 880px;
-  --height: min(84vh, 900px);
+  --height: min(84dvh, 900px);
   --border-radius: 24px;
   --backdrop-opacity: 0.4;
 }
@@ -187,7 +238,8 @@ ion-modal {
   @include theme.ui-theme;
 
   height: 100%;
-  padding: 22px;
+  box-sizing: border-box;
+  padding: 22px max(16px, var(--ion-safe-area-right, 0px)) 22px max(16px, var(--ion-safe-area-left, 0px));
   overflow-y: auto;
 
   background: var(--ui-bg);
@@ -214,23 +266,32 @@ ion-modal {
   label, .field-select { display: grid; gap: 7px; font-size: 12px; color: var(--ui-muted); }
 
   input { width: 100%; min-width: 0; border: 1px solid var(--ui-line); border-radius: 10px; background: var(--ui-card); color: var(--ui-ink); }
-  input { padding: 10px; }
+  input { min-height: 48px; padding: 10px; font-size: 1rem; }
 }
 
 .library-filters { grid-template-columns: minmax(0, 1fr); }
+.field-trigger, .field-options ion-radio { min-height: 48px; }
 
-.catalogue { --row-h: 78px; --gap: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 10px; }
+.catalogue-region {
+  @include grid.viewport;
+  max-width: grid.$page-max-width - 2 * grid.$page-inset;
+  margin-inline: auto;
+}
+.catalogue { align-items: start; }
+.catalogue > .error { grid-column: 1 / -1; }
 .catalogue-empty { grid-column: 1 / -1; padding: 24px; color: var(--ui-muted); font-size: 13px; text-align: center; }
-.preset { position: relative; min-width: 0; grid-column: span var(--span); }
-.preset-preview { --fill-h: calc(var(--rows) * var(--row-h) + (var(--rows) - 1) * var(--gap)); display: flex; height: var(--fill-h); overflow: hidden; border-radius: var(--ui-radius); }
-.preset.wide .preset-preview { height: auto; }
+.preset { position: relative; }
+.preset-preview { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; border-radius: var(--ui-radius); }
 .preset-pick { position: absolute; inset: 0; width: 100%; border: 1px solid transparent; border-radius: var(--ui-radius); background: transparent; }
 .preset-pick:hover { border-color: var(--ui-accent); }
 
 @media (max-width: 600px) {
-  .workspace { padding-inline: 12px; }
-  .tools-right { gap: 6px; }
-  .mode-switch button { padding-inline: 15px; }
-  ion-modal { --width: 100%; --height: 88vh; --border-radius: 24px 24px 0 0; align-items: flex-end; }
-  .sheet { padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
+  .mode-switch { flex: 1 0 100%; box-sizing: border-box; }
+  .mode-switch button { flex: 1; min-width: 0; padding-inline: 8px; }
+  .tools-right { width: 100%; justify-content: flex-end; gap: 8px; }
+  ion-modal { --width: 100%; --height: 88dvh; --border-radius: 24px 24px 0 0; align-items: flex-end; }
+  .sheet {
+    padding: 18px max(16px, var(--ion-safe-area-right, 0px))
+      calc(18px + var(--ion-safe-area-bottom, 0px)) max(16px, var(--ion-safe-area-left, 0px));
+  }
 }

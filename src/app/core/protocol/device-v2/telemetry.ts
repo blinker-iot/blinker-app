@@ -29,7 +29,19 @@ export interface DeviceV2TelemetrySnapshot {
   streamId: number;
   epoch: number;
   effectiveIntervalMs: number;
+  sampleSequence?: number;
+  /** Device uptime of the sample, not a UTC timestamp. */
+  sampleMonotonicMs?: number;
+  receivedAtMs?: number;
+  /** Local monotonic receipt time used for freshness, independent of wall-clock changes. */
+  receivedMonotonicMs?: number;
+  missedSamples: number;
   values: Readonly<Record<string, DeviceV2Value>>;
+}
+
+interface TelemetryClock {
+  wallNow(): number;
+  monotonicNow(): number;
 }
 
 type Listener = (snapshot: DeviceV2TelemetrySnapshot) => void;
@@ -42,11 +54,16 @@ interface LeaseState {
   intervalMs: number;
   effectiveIntervalMs: number;
   leaseMs: number;
-  sampleSequence: number;
+  sampleSequence?: number;
+  sampleMonotonicMs?: number;
+  receivedAtMs?: number;
+  receivedMonotonicMs?: number;
+  missedSamples: number;
   active: boolean;
   visible: boolean;
   closing: boolean;
   closed: boolean;
+  closeOnReset: boolean;
   transition: Promise<void>;
   values: Record<string, DeviceV2Value>;
   listeners: Set<Listener>;
@@ -61,8 +78,8 @@ function cloneValue(value: DeviceV2Value): DeviceV2Value {
   };
 }
 
-function newerSequence(value: number, previous: number): boolean {
-  if (previous === 0) return true;
+function newerSequence(value: number, previous: number | undefined): boolean {
+  if (previous === undefined) return true;
   const difference = (value - previous) >>> 0;
   return difference !== 0 && difference < 0x80000000;
 }
@@ -95,6 +112,7 @@ export class DeviceV2TelemetryLease {
 export class DeviceV2TelemetryManager {
   private readonly leases = new Set<LeaseState>();
   private nextStreamId = 1;
+  private generation = 0;
 
   constructor(
     private readonly prepare: (
@@ -106,6 +124,10 @@ export class DeviceV2TelemetryManager {
       control: DeviceV2TelemetryControl,
     ) => Promise<DeviceV2TelemetryStatus>,
     private readonly error: (error: Error) => void,
+    private readonly clock: TelemetryClock = {
+      wallNow: () => Date.now(),
+      monotonicNow: () => performance.now(),
+    },
   ) {}
 
   async open(
@@ -124,7 +146,10 @@ export class DeviceV2TelemetryManager {
       || leaseMs > BBP2_TELEMETRY_MAXIMUM_LEASE_MS) {
       throw new Error('Device V2 telemetry lease is invalid');
     }
+    const generation = this.generation;
     const fields = await this.prepare(logicalDeviceId, endpointKeys);
+    if (generation !== this.generation) throw new Error('Device V2 telemetry manager was reset');
+    if (this.leases.size >= MAX_STREAMS) throw new Error('Device V2 telemetry stream limit reached');
     const lease: LeaseState = {
       logicalDeviceId,
       fields,
@@ -133,11 +158,12 @@ export class DeviceV2TelemetryManager {
       intervalMs,
       effectiveIntervalMs: intervalMs,
       leaseMs,
-      sampleSequence: 0,
+      missedSamples: 0,
       active: false,
       visible: options.visible !== false,
       closing: false,
       closed: false,
+      closeOnReset: false,
       transition: Promise.resolve(),
       values: Object.create(null),
       listeners: new Set<Listener>(),
@@ -159,6 +185,8 @@ export class DeviceV2TelemetryManager {
       throw new Error('Device V2 telemetry lease is closed');
     }
     lease.visible = visible;
+    if (!visible) this.clearSamples(lease);
+    this.notify(lease);
     await this.enqueue(lease, () => this.reconcileVisibility(lease));
   }
 
@@ -170,10 +198,15 @@ export class DeviceV2TelemetryManager {
     }
     lease.closing = true;
     lease.visible = false;
+    this.clearSamples(lease);
+    this.notify(lease);
     await this.enqueue(lease, async () => {
       try {
         await this.stopLease(lease);
       } finally {
+        lease.active = false;
+        this.clearSamples(lease);
+        this.notify(lease);
         lease.closed = true;
         lease.listeners.clear();
         this.leases.delete(lease);
@@ -182,16 +215,21 @@ export class DeviceV2TelemetryManager {
   }
 
   receiveData(logicalDeviceId: string, data: DeviceV2TelemetryData): void {
-    const lease = Array.from(this.leases).find(candidate => (
-      candidate.logicalDeviceId === logicalDeviceId && candidate.streamId === data.streamId
-      && candidate.epoch === data.epoch && candidate.active
-    ));
+    const lease = this.activeLease(logicalDeviceId, data.streamId, data.epoch);
     if (!lease || !newerSequence(data.sampleSequence, lease.sampleSequence)) return;
     const allowed = new Set(lease.fields.map(field => field.key));
     if (Object.keys(data.values).some(key => !allowed.has(key))) {
       throw new Error('Device V2 telemetry sample contains an unrequested endpoint');
     }
+    if (lease.sampleSequence !== undefined) {
+      const distance = (data.sampleSequence - lease.sampleSequence) >>> 0;
+      // Sequence zero is reserved and skipped by the device on wraparound.
+      lease.missedSamples += distance - 1 - Number(data.sampleSequence < lease.sampleSequence);
+    }
     lease.sampleSequence = data.sampleSequence;
+    lease.sampleMonotonicMs = data.monotonicMs;
+    lease.receivedAtMs = this.clock.wallNow();
+    lease.receivedMonotonicMs = this.clock.monotonicNow();
     lease.values = Object.fromEntries(
       Object.entries(data.values).map(([key, value]) => [key, cloneValue(value)]),
     );
@@ -199,35 +237,60 @@ export class DeviceV2TelemetryManager {
   }
 
   receiveStatus(logicalDeviceId: string, status: DeviceV2TelemetryStatus): void {
+    if (status.status !== DeviceV2TelemetryStatusCode.Opened
+      && status.status !== DeviceV2TelemetryStatusCode.Renewed
+      && status.status !== DeviceV2TelemetryStatusCode.Closed
+      && status.status !== DeviceV2TelemetryStatusCode.Expired) return;
     const lease = Array.from(this.leases).find(candidate => (
       candidate.logicalDeviceId === logicalDeviceId && candidate.streamId === status.streamId
       && candidate.epoch === status.epoch
     ));
-    if (!lease) return;
+    if (!lease || lease.closed || lease.closing || !lease.active || !lease.visible) return;
     lease.effectiveIntervalMs = status.effectiveIntervalMs;
     if (status.status === DeviceV2TelemetryStatusCode.Closed
       || status.status === DeviceV2TelemetryStatusCode.Expired) {
       clearTimeout(lease.renewTimer);
       lease.active = false;
-      lease.values = Object.create(null);
+      this.clearSamples(lease);
       this.notify(lease);
       if (lease.visible && !lease.closing
         && status.status === DeviceV2TelemetryStatusCode.Expired) {
         void this.enqueue(lease, () => this.reconcileVisibility(lease))
           .catch(error => this.error(error as Error));
       }
-    }
+    } else this.notify(lease);
   }
 
-  reset(): void {
+  /** Pinned descriptors only for a currently active lease, never a new Manifest's IDs. */
+  fieldsForData(logicalDeviceId: string, streamId: number, epoch: number): DeviceV2ManifestField[] | undefined {
+    const lease = this.activeLease(logicalDeviceId, streamId, epoch);
+    if (!lease) return undefined;
+    // The existing ID decoder indexes by id - 1. Unrequested positions stay
+    // empty so neither a different key nor an unrequested field can decode.
+    const fields: DeviceV2ManifestField[] = [];
+    for (const field of lease.fields) fields[field.id - 1] = field;
+    return fields;
+  }
+
+  reset(closeActive = false): void {
+    this.generation += 1;
+    const remote: Array<{ logicalDeviceId: string; streamId: number; epoch: number }> = [];
     for (const lease of this.leases) {
+      if (closeActive && lease.active) remote.push(lease);
+      lease.closeOnReset = closeActive;
       clearTimeout(lease.renewTimer);
       lease.active = false;
+      lease.visible = false;
       lease.closing = true;
       lease.closed = true;
+      this.clearSamples(lease);
+      this.notify(lease);
       lease.listeners.clear();
     }
     this.leases.clear();
+    // Queue existing Close controls but never await them from a carrier's own
+    // operation queue. Local retirement is immediate, including failed Close.
+    for (const lease of remote) this.closeResetLease(lease.logicalDeviceId, lease.streamId, lease.epoch);
   }
 
   snapshot(lease: LeaseState): DeviceV2TelemetrySnapshot {
@@ -240,6 +303,11 @@ export class DeviceV2TelemetryManager {
       streamId: lease.streamId,
       epoch: lease.epoch,
       effectiveIntervalMs: lease.effectiveIntervalMs,
+      sampleSequence: lease.sampleSequence,
+      sampleMonotonicMs: lease.sampleMonotonicMs,
+      receivedAtMs: lease.receivedAtMs,
+      receivedMonotonicMs: lease.receivedMonotonicMs,
+      missedSamples: lease.missedSamples,
       values,
     };
   }
@@ -253,22 +321,33 @@ export class DeviceV2TelemetryManager {
       intervalMs: lease.intervalMs,
       fieldIds: lease.fields.map(field => field.id),
     });
+    if (lease.closed || !this.leases.has(lease)) {
+      if (lease.closeOnReset && status.status === DeviceV2TelemetryStatusCode.Opened
+        && status.streamId === lease.streamId) {
+        this.closeResetLease(lease.logicalDeviceId, status.streamId, status.epoch);
+      }
+      throw new Error('Device V2 telemetry lease is closed');
+    }
     if (status.status !== DeviceV2TelemetryStatusCode.Opened
       || status.streamId !== lease.streamId) {
       throw new Error('Device V2 telemetry open status is invalid');
     }
     lease.epoch = status.epoch;
     lease.effectiveIntervalMs = status.effectiveIntervalMs;
-    lease.sampleSequence = 0;
-    lease.values = Object.create(null);
+    this.clearSamples(lease);
     lease.active = true;
-    this.scheduleRenew(lease);
-    this.notify(lease);
+    if (lease.visible && !lease.closing) {
+      this.scheduleRenew(lease);
+      this.notify(lease);
+    }
   }
 
   private async stopLease(lease: LeaseState): Promise<void> {
     clearTimeout(lease.renewTimer);
     if (!lease.active) return;
+    lease.active = false;
+    this.clearSamples(lease);
+    this.notify(lease);
     const status = await this.send(lease.logicalDeviceId, {
       operation: DeviceV2TelemetryOperation.Close,
       streamId: lease.streamId,
@@ -278,8 +357,6 @@ export class DeviceV2TelemetryManager {
       || status.streamId !== lease.streamId || status.epoch !== lease.epoch) {
       throw new Error('Device V2 telemetry close status is invalid');
     }
-    lease.active = false;
-    lease.values = Object.create(null);
   }
 
   private async reconcileVisibility(lease: LeaseState): Promise<void> {
@@ -303,16 +380,18 @@ export class DeviceV2TelemetryManager {
           epoch: lease.epoch,
           leaseMs: lease.leaseMs,
         });
+        if (!lease.active || !lease.visible || lease.closing || lease.closed) return;
         if (status.status !== DeviceV2TelemetryStatusCode.Renewed
           || status.streamId !== lease.streamId || status.epoch !== lease.epoch) {
           throw new Error('Device V2 telemetry renew status is invalid');
         }
         lease.effectiveIntervalMs = status.effectiveIntervalMs;
+        this.notify(lease);
         this.scheduleRenew(lease);
       }).catch(error => {
         if (lease.closed) return;
         lease.active = false;
-        lease.values = Object.create(null);
+        this.clearSamples(lease);
         this.notify(lease);
         this.error(error as Error);
       });
@@ -331,10 +410,36 @@ export class DeviceV2TelemetryManager {
     return streamId;
   }
 
+  private activeLease(logicalDeviceId: string, streamId: number, epoch: number): LeaseState | undefined {
+    return Array.from(this.leases).find(candidate => (
+      candidate.logicalDeviceId === logicalDeviceId && candidate.streamId === streamId
+      && candidate.epoch === epoch && candidate.active && candidate.visible
+      && !candidate.closing && !candidate.closed
+    ));
+  }
+
+  private closeResetLease(logicalDeviceId: string, streamId: number, epoch: number): void {
+    try {
+      void this.send(logicalDeviceId, { operation: DeviceV2TelemetryOperation.Close, streamId, epoch })
+        .catch(() => undefined);
+    } catch {
+      // A retired or failing carrier is not a reason to revive this stream.
+    }
+  }
+
   private notify(lease: LeaseState): void {
     if (!lease.listeners.size) return;
     const snapshot = this.snapshot(lease);
     for (const listener of lease.listeners) listener(snapshot);
+  }
+
+  private clearSamples(lease: LeaseState): void {
+    lease.sampleSequence = undefined;
+    lease.sampleMonotonicMs = undefined;
+    lease.receivedAtMs = undefined;
+    lease.receivedMonotonicMs = undefined;
+    lease.missedSamples = 0;
+    lease.values = Object.create(null);
   }
 }
 

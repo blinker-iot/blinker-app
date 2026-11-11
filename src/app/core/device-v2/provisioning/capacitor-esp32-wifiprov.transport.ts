@@ -27,7 +27,7 @@ implements Esp32ProvisioningTransport {
       data: encodeBase64(payload),
       encoding: 'base64',
     });
-    return decodeBase64(response.base64);
+    return decodeWiFiProvBase64(response.base64);
   }
 }
 
@@ -37,7 +37,7 @@ function encodeBase64(value: Uint8Array): string {
   return btoa(binary);
 }
 
-function decodeBase64(value: string): Uint8Array {
+export function decodeWiFiProvBase64(value: string): Uint8Array {
   if (
     typeof value !== 'string'
     || value.length === 0

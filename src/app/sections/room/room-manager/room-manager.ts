@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 
 import {
@@ -17,6 +17,7 @@ import { MenuItemComponent } from 'src/app/core/components/menu-list/menu-item/m
 import { OrderData } from 'src/app/core/model/data.model';
 import { DataService } from 'src/app/core/services/data.service';
 import { RoomService, roomErrorMessage } from '../room.service';
+import { RoomReadRecovery } from '../room-read-recovery';
 
 @Component({
   selector: 'room-manager',
@@ -29,7 +30,7 @@ import { RoomService, roomErrorMessage } from '../room.service';
   ],
 })
 
-export class RoomManagerPage {
+export class RoomManagerPage implements OnDestroy {
   loaded = false;
   saving = false;
   editMode = false;
@@ -38,6 +39,7 @@ export class RoomManagerPage {
 
   private revision = 0;
   private sessionEpoch = -1;
+  private readonly readRecovery: RoomReadRecovery;
 
   get roomDataList(): string[] {
     return this.dataService.room.list;
@@ -53,27 +55,39 @@ export class RoomManagerPage {
     private readonly alertCtrl: AlertController,
     private readonly dataService: DataService,
   ) {
+    this.readRecovery = new RoomReadRecovery(this.dataService);
     const state = this.router.getCurrentNavigation()?.extras.state;
 
     if (typeof state?.['backHref'] === 'string') this.defaultBackHref = state['backHref'];
   }
 
   async ionViewDidEnter(): Promise<void> {
+    this.readRecovery.enter();
     await this.load();
   }
 
+  ionViewWillLeave(): void { this.readRecovery.leave(); }
+
+  ngOnDestroy(): void { this.readRecovery.leave(); }
+
   async load(): Promise<void> {
+    if (this.saving) return;
+    const attempt = this.readRecovery.begin();
+    if (!attempt) return;
     this.loaded = false;
     this.error = '';
 
     try {
       const snapshot = await this.roomService.load();
+      if (!this.readRecovery.accepts(attempt)) return;
 
       this.revision = snapshot.revision;
       this.sessionEpoch = this.dataService.sessionEpoch;
       this.loaded = true;
     } catch (error) {
+      if (!this.readRecovery.current(attempt)) return;
       this.error = roomErrorMessage(error);
+      this.readRecovery.afterFailure(error, attempt, () => void this.load());
     }
   }
 

@@ -1,4 +1,4 @@
-<ion-header class="tool-page-header">
+<ion-header class="tool-page-header control-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/home/tools" text=""></ion-back-button>
@@ -49,6 +49,7 @@
           <button
             type="button"
             [class.active]="serviceType === preset.type"
+            [attr.aria-pressed]="serviceType === preset.type"
             [disabled]="isScanning"
             (click)="selectType(preset.type)"
           >
@@ -82,10 +83,9 @@
           <strong>{{ isScanning ? '停止发现' : '开始发现' }}</strong>
           <small>{{ isScanning ? scanElapsed + ' 秒 · 已发现 ' + services.length + ' 项' : typeLabel(serviceType) + ' · ' + domain }}</small>
         </span>
-        @if (isScanning) { <i class="scan-ripple" aria-hidden="true"></i> }
       </button>
 
-      <div class="scan-status" [class.active]="isScanning" [class.error]="!!errorMessage">
+      <div class="scan-status" role="status" [class.active]="isScanning" [class.error]="!!errorMessage">
         <i [class]="errorMessage ? 'fa-solid fa-circle-exclamation' : isScanning ? 'fa-solid fa-circle' : 'fa-light fa-circle-info'"></i>
         <span>{{ errorMessage || statusMessage }}</span>
       </div>
@@ -100,7 +100,7 @@
         @if (services.length > 1) {
           <label class="result-search">
             <i class="fa-light fa-magnifying-glass"></i>
-            <input type="search" inputmode="search" autocomplete="off" placeholder="筛选" [(ngModel)]="searchKeyword" />
+            <input type="search" inputmode="search" autocomplete="off" aria-label="筛选发现结果" placeholder="筛选" [(ngModel)]="searchKeyword" />
             @if (searchKeyword) {
               <button type="button" aria-label="清除筛选" (click)="searchKeyword = ''">
                 <i class="fa-solid fa-circle-xmark"></i>
@@ -113,7 +113,7 @@
       <div class="service-list">
         @for (service of visibleServices; track service.id) {
           <article class="service-card" [class.expanded]="isExpanded(service)">
-            <button type="button" class="service-main" (click)="toggleDetails(service)">
+            <button type="button" class="service-main" [attr.aria-expanded]="isExpanded(service)" (click)="toggleDetails(service)">
               <span class="service-icon"><i [class]="serviceIcon(service)"></i></span>
               <span class="service-copy">
                 <strong>{{ service.name }}</strong>

@@ -1,0 +1,71 @@
+{
+  "repository": "https://github.com/ionic-team/ion-android-geolocation",
+  "version": "2.2.2",
+  "commit": "30243181a2fb6b336f3d5bd67766904188c69e3d",
+  "license": "MIT",
+  "upstreamFiles": [
+    {
+      "path": "src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/IONGLOCController.kt",
+      "sha256": "90ed9bb5cf0f9ea8d6a55fc44ee96040715d4528cc21c25f36e2bc2066ed2331"
+    },
+    {
+      "path": "src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/IONGLOCSensorHandler.kt",
+      "sha256": "4124dfa512d04206ba3a89a192df7311171a94f130baf3a4c6a32516778ba15b"
+    },
+    {
+      "path": "src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/helper/IONGLOCBuildConfig.kt",
+      "sha256": "623db213f8e41b38ad7cd1d525db514f522a50e6e75e714e9b8086e6146b8ed5"
+    },
+    {
+      "path": "src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/helper/IONGLOCExtensions.kt",
+      "sha256": "39f5a95f21aaf79ce72e884925686c31e3f9f3988c8ff1fda73d8e4c8faaeecc"
+    },
+    {
+      "path": "src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/helper/IONGLOCFallbackHelper.kt",
+      "sha256": "7ac044006cd892112fe1b528431295abe6380bfe373c55e1fd08362301180ccd"
+    },
+    {
+      "path": "src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/helper/IONGLOCGoogleServicesHelper.kt",
+      "sha256": "41c80b6f0503cbc1d94da8329aef7b366c8d6540aec70e66e4463af107e78e97"
+    },
+    {
+      "path": "src/main/kotlin/io/ionic/libs/iongeolocationlib/model/IONGLOCException.kt",
+      "sha256": "afc432d31b2acbb43d2b7ec25db947e5b224cd322a7fba36f158e8fdc5679004"
+    },
+    {
+      "path": "src/main/kotlin/io/ionic/libs/iongeolocationlib/model/IONGLOCLocationOptions.kt",
+      "sha256": "035b9a734758370fa465a19a760998883bfd32ebb19beeb948463a937d4e7065"
+    },
+    {
+      "path": "src/main/kotlin/io/ionic/libs/iongeolocationlib/model/IONGLOCLocationResult.kt",
+      "sha256": "e1226b120f57def9744fee2831f5b83b678541e57c8add7f800c3d95672f65ab"
+    },
+    {
+      "path": "src/main/kotlin/io/ionic/libs/iongeolocationlib/model/internal/LocationHandler.kt",
+      "sha256": "e8217dc6f9e04f93cc4d5216e5ccfa9ec7b7c62c040f8d7c79dc6b8a1580468d"
+    },
+    {
+      "path": "src/main/kotlin/io/ionic/libs/iongeolocationlib/model/internal/LocationSettingsResult.kt",
+      "sha256": "8d7542e12171ef4432d7ebee903618b692df9920741b03cc061d2d941163a2eb"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "de884404585ed20280150b0768082b6004d3548aaa0d6e596d6bfa0538ab331d"
+    }
+  ],
+  "modifiedFiles": [
+    "src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/IONGLOCController.kt",
+    "src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/helper/IONGLOCGoogleServicesHelper.kt"
+  ],
+  "patchScope": [
+    "Single-request fixed-stage observations without coordinates or exception text",
+    "Preserve cancellation through controller and settings checks",
+    "Associate the same CancellationTokenSource with GMS Task and cancellable await; always cancel on exit"
+  ],
+  "sourceNormalization": {
+    "encoding": "UTF-8 without BOM",
+    "lineEndings": "LF",
+    "trailingNewlineAdded": ["src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/IONGLOCController.kt","src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/helper/IONGLOCBuildConfig.kt","src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/helper/IONGLOCExtensions.kt","src/main/kotlin/io/ionic/libs/iongeolocationlib/controller/helper/IONGLOCGoogleServicesHelper.kt","src/main/kotlin/io/ionic/libs/iongeolocationlib/model/IONGLOCException.kt","src/main/kotlin/io/ionic/libs/iongeolocationlib/model/internal/LocationHandler.kt","src/main/kotlin/io/ionic/libs/iongeolocationlib/model/internal/LocationSettingsResult.kt"]
+  },
+  "notes": "SHA-256 entries describe original upstream bytes before the explicitly listed final-newline normalization. Pinned versions are preserved. This Android-only maintenance module replaces, and must not coexist with, the original Maven AAR. Watch and fallback logic remain unchanged."
+}

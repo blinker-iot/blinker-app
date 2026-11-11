@@ -1,0 +1,16 @@
+@use '../../../../theme/workflow-surface' as workflow;
+
+@include workflow.content;
+
+:host { display: grid; min-width: 0; gap: 12px; }
+.capacity-text { font-size: 1.0625rem; line-height: 1.5; }
+.task-summary p { margin: 8px 0 0; }
+.source-text { color: var(--blinker-text-secondary); }
+.task-busy { display: flex; align-items: flex-start; gap: 12px; }
+.task-busy ion-spinner { flex: 0 0 24px; width: 24px; height: 24px; }
+.task-diagnostics { padding-block: 4px; }
+.task-diagnostics details + details { border-top: 1px solid var(--blinker-divider); }
+.task-pending { border: 1px solid var(--ion-color-warning); }
+.task-pending > strong { font-size: 1.0625rem; line-height: 1.5; }
+.task-pending .workflow-actions { margin-top: 16px; }
+.task-request-details code { font-size: .8125rem; overflow-wrap: anywhere; }

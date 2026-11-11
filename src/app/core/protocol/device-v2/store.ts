@@ -98,6 +98,7 @@ export class DeviceV2Store {
   constructor(
     private readonly hash: (input: Uint8Array) => Promise<Uint8Array> = sha256,
     private readonly maximumTargets = 256,
+    private readonly isTargetId: (id: string) => boolean = isLogicalDeviceId,
   ) {}
 
   subscribe(listener: StateListener): () => void {
@@ -370,7 +371,7 @@ export class DeviceV2Store {
   }
 
   private target(logicalDeviceId: string): TargetState {
-    if (!isLogicalDeviceId(logicalDeviceId)) {
+    if (!this.isTargetId(logicalDeviceId)) {
       throw new Error('logical device identity is invalid');
     }
     let target = this.targets.get(logicalDeviceId);

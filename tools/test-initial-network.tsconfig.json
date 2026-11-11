@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.spec.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "types": ["vitest/globals", "node"],
+    "paths": { "capacitor-wifiprov": ["../capacitor-wifiprov/src/index.ts"] }
+  },
+  "files": [],
+  "include": [
+    "../src/app/core/device-v2/ble-direct/initial-network-run.ts",
+    "../src/app/core/device-v2/ble-direct/initial-network-checkpoint.ts",
+    "../src/app/core/device-v2/ble-direct/initial-network-launch-profile.ts",
+    "../src/app/core/services/device-v2-ble.service.ts",
+    "../src/app/tools/bc5-acceptance/bc5-acceptance.page.ts",
+    "../src/app/tools/bc5-acceptance/bc5-acceptance.page.initial-network.spec.ts",
+    "../src/test-setup.ts"
+  ]
+}

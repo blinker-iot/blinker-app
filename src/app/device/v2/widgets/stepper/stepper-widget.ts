@@ -7,6 +7,14 @@ import { ValueTransitionDirective } from '../value-transition.directive';
 
 const SENT_MS = 1200;
 
+interface DraftBinding {
+  widgetId: string;
+  endpointKey: string;
+  fieldId: number;
+  fieldKey: string;
+  command: boolean;
+}
+
 // 数值步进器: − value +; one row high it becomes a row with the value between the buttons.
 // Bound to an action (e.g. "turn to 90°") it has no state to follow: − / + only
 // pick the value on screen and the send key fires it.
@@ -21,10 +29,31 @@ const SENT_MS = 1200;
 export class StepperWidgetComponent extends RangeWidgetBase implements OnDestroy {
   readonly sent = signal(false);
   private sentTimer?: ReturnType<typeof setTimeout>;
+  private binding?: DraftBinding;
 
   get hold(): boolean { return this.options.longPress !== false; }
   get showRange(): boolean { return this.options.showRange !== false; }
   get command(): boolean { return this.card.field.role === 'action'; }
+
+  override ngOnChanges(): void {
+    const { widget, field } = this.card;
+    const binding: DraftBinding = { widgetId: widget.widgetId, endpointKey: widget.endpointKey,
+      fieldId: field.id, fieldKey: field.key, command: this.command };
+    const previous = this.binding;
+
+    if (previous && (previous.command || binding.command)
+      && (previous.widgetId !== binding.widgetId || previous.endpointKey !== binding.endpointKey
+        || previous.fieldId !== binding.fieldId || previous.fieldKey !== binding.fieldKey
+        || previous.command !== binding.command)) {
+      this.resetInput();
+      clearTimeout(this.sentTimer);
+      this.sentTimer = undefined;
+      this.sent.set(false);
+    }
+
+    this.binding = binding;
+    super.ngOnChanges();
+  }
 
   // An action only moves the value on screen; send() fires it.
   override commit(raw: number): void {

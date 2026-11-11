@@ -1,13 +1,14 @@
-import { MenuListItem } from '../../../core/components/menu-list/menu-list';
+import type { MenuListItem } from '../../../core/components/menu-list/menu-list';
+import { environment } from 'src/environments/environment';
 
 export interface ProfileMenuStats {
   roomNum: number;
-  sceneNum: number;
-  sharedDeviceNum: number;
+  receivedDeviceNum: number | null;
 }
 
 export interface ProfileMenuGroup {
-  id: string;
+  id: 'devices' | 'connections' | 'support';
+  title?: string;
   items: readonly MenuListItem[];
 }
 
@@ -22,7 +23,8 @@ export function createProfileMenuGroups(
 ): readonly ProfileMenuGroup[] {
   return [
     {
-      id: 'account',
+      id: 'devices',
+      title: translate('PROFILE.DEVICE_MANAGEMENT'),
       items: [
         {
           id: 'room',
@@ -31,66 +33,56 @@ export function createProfileMenuGroups(
           value: translate('PROFILE.REGION_COUNT', { count: stats.roomNum }),
           route: '/room-manager',
         },
-        {
+        ...(environment.deployment.automation ? [{
           id: 'automation',
           title: translate('PROFILE.AUTOMATION'),
           icon: 'fa-bullseye-pointer',
-          value: translate('PROFILE.SCENE_COUNT', { count: stats.sceneNum }),
-          route: '/scene-manager',
-        },
+          route: '/automation-manager',
+        }] : []),
         {
           id: 'sharing',
           title: translate('PROFILE.DEVICE_SHARING'),
           icon: 'fa-user-group',
-          value: translate('PROFILE.SHARED_DEVICE_COUNT', {
-            count: stats.sharedDeviceNum,
-          }),
+          value: stats.receivedDeviceNum === null ? undefined
+            : translate('PROFILE.RECEIVED_DEVICE_COUNT', { count: stats.receivedDeviceNum }),
           route: '/share-manager',
         },
+      ],
+    },
+    {
+      id: 'connections',
+      title: translate('PROFILE.CONNECTION_AND_SERVICES'),
+      items: [
         {
           id: 'selfhost',
           title: translate('PROFILE.SELF_HOSTED_SERVER'),
           icon: 'fa-server',
-          value: translate('PROFILE.SELF_HOSTED_SERVER_DESCRIPTION'),
           route: '/self-hosted-server',
         },
         {
           id: 'third-party-services',
           title: translate('PROFILE.THIRD_PARTY_SERVICES'),
           icon: 'fa-plug',
-          value: translate('PROFILE.THIRD_PARTY_SERVICES_DESCRIPTION'),
           route: '/third-party-services',
         },
       ],
     },
     {
-      id: 'settings',
+      id: 'support',
       items: [
-        {
-          id: 'settings',
-          title: translate('PROFILE.SETTINGS'),
-          icon: 'fa-gear',
-          value: translate('PROFILE.SETTINGS_DESCRIPTION'),
-          route: '/settings',
-        },
         {
           id: 'feedback',
           title: translate('PROFILE.FEEDBACK'),
-          icon: 'fa-circle-question',
-          value: translate('PROFILE.FEEDBACK_DESCRIPTION'),
           route: '/feedback',
         },
         {
           id: 'about',
           title: translate('PROFILE.ABOUT_US'),
-          icon: 'fa-building',
-          value: translate('PROFILE.ABOUT_US_DESCRIPTION'),
           route: '/about',
         },
         {
           id: 'logout',
           title: translate('PROFILE.LOGOUT'),
-          icon: 'fa-arrow-right-from-bracket',
           danger: true,
           showChevron: false,
         },

@@ -1,227 +1,226 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import {
-  IonBackButton,
-  IonButton,
-  IonButtons,
-  IonContent,
-  IonHeader,
-  IonSpinner,
-  IonTitle,
-  IonToolbar,
-} from '@ionic/angular/standalone';
+import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, NavController } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
-import { BlinkerDevice } from 'src/app/core/model/device.model';
-import { DataService } from 'src/app/core/services/data.service';
+import { API } from '../../../configs/api.config';
+import { assertDeviceV2AccountContext, captureDeviceV2AccountContext, DeviceV2AccountContext } from '../../../core/device-v2/account-scope';
+import { ActivityItem, ActivityQuery, ACTIVITY_MAX_AGE_MS, ACTIVITY_PAGE_LIMIT } from '../../../core/device-v2/device-activity';
+import { capabilityDisplayName, deviceDisplayName } from '../../../core/device-v2/display-metadata';
+import { GatewayHttpError } from '../../../core/model/response.model';
+import { AppVisibilityService } from '../../../core/services/app-visibility.service';
+import { DataService } from '../../../core/services/data.service';
+import { DeviceV2ActivityService } from '../../../core/services/device-v2-activity.service';
 
-type LogType = 'system' | 'device' | 'user' | 'warning';
-
-interface RuntimeLog {
-  id: string;
-  date: Date;
-  type: LogType;
-  title: string;
-  detail: string;
-}
-
-interface LogFilter {
-  id: 'all' | LogType;
-  label: string;
-}
-
-function createTestLogs(): RuntimeLog[] {
-  const now = Date.now();
-  const minutesAgo = (minutes: number) => new Date(now - minutes * 60_000);
-
-  return [
-    {
-      id: 'test-online',
-      date: minutesAgo(2),
-      type: 'system',
-      title: '设备上线',
-      detail: 'MQTT 连接已建立，信号质量良好',
-    },
-    {
-      id: 'test-temperature',
-      date: minutesAgo(8),
-      type: 'device',
-      title: '温度数据上报',
-      detail: 'temperature = 24.6 °C',
-    },
-    {
-      id: 'test-switch',
-      date: minutesAgo(18),
-      type: 'user',
-      title: '执行开关操作',
-      detail: '用户将设备开关设置为 ON',
-    },
-    {
-      id: 'test-network',
-      date: minutesAgo(43),
-      type: 'warning',
-      title: '网络短暂波动',
-      detail: '连接中断 3 秒后自动恢复',
-    },
-    {
-      id: 'test-timer',
-      date: minutesAgo(75),
-      type: 'user',
-      title: '定时任务已执行',
-      detail: '工作日节能模式执行成功',
-    },
-    {
-      id: 'test-restart',
-      date: minutesAgo(132),
-      type: 'system',
-      title: '设备重新启动',
-      detail: '启动原因：软件复位',
-    },
-  ];
-}
+type PageStatus = 'inactive' | 'restoring' | 'ready' | 'signed-out' | 'account-changed' | 'unavailable'
+  | 'preview' | 'unsupported' | 'shared' | 'owner-unconfirmed' | 'forbidden';
+const UNAVAILABLE = {
+  inactive: ['请从设备设置重新进入', '此页面没有后台活动采集或本地记录缓存。'],
+  restoring: ['正在恢复账号', '正在读取本机登录信息，不会重新登录或重试失败请求。'],
+  'signed-out': ['请先登录当前账号', '登录后请从设备列表重新进入设备设置。'],
+  'account-changed': ['登录账号已变化', '请返回设备列表，重新进入当前账号的设备。'],
+  unavailable: ['设备不存在或当前不可用', '设备可能已移除、停用或权限已变化，请返回设备列表确认。'],
+  preview: ['预览设备没有活动记录', '预览内容不代表真实设备事件，不会生成演示记录。'],
+  unsupported: ['当前设备暂不支持此入口', '此入口仅适用于当前账号下的 V2 设备，不会加载旧格式日志。'],
+  shared: ['活动记录暂不向分享用户开放', '可按需查看已开放的状态历史或在线趋势。'],
+  'owner-unconfirmed': ['当前设备的所有者权限尚未确认', '请返回设备列表确认，不会读取活动记录。'],
+  forbidden: ['活动记录访问权限已变化', '请返回设备列表确认后重新进入。'],
+} as const;
+const STATUS_LABELS: Record<ActivityItem['status'], string> = {
+  inflight: '处理中', acknowledged: '设备已确认', rejected: '请求被拒绝', outcome_unknown: '结果未知', not_sent: '未下发',
+};
 
 @Component({
-  selector: 'app-device-log',
-  templateUrl: './device-log.component.html',
-  styleUrls: ['./device-log.component.scss'],
-  imports: [
-    CommonModule,
-    FormsModule,
-    IonBackButton,
-    IonButton,
-    IonButtons,
-    IonContent,
-    IonHeader,
-    IonSpinner,
-    IonTitle,
-    IonToolbar,
-  ],
+  selector: 'app-device-log', templateUrl: './device-log.component.html', styleUrls: ['./device-log.component.scss'],
+  imports: [CommonModule, IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar],
 })
-export class DeviceLogComponent implements OnInit, OnDestroy {
-  readonly filters: readonly LogFilter[] = [
-    { id: 'all', label: '全部' },
-    { id: 'system', label: '系统' },
-    { id: 'device', label: '设备' },
-    { id: 'user', label: '操作' },
-    { id: 'warning', label: '异常' },
-  ];
+export class DeviceLogComponent implements OnDestroy {
+  readonly status = signal<PageStatus>('inactive');
+  readonly deviceName = signal('');
+  readonly viewLimit = 200;
+  readonly state = signal({ busy: false, ready: false, error: '', rows: [] as ActivityItem[],
+    from: 0, to: 0, nextCursor: null as string | null });
+  private id = '';
+  private readonly visible = signal(false);
+  private destroyed = false;
+  private readonly foreground = signal(true);
+  private generation = 0;
+  private controller?: AbortController;
+  private account?: DeviceV2AccountContext;
+  private initialAuthWait?: { authority: string; sessionEpoch: number; accountId?: string };
+  private readonly subscriptions = new Subscription();
 
-  id = '';
-  device?: BlinkerDevice;
-  loaded = false;
-  usingTestData = false;
-  selectedType: LogFilter['id'] = 'all';
-  searchText = '';
-  logs: RuntimeLog[] = [];
-  lastRefreshed = new Date();
-
-  private subscription?: Subscription;
-
-  get defaultBackHref(): string {
-    return `/device-manager/${this.id}`;
+  constructor(private readonly data: DataService, private readonly route: ActivatedRoute,
+    private readonly navigation: NavController, private readonly activity: DeviceV2ActivityService,
+    private readonly visibility: AppVisibilityService) {
+    this.foreground.set(visibility.active.value);
+    this.subscriptions.add(data.authDataChanged.subscribe(() => this.reconcileAuth()));
+    this.subscriptions.add(data.deviceDataLoader.subscribe(() => this.reconcile()));
+    this.subscriptions.add(data.authRestoreCompleted.subscribe(completed => {
+      if (completed) this.finishInitialAuth();
+    }));
+    this.subscriptions.add(visibility.active.subscribe(active => {
+      if (this.foreground() === active) return;
+      this.foreground.set(active);
+      if (!active) {
+        if (this.initialAuthWait) this.show('inactive');
+        else { this.cancelAndClear(true); this.deviceName.set(''); }
+      } else if (this.visible()) {
+        if (this.initialAuthWait) this.finishInitialAuth();
+        else if (this.reconcile() && !this.state().error) void this.refresh();
+      }
+    }));
   }
 
-  get visibleLogs(): RuntimeLog[] {
-    const keyword = this.searchText.trim().toLocaleLowerCase();
-    return this.logs.filter((log) => {
-      const typeMatches = this.selectedType === 'all' || log.type === this.selectedType;
-      const textMatches =
-        !keyword ||
-        `${log.title} ${log.detail}`.toLocaleLowerCase().includes(keyword);
-      return typeMatches && textMatches;
-    });
+  get defaultBackHref(): string { return this.canNavigate ? `/device-manager/${encodeURIComponent(this.id)}` : '/home/device'; }
+  get unavailableTitle(): string { return this.status() === 'ready' ? '' : UNAVAILABLE[this.status()][0]; }
+  get unavailableDescription(): string { return this.status() === 'ready' ? '' : UNAVAILABLE[this.status()][1]; }
+  get present(): boolean { return this.visible() && !this.destroyed && this.foreground(); }
+  get canQuery(): boolean { return this.present && this.status() === 'ready' && this.accountCurrent() && this.ownerAvailable(); }
+  get canLoadMore(): boolean { return this.canQuery && this.state().ready && !this.state().busy
+    && !this.state().error && !!this.state().nextCursor && this.state().rows.length < this.viewLimit; }
+  get bounded(): boolean { return this.state().ready && this.state().rows.length >= this.viewLimit && !!this.state().nextCursor; }
+  get canNavigate(): boolean { return this.present && this.accountCurrent()
+    && ['ready', 'shared', 'owner-unconfirmed'].includes(this.status()); }
+
+  fieldLabel(row: ActivityItem): string {
+    if (!this.canQuery) return row.endpointKey;
+    const device = this.data.getDevice(this.id);
+    const currentAlias = device?.displayMetadata?.capabilities.find(field => field.key === row.endpointKey);
+    return capabilityDisplayName(device, currentAlias ?? { key: row.endpointKey });
   }
+  statusLabel(row: ActivityItem): string { return STATUS_LABELS[row.status]; }
+  utcDate(at: number): string { return new Date(at).toISOString(); }
 
-  get warningCount(): number {
-    return this.logs.filter((log) => log.type === 'warning').length;
-  }
-
-  constructor(
-    private readonly dataService: DataService,
-    private readonly activatedRoute: ActivatedRoute,
-  ) {}
-
-  ngOnInit(): void {
-    this.id = this.activatedRoute.snapshot.paramMap.get('id') || '';
-    this.bindDevice();
-    this.subscription = this.dataService.userDataLoader.subscribe((loaded) => {
-      if (loaded) this.bindDevice();
-    });
-  }
-
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
-  }
-
-  selectType(type: LogFilter['id']): void {
-    this.selectedType = type;
-  }
-
-  typeLabel(type: LogType): string {
-    return {
-      system: '系统',
-      device: '设备',
-      user: '操作',
-      warning: '异常',
-    }[type];
-  }
-
-  refreshLogs(): void {
-    this.lastRefreshed = new Date();
-    if (!this.usingTestData) {
-      this.bindDevice();
-      return;
+  ionViewWillEnter(): void {
+    if (this.destroyed) return;
+    this.close(); this.visible.set(true); this.id = this.route.snapshot.paramMap.get('id') || '';
+    if (!this.data.authRestoreCompleted.value) {
+      this.initialAuthWait = { authority: API.BASE_URL, sessionEpoch: this.data.sessionEpoch, accountId: this.data.auth?.uuid };
+      this.show('restoring'); return;
     }
-
-    this.logs = [
-      {
-        id: `test-refresh-${Date.now()}`,
-        date: this.lastRefreshed,
-        type: 'system',
-        title: '日志刷新完成',
-        detail: '这是一条用于验证实时列表样式的测试记录',
-      },
-      ...this.logs,
-    ];
+    this.enterAccount();
   }
+  private enterAccount(): void {
+    if (!this.data.auth?.uuid) { this.show('signed-out'); return; }
+    try {
+      this.account = captureDeviceV2AccountContext(this.data, API.BASE_URL);
+      if (this.reconcile() && this.foreground()) void this.refresh();
+    } catch { this.show('signed-out'); }
+  }
+  ionViewWillLeave(): void { this.close(); }
+  ngOnDestroy(): void { this.destroyed = true; this.close(); this.subscriptions.unsubscribe(); }
 
-  private bindDevice(): void {
-    this.device = this.dataService.device?.dict?.[this.id];
-    this.loaded = Boolean(this.device);
-    if (!this.device) return;
+  openHistory(target: 'storage' | 'trends'): void {
+    this.reconcile();
+    if (this.canNavigate) void this.navigation.navigateForward(`/device-manager/${encodeURIComponent(this.id)}/${target}`);
+  }
+  async refresh(): Promise<void> {
+    if (!this.reconcile() || !this.canQuery || this.state().busy) return;
+    this.cancelAndClear();
+    const to = Date.now(), from = Math.max(0, to - ACTIVITY_MAX_AGE_MS);
+    this.state.update(s => ({ ...s, from, to }));
+    await this.read(false);
+  }
+  async loadMore(): Promise<void> { if (this.reconcile() && this.canLoadMore) await this.read(true); }
 
-    const rawLogs = this.findRawLogs();
-    if (rawLogs.length) {
-      this.logs = rawLogs.map((log, index) => this.normalizeLog(log, index));
-      this.usingTestData = false;
-    } else if (!this.logs.length || !this.usingTestData) {
-      this.logs = createTestLogs();
-      this.usingTestData = true;
+  private async read(append: boolean): Promise<void> {
+    const generation = ++this.generation, controller = this.controller = new AbortController(), id = this.id;
+    const baseline = this.state();
+    const query: ActivityQuery = { from: baseline.from, to: baseline.to, limit: ACTIVITY_PAGE_LIMIT,
+      ...(append ? { before: baseline.nextCursor! } : {}) };
+    this.state.update(s => ({ ...s, busy: true, error: '' }));
+    try {
+      const page = await this.activity.read(id, query, controller.signal);
+      if (!this.current(id, generation, controller)) return;
+      const rows = append ? [...baseline.rows, ...page.items] : page.items;
+      const previous = baseline.rows.at(-1), first = page.items[0];
+      if (rows.length > this.viewLimit || new Set(rows.map(row => row.id)).size !== rows.length
+        || (append && first && previous && !(first.createdAt < previous.createdAt
+          || first.createdAt === previous.createdAt && BigInt(first.id) < BigInt(previous.id)))) {
+        throw Error('DEVICE_V2_ACTIVITY_RESPONSE_INVALID');
+      }
+      this.state.update(s => ({ ...s, rows, nextCursor: page.nextCursor, ready: true }));
+    } catch (error) {
+      if (!this.current(id, generation, controller)) return;
+      if (error instanceof GatewayHttpError && error.httpStatus === 403) { this.show('forbidden'); return; }
+      this.state.update(s => ({ ...s, rows: [], nextCursor: null, ready: false, error: this.errorText(error) }));
+    } finally {
+      if (this.current(id, generation, controller)) { this.controller = undefined; this.state.update(s => ({ ...s, busy: false })); }
     }
   }
-
-  private findRawLogs(): unknown[] {
-    const data = this.device?.data;
-    const candidates = [data?.runtimeLogs, data?.logs, data?.log];
-    return candidates.find((candidate) => Array.isArray(candidate)) || [];
+  private ownerAvailable(): boolean {
+    const device = this.data.getDevice(this.id);
+    const state = (device as { state?: unknown } | undefined)?.state;
+    return !!device && device.config.mode === 'bbp2' && device.config.isShared === false
+      && !device.config.isPreview && !device.config.disabled && (state === undefined || state === 'active');
   }
-
-  private normalizeLog(raw: unknown, index: number): RuntimeLog {
-    const entry = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-    const rawType = String(entry['type'] || 'device');
-    const type: LogType = ['system', 'device', 'user', 'warning'].includes(rawType)
-      ? (rawType as LogType)
-      : 'device';
-    const rawDate = entry['date'] || entry['timestamp'] || entry['time'];
-    const date = rawDate ? new Date(rawDate as string | number) : new Date();
-
-    return {
-      id: String(entry['id'] || `${date.getTime()}-${index}`),
-      date: Number.isNaN(date.getTime()) ? new Date() : date,
-      type,
-      title: String(entry['title'] || entry['event'] || '设备记录'),
-      detail: String(entry['detail'] || entry['data'] || entry['message'] || '—'),
-    };
+  private accountCurrent(): boolean {
+    if (!this.account || this.account.authority !== API.BASE_URL || !this.data.auth?.uuid) return false;
+    try { assertDeviceV2AccountContext(this.data, this.account); return true; } catch { return false; }
+  }
+  private reconcileAuth(): void {
+    const waiting = this.initialAuthWait;
+    if (!waiting) { this.reconcile(); return; }
+    const accountId = this.data.auth?.uuid;
+    if (waiting.authority !== API.BASE_URL
+      || (waiting.accountId && (waiting.accountId !== accountId || waiting.sessionEpoch !== this.data.sessionEpoch))
+      || (!accountId && waiting.sessionEpoch !== this.data.sessionEpoch)) {
+      this.show(accountId ? 'account-changed' : 'signed-out'); return;
+    }
+    // The first restored account notification precedes the completion signal.
+    // Later account/epoch changes retire this entry instead of adopting it.
+    if (!waiting.accountId && accountId) this.initialAuthWait = { ...waiting, accountId, sessionEpoch: this.data.sessionEpoch };
+  }
+  private finishInitialAuth(): void {
+    if (!this.initialAuthWait || !this.present || !this.data.authRestoreCompleted.value) return;
+    this.reconcileAuth();
+    if (!this.initialAuthWait) return;
+    if (this.id !== (this.route.snapshot.paramMap.get('id') || '')) { this.show('inactive'); return; }
+    this.initialAuthWait = undefined; // One initial read, never a failed-read retry.
+    this.enterAccount();
+  }
+  private reconcile(): boolean {
+    if (!this.visible() || this.destroyed || !this.account) return false;
+    if (!this.accountCurrent()) { this.show(this.data.auth?.uuid ? 'account-changed' : 'signed-out'); return false; }
+    const device = this.data.getDevice(this.id);
+    const state = (device as { state?: unknown } | undefined)?.state;
+    if (!device || device.config.disabled || (state !== undefined && state !== 'active')) {
+      this.show('unavailable'); return false;
+    }
+    if (device.config.isPreview) { this.show('preview'); return false; }
+    if (device.config.mode !== 'bbp2') { this.show('unsupported'); return false; }
+    if (device.config.isShared !== false) {
+      this.cancelAndClear(); this.deviceName.set('');
+      this.status.set(device.config.isShared === true ? 'shared' : 'owner-unconfirmed');
+      return false;
+    }
+    if (this.status() === 'shared' || this.status() === 'owner-unconfirmed') return false;
+    this.deviceName.set(this.foreground() ? deviceDisplayName(device) : ''); this.status.set('ready'); return true;
+  }
+  private current(id: string, generation: number, controller: AbortController): boolean {
+    if (id !== this.id || generation !== this.generation || controller !== this.controller || controller.signal.aborted) return false;
+    this.reconcile();
+    return id === this.id && generation === this.generation && controller === this.controller && this.canQuery;
+  }
+  private show(status: Exclude<PageStatus, 'ready'>): void {
+    if (status !== 'restoring') this.initialAuthWait = undefined;
+    this.cancelAndClear(); this.account = undefined; this.deviceName.set(''); this.status.set(status);
+  }
+  private cancelAndClear(preserveReadError = false): void {
+    // A visibility change is not consent to retry a failed read. Retain only
+    // the safe recovery prompt, never the records or their query context.
+    const error = preserveReadError ? this.state().error : '';
+    ++this.generation; this.controller?.abort(); this.controller = undefined;
+    this.state.set({ busy: false, ready: false, error, rows: [], from: 0, to: 0, nextCursor: null });
+  }
+  private close(): void { this.visible.set(false); this.id = ''; this.show('inactive'); }
+  private errorText(error: unknown): string {
+    if (error instanceof GatewayHttpError) {
+      if (error.httpStatus === 401) return '请重新登录后，再手动刷新活动记录。';
+      if ([404, 503].includes(error.httpStatus)) return '活动记录服务暂不可用，请稍后手动刷新。';
+      if (error.httpStatus === 400) return '查询范围或分页已失效，请手动刷新。';
+    }
+    return '未取得有效活动记录，请手动刷新；不会自动重试。';
   }
 }

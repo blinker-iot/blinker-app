@@ -25,4 +25,3 @@ export function placeWidget(widget: PageLayoutWidget, others: readonly PageLayou
 
   throw new Error('没有可放置部件的空位');
 }
-

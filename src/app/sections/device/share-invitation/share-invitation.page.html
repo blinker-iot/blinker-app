@@ -5,17 +5,17 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content [fullscreen]="true">
   <main class="invitation-page">
     @let view = invitation.state();
 
     @if (view.phase === 'login') {
-      <section class="status-panel">
+      <section class="status-panel surface-card">
         <h1>登录后接受邀请</h1>
         <ion-button expand="block" (click)="login()">登录并继续</ion-button>
       </section>
     } @else if (view.phase === 'loading') {
-      <div class="status-panel loading" role="status">
+      <div class="status-panel surface-card loading" role="status">
         <ion-spinner name="crescent" />
         <p>正在读取邀请…</p>
       </div>
@@ -23,7 +23,7 @@
       @if (view.preview; as preview) {
         @let access = preview.currentShare?.state === 'active' ? preview.currentShare! : preview;
 
-        <section class="invitation-card" aria-labelledby="device-title">
+        <section class="invitation-card surface-card" aria-labelledby="device-title">
           <div class="device-heading">
             <span class="device-mark" aria-hidden="true"><i class="fa-light fa-microchip"></i></span>
             <h1 id="device-title">{{ preview.deviceName }}</h1>
@@ -44,7 +44,7 @@
           </dl>
         </section>
 
-        <div class="invitation-actions">
+        <div class="invitation-actions" [attr.aria-busy]="view.phase !== 'preview'">
           @if (preview.state === 'accepted' && preview.currentShare?.state !== 'active') {
             <p class="status-message">分享已解除，请让所有者重新邀请</p>
           } @else {
@@ -61,23 +61,23 @@
         </div>
       }
     } @else if (view.phase === 'accepted') {
-      <section class="status-panel">
+      <section class="status-panel surface-card">
         @if (view.result?.share.state === 'active') {
           <h1>已接受分享</h1>
-          @if (view.result?.realtimeRefreshPending) { <p>设备权限同步中</p> }
-          @if (openError) { <p role="alert">{{ openError }}</p> }
+          @if (view.result?.realtimeRefreshPending) { <p class="sync-notice" role="status">设备权限同步中</p> }
+          @if (openError) { <p class="open-error" role="alert">{{ openError }}</p> }
           <ion-button expand="block" [disabled]="opening" (click)="openDevice()">{{ opening ? '正在进入…' : '进入设备' }}</ion-button>
         } @else { <p>分享已解除，请让所有者重新邀请</p> }
       </section>
     } @else if (view.phase === 'declined') {
-      <p class="status-message">{{ view.message }}</p>
+      <p class="status-message surface-card">{{ view.message }}</p>
     } @else if (view.phase === 'error') {
-      <section class="status-panel">
+      <section class="status-panel surface-card">
         <p role="alert">{{ view.message }}</p>
         <ion-button expand="block" (click)="invitation.refresh()">重试</ion-button>
       </section>
     } @else {
-      <p class="status-message">请从邀请链接打开</p>
+      <p class="status-message surface-card">请从邀请链接打开</p>
     }
   </main>
 </ion-content>

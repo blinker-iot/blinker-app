@@ -1,7 +1,7 @@
 <div class="lvl-track" role="slider" tabindex="0" [attr.aria-label]="title" [attr.aria-valuemin]="min"
   [attr.aria-valuemax]="max" [attr.aria-valuenow]="value" [attr.aria-orientation]="vertical ? 'vertical' : 'horizontal'"
   (pointerdown)="dragStart($event, false, vertical)" (pointermove)="dragMove($event)" (pointerup)="dragEnd($event)"
-  (pointercancel)="dragEnd($event)" (keydown)="key($event)">
+  (pointercancel)="dragCancel($event)" (keydown)="key($event)">
   <div class="lvl-fill" [style.--p]="percent"></div>
   @for (mark of marks; track mark) {
     <i class="lvl-mk" [style.--m]="mark"></i>

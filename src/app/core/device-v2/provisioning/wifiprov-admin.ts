@@ -9,6 +9,7 @@ import {
   BLINKER_CONFIG_ENDPOINT, BlinkerConfigInfo, BlinkerConfigOperation, Esp32ProvisioningTransport,
   decodeBlinkerConfigInfo, decodeBlinkerConfigStatus, encodeBlinkerConfigBootstrap, encodeBlinkerConfigInfoRequest,
 } from './esp32-wifiprov';
+import { allocationContext } from './wifiprov-allocation';
 
 interface CredentialStore extends Pick<BleControllerCredentialStore, 'save' | 'load'> {
   findWiFiProv(instance: Uint8Array, pendingOnly?: boolean): Promise<BleControllerCredential | undefined>;
@@ -28,6 +29,66 @@ export class WiFiProvAdmin {
     private readonly assertCurrent: () => void,
     private readonly crypto = new BleDirectCrypto(),
   ) {}
+
+  /** Existing-root admission plus fresh Key verification; never repairs a pending operation. */
+  async inspectExisting(context: DeviceKeyContext, info: BlinkerConfigInfo): Promise<WiFiProvIdentity> {
+    const identity = await this.inspectExistingFacts(context, info);
+    await this.reveal(identity);
+    this.assertCurrent();
+    return identity;
+  }
+
+  /** Explicit network-only reconfiguration: no Key access, Admin writes or checkpoint recovery.
+   * The transport separately enforces its physical provisioning/PoP contract;
+   * these Cloud/Admin metadata checks are not device-side root authentication.
+   */
+  async inspectExistingNetwork(context: DeviceKeyContext, info: BlinkerConfigInfo): Promise<WiFiProvIdentity> {
+    return this.inspectExistingFacts(context, info);
+  }
+
+  private async inspectExistingFacts(context: DeviceKeyContext, info: BlinkerConfigInfo): Promise<WiFiProvIdentity> {
+    this.assertCurrent();
+    const expected = allocationContext(context);
+    if (!(info?.deviceInstanceId instanceof Uint8Array) || info.deviceInstanceId.length !== 16
+      || !info.deviceInstanceId.some(Boolean) || info.supportsAccessBootstrap !== true
+      || info.hasDeviceKey !== true || info.hasAccessState !== true
+      || !Number.isSafeInteger(info.accessEpoch) || info.accessEpoch < 1 || info.accessEpoch > 0xffffffff) {
+      throw new Error('WIFIPROV_EXISTING_ROOT_REQUIRED');
+    }
+    const instance = info.deviceInstanceId.slice(), accessEpoch = info.accessEpoch;
+    let credential: BleControllerCredential | undefined;
+    try {
+      this.assertCurrent();
+      credential = await this.store.load(expected.logicalDeviceId);
+      this.assertCurrent();
+      const source = credential?.source ?? 'enrollment';
+      if (!credential || credential.state !== 'active' || credential.keyRotation !== undefined
+        || credential.permissions !== 0x0f || credential.credentialVersion !== 1
+        || credential.logicalDeviceId !== expected.logicalDeviceId
+        || !(credential.deviceInstanceId instanceof Uint8Array) || !sameBytes(credential.deviceInstanceId, instance)
+        || credential.accessEpoch !== accessEpoch
+        || !(credential.controllerId instanceof Uint8Array) || credential.controllerId.length !== 16 || !credential.controllerId.some(Boolean)
+        || !(credential.controllerSecret instanceof Uint8Array) || credential.controllerSecret.length !== 32 || !credential.controllerSecret.some(Boolean)
+        || (source !== 'wifiprov' && source !== 'enrollment') || (source === 'wifiprov' && !credential.cloudContext)) {
+        throw new Error('WIFIPROV_EXISTING_ADMIN_REQUIRED');
+      }
+      if (credential.cloudContext !== undefined && (credential.cloudContext?.credentialVersion !== expected.credentialVersion
+        || credential.cloudContext?.locator !== expected.locator)) throw new Error('WIFIPROV_KEY_CONTEXT_CHANGED');
+      const controllerId = base64UrlEncode(credential.controllerId);
+      const record = await this.step(() => this.management.getDirectAdminV2(expected.logicalDeviceId));
+      this.assertCurrent();
+      if (!record || record.logicalDeviceId !== expected.logicalDeviceId || record.controllerId !== controllerId
+        || record.accessEpoch !== accessEpoch || record.credentialVersion !== 1) throw new Error('WIFIPROV_ADMIN_EPOCH_CONFLICT');
+      return { ...expected, accessEpoch };
+    } finally {
+      // load's late account failure and malformed test/external values must
+      // still clear any buffers we acquired without masking the original error.
+      if (credential?.controllerSecret instanceof Uint8Array) credential.controllerSecret.fill(0);
+      if (Array.isArray(credential?.presenceKeys)) {
+        for (const presence of credential.presenceKeys) if (presence?.key instanceof Uint8Array) presence.key.fill(0);
+      }
+    }
+  }
 
   async resume(info: BlinkerConfigInfo, expectedId?: string): Promise<WiFiProvIdentity | undefined> {
     let credential = await this.step(() => expectedId
@@ -88,7 +149,8 @@ export class WiFiProvAdmin {
     } finally { if (credential) clearBleControllerCredentialSecrets(credential); }
   }
 
-  async install(context: DeviceKeyContext & { deviceKey: string }, info: BlinkerConfigInfo): Promise<void> {
+  async install(context: DeviceKeyContext & { deviceKey: string }, info: BlinkerConfigInfo,
+    beforeBootstrap?: () => Promise<void>): Promise<void> {
     let credential = await this.step(() => this.store.load(context.logicalDeviceId), this.clearCredential);
     try {
       if (credential) {
@@ -100,7 +162,7 @@ export class WiFiProvAdmin {
         credential = this.candidate(context, info, 1);
         await this.step(() => this.store.save(credential!));
       }
-      await this.finish(credential, context.deviceKey, info);
+      await this.finish(credential, context.deviceKey, info, beforeBootstrap);
     } finally { if (credential) clearBleControllerCredentialSecrets(credential); }
   }
 
@@ -132,7 +194,8 @@ export class WiFiProvAdmin {
     }
   }
 
-  private async finish(credential: BleControllerCredential, key: string, info: BlinkerConfigInfo): Promise<void> {
+  private async finish(credential: BleControllerCredential, key: string, info: BlinkerConfigInfo,
+    beforeBootstrap?: () => Promise<void>): Promise<void> {
     this.match(credential, info);
     await this.registerExisting(credential);
     if (credential.keyRotation) {
@@ -144,6 +207,7 @@ export class WiFiProvAdmin {
     }
     const payload = encodeBlinkerConfigBootstrap(key, credential);
     try {
+      if (beforeBootstrap) await this.step(beforeBootstrap);
       // Never fall back to Key-only Install on an ambiguous Bootstrap response.
       decodeBlinkerConfigStatus(await this.step(() => this.transport.request(BLINKER_CONFIG_ENDPOINT, payload)),
         BlinkerConfigOperation.Bootstrap);

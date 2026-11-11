@@ -1,6 +1,8 @@
 import { Capacitor } from '@capacitor/core';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { Subject } from 'rxjs';
+import { API } from '../../configs/api.config';
+import { loadDeviceCatalog, saveDeviceCatalog } from '../device-v2/device-catalog-cache';
 import { environment } from '../../../environments/environment';
 import {
   AUTH_INVALIDATED_STORAGE_KEY,
@@ -33,6 +35,209 @@ describe('DataService', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  const scope = () => ({ authority: API.BASE_URL, accountId: 'user-a' });
+  const auth = { accessToken: 'a', refreshToken: 'r', tokenType: 'bearer', uuid: 'user-a' };
+  const item = { device: { logicalDeviceId: 'ble_one', name: 'Sensor', deviceType: 'ble', cloudEnabled: true },
+    state: 'active', shared: true, access: { shareId: 'share-1', role: 'viewer' as const } };
+
+  it('restores directory only after native auth; no fake user, online state, values or credential', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    vi.mocked(SecureStorage.get).mockResolvedValue(auth);
+    saveDeviceCatalog(scope(), [item]);
+    await service.init();
+    expect(service.getDevice('ble_one')).toMatchObject({ deviceType: 'ble', cloudEnabled: true,
+      config: { mode: 'bbp2', isShared: true }, data: { enable: false, cloudReachable: null, canCommand: false } });
+    expect(service.deviceDataLoader.value).toBe(true);
+    expect(service.initCompleted.value).toBe(true);
+    expect(service.userDataLoader.value).toBe(false);
+    expect(service.ownedDeviceCount).toBeNull();
+    expect(service.user.id).toBeUndefined();
+    expect(service.getDevice('ble_one')?.data.power).toBeUndefined();
+    expect(SecureStorage.get).toHaveBeenCalledExactlyOnceWith('session');
+  });
+
+  it('announces initial account restoration only after the native read settles and only once', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    let restore!: (saved: typeof auth) => void;
+    vi.mocked(SecureStorage.get).mockReturnValueOnce(new Promise(resolve => { restore = resolve; }));
+    const completed: boolean[] = [];
+    const subscription = service.authRestoreCompleted.subscribe(value => completed.push(value));
+    const loading = service.init();
+    await vi.waitFor(() => expect(restore).toBeDefined());
+    expect(completed).toEqual([false]); expect(service.auth).toBeNull();
+    restore(auth); await loading;
+    expect(service.auth?.uuid).toBe('user-a'); expect(completed).toEqual([false, true]);
+    vi.mocked(SecureStorage.get).mockResolvedValue(auth); await service.init();
+    expect(completed).toEqual([false, true]); subscription.unsubscribe();
+  });
+
+  it.each(['empty', 'read-failure'] as const)('finishes initial account restoration for %s without pretending the account or catalog is ready', async kind => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    if (kind === 'read-failure') vi.mocked(SecureStorage.get).mockRejectedValueOnce(Error('temporary read failure'));
+    await service.init();
+    expect(service.authRestoreCompleted.value).toBe(true); expect(service.auth).toBeNull();
+    expect(service.authDataLoader.value).toBe(false); expect(service.initCompleted.value).toBe(false);
+    expect(SecureStorage.get).toHaveBeenCalledOnce(); expect(SecureStorage.set).not.toHaveBeenCalled();
+  });
+
+  it('allows an explicit auth reload after transient native storage configuration failure, without an automatic retry', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    vi.mocked(SecureStorage.setKeyPrefix).mockRejectedValueOnce(Error('temporary configuration failure'));
+    vi.mocked(SecureStorage.get).mockResolvedValue(auth);
+
+    await service.loadAuthData();
+    await Promise.resolve();
+    expect(service.auth).toBeNull();
+    expect(SecureStorage.setKeyPrefix).toHaveBeenCalledOnce();
+    expect(SecureStorage.get).not.toHaveBeenCalled();
+    expect(SecureStorage.set).not.toHaveBeenCalled();
+    expect(SecureStorage.remove).not.toHaveBeenCalled();
+
+    await service.loadAuthData();
+    expect(SecureStorage.setKeyPrefix).toHaveBeenCalledTimes(2);
+    expect(SecureStorage.get).toHaveBeenCalledExactlyOnceWith('session');
+    expect(service.auth?.uuid).toBe('user-a');
+    expect(SecureStorage.set).not.toHaveBeenCalled();
+    expect(SecureStorage.remove).not.toHaveBeenCalled();
+  });
+
+  it('shares pending native configuration and keeps the successful configuration cached', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    let configure!: () => void;
+    vi.mocked(SecureStorage.setKeyPrefix).mockReturnValueOnce(new Promise<void>(resolve => { configure = resolve; }));
+    vi.mocked(SecureStorage.get).mockResolvedValue(auth);
+
+    const first = service.loadAuthData(), second = service.loadAuthData();
+    expect(SecureStorage.setKeyPrefix).toHaveBeenCalledOnce();
+    expect(SecureStorage.get).not.toHaveBeenCalled();
+    configure();
+    await Promise.all([first, second]);
+    expect(service.auth?.uuid).toBe('user-a');
+    await service.loadAuthData();
+    expect(SecureStorage.setKeyPrefix).toHaveBeenCalledExactlyOnceWith('blinker_');
+    expect(SecureStorage.set).not.toHaveBeenCalled();
+  });
+
+  it('does not discard successful configuration when only the native auth read fails', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    vi.mocked(SecureStorage.get).mockRejectedValueOnce(Error('temporary read failure')).mockResolvedValue(auth);
+
+    await service.loadAuthData();
+    expect(service.auth).toBeNull();
+    expect(SecureStorage.get).toHaveBeenCalledOnce();
+    await service.loadAuthData();
+    expect(service.auth?.uuid).toBe('user-a');
+    expect(SecureStorage.setKeyPrefix).toHaveBeenCalledOnce();
+    expect(SecureStorage.get).toHaveBeenCalledTimes(2);
+    expect(SecureStorage.remove).not.toHaveBeenCalled();
+  });
+
+  it('keeps logout authoritative when the old pending native configuration fails', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    let fail!: (reason: Error) => void;
+    vi.mocked(SecureStorage.setKeyPrefix).mockReturnValueOnce(new Promise<void>((_resolve, reject) => { fail = reject; }));
+    vi.mocked(SecureStorage.get).mockResolvedValue(auth);
+
+    const loading = service.loadAuthData(), logout = service.removeAuthData();
+    fail(Error('late configuration failure'));
+    await Promise.all([loading, logout]);
+    expect(service.auth).toBeNull();
+    expect(localStorage.getItem(AUTH_INVALIDATED_STORAGE_KEY)).toBe('1');
+    expect(SecureStorage.get).not.toHaveBeenCalled();
+
+    await service.loadAuthData();
+    expect(service.auth).toBeNull();
+    expect(SecureStorage.get).not.toHaveBeenCalled();
+    expect(SecureStorage.remove).toHaveBeenCalledExactlyOnceWith('session');
+  });
+
+  it('clears old account view synchronously and does not restore another account catalog', async () => {
+    saveDeviceCatalog(scope(), [item]);
+    await service.setAuthData(auth);
+    expect(service.device.list).toEqual(['ble_one']);
+    const changed = service.setAuthData({ ...auth, uuid: 'user-b', accessToken: 'b' });
+    expect(service.device.list).toEqual([]);
+    await changed;
+    expect(service.device.list).toEqual([]);
+  });
+
+  it.each(['logout', 'login'])('a late SecureStorage read cannot undo %s', async action => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    let resolve!: (value: any) => void;
+    vi.mocked(SecureStorage.get).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+    const loading = service.loadAuthData();
+    await vi.waitFor(() => expect(resolve).toBeDefined());
+    saveDeviceCatalog(scope(), [item]);
+    if (action === 'logout') await service.removeAuthData();
+    else await service.setAuthData({ ...auth, uuid: 'user-b', accessToken: 'b' });
+    resolve(auth); await loading;
+    expect(service.auth?.uuid).toBe(action === 'logout' ? undefined : 'user-b');
+    expect(service.device.list).toEqual([]);
+  });
+
+  it('logout removes the current catalog and full server replacement removes revoked shared entries', async () => {
+    await service.setAuthData(auth);
+    saveDeviceCatalog(scope(), [item]);
+    service.loadGatewayData({ id: 'user-a' } as any, [], [{ ...item.device,
+      share: { state: 'revoked', shareId: 'share-1', role: 'viewer' } } as any]);
+    expect(loadDeviceCatalog(scope())).toEqual([]);
+    expect(service.device.list).toEqual([]);
+    expect(service.share.received).toEqual([]);
+    await service.removeAuthData();
+    expect(loadDeviceCatalog(scope())).toBeUndefined();
+  });
+
+  it('partial online directories cannot be persisted as a complete shared inventory', async () => {
+    await service.setAuthData(auth);
+    saveDeviceCatalog(scope(), [item]);
+    service.loadGatewayData({ id: 'user-a' } as any, [], [], false);
+    expect(loadDeviceCatalog(scope())).toBeUndefined();
+  });
+
+  it('counts only the complete owned response, independent of shared catalog and optional sharing errors', async () => {
+    await service.setAuthData(auth);
+    const owned = (id: string, state: string) => ({ ...item.device, logicalDeviceId: id, state });
+    service.loadGatewayData({ id: 'user-a' } as any, [
+      owned('own-a', 'active'), owned('own-a', 'active'), owned('own-b', 'disabled'), owned('deleted', 'deleted'),
+    ] as any, [{ ...item.device, share: { state: 'active', shareId: 'share-1', role: 'viewer' } } as any], false);
+    expect(service.ownedDeviceCount).toBe(2);
+    await service.setAuthData({ ...auth, uuid: 'user-b' });
+    expect(service.ownedDeviceCount).toBeNull();
+    service.loadGatewayData({ id: 'user-b' } as any, []);
+    expect(service.ownedDeviceCount).toBe(0);
+  });
+
+  it('uses server display names, retains newer CAS receipts across stale inventory and offline restart', async () => {
+    await service.setAuthData(auth);
+    const metadata = { logicalDeviceId: 'device_a', revision: 1, name: 'Server name',
+      capabilities: [{ key: 'power', kind: 0, type: 0, displayName: '电源' }] };
+    const device = { ...item.device, logicalDeviceId: 'device_a', name: metadata.name, displayMetadata: metadata, state: 'active' };
+    service.loadGatewayData({ id: 'user-a' } as any, [device as any]);
+    const current = service.getDevice('device_a');
+    const sharedConfig = current.config;
+    const panel = { html: '<main>Control</main>' };
+    Object.assign(sharedConfig, { panelMode: 'custom', customPanel: panel });
+    current.config.customName = 'Stale local name';
+    service.loadGatewayData({ id: 'user-a' } as any, [device as any]);
+    expect(service.getDevice('device_a').config).toBe(sharedConfig);
+    expect(service.getDevice('device_a').config.panelMode).toBe('custom');
+    expect(service.getDevice('device_a').config.customPanel).toBe(panel);
+    expect(service.getDevice('device_a').config.customName).toBe('Server name');
+    const saved = { ...metadata, revision: 2, name: '客厅灯',
+      capabilities: [{ key: 'power', kind: 0, type: 0, displayName: '电源开关' }] };
+    service.updateDeviceV2DisplayMetadata(saved);
+    service.loadGatewayData({ id: 'user-a' } as any, [device as any]);
+    expect(service.getDevice('device_a').config).toBe(sharedConfig);
+    expect(service.getDevice('device_a').displayMetadata).toEqual(saved);
+    expect(service.getDevice('device_a').config.customName).toBe('客厅灯');
+    expect(loadDeviceCatalog(scope())?.[0].device.displayMetadata).toEqual(saved);
+    const restarted = new DataService(); await restarted.setAuthData(auth);
+    expect(restarted.getDevice('device_a').displayMetadata).toEqual(saved);
+    expect(restarted.getDevice('device_a').config.customName).toBe('客厅灯');
+    await service.setAuthData({ ...auth, uuid: 'user-b' });
+    expect(service.getDevice('device_a')).toBeUndefined();
   });
 
   it('persists the native token pair in secure storage', async () => {
@@ -278,7 +483,7 @@ describe('DataService', () => {
     expect(device.id).toBe(deviceId);
     expect(device.deviceName).toBe(deviceId);
     expect(device.config).toMatchObject({
-      customName: 'Previous name',
+      customName: 'Temperature sensor',
       image: 'diyarduino.png',
       broker: 'blinker',
       mode: 'bbp2',

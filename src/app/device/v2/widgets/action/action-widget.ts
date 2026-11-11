@@ -1,4 +1,4 @@
-import { Component, OnDestroy, signal } from '@angular/core';
+import { Component, OnChanges, OnDestroy, signal } from '@angular/core';
 
 import { UiIconComponent } from '../icon/ui-icon';
 import { ValueTransitionDirective } from '../value-transition.directive';
@@ -10,6 +10,14 @@ const RUN_MS = 650;
 const DONE_MS = 1600;
 
 type Status = 'idle' | 'run' | 'done';
+
+interface PendingHold {
+  widgetId: string;
+  endpointKey: string;
+  fieldId: number;
+  fieldKey: string;
+  timer?: ReturnType<typeof setTimeout>;
+}
 
 // 场景按钮: an action endpoint as a round key, or as an action card (a card
 // two rows tall, a bar one row tall) that is pressed as a whole.
@@ -25,12 +33,13 @@ type Status = 'idle' | 'run' | 'done';
     '[class.done]': 'status() === "done"',
   },
 })
-export class ActionWidgetComponent extends WidgetBase implements OnDestroy {
+export class ActionWidgetComponent extends WidgetBase implements OnChanges, OnDestroy {
   readonly status = signal<Status>('idle');
   readonly holding = signal(false);
   readonly count = signal(0);
   readonly lastAt = signal<string>('');
   private timers: ReturnType<typeof setTimeout>[] = [];
+  private hold?: PendingHold;
 
   get shape(): string { return this.options.shape ?? 'circle'; }
   get icon(): string { return this.options.icon ?? 'play'; }
@@ -46,19 +55,41 @@ export class ActionWidgetComponent extends WidgetBase implements OnDestroy {
   // Taller round keys have room for the caption; a one-row card shows it in its copy.
   get showCaption(): boolean { return this.shape === 'card' || this.rows > 1; }
 
+  ngOnChanges(): void {
+    if (this.hold && !this.currentHold(this.hold)) this.holdEnd();
+  }
+
   tap(): void {
     if (!this.options.hold) this.run();
   }
 
   holdStart(event: Event): void {
-    if (!this.options.hold || this.card.disabled || this.status() === 'run') return;
+    if (!this.options.hold || this.card.disabled || this.status() === 'run' || this.hold) return;
     event.preventDefault();
+    const hold: PendingHold = {
+      widgetId: this.card.widget.widgetId, endpointKey: this.card.widget.endpointKey,
+      fieldId: this.card.field.id, fieldKey: this.card.field.key,
+    };
+    this.hold = hold;
     this.holding.set(true);
-    this.later(() => { if (this.holding()) { this.holding.set(false); this.run(); } }, HOLD_MS);
+    hold.timer = setTimeout(() => {
+      if (this.hold !== hold) return;
+      const current = this.currentHold(hold);
+      this.holdEnd();
+      if (current) this.run();
+    }, HOLD_MS);
   }
 
   holdEnd(): void {
+    clearTimeout(this.hold?.timer);
+    this.hold = undefined;
     this.holding.set(false);
+  }
+
+  private currentHold(hold: PendingHold): boolean {
+    return !this.card.disabled && !!this.options.hold
+      && hold.widgetId === this.card.widget.widgetId && hold.endpointKey === this.card.widget.endpointKey
+      && hold.fieldId === this.card.field.id && hold.fieldKey === this.card.field.key;
   }
 
   private run(): void {
@@ -78,6 +109,7 @@ export class ActionWidgetComponent extends WidgetBase implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.holdEnd();
     this.timers.forEach(clearTimeout);
   }
 }

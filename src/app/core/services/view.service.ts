@@ -125,7 +125,9 @@ export class ViewService {
   }
 
   listenBackButton() {
-    this.platform.backButton.subscribeWithPriority(9999, async () => {
+    // Ionic overlays (100) and menus (99) must close before page navigation.
+    // Keep our existing navigation policy just above Ionic's default pop (0).
+    this.platform.backButton.subscribeWithPriority(1, async () => {
       if (typeof await this.modalCtrl.getTop() != "undefined") {
         console.log("close modal");
         this.modalCtrl.dismiss();
@@ -251,7 +253,7 @@ export class ViewService {
     if (url?.startsWith('diandeng://share/') && parseShareInvitation(url)) {
       this.ngzone.run(() => {
         this.shareInvitation.stage(url);
-        void this.router.navigate(['/share-invitation', this.shareInvitation.code], { replaceUrl: true });
+        void this.router.navigate(['/share-invitation'], { replaceUrl: true });
       });
 
       return;

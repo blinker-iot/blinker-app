@@ -17,7 +17,7 @@ import {
   NavController,
 } from '@ionic/angular/standalone';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Subscription } from 'rxjs';
+import { skip, Subscription } from 'rxjs';
 import { BDeviceImgComponent } from 'src/app/core/components/b-device-img/b-device-img.component';
 import { ShareDate } from 'src/app/core/model/data.model';
 import { DeviceV2PendingInvitation } from 'src/app/core/model/response.model';
@@ -111,7 +111,9 @@ export class ShareManagerPage implements OnInit, OnDestroy {
       this.cd.markForCheck();
     });
 
-    this.deviceSubscription = this.dataService.deviceDataLoader.subscribe((loaded) => {
+    // The current value is a snapshot; the view entry owns the initial read.
+    // Later catalog-load notifications still refresh the existing page.
+    this.deviceSubscription = this.dataService.deviceDataLoader.pipe(skip(1)).subscribe((loaded) => {
       if (loaded) void this.loadShares();
     });
   }

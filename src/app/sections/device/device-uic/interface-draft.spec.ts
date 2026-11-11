@@ -8,6 +8,66 @@ import { DeviceUiSnapshot } from '../../../core/device-v2/device-ui.port';
 const device = { config: { mode: 'mqtt', showSwitch: true }, data: { switch: 'on', temperature: 23, token: 'secret', enable: true }, } as BlinkerDevice;
 
 describe('interface capability and proposal boundaries', () => {
+  const unitSnapshot = (field: Partial<DeviceUiSnapshot['endpoints'][number]> = {}): DeviceUiSnapshot => ({
+    manifestAccepted: true, manifestFingerprint: 'a'.repeat(64), manifestRevision: 1, stateRevision: 1, stateFresh: true,
+    endpoints: [{ id: 1, key: 'power', role: 'property', valueType: 'boolean', readable: true, writable: false, notifies: true, ...field }],
+  });
+  const v2Device = { ...device, config: { ...device.config, mode: 'bbp2' } };
+
+  it('infers units from declared numeric capability types, never a current value or a boolean key', () => {
+    for (const field of [
+      { valueType: 'boolean' as const, value: true },
+      { valueType: 'boolean' as const, value: undefined },
+      { valueType: 'text' as const, value: '123' },
+      { key: 'humidity', valueType: 'boolean' as const, value: false },
+    ]) {
+      expect(capabilityTiles(v2Device, unitSnapshot(field))[0].unit).toBe('');
+    }
+    for (const valueType of ['integer', 'number'] as const) {
+      expect(capabilityTiles(v2Device, unitSnapshot({ valueType, value: undefined }))[0].unit).toBe('W');
+    }
+  });
+
+  it('preserves explicit capability units including an intentionally empty numeric unit', () => {
+    for (const [valueType, unit] of [['boolean', 'custom'], ['text', 'label'], ['integer', 'kW'], ['number', '']] as const) {
+      expect(capabilityTiles(v2Device, unitSnapshot({ valueType, unit }))[0].unit).toBe(unit);
+    }
+  });
+
+  it('keeps existing numeric unit defaults and never reads a prototype key as a unit', () => {
+    const defaults = { temperature: '°C', humidity: '%', brightness: '%', soilMoisture: '%', co2: 'ppm', power: 'W', voltage: 'V' };
+    for (const valueType of ['integer', 'number'] as const) {
+      for (const [key, unit] of Object.entries(defaults)) {
+        expect(capabilityTiles(v2Device, unitSnapshot({ key, valueType }))[0].unit).toBe(unit);
+      }
+      for (const key of ['customNumeric', 'constructor', '__proto__', 'toString']) {
+        expect(capabilityTiles(v2Device, unitSnapshot({ key, valueType }))[0].unit).toBe('');
+      }
+    }
+  });
+
+  it('keeps inferred units local without mutating the snapshot or adding units to saved layouts', () => {
+    const snapshot = unitSnapshot({ valueType: 'number' });
+    const before = structuredClone(snapshot);
+    const tiles = capabilityTiles(v2Device, snapshot);
+    expect(tiles[0].unit).toBe('W');
+    const layout = toPageLayout(tiles, snapshot, 1);
+    expect(snapshot).toEqual(before);
+    expect(snapshot.endpoints[0].unit).toBeUndefined();
+    expect(JSON.stringify(layout)).not.toContain('"unit":');
+  });
+
+  it('uses typed power names and compatible aliases for V2 capability previews', () => {
+    const field = { id: 1, key: 'power', manifestKind: 0, manifestType: 0, role: 'property' as const,
+      valueType: 'boolean' as const, readable: true, writable: true, notifies: true };
+    const snapshot: DeviceUiSnapshot = { manifestAccepted: true, manifestFingerprint: 'a'.repeat(64),
+      manifestRevision: 1, stateRevision: 1, stateFresh: true, endpoints: [field] };
+    const v2 = { ...device, config: { ...device.config, mode: 'bbp2' } };
+    expect(capabilityTiles(v2, snapshot)[0].title).toBe('电源开关');
+    expect(capabilityTiles({ ...v2, displayMetadata: { logicalDeviceId: 'device_a', revision: 1, name: '灯',
+      capabilities: [{ key: 'power', kind: 0, type: 0, displayName: '主灯' }] } }, snapshot)[0].title).toBe('主灯');
+    expect(capabilityTiles(v2, { ...snapshot, endpoints: [{ ...field, manifestType: 2, valueType: 'integer' }] })[0].title).toBe('功率');
+  });
   it('does not infer write access from legacy telemetry', () => {
     const tiles = capabilityTiles(device);
 

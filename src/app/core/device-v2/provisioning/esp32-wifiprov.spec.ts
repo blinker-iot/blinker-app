@@ -92,6 +92,23 @@ describe('ESP32 blinker-config/2', () => {
     expect(transport.requests[1].payload.length).toBe(101);
   });
 
+  it('reuses a verified GetInfo result without a second BLE round trip', async () => {
+    const verified = decodeBlinkerConfigInfo(info(0x02));
+    const transport = new FakeTransport([
+      Uint8Array.of(2, BlinkerConfigOperation.Bootstrap, 0),
+    ]);
+
+    await configureBlinkerAccess(transport, DEVICE_KEY, {
+      accessEpoch: 1,
+      controllerId: Uint8Array.from({ length: 16 }, (_, index) => index + 1),
+      credentialVersion: 1,
+      controllerSecret: Uint8Array.from({ length: 32 }, (_, index) => index + 1),
+    }, verified);
+
+    expect(transport.requests).toHaveLength(1);
+    expect(transport.requests[0].payload[1]).toBe(BlinkerConfigOperation.Bootstrap);
+  });
+
   it('chooses Install when access state already exists', async () => {
     const transport = new FakeTransport([
       info(0x07, 1),

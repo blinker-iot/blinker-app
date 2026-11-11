@@ -69,22 +69,35 @@ export class DeviceV2SharingService {
     role: DeviceV2ShareRole,
     idempotencyKey: string,
     commandEndpointKeys?: readonly string[],
-    canEditConsole = false,
+    recipientAccount?: string,
+    canEditConsole?: boolean,
   ): Promise<DeviceV2ShareInvitation> {
     const id = this.deviceId(logicalDeviceId);
-    const access = { ...this.access(role, commandEndpointKeys), canEditConsole };
+    const access = { ...this.access(role, commandEndpointKeys),
+      ...(canEditConsole === undefined ? {} : { canEditConsole }) };
+    const email = recipientAccount === undefined ? undefined : this.recipientEmail(recipientAccount);
 
     const response = await firstValueFrom(this.http.post<InvitationResponse>(
       API.DEVICE_V2.SHARE_INVITATIONS(id),
-      access,
+      email === undefined ? access : { ...access, recipientAccount: email },
       { headers: { 'Idempotency-Key': this.text(idempotencyKey, 128) } },
     ));
 
-    const invitation = this.invitation(this.body(response).data, true);
+    const invitation = this.invitation(this.body(response).data, email === undefined);
 
-    if (!invitation.invitationCode || invitation.targeted === true) throw new Error('共享邀请响应无效');
+    if (email === undefined ? (!invitation.invitationCode || invitation.targeted === true)
+      : (invitation.targeted !== true || invitation.invitationCode !== undefined)) throw new Error('共享邀请响应无效');
 
     return invitation;
+  }
+
+  recipientEmail(input: string): string {
+    const email = typeof input === 'string' ? input.trim().toLowerCase() : '';
+    if (new TextEncoder().encode(email).length > 254
+      || !/^[^\s@\u0000-\u001f\u007f]+@[^\s@\u0000-\u001f\u007f]+\.[^\s@\u0000-\u001f\u007f]+$/.test(email)) {
+      throw new Error('请输入对方注册使用的邮箱');
+    }
+    return email;
   }
 
   async getInvitation(logicalDeviceId: string, invitationId: string): Promise<DeviceV2ShareInvitation> {

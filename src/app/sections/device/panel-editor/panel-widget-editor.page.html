@@ -1,11 +1,11 @@
-<ion-header class="ion-no-border">
+<ion-header class="ion-no-border control-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button text="" [defaultHref]="editorUrl" [disabled]="saving" />
     </ion-buttons>
     <ion-title>部件属性</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="save()" [disabled]="saving || !widget">
+      <ion-button (click)="save()" [disabled]="saving || !widget || invalid">
         @if (saving) { <ion-spinner name="crescent" /> } @else { 保存 }
       </ion-button>
     </ion-buttons>
@@ -15,9 +15,10 @@
   <div class="property-page content-under-header">
 
     @if (card; as preview) {
-      <section class="preview-region" aria-label="组件实时预览">
+      <section class="preview-region" aria-label="组件只读外观预览">
         <div class="panel">
-          <div class="cell" [class.wide]="preview.widget.grid.width >= 4"
+          <div class="cell" [class.full]="preview.widget.grid.width === 8" [class.wide]="preview.widget.grid.width >= 4"
+            style="--col: 1; --row: 1"
             [style.--span]="preview.widget.grid.width"
             [style.--rows]="preview.widget.grid.height">
             <app-page-widget [card]="preview" />
@@ -27,10 +28,12 @@
       <section class="property-scroll" aria-label="部件属性设置">
         <div class="property-settings" [attr.inert]="saving ? '' : null">
           @if (error) { <p class="error" role="alert">{{ error }}</p> }
+          <p class="save-scope">保存部件与当前页面布局。</p>
+          @if (invalid) { <p class="validation-hint" role="status">请先修正标出的属性，再保存。</p> }
 
           <app-widget-inspector [widget]="preview.widget" [field]="preview.field"
-            [extraCandidates]="context!.extraCandidates" [twoColumnLayout]="true"
-            (widgetChange)="updateWidget($event)" />
+            [extraCandidates]="context!.extraCandidates" [disabled]="saving" [draftVersion]="draftVersion"
+            (widgetChange)="updateWidget($event)" (invalidChange)="setInvalid($event)" />
           <button class="remove-button" type="button" (click)="remove()" [disabled]="saving">
             <i class="fa-light fa-trash" aria-hidden="true"></i>移除部件
           </button>

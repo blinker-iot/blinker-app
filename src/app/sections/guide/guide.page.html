@@ -14,17 +14,20 @@
         {{ sectionTitleKey | translate }}
       </h2>
 
-      <app-menu-list [items]="methodItems" [detailed]="true"
+      <app-menu-list appearance="settings" [items]="methodItems" [detailed]="true"
         (itemSelected)="selectMethod($event)"></app-menu-list>
 
-      <h2 class="section-label" style="margin-top: 20px;">
+      @if (migrationItems.length) {
+      <h2 class="section-label other-heading">
         {{ 'DEVICE_GUIDE.OTHER' | translate }}
       </h2>
       <app-menu-list
+        appearance="settings"
         [items]="migrationItems"
         [detailed]="true"
         (itemSelected)="selectMethod($event)"
       ></app-menu-list>
+      }
     </section>
 
   </main>

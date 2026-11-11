@@ -1,162 +1,167 @@
 <header class="head">
   <h2>{{ variantLabel(variant) }}</h2>
-  <p>{{ typeLabel }}组件 · 绑定字段 <b>{{ widget.endpointKey }}</b></p>
+  <p>{{ typeLabel }}组件 · 设置只影响此部件的显示与既有交互。</p>
+  @if (invalidCount) {
+    <div class="error-summary" role="status">
+      <span>还有 {{ invalidCount }} 项需要修正，当前输入已保留。</span>
+      <button type="button" (click)="focusFirstInvalid($event)">查看错误</button>
+    </div>
+  }
 </header>
 
-<section class="group">
-  <h3>外观</h3>
-  <div class="seg wrap" role="radiogroup" aria-label="组件外观">
-
-    @for (item of variants; track item) {
-      <button type="button" role="radio" [attr.aria-checked]="item === variant" (click)="setVariant(item)">
-        {{ variantLabel(item) }}</button>
-    }
-
-  </div>
-</section>
-
-<section class="group">
-  <h3>通用</h3>
-  <label class="field">
-    <span>标题</span>
-    <input class="input" maxlength="32" [value]="widget.title ?? ''" (change)="setTitle($any($event.target).value)" />
-
-  </label>
-  <div class="field top">
-    <span>图标</span>
-    <div class="icons" role="radiogroup" aria-label="图标">
-      <button type="button" role="radio" class="icon-none" [attr.aria-checked]="!options.icon"
-        (click)="setOption('icon', undefined)">无</button>
-
-      @for (name of icons; track name) {
-        <button type="button" role="radio" [attr.aria-checked]="options.icon === name" [attr.aria-label]="name"
-          (click)="setOption('icon', name)"><app-ui-icon [name]="name" /></button>
-      }
-
-    </div>
-  </div>
-  <div class="field">
-    <span>色调</span>
-    <div class="tones" role="radiogroup" aria-label="色调">
-      <button type="button" role="radio" class="tone-auto" [attr.aria-checked]="!options.tone" aria-label="主题默认"
-        (click)="setOption('tone', undefined)">自</button>
-
-      @for (tone of tones; track tone) {
-        <button type="button" role="radio" [attr.aria-checked]="options.tone === tone" [attr.aria-label]="valueLabel(tone)"
-          [style.--c]="'var(--ui-' + tone + ')'" (click)="setOption('tone', tone)"></button>
-      }
-
-    </div>
-  </div>
-  <div class="field">
-    <span>宽度</span>
-    <div class="seg" role="radiogroup" aria-label="宽度">
-
-      @for (width of widths; track width) {
-        <button type="button" role="radio" [attr.aria-checked]="widget.grid.width === width"
-          (click)="setSize(width, widget.grid.height)">{{ widthLabel(width) }}</button>
-      }
-
-    </div>
-  </div>
-  <div class="field">
-    <span>高度</span>
-    <div class="seg" role="radiogroup" aria-label="高度">
-      @for (height of heights; track height) {
-        <button type="button" role="radio" [attr.aria-checked]="widget.grid.height === height"
-          (click)="setSize(widget.grid.width, height)">{{ height }} 行</button>
-      }
-
-    </div>
-  </div>
-</section>
-<section class="group">
-  <h3>专属参数</h3>
-
-  @if (showExtras) {
-    <div class="field top">
-      <span>{{ variant === 'memory' ? '总内存字段' : '附属读数' }}</span>
+<fieldset class="inspector-fields" [disabled]="disabled">
+  <legend class="sr-only">部件属性</legend>
+  <section class="group common-group">
+    <h3>常用</h3>
+    <label class="field top" [class.invalid]="invalid.has('title')">
+      <span>标题</span>
       <span class="stack">
-        <span class="seg wrap">
-          @for (candidate of candidates; track candidate.key) {
-            <button type="button" [attr.aria-pressed]="extraKeys.includes(candidate.key)"
-              [disabled]="variant !== 'memory' && !extraKeys.includes(candidate.key) && extraKeys.length >= maxExtras"
-              (click)="toggleExtra(candidate.key)">{{ candidate.label }}</button>
-          }
-
-        </span>
-        <small>{{ variant === 'memory' ? '选择一个以字节计的总内存字段；主字段绑定可用内存。' : '最多 ' + maxExtras + ' 个，按选择顺序显示在附注行' }}</small>
+        <input class="input" data-title data-field="title" [id]="fieldId('title')" [value]="titleInput"
+          [attr.aria-invalid]="invalid.has('title')" [attr.aria-describedby]="fieldId('title') + '-hint' + (error('title') ? ' ' + fieldId('title') + '-error' : '')"
+          (input)="setTitle($any($event.target).value)" (compositionstart)="beginComposition('title')"
+          (compositionend)="endComposition('title', $any($event.target).value)" />
+        <small class="field-hint" [id]="fieldId('title') + '-hint'">{{ titleBytes }} / {{ titleMaxBytes }} UTF-8 字节 · 留空使用原名称</small>
+        @if (error('title')) { <small class="field-error" [id]="fieldId('title') + '-error'">{{ error('title') }}</small> }
       </span>
+    </label>
+    @for (key of commonOptions; track key) { <ng-container [ngTemplateOutlet]="optionField" [ngTemplateOutletContext]="{ key }" /> }
+    <div class="binding-summary">
+      <span>绑定字段 · 只读</span>
+      <strong>{{ widget.endpointKey }}</strong>
+      <small>{{ bindingRole }}@if (field) { · {{ field.valueType }} }</small>
     </div>
-  }
+  </section>
 
-  @for (key of specific; track key) {
-    <div class="field" [class.top]="rule(key).kind !== 'enum' && hints[key]" [class.invalid]="invalid.has(key)">
-      <span>{{ variant === 'memory' && key === 'max' ? '总内存（字节）' : variant === 'memory' && key === 'pulse' ? '波纹动画' : variant === 'timer' && key === 'actionText' ? '结束动作文案' : optionLabels[key] }}</span>
+  <details class="group disclosure appearance-group">
+    <summary>外观与尺寸</summary>
+    <div class="group-body">
+      <div class="field top">
+        <span>外观</span>
+        <div class="seg wrap" role="radiogroup" aria-label="组件外观">
+          @for (item of variants; track item) {
+            <button type="button" role="radio" [attr.aria-checked]="item === variant" (click)="setVariant(item)">{{ variantLabel(item) }}</button>
+          }
+        </div>
+      </div>
+      <div class="field top">
+        <span>图标</span>
+        <div class="icons" role="radiogroup" aria-label="图标">
+          <button type="button" role="radio" class="icon-none" [attr.aria-checked]="!options.icon" (click)="setOption('icon', undefined)">默认</button>
+          @for (name of icons; track name) {
+            <button type="button" role="radio" [attr.aria-checked]="options.icon === name" [attr.aria-label]="name"
+              (click)="setOption('icon', name)"><app-ui-icon [name]="name" aria-hidden="true" /></button>
+          }
+        </div>
+      </div>
+      <div class="field top">
+        <span>色调</span>
+        <div class="tones" role="radiogroup" aria-label="色调">
+          <button type="button" role="radio" class="tone-auto" [attr.aria-checked]="!options.tone" aria-label="主题默认" (click)="setOption('tone', undefined)"><span>自</span></button>
+          @for (tone of tones; track tone) {
+            <button type="button" role="radio" [attr.aria-checked]="options.tone === tone" [attr.aria-label]="valueLabel(tone)"
+              [style.--c]="'var(--ui-' + tone + ')'" (click)="setOption('tone', tone)"><span></span></button>
+          }
+        </div>
+      </div>
+      <div class="field">
+        <span>布局宽度</span>
+        <div class="seg wrap" role="radiogroup" aria-label="宽度">
+          @for (width of widths; track width) {
+            <button type="button" role="radio" [attr.aria-checked]="widget.grid.width === width" (click)="setSize(width, widget.grid.height)">{{ widthLabel(width) }}</button>
+          }
+        </div>
+      </div>
+      <div class="field">
+        <span>布局高度</span>
+        <div class="seg wrap" role="radiogroup" aria-label="高度">
+          @for (height of heights; track height) {
+            <button type="button" role="radio" [attr.aria-checked]="widget.grid.height === height" (click)="setSize(widget.grid.width, height)">{{ height }} 行</button>
+          }
+        </div>
+      </div>
+      <p class="note layout-hint">窄屏下，2 栏占半行，4／8 栏均占整行；宽屏按 8 栏排布。宽高使用相同网格单元，2 栏 2 行为正方形。打开本页不会改写已有布局；空间不足时内容可在卡内滚动。</p>
+    </div>
+  </details>
 
+  <section class="group current-group">
+    <h3>当前外观参数</h3>
+    <div class="group-body">
+      @if (showExtras) {
+        <div class="field top">
+          <span>{{ variant === 'memory' ? '总内存字段' : '附属读数' }}</span>
+          <span class="stack">
+            <span class="seg wrap">
+              @for (candidate of candidates; track candidate.key) {
+                <button type="button" [attr.aria-pressed]="extraKeys.includes(candidate.key)"
+                  [disabled]="variant !== 'memory' && !extraKeys.includes(candidate.key) && extraKeys.length >= maxExtras"
+                  (click)="toggleExtra(candidate.key)">{{ candidate.label }}</button>
+              }
+            </span>
+            <small>{{ variant === 'memory' ? '选择一个以字节计的总内存字段；主字段绑定可用内存。' : '最多 ' + maxExtras + ' 个，按选择顺序显示在附注行' }}</small>
+          </span>
+        </div>
+      }
+      @for (key of currentOptions; track key) { <ng-container [ngTemplateOutlet]="optionField" [ngTemplateOutletContext]="{ key }" /> }
+      @if (!currentOptions.length && !showExtras) { <p class="note">这个外观的低频设置在“高级”中。</p> }
+    </div>
+  </section>
+
+  <details class="group disclosure advanced-group">
+    <summary>高级</summary>
+    <div class="group-body">
+      @for (key of advancedOptions; track key) { <ng-container [ngTemplateOutlet]="optionField" [ngTemplateOutletContext]="{ key }" /> }
+      <p class="note">显示范围、倍率及告警只影响显示，不改变设备能力、步进或自动化规则。</p>
+      <details class="json-details">
+        <summary>只读布局片段</summary>
+        <pre class="json" tabindex="0" aria-label="只读布局片段">{{ json }}</pre>
+      </details>
+    </div>
+  </details>
+</fieldset>
+
+<ng-template #optionField let-key="key">
+  <div class="field" [attr.data-option]="key" [class.top]="rule(key).kind !== 'enum'" [class.invalid]="invalid.has(key)">
+    <label [attr.for]="rule(key).kind === 'boolean' || rule(key).kind === 'enum' || (variant === 'timer' && key === 'actionText') ? null : fieldId(key)">{{ variant === 'memory' && key === 'max' ? '总内存（字节）' : variant === 'memory' && key === 'pulse' ? '波纹动画' : variant === 'timer' && key === 'actionText' ? '结束动作文案' : optionLabels[key] }}</label>
+    <span class="stack">
       @switch (rule(key).kind) {
         @case ('boolean') {
-          <span class="stack">
-            <span class="seg">
-              <button type="button" [attr.aria-pressed]="options[key] === undefined" (click)="setOption(key, undefined)">默认</button>
-              <button type="button" [attr.aria-pressed]="options[key] === true" (click)="setOption(key, true)">开</button>
-              <button type="button" [attr.aria-pressed]="options[key] === false" (click)="setOption(key, false)">关</button>
-            </span>
-
-            @if (hints[key]) { <small>{{ hints[key] }}</small> }
-          </span>
-        }
-
-        @case ('enum') {
-          <span class="seg wrap">
+          <span class="seg wrap" role="group" [attr.aria-label]="optionLabels[key]">
             <button type="button" [attr.aria-pressed]="options[key] === undefined" (click)="setOption(key, undefined)">默认</button>
-
+            <button type="button" [attr.aria-pressed]="options[key] === true" (click)="setOption(key, true)">开</button>
+            <button type="button" [attr.aria-pressed]="options[key] === false" (click)="setOption(key, false)">关</button>
+          </span>
+        }
+        @case ('enum') {
+          <span class="seg wrap" role="group" [attr.aria-label]="optionLabels[key]">
+            <button type="button" [attr.aria-pressed]="options[key] === undefined" (click)="setOption(key, undefined)">默认</button>
             @for (value of enumValues(key); track value) {
-              <button type="button" [attr.aria-pressed]="options[key] === value" (click)="setOption(key, value)">
-                {{ valueLabel(value) }}</button>
+              <button type="button" [attr.aria-pressed]="options[key] === value" (click)="setOption(key, value)">{{ valueLabel(value) }}</button>
             }
-
           </span>
         }
-
         @case ('text') {
-          <span class="stack">
-
-            @if (variant === 'timer' && key === 'actionText') {
-              <span class="seg" role="radiogroup" aria-label="结束动作文案">
-                <button type="button" role="radio" [attr.aria-checked]="(options.actionText ?? '后关闭') === '后关闭'"
-                  (click)="setOption(key, '后关闭')">关闭</button>
-                <button type="button" role="radio" [attr.aria-checked]="options.actionText === '后开启'"
-                  (click)="setOption(key, '后开启')">开启</button>
-              </span>
-              <small>用于显示，请与设备实际的定时行为保持一致。</small>
-            } @else {
-              <input class="input" [value]="text(key)" placeholder="默认" (change)="setOption(key, $any($event.target).value)" />
-            }
-
-            @if (hints[key]) { <small>{{ hints[key] }}</small> }
-          </span>
+          @if (variant === 'timer' && key === 'actionText') {
+            <span class="seg wrap" role="radiogroup" aria-label="结束动作文案">
+              <button type="button" role="radio" [attr.aria-checked]="(options.actionText ?? '后关闭') === '后关闭'" (click)="setOption(key, '后关闭')">关闭</button>
+              <button type="button" role="radio" [attr.aria-checked]="options.actionText === '后开启'" (click)="setOption(key, '后开启')">开启</button>
+            </span>
+            <small>用于显示，请与设备实际的定时行为保持一致。</small>
+          } @else {
+            <input class="input" [id]="fieldId(key)" [value]="text(key)" placeholder="默认"
+              [attr.aria-invalid]="invalid.has(key)" [attr.aria-describedby]="describedBy(key)"
+              (input)="setOption(key, $any($event.target).value)" (compositionstart)="beginComposition(key)"
+              (compositionend)="endComposition(key, $any($event.target).value)" />
+          }
         }
-
         @default {
-          <span class="stack">
-            <input class="input" type="number" inputmode="decimal" [value]="text(key)" placeholder="默认"
-              (change)="setOption(key, $any($event.target).value)" />
-
-            @if (variant === 'memory' && key === 'max') { <small>未绑定总内存字段时使用；留空表示总量未知。</small> }
-
-            @if (hints[key]) { <small>{{ hints[key] }}</small> }
-          </span>
+          <input class="input" type="number" inputmode="decimal" [id]="fieldId(key)" [value]="text(key)" placeholder="默认"
+            [attr.aria-invalid]="invalid.has(key)" [attr.aria-describedby]="describedBy(key)"
+            (input)="setOption(key, $any($event.target).value, $any($event.target).validity.badInput)" />
+          @if (variant === 'memory' && key === 'max') { <small>未绑定总内存字段时使用；留空表示总量未知。</small> }
         }
       }
-
-    </div>
-  } @empty {
-    <p class="note">这个外观没有专属参数。</p>
-  }
-
-</section>
-<section class="group">
-  <h3>布局片段</h3>
-  <pre class="json">{{ json }}</pre>
-</section>
+      @if (hints[key]) { <small class="field-hint" [id]="fieldId(key) + '-hint'">{{ hints[key] }}</small> }
+      @if (error(key)) { <small class="field-error" [id]="fieldId(key) + '-error'">{{ error(key) }}</small> }
+    </span>
+  </div>
+</ng-template>

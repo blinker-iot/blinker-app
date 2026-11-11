@@ -1,12 +1,14 @@
 import { CustomPanelFrameComponent } from '../custom-panel/custom-panel-frame.component';
 import { readDevicePanelMode } from '../device-panel-mode';
-import { ChangeDetectionStrategy, Component, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { IonButton, IonRouterLink } from '@ionic/angular/standalone';
 import type { BlinkerDevice } from '../../core/model/device.model';
 import { DeviceService } from '../../core/services/device.service';
-import { DevicePanelService } from '../../core/services/device-panel.service';
+import { DevicePanelService, DevicePanelRecord } from '../../core/services/device-panel.service';
+import { PanelEditorPage } from '../../sections/device/panel-editor/panel-editor.page';
+import { EmbeddedPanelSession, SavedPanelEdit } from '../../sections/device/panel-editor/embedded-panel-session';
 import { canEditConsole } from '../../core/services/device-console.service';
 import { legacyCommand, legacyField, legacyRoot, readLegacyPanel, type LegacyPanel } from '../../core/device-v2/legacy-panel';
 import { PageLayoutPanelComponent, type PanelAction, type PanelCard } from '../v2/panel/page-layout-panel';
@@ -14,10 +16,14 @@ import { PageLayoutPanelComponent, type PanelAction, type PanelCard } from '../v
 @Component({
   selector: 'app-legacy-panel',
   standalone: true,
-  imports: [PageLayoutPanelComponent, CustomPanelFrameComponent, IonButton, IonRouterLink, RouterLink],
+  imports: [PageLayoutPanelComponent, CustomPanelFrameComponent, IonButton, IonRouterLink, RouterLink, PanelEditorPage],
   changeDetection: ChangeDetectionStrategy.Eager,
   host: { '[class.custom-panel]': '!!customPanel' },
   template: `
+    @if (panelEditSession; as session) {
+      <app-panel-editor [embeddedSession]="session" [hostRevision]="panelRecord?.revision ?? 0" [editingActive]="viewActive"
+        (changed)="panelEditChanged.emit()" (saved)="acceptPanelEdit($event)" />
+    } @else {
     @if (error) { <p class="error" role="alert">{{ error }}</p> }
     @if (customPanel) {
       <app-custom-panel-frame [document]="customPanel" [cards]="cards" [interactive]="true"
@@ -33,25 +39,33 @@ import { PageLayoutPanelComponent, type PanelAction, type PanelCard } from '../v
     } @else if (panel) {
       <app-page-layout-panel [cards]="cards" [interactive]="true" (action)="act($event)" />
     }
-  `,
-  styles: [`
-    :host { display: block; padding: 16px; }
-    :host.custom-panel { display: flex; flex-direction: column; min-height: 0; padding: 0; }
-    .error { flex-shrink: 0; color: var(--ui-alert); padding: 16px; }
-
-    .empty {
-      min-height: 42vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: var(--blinker-text-secondary);
-      text-align: center;
     }
-  `],
+  `,
+  styleUrls: ['./legacy-panel.component.scss'],
 })
 
 export class LegacyPanelComponent implements OnChanges, OnDestroy {
+  @ViewChild(PanelEditorPage) panelEditor?: PanelEditorPage;
+  @Output() panelEditChanged = new EventEmitter<void>();
+  panelEditSession?: EmbeddedPanelSession;
+  panelRecord?: DevicePanelRecord | null;
+
+  beginPanelEdit(): boolean {
+    if (this.customMode || !this.canEdit || !this.panel || this.panelRecord === undefined) return false;
+    this.panelEditSession = { device: this.device, document: this.panel.document,
+      bindings: this.panel.bindings, legacyRecord: this.panelRecord };
+    return true;
+  }
+
+  endPanelEdit(): void { this.panelEditSession = undefined; }
+
+  acceptPanelEdit(saved: SavedPanelEdit): void {
+    if (!this.panelEditSession || !saved.legacyRecord) return;
+    this.panelRecord = saved.legacyRecord;
+    this.panel = readLegacyPanel(this.device);
+    this.refresh();
+    this.endPanelEdit();
+  }
   @Input() device!: BlinkerDevice;
   @Input() viewActive = true;
 
@@ -62,6 +76,10 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
   private subscription?: Subscription;
   private drafts = new Map<string, string>();
   private loadVersion = 0;
+  private controlEpoch = 0;
+  private controlOwner = '';
+  private controlAvailable = false;
+  private destroyed = false;
 
   constructor(private readonly devices: DeviceService, private readonly panels: DevicePanelService) {}
 
@@ -77,7 +95,11 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
   get layoutTheme() { return this.customPanel?.theme || this.panel?.document.style; }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (!changes['device']) return;
+    if (!changes['device']) {
+      if (changes['viewActive']) this.refresh();
+
+      return;
+    }
 
     this.subscription?.unsubscribe();
     this.load();
@@ -95,13 +117,32 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void { this.loadVersion++; this.subscription?.unsubscribe(); }
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    this.controlEpoch++;
+    this.loadVersion++;
+    this.subscription?.unsubscribe();
+  }
 
   act(action: PanelAction): void {
+    if (this.destroyed || this.panelEditSession) return;
     const binding = this.panel?.bindings[action.widgetId || ''];
+    const card = this.cards.find(item => item.widget.widgetId === action.widgetId);
 
     if (!binding || !binding.field.writable || !this.viewActive
-      || this.cards.find(card => card.widget.widgetId === action.widgetId)?.disabled) return;
+      || card?.disabled) return;
+
+    if (Object.hasOwn(action, 'hold')) {
+      const hold = action.hold, target = hold?.target, field = target?.field;
+
+      // Legacy has no protocol-session epoch or confirmed-release queue. This
+      // local owner only refuses stale Hold events instead of retargeting them.
+      if (!hold || !target || !field || !card?.controlAvailable || target.scope !== this.controlScope()
+        || card.controlScope !== target.scope || target.widgetId !== action.widgetId
+        || !['press', 'release'].includes(hold.phase) || action.kind !== 'toggle' || action.value !== (hold.phase === 'press')
+        || field.id !== binding.field.id || field.key !== binding.field.key
+        || field.role !== binding.field.role || field.valueType !== binding.field.valueType) return;
+    }
 
     if (action.kind === 'draft') {
       this.drafts.set(binding.field.key, String(action.value ?? ''));
@@ -135,6 +176,7 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
 
   private async load(): Promise<void> {
     const version = ++this.loadVersion;
+    this.panelRecord = undefined;
 
     try {
       this.panel = readLegacyPanel(this.device);
@@ -144,6 +186,7 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
       const saved = await this.panels.get(this.device);
 
       if (version !== this.loadVersion) return;
+      this.panelRecord = saved;
       if (saved) this.panels.install(this.device, saved);
 
       this.panel = readLegacyPanel(this.device);
@@ -160,6 +203,15 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
   private refresh(): void {
     if (!this.panel) return;
 
+    const owner = this.device.deviceName || this.device.id || '';
+    const available = this.viewActive && (this.device.config.isPreview === true || !!this.device.data?.enable
+      || this.device.data?.state === 'connected' || this.devices.islocalDevice(this.device));
+
+    if (owner !== this.controlOwner || this.controlAvailable && !available) this.controlEpoch++;
+
+    this.controlOwner = owner;
+    this.controlAvailable = available;
+
     const fields = Object.values(this.panel.bindings).map(binding => legacyField(binding, this.device));
 
     this.cards = this.panel.document.widgets.map(widget => {
@@ -172,8 +224,11 @@ export class LegacyPanelComponent implements OnChanges, OnDestroy {
 
           return extra ? [{ field: extra, value: extra.value }] : [];
         }),
-        error: '', disabled: !this.device.config.isPreview && !this.device.data?.enable
-          && this.device.data?.state !== 'connected' && !this.devices.islocalDevice(this.device) };
+        error: '', disabled: !available, controlScope: this.controlScope(), controlAvailable: available && field.writable };
     });
+  }
+
+  private controlScope(): string {
+    return 'legacy:' + JSON.stringify([this.device.deviceName || this.device.id || '', this.controlEpoch]);
   }
 }

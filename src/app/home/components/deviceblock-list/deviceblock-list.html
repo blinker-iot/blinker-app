@@ -3,12 +3,35 @@
   #sortbox
 >
   @for (deviceId of deviceDataList; track deviceId) {
-  <deviceblock
-    class="deviceblock"
-    [device]="deviceDataDict[deviceId]"
+  <div
+    class="deviceblock device-card-item"
+    [class.editing]="editing"
+    [class.sortable-card]="interactiveEditor"
+    [class.selected]="editing && cardEditor.selectedId() === deviceId"
     [attr.data-id]="deviceId"
-    (click)="gotoDashboard(deviceId)"
-  ></deviceblock>
+    [attr.role]="editing ? 'group' : 'link'"
+    [attr.tabindex]="editing && !interactiveEditor ? -1 : 0"
+    [attr.aria-keyshortcuts]="editing ? 'Enter ArrowUp ArrowDown' : null"
+    [attr.aria-description]="editing ? '拖动卡片任意位置排序；按 Enter 设置，按上下方向键排序' : null"
+    (focus)="interactiveEditor && cardEditor.select(deviceId)"
+    (pointerdown)="onPress(deviceId, $event)"
+    (pointermove)="onPressMove($event)"
+    (pointerup)="cancelPress()"
+    (pointercancel)="cancelPress()"
+    (contextmenu)="onContextMenu(deviceId, $event)"
+    (click)="onCardClick(deviceId, $event)"
+    (keydown.enter)="onCardClick(deviceId, $event)"
+    (keydown.arrowup)="moveDevice(deviceId, -1, $event)"
+    (keydown.arrowdown)="moveDevice(deviceId, 1, $event)"
+  >
+    <deviceblock #card [device]="deviceDataDict[deviceId]" [wide]="cardWidthOverride(deviceId)"
+      [bindings]="cardEditor.bindings(deviceId)" [editing]="editing"
+      [controlsEnabled]="controlsEnabled" [controlStates]="cardControls.states(deviceId)"
+      (configure)="configureCard(deviceId, $event)"
+      (control)="control(deviceId, $event)" (interactionChange)="controlInteraction($event)"
+      (capacityChange)="cardEditor.setCapacity(deviceId, card.wideCard ? 'wide' : 'standard', $event)"
+      (rangeCapacityChange)="cardEditor.setRangeFits(deviceId, card.wideCard ? 'wide' : 'standard', $event)"></deviceblock>
+  </div>
   }
 
   <div class="device-count">共 {{ deviceDataList.length }} 个设备</div>

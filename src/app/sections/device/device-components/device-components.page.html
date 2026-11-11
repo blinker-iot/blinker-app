@@ -1,4 +1,4 @@
-<ion-header>
+<ion-header class="control-page-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button text="" [defaultHref]="'/device-manager/' + id"></ion-back-button>
@@ -11,15 +11,22 @@
   <main>
     <p class="hint">选择控制页面显示的字段。隐藏不会影响设备运行，可随时重新开启。</p>
 
+    @if (saving && !editing) {
+      <p class="save-status" role="status">正在保存组件显示设置…</p>
+    }
+
     @if (error) {
       <div class="error" role="alert">
         <span>{{ error }}</span>
-        <ion-button fill="clear" size="small" [disabled]="saving || loading" (click)="load()">重新读取</ion-button>
+        <button type="button" class="retry" [disabled]="saving || loading" (click)="load()">重新读取</button>
       </div>
     }
 
     @if (loading) {
-      <div class="empty"><ion-spinner name="crescent"></ion-spinner></div>
+      <div class="empty" role="status">
+        <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
+        <span>正在读取组件配置…</span>
+      </div>
     } @else {
       <section class="components" aria-label="字段显示设置" [attr.aria-busy]="saving">
         @for (row of rows; track row.key) {
@@ -27,6 +34,7 @@
             <ion-toggle justify="space-between" [checked]="row.visible" [disabled]="saving || !configReady"
               (ionChange)="setVisible(row.key, $event)">{{ row.title }}</ion-toggle>
             <button type="button" class="style" [disabled]="saving || !configReady || !row.visible"
+              [attr.aria-label]="'修改' + row.title + '的组件样式'"
               (click)="openStyle(row.key)">样式</button>
           </div>
         } @empty {
@@ -37,22 +45,27 @@
   </main>
 </ion-content>
 
-<ion-modal [isOpen]="!!editing" (didDismiss)="editing = undefined" aria-label="组件样式">
+<ion-modal class="component-style-modal" [isOpen]="!!editing" [canDismiss]="!saving" (didDismiss)="editing = undefined" aria-label="组件样式">
   <ng-template>
-    <ion-header>
+    <ion-header class="control-page-header">
       <ion-toolbar>
-        <ion-buttons slot="start"><ion-button (click)="editing = undefined">取消</ion-button></ion-buttons>
+        <ion-buttons slot="start"><ion-button class="text-action" [disabled]="saving" (click)="editing = undefined">取消</ion-button></ion-buttons>
         <ion-title>组件样式</ion-title>
         <ion-buttons slot="end">
-          <ion-button [disabled]="saving" (click)="saveStyle()">{{ saving ? '保存中…' : '保存' }}</ion-button>
+          <ion-button class="text-action" [disabled]="saving || editing?.invalid" (click)="saveStyle()">{{ saving ? '保存中…' : '保存' }}</ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
     <ion-content>
-      <div class="editor" [attr.data-ui-theme]="theme">
+      <div class="editor" [attr.data-ui-theme]="theme" [attr.aria-busy]="saving">
         <app-page-layout-panel class="editor-preview" [cards]="previewCards" />
+        @if (error) { <p class="error" role="alert">{{ error }}</p> }
+        <p class="hint">保存部件与当前页面布局；预览不下发设备命令。</p>
+        @if (saving) { <p class="save-status" role="status">正在保存部件与页面布局…</p> }
+        @if (editing?.invalid) { <p class="validation-hint" role="status">请先修正标出的属性，再保存。</p> }
         @if (editing) {
-          <app-widget-inspector [widget]="editing.widget" [field]="previewCards[0]?.field" [extraCandidates]="extraCandidates" (widgetChange)="editing.widget = $event" />
+          <app-widget-inspector [widget]="editing.widget" [field]="previewCards[0]?.field" [extraCandidates]="extraCandidates"
+            [disabled]="saving" (widgetChange)="updateStyleWidget($event)" (invalidChange)="setStyleInvalid($event)" />
         }
       </div>
     </ion-content>

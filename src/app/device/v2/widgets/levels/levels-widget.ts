@@ -14,6 +14,7 @@ const MAX_LEVELS = 12;
   imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './levels-widget.html',
   styleUrls: ['./levels-widget.scss'],
+  host: { '[class.rowc]': 'rows === 1' },
 })
 export class LevelsWidgetComponent extends RangeWidgetBase {
   get style(): string { return this.options.style ?? 'bars'; }

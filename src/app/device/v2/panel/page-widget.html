@@ -4,7 +4,7 @@
   @case ('toggle') { <app-toggle-widget [card]="card" (act)="emit($event)" /> }
 
   @case ('slide') { <app-slide-widget [card]="card" (act)="emit($event)" /> }
-  @case ('hold') { <app-hold-widget [card]="card" (act)="emit($event)" /> }
+  @case ('hold') { <app-hold-widget [card]="card" [interactive]="interactive" (act)="emit($event)" /> }
   @case ('action') { <app-action-widget [card]="card" (act)="emit($event)" /> }
 
   @case ('keys') { <app-keys-widget [card]="card" (act)="emit($event)" /> }

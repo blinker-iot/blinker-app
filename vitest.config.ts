@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    maxWorkers: 2,
     server: {
       deps: {
         inline: [/@ionic\/angular/, /@ionic\/core/],
@@ -11,6 +12,10 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      {
+        find: /^src\//,
+        replacement: fileURLToPath(new URL('./src/', import.meta.url)),
+      },
       {
         find: /^@ionic\/core\/components$/,
         replacement: fileURLToPath(

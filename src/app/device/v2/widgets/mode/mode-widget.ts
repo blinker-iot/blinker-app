@@ -12,6 +12,7 @@ import { choicesOf } from '../widget-kit';
   imports: [UiIconComponent],
   templateUrl: './mode-widget.html',
   styleUrls: ['./mode-widget.scss'],
+  host: { '[class.rowc]': 'rows === 1' },
 })
 export class ModeWidgetComponent extends WidgetBase {
   get style(): string { return this.options.style ?? 'tiles'; }

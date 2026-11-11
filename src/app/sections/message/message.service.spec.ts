@@ -1,4 +1,7 @@
 import '@angular/compiler';
+
+import { environment } from 'src/environments/environment';
+import { localCapabilities } from 'src/environments/deployment';
 import { HttpClient, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -12,6 +15,10 @@ import { DataService } from 'src/app/core/services/data.service';
 import { NtfyService } from 'src/app/core/services/ntfy.service';
 import { MessageItem, MessagePage, UnreadSummary } from './message.model';
 import { MessageService } from './message.service';
+
+const originalDeployment = environment.deployment;
+beforeEach(() => { environment.deployment = localCapabilities; });
+afterEach(() => { environment.deployment = originalDeployment; });
 
 describe('MessageService', () => {
   let service: MessageService;
@@ -57,6 +64,45 @@ describe('MessageService', () => {
 
   afterEach(() => {
     httpTesting.verify();
+    vi.restoreAllMocks();
+  });
+
+  it('makes closed deployment startup, foreground events and explicit inbox operations inert', async () => {
+    vi.spyOn(service, 'available', 'get').mockReturnValue(false);
+    await service.init();
+    dataService.userDataLoader.next(true);
+    appVisibility.active.next(false); appVisibility.active.next(true);
+    ntfyMessageIds.next('message-1');
+    await Promise.resolve();
+    await service.loadFirst(); await service.loadMore(); await service.refresh();
+    expect(await service.getMessage('message-1')).toBeNull();
+    expect(await service.markRead('message-1')).toBeNull();
+    expect(await service.markAllRead()).toBeNull();
+    expect(await service.deleteMessage('message-1')).toBeNull();
+    expect(service.unreadTotal).toBe(0);
+    httpTesting.expectNone(() => true);
+  });
+
+  it('only accepts typed canonical actions from matching authenticated message details', async () => {
+    const valid = { type: 'share_invitation', invitationId: 'A'.repeat(22) };
+    for (const [action, expected] of [[valid, valid], [null, null],
+      [{ ...valid, url: 'https://outside.invalid' }, null], [{ ...valid, invitationId: 'bad' }, null],
+      [{ type: 'open_url', url: 'diandeng://share/' + 'A'.repeat(43) }, null]] as const) {
+      const pending = service.getMessage('target');
+      httpTesting.expectOne(API.MESSAGE.DETAIL('target')).flush(envelope(message('target', {
+        type: 'share.invitation', category: 'device_sharing', action: action as any,
+      })));
+      expect((await pending)?.action).toEqual(expected);
+    }
+    const spoof = service.getMessage('target');
+    httpTesting.expectOne(API.MESSAGE.DETAIL('target')).flush(envelope(message('target', {
+      body: 'Invitation: ' + valid.invitationId, action: valid as any,
+    })));
+    expect((await spoof)?.action).toBeNull();
+    const mismatched = service.getMessage('target');
+    const rejection = expect(mismatched).rejects.toThrow('Message identity mismatch');
+    httpTesting.expectOne(API.MESSAGE.DETAIL('target')).flush(envelope(message('other')));
+    await rejection;
   });
 
   it('loads the first page and summary with the V2 filter contract', async () => {

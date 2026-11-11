@@ -4,8 +4,8 @@
 @include grid.layout;
 
 :host {
+  @include grid.viewport;
   display: block;
-  container-type: inline-size;
 }
 
 .panel {
@@ -14,12 +14,7 @@
   color: var(--ui-ink);
   font-family: var(--ui-font);
 
-  &[data-ui-theme] {
-    padding: 12px;
-
-    border-radius: calc(var(--ui-radius) + 6px);
-    background: var(--ui-bg);
-  }
+  // A theme changes tokens, never the measured grid or its content width.
 }
 
 
@@ -31,11 +26,14 @@
 :host-context([data-ui-theme='electronic']) .cell.selected > :first-child { outline: 1px dashed var(--ui-focus); }
 
 .cell-error {
+  flex: none;
   margin: 0 6px;
 
   color: var(--ui-alert);
 
   font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .empty {
@@ -48,6 +46,4 @@
   text-align: center;
 }
 
-@container (max-width: 560px) {
-  @include grid.compact;
-}
+@include grid.responsive;

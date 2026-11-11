@@ -7,6 +7,29 @@ import { DataService } from '../core/services/data.service';
 import { DebugService } from '../debug/debug.service';
 import { DevicePage } from './device.page';
 
+const ionicMock = vi.hoisted(() => {
+  class IonicStub {}
+
+  return new Proxy(
+    { IonicModule: IonicStub, ModalController: IonicStub,
+      IonBackButton: IonicStub, IonButton: IonicStub, IonButtons: IonicStub,
+      IonContent: IonicStub, IonHeader: IonicStub, IonModal: IonicStub, IonRouterLink: IonicStub,
+      IonRouterLinkWithHref: IonicStub, IonSpinner: IonicStub, IonTitle: IonicStub, IonToolbar: IonicStub,
+      IonPopover: IonicStub, IonRadio: IonicStub, IonRadioGroup: IonicStub,
+      AlertController: IonicStub, NavController: IonicStub },
+    {
+      get: (target, property: string | symbol) => {
+        if (property === 'then' || typeof property === 'symbol') return undefined;
+
+        return target[property as keyof typeof target] ?? IonicStub;
+      },
+    },
+  );
+});
+
+vi.mock('@ionic/angular', () => ionicMock);
+vi.mock('@ionic/angular/standalone', () => ionicMock);
+
 describe('DevicePage component switching', () => {
   let device: BlinkerDevice;
   let page: DevicePage;
@@ -172,6 +195,23 @@ describe('DevicePage component switching', () => {
       'embedded',
       true,
     );
+  });
+
+  it.each([undefined, 'DeviceV2', 'RetiredDashboard'])('does not create a shell-owned one-shot connection for V2 component %s', async component => {
+    device.config.mode = 'bbp2';
+    device.config.isPreview = false;
+    device.config.component = component;
+    // Resolve ownership even before the dynamic component has loaded.
+    await page.connectDevice();
+    expect(page.deviceService.connectDevice).not.toHaveBeenCalled();
+    expect(page.deviceService.queryDevice).not.toHaveBeenCalled();
+  });
+
+  it('leaves the debug V2 connection with its cancellable child scope', async () => {
+    device.config.mode = 'bbp2'; device.config.isPreview = false;
+    device.config.component = 'TestDashboard';
+    await page.connectDevice();
+    expect(page.deviceService.connectDevice).not.toHaveBeenCalled();
   });
 
   it('falls back to DeviceV2 when a bbp2 component is unknown', () => {

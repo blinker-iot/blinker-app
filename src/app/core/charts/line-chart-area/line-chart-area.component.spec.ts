@@ -98,7 +98,7 @@ describe('LineChartAreaComponent', () => {
     component.ngAfterViewInit();
     expect(chartMock.chart.applyOptions).toHaveBeenLastCalledWith(expect.objectContaining({ layout: { textColor: '#b4c0cd' } }));
     style.setProperty('--blinker-text-secondary', '#526780');
-    parent.setAttribute('data-device-theme', 'clear');
+    parent.setAttribute('data-ui-theme', 'natural');
     await vi.waitFor(() => expect(chartMock.chart.applyOptions).toHaveBeenLastCalledWith(expect.objectContaining({ layout: { textColor: '#526780' } })));
     component.ngOnDestroy();
     parent.remove();

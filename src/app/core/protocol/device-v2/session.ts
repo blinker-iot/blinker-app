@@ -75,6 +75,8 @@ export interface DeviceV2SessionOptions {
   requestTimeoutMs?: number;
   routeRetries?: number;
   requestId?: () => Uint8Array;
+  /** Explicit account adapter only; the default identity contract stays strict. */
+  peerId?: (logicalDeviceId: string) => Uint8Array;
 }
 
 export type DeviceV2SessionState = 'idle' | 'negotiating' | 'ready' | 'closed';
@@ -195,6 +197,7 @@ export class DeviceV2Session {
   private readonly requestTimeoutMs: number;
   private readonly routeRetries: number;
   private readonly makeRequestId: () => Uint8Array;
+  private readonly resolvePeerId: (logicalDeviceId: string) => Uint8Array;
 
   constructor(
     private readonly channel: DeviceV2Channel,
@@ -202,7 +205,9 @@ export class DeviceV2Session {
     options: DeviceV2SessionOptions = {},
   ) {
     this.store = store;
+    this.resolvePeerId = options.peerId ?? logicalDevicePeerId;
     this.presence = new DeviceV2PresenceSubscriptions({
+      validateTarget: target => { this.peerId(target); },
       id: () => this.makeRequestId(),
       request: async (target, requestId, signal) => {
         const result = await this.route(target, Bbp2MessageKind.PresenceControl, 0,
@@ -213,8 +218,8 @@ export class DeviceV2Session {
       },
       apply: (target, value) => { this.store.applyPresence(target, value, true); },
       lost: target => {
+        const peer = this.peerId(target);
         this.store.losePresence(target);
-        const peer = logicalDevicePeerId(target);
         for (const [id, pending] of this.pending) {
           if (equalBytes(peer, pending.targetPeerId)) this.rejectPending(id, pending, new DeviceV2TargetUnavailableError());
         }
@@ -413,7 +418,7 @@ export class DeviceV2Session {
   acquireStateInterest(logicalDeviceId: string, signal?: AbortSignal): DeviceV2DemandOwner | undefined {
     this.assertReady(); signal?.throwIfAborted();
     if ((this.negotiatedFeatures & BBP2_FEATURE_STATE_INTEREST) === 0) return undefined;
-    logicalDevicePeerId(logicalDeviceId);
+    this.peerId(logicalDeviceId);
     if ([...this.stateConsumers.values()].reduce((n, group) => n + group.owners.size, 0) >= 16) throw new DeviceV2DemandError('capacity');
     let accept!: () => void, reject!: (error: Error) => void, finish!: (reason: DeviceV2DemandCloseReason) => void;
     const accepted = new Promise<void>((resolve, fail) => { accept = resolve; reject = fail; });
@@ -493,7 +498,7 @@ export class DeviceV2Session {
     if ((this.negotiatedFeatures & BBP2_FEATURE_CONNECTION_DEMAND) === 0) {
       throw new Error('Connection demand is not negotiated');
     }
-    logicalDevicePeerId(logicalDeviceId); // Validate before allocating an owner.
+    this.peerId(logicalDeviceId); // Validate before allocating an owner.
     return this.connectionDemands.acquire(logicalDeviceId, signal);
   }
 
@@ -505,7 +510,7 @@ export class DeviceV2Session {
     if ((this.negotiatedFeatures & features) !== features) {
       throw new Error('Direct priority/Ready is not negotiated');
     }
-    logicalDevicePeerId(logicalDeviceId);
+    this.peerId(logicalDeviceId);
     return this.connectionDemands.acquire(logicalDeviceId, signal, 'direct');
   }
 
@@ -684,7 +689,7 @@ export class DeviceV2Session {
     if (this.pending.has(requestKey)) {
       return Promise.reject(new Error('Device V2 request identity is duplicated'));
     }
-    const targetPeerId = logicalDevicePeerId(logicalDeviceId);
+    const targetPeerId = this.peerId(logicalDeviceId);
     const peerKey = bytesToHex(targetPeerId);
     const mapped = this.logicalDeviceByPeer.get(peerKey);
     if (mapped && mapped !== logicalDeviceId) {
@@ -733,6 +738,12 @@ export class DeviceV2Session {
       options.signal?.addEventListener('abort', abort, { once: true });
       this.publishPending(requestKey, pending);
     });
+  }
+
+  private peerId(logicalDeviceId: string): Uint8Array {
+    const peer = this.resolvePeerId(logicalDeviceId);
+    if (!(peer instanceof Uint8Array) || peer.length !== 16 || !peer.some(Boolean)) throw Error('Invalid Route peer identity');
+    return peer;
   }
 
   private publishPending(requestKey: string, pending: PendingRoute): void {

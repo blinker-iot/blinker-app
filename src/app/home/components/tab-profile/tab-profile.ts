@@ -4,18 +4,21 @@ import {
   OnInit,
 } from '@angular/core';
 
-import { FormsModule } from '@angular/forms';
 import { IonicModule, NavController } from '@ionic/angular';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { DataService } from '../../../core/services/data.service';
 import { UpdateService } from '../../../core/services/update.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { UserService } from '../../../core/services/user.service';
 import { MessageService } from '../../../sections/message/message.service';
 import {
   MenuListComponent,
   MenuListItem,
 } from '../../../core/components/menu-list/menu-list';
 import { createProfileMenuGroups } from './profile-menu.config';
+import { environment } from 'src/environments/environment';
+import { profileEntitlements } from './profile-entitlements';
+import { profileReceivedDeviceCount } from './profile-sharing';
 
 @Component({
   selector: 'app-tab-profile',
@@ -24,19 +27,20 @@ import { createProfileMenuGroups } from './profile-menu.config';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
-    FormsModule,
     IonicModule,
     TranslatePipe,
     MenuListComponent,
   ],
 })
 export class TabProfileComponent implements OnInit {
+  readonly messagesAvailable = environment.deployment.messages;
+  refreshingAccount = false;
+  private failedAccountEpoch: number | null = null;
   get menuGroups() {
     return createProfileMenuGroups(
       {
         roomNum: this.roomNum,
-        sceneNum: this.sceneNum,
-        sharedDeviceNum: this.sharedDeviceNum,
+        receivedDeviceNum: this.receivedDeviceNum,
       },
       (key, params) => this.translate.instant(key, params)
     );
@@ -57,28 +61,37 @@ export class TabProfileComponent implements OnInit {
     return this.user?.avatar || '';
   }
 
-  get planSummary(): string {
-    const plan = this.user?.subscriptionPlan;
-    const planName = plan?.display_name?.trim() || plan?.name?.trim() || '';
-    if (!planName) return '';
+  get accountEntitlements() {
+    return profileEntitlements(this.user, this.dataService.ownedDeviceCount);
+  }
 
-    const endDate = plan?.end_date?.trim();
-    if (!endDate) return planName;
+  get deviceQuotaLabel(): string {
+    const { limit, used } = this.accountEntitlements;
+    const key = limit === -1
+      ? used === null ? 'DEVICE_QUOTA_UNLIMITED' : 'DEVICE_QUOTA_UNLIMITED_COUNT'
+      : limit === null
+        ? used === null ? 'DEVICE_QUOTA_UNKNOWN' : 'DEVICE_QUOTA_USAGE'
+        : used === null ? 'DEVICE_QUOTA_LIMIT' : 'DEVICE_QUOTA_COUNT';
+    return this.translate.instant(`PROFILE.${key}`, { used, limit });
+  }
 
-    const dateOnly = endDate.match(/^\d{4}-\d{2}-\d{2}/)?.[0] || endDate;
-    return `${planName} · ${dateOnly}`;
+  get showAccountRefreshFailure(): boolean {
+    return this.failedAccountEpoch === this.dataService.sessionEpoch
+      || (!!this.user?.id && (!!this.dataService.userLoadError.value
+        || !!this.dataService.deviceLoadError.value));
   }
 
   get roomNum() {
-    return this.dataService.room?.list?.length || 2;
+    return this.dataService.room?.list?.length ?? 0;
   }
 
-  get sceneNum() {
-    return this.dataService.scene?.list?.length || 10;
-  }
-
-  get sharedDeviceNum() {
-    return this.dataService.share?.received?.length ?? 0;
+  get receivedDeviceNum(): number | null {
+    const count = this.dataService.ownedDeviceCount;
+    const available = !!this.dataService.auth && count !== null && Number.isSafeInteger(count) && count >= 0
+      && this.dataService.userLoadError?.value === null
+      && this.dataService.deviceLoadError?.value === null
+      && this.dataService.configLoadError?.value === null;
+    return profileReceivedDeviceCount(this.dataService.share?.received, available);
   }
 
   get showNewVersion() {
@@ -86,7 +99,7 @@ export class TabProfileComponent implements OnInit {
   }
 
   get currentVersion() {
-    return this.updateService.currentVersion;
+    return this.updateService.currentVersion || '—';
   }
 
   get unreadMessageCount(): number {
@@ -115,11 +128,27 @@ export class TabProfileComponent implements OnInit {
     private authService: AuthService,
     private translate: TranslateService,
     private navController: NavController,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private userService: UserService,
   ) {}
 
   ngOnInit(): void {
     void this.messageService.init().catch(() => undefined);
+  }
+
+  async refreshAccount(): Promise<void> {
+    if (this.refreshingAccount || !this.dataService.auth) return;
+    this.refreshingAccount = true;
+    this.failedAccountEpoch = null;
+    const epoch = this.dataService.sessionEpoch;
+    try {
+      const loaded = await this.userService.getAllInfo();
+      if (epoch === this.dataService.sessionEpoch && !loaded) this.failedAccountEpoch = epoch;
+    } catch {
+      if (epoch === this.dataService.sessionEpoch) this.failedAccountEpoch = epoch;
+    } finally {
+      this.refreshingAccount = false;
+    }
   }
 
   goto(page?: string) {
@@ -140,7 +169,4 @@ export class TabProfileComponent implements OnInit {
     this.goto(item.route);
   }
 
-  checkCodePush() {
-    // 检查更新
-  }
 }

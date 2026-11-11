@@ -1,135 +1,55 @@
-:host {
-  display: block;
-  height: 100%;
-  color: var(--blinker-text-primary);
-  background: var(--blinker-bg);
+@use '../../../../theme/settings-surface' as surface;
+@use '../../../../theme/workflow-surface' as workflow;
 
-  --section-main-accent-opacity: 0;
-  --content-offset-gap: 4px;
-}
+@include workflow.page;
 
-ion-content {
-  --background: var(--blinker-bg);
-}
-
-button,
-a {
-  -webkit-tap-highlight-color: transparent;
-
-  &:focus-visible {
-    outline: 2px solid var(--ion-color-primary);
-    outline-offset: -3px;
-    border-radius: 6px;
-  }
-}
-
-button {
-  border: 0;
-  background: transparent;
-  font: inherit;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
-}
+button, a { -webkit-tap-highlight-color: transparent; }
+button { border: 0; background: transparent; cursor: pointer; }
+a:focus-visible { outline: 2px solid var(--ion-color-primary); outline-offset: -3px; border-radius: 12px; }
 
 .share-categories {
   display: flex;
-  gap: 26px;
-  margin: 0 4px 18px;
-
+  flex-wrap: wrap;
+  gap: 8px;
   button {
-    position: relative;
+    @include surface.button;
     display: flex;
+    flex: 1;
     align-items: center;
-    gap: 6px;
-    min-height: 44px;
-    padding: 0 0 3px;
+    justify-content: center;
+    gap: 8px;
     color: var(--blinker-text-secondary);
-    font-size: 14px;
-    font-weight: 500;
-  }
-
-  button.selected {
-    color: var(--blinker-text-primary);
-    font-weight: 600;
-
-    &::after {
-      content: '';
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      left: 0;
-      height: 2px;
-      border-radius: 2px;
-      background: currentColor;
-    }
+    background: var(--blinker-surface);
+    font-size: 0.9375rem;
+    &.selected { color: var(--ion-color-primary); box-shadow: inset 0 0 0 2px currentColor; }
   }
 }
-
-.invitation-count {
-  color: var(--ion-color-primary);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.share-section + .share-section {
-  margin-top: 24px;
-}
-
+.invitation-count { font-size: 0.8125rem; font-weight: 600; }
+.share-section { display: grid; gap: 8px; min-width: 0; }
 .section-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  min-height: 28px;
-  margin: 0 4px 7px;
-
-  h2 {
-    margin: 0;
-    color: var(--blinker-text-secondary);
-    font-size: 12px;
-    font-weight: 500;
-  }
-
-  h2 span {
-    margin-left: 8px;
-    color: var(--blinker-text-tertiary);
-    font-size: 10px;
-    font-weight: 400;
-  }
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-inline: 4px;
+  h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0; }
+  h2 span { color: var(--blinker-text-secondary); font-size: 0.8125rem; font-weight: 400; }
 }
-
+.section-note { margin: 0 4px; color: var(--blinker-text-secondary); }
 .device-list {
+  @include surface.card;
+  padding: 0;
   overflow: hidden;
-  border: 1px solid var(--blinker-border);
-  border-radius: 16px;
-  background: var(--blinker-surface);
-
-  > * + * {
-    border-top: 1px solid var(--blinker-divider);
-  }
+  > * + * { border-top: 1px solid var(--blinker-divider); }
 }
-
 .device-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-width: 0;
-  min-height: 76px;
-  padding: 14px;
-  color: inherit;
-  text-align: left;
+  @include surface.row;
+  @include surface.interaction;
+  min-height: 80px;
+  padding: 16px;
   text-decoration: none;
-
-  &:active {
-    background: var(--blinker-surface-active);
-  }
 }
-
 .device-image {
   display: grid;
   place-items: center;
@@ -137,137 +57,61 @@ button {
   width: 40px;
   height: 40px;
   padding: 4px;
-  border-radius: 11px;
+  border-radius: 12px;
   color: var(--blinker-text-secondary);
   background: var(--blinker-surface-muted);
-  font-size: 17px;
-
-  b-device-img {
-    width: 100%;
-    height: 100%;
-  }
+  font-size: 1.25rem;
+  b-device-img { width: 100%; height: 100%; }
 }
-
 .device-copy {
   display: grid;
   flex: 1;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
-
-  strong,
-  small {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  strong {
-    font-size: 14px;
-    font-weight: 550;
-    line-height: 1.4;
-  }
-
-  small {
-    color: var(--blinker-text-tertiary);
-    font-size: 11px;
-    line-height: 1.4;
-  }
-
-  .has-members {
-    color: var(--blinker-text-secondary);
-  }
+  strong, small { overflow-wrap: anywhere; white-space: normal; }
+  strong { font-size: 0.9375rem; font-weight: 600; line-height: 1.5; }
+  small { color: var(--blinker-text-secondary); font-size: 0.8125rem; line-height: 1.6; }
 }
-
-.row-arrow {
-  flex-shrink: 0;
-  margin-left: 4px;
-  color: var(--blinker-text-tertiary);
-  font-size: 11px;
-}
-
-.invitation-icon,
-.invitation-action {
-  color: var(--ion-color-primary);
-}
-
-.invitation-action {
-  flex-shrink: 0;
-  font-size: 11px;
-}
-
-.device-entry {
-  display: flex;
-  align-items: center;
-
-  .device-row {
-    flex: 1;
-  }
-}
-
-.text-action,
-.remove-action {
-  flex-shrink: 0;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 10px;
-  color: var(--ion-color-primary);
-  font-size: 12px;
-}
-
-.leave-action,
-.remove-action {
-  margin-right: 4px;
-  color: var(--blinker-text-secondary);
-}
-
-.remove-action {
-  font-size: 15px;
-}
-
+.row-arrow { flex-shrink: 0; color: var(--blinker-text-secondary); font-size: 0.8125rem; }
+.invitation-icon, .invitation-action { color: var(--ion-color-primary); }
+.invitation-action { flex-shrink: 0; font-size: 0.8125rem; }
+.device-entry { display: flex; align-items: center; min-width: 0; .device-row { flex: 1; } }
+.text-action { @include surface.button; background: transparent; font-size: 0.875rem; }
+.remove-action { @include surface.icon-button; margin-right: 4px; }
+.leave-action { flex-shrink: 0; margin-right: 4px; color: var(--blinker-text-secondary); }
 .empty-state {
-  padding: 24px 14px;
-  color: var(--blinker-text-secondary);
+  @include surface.card;
+  padding: 24px 16px;
   text-align: center;
-
-  p {
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.6;
-  }
-
-  small {
-    display: block;
-    margin-top: 5px;
-    color: var(--blinker-text-tertiary);
-    font-size: 11px;
-    line-height: 1.6;
-  }
+  color: var(--blinker-text-secondary);
+  p { margin: 0; }
+  small { display: block; margin-top: 4px; font-size: 0.8125rem; line-height: 1.6; }
 }
-
-.loading-state,
-.inline-loading {
+.loading-state, .inline-loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 28px 14px;
+  gap: 12px;
+  padding: 24px 16px;
   color: var(--blinker-text-secondary);
-  font-size: 12px;
-
-  ion-spinner {
-    width: 18px;
-    height: 18px;
-  }
+  font-size: 0.875rem;
+  ion-spinner { flex-shrink: 0; width: 20px; height: 20px; }
 }
-
-.load-more {
-  display: block;
-  margin: 4px auto 0;
-}
-
+.load-more { justify-self: center; }
 .error-notice {
-  margin: 0 4px 12px;
+  @include surface.card;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
   color: var(--ion-color-danger);
-  font-size: 12px;
+  font-size: 0.875rem;
   line-height: 1.6;
+}
+
+@media (max-width: 360px) {
+  .device-row { gap: 8px; padding: 12px; }
+  .invitation-action { display: none; }
 }

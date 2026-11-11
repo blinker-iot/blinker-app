@@ -1,17 +1,7 @@
-:host {
-  display: block;
-  height: 100%;
-  color: var(--blinker-text-primary);
-  background: var(--blinker-bg);
-}
+@use '../../../theme/workflow-surface' as workflow;
 
-ion-content {
-  --background: var(--blinker-bg);
-}
+@include workflow.page;
 
-.section-label {
-  margin: 0 4px 10px;
-  color: var(--blinker-text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-}
+.methods-section { display: grid; gap: 12px; min-width: 0; }
+.section-label { padding-inline: 4px; }
+.other-heading { margin-top: 8px; }

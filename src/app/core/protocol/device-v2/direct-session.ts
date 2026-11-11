@@ -2,9 +2,13 @@ import { Bbp2ErrorCode, Bbp2Frame, Bbp2FrameFlag, Bbp2MessageKind,
   DeviceV2Ack, DeviceV2Manifest, DeviceV2ManifestField } from './types';
 import { DeviceV2Store } from './store';
 import { DirectTimeOptions, DirectTimeResponder } from './direct-time';
-import { decodeAckBody, decodeCachedManifest, decodeErrorBody, decodeEventBody, decodeManifestPageBody,
-  decodePatchBody, decodeStatePageBody, encodeAckBody, encodeCommandBody,
-  encodeManifestAcceptBody, encodeManifestRequestBody, encodeStateRequestBody, hexToBytes } from './codec';
+import { DIRECT_FEATURE_TELEMETRY } from './direct-hello';
+import { DeviceV2TelemetryLease, DeviceV2TelemetryManager, DeviceV2TelemetryOptions,
+  validateDeviceV2TelemetryFields } from './telemetry';
+import { CborReader, decodeAckBody, decodeCachedManifest, decodeErrorBody, decodeEventBody, decodeManifestPageBody,
+  decodePatchBody, decodeStatePageBody, decodeTelemetryDataBody, decodeTelemetryStatusBody,
+  encodeAckBody, encodeCommandBody, encodeManifestAcceptBody, encodeManifestRequestBody,
+  encodeStateRequestBody, encodeTelemetryControlBody, hexToBytes } from './codec';
 
 // A self-device BBP lane, independent of BLE/LAN and of the account broker's
 // Route/Delivery session. The carrier supplies authenticated bounded frames.
@@ -64,12 +68,15 @@ export class DirectDeviceSession {
   private readonly errors = new Set<(error: Error) => void>();
   private readonly closedListeners = new Set<() => void>();
   private readonly time?: DirectTimeResponder;
+  private readonly telemetry: DeviceV2TelemetryManager;
+  private readonly telemetrySupported: boolean;
+  private readonly telemetryObserve: boolean;
 
   constructor(
     private readonly channel: DirectDeviceFrameChannel,
     store = new DeviceV2Store(),
     private readonly requestTimeoutMs = 6000,
-    time?: DirectTimeOptions,
+    capabilities?: DirectTimeOptions,
     private manifestCache?: DirectManifestCache,
   ) {
     if (!Number.isInteger(requestTimeoutMs) || requestTimeoutMs < 1) {
@@ -77,7 +84,34 @@ export class DirectDeviceSession {
     }
     this.logicalDeviceId = channel.logicalDeviceId;
     this.store = store;
-    this.time = time ? new DirectTimeResponder(time) : undefined;
+    this.time = capabilities ? new DirectTimeResponder(capabilities) : undefined;
+    // Capabilities gate optional operations, not authentication. Permissions
+    // are the existing Method 2/carrier result; the device rechecks both.
+    this.telemetrySupported = !!capabilities && (capabilities.features & DIRECT_FEATURE_TELEMETRY) !== 0;
+    this.telemetryObserve = !!capabilities && (capabilities.permissions & 1) !== 0;
+    this.telemetry = new DeviceV2TelemetryManager(
+      async (logicalDeviceId, keys) => {
+        this.assertTelemetryReady();
+        if (logicalDeviceId !== this.logicalDeviceId) throw new Error('DIRECT_TELEMETRY_TARGET_INVALID');
+        await this.synchronize();
+        this.assertTelemetryReady();
+        const manifest = this.store.snapshot(logicalDeviceId).manifest;
+        if (!manifest) throw new Error('verified Manifest is missing');
+        return validateDeviceV2TelemetryFields(manifest.fields, keys);
+      },
+      (_, control) => this.enqueue(async () => {
+        this.assertTelemetryReady();
+        const response = await this.exchange(
+          Bbp2MessageKind.TelemetryControl, Bbp2FrameFlag.IdMode,
+          encodeTelemetryControlBody(control), Bbp2MessageKind.TelemetryStatus,
+          Bbp2FrameFlag.IsResponse | Bbp2FrameFlag.IdMode,
+        );
+        return decodeTelemetryStatusBody(response.body);
+      }),
+      // A lease rejection retires the lease and notifies its observers. It is
+      // not a carrier failure and must not disconnect ordinary control.
+      () => undefined,
+    );
     void this.receiveLoop();
   }
 
@@ -106,7 +140,7 @@ export class DirectDeviceSession {
   refresh(): Promise<void> {
     return this.enqueue(async () => {
       this.manifestCache = undefined;
-      this.store.invalidate(this.logicalDeviceId);
+      this.invalidateManifest();
       await this.synchronizeTarget();
     });
   }
@@ -128,7 +162,7 @@ export class DirectDeviceSession {
           if (attempt === 0 && error instanceof DirectDeviceProtocolError
             && (error.code === Bbp2ErrorCode.ManifestConflict
               || error.code === Bbp2ErrorCode.NegotiationRequired)) {
-            this.store.invalidate(this.logicalDeviceId);
+            this.invalidateManifest();
             continue;
           }
           throw error;
@@ -136,6 +170,12 @@ export class DirectDeviceSession {
       }
       throw new Error('Device Direct command retry exhausted');
     });
+  }
+
+  async openTelemetry(endpointKeys: string[], intervalMs: number,
+    options?: DeviceV2TelemetryOptions): Promise<DeviceV2TelemetryLease> {
+    this.assertTelemetryReady();
+    return this.telemetry.open(this.logicalDeviceId, endpointKeys, intervalMs, options);
   }
 
   async close(): Promise<void> {
@@ -169,7 +209,7 @@ export class DirectDeviceSession {
       } catch (error) {
         if (attempt === 0 && error instanceof DirectDeviceProtocolError
           && error.code === Bbp2ErrorCode.ManifestConflict) {
-          this.store.invalidate(this.logicalDeviceId);
+          this.invalidateManifest();
           continue;
         }
         throw error;
@@ -190,7 +230,7 @@ export class DirectDeviceSession {
         )).manifest;
       } catch {
         // Only cache validation falls back; auth, ACK and transport failures do not.
-        this.store.invalidate(this.logicalDeviceId);
+        this.invalidateManifest();
       }
       this.assertReady();
       if (verified) {
@@ -343,6 +383,35 @@ export class DirectDeviceSession {
       await this.notification(frame);
       return;
     }
+    if (frame.kind === Bbp2MessageKind.TelemetryData
+      || (frame.kind === Bbp2MessageKind.TelemetryStatus && frame.flags === Bbp2FrameFlag.IdMode)) {
+      this.assertTelemetryReady();
+      if (frame.flags !== Bbp2FrameFlag.IdMode || !Number.isInteger(frame.sequence)
+        || frame.sequence < 1 || frame.sequence > 0xffff) {
+        throw new Error('Device Direct telemetry notification metadata is invalid');
+      }
+      if (frame.kind === Bbp2MessageKind.TelemetryData) {
+        const reader = new CborReader(frame.body);
+        if (reader.readMapSize(5) !== 5 || reader.readUnsigned(4) !== 0) {
+          throw new Error('Device Direct telemetry identity is invalid');
+        }
+        const streamId = reader.readUnsigned();
+        if (reader.readUnsigned(4) !== 1) throw new Error('Device Direct telemetry identity is invalid');
+        const epoch = reader.readUnsigned();
+        if (streamId === 0 || epoch === 0) throw new Error('Device Direct telemetry identity is invalid');
+        const fields = this.telemetry.fieldsForData(this.logicalDeviceId, streamId, epoch);
+        if (!fields || !this.store.snapshot(this.logicalDeviceId).manifestAccepted) {
+          // Best-effort samples cannot be decoded while refresh/resync is
+          // accepting a Manifest, or against a successor lease's schema.
+          return;
+        }
+        this.telemetry.receiveData(this.logicalDeviceId,
+          decodeTelemetryDataBody(frame.body, fields));
+      } else {
+        this.telemetry.receiveStatus(this.logicalDeviceId, decodeTelemetryStatusBody(frame.body));
+      }
+      return; // Independent of the pending command/Manifest/telemetry response.
+    }
     const pending = this.pending;
     const ack = frame.kind === Bbp2MessageKind.Ack && frame.flags === Bbp2FrameFlag.IsResponse
       ? decodeAckBody(frame.body) : undefined;
@@ -378,6 +447,7 @@ export class DirectDeviceSession {
     } else if (frame.sequence !== pending.sequence) {
       throw new Error('Device Direct response sequence does not match the request');
     }
+    if (frame.kind === Bbp2MessageKind.TelemetryStatus) decodeTelemetryStatusBody(frame.body);
     this.settle(pending);
     pending.resolve(frame);
   }
@@ -444,11 +514,27 @@ export class DirectDeviceSession {
     }
   }
 
+  private assertTelemetryReady(): void {
+    this.assertReady();
+    if (!this.telemetrySupported) {
+      throw new Error('DIRECT_TELEMETRY_NOT_SUPPORTED');
+    }
+    if (!this.telemetryObserve) {
+      throw new Error('DIRECT_TELEMETRY_OBSERVE_REQUIRED');
+    }
+  }
+
+  private invalidateManifest(): void {
+    this.telemetry.reset(true);
+    this.store.invalidate(this.logicalDeviceId);
+  }
+
   private fail(error: Error, notify = true): void {
     if (this.stateValue === 'closed') return;
     this.terminalError = error;
     this.stateValue = 'closed';
     this.lastAck = undefined;
+    this.telemetry.reset();
     const pending = this.pending;
     if (pending) {
       this.settle(pending);

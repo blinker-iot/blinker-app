@@ -1,18 +1,23 @@
 import type { DeviceKeyContext, DeviceKeyRevealData } from '../../model/response.model';
 import type { DeviceV2ManagementService } from '../../services/device-v2-management.service';
 import { logicalDevicePeerId } from '../../protocol/device-v2';
+import { isLogicalDeviceReferenceId } from '../../protocol/device-v2/logical-device-reference';
 import { base64UrlDecode } from '../ble-direct/wire';
 import { encodeBlinkerConfigInstall } from './esp32-wifiprov';
+import type { WiFiProvUnknownCheckpoint } from './wifiprov-unknown-checkpoint';
 
 export interface WiFiProvAllocationRecord {
   requestId: string;
   name: string;
   context?: DeviceKeyContext;
+  wifiUnknown?: WiFiProvUnknownCheckpoint;
 }
 
 export interface WiFiProvAllocationStore {
   load(instance: Uint8Array): Promise<WiFiProvAllocationRecord | undefined>;
   prepare(instance: Uint8Array, name: string): Promise<WiFiProvAllocationRecord>;
+  /** Atomic fresh-only preparation; older stores must not silently resume. */
+  prepareNew?(instance: Uint8Array, name: string): Promise<WiFiProvAllocationRecord>;
   bind(instance: Uint8Array, requestId: string, context: DeviceKeyContext): Promise<void>;
   complete(instance: Uint8Array, logicalDeviceId: string): Promise<void>;
 }
@@ -27,7 +32,16 @@ export class WiFiProvAllocation {
   ) {}
 
   async create(instance: Uint8Array, name: string): Promise<DeviceKeyRevealData> {
-    const record = await this.step(() => this.store.prepare(instance, name));
+    return this.allocate(instance, () => this.store.prepare(instance, name));
+  }
+
+  async createNew(instance: Uint8Array, name: string): Promise<DeviceKeyRevealData> {
+    if (!this.store.prepareNew) throw Error('WIFIPROV_FRESH_ALLOCATION_UNSUPPORTED');
+    return this.allocate(instance, () => this.store.prepareNew!(instance, name));
+  }
+
+  private async allocate(instance: Uint8Array, prepare: () => Promise<WiFiProvAllocationRecord>): Promise<DeviceKeyRevealData> {
+    const record = await this.step(prepare);
     let context = record.context;
     if (!context) {
       const response = await this.step(() => this.management.createDeviceKeyV2(record.name, record.requestId, 'diy'));
@@ -63,6 +77,16 @@ export function allocationContext(value: DeviceKeyContext): DeviceKeyContext {
     throw Error('WIFIPROV_ALLOCATION_CONTEXT_INVALID');
   }
   logicalDevicePeerId(value.logicalDeviceId);
+  return { logicalDeviceId: value.logicalDeviceId, credentialVersion: value.credentialVersion, locator: value.locator };
+}
+
+/** Read-only metadata context. Never use it for allocation, Key reveal or a BBP peer. */
+export function metadataAllocationContext(value: DeviceKeyContext): DeviceKeyContext {
+  if (!value || !isLogicalDeviceReferenceId(value.logicalDeviceId)
+    || !Number.isSafeInteger(value.credentialVersion) || value.credentialVersion < 1
+    || value.credentialVersion > 0xffffffff || !base64UrlDecode(value.locator, 16).some(Boolean)) {
+    throw Error('WIFIPROV_ALLOCATION_CONTEXT_INVALID');
+  }
   return { logicalDeviceId: value.logicalDeviceId, credentialVersion: value.credentialVersion, locator: value.locator };
 }
 

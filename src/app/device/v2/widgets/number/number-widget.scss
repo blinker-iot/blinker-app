@@ -25,6 +25,22 @@
   overflow-wrap: anywhere;
 }
 
+// One saved row is 78px on a phone. Keep the title, value and optional note
+// in their own lines; the larger readout options remain unchanged elsewhere.
+:host(.rowc) {
+  padding: 8px 12px;
+  gap: 4px;
+
+  .hd { flex: none; font-size: 12px; line-height: 16px; }
+  .hd-ico { width: 16px; height: 16px; }
+  .bn { gap: 2px; }
+  .bn .bn-num { flex-wrap: nowrap; font-size: 26px; }
+  .bn-value { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bn-u { flex: none; max-width: 40%; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bn-sub { font-size: 11px; line-height: 12px; }
+  .delta { padding: 0 4px; font-size: 10px; line-height: 12px; }
+}
+
 .delta {
   display: inline-flex;
   align-items: center;

@@ -16,6 +16,7 @@ import {
   decodeFrame,
   decodeManifestPageBody,
   decodePatchBody,
+  decodePresenceBody,
   decodeServerHelloBody,
   decodeStatePageBody,
   decodeTelemetryDataBody,
@@ -26,6 +27,7 @@ import {
   encodeFrame,
   encodeManifestAcceptBody,
   encodeManifestRequestBody,
+  encodePresenceControlBody,
   encodeRouteBody,
   encodeStateRequestBody,
   encodeTelemetryControlBody,
@@ -46,8 +48,8 @@ function bytes(value: string): Uint8Array {
 describe('Device V2 App codec', () => {
   it('matches the server App HELLO and frame golden bytes', () => {
     const hello = encodeAppHelloBody();
-    expect(bytesToHex(hello)).toBe('a6000101810202191cc303190200041902000904');
-    expect(APP_FEATURES).toBe(0x1cc3);
+    expect(bytesToHex(hello)).toBe('a60001018102021a00fb1cc303190200041902000904');
+    expect(APP_FEATURES).toBe(0xfb1cc3);
 
     const frame = encodeFrame({
       kind: Bbp2MessageKind.Hello,
@@ -72,18 +74,36 @@ describe('Device V2 App codec', () => {
     expect(() => decodeFrame(new Uint8Array(513))).toThrow(/header/);
 
     expect(decodeServerHelloBody(bytes(
-      'a6000201810202191cc303190200041902000904',
+      'a60002018102021a00011cc303190200041902000904',
     ))).toEqual({
       role: 2,
       versions: [2],
-      features: APP_FEATURES,
+      features: 0x11cc3, // Older Broker can negotiate cloud without Direct.
       maxFrameSize: 512,
       maxReassemblySize: 512,
       reliableReceiveWindow: 4,
     });
+    expect(decodeServerHelloBody(bytes('a60002018102021a00031cc303190200041902000904')).features).toBe(0x31cc3);
+    expect(decodeServerHelloBody(bytes('a60002018102021a000b1cc303190200041902000904')).features).toBe(0xb1cc3);
+    expect(decodeServerHelloBody(bytes('a60002018102021a001b1cc303190200041902000904')).features).toBe(0x1b1cc3);
+    expect(decodeServerHelloBody(bytes('a60002018102021a003b1cc303190200041902000904')).features).toBe(0x3b1cc3);
+    expect(decodeServerHelloBody(bytes('a60002018102021a00fb1cc303190200041902000904')).features).toBe(APP_FEATURES);
     expect(() => decodeServerHelloBody(bytes(
       'a600020181020218c303190200041902000904',
     ))).toThrow(/negotiation/);
+  });
+
+  it('matches the frozen account Presence control and snapshot bytes', () => {
+    expect(bytesToHex(encodePresenceControlBody())).toBe('a10000');
+    expect(decodePresenceBody(bytes('a200f401f6'))).toEqual({
+      cloudReachable: false,
+      cloudLastSeenAt: null,
+    });
+    expect(decodePresenceBody(bytes('a200f5011b0000018bcfe56800'))).toEqual({
+      cloudReachable: true,
+      cloudLastSeenAt: 1_700_000_000_000,
+    });
+    expect(() => decodePresenceBody(bytes('a200f501f6'))).toThrow(/Presence body/);
   });
 
   it('matches the frozen telemetry control/status/data bytes', () => {
@@ -293,5 +313,35 @@ describe('DeviceV2Store', () => {
 
     await expect(store.applyManifestPage(logicalDeviceId, page)).rejects.toThrow(/fingerprint/);
     expect(store.snapshot(logicalDeviceId).manifest).toBeNull();
+  });
+
+  it('orders Presence transitions and restores a same-timestamp snapshot after reconnect', () => {
+    const store = new DeviceV2Store();
+    expect(store.applyPresence(logicalDeviceId, {
+      cloudReachable: false,
+      cloudLastSeenAt: null,
+    })).toBe(true);
+    expect(store.applyPresence(logicalDeviceId, {
+      cloudReachable: true,
+      cloudLastSeenAt: 100,
+    })).toBe(true);
+    expect(store.applyPresence(logicalDeviceId, {
+      cloudReachable: false,
+      cloudLastSeenAt: 99,
+    })).toBe(false);
+    expect(() => store.applyPresence(logicalDeviceId, {
+      cloudReachable: false,
+      cloudLastSeenAt: 100,
+    })).toThrow(/same timestamp/);
+
+    store.resetSession();
+    expect(store.snapshot(logicalDeviceId)).toMatchObject({
+      cloudReachable: null,
+      cloudLastSeenAt: 100,
+    });
+    expect(store.applyPresence(logicalDeviceId, {
+      cloudReachable: true,
+      cloudLastSeenAt: 100,
+    })).toBe(true);
   });
 });

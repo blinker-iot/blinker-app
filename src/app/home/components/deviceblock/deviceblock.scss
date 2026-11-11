@@ -261,7 +261,234 @@
   text-transform: uppercase;
 }
 
-.device-card.offline .device-visual {
+.device-card:not(.online) .device-visual {
   filter: saturate(0.45);
   opacity: 0.78;
+}
+
+.device-nearby {
+  display: inline-flex;
+  gap: 3px;
+
+  color: var(--ion-color-primary);
+}
+
+.configured-metrics {
+  --device-card-header-height: max(24px, 1.1375rem);
+  --device-card-footer-height: max(44px, calc(10px + 2.0125rem));
+
+  position: relative;
+
+  margin: 0 12px 8px;
+  max-width: none;
+  text-align: initial;
+  min-width: 0;
+
+  height: var(--device-card-footer-height);
+
+  display: grid;
+
+  grid-auto-flow: column;
+
+  grid-auto-columns: minmax(max(44px, 3rem), 1fr);
+
+  gap: 6px;
+
+  &.stale .device-metric {
+    color: var(--blinker-text-secondary);
+  }
+}
+
+.device-data-hint {
+  position: absolute;
+
+  right: 0;
+
+  bottom: calc(100% + 2px);
+  color: var(--blinker-text-secondary);
+  font-size: 0.625rem;
+
+  line-height: 12px;
+}
+
+.configured-metrics .device-metric {
+  box-sizing: border-box;
+
+  min-width: max(44px, 3rem);
+  min-height: 44px;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+
+  color: var(--blinker-text-primary);
+
+  font: inherit;
+  text-align: center;
+
+  small,
+  strong,
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .device-metric-hint {
+    color: var(--blinker-text-secondary);
+    font-size: 0.625rem;
+    line-height: 1.4;
+  }
+
+  strong {
+    font-family: inherit;
+
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+
+    line-height: 1.4;
+  }
+
+  .device-metric-unit {
+    color: var(--blinker-text-secondary);
+    font-size: 0.625rem;
+    line-height: 1.4;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: 2px;
+  }
+
+  &[role='button'] {
+    cursor: pointer;
+  }
+
+  &.unavailable {
+    color: var(--blinker-text-secondary);
+  }
+}
+
+.device-metric-visual {
+  max-width: 100%;
+
+  height: var(--device-card-header-height);
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.device-control:disabled,
+.device-range-prepare:disabled,
+.device-range input:disabled {
+  opacity: 0.55;
+
+  cursor: default;
+}
+
+.device-control:not(:disabled) {
+  cursor: pointer;
+}
+
+.device-control-body {
+  flex: 1;
+}
+
+.device-switch-track {
+  position: relative;
+  display: block;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+
+  background: var(--blinker-border);
+
+  &.is-on { background: var(--ion-color-primary); }
+}
+
+.device-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+
+  background: var(--blinker-surface);
+}
+
+.is-on .device-switch-thumb { left: 16px; }
+.device-action-icon { color: var(--ion-color-primary); font-size: 0.75rem; }
+.device-control-body .device-control-feedback { font-size: 0.6875rem; }
+.device-range {
+  position: relative;
+
+  min-width: 140px;
+
+  padding: 0;
+}
+
+.device-range-info {
+  position: absolute;
+  inset: 2px 0 auto;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  pointer-events: none;
+
+  strong { max-width: 100%; }
+}
+
+.device-range input {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+
+  min-height: 44px;
+  min-width: 0;
+
+  margin: 0;
+
+  padding: calc(1.1375rem + 6px) 0 0;
+  accent-color: var(--ion-color-primary);
+
+  touch-action: pan-y;
+
+  &:focus-visible {
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: -2px;
+  }
+}
+
+.device-range-prepare {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+
+  min-height: 44px;
+  padding: 2px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
 }

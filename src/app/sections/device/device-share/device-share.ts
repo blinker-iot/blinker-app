@@ -23,6 +23,7 @@ import { DataService } from 'src/app/core/services/data.service';
 import { DeviceV2SharingService } from 'src/app/core/services/device-v2-sharing.service';
 import { DeviceV2BleService } from 'src/app/core/services/device-v2-ble.service';
 import { NoticeService } from 'src/app/core/services/notice.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'device-share',
@@ -42,6 +43,7 @@ import { NoticeService } from 'src/app/core/services/notice.service';
 })
 
 export class DeviceSharePage implements OnInit, OnDestroy {
+  readonly directedSharingAvailable = environment.deployment.directedSharing;
   id = '';
   device;
   busyId = '';
@@ -57,10 +59,11 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   permissionsOpen = false;
   permissionRole: DeviceV2ShareRole = 'viewer';
   permissionEdit = false;
+  private permissionRecipient?: string;
   private permissionMember?: DeviceV2ShareGrant;
   private linkRequest?: { key: string; body: string };
 
-  get supportsConsoleLink(): boolean { return cloudConsole(this.device); }
+  get supportsConsoleLink(): boolean { return environment.deployment.consoleLinks && cloudConsole(this.device); }
   get linkActive(): boolean { return this.viewLink?.state === 'active' && (this.viewLink.expiresAt === null || this.viewLink.expiresAt > Date.now()); }
 
   get publicLink(): string {
@@ -83,14 +86,17 @@ export class DeviceSharePage implements OnInit, OnDestroy {
     return this.invitationDetails?.invitationCode ? shareInvitationLink(this.invitationDetails.invitationCode) : '';
   }
 
-  get permissionTitle(): string { return this.permissionMember ? '成员权限' : '邀请权限'; }
+  get permissionTitle(): string {
+    return this.permissionMember ? '成员权限' : this.permissionRecipient ? '邮箱邀请权限' : '邀请权限';
+  }
 
   private loadSubscription?: Subscription;
   private sessionSubscription?: Subscription;
   private linkDeviceKey = '';
   private destroyed = false;
   private pageEpoch = 0;
-  private pendingInvitation?: { canEditConsole: boolean; role: DeviceV2ShareRole; idempotencyKey: string; epoch: number; deviceId: string };
+  private pendingInvitation?: { canEditConsole: boolean; recipientAccount?: string;
+    role: DeviceV2ShareRole; idempotencyKey: string; epoch: number; deviceId: string };
 
   get access() {
     return this.dataService.share.byDevice[this.id];
@@ -142,6 +148,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
       this.linkSettingsOpen = false;
       this.linkRequest = undefined;
       this.pendingInvitation = undefined;
+      this.permissionRecipient = undefined;
       this.invitationDetails = null;
 
       this.cd.markForCheck();
@@ -171,10 +178,29 @@ export class DeviceSharePage implements OnInit, OnDestroy {
     this.invitationDetails = null;
   }
 
-  async addShare(): Promise<void> {
-    if (this.busyId || this.destroyed) return;
+  async inviteAccount(): Promise<void> {
+    if (!this.directedSharingAvailable || this.busyId || this.destroyed) return;
+    const epoch = this.dataService.sessionEpoch, deviceId = this.id, pageEpoch = this.pageEpoch;
+    const alert = await this.alerts.create({
+      header: '通过邮箱邀请',
+      message: '填写对方注册使用的邮箱。只有该账号可以在“分享给我的”接受或拒绝；不会自动获得设备权限。',
+      inputs: [{ name: 'email', type: 'email', placeholder: '对方的注册邮箱', attributes: { maxlength: 254 } }],
+      buttons: [{ text: '取消', role: 'cancel' }, {
+        text: '选择权限', handler: (value: { email?: string }) => {
+          if (!this.current(epoch, deviceId, pageEpoch)) return;
+          try { void this.addShare(this.sharing.recipientEmail(value?.email ?? '')); }
+          catch { void this.notices.showToast('请输入对方注册使用的邮箱'); return false; }
+        },
+      }],
+    });
+    if (this.current(epoch, deviceId, pageEpoch)) await alert.present();
+  }
+
+  async addShare(recipientAccount?: string): Promise<void> {
+    if ((recipientAccount !== undefined && !this.directedSharingAvailable) || this.busyId || this.destroyed) return;
 
     this.permissionMember = undefined;
+    this.permissionRecipient = recipientAccount;
     this.permissionRole = 'viewer';
     this.permissionEdit = false;
     this.permissionsOpen = true;
@@ -184,6 +210,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
 
   editPermissions(member: DeviceV2ShareGrant): void {
     this.permissionMember = member;
+    this.permissionRecipient = undefined;
     this.permissionRole = member.role;
     this.permissionEdit = member.canEditConsole === true;
     this.permissionsOpen = true;
@@ -194,19 +221,19 @@ export class DeviceSharePage implements OnInit, OnDestroy {
 
     if (member) {
       await this.run(member.shareId, async () => {
-        await this.sharing.updateShare(this.id, member.shareId, this.permissionRole,
+        const result = await this.sharing.updateShare(this.id, member.shareId, this.permissionRole,
           this.permissionRole === 'operator' ? member.commandEndpointKeys ?? undefined : undefined, this.permissionEdit);
 
         await this.refresh();
 
         this.permissionsOpen = false;
 
-        await this.notices.showToast('成员权限已更新');
+        await this.notices.showToast(result.realtimeRefreshPending ? '权限已保存，通信权限同步中' : '成员权限已更新');
       });
     } else {
       this.permissionsOpen = false;
 
-      await this.createInvitation(this.permissionRole, this.permissionEdit);
+      await this.createInvitation(this.permissionRole, this.permissionRecipient, this.permissionEdit);
     }
   }
 
@@ -239,7 +266,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   }
 
   async setPublicAccess(enabled: boolean): Promise<void> {
-    if (this.busyId || this.linkLoading || this.destroyed) return;
+    if (!this.supportsConsoleLink || this.busyId || this.linkLoading || this.destroyed) return;
 
     const epoch = this.dataService.sessionEpoch;
     const previous = this.publicAccessEnabled;
@@ -271,7 +298,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   }
 
   openLinkSettings(): void {
-    if (!this.publicAccessEnabled || this.busyId || this.linkLoading) return;
+    if (!this.supportsConsoleLink || !this.publicAccessEnabled || this.busyId || this.linkLoading) return;
 
     this.publicFields = [...this.viewLink?.publicFields || []];
     this.linkDays = this.viewLink?.expiresAt === null ? null : 7;
@@ -279,7 +306,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   }
 
   async saveViewLink(rotate = false): Promise<void> {
-    if (this.busyId || this.destroyed || !this.publicAccessEnabled || this.linkLoading) return;
+    if (!this.supportsConsoleLink || this.busyId || this.destroyed || !this.publicAccessEnabled || this.linkLoading) return;
 
     const epoch = this.dataService.sessionEpoch;
     const body = { ...(this.viewLink ? { expectedVersion: this.viewLink.version } : {}),
@@ -318,6 +345,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
   }
 
   async revokeViewLink(): Promise<void> {
+    if (!this.supportsConsoleLink) return;
     const alert = await this.alerts.create({ header: '停用控制台链接？',
       message: '通过此链接的查看将停止，已授权成员不受影响。',
       buttons: [{ text: '保留', role: 'cancel' }, { text: '停用', role: 'destructive', handler: () => {
@@ -382,7 +410,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
     if (key) void this.refreshLink();
   }
 
-  private async createInvitation(role: DeviceV2ShareRole, canEditConsole = false): Promise<void> {
+  private async createInvitation(role: DeviceV2ShareRole, recipientAccount?: string, canEditConsole = false): Promise<void> {
     if (this.busyId || this.destroyed) return;
 
     const epoch = this.dataService.sessionEpoch, deviceId = this.id, pageEpoch = this.pageEpoch;
@@ -390,8 +418,10 @@ export class DeviceSharePage implements OnInit, OnDestroy {
     this.busyId = 'create-invitation';
 
     if (this.pendingInvitation?.canEditConsole !== canEditConsole || this.pendingInvitation?.role !== role
+      || this.pendingInvitation.recipientAccount !== recipientAccount
       || this.pendingInvitation.epoch !== epoch || this.pendingInvitation.deviceId !== deviceId) {
-      this.pendingInvitation = { role, canEditConsole, epoch, deviceId, idempotencyKey: `app-share-${Date.now()}-${this.randomSuffix()}` };
+      this.pendingInvitation = { role, recipientAccount, canEditConsole, epoch, deviceId,
+        idempotencyKey: `app-share-${Date.now()}-${this.randomSuffix()}` };
     }
 
     try {
@@ -400,6 +430,7 @@ export class DeviceSharePage implements OnInit, OnDestroy {
         role,
         this.pendingInvitation.idempotencyKey,
         undefined,
+        recipientAccount,
         canEditConsole,
       );
 
@@ -411,7 +442,9 @@ export class DeviceSharePage implements OnInit, OnDestroy {
 
       if (!this.current(epoch, deviceId, pageEpoch)) return;
 
-      this.invitationDetails = invitation;
+      if (recipientAccount) {
+        await this.notices.showToast('邀请已创建，对方可在“分享给我的”查看。系统通知尚未接通，请自行提醒对方。');
+      } else this.invitationDetails = invitation;
     } catch (error) {
       if (this.current(epoch, deviceId, pageEpoch)) {
         const code = error?.code || error?.error?.errorCode;
@@ -421,6 +454,11 @@ export class DeviceSharePage implements OnInit, OnDestroy {
           DEVICE_V2_SHARE_LIMIT_REACHED: '待领取邀请过多，请先取消不再使用的链接',
           DEVICE_V2_SHARE_IDEMPOTENCY_CONFLICT: '本次邀请权限已变化，请重新生成链接',
           DEVICE_V2_ROUTE_NOT_READY: '设备通信服务准备中，请稍后重试',
+          DEVICE_V2_SHARE_RECIPIENT_NOT_FOUND: '未找到可接收邀请的账号，请确认对方的注册邮箱',
+          DEVICE_V2_SHARE_DIRECTORY_UNAVAILABLE: '邮箱邀请服务暂不可用，请稍后重试；也可另行创建分享链接',
+          DEVICE_V2_SHARE_DIRECTORY_RATE_LIMITED: '邀请查询过于频繁，请稍后重试',
+          DEVICE_V2_SHARE_ALREADY_PENDING: '对方已有该设备的待领取邀请，请勿重复创建',
+          DEVICE_V2_SHARE_OWNER_CANNOT_ACCEPT: '不能邀请设备所有者本人',
         };
 
         await this.notices.showToast(messages[code] ?? '创建共享邀请失败，请稍后重试');

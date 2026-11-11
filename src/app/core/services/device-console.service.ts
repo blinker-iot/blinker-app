@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { getServiceRegion, ServiceRegion } from '../../configs/service-region.config';
@@ -7,6 +7,7 @@ import { CustomPanelDocument, PanelMode, parseCustomPanel } from '../device-v2/c
 import { PageLayout, parsePageLayout } from '../device-v2/page-layout';
 import { BlinkerDevice } from '../model/device.model';
 import { DeviceV2PageLayoutRecord } from './device-v2-page-layout.service';
+import { GATEWAY_NO_AUTH_REPLAY } from '../injectable/server.interceptor';
 
 export interface DeviceConsole {
   logicalDeviceId: string;
@@ -58,6 +59,11 @@ export function cloudConsole(device?: BlinkerDevice): boolean {
 
 export function canEditConsole(device?: BlinkerDevice): boolean {
   return !!device && (!device.config.isShared || device.config.canEditConsole === true);
+}
+
+export function consoleWriteConflict(error: unknown): boolean {
+  return ['DEVICE_CONSOLE_CONFLICT', 'DEVICE_CONSOLE_OWNER_CHANGED', 'DEVICE_CONSOLE_EDIT_FORBIDDEN',
+    'DEVICE_V2_PAGE_LAYOUT_MANIFEST_STALE'].includes((error as { code?: string })?.code || '');
 }
 
 export function parseConsoleLink(value?: string | null): string | null {
@@ -123,9 +129,14 @@ export class DeviceConsoleService {
 
   async save(
     id: string,
-    change: { layout?: PageLayout; uiConfig?: DeviceConsole['uiConfig'] }
+    change: { layout?: PageLayout; uiConfig?: DeviceConsole['uiConfig'] },
+    expectedRevision: number,
   ): Promise<DeviceConsole> {
-    const response = await firstValueFrom(this.http.put<{ data: DeviceConsole }>(this.consoleUrl(id), change));
+    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
+      throw new Error('DEVICE_CONSOLE_REVISION_REQUIRED');
+    }
+    const response = await firstValueFrom(this.http.put<{ data: DeviceConsole }>(this.consoleUrl(id),
+      { ...change, expectedRevision }, { context: new HttpContext().set(GATEWAY_NO_AUTH_REPLAY, true) }));
 
     return this.record(response.data, id);
   }

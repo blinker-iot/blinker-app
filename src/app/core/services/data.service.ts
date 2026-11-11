@@ -6,6 +6,7 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { API } from '../../configs/api.config';
 import { deviceV2AccountCacheScope } from '../device-v2/account-scope';
+import { DeviceDisplayMetadata, parseDeviceDisplayMetadata } from '../device-v2/display-metadata';
 import { DeviceCatalogItem, loadDeviceCatalog, removeDeviceCatalog, saveDeviceCatalog } from '../device-v2/device-catalog-cache';
 import { createGuestDevicePreview } from '../data/guest-device-preview.data';
 import { AuthData, OrderData, ShareDate, UserData } from '../model/data.model';
@@ -28,6 +29,7 @@ const FEEDBACK_DRAFT_STORAGE_KEY = 'blinker_feedback_draft';
 
 export class DataService {
   readonly authDataLoader = new BehaviorSubject(false);
+  readonly authRestoreCompleted = new BehaviorSubject(false);
   readonly userDataLoader = new BehaviorSubject(false);
   readonly deviceDataLoader = new BehaviorSubject(false);
   readonly initCompleted = new BehaviorSubject(false);
@@ -43,6 +45,8 @@ export class DataService {
   private _sessionEpoch = 0;
   private secureStorageReady: Promise<void> | null = null;
   user: UserData = this.emptyUser();
+  /** Only a complete owned-device response, never the merged/shared or cached catalog. */
+  ownedDeviceCount: number | null = null;
   device: OrderData = this.emptyOrder();
   scene: OrderData = this.emptyOrder();
   room: OrderData = this.emptyOrder();
@@ -87,7 +91,12 @@ export class DataService {
 
   async init(): Promise<void> {
     this.removeLegacyAuthData();
-    await this.loadAuthData();
+    try { await this.loadAuthData(); }
+    finally {
+      // Account restoration finishes independently of the device catalog and
+      // can legitimately finish without an authenticated session.
+      if (!this.authRestoreCompleted.value) this.authRestoreCompleted.next(true);
+    }
   }
 
   async setAuthData(auth: AuthData): Promise<boolean> {
@@ -286,6 +295,7 @@ export class DataService {
 
   private resetBlinkerMemory(): void {
     this.user = this.emptyUser();
+    this.ownedDeviceCount = null;
     this.device = this.emptyOrder();
     this.scene = this.emptyOrder();
     this.room = this.emptyOrder();
@@ -323,6 +333,10 @@ export class DataService {
   ): void {
     this.loadGatewayUser(currentUser);
 
+    this.ownedDeviceCount = new Set(devices
+      .filter(device => device.state !== 'deleted')
+      .map(device => device.logicalDeviceId)).size;
+
     const ownedIds = new Set(devices.map((device) => device.logicalDeviceId));
 
     const inventory = [
@@ -353,7 +367,11 @@ export class DataService {
     const scope = deviceV2AccountCacheScope(this, API.BASE_URL);
 
     if (scope) {
-      if (complete) saveDeviceCatalog(scope, inventory);
+      if (complete) saveDeviceCatalog(scope, inventory.map(item => {
+        const current = this.device.dict[item.device.logicalDeviceId];
+        return { ...item, device: { ...item.device, name: current?.name || item.device.name,
+          displayMetadata: current?.displayMetadata } };
+      }));
       else removeDeviceCatalog(scope);
     }
   }
@@ -403,10 +421,20 @@ export class DataService {
         } : {}),
       };
 
-      const customName = item.shared
-        ? gatewayDevice.name || id
-        : this.nonEmptyString(previousConfig['customName']) || gatewayDevice.name || id;
-
+      // Server inventory is the shared display authority, never an older local
+      // nickname. A delayed inventory response cannot undo a newer CAS receipt.
+      let displayMetadata: DeviceDisplayMetadata | undefined;
+      try {
+        if (gatewayDevice.displayMetadata) {
+          const incoming = parseDeviceDisplayMetadata(gatewayDevice.displayMetadata, id);
+          if (incoming.name === gatewayDevice.name) displayMetadata = incoming;
+        }
+      } catch { /* Ignore malformed display hints; never derive capabilities from them. */ }
+      const previousDisplay = previousDevices[id]?.displayMetadata as DeviceDisplayMetadata | undefined;
+      if (previousDisplay && (!displayMetadata || previousDisplay.revision > displayMetadata.revision)) {
+        displayMetadata = previousDisplay;
+      }
+      const customName = displayMetadata?.name || gatewayDevice.name || id;
       // Active views and pending UI-config requests share this object. Copying
       // it during inventory refresh would fork the device's current panel mode.
       const config = Object.assign(previousConfig, {
@@ -421,6 +449,8 @@ export class DataService {
 
       deviceDict[id] = {
         ...gatewayDevice,
+        name: customName,
+        displayMetadata,
         id,
         deviceName: id,
         deviceType: gatewayDevice.deviceType,
@@ -472,6 +502,26 @@ export class DataService {
     };
 
     device.subject?.next({ cloudReachable, cloudLastSeenAt });
+  }
+
+  updateDeviceV2DisplayMetadata(candidate: DeviceDisplayMetadata): void {
+    const metadata = parseDeviceDisplayMetadata(candidate);
+    const device = this.device?.dict?.[metadata.logicalDeviceId] as BlinkerDevice | undefined;
+    if (!device || (device.displayMetadata && device.displayMetadata.revision > metadata.revision)) return;
+    device.name = metadata.name;
+    device.displayMetadata = metadata;
+    device.config.customName = metadata.name;
+    const scope = deviceV2AccountCacheScope(this, API.BASE_URL);
+    const catalog = scope && loadDeviceCatalog(scope);
+    if (scope && catalog) {
+      for (const item of catalog) if (item.device.logicalDeviceId === metadata.logicalDeviceId) {
+        item.device.name = metadata.name;
+        item.device.displayMetadata = metadata;
+      }
+      saveDeviceCatalog(scope, catalog);
+    }
+    device.subject?.next({ displayMetadata: metadata });
+    this.deviceDataLoader.next(true);
   }
 
   loadGatewayUser(currentUser: CurrentUser): void {
@@ -647,7 +697,13 @@ export class DataService {
 
   private configureSecureStorage(): Promise<void> {
     if (!this.secureStorageReady) {
-      this.secureStorageReady = SecureStorage.setKeyPrefix('blinker_');
+      const pending = SecureStorage.setKeyPrefix('blinker_').catch(error => {
+        // Do not retain a rejected initialization forever. Only a later caller
+        // may try again; this failure never starts another storage operation.
+        if (this.secureStorageReady === pending) this.secureStorageReady = null;
+        throw error;
+      });
+      this.secureStorageReady = pending;
     }
 
     return this.secureStorageReady;

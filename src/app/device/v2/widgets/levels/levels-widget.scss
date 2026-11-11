@@ -6,38 +6,89 @@
 
 .lv-row {
   flex: 1;
-  min-height: 0;
+  min-width: 0;
+  min-height: 54px;
   display: flex;
   align-items: center;
   gap: 10px;
+  // One local scroller retains every full-size target, including both nudges,
+  // in historical 2-column cards with many levels. No saved grid is rewritten.
+  overflow: auto;
 
-  > :not(.rbtn) { flex: 1; min-width: 0; align-self: stretch; }
-  > .lv-seg { align-self: center; height: 44px; }
+  > :not(.rbtn) { flex: 1 0 auto; min-width: min-content; align-self: stretch; }
+  > .lv-seg { align-self: center; min-height: 54px; }
+
+  button {
+    min-width: 48px;
+    min-height: 48px;
+    touch-action: manipulation;
+
+    &:focus-visible { outline-offset: -2px; }
+    &:disabled { opacity: 0.35; cursor: default; }
+    &:active:not(:disabled) { opacity: 0.75; }
+  }
+
+  // Keep the original 40px round visual inside an independent 48px target.
+  > .rbtn {
+    position: relative;
+    isolation: isolate;
+    width: 48px;
+    height: 48px;
+    border: 0;
+    background: none;
+    transform: none;
+
+    &::before {
+      content: '';
+      box-sizing: border-box;
+      position: absolute;
+      z-index: -1;
+      inset: 4px;
+      border-radius: 50%;
+      background: var(--ui-well);
+      pointer-events: none;
+    }
+
+    @include theme.electronic {
+      border: 0;
+      &::before { border: 1.5px dotted var(--ui-faint); background: none; }
+    }
+  }
 }
 
 // Bars
 
 .lv-bars {
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 8px;
-  height: 100%;
 }
 
 .lv-bar {
-  flex: 1;
+  position: relative;
+  flex: 1 0 48px;
+}
+
+.lv-bar-fill {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
   height: calc(var(--h) * 1%);
   border-radius: 7px;
   background: var(--ui-track);
   transition: background-color 0.2s;
 
-  &.on { background: var(--ui-accent); }
-
   @include theme.electronic {
     border-radius: 0;
     background: radial-gradient(circle, var(--ui-faint) 1.8px, transparent 2.3px) center bottom / 7px 7px;
+  }
+}
 
-    &.on { background: radial-gradient(circle, var(--ui-accent) 2px, transparent 2.5px) center bottom / 7px 7px; }
+.lv-bar.on > .lv-bar-fill {
+  background: var(--ui-accent);
+
+  @include theme.electronic {
+    background: radial-gradient(circle, var(--ui-accent) 2px, transparent 2.5px) center bottom / 7px 7px;
   }
 }
 
@@ -51,6 +102,12 @@
 }
 
 .lv-dot {
+  flex: 0 0 48px;
+  display: grid;
+  place-items: center;
+}
+
+.lv-dot-face {
   display: grid;
   place-items: center;
   width: 30px;
@@ -61,18 +118,21 @@
   font-size: 12px;
   transition: background-color 0.2s, color 0.2s;
 
-  &.on { background: var(--ui-accent); color: var(--ui-on-accent); }
-
   @include theme.electronic {
     border: 1.5px dotted var(--ui-faint);
     background: none;
-
-    &.on { border-color: var(--ui-accent); background: none; color: var(--ui-accent); }
   }
 }
 
+.lv-dot.on > .lv-dot-face {
+  background: var(--ui-accent);
+  color: var(--ui-on-accent);
+
+  @include theme.electronic { border-color: var(--ui-accent); background: none; color: var(--ui-accent); }
+}
+
 .lv-gap {
-  flex: 1;
+  flex: 1 0 2px;
   height: 2px;
   border-radius: 2px;
   background: var(--ui-track);
@@ -99,8 +159,8 @@
   background: var(--ui-well);
 
   button {
-    flex: 1;
-    min-width: 0;
+    flex: 1 0 48px;
+    width: 48px;
     overflow: hidden;
     padding-inline: 2px;
     border-radius: calc(var(--ui-radius-sm) - 3px);
@@ -118,4 +178,26 @@
 
     button.on { background: var(--ui-well); }
   }
+}
+
+:host(.rowc) {
+  flex-direction: row;
+  align-items: center;
+  padding-block: 4px;
+  gap: 12px;
+
+  .hd {
+    flex: 0 1 30%;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+  .hd-ico { width: 18px; height: 18px; }
+  .hd-v { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .lv-row { align-self: stretch; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lv-bar-fill, .lv-dot-face, .rbtn { transition: none; }
 }

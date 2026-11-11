@@ -60,6 +60,12 @@ export class PickerWidgetComponent extends WidgetBase {
     if (value !== null) this.send(value);
   }
 
+  turnCancel(event: PointerEvent): void {
+    if (this.pointerId !== event.pointerId) return;
+    this.pointerId = undefined;
+    this.local.set(null);
+  }
+
   key(event: KeyboardEvent): void {
     const direction = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[event.key];
     if (!direction) return;

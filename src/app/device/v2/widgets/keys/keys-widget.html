@@ -9,7 +9,7 @@
 <div class="keys" role="group" [attr.aria-label]="title" [style.--cols]="columns">
   @for (key of keys; track key.label) {
     <button type="button" class="key" [class.toned]="key.tone" [class.sent]="sent() === key.label"
-      [style.--c]="key.tone ? 'var(--ui-' + key.tone + ')' : null" [disabled]="card.disabled" (click)="press(key.label)">
+      [style.--c]="key.tone ? 'var(--ui-' + key.tone + ')' : null" [title]="key.label" [disabled]="card.disabled" (click)="press(key.label)">
       @if (key.icon) { <app-ui-icon [name]="key.icon" /> }
       <span>{{ key.label }}</span>
     </button>

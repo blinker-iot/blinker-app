@@ -44,4 +44,10 @@ export class SlideWidgetComponent extends SwitchWidgetBase {
     this.position.set(null);
     if (this.on ? position <= 1 - SLIDE_THRESHOLD : position >= SLIDE_THRESHOLD) this.toggle(!this.on, true);
   }
+
+  cancel(event: PointerEvent): void {
+    if (this.drag?.pointerId !== event.pointerId) return;
+    this.drag = undefined;
+    this.position.set(null);
+  }
 }

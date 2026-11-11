@@ -37,6 +37,8 @@ import { DataService } from '../services/data.service';
 
 const REQUEST_RETRIED = new HttpContextToken<boolean>(() => false);
 const REQUEST_REFRESH_TOKEN = new HttpContextToken<string>(() => '');
+// Opt-in for management operations whose caller must reconcile explicitly.
+export const GATEWAY_NO_AUTH_REPLAY = new HttpContextToken<boolean>(() => false);
 const GATEWAY_REQUEST_TIMEOUT_MS = 30_000;
 const GATEWAY_UPLOAD_TIMEOUT_MS = 120_000;
 let requestSequence = 0;
@@ -125,6 +127,7 @@ export class ServerInterceptor implements HttpInterceptor {
           !this.isConsoleViewUrl(prepared.url) &&
           !this.isAccountDeletionTokenMissing(prepared.url, error) &&
           !prepared.context.get(REQUEST_RETRIED) &&
+          !prepared.context.get(GATEWAY_NO_AUTH_REPLAY) &&
           !!this.dataService.auth?.refreshToken
         ) {
           const recovery = this.tokensForUnauthorized(prepared);

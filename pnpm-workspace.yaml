@@ -1,0 +1,10 @@
+packages:
+  - device-template
+
+# Install hooks are disabled; locked platform packages provide native binaries.
+allowBuilds:
+  '@parcel/watcher': false
+  esbuild: false
+  lmdb: false
+  msgpackr-extract: false
+  sharp: false

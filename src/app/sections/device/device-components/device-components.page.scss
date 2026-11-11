@@ -1,77 +1,149 @@
 @use '../../../../theme/ui-theme' as theme;
+@use '../../../device/v2/panel/panel-grid' as grid;
+@use '../../../../theme/settings-surface' as settings;
+@use '../../../../theme/control-page-chrome' as chrome;
+
+@include chrome.header;
 
 :host {
-  color: var(--blinker-text-primary);
+  @include settings.tokens;
+  background: var(--blinker-bg);
+}
+
+ion-content { --background: var(--blinker-bg); }
+
+main {
+  @include settings.page;
+  --section-main-display: flex;
+  --section-main-accent-opacity: 0;
+  --content-offset-gap: 0px;
+  padding-bottom: calc(32px + var(--ion-safe-area-bottom, 0px));
 }
 
 .hint {
-  margin: 0 0 20px;
+  margin: 0;
   color: var(--blinker-text-secondary);
-  font-size: 13px;
+  font-size: 0.875rem;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .components {
+  @include settings.card;
+  padding: 0;
   overflow: hidden;
-  border: 1px solid var(--blinker-border);
-  border-radius: var(--blinker-radius-card);
-  background: var(--blinker-surface);
 }
 
 .row {
   display: flex;
   align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-inline-end: 8px;
 
-  & + .row { border-top: 1px solid var(--blinker-border); }
+  & + .row { border-top: 1px solid var(--blinker-divider); }
 }
 
 .style {
+  @include settings.button;
   flex: 0 0 auto;
-  margin-right: 12px;
-  padding: 6px 12px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--blinker-surface-muted);
-  color: var(--ion-color-primary);
-  font: inherit;
-  font-size: 12px;
-
-  &:disabled { opacity: 0.4; }
+  min-width: 64px;
+  margin-block: 4px;
+  padding-inline: 12px;
+  font-size: 0.875rem;
+  &:focus-visible { outline-offset: -3px; }
 }
 
 ion-toggle {
   display: block;
   flex: 1 1 auto;
   min-width: 0;
-  padding: 16px;
-  font-size: 14px;
+  min-height: 56px;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  font-size: 0.9375rem;
+  line-height: 1.5;
 
   &::part(label) {
+    min-width: 0;
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+  &:focus-within {
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: -4px;
+    border-radius: 12px;
   }
 }
 
 .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
   padding: 24px 16px;
   text-align: center;
   color: var(--blinker-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .error {
-  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
   color: var(--ion-color-danger);
-  font-size: 13px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  > span { flex: 1 1 160px; min-width: 0; }
+}
+
+.retry { @include settings.button; flex: 0 0 auto; }
+.save-status { margin: 0; color: var(--blinker-text-secondary); font-size: 0.875rem; line-height: 1.6; overflow-wrap: anywhere; }
+
+// This overlay is portaled outside the routed host. Opt in its chrome here,
+// but leave the preview and Inspector's three-theme tokens to the editor.
+.component-style-modal {
+  @include settings.tokens;
+  --width: min(100%, 720px);
+  --max-height: 100%;
+  --background: var(--blinker-bg);
+  --border-radius: 22px;
+  --transparent-page-header-height: 56px;
+  --transparent-page-content-top: calc(var(--ion-safe-area-top, 0px) + var(--transparent-page-header-height));
+}
+
+ion-header.control-page-header:not(.main-tab-header):not(.opaque-page-header) ion-toolbar ion-buttons ion-button.text-action {
+  width: auto;
+  max-width: 104px;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 0.875rem;
+  white-space: normal;
+  &::part(native) { line-height: 1.4; white-space: normal; }
 }
 
 .editor {
   @include theme.ui-theme;
+  box-sizing: border-box;
   min-height: 100%;
-  padding: 0 16px 16px;
+  padding: 0 max(16px, var(--ion-safe-area-right, 0px)) calc(24px + var(--ion-safe-area-bottom, 0px)) max(16px, var(--ion-safe-area-left, 0px));
   background: var(--ui-bg);
+  color: var(--ui-ink);
+  font-family: var(--ui-font);
+  .hint, .save-status { color: var(--ui-muted); margin-block: 12px; }
+  .error, .validation-hint { color: var(--ui-alert); margin-block: 12px; }
+  .validation-hint { font-size: 0.875rem; line-height: 1.6; overflow-wrap: anywhere; }
 }
 
 .editor-preview {
   display: block;
+  max-width: grid.$page-max-width - 2 * grid.$page-inset;
+  margin-inline: auto;
   margin-bottom: 20px;
 }

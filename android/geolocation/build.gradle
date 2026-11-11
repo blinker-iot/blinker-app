@@ -1,0 +1,51 @@
+buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20'
+    }
+}
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+// Fail closed when the installed JS/native contract changes. No node_modules edits.
+def upstream = new File(rootDir, '../node_modules/@capacitor/geolocation')
+if (new groovy.json.JsonSlurper().parse(new File(upstream, 'package.json')).version != '8.2.2') {
+    throw new GradleException('Review maintained Android Geolocation before changing plugin version')
+}
+[
+    'GeolocationPlugin.kt': 'fd2e2a8e4e094753085fb0049154a6ffad6ea0949e71efeeb6c5b4ef4927657d',
+    'GeolocationErrors.kt': '48f0e2ab7d83014bf6730cec074c3d2d61cbd81d3d4ff371a19f8b9b58ae11ef'
+].each { name, expected ->
+    def source = new File(upstream, "android/src/main/kotlin/com/capacitorjs/plugins/geolocation/${name}")
+    def actual = java.security.MessageDigest.getInstance('SHA-256').digest(source.bytes).encodeHex().toString()
+    if (actual != expected) throw new GradleException('Upstream Geolocation source changed; review overlay')
+}
+
+android {
+    namespace 'com.capacitorjs.plugins.geolocation'
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        minSdk rootProject.ext.minSdkVersion
+        targetSdk rootProject.ext.targetSdkVersion
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+}
+kotlin { jvmToolchain(21) }
+
+dependencies {
+    implementation project(':capacitor-android')
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.activity:activity-ktx:1.9.3'
+    implementation 'com.google.code.gson:gson:2.13.2'
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
+    implementation 'com.google.android.gms:play-services-base:18.5.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2'
+    testImplementation "junit:junit:$rootProject.ext.junitVersion"
+}

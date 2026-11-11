@@ -33,6 +33,7 @@ export class SelfHostedServerPage {
   showKey = false;
   addressError = '';
   keyError = '';
+  operationError = '';
   saved = false;
   hasSavedConfig = false;
 
@@ -51,6 +52,7 @@ export class SelfHostedServerPage {
   save(): void {
     this.addressError = '';
     this.keyError = '';
+    this.operationError = '';
     this.saved = false;
 
     const normalizedAddress = this.serverService.normalizeAddress(
@@ -64,23 +66,32 @@ export class SelfHostedServerPage {
     }
     if (!normalizedAddress || this.keyError) return;
 
-    const config = this.serverService.saveConfig(
-      normalizedAddress,
-      this.serverKey,
-    );
-    this.serverAddress = config.address;
-    this.hasSavedConfig = true;
-    this.saved = true;
+    try {
+      const config = this.serverService.saveConfig(
+        normalizedAddress,
+        this.serverKey,
+      );
+      this.serverAddress = config.address;
+      this.hasSavedConfig = true;
+      this.saved = true;
+    } catch {
+      this.operationError = '配置未能保存在本机，请稍后重试。';
+    }
   }
 
   clearValidation(field: 'address' | 'key'): void {
     this.saved = false;
+    this.operationError = '';
     if (field === 'address') this.addressError = '';
     if (field === 'key') this.keyError = '';
   }
 
   toggleKeyVisibility(): void {
     this.showKey = !this.showKey;
+  }
+
+  ionViewWillLeave(): void {
+    this.showKey = false;
   }
 
   async confirmClear(): Promise<void> {
@@ -100,13 +111,19 @@ export class SelfHostedServerPage {
   }
 
   private clear(): void {
-    this.serverService.clearConfig();
+    this.saved = false;
+    this.operationError = '';
+    try {
+      this.serverService.clearConfig();
+    } catch {
+      this.operationError = '配置暂未清除，请稍后重试。';
+      return;
+    }
     this.serverAddress = '';
     this.serverKey = '';
     this.showKey = false;
     this.addressError = '';
     this.keyError = '';
-    this.saved = false;
     this.hasSavedConfig = false;
   }
 }

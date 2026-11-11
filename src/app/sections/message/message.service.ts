@@ -9,6 +9,7 @@ import {
 import { AppVisibilityService } from 'src/app/core/services/app-visibility.service';
 import { DataService } from 'src/app/core/services/data.service';
 import { NtfyService } from 'src/app/core/services/ntfy.service';
+import { environment } from 'src/environments/environment';
 import {
   MessageDeleteResult,
   MessageItem,
@@ -27,6 +28,7 @@ interface RequestContext {
 
 @Injectable({ providedIn: 'root' })
 export class MessageService {
+  get available(): boolean { return environment.deployment.messages; }
   private currentItems: MessageItem[] = [];
   private currentSummary: UnreadSummary = this.emptySummary();
   private currentNextCursor: string | null = null;
@@ -100,7 +102,7 @@ export class MessageService {
 
   async init(): Promise<void> {
     this.syncSession();
-    if (this.initialized) return;
+    if (!this.available || this.initialized) return;
     this.initialized = true;
     if (!this.canRefreshInBackground()) return;
     await this.loadFirst();
@@ -108,7 +110,7 @@ export class MessageService {
 
   async loadFirst(filters: MessageListFilters = this.currentFilters): Promise<void> {
     this.syncSession();
-    if (!this.dataService.auth) return;
+    if (!this.available || !this.dataService.auth) return;
 
     const normalizedFilters = this.normalizeFilters(filters);
     const context = this.requestContext();
@@ -153,7 +155,7 @@ export class MessageService {
   async loadMore(): Promise<void> {
     this.syncSession();
     const cursor = this.currentNextCursor;
-    if (!this.dataService.auth || !cursor || this.firstPageLoading
+    if (!this.available || !this.dataService.auth || !cursor || this.firstPageLoading
       || this.nextPageLoading) return;
 
     const context = this.requestContext();
@@ -194,7 +196,7 @@ export class MessageService {
 
   async getMessage(messageId: string): Promise<MessageItem | null> {
     this.syncSession();
-    if (!this.dataService.auth) return null;
+    if (!this.available || !this.dataService.auth) return null;
     const context = this.requestContext();
     this.currentErrorMessage = null;
 
@@ -224,7 +226,7 @@ export class MessageService {
 
   async markRead(messageId: string): Promise<MessageReadResult | null> {
     this.syncSession();
-    if (!this.dataService.auth) return null;
+    if (!this.available || !this.dataService.auth) return null;
     const context = this.requestContext();
     this.currentErrorMessage = null;
 
@@ -261,7 +263,7 @@ export class MessageService {
 
   async markAllRead(): Promise<MessageMarkAllReadResult | null> {
     this.syncSession();
-    if (!this.dataService.auth) return null;
+    if (!this.available || !this.dataService.auth) return null;
     const snapshot = await this.refreshUnreadSummary();
     if (!snapshot) return null;
     const beforeCursor = snapshot.beforeCursor;
@@ -298,7 +300,7 @@ export class MessageService {
 
   async deleteMessage(messageId: string): Promise<MessageDeleteResult | null> {
     this.syncSession();
-    if (!this.dataService.auth) return null;
+    if (!this.available || !this.dataService.auth) return null;
     const context = this.requestContext();
     this.currentErrorMessage = null;
 
@@ -373,7 +375,7 @@ export class MessageService {
 
   private async refreshUnreadSummary(): Promise<UnreadSummary | null> {
     this.syncSession();
-    if (!this.dataService.auth) return null;
+    if (!this.available || !this.dataService.auth) return null;
     const context = this.requestContext();
     const requestId = ++this.summaryRequestId;
     this.currentErrorMessage = null;
@@ -420,7 +422,7 @@ export class MessageService {
   }
 
   private canRefreshInBackground(): boolean {
-    return !!this.dataService.auth
+    return this.available && !!this.dataService.auth
       && this.dataService.userDataLoader.value
       && this.appVisibility.active.value;
   }

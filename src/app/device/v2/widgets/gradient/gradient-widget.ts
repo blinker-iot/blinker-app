@@ -12,6 +12,7 @@ import { formatNumber } from '../widget-kit';
   imports: [ValueTransitionDirective, UiIconComponent],
   templateUrl: './gradient-widget.html',
   styleUrls: ['./gradient-widget.scss'],
+  host: { '[class.rowc]': 'rows === 1' },
 })
 export class GradientWidgetComponent extends RangeWidgetBase {
   get track(): string { return this.options.track ?? 'cct'; }

@@ -26,6 +26,8 @@ import { DataService } from '../../../core/services/data.service';
 import { GatewayHttpError } from '../../../core/model/response.model';
 import { DeviceV2BleService } from '../../../core/services/device-v2-ble.service';
 import { UserService } from '../../../core/services/user.service';
+import { AppVisibilityService } from '../../../core/services/app-visibility.service';
+import { BleAccessRegistrationGuide } from './ble-access-registration-guide';
 
 type BleEnrollmentPhase =
   | 'idle'
@@ -57,16 +59,21 @@ export class BleDeviceGuidePage implements OnDestroy {
   deviceName = '';
   phase: BleEnrollmentPhase = 'idle';
   error = '';
+  cloudIdentityConflict = false;
   logicalDeviceId = '';
   endpointCount = 0;
   candidates: BleDirectTarget[] = [];
   pendingEnrollments: string[] = [];
+  readonly registration: BleAccessRegistrationGuide;
+  registrationReady = false;
 
   private operation = 0;
   private recovery?: AbortController;
   private session?: BleDirectSession;
   private observedSessionEpoch: number;
   private readonly subscriptions = new Subscription();
+  private foreground = true;
+  private viewActive = false;
 
   constructor(
     private readonly ble: DeviceV2BleService,
@@ -75,15 +82,26 @@ export class BleDeviceGuidePage implements OnDestroy {
     private readonly navController: NavController,
     private readonly translate: TranslateService,
     private readonly changeDetector: ChangeDetectorRef,
+    appVisibility: AppVisibilityService,
   ) {
+    this.registration = new BleAccessRegistrationGuide(ble,
+      () => this.foreground && this.viewActive && !!this.data.auth?.accessToken
+        && ['idle', 'failed'].includes(this.phase),
+      () => this.changeDetector.markForCheck(), id => {
+        this.registrationReady = true; this.logicalDeviceId = id; this.endpointCount = 0;
+        this.phase = 'ready'; this.error = '';
+      });
     this.observedSessionEpoch = this.data.sessionEpoch;
     this.subscriptions.add(this.data.authDataChanged.subscribe(() => {
       if (this.observedSessionEpoch === this.data.sessionEpoch) return;
       this.observedSessionEpoch = this.data.sessionEpoch;
       this.operation += 1;
+      this.registration.retire(true);
+      this.registrationReady = false;
       this.recovery?.abort();
       this.phase = 'idle';
       this.error = '';
+      this.cloudIdentityConflict = false;
       this.logicalDeviceId = '';
       this.endpointCount = 0;
       this.candidates = [];
@@ -94,10 +112,17 @@ export class BleDeviceGuidePage implements OnDestroy {
       );
       this.changeDetector.markForCheck();
     }));
+    this.subscriptions.add(appVisibility.active.subscribe(active => {
+      this.foreground = active;
+      if (active) return; // No query, scan or authentication on return.
+      this.operation++; this.recovery?.abort(); this.registration.retire();
+      this.phase = 'idle'; this.candidates = []; this.logicalDeviceId = ''; this.registrationReady = false;
+      void this.closeSession(); this.changeDetector.markForCheck();
+    }));
   }
 
   get busy(): boolean {
-    return this.phase === 'discovering' || this.phase === 'enrolling' || this.phase === 'recovering';
+    return this.registration.busy || this.phase === 'discovering' || this.phase === 'enrolling' || this.phase === 'recovering';
   }
 
   get actionKey(): string {
@@ -108,12 +133,20 @@ export class BleDeviceGuidePage implements OnDestroy {
     return 'DEVICE_GUIDE.BLE_START';
   }
 
+  get registrationName(): string {
+    return this.deviceName.trim() || this.translate.instant('DEVICE_GUIDE.DEFAULT_DEVICE_NAME');
+  }
+
+  get registrationBlocked(): boolean { return this.busy || this.phase === 'selecting'; }
+
   ionViewWillEnter(): void {
+    this.viewActive = true;
     if (!this.data.auth?.accessToken) {
       void this.navController.navigateRoot('/login');
       return;
     }
     void this.loadPending(this.operation);
+    void this.registration.loadLocal();
   }
 
   private async loadPending(operation: number): Promise<void> {
@@ -132,11 +165,13 @@ export class BleDeviceGuidePage implements OnDestroy {
   async resumeEnrollment(logicalDeviceId: string): Promise<void> {
     if (this.busy || this.recovery || this.phase === 'ready' || !this.pendingEnrollments.includes(logicalDeviceId)) return;
     if (!this.data.auth?.accessToken) return;
+    this.registration.retire(); this.registrationReady = false;
     const operation = ++this.operation;
     const recovery = this.recovery = new AbortController();
     this.phase = 'recovering';
     this.candidates = [];
     this.error = '';
+    this.cloudIdentityConflict = false;
     this.changeDetector.markForCheck();
     try {
       await this.acceptEnrollment(await this.ble.resume(logicalDeviceId, recovery.signal), operation);
@@ -155,8 +190,10 @@ export class BleDeviceGuidePage implements OnDestroy {
     }
 
     const operation = ++this.operation;
+    this.registration.retire(); this.registrationReady = false;
     this.phase = 'discovering';
     this.error = '';
+    this.cloudIdentityConflict = false;
     this.changeDetector.markForCheck();
 
     try {
@@ -229,10 +266,10 @@ export class BleDeviceGuidePage implements OnDestroy {
 
   private fail(operation: number, error: unknown): void {
     if (operation !== this.operation) return;
-    if (operation !== this.operation) return;
     console.error('[BLE_DIRECT_ENROLLMENT]', error instanceof Error ? error.message : 'UNKNOWN');
     this.phase = 'failed';
     this.candidates = [];
+    this.cloudIdentityConflict = this.isCloudIdentityConflict(error);
     this.error = this.messageOf(error);
     this.changeDetector.markForCheck();
     void this.loadPending(operation);
@@ -241,7 +278,14 @@ export class BleDeviceGuidePage implements OnDestroy {
   async finish(): Promise<void> {
     const operation = this.operation;
     const logicalDeviceId = this.logicalDeviceId;
-    if (logicalDeviceId) await this.users.getAllInfo();
+    try { if (logicalDeviceId) await this.users.getAllInfo(); }
+    catch {
+      if (operation === this.operation) {
+        this.error = this.translate.instant('DEVICE_GUIDE.BLE_REGISTRATION_REFRESH_FAILED');
+        this.changeDetector.markForCheck();
+      }
+      return;
+    }
     if (operation !== this.operation) return;
     await this.closeSession();
     if (operation !== this.operation) return;
@@ -251,6 +295,7 @@ export class BleDeviceGuidePage implements OnDestroy {
   }
 
   ionViewWillLeave(): void {
+    this.viewActive = false; this.registration.retire(true); this.registrationReady = false;
     this.operation += 1;
     this.recovery?.abort();
     this.pendingEnrollments = [];
@@ -258,6 +303,7 @@ export class BleDeviceGuidePage implements OnDestroy {
     // displayed as busy or a closed session displayed as ready.
     this.phase = 'idle';
     this.error = '';
+    this.cloudIdentityConflict = false;
     this.candidates = [];
     this.logicalDeviceId = '';
     this.endpointCount = 0;
@@ -265,6 +311,7 @@ export class BleDeviceGuidePage implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.viewActive = false; this.registration.retire(true);
     this.operation += 1;
     this.recovery?.abort();
     this.subscriptions.unsubscribe();
@@ -277,7 +324,15 @@ export class BleDeviceGuidePage implements OnDestroy {
     if (session) await session.close().catch(() => undefined);
   }
 
+  private isCloudIdentityConflict(error: unknown): boolean {
+    return error instanceof GatewayHttpError && error.httpStatus === 409
+      && error.code === 'DEVICE_V2_BLE_CLOUD_IDENTITY_CONFLICT';
+  }
+
   private messageOf(error: unknown): string {
+    if (this.isCloudIdentityConflict(error)) {
+      return this.translate.instant('DEVICE_GUIDE.BLE_CLOUD_IDENTITY_CONFLICT');
+    }
     if (error instanceof GatewayHttpError) {
       if (error.httpStatus === 409 && error.code === 'DEVICE_V2_BLE_RESET_REQUIRED') {
         return this.translate.instant('DEVICE_GUIDE.BLE_RESET_REQUIRED');

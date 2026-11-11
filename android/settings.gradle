@@ -3,3 +3,6 @@ include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
 
 apply from: 'capacitor.settings.gradle'
+
+// Same JS/plugin identity and SDK versions; maintained Android one-shot fix.
+project(':capacitor-geolocation').projectDir = new File(rootDir, 'geolocation')

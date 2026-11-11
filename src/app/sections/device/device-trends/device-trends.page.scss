@@ -1,0 +1,33 @@
+@use '../../../../theme/workflow-surface' as workflow;
+@include workflow.page;
+
+.source-summary, .source-note, .policy-note, .range-note, .bounded-note, .empty-state,
+.readonly-note, .window-pending, small { color: var(--blinker-text-secondary); font-size: 14px; line-height: 1.6; }
+.policy-card { display: grid; gap: 12px; }
+.query-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.query-form h2 { flex-basis: 100%; }
+.query-form > label { display: flex; flex: 1 1 180px; flex-direction: column; min-width: 0; gap: 8px; }
+.window-end { margin: 0; }
+.window-navigation { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.window-status { flex-basis: 100%; min-width: 0; }
+.window-status:empty { display: none; }
+.window-error, .error-note { color: var(--ion-color-danger); }
+fieldset { min-width: 0; border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+legend { margin-bottom: 8px; color: var(--blinker-text-secondary); font-size: 14px; }
+.enabled-control, fieldset label { display: flex; align-items: center; min-height: 48px; gap: 12px; }
+.enabled-control span, fieldset label span { min-width: 0; overflow-wrap: anywhere; }
+input[type='checkbox'] { flex: 0 0 20px; width: 20px; height: 20px; margin: 0; accent-color: var(--ion-color-primary); }
+.runtime-phase { color: var(--blinker-text-primary); font-weight: 600; }
+.notice-note { color: var(--ion-color-primary); }
+.query-loading { display: flex; align-items: center; gap: 12px; min-height: 48px; color: var(--blinker-text-secondary); }
+.query-loading ion-spinner { width: 24px; height: 24px; flex: 0 0 24px; }
+.history-list { padding-block: 0; }
+.history-row { padding-block: 16px; border-bottom: 1px solid var(--blinker-divider); }
+.history-row:last-child { border-bottom: 0; }
+.history-main { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; }
+.history-main > * { min-width: 0; overflow-wrap: anywhere; }
+time { display: block; font-size: 13px; line-height: 1.6; margin-top: 8px; color: var(--blinker-text-secondary); }
+svg { display: block; width: 100%; margin-block: 12px; max-height: 180px; overflow: visible; }
+path { fill: none; stroke: var(--ion-color-primary); stroke-width: 1; }
+circle { fill: var(--ion-color-primary); }
+.load-more-action { width: 100%; }

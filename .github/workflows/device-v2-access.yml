@@ -1,0 +1,100 @@
+name: Device V2 matched access sources
+
+on:
+  workflow_dispatch:
+    inputs:
+      wifiprov_sha:
+        description: Full reviewed capacitor-wifiprov commit SHA (not a branch)
+        required: true
+        type: string
+      library_sha:
+        description: Full reviewed blinker-library commit SHA (its own CI is also required)
+        required: true
+        type: string
+      android:
+        description: Also compile cloud-beta Android and native WiFiProv tests (no deployment)
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  matched-access:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      ACCESS_APP_SHA: ${{ github.sha }}
+      ACCESS_WIFIPROV_SHA: ${{ inputs.wifiprov_sha }}
+      ACCESS_LIBRARY_SHA: ${{ inputs.library_sha }}
+      ACCESS_ANDROID: ${{ inputs.android && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: blinker-app
+          # Source-selection tests compare the fixed reviewed base, not HEAD.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reject branches, abbreviated SHAs and implicit modes before dependency checkout
+        run: node blinker-app/tools/access-ci.mjs validate
+      # Public/read-authorized repositories only. The default read token has no
+      # implicit cross-private-repository access: failure must stop the job.
+      - uses: actions/checkout@v4
+        with:
+          repository: i3water/capacitor-wifiprov
+          ref: ${{ inputs.wifiprov_sha }}
+          path: capacitor-wifiprov
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: blinker-iot/blinker-library
+          ref: ${{ inputs.library_sha }}
+          path: blinker-library
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: coloz/capacitor-android-shortcuts
+          ref: 2c187e447542843dba1264bd95c297686ade6c49
+          path: capacitor-android-shortcuts
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: i3water/capacitor-mdns
+          ref: 8525b992e8a53c4f60b97b076da48606a373135e
+          path: capacitor-mdns
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: i3water/capacitor-ntfy
+          ref: ed658dd2b6e89fa6fd89a8c85df7b5680851170e
+          path: capacitor-ntfy
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: coloz/capacitor-wechat
+          ref: ba0bfc5677b2a0dfe11d231c43b52e07af0bf487
+          path: capacitor-wechat
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.3
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+          run_install: false
+      - uses: actions/setup-java@v4
+        if: inputs.android
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        if: inputs.android
+      - name: Prepare the existing Android target only
+        if: inputs.android
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Verify exact source tuple, original locks and finite access scope
+        run: node blinker-app/tools/access-ci.mjs run
+      # Deliberately no artifact upload, release, signing secret, deployment,
+      # account/device access, Service golden bypass or automatic retry.

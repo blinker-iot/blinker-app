@@ -9,101 +9,92 @@
 
 <ion-content fullscreen="true">
   <main>
-    @if (languageList.length) {
-    <div class="section-label">
-      {{ 'SETTINGS.LANGUAGE_SECTION' | translate }}
-    </div>
-    <section class="settings-card" aria-labelledby="language-heading">
-      <div class="card-heading">
-        <div>
-          <p>{{ 'SETTINGS.LANGUAGE_HINT' | translate }}</p>
+    <section class="settings-card" [attr.aria-label]="'SETTINGS.TITLE' | translate">
+      @if (languageList.length) {
+      <details class="settings-disclosure">
+        <summary>
+          <i class="fa-light fa-language row-icon" aria-hidden="true"></i>
+          <span id="language-heading" class="row-title">{{ 'SETTINGS.LANGUAGE_SECTION' | translate }}</span>
+          <span class="row-value">{{ currentLanguageName }}</span>
+          @if (languageSaving) { <ion-spinner name="crescent" aria-hidden="true" /> }
+          @else { <i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i> }
+        </summary>
+        <div class="disclosure-content">
+          <p id="language-hint" class="help">{{ 'SETTINGS.LANGUAGE_HINT' | translate }}</p>
+          <fieldset class="language-options" [disabled]="languageSaving" [attr.aria-busy]="languageSaving"
+            aria-labelledby="language-heading" aria-describedby="language-hint">
+            @for (language of languageList; track language.code) {
+            <label class="language-option" [class.selected]="selectedLanguage === language.code">
+              <input type="radio" name="app-language" [value]="language.code"
+                [checked]="selectedLanguage === language.code" (change)="selectLanguage(language.code)" />
+              <span>{{ language.name }}</span>
+            </label>
+            }
+          </fieldset>
+          @if (languageSaveFailed) {
+          <p class="error" role="alert">{{ 'SETTINGS.LANGUAGE_SAVE_FAILED' | translate }}</p>
+          }
         </div>
-        <i class="fa-light fa-language" aria-hidden="true"></i>
-      </div>
-      <div class="language-options" role="radiogroup">
-        @for (language of languageList; track language.code) {
-        <button type="button" class="language-option" [class.selected]="currentLanguage === language.code" role="radio"
-          [attr.aria-checked]="currentLanguage === language.code" (click)="selectLanguage(language.code)">
-          <img [src]="getLanguageImage(language.code)" alt="" aria-hidden="true" />
-          <span>{{ language.name }}</span>
-          <i class="selection-icon fa-solid" [class.fa-circle-check]="currentLanguage === language.code"
-            [class.fa-circle]="currentLanguage !== language.code" aria-hidden="true"></i>
-        </button>
-        }
-
-      </div>
-    </section>
-    }
-
-    <div class="section-label appearance-section-label">
-      {{ 'SETTINGS.APPEARANCE' | translate }}
-    </div>
-    <section class="settings-card" aria-labelledby="theme-heading">
-      <div class="card-heading">
-        <div>
-          <p>{{ 'SETTINGS.THEME_HINT' | translate }}</p>
+      </details>
+      }
+      <details class="settings-disclosure">
+        <summary>
+          <i class="fa-light fa-moon-over-sun row-icon" aria-hidden="true"></i>
+          <span id="theme-heading" class="row-title">{{ 'SETTINGS.APPEARANCE' | translate }}</span>
+          <span class="row-value">{{ (currentTheme === 'dark' ? 'SETTINGS.DARK' : 'SETTINGS.LIGHT') | translate }}</span>
+          <i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i>
+        </summary>
+        <div class="disclosure-content">
+          <p id="theme-hint" class="help">{{ 'SETTINGS.THEME_HINT' | translate }}</p>
+          <fieldset class="theme-options" aria-labelledby="theme-heading" aria-describedby="theme-hint">
+            @for (theme of ['light', 'dark']; track theme) {
+            <label class="theme-option" [class.selected]="currentTheme === theme">
+              <span class="theme-preview" [class.preview-light]="theme === 'light'" [class.preview-dark]="theme === 'dark'" aria-hidden="true">
+                <span class="preview-header"></span>
+                <span class="preview-card preview-card-main"></span>
+                <span class="preview-card preview-card-small"></span>
+                <span class="preview-nav"><b></b><b></b><b></b></span>
+              </span>
+              <span class="option-copy">
+                <span class="option-title">{{ (theme === 'dark' ? 'SETTINGS.DARK' : 'SETTINGS.LIGHT') | translate }}</span>
+                <span class="option-description">{{ (theme === 'dark' ? 'SETTINGS.DARK_DESC' : 'SETTINGS.LIGHT_DESC') | translate }}</span>
+              </span>
+              <input type="radio" name="app-theme" [value]="theme" [checked]="currentTheme === theme"
+                (change)="selectTheme(theme === 'dark' ? 'dark' : 'light')" />
+            </label>
+            }
+          </fieldset>
+          <p class="help">{{ 'SETTINGS.SAVED_HINT' | translate }}</p>
         </div>
-        <i class="fa-light fa-moon-over-sun" aria-hidden="true"></i>
-      </div>
-      <div class="theme-options" role="radiogroup">
-        <button type="button" class="theme-option" [class.selected]="currentTheme === 'light'" role="radio"
-          [attr.aria-checked]="currentTheme === 'light'" (click)="selectTheme('light')">
-          <div class="theme-preview preview-light" aria-hidden="true">
-            <span class="preview-header"></span>
-            <span class="preview-card preview-card-main"></span>
-            <span class="preview-card preview-card-small"></span>
-            <span class="preview-nav"><b></b><b></b><b></b></span>
-          </div>
-          <span class="option-copy">
-            <span class="option-title">
-              <i class="fa-light fa-sun" aria-hidden="true"></i>
-              {{ 'SETTINGS.LIGHT' | translate }}
-            </span>
-            <span class="option-description">{{ 'SETTINGS.LIGHT_DESC' | translate }}</span>
-          </span>
-          <i class="selection-icon fa-solid" [class.fa-circle-check]="currentTheme === 'light'"
-            [class.fa-circle]="currentTheme !== 'light'" aria-hidden="true"></i>
-        </button>
-        <button type="button" class="theme-option" [class.selected]="currentTheme === 'dark'" role="radio"
-          [attr.aria-checked]="currentTheme === 'dark'" (click)="selectTheme('dark')">
-          <div class="theme-preview preview-dark" aria-hidden="true">
-            <span class="preview-header"></span>
-            <span class="preview-card preview-card-main"></span>
-            <span class="preview-card preview-card-small"></span>
-            <span class="preview-nav"><b></b><b></b><b></b></span>
-          </div>
-          <span class="option-copy">
-            <span class="option-title">
-              <i class="fa-light fa-moon" aria-hidden="true"></i>
-              {{ 'SETTINGS.DARK' | translate }}
-            </span>
-            <span class="option-description">{{ 'SETTINGS.DARK_DESC' | translate }}</span>
-          </span>
-          <i class="selection-icon fa-solid" [class.fa-circle-check]="currentTheme === 'dark'"
-            [class.fa-circle]="currentTheme !== 'dark'" aria-hidden="true"></i>
-        </button>
-      </div>
+      </details>
     </section>
-    <div id="service-region-heading" class="section-label service-region-section-label">
-      {{ 'SETTINGS.SERVICE_REGION' | translate }}
-    </div>
+
     <section class="settings-card" aria-labelledby="service-region-heading">
-      <div class="card-heading">
-        <p id="service-region-hint">{{ 'SETTINGS.SERVICE_REGION_HINT' | translate }}</p>
-        <i class="fa-light fa-globe" aria-hidden="true"></i>
-      </div>
-      <div class="service-region-options" role="radiogroup" aria-labelledby="service-region-heading"
-        aria-describedby="service-region-hint" [attr.aria-busy]="switchingRegion">
-
-        @for (region of serviceRegions; track region) {
-        <label class="service-region-option" [class.selected]="currentRegion === region">
-          <input type="radio" name="service-region" [value]="region" [checked]="currentRegion === region"
-            [disabled]="switchingRegion" (change)="selectRegion(region)" />
-          <span>{{ region }}</span>
-        </label>
-        }
-
-      </div>
+      <details class="settings-disclosure">
+        <summary>
+          <i class="fa-light fa-globe row-icon" aria-hidden="true"></i>
+          <span id="service-region-heading" class="row-title">{{ 'SETTINGS.SERVICE_REGION' | translate }}</span>
+          <span class="row-value">{{ currentRegion }}</span>
+          @if (switchingRegion) { <ion-spinner name="crescent" aria-hidden="true" /> }
+          @else { <i class="fa-light fa-chevron-right row-arrow" aria-hidden="true"></i> }
+        </summary>
+        <div class="disclosure-content">
+          <p id="service-region-hint" class="help region-warning">{{ 'SETTINGS.SERVICE_REGION_HINT' | translate }}</p>
+          <fieldset class="service-region-options" [disabled]="switchingRegion" [attr.aria-busy]="switchingRegion"
+            aria-labelledby="service-region-heading" aria-describedby="service-region-hint">
+            @for (region of serviceRegions; track region) {
+            <label class="service-region-option" [class.selected]="selectedRegion === region">
+              <input type="radio" name="service-region" [value]="region" [checked]="selectedRegion === region"
+                (change)="selectRegion(region)" />
+              <span>{{ region }}</span>
+            </label>
+            }
+          </fieldset>
+          @if (regionChangeFailed) {
+          <p class="error" role="alert">{{ 'SETTINGS.REGION_CHANGE_FAILED' | translate }}</p>
+          }
+        </div>
+      </details>
     </section>
   </main>
 </ion-content>

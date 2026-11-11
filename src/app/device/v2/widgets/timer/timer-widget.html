@@ -5,7 +5,7 @@
     <span class="hd-t">{{ showTitle ? title : '' }}</span>
 
     @if (left > 0) {
-      <button type="button" class="tm-x" [disabled]="card.disabled" (click)="cancel()">取消</button>
+      <button type="button" class="tm-x" [disabled]="card.disabled" [attr.aria-label]="'取消' + title + '倒计时'" (click)="cancel()">取消</button>
     } @else {
       <span class="hd-v">未设置</span>
     }
@@ -14,7 +14,7 @@
 }
 
 @if (left <= 0) {
-  <div class="tm-presets" [style.--n]="presets.length || 1">
+  <div class="tm-presets" role="group" aria-label="倒计时预设" [style.--n]="presets.length || 1">
     @for (minutes of presets; track minutes) {
       <button type="button" class="tm-p" [disabled]="card.disabled" (click)="start(minutes)">
         <b>{{ presetLabel(minutes).value }}</b>{{ presetLabel(minutes).unit }}</button>
